@@ -434,7 +434,8 @@ class EventBasedHazardCase17TestCase(qa_utils.BaseQATestCase):
         for gmf_output in models.Output.objects.filter(
                 output_type='gmf', oq_job=job):
             fname = core.export(gmf_output.id, result_dir, 'csv')
-            countlines += len(open(fname).readlines())
+            if os.path.exists(fname):  # empty files are not written
+                countlines += len(open(fname).readlines())
         self.assertEqual(countlines, len(tags))
 
         curves = [c.poes for c in models.HazardCurveData.objects.filter(
@@ -451,7 +452,7 @@ class EventBasedHazardCase18TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test(self):
-        cfg = os.path.join(os.path.dirname(case_18.__file__), 'job_3.ini')
+        cfg = os.path.join(os.path.dirname(case_18.__file__), 'job.ini')
         job = self.run_hazard(cfg)
         expected = [
             ('AB', '9.7812E-02 1.1691E-01 2.0018E-01'),

@@ -162,7 +162,7 @@ def export_agg_loss_curve_csv(key, output, target):
     row = output.loss_curve.aggregatelosscurvedata
     data = ('aggregate', row.losses, row.poes, row.average_loss,
             row.stddev_loss)
-    return writers.save_csv(dest, [data], fmt='%10.6E')
+    return writers.write_csv(dest, [data], fmt='%10.6E')
 
 
 @core.export_output.add(('loss_curve', 'xml'), ('event_loss_curve', 'xml'))
@@ -192,7 +192,7 @@ def export_loss_curve_csv(key, output, target):
             row.asset_ref, row.losses, row.poes, row.average_loss)
         data.append(lca)
     header = [lca._fields]
-    writers.save_csv(dest, header + data, fmt='%10.6E')
+    writers.write_csv(dest, header + data, fmt='%10.6E')
     return dest
 
 
@@ -208,7 +208,7 @@ def export_avgloss_csv(key, output, target):
     rows = [(c.location.x, c.location.y, c.asset_ref, c.asset_value,
              c.average_loss, c.stddev_loss or '', c.loss_curve.loss_type)
             for c in data]
-    writers.save_csv(dest, [header] + rows)
+    writers.write_csv(dest, [header] + rows)
     return dest
 
 
@@ -242,7 +242,7 @@ def export_loss_map_csv(key, output, target):
             output.loss_map.lossmapdata_set.all().order_by('asset_ref')):
         data.append(LossMapPerAsset(row.asset_ref, row.value))
     header = [data[0]._fields]
-    writers.save_csv(dest, header + data, fmt='%10.6E')
+    writers.write_csv(dest, header + data, fmt='%10.6E')
     return dest
 
 
@@ -397,5 +397,5 @@ def export_event_loss_asset_csv(key, output, target):
         rows.append([event_loss.rupture.tag,
                      event_loss.asset.asset_ref,
                      event_loss.loss])
-    writers.save_csv(dest, rows)
+    writers.write_csv(dest, rows)
     return dest
