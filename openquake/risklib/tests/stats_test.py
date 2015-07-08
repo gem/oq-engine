@@ -220,10 +220,6 @@ class StatsTestCase(unittest.TestCase):
 
         tests.check_equal(__file__, 'expected_loss_curves.csv', actual)
 
-        actual = os.path.join(tempdir, 'expected_ins_curves.csv')
-        writers.write_csv(actual, ins_curves, fmt='%05.2f')
-        tests.check_equal(__file__, 'expected_ins_curves.csv', actual)
-
         actual = os.path.join(tempdir, 'expected_loss_maps.csv')
         writers.write_csv(actual, maps, fmt='%05.2f')
         tests.check_equal(__file__, 'expected_loss_maps.csv', actual)
