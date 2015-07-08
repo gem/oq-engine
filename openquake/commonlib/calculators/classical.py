@@ -90,7 +90,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
-        sources = self.composite_source_model.get_sources()
+        sources = self.csm.get_sources()
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         gsims_assoc = self.rlzs_assoc.get_gsims_by_trt_id()
@@ -211,7 +211,7 @@ def classical_tiling(calculator, sitecol, position, tileno, monitor):
     curves_by_trt_gsim = calculator.execute()
     curves_by_trt_gsim.indices = range(position, position + len(sitecol))
     # build the correct realizations from the (reduced) logic tree
-    calculator.rlzs_assoc = calculator.composite_source_model.get_rlzs_assoc(
+    calculator.rlzs_assoc = calculator.csm.get_rlzs_assoc(
         partial(is_effective_trt_model, curves_by_trt_gsim))
     n_levels = sum(len(imls) for imls in calculator.oqparam.imtls.itervalues())
     tup = (len(calculator.sitecol), n_levels, len(calculator.rlzs_assoc),
@@ -252,8 +252,8 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         oq.concurrent_tasks = 0
         calculator = ClassicalCalculator(
             self.oqparam, monitor, persistent=False)
-        calculator.composite_source_model = self.composite_source_model
-        rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
+        calculator.csm = self.csm
+        rlzs_assoc = self.csm.get_rlzs_assoc()
         self.rlzs_assoc = calculator.rlzs_assoc = rlzs_assoc
 
         # parallelization
