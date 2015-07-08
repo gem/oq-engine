@@ -21,9 +21,9 @@ First, it is best to give some terminology.
    different GMPE logic tree
 2. the total number of realizations is the sum of the number of realizations
    of each GMPE logic tree
-3. a GMPE logic tree is *trivial* if has no tectonic region types with
+3. a GMPE logic tree is *trivial* if it has no tectonic region types with
    multiple GMPEs
-4. a GMPE logic tree is *simple* if has at most one tectonic region type
+4. a GMPE logic tree is *simple* if it has at most one tectonic region type
    with multiple GMPEs
 5. a GMPE logic tree is *complex* if it has more than one tectonic region
    type with multiple GMPEs.
@@ -139,7 +139,7 @@ the notation `@_<GMPE of second region type>`:
 == ======
 
 The "@" character should be read as "any", meaning that for the first
-tectonic region type any path (i.e. both "A", "B" and "C") will give
+tectonic region type any path (i.e. "A", "B" and "C") will give
 the same contribution, i.e. there is independence from the GMPE
 combinations coming from the first tectonic region type.
 
