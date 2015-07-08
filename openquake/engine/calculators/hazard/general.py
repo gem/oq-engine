@@ -109,7 +109,6 @@ class BaseHazardCalculator(base.Calculator):
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
             (csm.get_sources(), self.site_collection, info, self.monitor),
-             csm.get_info(), self.monitor),
             agg=self.agg_curves, acc=self.acc,
             weight=attrgetter('weight'), key=attrgetter('trt_model_id'),
             concurrent_tasks=self.concurrent_tasks)
