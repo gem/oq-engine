@@ -282,6 +282,7 @@ class RlzsAssoc(collections.Mapping):
         self.rlzs_assoc = collections.defaultdict(list)
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = [[] for _ in range(len(csm_info.source_models))]
+        self.gsims_by_trt_id = {}
 
     @property
     def num_samples(self):
@@ -295,18 +296,10 @@ class RlzsAssoc(collections.Mapping):
         """Flat list with all the realizations"""
         return sum(self.rlzs_by_smodel, [])
 
-    def get_gsims_by_trt_id(self):
-        """Returns associations trt_id -> [GSIM instance, ...]"""
-        return groupby(
-            self.rlzs_assoc, operator.itemgetter(0),
-            lambda group: sorted(valid.gsim(gsim)
-                                 for trt_id, gsim in group))
-
     def get_gsims_by_col(self):
         """Return a list of lists of GSIMs of length num_collections"""
         # TODO: add a special case for sampling?
-        gsims_by_trt_id = self.get_gsims_by_trt_id()
-        return [gsims_by_trt_id.get(col['trt_id'], [])
+        return [self.gsims_by_trt_id.get(col['trt_id'], [])
                 for col in self.csm_info.cols]
 
     def _add_realizations(self, idx, lt_model, realizations, trts):
@@ -650,6 +643,11 @@ class CompositeSourceModel(collections.Sequence):
                                  'weights are being rescaled')
                 for rlz in assoc.realizations:
                     rlz.weight = rlz.weight / tot_weight
+
+        assoc.gsims_by_trt_id = groupby(
+            assoc.rlzs_assoc, operator.itemgetter(0),
+            lambda group: sorted(valid.gsim(gsim) for trt_id, gsim in group))
+
         return assoc
 
     def __repr__(self):

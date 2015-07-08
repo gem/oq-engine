@@ -44,7 +44,7 @@ def data_transfer(calc):
     sources = calc.csm.get_sources()
     num_gsims_by_trt = groupby(calc.rlzs_assoc, operator.itemgetter(0),
                                lambda group: sum(1 for row in group))
-    gsims_assoc = calc.rlzs_assoc.get_gsims_by_trt_id()
+    gsims_assoc = calc.rlzs_assoc.gsims_by_trt_id
     to_send_forward = 0
     to_send_back = 0
     n_tasks = 0

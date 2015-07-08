@@ -84,7 +84,7 @@ a4,3,0,500000,1000,3000
         # this is case with a single SES collection
         ses_ruptures = dstore['sescollection'][0].values()
 
-        gsims_by_trt_id = rupcalc.rlzs_assoc.get_gsims_by_trt_id()
+        gsims_by_trt_id = rupcalc.rlzs_assoc.gsims_by_trt_id
 
         eps_dict = riskinput.make_eps_dict(
             self.assets_by_site, len(ses_ruptures), oq.master_seed,
