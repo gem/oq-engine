@@ -94,6 +94,7 @@ class BaseCalculator(object):
         if concurrent_tasks is not None:
             self.oqparam.concurrent_tasks = concurrent_tasks
         vars(self.oqparam).update(kw)
+        exported = {}
         try:
             if pre_execute:
                 with self.monitor('pre_execute', autoflush=True):
@@ -110,7 +111,7 @@ class BaseCalculator(object):
                     self.clean_up()
                 except:
                     logging.error('Cleanup error', exc_info=True)
-        return exported
+            return exported
 
     def core_func(*args):
         """
