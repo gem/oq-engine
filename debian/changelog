@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a command `oq-lite info --report job.ini` to produce a report
+    on a calculation without running it
   * Negative calculations IDs are recognized in the oq-lite commands
   * The GMFs are now saved in the HDF5 file
   * Added vulnerability functions with Probability Mass Function
