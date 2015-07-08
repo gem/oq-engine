@@ -50,7 +50,8 @@ class Asset(object):
                  deductibles=None,
                  insurance_limits=None,
                  retrofitting_values=None,
-                 aggregated=None):
+                 aggregated=None,
+                 idx=None):
         """
         :param asset_id:
             an unique identifier of the assets within the given exposure
@@ -72,6 +73,8 @@ class Asset(object):
             asset retrofitting values keyed by loss types
         :param dict aggregated:
             if the cost is aggregated, do not multiply by the number
+        :param idx:
+            asset collection index
         """
         self.id = asset_id
         self.taxonomy = taxonomy
@@ -372,6 +375,12 @@ class Classical(Workflow):
         return all_outputs
 
 
+def debug(assets, loss_matrix):
+    for a, row in zip(assets, loss_matrix):
+        debug.acc[a.asset_ref].extend(row)
+debug.acc = collections.defaultdict(list)
+
+
 @registry.add('event_based_risk', 'ebr')
 class ProbabilisticEventBased(Workflow):
     """
@@ -487,6 +496,7 @@ class ProbabilisticEventBased(Workflow):
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
         values = get_values(loss_type, assets)
+        # debug(assets, loss_matrix)
         ela = loss_matrix.T * values  # matrix with T x N elements
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = [a.deductible(loss_type) for a in assets]

@@ -20,7 +20,7 @@
 """
 This module includes the scientific API of the oq-risklib
 """
-
+from __future__ import division
 import abc
 import copy
 import itertools
@@ -446,7 +446,6 @@ class VulnerabilityFunctionWithPMF(object):
         # TODO: to be implemented if the classical risk calculator
         # needs to support the pmf vulnerability format
 
-
     def __repr__(self):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
 
@@ -737,7 +736,8 @@ class DiscreteDistribution(Distribution):
     def sample(self, loss_ratios, probs):
         ret = []
         for i in range(probs.shape[1]):
-            pmf = stats.rv_discrete(name='pmf', values=(range(len(loss_ratios)), probs[:,i]))
+            pmf = stats.rv_discrete(name='pmf', values=(
+                range(len(loss_ratios)), probs[:, i]))
             ret.append(loss_ratios[pmf.rvs()])
         return ret
 
@@ -751,6 +751,7 @@ class DiscreteDistribution(Distribution):
         # TODO: to be implemented if the classical risk calculator
         # needs to support the pmf vulnerability format
         return
+
 
 #
 # Event Based
@@ -784,27 +785,28 @@ class CurveBuilder(object):
                                         for ratio in self.ratios])
         return counts
 
-    def build_poes(self, counts, tses, time_span):
+    def build_poes(self, counts, nses):
         """
         :param counts: an array of counts of exceedence for the bins
-        :param tses: Time representative of the stochastic event set
-        :param time_span: Investigation Time spanned by the hazard input
+        :param nses: number of effective stochastic event sets
         :returns: an array of PoEs
         """
-        rates_of_exceedance = numpy.array(counts, float) / tses
-        return 1. - numpy.exp(-rates_of_exceedance * time_span)
+        rates_of_exceedance = numpy.array(counts, float) / nses
+        return 1. - numpy.exp(-rates_of_exceedance)
 
-    def build_loss_curves(self, poe_matrix, asset_values):
+    def build_loss_curves(self, poe_matrix, asset_values, indices, N):
         """
-        :param poe_matrix: a matrix N x C
-        :param asset_values: N asset values for a given loss_type
+        :param poe_matrix: a matrix n x C, with n <= N
+        :param asset_values: n asset values for a given loss_type
+        :param indices: n asset indices in the range [0, .., N-1]
+        :param N: the total number of assets
         """
-        N = len(asset_values)
-        assert len(poe_matrix) == N, (len(poe_matrix), N)
+        n = len(asset_values)
+        assert len(poe_matrix) == n, (len(poe_matrix), n)
+        assert n <= N, (n, N)
         lcs = numpy.zeros(N, self.loss_curve_dt)
-        for i, value in enumerate(asset_values):
+        for i, poes, value in zip(indices, poe_matrix, asset_values):
             losses = self.ratios * value
-            poes = poe_matrix[i]
             avg = average_loss((losses, poes))
             lcs[i] = (losses, poes, avg)
         return lcs
@@ -827,14 +829,13 @@ def event_based(loss_values, tses, time_span, curve_resolution):
     reference_losses = numpy.linspace(
         0, numpy.max(loss_values), curve_resolution)
     # counts how many loss_values are bigger than the reference loss
-    times = [(loss_values > loss).sum() for loss in reference_losses]
+    counts = [(loss_values > loss).sum() for loss in reference_losses]
     # NB: (loss_values > loss).sum() is MUCH more efficient than
     # sum(loss_values > loss). Incredibly more efficient in memory.
 
-    rates_of_exceedance = numpy.array(times) / float(tses)
+    rates_of_exceedance = numpy.array(counts) * time_span / float(tses)
 
-    poes = 1. - numpy.exp(-rates_of_exceedance * time_span)
-
+    poes = 1. - numpy.exp(-rates_of_exceedance)
     return numpy.array([reference_losses, poes])
 
 

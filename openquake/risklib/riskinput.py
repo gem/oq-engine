@@ -78,6 +78,7 @@ def build_asset_collection(assets_by_site, time_event=None):
     fields = ['asset_ref', 'site_id'] + float_fields
     for sid, assets_ in enumerate(assets_by_site):
         for asset in sorted(assets_, key=operator.attrgetter('id')):
+            asset.idx = asset_ordinal
             record = assetcol[asset_ordinal]
             asset_ordinal += 1
             for field in fields:

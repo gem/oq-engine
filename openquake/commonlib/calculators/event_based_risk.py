@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib.general import AccumDict, groupby
 from openquake.commonlib.calculators import base
 from openquake.commonlib import readinput, parallel, datastore
-from openquake.risklib import riskinput, scientific
+from openquake.risklib import riskinput, scientific, workflows
 
 
 @parallel.litetask
@@ -211,6 +211,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             loss_maps = self.zeros(N, self.loss_map_dt)
         agg_loss_curve = self.zeros(1, self.loss_curve_dt)
 
+        cb = scientific.CurveBuilder(C)
         for i in sorted(result):
             rlz = rlzs[i]
 
@@ -223,7 +224,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for loss_type, tag in data_by_lt_tag:
                 d = data_by_lt_tag[loss_type, tag]
                 if tag == 'counts_matrix':
-                    # the counts_matrix management is left for the future
+                    assets, counts = d.keys(), d.values()
+                    indices = numpy.array([asset.idx for asset in assets])
+                    asset_values = workflows.get_values(loss_type, assets)
+                    poes = cb.build_poes(counts, oq.ses_per_logic_tree_path)
+                    lcurves = cb.build_loss_curves(
+                        poes, asset_values, indices, N)
+                    self.store('lcurves/' + loss_type, rlz, lcurves)
                     continue
 
                 for aid, loss, ins_loss in d['data']:
