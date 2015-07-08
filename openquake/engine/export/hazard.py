@@ -26,7 +26,7 @@ from collections import namedtuple, defaultdict
 from openquake.baselib.general import groupby
 from openquake.hazardlib.calc import disagg
 from openquake.commonlib import hazard_writers
-from openquake.commonlib.writers import floatformat, scientificformat, save_csv
+from openquake.commonlib.writers import floatformat, scientificformat, write_csv
 
 from openquake.engine.db import models
 from openquake.engine.export import core
@@ -311,7 +311,7 @@ def export_gmf_csv(key, output, target):
     dest = _get_result_export_dest(
         haz_calc.id, target, output.gmf)[:-3] + 'csv'
     # export the GMFs ordered by tag
-    save_csv(dest, sorted(_gen_gmf_rows(output), key=operator.itemgetter(0)))
+    write_csv(dest, sorted(_gen_gmf_rows(output), key=operator.itemgetter(0)))
     return dest
 
 
@@ -423,7 +423,7 @@ def export_ses_csv(key, output, target):
     for ses in ses_coll:
         for sesrup in ses:
             rows.append([sesrup.tag, sesrup.seed])
-    save_csv(dest, sorted(rows, key=operator.itemgetter(0)))
+    write_csv(dest, sorted(rows, key=operator.itemgetter(0)))
     return dest
 
 

@@ -408,7 +408,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         rnd = random.Random(hc.random_seed)
         for src in self.composite_model.get_sources():
             src.seed = rnd.randint(0, models.MAX_SINT_32)
-        for trt_id, idx, col_id in self.composite_model.info.get_triples():
+        info = self.composite_model.get_info()
+        for trt_id, idx, col_id in info.get_triples():
             self.initialize_ses_db_records(trt_id, col_id)
         return weights
 
