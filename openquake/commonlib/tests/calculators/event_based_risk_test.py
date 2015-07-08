@@ -64,7 +64,8 @@ class EBRTestCase(CalculatorTestCase):
         self.run_calc(case_1.__file__, 'job_ebr.ini', concurrent_tasks=0)
         ds = DataStore(self.calc.datastore.calc_id,
                        export_dir=self.calc.datastore.export_dir)
-        fnames = export(('event_loss_table-rlzs', 'csv'), ds)
+        fnames = export(('assetcol', 'csv'), ds) + export(
+            ('event_loss_table-rlzs', 'csv'), ds)
         for fname in fnames:
             self.assertEqualFiles('expected/' + os.path.basename(fname), fname)
 
