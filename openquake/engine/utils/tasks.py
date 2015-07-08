@@ -22,6 +22,7 @@ from celery.result import ResultSet
 from celery.app import current_app
 from celery.task import task
 
+from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.commonlib.parallel import \
     TaskManager, safely_call, check_mem_usage
 from openquake.engine import logs
@@ -119,7 +120,8 @@ def oqtask(task_func):
             try:
                 total = 'total ' + task_func.__name__
                 with monitor(total, task=tsk, autoflush=True):
-                    return task_func(*args)
+                    with GroundShakingIntensityModel.forbid_instantiation():
+                        return task_func(*args)
             finally:
                 # save on the db
                 CacheInserter.flushall()

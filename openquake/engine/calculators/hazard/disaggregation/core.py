@@ -186,7 +186,7 @@ def save_disagg_result(job_id, site_id, bin_edges, trt_names, matrix,
 
 
 @tasks.oqtask
-def compute_disagg(sitecol, sources, trt_model_id,
+def compute_disagg(sitecol, sources, trt_model_id, gsims_by_trt_id,
                    trt_num, curves_dict, bin_edges, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -211,7 +211,7 @@ def compute_disagg(sitecol, sources, trt_model_id,
     """
     hc = models.oqparam(monitor.job_id)
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
-    gsims = trt_model.get_gsim_instances()
+    gsims = gsims_by_trt_id[trt_model.id]
     lt_model_id = trt_model.lt_model.id
     rlzs = trt_model.get_rlzs_by_gsim()
     trt_names = tuple(trt_model.lt_model.get_tectonic_region_types())
@@ -318,6 +318,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         tl = self.oqparam.truncation_level
         sitecol = self.site_collection
         mag_bin_width = self.oqparam.mag_bin_width
+        gsims_by_trt_id = self.rlzs_assoc.gsims_by_trt_id
         eps_edges = numpy.linspace(-tl, tl, self.oqparam.num_epsilon_bins + 1)
         logs.LOG.info('%d epsilon bins from %s to %s', len(eps_edges) - 1,
                       min(eps_edges), max(eps_edges))
@@ -367,8 +368,9 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                 self.bin_edges[lt_model.id, site.id] = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
-            all_args.append((sitecol, srcs, trt_model_id, trt_num,
-                             curves_dict, self.bin_edges, self.monitor))
+            all_args.append(
+                (sitecol, srcs, trt_model_id, gsims_by_trt_id,
+                 trt_num, curves_dict, self.bin_edges, self.monitor))
 
         res = tasks.starmap(compute_disagg, all_args)
         self.save_disagg_results(res.reduce(self.agg_result))
