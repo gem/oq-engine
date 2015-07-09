@@ -248,10 +248,7 @@ class HazardCalculator(BaseCalculator):
                     if name not in new:  # add missing parameter
                         new[name] = value
                 self.oqparam = self.oqparam
-            try:
-                self.datastore['taxonomies']
-            except KeyError:  # not read already
-                self.read_exposure_sitecol()
+            self.read_exposure_sitecol()
 
         else:  # we are in a basic calculator
             self.read_exposure_sitecol()
@@ -293,6 +290,9 @@ class HazardCalculator(BaseCalculator):
                 logging.warn(
                     'The hazard sites are different from the risk sites %s!=%s'
                     % (self.datastore.parent['sitecol'], self.sitecol))
+        elif (self.datastore.parent and 'exposure' in
+              self.datastore.parent['oqparam'].inputs):
+            pass  # use the parent parameters
         else:  # no exposure
             logging.info('Reading the site collection')
             with self.monitor('reading site collection', autoflush=True):
