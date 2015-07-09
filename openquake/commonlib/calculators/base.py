@@ -248,7 +248,10 @@ class HazardCalculator(BaseCalculator):
                     if name not in new:  # add missing parameter
                         new[name] = value
                 self.oqparam = self.oqparam
-            self.read_exposure_sitecol()
+            try:
+                self.datastore['taxonomies']
+            except KeyError:  # not read already
+                self.read_exposure_sitecol()
 
         else:  # we are in a basic calculator
             self.read_exposure_sitecol()
