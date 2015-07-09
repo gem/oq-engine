@@ -313,12 +313,13 @@ class GmfCalculator(object):
             a :class:`openquake.commonlib.source.RlzsAssoc` instance
         """
         samples = rlzs_assoc.csm_info.get_num_samples(self.trt_model_id)
+        col_ids = rlzs_assoc.col_ids_by_rlz
         for gname, imt_str, site_id in self.gmvs_per_site:
             rlzs = rlzs_assoc[self.trt_model_id, gname]
             if samples > 1:
                 # save only the data for the realization corresponding
                 # to the current SESCollection
-                rlzs = [rlz for rlz in rlzs if self.col_id in rlz.col_ids]
+                rlzs = [rlz for rlz in rlzs if self.col_id in col_ids[rlz]]
             for rlz in rlzs:
                 imt_name, sa_period, sa_damping = from_string(imt_str)
                 inserter.add(models.GmfData(
