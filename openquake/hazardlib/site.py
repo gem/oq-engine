@@ -102,7 +102,7 @@ Backarc=False>'
 
 def eq(array1, array2):
     """
-    Compare two numpy arrays for equality and returns a boolean
+    Compare two numpy arrays for equality and return a boolean
     """
     return array1.shape == array2.shape and (array1 == array2).all()
 
