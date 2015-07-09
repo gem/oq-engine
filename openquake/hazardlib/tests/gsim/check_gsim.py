@@ -261,7 +261,7 @@ def _parse_csv_line(headers, values):
             damping = float(value)
         elif param.startswith('site_'):
             # value is sites context object attribute
-            if param == 'site_vs30measured':
+            if (param == 'site_vs30measured') or (param == 'site_backarc'):
                 value = float(value) != 0
             else:
                 value = float(value)

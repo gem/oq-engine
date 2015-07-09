@@ -31,6 +31,7 @@ class SiteModelParam(object):
         self.reference_vs30_type = 'measured'
         self.reference_depth_to_1pt0km_per_sec = 3.4
         self.reference_depth_to_2pt5km_per_sec = 5.6
+        self.reference_backarc = False
 
 
 class SiteTestCase(unittest.TestCase):
@@ -40,7 +41,8 @@ class SiteTestCase(unittest.TestCase):
             'vs30': 10,
             'vs30measured': False,
             'z1pt0': 20,
-            'z2pt5': 30
+            'z2pt5': 30,
+            'backarc': True
         }
         default_kwargs.update(kwargs)
         kwargs = default_kwargs
@@ -76,10 +78,10 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
     def test_from_sites(self):
         s1 = Site(location=Point(10, 20, 30),
                   vs30=1.2, vs30measured=True,
-                  z1pt0=3.4, z2pt5=5.6)
+                  z1pt0=3.4, z2pt5=5.6, backarc=True)
         s2 = Site(location=Point(-1.2, -3.4, -5.6),
                   vs30=55.4, vs30measured=False,
-                  z1pt0=66.7, z2pt5=88.9)
+                  z1pt0=66.7, z2pt5=88.9, backarc=False)
         cll = SiteCollection([s1, s2])
         self.assertTrue((cll.vs30 == [1.2, 55.4]).all())
         self.assertTrue((cll.vs30measured == [True, False]).all())
@@ -87,14 +89,16 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         self.assertTrue((cll.z2pt5 == [5.6, 88.9]).all())
         self.assertTrue((cll.mesh.lons == [10, -1.2]).all())
         self.assertTrue((cll.mesh.lats == [20, -3.4]).all())
+        self.assertTrue((cll.backarc == [True, False]).all())
         self.assertIs(cll.mesh.depths, None)
         for arr in (cll.vs30, cll.z1pt0, cll.z2pt5):
             self.assertIsInstance(arr, numpy.ndarray)
             self.assertEqual(arr.flags.writeable, False)
             self.assertEqual(arr.dtype, float)
-        self.assertIsInstance(cll.vs30measured, numpy.ndarray)
-        self.assertEqual(cll.vs30measured.flags.writeable, False)
-        self.assertEqual(cll.vs30measured.dtype, bool)
+        for arr in (cll.vs30measured, cll.backarc):
+            self.assertIsInstance(arr, numpy.ndarray)
+            self.assertEqual(arr.flags.writeable, False)
+            self.assertEqual(arr.dtype, bool)
         self.assertEqual(len(cll), 2)
 
     def test_from_points(self):
@@ -108,12 +112,15 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         assert_eq(cll.mesh.lons, [10, -1.2])
         assert_eq(cll.mesh.lats, [20, -3.4])
         assert_eq(cll.mesh.depths, None)
+        assert_eq(cll.backarc, [False, False])
+        
         for arr in (cll.vs30, cll.z1pt0, cll.z2pt5):
             self.assertIsInstance(arr, numpy.ndarray)
             self.assertEqual(arr.dtype, float)
-        self.assertIsInstance(cll.vs30measured, numpy.ndarray)
-        self.assertEqual(cll.vs30measured.flags.writeable, False)
-        self.assertEqual(cll.vs30measured.dtype, bool)
+        for arr in (cll.vs30measured, cll.backarc):
+            self.assertIsInstance(arr, numpy.ndarray)
+            self.assertEqual(arr.flags.writeable, False)
+            self.assertEqual(arr.dtype, bool)
         self.assertEqual(len(cll), 2)
 
 
@@ -248,6 +255,9 @@ class SiteCollectionIterTestCase(unittest.TestCase):
         for i, s in enumerate([exp_s1, exp_s2]):
             self.assertEqual(s, cll_sites[i])
 
+        # test equality of site collections
+        sc = SiteCollection([exp_s1, exp_s2])
+        self.assertEqual(cll, sc)
 
 
 class SitePickleTestCase(unittest.TestCase):

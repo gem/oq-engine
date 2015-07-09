@@ -14,17 +14,20 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
+from nose.plugins.attrib import attr
 
 import numpy
+import os
 from decimal import Decimal
-
 from openquake.hazardlib import const
-from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import Rupture, \
     ParametricProbabilisticRupture, NonParametricProbabilisticRupture
 from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 
 
 def make_rupture(rupture_class, **kwargs):
@@ -127,6 +130,80 @@ class ParametricProbabilisticRuptureTestCase(unittest.TestCase):
             numpy.array([[0.6376282, 0.6703200, 0.7046881],
                          [0.7408182, 0.7788008, 0.8187308]])
         )
+
+
+class Cdppvalue(unittest.TestCase):
+
+    def make_rupture_fordpp(self, rupture_class, **kwargs):
+        # Create the rupture surface.
+        upper_seismogenic_depth = 0.
+        lower_seismogenic_depth = 15.
+        dip = 90.
+        mesh_spacing = 1.
+        fault_trace_start = Point(10., 45.2)
+        fault_trace_end = Point(10., 45.919457)
+        fault_trace = Line([fault_trace_start, fault_trace_end])
+        default_arguments = {
+            'mag': 7.2,
+            'rake': 0.,
+            'tectonic_region_type': const.TRT.STABLE_CONTINENTAL,
+            'hypocenter': Point(10.0, 45.334898, 10),
+            'surface': SimpleFaultSurface.from_fault_data(
+                fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
+                dip=dip, mesh_spacing=mesh_spacing),
+            'source_typology': object(),
+            'rupture_slip_direction': 0.
+        }
+        default_arguments.update(kwargs)
+        kwargs = default_arguments
+        rupture = rupture_class(**kwargs)
+        for key in kwargs:
+            assert getattr(rupture, key) is kwargs[key]
+        return rupture
+
+    def test_get_dppvalue(self):
+        rupture = self.make_rupture_fordpp(
+            ParametricProbabilisticRupture, occurrence_rate=0.01,
+            temporal_occurrence_model=PoissonTOM(50))
+        # Load the testing site.
+        data_path = os.path.dirname(__file__)
+        filename = os.path.join(
+            data_path, "./data/geo_cycs_ss3_testing_site.csv")
+        data = numpy.genfromtxt(filename,
+                                dtype=float, delimiter=',', names=True,
+                                skip_header=6675, skip_footer=6673)
+
+        for loc in range(len(data)):
+            lon = data[loc][0]
+            lat = data[loc][1]
+            ref_dpp = data[loc][2]
+            dpp = (rupture.get_dppvalue(Point(lon, lat)))
+
+            self.assertAlmostEqual(dpp, ref_dpp, delta=0.1)
+
+    @attr('slow')
+    def test_get_cdppvalue(self):
+
+        rupture = self.make_rupture_fordpp(
+            ParametricProbabilisticRupture, occurrence_rate=0.01,
+            temporal_occurrence_model=PoissonTOM(50))
+        # Load the testing site.
+        data_path = os.path.dirname(__file__)
+        filename = os.path.join(
+            data_path, "./data/geo_cycs_ss3_testing_site.csv")
+        data = numpy.genfromtxt(filename,
+                                dtype=float, delimiter=',', names=True,
+                                skip_header=6675, skip_footer=6673)
+        points = []
+        for loc in range(len(data)):
+            lon = data[loc][0]
+            lat = data[loc][1]
+            points.append(Point(lon, lat))
+
+        mesh = Mesh.from_points_list(points)
+        cdpp = rupture.get_cdppvalue(mesh)
+        self.assertAlmostEqual(cdpp[0], data[0][3], delta=0.1)
+        self.assertAlmostEqual(cdpp[1], data[1][3], delta=0.1)
 
 
 class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):

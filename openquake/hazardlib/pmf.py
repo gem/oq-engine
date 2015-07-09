@@ -16,6 +16,7 @@
 """
 Module :mod:`openquake.hazardlib.pmf` implements :class:`PMF`.
 """
+import numpy as np
 from openquake.hazardlib.slots import with_slots
 
 
@@ -57,3 +58,16 @@ class PMF(object):
             raise ValueError('probabilities %s do not sum up to 1.0'
                              % list(probs))
         self.data = zip(map(float, probs), values)
+
+    def sample(self, number_samples):
+        """
+        Produces a list of samples from the probability mass function.
+
+        :param int data:
+            Number of samples
+        :returns:
+            Samples from PMF as a list
+        """
+        probs = np.cumsum([val[0] for val in self.data])
+        sampler = np.random.uniform(0., 1., number_samples)
+        return [self.data[ival][1] for ival in np.searchsorted(probs, sampler)]

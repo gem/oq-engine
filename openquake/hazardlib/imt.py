@@ -44,7 +44,7 @@ def from_string(imt):
         try:
             imt_class = globals()[imt]
         except KeyError:
-            raise ValueError('Unknown IMT: %s' % imt)
+            raise ValueError('Unknown IMT: ' + repr(imt))
         return imt_class(None, None)
 
 

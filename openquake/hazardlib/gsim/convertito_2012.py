@@ -86,7 +86,7 @@ class ConvertitoEtAl2012Geysers(GMPE):
                 self._compute_site_scaling(C, sites.vs30))
         # Original GMPE returns log acceleration in m/s/s
         # Converts to natural logarithm of g
-        mean = np.log(np.exp(mean) / g)
+        mean = np.log((10.0 ** mean) / g)
         stddevs = self._compute_stddevs(C, dists.rhypo.shape, stddev_types)
         return mean, stddevs
 
@@ -101,7 +101,7 @@ class ConvertitoEtAl2012Geysers(GMPE):
         Returns the distance scaling term accounting for geometric and
         anelastic attenuation
         """
-        return C["c"] * np.log(np.sqrt((rhypo ** 2.) + (C["h"] ** 2.))) +\
+        return C["c"] * np.log10(np.sqrt((rhypo ** 2.) + (C["h"] ** 2.))) +\
             (C["d"] * rhypo)
 
     def _compute_site_scaling(self, C, vs30):
@@ -119,7 +119,7 @@ class ConvertitoEtAl2012Geysers(GMPE):
         """
         stddevs = []
         for _ in stddev_types:
-            stddevs.append(np.zeros(num_sites) + C["sigma"])
+            stddevs.append(np.zeros(num_sites) + np.log(10.0 ** C["sigma"]))
         return stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""

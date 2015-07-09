@@ -20,8 +20,8 @@ Module :mod:`openquake.hazardlib.geo.surface.base` implements
 import abc
 
 import numpy
-
-from openquake.hazardlib.geo import geodetic, utils, Point
+import math
+from openquake.hazardlib.geo import geodetic, utils, Point, Line
 
 
 class BaseSurface(object):
@@ -252,23 +252,26 @@ class BaseQuadrilateralSurface(BaseSurface):
 
         This method uses an average strike direction to compute ry0.
         """
-
         # This computes ry0 by using an average strike direction
         top_edge = self.get_mesh()[0:1]
         mean_strike = self.get_strike()
 
         dst1 = geodetic.distance_to_arc(top_edge.lons[0, 0],
                                         top_edge.lats[0, 0],
-                                        (mean_strike+90.) % 360,
+                                        (mean_strike + 90.) % 360,
                                         mesh.lons, mesh.lats)
 
         dst2 = geodetic.distance_to_arc(top_edge.lons[0, -1],
                                         top_edge.lats[0, -1],
-                                        (mean_strike+90.) % 360,
+                                        (mean_strike + 90.) % 360,
                                         mesh.lons, mesh.lats)
+        # Find the points on the rupture
 
-        # Get the shortest distance from two two lines
-        dst = numpy.fmin(numpy.abs(dst1), numpy.abs(dst2))
+        # Get the shortest distance from the two lines
+        idx = numpy.sign(dst1) == numpy.sign(dst2)
+        dst = numpy.zeros_like(dst1)
+        dst[idx] = numpy.fmin(numpy.abs(dst1[idx]), numpy.abs(dst2[idx]))
+        #dst = numpy.fmin(numpy.abs(dst1), numpy.abs(dst2))
 
         return dst
 
@@ -427,6 +430,41 @@ class BaseQuadrilateralSurface(BaseSurface):
 
         return mesh.get_middle_point()
 
+    def get_resampled_top_edge(self, angle_var=0.1):
+        """
+        This methods computes a simplified representation of a fault top edge
+        by removing the points that are not describing a change of direction,
+        provided a certain tolerance angle.
+
+        :param float angle_var:
+            Number representing the maximum deviation (in degrees) admitted
+            without the creation of a new segment
+        :returns:
+            A :class:`~openquake.hazardlib.geo.line.Line` representing the
+            rupture surface's top edge.
+        """
+        mesh = self.get_mesh()
+        top_edge = [Point(mesh.lons[0][0], mesh.lats[0][0], mesh.depths[0][0])]
+
+        for i in range(len(mesh.triangulate()[1][0]) - 1):
+            v1 = numpy.asarray(mesh.triangulate()[1][0][i])
+            v2 = numpy.asarray(mesh.triangulate()[1][0][i + 1])
+            cosang = numpy.dot(v1, v2)
+            sinang = numpy.linalg.norm(numpy.cross(v1, v2))
+            angle = math.degrees(numpy.arctan2(sinang, cosang))
+
+            if abs(angle) > angle_var:
+
+                top_edge.append(Point(mesh.lons[0][i + 1],
+                                      mesh.lats[0][i + 1],
+                                      mesh.depths[0][i + 1]))
+
+        top_edge.append(Point(mesh.lons[0][-1],
+                              mesh.lats[0][-1], mesh.depths[0][-1]))
+        line_top_edge = Line(top_edge)
+
+        return line_top_edge
+
     @abc.abstractmethod
     def _create_mesh(self):
         """
@@ -437,7 +475,7 @@ class BaseQuadrilateralSurface(BaseSurface):
             :class:`openquake.hazardlib.geo.mesh.RectangularMesh`.
         """
 
-    def get_hypo_location(self, mesh, mesh_spacing, hypo_loc=None):
+    def get_hypo_location(self, mesh_spacing, hypo_loc=None):
         """
         The method determines the location of the hypocentre within the rupture
 
@@ -457,21 +495,21 @@ class BaseQuadrilateralSurface(BaseSurface):
             the way down dip of the rupture plane would be entered as
             (0.75, 0.25).
         :returns:
-            Hypocentre location as instance of 
+            Hypocentre location as instance of
             :class:`~openquake.hazardlib.geo.point.Point`
         """
+        mesh = self.get_mesh()
         centroid = mesh.get_middle_point()
         if hypo_loc is None:
             return centroid
 
         total_len_y = (len(mesh.depths) - 1) * mesh_spacing
         y_distance = hypo_loc[1] * total_len_y
-        y_node = numpy.round(y_distance / mesh_spacing)
+        y_node = int(numpy.round(y_distance / mesh_spacing))
         total_len_x = (len(mesh.lons[y_node]) - 1) * mesh_spacing
         x_distance = hypo_loc[0] * total_len_x
-        x_node = numpy.round(x_distance / mesh_spacing)
+        x_node = int(numpy.round(x_distance / mesh_spacing))
         hypocentre = Point(mesh.lons[y_node][x_node],
                            mesh.lats[y_node][x_node],
                            mesh.depths[y_node][x_node])
         return hypocentre
-

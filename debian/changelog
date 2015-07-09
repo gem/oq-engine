@@ -1,3 +1,59 @@
+  [Michele Simionato]
+  * hazardlib now requires h5py
+
+  [Graeme Weatherill]
+  * Adds Atkinson & Macias (2009) Subduction Interface GMPE
+  
+  [Yen-Shin Chen]
+  * Rupture: fix bug in get_dppvalue
+
+  [Graeme Weatherill]
+  * Adds 'sample' method to PMF class
+
+  [Matteo Nastasi]
+  * Packaging system improvement
+
+  [Yen-Shin Chen]
+  * Rupture: adds 'rupture_slip_direction' slot
+  * Simple fault: Adds 'hypo_list' and 'slip_list' slot
+  * Adds 'rcdpp' slot to DistanceContext object
+  * ParametricProbabilisticRupture: adds 'rupture_slip_direction' slot and get_dppvalue, get_cdppvalue method
+  * Implements near fault effect- directivity adaptation of Chiou & Youngs 2014
+
+python-oq-hazardlib (0.14.0-0~precise01) precise; urgency=low
+
+  [Matteo Nastasi, Daniele Viganò]
+  * Add binary package support for both Ubuntu 12.04 (Precise)
+    and Ubuntu 14.04 (Trusty)
+
+  [Michele Simionato]
+  * Introduced a compact representation of the GMFs as a single array
+
+  [Graeme Weatherill]
+  * Implements Dost et al (2004) Induced Seismicity GMPE
+  * Implements Atkinson (2015) Induced Seismicity GMPE
+  * Adds new tectonic region type "Induced" to constants
+
+  [Graeme Weatherill]
+  * Adds 'hypo_loc' slot to RuptureContext object
+  * Implements Abrahamson et al. (2015) BC Hydro GMPE
+  * Adds backarc term to the Site and SiteCollection object
+
+  [Marco Pagani]
+  * Fixes a bug in the calculation of the hanging wall term of the Abrahamson
+    et al. (2014)
+
+  [Yen-Shin Chen]
+  * Simple fault: added a method to finds the index of the fault patch including the hypocentre.
+  * Base surface: fixes mesh input in get_hypo_location method
+  * Near fault: implementing the Chiou & Spudich(2014) direcitivty model, the methods needed in the model.
+
+  [Yen-Shin Chen]
+  * Simple fault: added a method to retrieve the vertexes of a patch given its index
+  * Base surface: added a method to get a set of point representing a resampled top edge
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 07 May 2015 09:34:15 +0200
+
 python-oq-hazardlib (0.13.1-0) precise; urgency=low
 
   [Graeme Weatherill]

@@ -178,7 +178,7 @@ class ChiouYoungs2014(GMPE):
         mag_test1 = np.cosh(2. * max(rup.mag - 4.5, 0))
 
         # centered DPP
-        centered_dpp = 0.
+        centered_dpp = self._get_centered_cdpp(dists)
         # centered_ztor
         centered_ztor = self._get_centered_ztor(rup, Frv)
         #
@@ -205,11 +205,11 @@ class ChiouYoungs2014(GMPE):
             + (C['cg1'] + C['cg2'] / (np.cosh(max(rup.mag - C['cg3'], 0))))
             * dists.rrup
             # fifth part
-            + C['c8'] * np.amax(1 - (np.amax(dists.rrup - 40,
+            + C['c8'] * np.fmax(1 - (np.fmax(dists.rrup - 40,
                                 np.zeros_like(dists)) / 30.),
-                                np.zeros_like(dists))
+                                np.zeros_like(dists))[0]
             * min(max(rup.mag - 5.5, 0) / 0.8, 1.0)
-            * np.exp(-1 * C['c8a'] * (rup.mag - C['c8b'] ** 2)) * centered_dpp
+            * np.exp(-1 * C['c8a'] * (rup.mag - C['c8b']) ** 2) * centered_dpp
             # sixth part
             + C['c9'] * Fhw * np.cos(math.radians(rup.dip)) *
             (C['c9a'] + (1 - C['c9a']) * np.tanh(dists.rx / C['c9b']))
@@ -248,6 +248,18 @@ class ChiouYoungs2014(GMPE):
             centered_ztor = rup.ztor - mean_ztor
 
         return centered_ztor
+
+    def _get_centered_cdpp(self, dists):
+        """
+        Get directivity prediction parameter centered on the avgerage
+        directivity prediction parameter. Here we set the centered_dpp
+        equals to zero, since the near fault directivity effect prediction is
+        off in our calculation.
+
+        """
+        centered_dpp = 0.
+
+        return centered_dpp
 
     #: Coefficient tables are constructed from values in tables 1 - 5
 
@@ -289,7 +301,7 @@ class ChiouYoungs2014PEER(ChiouYoungs2014):
     """
     #: Only the total standars deviation is defined
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL, 
+        const.StdDev.TOTAL,
     ])
     #: The PEER tests requires only PGA
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
@@ -307,3 +319,23 @@ class ChiouYoungs2014PEER(ChiouYoungs2014):
                 # eq. 13
                 ret.append(0.65 * np.ones_like(sites.vs30))
         return ret
+
+class ChiouYoungs2014NearFaultEffect(ChiouYoungs2014):
+    """
+    This implements the Chiou & Youngs (2014) GMPE include the near fault
+    effect prediction. In this version, we add the distance measure, rcdpp
+    for directivity prediction.
+
+    """
+    #: Required distance measures are RRup, Rjb, Rx, and Rcdpp
+    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx', 'rcdpp'))
+
+    def _get_centered_cdpp(self, dists):
+        """
+        Get directivity prediction parameter centered on the avgerage
+        directivity prediction parameter.
+
+        """
+        centered_dpp = dists.rcdpp
+
+        return centered_dpp
