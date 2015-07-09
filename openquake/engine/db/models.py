@@ -387,7 +387,7 @@ class OqJob(djm.Model):
             mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
         else:
             mesh = get_mesh(oqparam)
-        sids = save_sites(self, mesh)
+        sids = save_sites(self, [(p.longitude, p.latitude) for p in mesh])
         return mesh, sids
 
     def __repr__(self):
@@ -479,15 +479,15 @@ class Log(djm.Model):
         db_table = 'uiapi\".\"log'
 
 
-def save_sites(job, points):
+def save_sites(job, coords):
     """
     Save all the gives sites on the hzrdi.hazard_site table.
-    :param points: a sequence of hazardlib points
+    :param coords: a sequence of coordinates
     :returns: the ids of the inserted HazardSite instances
     """
     sites = [HazardSite(hazard_calculation=job,
-                        lon=point.longitude, lat=point.latitude)
-             for point in points]
+                        lon=point[0], lat=point[1])
+             for point in coords]
     return writer.CacheInserter.saveall(sites)
 
 
