@@ -363,7 +363,8 @@ class RlzsAssoc(collections.Mapping):
             for gsim in gsims:
                 gs = str(gsim)
                 for rlz in self.rlzs_assoc[trt_id, gs]:
-                    if col_id in self.rlzs_assoc.get_col_ids(rlz):
+                    col_ids = self.col_ids_by_rlz[rlz]
+                    if not col_ids or self.col_id in col_ids:
                         for rupid, rows in gmfs_by_rupid.iteritems():
                             dicts[rlz.ordinal][rupid] = numpy.array(
                                 [r[gs] for r in rows], rows[0][gs].dtype)
