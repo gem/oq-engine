@@ -77,7 +77,7 @@ def counts_per_rlz(num_sites, rlzs_assoc, sescollection):
     rlzs = rlzs_assoc.realizations
     counts = numpy.zeros(len(rlzs), counts_dt)
     for rlz in rlzs:
-        col_ids = list(rlzs_assoc.csm_info.get_col_ids(rlz))
+        col_ids = list(rlzs_assoc.get_col_ids(rlz))
         for sc in sescollection[col_ids]:
             i = rlz.ordinal
 
@@ -136,7 +136,7 @@ def view_col_rlz_assocs(name, dstore):
     num_rlzs = len(rlzs_assoc.realizations)
     col_ids_list = [[] for _ in range(num_rlzs)]
     for rlz in rlzs_assoc.realizations:
-        for col_id in sorted(rlzs_assoc.csm_info.get_col_ids(rlz)):
+        for col_id in sorted(rlzs_assoc.get_col_ids(rlz)):
             if num_ruptures[col_id]:
                 col_ids_list[rlz.ordinal].append(col_id)
     assocs = collections.defaultdict(list)
