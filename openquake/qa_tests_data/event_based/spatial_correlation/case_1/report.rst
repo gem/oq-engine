@@ -22,6 +22,7 @@ Input files
 -----------
 ======================= ==========================================================================================
 Name                    File                                                                                      
+======================= ==========================================================================================
 gsim_logic_tree         openquake/qa_tests_data/event_based/spatial_correlation/case_1/gmpe_logic_tree.xml        
 job_ini                 openquake/qa_tests_data/event_based/spatial_correlation/case_1/job.ini                    
 source                  openquake/qa_tests_data/event_based/spatial_correlation/case_1/source_model.xml           

@@ -22,6 +22,7 @@ Input files
 -----------
 ======================= =======================================================================
 Name                    File                                                                   
+======================= =======================================================================
 gsim_logic_tree         openquake/qa_tests_data/event_based/case_17/gsim_logic_tree.xml        
 job_ini                 openquake/qa_tests_data/event_based/case_17/job.ini                    
 source                  openquake/qa_tests_data/event_based/case_17/source_model_1.xml         
@@ -44,7 +45,7 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(1)
-  1,SadighEtAl1997: ['<1,b2,b1,w=0.2,col=1>', '<2,b2,b1,w=0.2,col=2>', '<3,b2,b1,w=0.2,col=3>', '<4,b2,b1,w=0.2,col=4>']>
+  1,SadighEtAl1997: ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']>
 
 Non-empty rupture collections
 -----------------------------

@@ -22,6 +22,7 @@ Input files
 -----------
 ======================= =========================================================================
 Name                    File                                                                     
+======================= =========================================================================
 gsim_logic_tree         openquake/qa_tests_data/event_based/blocksize/gmpe_logic_tree.xml        
 job_ini                 openquake/qa_tests_data/event_based/blocksize/job.ini                    
 source                  openquake/qa_tests_data/event_based/blocksize/source_model.xml           
