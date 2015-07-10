@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Fixed bug when importing coordinates with more than 5 digital digits
+  * Fixed bug when importing coordinates with more than 5 digits
   * `investigation_time` has been replaced by `risk_investigation_time` in
     risk configuration files
   * Initial support for Django 1.7
