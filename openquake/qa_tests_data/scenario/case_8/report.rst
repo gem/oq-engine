@@ -32,4 +32,5 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <openquake.commonlib.logictree.RlzsAssoc object at 0x7efd6f18d890>
+  <RlzsAssoc(1)
+  0,AtkinsonBoore2003SInter: ['AtkinsonBoore2003SInter']>

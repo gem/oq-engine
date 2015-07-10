@@ -94,6 +94,14 @@ class RlzsAssoc(collections.Mapping):
     def __len__(self):
         return len(self.rlzs_assoc)
 
+    def __repr__(self):
+        pairs = []
+        for key in sorted(self.rlzs_assoc):
+            rlzs = map(str, self.rlzs_assoc[key])
+            pairs.append(('%s,%s' % key, rlzs))
+        return '<%s(%d)\n%s>' % (self.__class__.__name__, len(self),
+                                 '\n'.join('%s: %s' % pair for pair in pairs))
+
 
 def get_effective_rlzs(rlzs):
     """

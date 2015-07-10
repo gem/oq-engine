@@ -33,4 +33,6 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <openquake.commonlib.logictree.RlzsAssoc object at 0x7efd6fb01710>
+  <RlzsAssoc(2)
+  0,LinLee2008SSlab: ['LinLee2008SSlab']
+  0,YoungsEtAl1997SSlab: ['YoungsEtAl1997SSlab']>
