@@ -345,12 +345,12 @@ WITH assocs AS (
   SELECT DISTINCT ON (exp.id) %s, exp.id, hsite.id
   FROM riski.exposure_data AS exp
   JOIN hzrdi.hazard_site AS hsite
-  ON ST_DWithin(exp.site, ST_MakePoint(hsite.lon, hsite.lat), %s)
+  ON ST_DWithin(exp.site, ST_MakePoint(hsite.lon, hsite.lat)::geography, %s)
   WHERE hsite.hazard_calculation_id = %s
   AND exposure_model_id = %s AND taxonomy=%s
   AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
   ORDER BY exp.id, ST_Distance(
-  exp.site, ST_MakePoint(hsite.lon, hsite.lat), false)
+  exp.site, ST_MakePoint(hsite.lon, hsite.lat)::geography, false)
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
 SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.oqparam.id,
