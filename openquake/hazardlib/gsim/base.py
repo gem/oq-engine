@@ -32,6 +32,7 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
+from openquake.baselib.python3compat import with_metaclass
 
 
 class NonInstantiableError(Exception):
@@ -141,7 +142,7 @@ class MetaGSIM(abc.ABCMeta):
 
 
 @functools.total_ordering
-class GroundShakingIntensityModel(object):
+class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     """
     Base class for all the ground shaking intensity models.
 
@@ -157,7 +158,6 @@ class GroundShakingIntensityModel(object):
     and all the class attributes with names starting from ``DEFINED_FOR``
     and ``REQUIRES``.
     """
-    __metaclass__ = MetaGSIM
 
     #: Reference to a
     #: :class:`tectonic region type <openquake.hazardlib.const.TRT>` this GSIM
@@ -752,11 +752,10 @@ class IPE(GroundShakingIntensityModel):
         return numpy.array(values, dtype=float)
 
 
-class BaseContext(object):
+class BaseContext(with_metaclass(abc.ABCMeta)):
     """
     Base class for context object.
     """
-    __metaclass__ = abc.ABCMeta
 
     def __eq__(self, other):
         """
@@ -984,7 +983,7 @@ class CoeffsTable(object):
             pass
 
         max_below = min_above = None
-        for unscaled_imt in self.sa_coeffs.keys():
+        for unscaled_imt in list(self.sa_coeffs):
             if unscaled_imt.damping != imt.damping:
                 continue
             if unscaled_imt.period > imt.period:
@@ -1005,5 +1004,5 @@ class CoeffsTable(object):
         min_above = self.sa_coeffs[min_above]
         return dict(
             (co, (min_above[co] - max_below[co]) * ratio + max_below[co])
-            for co in max_below.keys()
+            for co in max_below
         )
