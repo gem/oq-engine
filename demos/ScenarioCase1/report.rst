@@ -20,15 +20,16 @@ master_seed                  0
 
 Input files
 -----------
-============= =====================================
-Name          File                                 
-job_ini       demos/ScenarioCase1/job.ini          
-rupture_model demos/ScenarioCase1/rupture_model.xml
-============= =====================================
+============= ========================================
+Name          File                                    
+============= ========================================
+job_ini       `job.ini <job.ini>`_                    
+rupture_model `rupture_model.xml <rupture_model.xml>`_
+============= ========================================
 
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
-  <openquake.commonlib.logictree.RlzsAssoc object at 0x7f97f46addd0>
+  <openquake.commonlib.logictree.RlzsAssoc object at 0x7f01a9bbb790>

@@ -20,16 +20,17 @@ master_seed                  0
 
 Input files
 -----------
-============= =====================================
-Name          File                                 
-exposure      demos/ScenarioRisk/exposure_model.xml
-job_ini       demos/ScenarioRisk/job_hazard.ini    
-rupture_model demos/ScenarioRisk/fault_rupture.xml 
-============= =====================================
+============= ==========================================
+Name          File                                      
+============= ==========================================
+exposure      `exposure_model.xml <exposure_model.xml>`_
+job_ini       `job_hazard.ini <job_hazard.ini>`_        
+rupture_model `fault_rupture.xml <fault_rupture.xml>`_  
+============= ==========================================
 
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
-  <openquake.commonlib.logictree.RlzsAssoc object at 0x7ff57abf1e10>
+  <openquake.commonlib.logictree.RlzsAssoc object at 0x7f01aab55510>

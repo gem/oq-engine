@@ -20,16 +20,17 @@ master_seed                  0
 
 Input files
 -----------
-======================== ===========================================================================
-Name                     File                                                                       
-exposure                 openquake/qa_tests_data/event_based_risk/case_3/exposure_model_10assets.xml
-gsim_logic_tree          openquake/qa_tests_data/event_based_risk/case_3/gsim_logic_tree.xml        
-job_ini                  openquake/qa_tests_data/event_based_risk/case_3/job_haz.ini                
-source                   openquake/qa_tests_data/event_based_risk/case_3/SA_RA_CATAL1_00.xml        
-source                   openquake/qa_tests_data/event_based_risk/case_3/SA_RA_CATAL2_00.xml        
-source_model_logic_tree  openquake/qa_tests_data/event_based_risk/case_3/source_model_logic_tree.xml
-structural_vulnerability openquake/qa_tests_data/event_based_risk/case_3/vulnerability_model2013.xml
-======================== ===========================================================================
+======================== ============================================================
+Name                     File                                                        
+======================== ============================================================
+exposure                 `exposure_model_10assets.xml <exposure_model_10assets.xml>`_
+gsim_logic_tree          `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
+job_ini                  `job_haz.ini <job_haz.ini>`_                                
+source                   `SA_RA_CATAL1_00.xml <SA_RA_CATAL1_00.xml>`_                
+source                   `SA_RA_CATAL2_00.xml <SA_RA_CATAL2_00.xml>`_                
+source_model_logic_tree  `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+structural_vulnerability `vulnerability_model2013.xml <vulnerability_model2013.xml>`_
+======================== ============================================================
 
 Composite source model
 ----------------------

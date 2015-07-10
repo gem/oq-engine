@@ -20,17 +20,18 @@ master_seed                  0
 
 Input files
 -----------
-============= ==================================================================
-Name          File                                                              
-exposure      openquake/qa_tests_data/scenario_damage/case_4/exposure_model.xml 
-fragility     openquake/qa_tests_data/scenario_damage/case_4/fragility_model.xml
-job_ini       openquake/qa_tests_data/scenario_damage/case_4/job_haz.ini        
-rupture_model openquake/qa_tests_data/scenario_damage/case_4/fault_rupture.xml  
-============= ==================================================================
+============= ============================================
+Name          File                                        
+============= ============================================
+exposure      `exposure_model.xml <exposure_model.xml>`_  
+fragility     `fragility_model.xml <fragility_model.xml>`_
+job_ini       `job_haz.ini <job_haz.ini>`_                
+rupture_model `fault_rupture.xml <fault_rupture.xml>`_    
+============= ============================================
 
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
-  <openquake.commonlib.logictree.RlzsAssoc object at 0x7fdc92970fd0>
+  <openquake.commonlib.logictree.RlzsAssoc object at 0x7efd6fca1c90>

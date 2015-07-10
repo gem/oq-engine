@@ -20,17 +20,17 @@ master_seed                  0
 
 Input files
 -----------
-======================= ========================================================================================
-Name                    File                                                                                    
-======================= ========================================================================================
-gsim_logic_tree         openquake/qa_tests_data/event_based/case_5/complete_gmpe_logic_tree.xml                 
-job_ini                 openquake/qa_tests_data/event_based/case_5/job.ini                                      
-sites                   openquake/qa_tests_data/event_based/case_5/sites.csv                                    
-source                  openquake/qa_tests_data/event_based/case_5/source_models/as_model.xml                   
-source                  openquake/qa_tests_data/event_based/case_5/source_models/fs_bg_source_model.xml         
-source                  openquake/qa_tests_data/event_based/case_5/source_models/ss_model_final_250km_Buffer.xml
-source_model_logic_tree openquake/qa_tests_data/event_based/case_5/combined_logic-tree-source-model.xml         
-======================= ========================================================================================
+======================= ==============================================================================
+Name                    File                                                                          
+======================= ==============================================================================
+gsim_logic_tree         `complete_gmpe_logic_tree.xml <complete_gmpe_logic_tree.xml>`_                
+job_ini                 `job.ini <job.ini>`_                                                          
+sites                   `sites.csv <sites.csv>`_                                                      
+source                  `as_model.xml <as_model.xml>`_                                                
+source                  `fs_bg_source_model.xml <fs_bg_source_model.xml>`_                            
+source                  `ss_model_final_250km_Buffer.xml <ss_model_final_250km_Buffer.xml>`_          
+source_model_logic_tree `combined_logic-tree-source-model.xml <combined_logic-tree-source-model.xml>`_
+======================= ==============================================================================
 
 Composite source model
 ----------------------

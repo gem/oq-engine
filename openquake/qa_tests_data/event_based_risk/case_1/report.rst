@@ -20,16 +20,17 @@ master_seed                  0
 
 Input files
 -----------
-=========================== ===============================================================================
-Name                        File                                                                           
-contents_vulnerability      openquake/qa_tests_data/event_based_risk/case_1/vulnerability_model_coco.xml   
-gsim_logic_tree             openquake/qa_tests_data/event_based_risk/case_1/gmpe_logic_tree.xml            
-job_ini                     openquake/qa_tests_data/event_based_risk/case_1/job_haz.ini                    
-nonstructural_vulnerability openquake/qa_tests_data/event_based_risk/case_1/vulnerability_model_nonstco.xml
-source                      openquake/qa_tests_data/event_based_risk/case_1/source_model.xml               
-source_model_logic_tree     openquake/qa_tests_data/event_based_risk/case_1/source_model_logic_tree.xml    
-structural_vulnerability    openquake/qa_tests_data/event_based_risk/case_1/vulnerability_model_stco.xml   
-=========================== ===============================================================================
+=========================== ====================================================================
+Name                        File                                                                
+=========================== ====================================================================
+contents_vulnerability      `vulnerability_model_coco.xml <vulnerability_model_coco.xml>`_      
+gsim_logic_tree             `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                        
+job_ini                     `job_haz.ini <job_haz.ini>`_                                        
+nonstructural_vulnerability `vulnerability_model_nonstco.xml <vulnerability_model_nonstco.xml>`_
+source                      `source_model.xml <source_model.xml>`_                              
+source_model_logic_tree     `source_model_logic_tree.xml <source_model_logic_tree.xml>`_        
+structural_vulnerability    `vulnerability_model_stco.xml <vulnerability_model_stco.xml>`_      
+=========================== ====================================================================
 
 Composite source model
 ----------------------

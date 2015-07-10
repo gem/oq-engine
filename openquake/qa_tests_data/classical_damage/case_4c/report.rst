@@ -20,15 +20,16 @@ master_seed                  0
 
 Input files
 -----------
-======================= ============================================================================
-Name                    File                                                                        
-exposure                openquake/qa_tests_data/classical_damage/case_4c/exposure_model.xml         
-fragility               openquake/qa_tests_data/classical_damage/case_4c/fragility_model.xml        
-gsim_logic_tree         openquake/qa_tests_data/classical_damage/case_4c/gmpe_logic_tree.xml        
-job_ini                 openquake/qa_tests_data/classical_damage/case_4c/job_haz.ini                
-source                  openquake/qa_tests_data/classical_damage/case_4c/source_model.xml           
-source_model_logic_tree openquake/qa_tests_data/classical_damage/case_4c/source_model_logic_tree.xml
-======================= ============================================================================
+======================= ============================================================
+Name                    File                                                        
+======================= ============================================================
+exposure                `exposure_model.xml <exposure_model.xml>`_                  
+fragility               `fragility_model.xml <fragility_model.xml>`_                
+gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
+job_ini                 `job_haz.ini <job_haz.ini>`_                                
+source                  `source_model.xml <source_model.xml>`_                      
+source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+======================= ============================================================
 
 Composite source model
 ----------------------

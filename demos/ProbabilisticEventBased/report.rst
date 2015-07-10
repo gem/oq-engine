@@ -20,16 +20,17 @@ master_seed                  0
 
 Input files
 -----------
-=========================== ===================================================================
-Name                        File                                                               
-exposure                    demos/ProbabilisticEventBased/exposure_model.xml                   
-gsim_logic_tree             demos/ProbabilisticEventBased/gmpe_logic_tree.xml                  
-job_ini                     demos/ProbabilisticEventBased/job_hazard.ini                       
-nonstructural_vulnerability demos/ProbabilisticEventBased/nonstructural_vulnerability_model.xml
-source                      demos/ProbabilisticEventBased/source_model.xml                     
-source_model_logic_tree     demos/ProbabilisticEventBased/source_model_logic_tree.xml          
-structural_vulnerability    demos/ProbabilisticEventBased/structural_vulnerability_model.xml   
-=========================== ===================================================================
+=========================== ================================================================================
+Name                        File                                                                            
+=========================== ================================================================================
+exposure                    `exposure_model.xml <exposure_model.xml>`_                                      
+gsim_logic_tree             `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                                    
+job_ini                     `job_hazard.ini <job_hazard.ini>`_                                              
+nonstructural_vulnerability `nonstructural_vulnerability_model.xml <nonstructural_vulnerability_model.xml>`_
+source                      `source_model.xml <source_model.xml>`_                                          
+source_model_logic_tree     `source_model_logic_tree.xml <source_model_logic_tree.xml>`_                    
+structural_vulnerability    `structural_vulnerability_model.xml <structural_vulnerability_model.xml>`_      
+=========================== ================================================================================
 
 Composite source model
 ----------------------

@@ -20,16 +20,17 @@ master_seed                  0
 
 Input files
 -----------
-=============== ===================================================================
-Name            File                                                               
-gsim_logic_tree openquake/qa_tests_data/scenario_damage/case_5a/gmpe_logic_tree.xml
-job_ini         openquake/qa_tests_data/scenario_damage/case_5a/job_haz.ini        
-rupture_model   openquake/qa_tests_data/scenario_damage/case_5a/rupture_model.xml  
-=============== ===================================================================
+=============== ============================================
+Name            File                                        
+=============== ============================================
+gsim_logic_tree `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_
+job_ini         `job_haz.ini <job_haz.ini>`_                
+rupture_model   `rupture_model.xml <rupture_model.xml>`_    
+=============== ============================================
 
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
-  <openquake.commonlib.logictree.RlzsAssoc object at 0x7fdc9290d550>
+  <openquake.commonlib.logictree.RlzsAssoc object at 0x7efd6f274b90>

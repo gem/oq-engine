@@ -20,17 +20,19 @@ master_seed                  0
 
 Input files
 -----------
-======================== ==============================================================================================
-Name                     File                                                                                          
-exposure                 openquake/qa_tests_data/event_based_risk/case_4/models/exp/exposure.xml                       
-gsim_logic_tree          openquake/qa_tests_data/event_based_risk/case_4/models/tree/gmpe_logic_tree.xml               
-job_ini                  openquake/qa_tests_data/event_based_risk/case_4/job_hazard.ini                                
-source                   openquake/qa_tests_data/event_based_risk/case_4/models/src/as_model.xml                       
-source                   openquake/qa_tests_data/event_based_risk/case_4/models/src/fsbg_model.xml                     
-source                   openquake/qa_tests_data/event_based_risk/case_4/models/src/ss_model.xml                       
-source_model_logic_tree  openquake/qa_tests_data/event_based_risk/case_4/models/tree/source_model_logic_tree.xml       
-structural_vulnerability openquake/qa_tests_data/event_based_risk/case_4/models/vuln/structural_vulnerability_model.xml
-======================== ==============================================================================================
+======================== ==========================================================================
+Name                     File                                                                      
+======================== ==========================================================================
+exposure                 `exposure.xml <exposure.xml>`_                                            
+gsim_logic_tree          `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                              
+job_ini                  `job_hazard.ini <job_hazard.ini>`_                                        
+site_model               `site_model.xml <site_model.xml>`_                                        
+source                   `as_model.xml <as_model.xml>`_                                            
+source                   `fsbg_model.xml <fsbg_model.xml>`_                                        
+source                   `ss_model.xml <ss_model.xml>`_                                            
+source_model_logic_tree  `source_model_logic_tree.xml <source_model_logic_tree.xml>`_              
+structural_vulnerability `structural_vulnerability_model.xml <structural_vulnerability_model.xml>`_
+======================== ==========================================================================
 
 Composite source model
 ----------------------

@@ -20,14 +20,14 @@ master_seed                  0
 
 Input files
 -----------
-======================= =======================================================================
-Name                    File                                                                   
-======================= =======================================================================
-gsim_logic_tree         openquake/qa_tests_data/event_based/case_18/three_gsim_logic_tree.xml  
-job_ini                 openquake/qa_tests_data/event_based/case_18/job.ini                    
-source                  openquake/qa_tests_data/event_based/case_18/source_model.xml           
-source_model_logic_tree openquake/qa_tests_data/event_based/case_18/source_model_logic_tree.xml
-======================= =======================================================================
+======================= ============================================================
+Name                    File                                                        
+======================= ============================================================
+gsim_logic_tree         `three_gsim_logic_tree.xml <three_gsim_logic_tree.xml>`_    
+job_ini                 `job.ini <job.ini>`_                                        
+source                  `source_model.xml <source_model.xml>`_                      
+source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+======================= ============================================================
 
 Composite source model
 ----------------------
@@ -43,8 +43,8 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(2)
-  0,AkkarBommer2010: ['<0,b1,AB,w=0.333333333333>', '<1,b1,AB,w=0.333333333333>']
-  0,CauzziFaccioli2008: ['<2,b1,CF,w=0.333333333333>']>
+  0,AkkarBommer2010: ['<0,b1,AB,w=0.333333333333,col=0>', '<1,b1,AB,w=0.333333333333,col=1>']
+  0,CauzziFaccioli2008: ['<2,b1,CF,w=0.333333333333,col=2>']>
 
 Non-empty rupture collections
 -----------------------------

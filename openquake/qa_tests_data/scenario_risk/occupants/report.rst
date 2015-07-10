@@ -20,17 +20,18 @@ master_seed                  0
 
 Input files
 -----------
-======================= =================================================================================
-Name                    File                                                                             
-exposure                openquake/qa_tests_data/scenario_risk/occupants/exposure_model.xml               
-job_ini                 openquake/qa_tests_data/scenario_risk/occupants/job_haz.ini                      
-occupants_vulnerability openquake/qa_tests_data/scenario_risk/occupants/vulnerability_model_occupants.xml
-rupture_model           openquake/qa_tests_data/scenario_risk/occupants/fault_rupture.xml                
-======================= =================================================================================
+======================= ========================================================================
+Name                    File                                                                    
+======================= ========================================================================
+exposure                `exposure_model.xml <exposure_model.xml>`_                              
+job_ini                 `job_haz.ini <job_haz.ini>`_                                            
+occupants_vulnerability `vulnerability_model_occupants.xml <vulnerability_model_occupants.xml>`_
+rupture_model           `fault_rupture.xml <fault_rupture.xml>`_                                
+======================= ========================================================================
 
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
-  <openquake.commonlib.logictree.RlzsAssoc object at 0x7f0c948e82d0>
+  <openquake.commonlib.logictree.RlzsAssoc object at 0x7efd6fcf0b50>

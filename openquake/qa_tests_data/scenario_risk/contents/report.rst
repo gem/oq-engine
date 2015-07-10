@@ -20,18 +20,19 @@ master_seed                  0
 
 Input files
 -----------
-======================== ================================================================================
-Name                     File                                                                            
-contents_vulnerability   openquake/qa_tests_data/scenario_risk/contents/vulnerability_model_contents.xml 
-exposure                 openquake/qa_tests_data/scenario_risk/contents/exposure_model.xml               
-job_ini                  openquake/qa_tests_data/scenario_risk/contents/job.ini                          
-rupture_model            openquake/qa_tests_data/scenario_risk/contents/fault_rupture.xml                
-structural_vulnerability openquake/qa_tests_data/scenario_risk/contents/vulnerability_model_structure.xml
-======================== ================================================================================
+======================== ========================================================================
+Name                     File                                                                    
+======================== ========================================================================
+contents_vulnerability   `vulnerability_model_contents.xml <vulnerability_model_contents.xml>`_  
+exposure                 `exposure_model.xml <exposure_model.xml>`_                              
+job_ini                  `job.ini <job.ini>`_                                                    
+rupture_model            `fault_rupture.xml <fault_rupture.xml>`_                                
+structural_vulnerability `vulnerability_model_structure.xml <vulnerability_model_structure.xml>`_
+======================== ========================================================================
 
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
-  <openquake.commonlib.logictree.RlzsAssoc object at 0x7f0c948c73d0>
+  <openquake.commonlib.logictree.RlzsAssoc object at 0x7efd6eff6c10>
