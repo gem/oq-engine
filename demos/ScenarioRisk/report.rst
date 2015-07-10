@@ -33,4 +33,5 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <openquake.commonlib.logictree.RlzsAssoc object at 0x7f01aab55510>
+  <RlzsAssoc(1)
+  0,ChiouYoungs2008: ['ChiouYoungs2008']>

@@ -34,12 +34,12 @@ structural_vulnerability `vulnerability_model2013.xml <vulnerability_model2013.x
 
 Composite source model
 ----------------------
-========= =================== ======== =============== ========= ================ ===========
-smlt_path source_model_file   num_trts gsim_logic_tree num_gsims num_realizations num_sources
-========= =================== ======== =============== ========= ================ ===========
-b1        SA_RA_CATAL1_00.xml 2        complex         2,2       4/4              10191      
-b2        SA_RA_CATAL2_00.xml 2        complex         2,2       4/4              10191      
-========= =================== ======== =============== ========= ================ ===========
+========= ====== ============================================ ======== =============== ================ ===========
+smlt_path weight source_model_file                            num_trts gsim_logic_tree num_realizations num_sources
+========= ====== ============================================ ======== =============== ================ ===========
+b1        0.60   `SA_RA_CATAL1_00.xml <SA_RA_CATAL1_00.xml>`_ 2        complex(2,2)    4/4              10191      
+b2        0.40   `SA_RA_CATAL2_00.xml <SA_RA_CATAL2_00.xml>`_ 2        complex(2,2)    4/4              10191      
+========= ====== ============================================ ======== =============== ================ ===========
 
 Realizations per (TRT, GSIM)
 ----------------------------

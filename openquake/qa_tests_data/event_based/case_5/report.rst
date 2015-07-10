@@ -34,13 +34,13 @@ source_model_logic_tree `combined_logic-tree-source-model.xml <combined_logic-tr
 
 Composite source model
 ----------------------
-========= ============================================= ======== =============== ========= ================ ===========
-smlt_path source_model_file                             num_trts gsim_logic_tree num_gsims num_realizations num_sources
-========= ============================================= ======== =============== ========= ================ ===========
-b1        source_models/as_model.xml                    0        complex                   0/0              12         
-b2        source_models/fs_bg_source_model.xml          1        complex         5         5/5              25484      
-b3        source_models/ss_model_final_250km_Buffer.xml 1        complex         1         1/1              36         
-========= ============================================= ======== =============== ========= ================ ===========
+========= ====== ================================================================================================ ======== =============== ================ ===========
+smlt_path weight source_model_file                                                                                num_trts gsim_logic_tree num_realizations num_sources
+========= ====== ================================================================================================ ======== =============== ================ ===========
+b1        0.50   `source_models/as_model.xml <source_models/as_model.xml>`_                                       0        complex()       0/0              12         
+b2        0.200  `source_models/fs_bg_source_model.xml <source_models/fs_bg_source_model.xml>`_                   1        complex(5)      5/5              25484      
+b3        0.300  `source_models/ss_model_final_250km_Buffer.xml <source_models/ss_model_final_250km_Buffer.xml>`_ 1        complex(1)      1/1              36         
+========= ====== ================================================================================================ ======== =============== ================ ===========
 
 Realizations per (TRT, GSIM)
 ----------------------------
