@@ -154,8 +154,8 @@ def save_disagg_result(job_id, site_id, bin_edges, trt_names, matrix,
         Disaggregation probability of exceedance value for this result.
     """
     job = models.OqJob.objects.get(id=job_id)
-
-    site_wkt = models.HazardSite.objects.get(pk=site_id).location.wkt
+    site = models.HazardSite.objects.get(pk=site_id)
+    site_wkt = 'POINT(%s %s)' % (site.lon, site.lat)
 
     disp_name = _DISAGG_RES_NAME_FMT % dict(
         poe=poe, rlz=rlz_id, imt=imt_str, wkt=site_wkt)
