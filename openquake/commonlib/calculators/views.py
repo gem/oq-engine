@@ -69,34 +69,31 @@ def classify_gsim_lt(gsim_lt):
     """
     :returns: "trivial", "simple" or "complex"
     """
-    trt_gsims = gsim_lt.values.items()
-    multi_gsim_trts = sum(1 for trt, gsims in trt_gsims if len(gsims) > 1)
+    num_branches = gsim_lt.get_num_branches().values()
+    num_gsims = '(%s)' % ','.join(map(str, num_branches))
+    multi_gsim_trts = sum(1 for num_gsim in num_branches if num_gsim > 1)
     if multi_gsim_trts == 0:
-        return "trivial"
+        return "trivial" + num_gsims
     elif multi_gsim_trts == 1:
-        return "simple"
+        return "simple" + num_gsims
     else:
-        return "complex"
+        return "complex" + num_gsims
 
 
 @view.add('csm_info')
 def view_csm_info(token, dstore):
     rlzs_assoc = dstore['rlzs_assoc']
     csm_info = rlzs_assoc.csm_info
-    header = ['smlt_path', 'weight', 'source_model_file', 'num_trts',
+    header = ['smlt_path', 'weight', 'source_model_file',
               'gsim_logic_tree', 'num_realizations', 'num_sources']
     rows = []
     for sm in csm_info.source_models:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm.ordinal]
         num_rlzs = len(rlzs)
-        num_branches = [n for n in sm.gsim_lt.get_num_branches().values() if n]
         num_paths = sm.gsim_lt.get_num_paths()
-        num_gsims = ','.join(map(str, num_branches))
-        tmodels = [tm for tm in sm.trt_models  # effective
-                   if tm.trt in sm.gsim_lt.tectonic_region_types]
         link = "`%s <%s>`_" % (sm.name, sm.name)
-        row = ('_'.join(sm.path), sm.weight, link, len(tmodels),
-               classify_gsim_lt(sm.gsim_lt) + '(%s)' % num_gsims,
+        row = ('_'.join(sm.path), sm.weight, link,
+               classify_gsim_lt(sm.gsim_lt),
                '%d/%d' % (num_rlzs, num_paths), sm.num_sources)
         rows.append(row)
     return rst_table(rows, header)

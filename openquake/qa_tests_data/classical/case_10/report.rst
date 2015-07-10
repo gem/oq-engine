@@ -31,12 +31,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ====================================== ======== =============== ================ ===========
-smlt_path weight source_model_file                      num_trts gsim_logic_tree num_realizations num_sources
-========= ====== ====================================== ======== =============== ================ ===========
-b1_b2     0.500  `source_model.xml <source_model.xml>`_ 1        trivial(1)      1/1              1          
-b1_b3     0.500  `source_model.xml <source_model.xml>`_ 1        trivial(1)      1/1              1          
-========= ====== ====================================== ======== =============== ================ ===========
+========= ====== ====================================== =============== ================ ===========
+smlt_path weight source_model_file                      gsim_logic_tree num_realizations num_sources
+========= ====== ====================================== =============== ================ ===========
+b1_b2     0.500  `source_model.xml <source_model.xml>`_ trivial(1)      1/1              1          
+b1_b3     0.500  `source_model.xml <source_model.xml>`_ trivial(1)      1/1              1          
+========= ====== ====================================== =============== ================ ===========
 
 Realizations per (TRT, GSIM)
 ----------------------------

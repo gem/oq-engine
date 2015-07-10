@@ -35,11 +35,11 @@ structural_vulnerability    `structural_vulnerability_model.xml <structural_vuln
 
 Composite source model
 ----------------------
-========= ====== ====================================== ======== =============== ================ ===========
-smlt_path weight source_model_file                      num_trts gsim_logic_tree num_realizations num_sources
-========= ====== ====================================== ======== =============== ================ ===========
-b1        1.00   `source_model.xml <source_model.xml>`_ 1        trivial(1)      1/1              1364       
-========= ====== ====================================== ======== =============== ================ ===========
+========= ====== ====================================== =============== ================ ===========
+smlt_path weight source_model_file                      gsim_logic_tree num_realizations num_sources
+========= ====== ====================================== =============== ================ ===========
+b1        1.00   `source_model.xml <source_model.xml>`_ trivial(1)      1/1              1364       
+========= ====== ====================================== =============== ================ ===========
 
 Realizations per (TRT, GSIM)
 ----------------------------

@@ -31,19 +31,19 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-=========== ========== ====================================== ======== =============== ================ ===========
-smlt_path   weight     source_model_file                      num_trts gsim_logic_tree num_realizations num_sources
-=========== ========== ====================================== ======== =============== ================ ===========
-b11_b21_b31 0.11088900 `source_model.xml <source_model.xml>`_ 2        complex(2,2)    4/4              1539       
-b11_b21_b32 0.11088900 `source_model.xml <source_model.xml>`_ 2        complex(2,2)    4/4              1544       
-b11_b21_b33 0.11122200 `source_model.xml <source_model.xml>`_ 2        complex(2,2)    4/4              1549       
-b11_b22_b31 0.11088900 `source_model.xml <source_model.xml>`_ 2        complex(2,2)    4/4              1539       
-b11_b22_b32 0.11088900 `source_model.xml <source_model.xml>`_ 2        complex(2,2)    4/4              1544       
-b11_b22_b33 0.11122200 `source_model.xml <source_model.xml>`_ 2        complex(2,2)    4/4              1549       
-b11_b23_b31 0.11122200 `source_model.xml <source_model.xml>`_ 2        complex(2,2)    4/4              1539       
-b11_b23_b32 0.11122200 `source_model.xml <source_model.xml>`_ 2        complex(2,2)    4/4              1544       
-b11_b23_b33 0.11155600 `source_model.xml <source_model.xml>`_ 2        complex(2,2)    4/4              1549       
-=========== ========== ====================================== ======== =============== ================ ===========
+=========== ========== ====================================== =============== ================ ===========
+smlt_path   weight     source_model_file                      gsim_logic_tree num_realizations num_sources
+=========== ========== ====================================== =============== ================ ===========
+b11_b21_b31 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
+b11_b21_b32 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
+b11_b21_b33 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1549       
+b11_b22_b31 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
+b11_b22_b32 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
+b11_b22_b33 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1549       
+b11_b23_b31 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
+b11_b23_b32 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
+b11_b23_b33 0.11155600 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1549       
+=========== ========== ====================================== =============== ================ ===========
 
 Realizations per (TRT, GSIM)
 ----------------------------

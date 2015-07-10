@@ -36,13 +36,13 @@ structural_vulnerability `structural_vulnerability_model.xml <structural_vulnera
 
 Composite source model
 ----------------------
-======================== ====== ======================================================== ======== =============== ================ ===========
-smlt_path                weight source_model_file                                        num_trts gsim_logic_tree num_realizations num_sources
-======================== ====== ======================================================== ======== =============== ================ ===========
-AreaSource               0.500  `models/src/as_model.xml <models/src/as_model.xml>`_     1        complex(4)      4/4              1319       
-FaultSourceAndBackground 0.200  `models/src/fsbg_model.xml <models/src/fsbg_model.xml>`_ 1        complex(4)      4/4              7060       
-SeiFaCrust               0.300  `models/src/ss_model.xml <models/src/ss_model.xml>`_     0        complex()       0/0              0          
-======================== ====== ======================================================== ======== =============== ================ ===========
+======================== ====== ======================================================== ====================== ================ ===========
+smlt_path                weight source_model_file                                        gsim_logic_tree        num_realizations num_sources
+======================== ====== ======================================================== ====================== ================ ===========
+AreaSource               0.500  `models/src/as_model.xml <models/src/as_model.xml>`_     simple(0,0,0,0,0,4,0)  4/4              1319       
+FaultSourceAndBackground 0.200  `models/src/fsbg_model.xml <models/src/fsbg_model.xml>`_ simple(0,0,0,0,0,4,0)  4/4              7060       
+SeiFaCrust               0.300  `models/src/ss_model.xml <models/src/ss_model.xml>`_     trivial(0,0,0,0,0,0,0) 0/0              0          
+======================== ====== ======================================================== ====================== ================ ===========
 
 Realizations per (TRT, GSIM)
 ----------------------------
