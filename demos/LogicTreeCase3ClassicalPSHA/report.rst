@@ -20,29 +20,30 @@ master_seed                  0
 
 Input files
 -----------
-======================= =============================================================
-Name                    File                                                         
-gsim_logic_tree         demos/LogicTreeCase3ClassicalPSHA/gmpe_logic_tree.xml        
-job_ini                 demos/LogicTreeCase3ClassicalPSHA/job.ini                    
-source                  demos/LogicTreeCase3ClassicalPSHA/source_model.xml           
-source_model_logic_tree demos/LogicTreeCase3ClassicalPSHA/source_model_logic_tree.xml
-======================= =============================================================
+======================= ============================================================
+Name                    File                                                        
+======================= ============================================================
+gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
+job_ini                 `job.ini <job.ini>`_                                        
+source                  `source_model.xml <source_model.xml>`_                      
+source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+======================= ============================================================
 
 Composite source model
 ----------------------
-=========== ================= ======== =============== ========= ================ ===========
-smlt_path   source_model_file num_trts gsim_logic_tree num_gsims num_realizations num_sources
-=========== ================= ======== =============== ========= ================ ===========
-b11_b21_b31 source_model.xml  2        complex         2,2       4/4              1539       
-b11_b21_b32 source_model.xml  2        complex         2,2       4/4              1544       
-b11_b21_b33 source_model.xml  2        complex         2,2       4/4              1549       
-b11_b22_b31 source_model.xml  2        complex         2,2       4/4              1539       
-b11_b22_b32 source_model.xml  2        complex         2,2       4/4              1544       
-b11_b22_b33 source_model.xml  2        complex         2,2       4/4              1549       
-b11_b23_b31 source_model.xml  2        complex         2,2       4/4              1539       
-b11_b23_b32 source_model.xml  2        complex         2,2       4/4              1544       
-b11_b23_b33 source_model.xml  2        complex         2,2       4/4              1549       
-=========== ================= ======== =============== ========= ================ ===========
+=========== ========== ====================================== =============== ================ ===========
+smlt_path   weight     source_model_file                      gsim_logic_tree num_realizations num_sources
+=========== ========== ====================================== =============== ================ ===========
+b11_b21_b31 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
+b11_b21_b32 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
+b11_b21_b33 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1549       
+b11_b22_b31 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
+b11_b22_b32 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
+b11_b22_b33 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1549       
+b11_b23_b31 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
+b11_b23_b32 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
+b11_b23_b33 0.11155600 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1549       
+=========== ========== ====================================== =============== ================ ===========
 
 Realizations per (TRT, GSIM)
 ----------------------------

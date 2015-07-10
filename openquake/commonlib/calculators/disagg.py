@@ -24,5 +24,8 @@ class DisaggregationCalculator(base.HazardCalculator):
     """
     Classical disaggregation PSHA calculator
     """
+    def execute(self):
+        raise NotImplementedError
+
     def post_execute(self, result):
         return {}
