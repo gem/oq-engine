@@ -387,7 +387,7 @@ class OqJob(djm.Model):
             mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
         else:
             mesh = get_mesh(oqparam)
-        sids = save_sites(self, [(p.longitude, p.latitude) for p in mesh])
+        sids = save_sites(self, ((p.longitude, p.latitude) for p in mesh))
         return mesh, sids
 
     def __repr__(self):
