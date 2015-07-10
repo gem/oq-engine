@@ -131,12 +131,11 @@ def view_params(token, dstore):
     return rst_table([(param, getattr(oq, param)) for param in params])
 
 
-def hide_fullpath(items):
-    """Strip everything before oq-risklib/, if any"""
+def build_links(items):
     out = []
     for key, fname in items:
         bname = os.path.basename(fname)
-        link = "`%s<./%s>`_" % (bname, bname)
+        link = "`%s <%s>`_" % (bname, bname)
         out.append((key, link))
     return sorted(out)
 
@@ -150,4 +149,4 @@ def view_inputs(token, dstore):
     except KeyError:  # there is no 'source' in scenario calculations
         source_models = []
     return rst_table(
-        hide_fullpath(inputs.items() + source_models), header=['Name', 'File'])
+        build_links(inputs.items() + source_models), header=['Name', 'File'])

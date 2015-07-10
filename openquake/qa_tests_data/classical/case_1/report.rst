@@ -20,14 +20,14 @@ master_seed                  0
 
 Input files
 -----------
-======================= =============================================================
-Name                    File                                                         
-======================= =============================================================
-gsim_logic_tree         `gsim_logic_tree.xml<./gsim_logic_tree.xml>`_                
-job_ini                 `job.ini<./job.ini>`_                                        
-source                  `source_model.xml<./source_model.xml>`_                      
-source_model_logic_tree `source_model_logic_tree.xml<./source_model_logic_tree.xml>`_
-======================= =============================================================
+======================= ============================================================
+Name                    File                                                        
+======================= ============================================================
+gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
+job_ini                 `job.ini <job.ini>`_                                        
+source                  `source_model.xml <source_model.xml>`_                      
+source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+======================= ============================================================
 
 Composite source model
 ----------------------
