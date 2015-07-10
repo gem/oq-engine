@@ -39,7 +39,7 @@ def zero_curves(num_sites, imtls):
     """
     # numpy dtype for the hazard curves
     imt_dt = numpy.dtype([(imt, float, 1 if imls is None else len(imls))
-                          for imt, imls in list(imtls.items())])
+                          for imt, imls in imtls.items()])
     zero = numpy.zeros(num_sites, imt_dt)
     return zero
 
