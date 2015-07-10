@@ -117,7 +117,7 @@ class OqParam(valid.ParamSet):
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
-    width_of_mfd_bin = valid.Param(valid.positivefloat)
+    width_of_mfd_bin = valid.Param(valid.positivefloat, None)
 
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
