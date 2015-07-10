@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
 from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import build_header
 
@@ -133,9 +134,10 @@ def view_params(token, dstore):
 def hide_fullpath(items):
     """Strip everything before oq-risklib/, if any"""
     out = []
-    for name, fname in items:
-        splits = fname.split('oq-risklib/')
-        out.append((name, splits[1] if len(splits) == 2 else fname))
+    for key, fname in items:
+        bname = os.path.basename(fname)
+        link = "`%s<./%s>`_" % (bname, bname)
+        out.append((key, link))
     return sorted(out)
 
 
