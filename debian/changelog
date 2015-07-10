@@ -1,6 +1,8 @@
   [Michele Simionato]
   * Fixed several bugs in the ebr calculator
   * The composite source model is saved in the HDF5 file
+  * Added a command `oq-lite info --report job.ini` to produce a report
+    on a calculation without running it
   * Negative calculations IDs are recognized in the oq-lite commands
   * The GMFs are saved in the HDF5 file
   * Added vulnerability functions with Probability Mass Function

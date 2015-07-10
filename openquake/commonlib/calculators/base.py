@@ -25,7 +25,6 @@ import collections
 import numpy
 
 from openquake.hazardlib.geo import geodetic
-from openquake.hazardlib.geo.mesh import Mesh
 from openquake.baselib import general
 from openquake.baselib.performance import DummyMonitor
 from openquake.commonlib import readinput, datastore, logictree, export, source
@@ -65,9 +64,10 @@ class BaseCalculator(object):
     assetcol = datastore.persistent_attribute('assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('taxonomies')
+    job_info = datastore.persistent_attribute('job_info')
     source_info = datastore.persistent_attribute('source_info')
     performance = datastore.persistent_attribute('performance')
-
+    csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
 
@@ -237,8 +237,8 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam, self.monitor('precalculator'),
                     self.datastore.calc_id)
                 precalc.run(clean_up=False)
-                if 'composite_source_model' in vars(precalc):
-                    self.csm = precalc.composite_source_model
+                if 'scenario' not in self.oqparam.calculation_mode:
+                    self.csm = precalc.csm
             else:  # read previously computed data
                 self.datastore.parent = datastore.DataStore(precalc_id)
                 # merge old oqparam into the new ones, when possible
@@ -262,7 +262,8 @@ class HazardCalculator(BaseCalculator):
         Read the exposure (if any) and then the site collection, possibly
         extracted from the exposure.
         """
-        if 'exposure' in self.oqparam.inputs:
+        inputs = self.oqparam.inputs
+        if 'exposure' in inputs:
             logging.info('Reading the exposure')
             with self.monitor('reading exposure', autoflush=True):
                 self.exposure = readinput.get_exposure(self.oqparam)
@@ -272,26 +273,21 @@ class HazardCalculator(BaseCalculator):
                 self.taxonomies = numpy.array(
                     sorted(self.exposure.taxonomies), '|S100')
             num_assets = self.count_assets()
-            mesh = readinput.get_mesh(self.oqparam)
             if self.datastore.parent:
-                parent_mesh = self.datastore.parent['sitemesh'].value
-                if mesh is None:
-                    mesh = Mesh(parent_mesh['lon'], parent_mesh['lat'])
-            if mesh is not None:
-                sites = readinput.get_site_collection(self.oqparam, mesh)
+                haz_sitecol = self.datastore.parent['sitecol']
+            elif 'gmfs' in inputs:
+                haz_sitecol = readinput.get_site_collection(self.oqparam)
+            # TODO: think about the case hazard_curves in inputs
+            else:
+                haz_sitecol = None
+            if haz_sitecol is not None and haz_sitecol != self.sitecol:
                 with self.monitor('assoc_assets_sites'):
                     self.sitecol, self.assets_by_site = \
-                        self.assoc_assets_sites(sites)
+                        self.assoc_assets_sites(haz_sitecol)
                 ok_assets = self.count_assets()
                 num_sites = len(self.sitecol)
                 logging.warn('Associated %d assets to %d sites, %d discarded',
                              ok_assets, num_sites, num_assets - ok_assets)
-
-            if (self.is_stochastic and self.datastore.parent and
-                    self.datastore.parent['sitecol'] != self.sitecol):
-                logging.warn(
-                    'The hazard sites are different from the risk sites %s!=%s'
-                    % (self.datastore.parent['sitecol'], self.sitecol))
         else:  # no exposure
             logging.info('Reading the site collection')
             with self.monitor('reading site collection', autoflush=True):
@@ -323,16 +319,15 @@ class HazardCalculator(BaseCalculator):
             logging.info('Reading the composite source model')
             with self.monitor(
                     'reading composite source model', autoflush=True):
-                self.composite_source_model = (
-                    readinput.get_composite_source_model(
-                        self.oqparam, self.sitecol, self.SourceProcessor,
-                        self.monitor))
+                self.csm = readinput.get_composite_source_model(
+                    self.oqparam, self.sitecol, self.SourceProcessor,
+                    self.monitor)
                 # we could manage limits here
-                self.source_info = self.composite_source_model.source_info
+                self.source_info = self.csm.source_info
                 self.job_info = readinput.get_job_info(
-                    self.oqparam, self.composite_source_model, self.sitecol)
-                self.composite_source_model.count_ruptures()
-                self.rlzs_assoc = self.composite_source_model.get_rlzs_assoc()
+                    self.oqparam, self.csm, self.sitecol)
+                self.csm.count_ruptures()
+                self.rlzs_assoc = self.csm.get_rlzs_assoc()
 
                 logging.info(
                     'Total weight of the sources=%s',
@@ -461,7 +456,10 @@ def get_gmfs(calc):
     # filtered site collection for the nonzero GMFs has N' <= N sites
     # whereas the risk site collection associated to the assets
     # has N'' <= N' sites
-    haz_sitecol = calc.datastore.parent['sitecol']  # N' values
+    if calc.datastore.parent:
+        haz_sitecol = calc.datastore.parent['sitecol']  # N' values
+    else:
+        haz_sitecol = calc.sitecol
     risk_indices = set(calc.sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
     imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])
