@@ -119,7 +119,9 @@ class ClassicalCalculator(base.HazardCalculator):
                         pass
                     else:
                         nm = '%s/%03d-%s' % ('_'.join(sm.path), tm.id, gsim)
-                        self.datastore['curves_by_smpath/' + nm] = curves
+                        self.datastore['curves_by_sm/' + nm] = curves
+                        self.datastore['curves_by_sm/' + nm].attrs[
+                            'trt'] = tm.trt
         oq = self.oqparam
         zc = zero_curves(len(self.sitecol.complete), oq.imtls)
         curves_by_rlz = self.rlzs_assoc.combine_curves(
