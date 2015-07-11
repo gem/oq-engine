@@ -287,7 +287,7 @@ class HazardCalculator(BaseCalculator):
                              ok_assets, num_sites, num_assets - ok_assets)
         elif (self.datastore.parent and 'exposure' in
               self.datastore.parent['oqparam'].inputs):
-            pass  # use the parent parameters
+            logging.info('Re-using the already imported exposure')
         else:  # no exposure
             logging.info('Reading the site collection')
             with self.monitor('reading site collection', autoflush=True):
