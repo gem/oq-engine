@@ -39,19 +39,14 @@ class LtRealization(object):
     Composite realization build on top of a source model realization and
     a GSIM realization.
     """
-    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight, col_ids=()):
+    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
         self.ordinal = ordinal
         self.sm_lt_path = sm_lt_path
         self.gsim_rlz = gsim_rlz
         self.weight = weight
-        self.col_ids = col_ids
 
     def __repr__(self):
-        if self.col_ids:
-            col = ',col=' + ','.join(map(str, sorted(self.col_ids)))
-        else:
-            col = ''
-        return '<%d,%s,w=%s%s>' % (self.ordinal, self.uid, self.weight, col)
+        return '<%d,%s,w=%s>' % (self.ordinal, self.uid, self.weight)
 
     @property
     def gsim_lt_path(self):
@@ -283,6 +278,7 @@ class RlzsAssoc(collections.Mapping):
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = [[] for _ in range(len(csm_info.source_models))]
         self.gsims_by_trt_id = {}
+        self.col_ids_by_rlz = collections.defaultdict(set)
 
     @property
     def num_samples(self):
@@ -302,12 +298,27 @@ class RlzsAssoc(collections.Mapping):
         return [self.gsims_by_trt_id.get(col['trt_id'], [])
                 for col in self.csm_info.cols]
 
+    # this useful to extract the ruptures affecting a given realization
+    def get_col_ids(self, rlz):
+        """
+        :param rlz: a realization
+        :returns: a set of ses collection indices relevant for the realization
+        """
+        # first consider the oversampling case, when the col_ids are known
+        col_ids = self.col_ids_by_rlz[rlz]
+        if col_ids:
+            return col_ids
+        # else consider the source model to which the realization belongs
+        # and extract the trt_model_ids, which are the same as the col_ids
+        return set(tm.id for sm in self.csm_info.source_models
+                   for tm in sm.trt_models if sm.path == rlz.sm_lt_path)
+
     def _add_realizations(self, idx, lt_model, realizations, trts):
         gsim_lt = lt_model.gsim_lt
         rlzs = []
         for i, gsim_rlz in enumerate(realizations):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
-            rlz = LtRealization(idx, lt_model.path, gsim_rlz, weight, set())
+            rlz = LtRealization(idx, lt_model.path, gsim_rlz, weight)
             self.gsim_by_trt.append(dict(
                 zip(gsim_lt.all_trts, gsim_rlz.value)))
             for trt_model in lt_model.trt_models:
@@ -317,7 +328,7 @@ class RlzsAssoc(collections.Mapping):
                     self.rlzs_assoc[trt_model.id, gs].append(rlz)
                 if lt_model.samples > 1:  # oversampling
                     col_id = self.csm_info.col_ids_by_trt_id[trt_model.id][i]
-                    rlz.col_ids.add(col_id)
+                    self.col_ids_by_rlz[rlz].add(col_id)
             idx += 1
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
@@ -352,7 +363,8 @@ class RlzsAssoc(collections.Mapping):
             for gsim in gsims:
                 gs = str(gsim)
                 for rlz in self.rlzs_assoc[trt_id, gs]:
-                    if not rlz.col_ids or col_id in rlz.col_ids:
+                    col_ids = self.col_ids_by_rlz[rlz]
+                    if not col_ids or self.col_id in col_ids:
                         for rupid, rows in gmfs_by_rupid.iteritems():
                             dicts[rlz.ordinal][rupid] = numpy.array(
                                 [r[gs] for r in rows], rows[0][gs].dtype)
@@ -493,20 +505,6 @@ class CompositionInfo(object):
         :returns: how many times the sources of that TRT are to be sampled
         """
         return len(self.col_ids_by_trt_id[trt_id])
-
-    # this useful to extract the ruptures affecting a given realization
-    def get_col_ids(self, rlz):
-        """
-        :param rlz: a realization
-        :returns: a set of ses collection indices relevant for the realization
-        """
-        # first consider the oversampling case, when the col_ids are known
-        if rlz.col_ids:
-            return rlz.col_ids
-        # else consider the source model to which the realization belongs
-        # and extract the trt_model_ids, which are the same as the col_ids
-        return set(tm.id for sm in self.source_models
-                   for tm in sm.trt_models if sm.path == rlz.sm_lt_path)
 
     def get_trt_id(self, col_id):
         """
