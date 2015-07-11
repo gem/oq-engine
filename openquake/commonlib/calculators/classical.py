@@ -132,7 +132,8 @@ class ClassicalCalculator(base.HazardCalculator):
         nsites = len(self.sitecol)
         if oq.individual_curves:
             for rlz, curves in curves_by_rlz.iteritems():
-                self.store_curves('rlz-%03d' % rlz.ordinal, curves)
+                dset = self.store_curves('rlz-%03d' % rlz.ordinal, curves)
+                dset.attrs['uid'] = rlz.uid
 
         if len(rlzs) == 1:  # cannot compute statistics
             [self.mean_curves] = curves_by_rlz.values()
@@ -191,6 +192,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if oq.uniform_hazard_spectra:
                 # uhs is an array of shape (N, I, P)
                 self.datastore.hdf5['uhs/' + dset] = calc.make_uhs(hmaps)
+        return h5['hcurves/' + dset]
 
 
 def is_effective_trt_model(result_dict, trt_model):
