@@ -111,6 +111,9 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         # save curves_by_trt_gsim
         for sm in self.rlzs_assoc.csm_info.source_models:
+            group = self.datastore.hdf5.create_group(
+                'curves_by_sm/' + '_'.join(sm.path))
+            group.attrs['source_model'] = sm.name
             for tm in sm.trt_models:
                 for gsim in tm.gsims:
                     try:
@@ -118,10 +121,9 @@ class ClassicalCalculator(base.HazardCalculator):
                     except KeyError:  # no data for the trt_model
                         pass
                     else:
-                        nm = '%s/%03d-%s' % ('_'.join(sm.path), tm.id, gsim)
-                        self.datastore['curves_by_sm/' + nm] = curves
-                        self.datastore['curves_by_sm/' + nm].attrs[
-                            'trt'] = tm.trt
+                        ts = '%03d-%s' % (tm.id, gsim)
+                        group[ts] = curves
+                        group[ts].attrs['trt'] = tm.trt
         oq = self.oqparam
         zc = zero_curves(len(self.sitecol.complete), oq.imtls)
         curves_by_rlz = self.rlzs_assoc.combine_curves(
