@@ -354,8 +354,9 @@ class RlzsAssoc(collections.Mapping):
         gsims_by_col = self.get_gsims_by_col()
         dicts = [{} for rlz in self.realizations]
         for col_id, gsims in enumerate(gsims_by_col):
-            dataset = gmfs['col%02d' % col_id]
-            if len(dataset) == 0:
+            try:
+                dataset = gmfs['col%02d' % col_id]
+            except KeyError:  # empty dataset
                 continue
             trt_id = self.csm_info.get_trt_id(col_id)
             gmfs_by_rupid = groupby(
@@ -364,7 +365,7 @@ class RlzsAssoc(collections.Mapping):
                 gs = str(gsim)
                 for rlz in self.rlzs_assoc[trt_id, gs]:
                     col_ids = self.col_ids_by_rlz[rlz]
-                    if not col_ids or self.col_id in col_ids:
+                    if not col_ids or col_id in col_ids:
                         for rupid, rows in gmfs_by_rupid.iteritems():
                             dicts[rlz.ordinal][rupid] = numpy.array(
                                 [r[gs] for r in rows], rows[0][gs].dtype)
