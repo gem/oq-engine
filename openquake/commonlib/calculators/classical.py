@@ -28,7 +28,7 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, datastore, source
+from openquake.commonlib import parallel, source
 from openquake.baselib.general import AccumDict, split_in_blocks
 
 from openquake.commonlib.calculators import base, calc
@@ -80,7 +80,6 @@ class ClassicalCalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_func = classical
-    curves_by_trt_gsim = datastore.persistent_attribute('curves_by_trt_gsim')
 
     def execute(self):
         """
@@ -110,7 +109,17 @@ class ClassicalCalculator(base.HazardCalculator):
         :param curves_by_trt_gsim:
             a dictionary (trt_id, gsim) -> hazard curves
         """
-        self.curves_by_trt_gsim = curves_by_trt_gsim
+        # save curves_by_trt_gsim
+        for sm in self.rlzs_assoc.csm_info.source_models:
+            for tm in sm.trt_models:
+                for gsim in tm.gsims:
+                    try:
+                        curves = curves_by_trt_gsim[tm.id, gsim]
+                    except KeyError:  # no data for the trt_model
+                        pass
+                    else:
+                        nm = '%s/%03d-%s' % ('_'.join(sm.path), tm.id, gsim)
+                        self.datastore['curves_by_smpath/' + nm] = curves
         oq = self.oqparam
         zc = zero_curves(len(self.sitecol.complete), oq.imtls)
         curves_by_rlz = self.rlzs_assoc.combine_curves(
@@ -119,7 +128,7 @@ class ClassicalCalculator(base.HazardCalculator):
         nsites = len(self.sitecol)
         if oq.individual_curves:
             for rlz, curves in curves_by_rlz.iteritems():
-                self.store_curves('rlz-%d' % rlz.ordinal, curves)
+                self.store_curves('rlz-%03d' % rlz.ordinal, curves)
 
         if len(rlzs) == 1:  # cannot compute statistics
             [self.mean_curves] = curves_by_rlz.values()
