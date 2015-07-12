@@ -1,23 +1,69 @@
 The concept of effective realizations
 ==============================================
 
-The management of the logic trees is the most complex thing in the
-OpenQuake libraries. The problem is that it is necessary to implement logic
-trees in an efficient way, otherwise the engine will not be able to
-cope with large computations.
-To this aim we introduced the concept of *effective
-realizations*. There are common situations where it is
-possible to reduce the full logic tree of a computation to a much
-smaller one. The engine takes full advantage of such situations.
+The management of the logic trees is the most complicated thing in the
+OpenQuake libraries. The issue is that it is necessary to manage them
+in an efficient way, by avoiding redundant computation and storage,
+otherwise the engine will not be able to cope with large computations.
 
-Reduction of the logic tree (full enumeration)
+Historically the engine did not fare well in the case of complex logic
+trees. In recent years we improved the situation by introducing the
+concept of *effective realizations*. After realizing that in many
+calculations it is possible to reduce the full logic tree (the tree of
+the potential realizations) to a much smaller one
+(the tree of the effective realizations), we implemented an engine
+optimization to take advantage of such situations. Here I will
+explain how the optimization work.
+
+First, it is best to give some terminology.
+
+1. for each source model in the source model logic tree there is a
+   different GMPE logic tree
+2. the total number of realizations is the sum of the number of realizations
+   of each GMPE logic tree
+3. a GMPE logic tree is *trivial* if it has no tectonic region types with
+   multiple GMPEs
+4. a GMPE logic tree is *simple* if it has at most one tectonic region type
+   with multiple GMPEs
+5. a GMPE logic tree is *complex* if it has more than one tectonic region
+   type with multiple GMPEs.
+
+Here is an example of trivial GMPE logic tree, in its XML input representation::
+  
+  <?xml version="1.0" encoding="UTF-8"?>
+  <nrml xmlns:gml="http://www.opengis.net/gml"
+        xmlns="http://openquake.org/xmlns/nrml/0.4">
+      <logicTree logicTreeID='lt1'>
+          <logicTreeBranchingLevel branchingLevelID="bl1">
+              <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                      applyToTectonicRegionType="active shallow crust">
+  
+                  <logicTreeBranch branchID="b1">
+                      <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
+                      <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+  
+              </logicTreeBranchSet>
+          </logicTreeBranchingLevel>
+      </logicTree>
+  </nrml>
+
+The logic tree is trivial since there is a single branch
+("b1") and GMPE ("SadighEtAl1997") for each tectonic region
+type ("active shallow crust").  A logic tree with multiple branches
+can be simple, complex, or even trivial if the tectonic region type
+with multiple branches is not present in the underlying source
+model. This is the key to the logic tree reduction concept.
+
+
+Reduction of the logic tree
 -----------------------------------------------
 
-The reduction of the logic tree happens when the actual
+The simplest case of logic tree reduction is when the actual
 sources do not span the full range of tectonic region types in the
 GMPE logic tree file. This happens very often in SHARE calculations.
-The GMPE logic tree potentially contains 1280 realizations per each
-of the three source models contained in the SHARE model,
+The GMPE logic tree (actually there are three of them, one for each
+source model) potentially contains 1280 realizations
 coming from 7 different tectonic region types:
 
 Active_Shallow:
@@ -36,14 +82,14 @@ Deep:
  2 GMPEs (b71, b72)
 
 The number of paths in the logic tree is 4 * 5 * 2 * 4 * 4 * 1 * 2 =
-1280, pretty large. We say that there are 1280 *potential realizations*.
-However, in most computations the user will be interested
-only in a subset of them. For instance, if the sources contributing to
-your region of interest are only of kind **Active_Shallow** and
-**Stable_Shallow**, you would consider only 4 * 5 = 20 effective
-realizations instead of 1280. Doing so will improve the computation
-time and the neeed storage by a factor of 1280 / 20 = 64, which is
-very significant.
+1280, pretty large. We say that there are 1280 *potential
+realizations* per source model. However, in most computations, the
+user will be interested only in a subset of them. For instance, if the
+sources contributing to your region of interest are only of kind
+**Active_Shallow** and **Stable_Shallow**, you would consider only 4 *
+5 = 20 effective realizations instead of 1280. Doing so will improve
+the computation time and the needed storage by a factor of 1280 / 20 =
+64, which is very significant.
 
 Having motivated the need for the concept of effective realizations,
 let explain how it works in practice. For sake of simplicity let us
@@ -51,8 +97,9 @@ consider the simplest possible situation, when there are two tectonic
 region types in the logic tree file, but the engine contains only
 sources of one tectonic region type.  Let us assume that for the first
 tectonic region type (T1) the GMPE logic tree file contains 3 GMPEs (A,
-B, C) and for the second tectonic region type (T2) the GMPE logic tree
-file contains 2 GMPEs (D, E). The total number of realizations is
+B, C) and that for the second tectonic region type (T2) the GMPE logic tree
+file contains 2 GMPEs (D, E). The total number of realizations (assuming
+full enumeration) is
 
   `total_num_rlzs = 3 * 2 = 6`
 
@@ -82,70 +129,33 @@ three different paths in the first tectonic region type will produce
 exactly the same result.  It is not important which GMPE was chosen
 for the first tectonic region type because there are no sources of
 kind T1; so let's denote the path of the effective realizations with
-the notation `*_<GMPE of second region type>`:
+the notation `@_<GMPE of second region type>`:
 
 == ======
 #   path
 == ======
-0  `*_D`
-1  `*_E`
+0  `@_D`
+1  `@_E`
 == ======
 
-In such situation the engine will perform the computation only for the 2
+The "@" character should be read as "any", meaning that for the first
+tectonic region type any path (i.e. "A", "B" and "C") will give
+the same contribution, i.e. there is independence from the GMPE
+combinations coming from the first tectonic region type.
+
+In such a situation the engine will perform the computation only for the 2
 effective realizations, not for the 6 potential realizations; moreover,
 it will export only two files with names like::
 
-  hazard_curve-smltp_sm-gsimltp_*_D-ltr_0.csv
-  hazard_curve-smltp_sm-gsimltp_*_E-ltr_1.csv
-
-
-Reduction of the logic tree when sampling is enabled
-----------------------------------------------------
-
-There are real life examples of very complex logic trees, even with
-more than 400,000 branches. In such situations it is impossible to perform
-a full computation. However, the engine allows to
-sample the branches of the complete logic tree. More precisely,
-for each branch sampled from the source model logic
-tree a branch of the GMPE logic tree is chosen randomly,
-by taking into account the weights in the GMPE logic tree file.
-
-Suppose for instance that we set
-
-  `number_of_logic_tree_samples = 4000`
-
-to sample 4,000 branches instead of 400,000. The expectation is that
-the computation will be 100 times faster. This is indeed the case for
-the classical calculator. However, for the event based calculator
-things are different. The point is that each sample of the source
-model must produce different ruptures, even if there is only one
-source model repeated 4,000 times, because of the inherent
-stochasticity of the process. Therefore the time spent in generating
-the needed amount of ruptures could make the calculator slower than
-using full enumeration: remember than when using full enumeration the
-ruptures of a given source model are generated exactly once, since
-each path is taken exactly once.
-
-Notice that even if source model path is
-sampled several times, the model is parsed and sent to the workers *only
-once*. In particular if there is a single source model and
-`number_of_logic_tree_samples = 4000`, we generate effectively
-1 source model realization and not 4,000 equivalent source model
-realizations, as we did in past (actually in the engine version 1.3).
-Then engine keeps track of how many times a model has
-been sampled (say `N`) and in the event based case it produce ruptures
-(*with different seeds*)
-by calling the appropriate hazardlib function `N` times. This is done
-inside the worker nodes. In the classical case, all the ruptures are
-identical and there are no seeds, so the computation is done only once,
-in an efficient way.
+  hazard_curve-smltp_sm-gsimltp_@_D-ltr_0.csv
+  hazard_curve-smltp_sm-gsimltp_@_E-ltr_1.csv
 
 
 How to analyze the logic tree of a calculation without running the calculation
 ==============================================================================
 
 `oq-lite` provide some facilities to explore the logic tree of a
-computation. The command you need is the *info* command::
+computation without running it. The command you need is the *info* command::
 
    $ oq-lite info -h
    usage: oq-lite info [-h] [-f] [-w] [-d] name
@@ -158,6 +168,7 @@ computation. The command you need is the *info* command::
      -f, --filtersources  flag to enable filtering of the source models
      -w, --weightsources  flag to enable weighting of the source models
      -d, --datatransfer   flag to enable data transfer calculation
+     -r, --report         flag to enable building a report in rst format
    
 Let's assume that you have a zip archive called `SHARE.zip` containing the
 SHARE source model, the SHARE source model logic tree file and the SHARE
@@ -179,9 +190,9 @@ object, which contains information about the composition of the source
 model. You will get something like this::
 
    <CompositionInfo
-   b1, area_source_model.xml, trt=[0, 1, 2, 3, 4, 5, 6]: 1280 realization(s)
-   b2, faults_backg_source_model.xml, trt=[7, 8, 9, 10, 11, 12, 13]: 1280 realization(s)
-   b3, seifa_model.xml, trt=[14, 15, 16, 17, 18, 19]: 640 realization(s)>
+   b1, area_source_model.xml, trt=[0, 1, 2, 3, 4, 5, 6], weight=0.500: 1280 realization(s)
+   b2, faults_backg_source_model.xml, trt=[7, 8, 9, 10, 11, 12, 13], weight=0.200: 1280 realization(s)
+   b3, seifa_model.xml, trt=[14, 15, 16, 17, 18, 19], weight=0.300: 640 realization(s)>
    <RlzsAssoc...>
 
 You can read the lines above as follows. The SHARE model is composed by three
@@ -204,9 +215,9 @@ around those points with a maximum distance of 200 kilometers::
 
    $ oq-lite info SHARE.zip --filtersources
    <CompositionInfo
-   b1, area_source_model.xml, trt=[0, 1, 2, 3, 4, 5, 6]: 80 realization(s)
-   b2, faults_backg_source_model.xml, trt=[7, 8, 9, 10, 11, 12, 13]: 80 realization(s)
-   b3, seifa_model.xml, trt=[14, 15, 16, 17, 18, 19]: 80 realization(s)>
+   b1, area_source_model.xml, trt=[0, 1, 2, 3, 4, 5, 6], weight=0.500: 80 realization(s)
+   b2, faults_backg_source_model.xml, trt=[7, 8, 9, 10, 11, 12, 13, weight=0.200]: 80 realization(s)
+   b3, seifa_model.xml, trt=[14, 15, 16, 17, 18, 19], weight=0.300: 80 realization(s)>
    <RlzsAssoc...>
 
 In this example the effective SHARE model is composed by three submodels:
@@ -222,7 +233,7 @@ Depending on the location of the points and the maximum distance, one
 or more submodels could be completely filtered out and could produce
 zero effective realizations, so the reduction effect could be even
 stronger. Such a situation is covered by our tests
-and will be discussed in the next paragraph. Notice that already in
+and will be discussed later on. Notice that already in
 this case we reduced the computation from 1280 + 1280 + 640 = 3200
 potential realizations to only 80 + 80 + 80 = 240 effective
 realizations.
@@ -244,8 +255,8 @@ classical/case_7; you can run the command and get::
 
    $ oq-lite info classical/case_7/job.ini 
    <CompositionInfo
-   b1, source_model_1.xml, trt=[0]: 1 realization(s)
-   b2, source_model_2.xml, trt=[1]: 1 realization(s)>
+   b1, source_model_1.xml, trt=[0], weight=0.70: 1 realization(s)
+   b2, source_model_2.xml, trt=[1], weight=0.30: 1 realization(s)>
    <RlzsAssoc(2)
    0,SadighEtAl1997: ['<0,b1,b1,w=0.7>']
    1,SadighEtAl1997: ['<1,b2,b1,w=0.3>']>
@@ -261,16 +272,16 @@ the SHARE model with just a simplified area source model::
 
    $ oq-lite info classical/case_19/job.ini -f
    <CompositionInfo
-   b1, simple_area_source_model.xml, trt=[0, 1, 2, 3, 4]: 4 realization(s)>
+   b1, simple_area_source_model.xml, trt=[0, 1, 2, 3, 4], weight=1.0:: 4 realization(s)>
    <RlzsAssoc(8)
-   0,AtkinsonBoore2003SInter: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
-   1,FaccioliEtAl2010: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
-   2,ToroEtAl2002SHARE: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
-   3,AkkarBommer2010: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>', '<1,b1,*_*_*_*_b52_*_*,w=0.2>', '<2,b1,*_*_*_*_b53_*_*,w=0.2>', '<3,b1,*_*_*_*_b54_*_*,w=0.4>']
-   4,AtkinsonBoore2003SSlab: ['<0,b1,*_*_*_*_b51_*_*,w=0.2>']
-   4,LinLee2008SSlab: ['<1,b1,*_*_*_*_b52_*_*,w=0.2>']
-   4,YoungsEtAl1997SSlab: ['<2,b1,*_*_*_*_b53_*_*,w=0.2>']
-   4,ZhaoEtAl2006SSlab: ['<3,b1,*_*_*_*_b54_*_*,w=0.4>']>
+   0,AtkinsonBoore2003SInter: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
+   1,FaccioliEtAl2010: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
+   2,ToroEtAl2002SHARE: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
+   3,AkkarBommer2010: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>', '<1,b1,@_@_@_@_b52_@_@,w=0.2>', '<2,b1,@_@_@_@_b53_@_@,w=0.2>', '<3,b1,@_@_@_@_b54_@_@,w=0.4>']
+   4,AtkinsonBoore2003SSlab: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>']
+   4,LinLee2008SSlab: ['<1,b1,@_@_@_@_b52_@_@,w=0.2>']
+   4,YoungsEtAl1997SSlab: ['<2,b1,@_@_@_@_b53_@_@,w=0.2>']
+   4,ZhaoEtAl2006SSlab: ['<3,b1,@_@_@_@_b54_@_@,w=0.4>']>
 
 This is a case where a lot of tectonic region types have been completely
 filtered out, so the original 160 realizations have been reduced to merely 4 for
