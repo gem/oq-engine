@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib.general import AccumDict, humansize
 from openquake.commonlib.calculators import base
 from openquake.commonlib import readinput, parallel, datastore
-from openquake.risklib import riskinput
+from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import apply_reduce
 
 elt_dt = numpy.dtype([('rup_id', numpy.uint32), ('loss', numpy.float32)])
@@ -65,11 +65,14 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
     losses = cube(
         monitor.num_outputs, len(lt_idx), len(rlzs_assoc.realizations),
         AccumDict)
+    N = monitor.num_assets
+    C = monitor.oqparam.loss_curve_resolution
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         rup_slice = out_by_rlz.rup_slice
         rup_ids = range(rup_slice.start, rup_slice.stop)
         for out in out_by_rlz:
             lti = lt_idx[out.loss_type]
+            asset_ids = [a.idx for a in out.assets]
             agg_losses = out.event_loss_per_asset.sum(axis=1)
             agg_ins_losses = out.insured_loss_per_asset.sum(axis=1)
             for rup_id, loss, ins_loss in zip(
@@ -78,9 +81,16 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
                     losses[0, lti, out.hid] += {rup_id: loss}
                 if ins_loss > 0:
                     losses[1, lti, out.hid] += {rup_id: ins_loss}
+            losses[2, lti, out.hid] += dict(zip(asset_ids, out.counts_matrix))
+
     for idx, dic in numpy.ndenumerate(losses):
         if dic:
-            losses[idx] = [numpy.array(dic.items(), elt_dt)]
+            if idx[0] in (0, 1):
+                losses[idx] = [numpy.array(dic.items(), elt_dt)]
+            else:
+                counts_matrix = numpy.zeros((N, C), numpy.uint32)
+                counts_matrix[dic.keys()] = dic.values()
+                losses[idx] = [counts_matrix]
         else:
             losses[idx] = []
     return losses
@@ -132,16 +142,19 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         loss_types = self.riskmodel.get_loss_types()
         self.L = len(loss_types)
         self.R = len(self.rlzs_assoc.realizations)
-        self.outs = ['event_loss_table-rlzs']
-        if oq.insured_losses:
-            self.outs.append('insured_loss_table-rlzs')
+        poes_dt = numpy.dtype((float, oq.loss_curve_resolution))
+        self.outs = ['event_loss_table-rlzs', 'insured_loss_table-rlzs',
+                     'rcurves-rlzs']
         self.datasets = {}
         for o, out in enumerate(self.outs):
             self.datastore.hdf5.create_group(out)
             for l, loss_type in enumerate(loss_types):
                 for r, rlz in enumerate(self.rlzs_assoc.realizations):
                     key = '/%s/%s' % (loss_type, rlz.uid)
-                    dset = self.datastore.create_dset(out + key, elt_dt)
+                    if o in (0, 1):
+                        dset = self.datastore.create_dset(out + key, elt_dt)
+                    else:
+                        dset = self.datastore.create_dset(out + key, poes_dt)
                     self.datasets[o, l, r] = dset
 
     def execute(self):
@@ -150,7 +163,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         self.monitor.oqparam = oq = self.oqparam
         # ugly: attaching an attribute needed in the task function
-        self.monitor.num_outputs = 2 if oq.insured_losses else 1
+        self.monitor.num_outputs = 3
         # attaching two other attributes used in riskinput.gen_outputs
         self.monitor.assets_by_site = self.assets_by_site
         self.monitor.num_assets = self.count_assets()
@@ -181,13 +194,18 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param result:
             a numpy array of shape (O, L, R) containing lists of arrays
         """
+        cb = scientific.CurveBuilder(self.oqparam.loss_curve_resolution)
+        nses = self.oqparam.ses_per_logic_tree_path
         saved = {out: 0 for out in self.outs}
         with self.monitor('saving loss table',
                           autoflush=True, measuremem=True):
             for (o, l, r), arrays in numpy.ndenumerate(result):
                 if not arrays:  # empty list
                     continue
-                losses = numpy.concatenate(arrays)
+                if o in (0, 1):
+                    losses = numpy.concatenate(arrays)
+                else:
+                    losses = cb.build_poes(sum(arrays), nses)
                 self.datasets[o, l, r].extend(losses)
                 self.datastore.hdf5.flush()
                 saved[self.outs[o]] += losses.nbytes

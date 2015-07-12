@@ -81,7 +81,7 @@ class EBRTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + os.path.basename(fname), fname)
 
-    @attr('qa', 'risk', 'event_based')
+    @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):
         # the case of a site_model.xml with 7 sites but only 1 asset
         out = self.run_calc(case_4a.__file__, 'job_hazard.ini',

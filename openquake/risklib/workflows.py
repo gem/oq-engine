@@ -86,6 +86,7 @@ class Asset(object):
         self.deductibles = deductibles
         self.insurance_limits = insurance_limits
         self.aggregated = aggregated or {}
+        self.idx = idx
 
     def value(self, loss_type, time_event=None):
         """

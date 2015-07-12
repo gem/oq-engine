@@ -768,7 +768,7 @@ class CurveBuilder(object):
     """
     def __init__(self, curve_resolution):
         self.curve_resolution = R = curve_resolution
-        self.ratios = numpy.linspace(0, 1, curve_resolution)
+        self.ratios = numpy.logspace(-10, 0, curve_resolution)
         self.loss_curve_dt = numpy.dtype([
             ('losses', (float, R)), ('poes', (float, R)), ('avg', float)])
 
