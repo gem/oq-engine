@@ -247,9 +247,6 @@ class HazardCalculator(BaseCalculator):
                     if name not in new:  # add missing parameter
                         new[name] = value
                 self.oqparam = self.oqparam
-            try:
-                self.datastore['taxonomies']
-            except KeyError:  # not read already
                 self.read_exposure_sitecol()
 
         else:  # we are in a basic calculator
@@ -283,11 +280,14 @@ class HazardCalculator(BaseCalculator):
             if haz_sitecol is not None and haz_sitecol != self.sitecol:
                 with self.monitor('assoc_assets_sites'):
                     self.sitecol, self.assets_by_site = \
-                        self.assoc_assets_sites(haz_sitecol)
+                        self.assoc_assets_sites(haz_sitecol.complete)
                 ok_assets = self.count_assets()
                 num_sites = len(self.sitecol)
                 logging.warn('Associated %d assets to %d sites, %d discarded',
                              ok_assets, num_sites, num_assets - ok_assets)
+        elif (self.datastore.parent and 'exposure' in
+              self.datastore.parent['oqparam'].inputs):
+            logging.info('Re-using the already imported exposure')
         else:  # no exposure
             logging.info('Reading the site collection')
             with self.monitor('reading site collection', autoflush=True):
