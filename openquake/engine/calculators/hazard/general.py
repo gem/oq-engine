@@ -393,7 +393,7 @@ class BaseHazardCalculator(base.Calculator):
         writer.CacheInserter.saveall([models.HazardCurveData(
             hazard_curve=haz_curve,
             poes=list(poes),
-            location=p.location,
+            location='POINT(%s %s)' % (p.lon, p.lat),
             weight=rlz.weight)
             for p, poes in zip(points, curves)])
 
