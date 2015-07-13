@@ -46,7 +46,7 @@ def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
         if gmv_close(gmv_site_1) and gmv_close(gmv_site_2):
             count += 1
 
-    prob = 1 - math.exp(- (float(count) / (time_span * num_ses)) * time_span)
+    prob = 1 - math.exp(- float(count) / num_ses)
     return prob
 
 
@@ -59,7 +59,7 @@ def get_gmvs_for_location(location, job):
     Get a list of GMVs (as floats) for a given ``location`` and ``job_id``.
 
     :param str location:
-        Location as a POINT string Well Known Text format
+        Location as a pair (lon, lat)
     :param job:
         The job that generated the GMVs
     :returns:
@@ -68,8 +68,7 @@ def get_gmvs_for_location(location, job):
     [output] = job.output_set.filter(output_type='gmf')
 
     [site] = models.HazardSite.objects.filter(hazard_calculation=job).extra(
-        where=["location::geometry ~= 'SRID=4326;%s'::geometry"
-               % location])
+        where=["lon=%s AND lat=%s" % location])
     gmv_by_rup = {}
     for gmf in models.GmfData.objects.filter(site=site, gmf=output.gmf):
         gmv_by_rup.update(zip(gmf.rupture_ids, gmf.gmvs))
