@@ -20,24 +20,24 @@ master_seed                  0
 
 Input files
 -----------
-======================= ======================================================================
-Name                    File                                                                  
-======================= ======================================================================
-gsim_logic_tree         openquake/qa_tests_data/event_based/case_7/gmpe_logic_tree.xml        
-job_ini                 openquake/qa_tests_data/event_based/case_7/job.ini                    
-source                  openquake/qa_tests_data/event_based/case_7/source_model1.xml          
-source                  openquake/qa_tests_data/event_based/case_7/source_model2.xml          
-source_model_logic_tree openquake/qa_tests_data/event_based/case_7/source_model_logic_tree.xml
-======================= ======================================================================
+======================= ============================================================
+Name                    File                                                        
+======================= ============================================================
+gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
+job_ini                 `job.ini <job.ini>`_                                        
+source                  `source_model1.xml <source_model1.xml>`_                    
+source                  `source_model2.xml <source_model2.xml>`_                    
+source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+======================= ============================================================
 
 Composite source model
 ----------------------
-========= ================= ======== =============== ========= ================ ===========
-smlt_path source_model_file num_trts gsim_logic_tree num_gsims num_realizations num_sources
-========= ================= ======== =============== ========= ================ ===========
-b11       source_model1.xml 1        simple          3         63/3             307        
-b12       source_model2.xml 1        simple          3         37/3             307        
-========= ================= ======== =============== ========= ================ ===========
+========= ====== ======================================== =============== ================ ===========
+smlt_path weight source_model_file                        gsim_logic_tree num_realizations num_sources
+========= ====== ======================================== =============== ================ ===========
+b11       0.01   `source_model1.xml <source_model1.xml>`_ simple(3)       63/3             307        
+b12       0.01   `source_model2.xml <source_model2.xml>`_ simple(3)       37/3             307        
+========= ====== ======================================== =============== ================ ===========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -47,10 +47,10 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(6)
   0,BooreAtkinson2008: ['33 realizations']
   0,CampbellBozorgnia2008: ['22 realizations']
-  0,ChiouYoungs2008: ['<0,b11,CY,w=0.01>', '<1,b11,CY,w=0.01>', '<2,b11,CY,w=0.01>', '<24,b11,CY,w=0.01>', '<40,b11,CY,w=0.01>', '<47,b11,CY,w=0.01>', '<58,b11,CY,w=0.01>', '<61,b11,CY,w=0.01>']
+  0,ChiouYoungs2008: ['<0,b11,CY,w=0.01,col=0>', '<1,b11,CY,w=0.01,col=1>', '<2,b11,CY,w=0.01,col=2>', '<24,b11,CY,w=0.01,col=24>', '<40,b11,CY,w=0.01,col=40>', '<47,b11,CY,w=0.01,col=47>', '<58,b11,CY,w=0.01,col=58>', '<61,b11,CY,w=0.01,col=61>']
   1,BooreAtkinson2008: ['19 realizations']
-  1,CampbellBozorgnia2008: ['<63,b12,CB,w=0.01>', '<69,b12,CB,w=0.01>', '<70,b12,CB,w=0.01>', '<78,b12,CB,w=0.01>', '<79,b12,CB,w=0.01>', '<92,b12,CB,w=0.01>', '<93,b12,CB,w=0.01>', '<96,b12,CB,w=0.01>', '<98,b12,CB,w=0.01>', '<99,b12,CB,w=0.01>']
-  1,ChiouYoungs2008: ['<65,b12,CY,w=0.01>', '<71,b12,CY,w=0.01>', '<72,b12,CY,w=0.01>', '<74,b12,CY,w=0.01>', '<76,b12,CY,w=0.01>', '<82,b12,CY,w=0.01>', '<89,b12,CY,w=0.01>', '<95,b12,CY,w=0.01>']>
+  1,CampbellBozorgnia2008: ['<63,b12,CB,w=0.01,col=63>', '<69,b12,CB,w=0.01,col=69>', '<70,b12,CB,w=0.01,col=70>', '<78,b12,CB,w=0.01,col=78>', '<79,b12,CB,w=0.01,col=79>', '<92,b12,CB,w=0.01,col=92>', '<93,b12,CB,w=0.01,col=93>', '<96,b12,CB,w=0.01,col=96>', '<98,b12,CB,w=0.01,col=98>', '<99,b12,CB,w=0.01,col=99>']
+  1,ChiouYoungs2008: ['<65,b12,CY,w=0.01,col=65>', '<71,b12,CY,w=0.01,col=71>', '<72,b12,CY,w=0.01,col=72>', '<74,b12,CY,w=0.01,col=74>', '<76,b12,CY,w=0.01,col=76>', '<82,b12,CY,w=0.01,col=82>', '<89,b12,CY,w=0.01,col=89>', '<95,b12,CY,w=0.01,col=95>']>
 
 Non-empty rupture collections
 -----------------------------
