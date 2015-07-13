@@ -381,8 +381,7 @@ class OqJob(djm.Model):
             # ordering no ruptures are generated and the test
             # qa_tests/hazard/disagg/case_1/test.py fails with a bad
             # error message
-            coords = sorted(
-                set((asset.site.x, asset.site.y) for asset in assets))
+            coords = sorted(set(get_lon_lat(asset) for asset in assets))
             lons, lats = zip(*coords)
             mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
         else:
@@ -393,6 +392,14 @@ class OqJob(djm.Model):
     def __repr__(self):
         return '<%s %d, %s>' % (self.__class__.__name__,
                                 self.id, self.job_type)
+
+
+def get_lon_lat(asset):
+    """
+    :param asset: an ExposureData instance
+    :returns: (lon, lat) truncated to 5 digits
+    """
+    return valid.longitude(asset.site.x), valid.latitude(asset.site.y)
 
 
 def oqparam(job_id):
