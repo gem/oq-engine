@@ -110,7 +110,7 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
             intensity_measure_types_and_levels=str({'PGA': hazard_imls}))
 
         models.HazardSite.objects.create(
-            hazard_calculation=job, location="POINT(1 1)")
+            hazard_calculation=job, lon=1, lat=1)
         models.HazardCurveData.objects.create(
             hazard_curve=models.HazardCurve.objects.create(
                 output=models.Output.objects.create_output(

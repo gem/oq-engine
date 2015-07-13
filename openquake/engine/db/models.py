@@ -384,7 +384,7 @@ class OqJob(djm.Model):
             coords = sorted(
                 set((asset.site.x, asset.site.y) for asset in assets))
             lons, lats = zip(*coords)
-            mesh = geo.Mesh(numpy.array(lons), numpy.array(lats), None)
+            mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
         else:
             mesh = get_mesh(oqparam)
         sids = save_sites(self, ((p.longitude, p.latitude) for p in mesh))
@@ -482,12 +482,12 @@ class Log(djm.Model):
 def save_sites(job, coords):
     """
     Save all the gives sites on the hzrdi.hazard_site table.
-    :param coordinates: a sequence of (lon, lat) pairs
+    :param coords: a sequence of coordinates
     :returns: the ids of the inserted HazardSite instances
     """
     sites = [HazardSite(hazard_calculation=job,
-                        location='POINT(%s %s)' % (lon, lat))
-             for lon, lat in coords]
+                        lon=point[0], lat=point[1])
+             for point in coords]
     return writer.CacheInserter.saveall(sites)
 
 
@@ -1320,7 +1320,7 @@ class Gmf(djm.Model):
         # find all the locations interested by the hazard calculation
         logs.LOG.info('reading HazardSite for job_id=%d', job.id)
         curs.execute("""\
-        SELECT id, ST_X(location::geometry), ST_Y(location::geometry)
+        SELECT id, lon, lat
         FROM hzrdi.hazard_site WHERE hazard_calculation_id=%d""" % job.id)
         loc = {site_id: (x, y) for site_id, x, y in curs}
 
@@ -2944,7 +2944,8 @@ class HazardSite(djm.Model):
     """
 
     hazard_calculation = djm.ForeignKey('OqJob')
-    location = djm.PointField(srid=DEFAULT_SRID)
+    lon = djm.FloatField(null=False)
+    lat = djm.FloatField(null=False)
 
     class Meta:
         db_table = 'hzrdi\".\"hazard_site'
