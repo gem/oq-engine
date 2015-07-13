@@ -272,6 +272,9 @@ def longitude(value):
     """
     :param value: input string
     :returns: longitude float, rounded to 5 digits, i.e. 1 meter maximum
+
+    >>> longitude('0.123456')
+    0.12346
     """
     lon = round(float_(value), 5)
     if lon > 180.:
@@ -285,6 +288,9 @@ def latitude(value):
     """
     :param value: input string
     :returns: latitude float, rounded to 5 digits, i.e. 1 meter maximum
+
+    >>> latitude('-0.123456')
+    -0.12346
     """
     lat = round(float_(value), 5)
     if lat > 90.:
