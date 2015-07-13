@@ -271,9 +271,9 @@ def nonzero(value):
 def longitude(value):
     """
     :param value: input string
-    :returns: longitude float
+    :returns: longitude float, rounded to 5 digits, i.e. 1 meter maximum
     """
-    lon = float_(value)
+    lon = round(float_(value), 5)
     if lon > 180.:
         raise ValueError('longitude %s > 180' % lon)
     elif lon < -180.:
@@ -284,9 +284,9 @@ def longitude(value):
 def latitude(value):
     """
     :param value: input string
-    :returns: latitude float
+    :returns: latitude float, rounded to 5 digits, i.e. 1 meter maximum
     """
-    lat = float_(value)
+    lat = round(float_(value), 5)
     if lat > 90.:
         raise ValueError('latitude %s > 90' % lat)
     elif lat < -90.:
