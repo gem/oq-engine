@@ -108,8 +108,8 @@ class EBHazardSpatialCorrelCase1TestCase(qa_utils.BaseQATestCase):
         job = self.run_hazard(cfg)
         hc = job.get_oqparam()
 
-        site_1 = 'POINT(0.0 0.0)'
-        site_2 = 'POINT(0.008993 0.0)'
+        site_1 = (0.0, 0.0)
+        site_2 = (0.008993, 0.0)
 
         gmvs_site_1 = sc_utils.get_gmvs_for_location(site_1, job)
         gmvs_site_2 = sc_utils.get_gmvs_for_location(site_2, job)
@@ -135,8 +135,8 @@ class EBHazardSpatialCorrelCase2TestCase(qa_utils.BaseQATestCase):
         job = self.run_hazard(cfg)
         hc = job.get_oqparam()
 
-        site_1 = 'POINT(0.0 0.0)'
-        site_2 = 'POINT(0.008993 0.0)'
+        site_1 = (0.0, 0.0)
+        site_2 = (0.008993, 0.0)
 
         gmvs_site_1 = sc_utils.get_gmvs_for_location(site_1, job)
         gmvs_site_2 = sc_utils.get_gmvs_for_location(site_2, job)
@@ -163,8 +163,8 @@ class EBHazardSpatialCorrelCase3TestCase(qa_utils.BaseQATestCase):
         job = self.run_hazard(cfg)
         hc = job.get_oqparam()
 
-        site_1 = 'POINT(0.0 0.0)'
-        site_2 = 'POINT(0.008993 0.0)'
+        site_1 = (0.0, 0.0)
+        site_2 = (0.008993, 0.0)
 
         gmvs_site_1 = sc_utils.get_gmvs_for_location(site_1, job)
         gmvs_site_2 = sc_utils.get_gmvs_for_location(site_2, job)
