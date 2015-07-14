@@ -47,10 +47,10 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(6)
   0,BooreAtkinson2008: ['33 realizations']
   0,CampbellBozorgnia2008: ['22 realizations']
-  0,ChiouYoungs2008: ['<0,b11,CY,w=0.01,col=0>', '<1,b11,CY,w=0.01,col=1>', '<2,b11,CY,w=0.01,col=2>', '<24,b11,CY,w=0.01,col=24>', '<40,b11,CY,w=0.01,col=40>', '<47,b11,CY,w=0.01,col=47>', '<58,b11,CY,w=0.01,col=58>', '<61,b11,CY,w=0.01,col=61>']
+  0,ChiouYoungs2008: ['<0,b11,CY,w=0.01>', '<1,b11,CY,w=0.01>', '<2,b11,CY,w=0.01>', '<24,b11,CY,w=0.01>', '<40,b11,CY,w=0.01>', '<47,b11,CY,w=0.01>', '<58,b11,CY,w=0.01>', '<61,b11,CY,w=0.01>']
   1,BooreAtkinson2008: ['19 realizations']
-  1,CampbellBozorgnia2008: ['<63,b12,CB,w=0.01,col=63>', '<69,b12,CB,w=0.01,col=69>', '<70,b12,CB,w=0.01,col=70>', '<78,b12,CB,w=0.01,col=78>', '<79,b12,CB,w=0.01,col=79>', '<92,b12,CB,w=0.01,col=92>', '<93,b12,CB,w=0.01,col=93>', '<96,b12,CB,w=0.01,col=96>', '<98,b12,CB,w=0.01,col=98>', '<99,b12,CB,w=0.01,col=99>']
-  1,ChiouYoungs2008: ['<65,b12,CY,w=0.01,col=65>', '<71,b12,CY,w=0.01,col=71>', '<72,b12,CY,w=0.01,col=72>', '<74,b12,CY,w=0.01,col=74>', '<76,b12,CY,w=0.01,col=76>', '<82,b12,CY,w=0.01,col=82>', '<89,b12,CY,w=0.01,col=89>', '<95,b12,CY,w=0.01,col=95>']>
+  1,CampbellBozorgnia2008: ['<63,b12,CB,w=0.01>', '<69,b12,CB,w=0.01>', '<70,b12,CB,w=0.01>', '<78,b12,CB,w=0.01>', '<79,b12,CB,w=0.01>', '<92,b12,CB,w=0.01>', '<93,b12,CB,w=0.01>', '<96,b12,CB,w=0.01>', '<98,b12,CB,w=0.01>', '<99,b12,CB,w=0.01>']
+  1,ChiouYoungs2008: ['<65,b12,CY,w=0.01>', '<71,b12,CY,w=0.01>', '<72,b12,CY,w=0.01>', '<74,b12,CY,w=0.01>', '<76,b12,CY,w=0.01>', '<82,b12,CY,w=0.01>', '<89,b12,CY,w=0.01>', '<95,b12,CY,w=0.01>']>
 
 Non-empty rupture collections
 -----------------------------

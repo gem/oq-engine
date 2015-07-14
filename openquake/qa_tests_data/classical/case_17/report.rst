@@ -46,4 +46,4 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(2)
   0,SadighEtAl1997: ['<0,b1,b1,w=0.2>']
-  1,SadighEtAl1997: ['<1,b2,b1,w=0.2,col=1>', '<2,b2,b1,w=0.2,col=2>', '<3,b2,b1,w=0.2,col=3>', '<4,b2,b1,w=0.2,col=4>']>
+  1,SadighEtAl1997: ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']>

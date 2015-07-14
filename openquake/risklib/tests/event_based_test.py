@@ -182,15 +182,14 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
             [0.30, 0.30, 0.20, 0.20], "LN")
 
-        vuln_function.distribution.epsilons = EPSILONS
+        vuln_function.set_distribution(EPSILONS)
 
         gmfs = (0.08, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 0.05, 0.9595)
 
         numpy.testing.assert_allclose(
-            numpy.array([0.0, 0.3176, 0.4049, 0.0902,
-                         0.2793, 0.0636, 0.0932, 0.2472,
-                         0.0, 0.3020]),
+            numpy.array([0., 0.4105595, 0.18002423, 0.17102685, 0.25077079,
+                         0.03945861, 0.11454372, 0.28828653, 0., 0.48847448]),
             vuln_function._apply(gmfs), atol=0.0, rtol=0.01)
 
     def test_sampling_lr_gmfs_greater_than_last_vulnimls(self):
@@ -208,7 +207,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         gmfs = (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 1.05, 0.9595)
-        vuln_function.distribution.epsilons = EPSILONS
+        vuln_function.set_distribution(EPSILONS)
 
         numpy.testing.assert_allclose(
             numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,
