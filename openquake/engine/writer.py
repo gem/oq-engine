@@ -128,9 +128,9 @@ class CacheInserter(object):
         self.stringio.close()
         self.stringio = StringIO()
 
-        ## TODO: should we add an assert that the number of rows stored
-        ## in the db is the expected one? I (MS) have seen a case where
-        ## this fails silently (it was for True/False not converted in t/f)
+        # TODO: should we add an assert that the number of rows stored
+        # in the db is the expected one? I (MS) have seen a case where
+        # this fails silently (it was for True/False not converted in t/f)
 
         LOGGER.debug('saved %d rows in %s', self.nlines, self.tname)
         self.nlines = 0
