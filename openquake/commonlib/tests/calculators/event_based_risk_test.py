@@ -71,7 +71,7 @@ class EBRTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'ebr')
     def test_case_2(self):
-        out = self.run_calc(case_2.__file__, 'job_haz.ini,job_loss.ini',
+        out = self.run_calc(case_2.__file__, 'job_loss.ini',
                             concurrent_tasks=0, exports='csv')
         [fname] = out['event_loss_table-rlzs', 'csv']
         self.assertEqualFiles(
