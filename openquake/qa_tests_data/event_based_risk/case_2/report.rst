@@ -20,22 +20,23 @@ master_seed                  0
 
 Input files
 -----------
-======================== ============================================================================
-Name                     File                                                                        
-gsim_logic_tree          openquake/qa_tests_data/event_based_risk/case_2/gmpe_logic_tree.xml         
-job_ini                  openquake/qa_tests_data/event_based_risk/case_2/job_haz.ini                 
-source                   openquake/qa_tests_data/event_based_risk/case_2/source_model.xml            
-source_model_logic_tree  openquake/qa_tests_data/event_based_risk/case_2/source_model_logic_tree.xml 
-structural_vulnerability openquake/qa_tests_data/event_based_risk/case_2/vulnerability_model_stco.xml
-======================== ============================================================================
+======================== ==============================================================
+Name                     File                                                          
+======================== ==============================================================
+gsim_logic_tree          `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                  
+job_ini                  `job_haz.ini <job_haz.ini>`_                                  
+source                   `source_model.xml <source_model.xml>`_                        
+source_model_logic_tree  `source_model_logic_tree.xml <source_model_logic_tree.xml>`_  
+structural_vulnerability `vulnerability_model_stco.xml <vulnerability_model_stco.xml>`_
+======================== ==============================================================
 
 Composite source model
 ----------------------
-========= ================= ======== =============== ========= ================ ===========
-smlt_path source_model_file num_trts gsim_logic_tree num_gsims num_realizations num_sources
-========= ================= ======== =============== ========= ================ ===========
-b1        source_model.xml  1        trivial         1         1/1              3          
-========= ================= ======== =============== ========= ================ ===========
+========= ====== ====================================== =============== ================ ===========
+smlt_path weight source_model_file                      gsim_logic_tree num_realizations num_sources
+========= ====== ====================================== =============== ================ ===========
+b1        1.00   `source_model.xml <source_model.xml>`_ trivial(1)      1/1              3          
+========= ====== ====================================== =============== ================ ===========
 
 Realizations per (TRT, GSIM)
 ----------------------------

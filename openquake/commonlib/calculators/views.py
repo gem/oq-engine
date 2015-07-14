@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
 from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import build_header
 
@@ -68,34 +69,31 @@ def classify_gsim_lt(gsim_lt):
     """
     :returns: "trivial", "simple" or "complex"
     """
-    trt_gsims = gsim_lt.values.items()
-    multi_gsim_trts = sum(1 for trt, gsims in trt_gsims if len(gsims) > 1)
+    num_branches = gsim_lt.get_num_branches().values()
+    num_gsims = '(%s)' % ','.join(map(str, num_branches))
+    multi_gsim_trts = sum(1 for num_gsim in num_branches if num_gsim > 1)
     if multi_gsim_trts == 0:
-        return "trivial"
+        return "trivial" + num_gsims
     elif multi_gsim_trts == 1:
-        return "simple"
+        return "simple" + num_gsims
     else:
-        return "complex"
+        return "complex" + num_gsims
 
 
 @view.add('csm_info')
 def view_csm_info(token, dstore):
     rlzs_assoc = dstore['rlzs_assoc']
     csm_info = rlzs_assoc.csm_info
-    header = ['smlt_path', 'source_model_file', 'num_trts',
-              'gsim_logic_tree', 'num_gsims', 'num_realizations',
-              'num_sources']
+    header = ['smlt_path', 'weight', 'source_model_file',
+              'gsim_logic_tree', 'num_realizations', 'num_sources']
     rows = []
     for sm in csm_info.source_models:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm.ordinal]
         num_rlzs = len(rlzs)
-        num_branches = [n for n in sm.gsim_lt.get_num_branches().values() if n]
         num_paths = sm.gsim_lt.get_num_paths()
-        num_gsims = ','.join(map(str, num_branches))
-        tmodels = [tm for tm in sm.trt_models  # effective
-                   if tm.trt in sm.gsim_lt.tectonic_region_types]
-        row = ('_'.join(sm.path), sm.name, len(tmodels),
-               classify_gsim_lt(sm.gsim_lt), num_gsims,
+        link = "`%s <%s>`_" % (sm.name, sm.name)
+        row = ('_'.join(sm.path), sm.weight, link,
+               classify_gsim_lt(sm.gsim_lt),
                '%d/%d' % (num_rlzs, num_paths), sm.num_sources)
         rows.append(row)
     return rst_table(rows, header)
@@ -130,12 +128,12 @@ def view_params(token, dstore):
     return rst_table([(param, getattr(oq, param)) for param in params])
 
 
-def hide_fullpath(items):
-    """Strip everything before oq-risklib/, if any"""
+def build_links(items):
     out = []
-    for name, fname in items:
-        splits = fname.split('oq-risklib/')
-        out.append((name, splits[1] if len(splits) == 2 else fname))
+    for key, fname in items:
+        bname = os.path.basename(fname)
+        link = "`%s <%s>`_" % (bname, bname)
+        out.append((key, link))
     return sorted(out)
 
 
@@ -148,4 +146,4 @@ def view_inputs(token, dstore):
     except KeyError:  # there is no 'source' in scenario calculations
         source_models = []
     return rst_table(
-        hide_fullpath(inputs.items() + source_models), header=['Name', 'File'])
+        build_links(inputs.items() + source_models), header=['Name', 'File'])
