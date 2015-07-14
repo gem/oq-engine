@@ -47,7 +47,7 @@ def get_datastore(calc):
 
 
 class CalculatorTestCase(unittest.TestCase):
-    OVERWRITE_EXPECTED = False
+    OVERWRITE_EXPECTED = True
 
     def get_calc(self, testfile, job_ini, **kw):
         """
@@ -108,8 +108,8 @@ class CalculatorTestCase(unittest.TestCase):
         """
         expected = os.path.join(self.testdir, fname1)
         actual = os.path.join(self.calc.oqparam.export_dir, fname2)
-        expected_lines = make_comparable(open(expected))
-        actual_lines = make_comparable(open(actual))
+        expected_lines = make_comparable(open(expected).readlines())
+        actual_lines = make_comparable(open(actual).readlines())
         try:
             for exp, got in zip(expected_lines, actual_lines):
                 if delta:
