@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Fixed a very subtle bug in the vulnerability functions, potentially
+    affecting calculations with nonzero coefficients of variation and nonzero
+    minIML; the numbers produced by the engine were incorrect; see
+    https://bugs.launchpad.net/oq-engine/+bug/1459926
   * Fixed bug when importing coordinates with more than 5 digits
   * `investigation_time` has been replaced by `risk_investigation_time` in
     risk configuration files
