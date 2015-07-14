@@ -22,14 +22,13 @@ from celery.result import ResultSet
 from celery.app import current_app
 from celery.task import task
 
+from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.commonlib.parallel import \
     TaskManager, safely_call, check_mem_usage
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
-
-CONCURRENT_TASKS = int(config.get('celery', 'concurrent_tasks'))
 
 SOFT_MEM_LIMIT = int(config.get('memory', 'soft_mem_limit'))
 HARD_MEM_LIMIT = int(config.get('memory', 'hard_mem_limit'))
@@ -69,6 +68,7 @@ class OqTaskManager(TaskManager):
         if not self.results:
             return acc
         backend = current_app().backend
+        amqp_backend = backend.__class__.__name__.startswith('AMQP')
         rset = ResultSet(self.results)
         for task_id, result_dict in rset.iter_native():
             check_mem_usage()  # warn if too much memory is used
@@ -77,7 +77,9 @@ class OqTaskManager(TaskManager):
                 raise result
             self.received += len(result)
             acc = agg(acc, result.unpickle())
-            del backend._cache[task_id]  # work around a celery bug
+            if amqp_backend:
+                # work around a celery bug
+                del backend._cache[task_id]
         return acc
 
 # convenient aliases
@@ -118,7 +120,8 @@ def oqtask(task_func):
             try:
                 total = 'total ' + task_func.__name__
                 with monitor(total, task=tsk, autoflush=True):
-                    return task_func(*args)
+                    with GroundShakingIntensityModel.forbid_instantiation():
+                        return task_func(*args)
             finally:
                 # save on the db
                 CacheInserter.flushall()

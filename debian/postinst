@@ -148,7 +148,7 @@ if [ -f /usr/lib/postgresql/$PG_VERSION/bin/postgres ]; then
         echo "authentication configuration)"
         echo ""
         echo "Please ask the system administrator to grant access to the"
-        echo "'openquake' database to the following users:"
+        echo "'openquake2' database to the following users:"
         echo ""
         echo "      oq_admin oq_job_init"
         echo "============================================================"
@@ -156,7 +156,9 @@ if [ -f /usr/lib/postgresql/$PG_VERSION/bin/postgres ]; then
     fi
 
     # Restart the remaining services just to be on the safe side.
-    /etc/init.d/rabbitmq-server restart
+    if [ -f /usr/sbin/rabbitmqctl ]; then
+        /etc/init.d/rabbitmq-server restart
+    fi
 
     # Restart celeryd
     if [ -x /etc/init.d/celeryd ]; then
