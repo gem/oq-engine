@@ -165,7 +165,8 @@ class DataStore(collections.MutableMapping):
     items, the DataStore will return a generator. The items will be ordered
     lexicographically according to their name.
     """
-    def __init__(self, calc_id=None, datadir=DATADIR, parent=()):
+    def __init__(self, calc_id=None, datadir=DATADIR, parent=(),
+                 export_dir='.'):
         if not os.path.exists(datadir):
             os.makedirs(datadir)
         if calc_id is None:  # use a new datastore
@@ -184,7 +185,7 @@ class DataStore(collections.MutableMapping):
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         if not os.path.exists(self.calc_dir):
             os.mkdir(self.calc_dir)
-        self.export_dir = '.'
+        self.export_dir = export_dir
         self.hdf5path = os.path.join(self.calc_dir, 'output.hdf5')
         mode = 'r+' if os.path.exists(self.hdf5path) else 'w'
         self.hdf5 = h5py.File(self.hdf5path, mode, libver='latest')

@@ -8,7 +8,7 @@ from openquake.commonlib.export import export
 class MyScenarioCalculator(base.BaseCalculator):
     def pre_execute(self):
         self.sitecol = readinput.get_site_collection(self.oqparam)
-        self.gsim = readinput.get_gsim(self.oqparam)
+        [self.gsim] = readinput.get_gsims(self.oqparam)
         self.imts = readinput.get_imts(self.oqparam)
         self.rupture = readinput.get_rupture(self.oqparam)
         self.rupture_tags = [  # used in the export phase

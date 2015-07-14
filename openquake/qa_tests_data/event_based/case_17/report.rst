@@ -20,24 +20,24 @@ master_seed                  0
 
 Input files
 -----------
-======================= =======================================================================
-Name                    File                                                                   
-======================= =======================================================================
-gsim_logic_tree         openquake/qa_tests_data/event_based/case_17/gsim_logic_tree.xml        
-job_ini                 openquake/qa_tests_data/event_based/case_17/job.ini                    
-source                  openquake/qa_tests_data/event_based/case_17/source_model_1.xml         
-source                  openquake/qa_tests_data/event_based/case_17/source_model_2.xml         
-source_model_logic_tree openquake/qa_tests_data/event_based/case_17/source_model_logic_tree.xml
-======================= =======================================================================
+======================= ============================================================
+Name                    File                                                        
+======================= ============================================================
+gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
+job_ini                 `job.ini <job.ini>`_                                        
+source                  `source_model_1.xml <source_model_1.xml>`_                  
+source                  `source_model_2.xml <source_model_2.xml>`_                  
+source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+======================= ============================================================
 
 Composite source model
 ----------------------
-========= ================== ======== =============== ========= ================ ===========
-smlt_path source_model_file  num_trts gsim_logic_tree num_gsims num_realizations num_sources
-========= ================== ======== =============== ========= ================ ===========
-b1        source_model_1.xml 0        trivial                   1/0              1          
-b2        source_model_2.xml 1        trivial         1         4/1              1          
-========= ================== ======== =============== ========= ================ ===========
+========= ====== ========================================== =============== ================ ===========
+smlt_path weight source_model_file                          gsim_logic_tree num_realizations num_sources
+========= ====== ========================================== =============== ================ ===========
+b1        0.2    `source_model_1.xml <source_model_1.xml>`_ trivial(0)      1/0              1          
+b2        0.2    `source_model_2.xml <source_model_2.xml>`_ trivial(1)      4/1              1          
+========= ====== ========================================== =============== ================ ===========
 
 Realizations per (TRT, GSIM)
 ----------------------------

@@ -745,11 +745,14 @@ def get_exposure(oqparam):
                                  "Missing cost %s for asset %s" % (
                                      missing, asset_id))
 
+        tot_fatalities = 0
         for occupancy in occupancies:
             with context(fname, occupancy):
                 fatalities = 'fatalities_%s' % occupancy['period']
                 values[fatalities] = occupancy['occupants']
-
+                tot_fatalities += values[fatalities]
+        if occupancies:  # store average fatalities
+            values['fatalities_None'] = tot_fatalities / len(occupancies)
         area = float(asset.attrib.get('area', 1))
         ass = workflows.Asset(
             asset_id, taxonomy, number, location, values, area,
