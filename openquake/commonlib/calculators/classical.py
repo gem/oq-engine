@@ -132,8 +132,7 @@ class ClassicalCalculator(base.HazardCalculator):
         nsites = len(self.sitecol)
         if oq.individual_curves:
             for rlz, curves in curves_by_rlz.iteritems():
-                dset = self.store_curves('rlz-%03d' % rlz.ordinal, curves)
-                dset.attrs['uid'] = rlz.uid
+                self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
 
         if len(rlzs) == 1:  # cannot compute statistics
             [self.mean_curves] = curves_by_rlz.values()
@@ -172,27 +171,35 @@ class ClassicalCalculator(base.HazardCalculator):
                 curves[imt], self.oqparam.imtls[imt], self.oqparam.poes)
         return maps
 
-    def store_curves(self, dset, curves):
+    def store_curves(self, kind, curves, rlz=None):
         """
         Store all kind of curves, optionally computing maps and uhs curves.
 
-        :param dset: the HDF5 dataset where to store the curves
+        :param kind: the kind of curves to store
         :param curves: an array of N curves to store
+        :param rlz: hazard realization, if any
         """
         if not self.persistent:  # do nothing
             return
         oq = self.oqparam
-        h5 = self.datastore.hdf5
-        h5['hcurves/' + dset] = curves
+        self._store('hcurves/' + kind, curves, rlz)
         if oq.hazard_maps or oq.uniform_hazard_spectra:
             # hmaps is a composite array of shape (N, P)
             hmaps = self.hazard_maps(curves)
             if oq.hazard_maps:
-                h5['hmaps/' + dset] = hmaps
+                self._store('hmaps/' + kind, hmaps, rlz, poes=oq.poes)
             if oq.uniform_hazard_spectra:
                 # uhs is an array of shape (N, I, P)
-                self.datastore.hdf5['uhs/' + dset] = calc.make_uhs(hmaps)
-        return h5['hcurves/' + dset]
+                self._store('uhs/' + kind, calc.make_uhs(hmaps), rlz,
+                            poes=oq.poes)
+
+    def _store(self, name, curves, rlz, **kw):
+        self.datastore.hdf5[name] = curves
+        dset = self.datastore.hdf5[name]
+        if rlz is not None:
+            dset.attrs['uid'] = rlz.uid
+        for k, v in kw.items():
+            dset.attrs[k] = v
 
 
 def is_effective_trt_model(result_dict, trt_model):
