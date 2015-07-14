@@ -35,9 +35,11 @@ from datetime import datetime
 import numpy
 from scipy import interpolate
 
+import django
+if hasattr(django, 'setup'):
+    django.setup()  # for Django >= 1.7
 from django.db import connections
 from django.core.exceptions import ObjectDoesNotExist
-
 from django.contrib.gis.db import models as djm
 
 from openquake.hazardlib.imt import from_string
@@ -382,7 +384,7 @@ class OqJob(djm.Model):
             coords = sorted(
                 set((asset.site.x, asset.site.y) for asset in assets))
             lons, lats = zip(*coords)
-            mesh = geo.Mesh(numpy.array(lons), numpy.array(lats), None)
+            mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
         else:
             mesh = get_mesh(oqparam)
         sids = save_sites(self, ((p.longitude, p.latitude) for p in mesh))
@@ -480,12 +482,12 @@ class Log(djm.Model):
 def save_sites(job, coords):
     """
     Save all the gives sites on the hzrdi.hazard_site table.
-    :param coordinates: a sequence of (lon, lat) pairs
+    :param coords: a sequence of coordinates
     :returns: the ids of the inserted HazardSite instances
     """
     sites = [HazardSite(hazard_calculation=job,
-                        location='POINT(%s %s)' % (lon, lat))
-             for lon, lat in coords]
+                        lon=point[0], lat=point[1])
+             for point in coords]
     return writer.CacheInserter.saveall(sites)
 
 
@@ -727,12 +729,11 @@ class Output(djm.Model):
 
         """
         oq = self.oq_job.get_oqparam()
-        investigation_time = oq.hazard_investigation_time
 
         statistics, quantile = self.statistical_params
         gsim_lt_path, sm_lt_path = self.lt_realization_paths
 
-        return self.HazardMetadata(investigation_time,
+        return self.HazardMetadata(oq.investigation_time,
                                    statistics, quantile,
                                    sm_lt_path, gsim_lt_path)
 
@@ -1319,7 +1320,7 @@ class Gmf(djm.Model):
         # find all the locations interested by the hazard calculation
         logs.LOG.info('reading HazardSite for job_id=%d', job.id)
         curs.execute("""\
-        SELECT id, ST_X(location::geometry), ST_Y(location::geometry)
+        SELECT id, lon, lat
         FROM hzrdi.hazard_site WHERE hazard_calculation_id=%d""" % job.id)
         loc = {site_id: (x, y) for site_id, x, y in curs}
 
@@ -2943,7 +2944,8 @@ class HazardSite(djm.Model):
     """
 
     hazard_calculation = djm.ForeignKey('OqJob')
-    location = djm.PointField(srid=DEFAULT_SRID)
+    lon = djm.FloatField(null=False)
+    lat = djm.FloatField(null=False)
 
     class Meta:
         db_table = 'hzrdi\".\"hazard_site'

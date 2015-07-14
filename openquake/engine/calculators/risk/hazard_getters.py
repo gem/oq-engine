@@ -159,12 +159,13 @@ class HazardCurveGetter(HazardGetter):
         query = """\
         SELECT hzrdr.hazard_curve_data.poes
         FROM hzrdr.hazard_curve_data
-        WHERE hazard_curve_id = %s AND location = %s
+        WHERE hazard_curve_id = %s
+        AND ST_X(location) = %s AND ST_Y(location) = %s
         """
         all_curves = []
         for site_id in self.site_ids:
-            location = models.HazardSite.objects.get(pk=site_id).location
-            cursor.execute(query, (oc.id, 'SRID=4326; ' + location.wkt))
+            site = models.HazardSite.objects.get(pk=site_id)
+            cursor.execute(query, (oc.id, site.lon, site.lat))
             poes = cursor.fetchall()[0][0]
             all_curves.append(poes)
         return all_curves
@@ -327,7 +328,8 @@ WITH assocs AS (
   SELECT %s, exp.id, hsite.id
   FROM riski.exposure_data AS exp
   JOIN hzrdi.hazard_site AS hsite
-  ON exp.site::text = hsite.location::text
+  ON ST_X(exp.site::GEOMETRY) = hsite.lon
+  AND ST_Y(exp.site::GEOMETRY) = hsite.lat
   WHERE hsite.hazard_calculation_id = %s
   AND exposure_model_id = %s AND taxonomy=%s
   AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
@@ -343,11 +345,12 @@ WITH assocs AS (
   SELECT DISTINCT ON (exp.id) %s, exp.id, hsite.id
   FROM riski.exposure_data AS exp
   JOIN hzrdi.hazard_site AS hsite
-  ON ST_DWithin(exp.site, hsite.location, %s)
+  ON ST_DWithin(exp.site, ST_MakePoint(hsite.lon, hsite.lat)::geography, %s)
   WHERE hsite.hazard_calculation_id = %s
   AND exposure_model_id = %s AND taxonomy=%s
   AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
-  ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
+  ORDER BY exp.id, ST_Distance(
+  exp.site, ST_MakePoint(hsite.lon, hsite.lat)::geography, false)
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
 SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.oqparam.id,
@@ -434,10 +437,13 @@ SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.oqparam.id,
             num_assets, num_samples = self.epsilons_shape[scid]
             self._rupture_ids[scid] = ses_coll.get_ruptures(
                 ).values_list('id', flat=True)
+            if not num_samples:  # empty SESCollection
+                continue
             # build the epsilons, except for scenario_damage
             if self.calculation_mode != 'scenario_damage':
-                logs.LOG.info('Building (%d, %d) epsilons for taxonomy %s',
-                              num_assets, num_samples, self.taxonomy)
+                logs.LOG.info(
+                    'Building (%d, %d) epsilons for taxonomy %s, ses_coll=%d',
+                    num_assets, num_samples, self.taxonomy, scid)
                 asset_sites = models.AssetSite.objects.filter(
                     job=self.calc.job, asset__taxonomy=self.taxonomy)
                 eps = make_epsilons(
