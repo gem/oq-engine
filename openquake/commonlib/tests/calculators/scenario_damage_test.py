@@ -47,6 +47,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_5(self):
         # this is a test for the rupture filtering
+        # NB: the exposure file is imported twice on purpose, to make
+        # sure that nothing changes; TODO: document the issue (MS)
         self.assert_ok(case_5, 'job_haz.ini,job_risk.ini')
 
     @attr('qa', 'risk', 'scenario_damage')

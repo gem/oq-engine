@@ -20,23 +20,24 @@ master_seed                  0
 
 Input files
 -----------
-======================= =============================================================
-Name                    File                                                         
-gsim_logic_tree         demos/LogicTreeCase1ClassicalPSHA/gmpe_logic_tree.xml        
-job_ini                 demos/LogicTreeCase1ClassicalPSHA/job.ini                    
-source                  demos/LogicTreeCase1ClassicalPSHA/source_model_1.xml         
-source                  demos/LogicTreeCase1ClassicalPSHA/source_model_2.xml         
-source_model_logic_tree demos/LogicTreeCase1ClassicalPSHA/source_model_logic_tree.xml
-======================= =============================================================
+======================= ============================================================
+Name                    File                                                        
+======================= ============================================================
+gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
+job_ini                 `job.ini <job.ini>`_                                        
+source                  `source_model_1.xml <source_model_1.xml>`_                  
+source                  `source_model_2.xml <source_model_2.xml>`_                  
+source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+======================= ============================================================
 
 Composite source model
 ----------------------
-========= ================== ======== =============== ========= ================ ===========
-smlt_path source_model_file  num_trts gsim_logic_tree num_gsims num_realizations num_sources
-========= ================== ======== =============== ========= ================ ===========
-b1        source_model_1.xml 2        complex         2,2       4/4              1539       
-b2        source_model_2.xml 2        complex         2,2       4/4              1593       
-========= ================== ======== =============== ========= ================ ===========
+========= ====== ========================================== =============== ================ ===========
+smlt_path weight source_model_file                          gsim_logic_tree num_realizations num_sources
+========= ====== ========================================== =============== ================ ===========
+b1        0.50   `source_model_1.xml <source_model_1.xml>`_ complex(2,2)    4/4              1539       
+b2        0.50   `source_model_2.xml <source_model_2.xml>`_ complex(2,2)    4/4              1593       
+========= ====== ========================================== =============== ================ ===========
 
 Realizations per (TRT, GSIM)
 ----------------------------

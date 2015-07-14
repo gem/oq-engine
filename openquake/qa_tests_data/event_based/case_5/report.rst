@@ -20,27 +20,27 @@ master_seed                  0
 
 Input files
 -----------
-======================= ========================================================================================
-Name                    File                                                                                    
-======================= ========================================================================================
-gsim_logic_tree         openquake/qa_tests_data/event_based/case_5/complete_gmpe_logic_tree.xml                 
-job_ini                 openquake/qa_tests_data/event_based/case_5/job.ini                                      
-sites                   openquake/qa_tests_data/event_based/case_5/sites.csv                                    
-source                  openquake/qa_tests_data/event_based/case_5/source_models/as_model.xml                   
-source                  openquake/qa_tests_data/event_based/case_5/source_models/fs_bg_source_model.xml         
-source                  openquake/qa_tests_data/event_based/case_5/source_models/ss_model_final_250km_Buffer.xml
-source_model_logic_tree openquake/qa_tests_data/event_based/case_5/combined_logic-tree-source-model.xml         
-======================= ========================================================================================
+======================= ==============================================================================
+Name                    File                                                                          
+======================= ==============================================================================
+gsim_logic_tree         `complete_gmpe_logic_tree.xml <complete_gmpe_logic_tree.xml>`_                
+job_ini                 `job.ini <job.ini>`_                                                          
+sites                   `sites.csv <sites.csv>`_                                                      
+source                  `as_model.xml <as_model.xml>`_                                                
+source                  `fs_bg_source_model.xml <fs_bg_source_model.xml>`_                            
+source                  `ss_model_final_250km_Buffer.xml <ss_model_final_250km_Buffer.xml>`_          
+source_model_logic_tree `combined_logic-tree-source-model.xml <combined_logic-tree-source-model.xml>`_
+======================= ==============================================================================
 
 Composite source model
 ----------------------
-========= ============================================= ======== =============== ========= ================ ===========
-smlt_path source_model_file                             num_trts gsim_logic_tree num_gsims num_realizations num_sources
-========= ============================================= ======== =============== ========= ================ ===========
-b1        source_models/as_model.xml                    0        complex                   0/0              12         
-b2        source_models/fs_bg_source_model.xml          1        complex         5         5/5              25484      
-b3        source_models/ss_model_final_250km_Buffer.xml 1        complex         1         1/1              36         
-========= ============================================= ======== =============== ========= ================ ===========
+========= ====== ================================================================================================ ================ ================ ===========
+smlt_path weight source_model_file                                                                                gsim_logic_tree  num_realizations num_sources
+========= ====== ================================================================================================ ================ ================ ===========
+b1        0.50   `source_models/as_model.xml <source_models/as_model.xml>`_                                       trivial(0,0,0,0) 0/0              12         
+b2        0.200  `source_models/fs_bg_source_model.xml <source_models/fs_bg_source_model.xml>`_                   simple(0,0,5,0)  5/5              25484      
+b3        0.300  `source_models/ss_model_final_250km_Buffer.xml <source_models/ss_model_final_250km_Buffer.xml>`_ trivial(1,0,0,0) 1/1              36         
+========= ====== ================================================================================================ ================ ================ ===========
 
 Realizations per (TRT, GSIM)
 ----------------------------

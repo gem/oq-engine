@@ -20,16 +20,18 @@ master_seed                  0
 
 Input files
 -----------
-============= ===============================================================
-Name          File                                                           
-job_ini       openquake/qa_tests_data/scenario_risk/case_1g/job_haz.ini      
-rupture_model openquake/qa_tests_data/scenario_risk/case_1g/rupture_model.xml
-sites         openquake/qa_tests_data/scenario_risk/case_1g/sites.csv        
-============= ===============================================================
+============= ========================================
+Name          File                                    
+============= ========================================
+job_ini       `job_haz.ini <job_haz.ini>`_            
+rupture_model `rupture_model.xml <rupture_model.xml>`_
+sites         `sites.csv <sites.csv>`_                
+============= ========================================
 
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
-  <openquake.commonlib.logictree.RlzsAssoc object at 0x7f0c94929fd0>
+  <RlzsAssoc(1)
+  0,BooreAtkinson2008: ['BooreAtkinson2008']>
