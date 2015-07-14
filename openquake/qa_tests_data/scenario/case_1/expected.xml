@@ -519,7 +519,7 @@ xmlns:gml="http://www.opengis.net/gml"
             ruptureId="scenario-0000000063"
             >
                 <node gmv="5.89127588E-01" lat="0.00000000E+00" lon="0.00000000E+00"/>
-                <node gmv="2.31586277E-01" lat="1.00000000E-01" lon="0.00000000E+00"/>
+                <node gmv="2.31586278E-01" lat="1.00000000E-01" lon="0.00000000E+00"/>
                 <node gmv="7.35884916E-02" lat="2.00000000E-01" lon="0.00000000E+00"/>
             </gmf>
             <gmf
