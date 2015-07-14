@@ -52,6 +52,6 @@ class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
         return data
 
     def expected_data(self):
-        return [(0.2311358, 0.0, 39.970994),
-                (0.3344297, 0.0, 28.916953),
-                (0.2479981, 0.0, 21.443528)]
+        return [(0.19014, 0.0, 32.8812),
+                (0.36215, 0.0, 31.3136),
+                (0.24714, 0.0, 21.3698)]
