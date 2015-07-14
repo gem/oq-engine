@@ -30,12 +30,13 @@ from openquake.hazardlib.imt import from_string
 from openquake.engine.db import models
 
 from openquake.baselib import general
-from openquake.commonlib import readinput, risk_parsers, source
+from openquake.commonlib import readinput, risk_parsers, valid
 from openquake.commonlib.readinput import get_site_collection
 
 from openquake.engine.input import exposure
 from openquake.engine import logs
 from openquake.engine import writer
+from openquake.engine.utils import config
 from openquake.engine.calculators import base
 from openquake.risklib import scientific
 
@@ -78,7 +79,6 @@ class BaseHazardCalculator(base.Calculator):
     Abstract base class for hazard calculators. Contains a bunch of common
     functionality, like initialization procedures.
     """
-    prefilter = True
     tilepath = ()  # set only by the tiling calculator
 
     def __init__(self, job):
@@ -100,9 +100,15 @@ class BaseHazardCalculator(base.Calculator):
         distribution, but it can be overridden in subclasses.
         """
         csm = self.composite_model
+        rlzs_assoc = csm.get_rlzs_assoc()
+        # temporary hack
+        if self.__class__.__name__ == 'EventBasedHazardCalculator':
+            info = rlzs_assoc.csm_info
+        else:
+            info = rlzs_assoc.gsims_by_trt_id
         self.acc = tasks.apply_reduce(
             self.core_calc_task,
-            (list(csm.sources), self.site_collection, csm.info, self.monitor),
+            (csm.get_sources(), self.site_collection, info, self.monitor),
             agg=self.agg_curves, acc=self.acc,
             weight=attrgetter('weight'), key=attrgetter('trt_model_id'),
             concurrent_tasks=self.concurrent_tasks)
@@ -153,7 +159,7 @@ class BaseHazardCalculator(base.Calculator):
         models.JobInfo.objects.create(
             oq_job=self.job,
             num_sites=info['n_sites'],
-            num_realizations=info['max_realizations'],
+            num_realizations=info['n_realizations'],
             num_imts=info['n_imts'],
             num_levels=info['n_levels'],
             input_weight=info['input_weight'],
@@ -193,7 +199,7 @@ class BaseHazardCalculator(base.Calculator):
                 'of sites, the number of IMTs, the number of realizations '
                 'or the number of stochastic event sets; otherwise, '
                 'raise the parameter max_output_weight in openquake.cfg'
-                % (self.max_input_weight, input_weight))
+                % (self.max_output_weight, output_weight))
 
     def post_execute(self, result=None):
         """Inizialize realizations"""
@@ -208,8 +214,11 @@ class BaseHazardCalculator(base.Calculator):
         trees. Save in the database LtSourceModel and TrtModel objects.
         """
         logs.LOG.progress("initializing sources")
+        parallel_source_splitting = valid.boolean(
+            config.get('hazard', 'parallel_source_splitting') or 'false')
         self.composite_model = readinput.get_composite_source_model(
-            self.oqparam, self.site_collection, self.prefilter)
+            self.oqparam, self.site_collection,
+            no_distribute=not parallel_source_splitting)
         for sm in self.composite_model:
             # create an LtSourceModel for each distinct source model
             lt_model = models.LtSourceModel.objects.create(
@@ -230,9 +239,6 @@ class BaseHazardCalculator(base.Calculator):
                     min_mag=trt_mod.min_mag,
                     max_mag=trt_mod.max_mag,
                     gsims=gsims_by_trt[trt_mod.trt]).id
-        # rebuild the info object with the trt_ids coming from the db
-        self.composite_model.info = source.CompositionInfo(
-            self.composite_model.source_models)
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_model(self):
@@ -282,9 +288,9 @@ class BaseHazardCalculator(base.Calculator):
         self.rlzs_assoc = cm.get_rlzs_assoc(
             lambda trt_model: models.TrtModel.objects.get(
                 pk=trt_model.id).num_ruptures)
-        gsims_by_trt_id = self.rlzs_assoc.get_gsims_by_trt_id()
-        for lt_model in self._source_models:
-            rlzs = self.rlzs_assoc.rlzs_by_smodel.get(lt_model.ordinal, [])
+        gsims_by_trt_id = self.rlzs_assoc.gsims_by_trt_id
+        for lt_model, rlzs in zip(
+                self._source_models, self.rlzs_assoc.rlzs_by_smodel):
             logs.LOG.info('Creating %d realization(s) for model '
                           '%s, %s', len(rlzs), lt_model.sm_name,
                           '_'.join(lt_model.sm_lt_path))
@@ -295,7 +301,8 @@ class BaseHazardCalculator(base.Calculator):
                     weight=rlz.weight, ordinal=rlz.ordinal)
                 rlz.id = lt_rlz.id
                 self._realizations.append(lt_rlz)
-                for trt_model in lt_model.trtmodel_set.all():
+                for trt_model in lt_model.trtmodel_set.filter(
+                        pk__in=gsims_by_trt_id):
                     trt = trt_model.tectonic_region_type
                     # populate the association table rlz <-> trt_model
                     models.AssocLtRlzTrtModel.objects.create(
@@ -335,7 +342,7 @@ class BaseHazardCalculator(base.Calculator):
 
             with self.monitor('building curves per realization'):
                 the_curves = models.build_curves(rlz, self.acc)
-                if isinstance(the_curves, float) and the_curves == 0:
+                if all_equal(the_curves, 0):
                     the_curves = self.zeros
                 for imt, curves in zip(sorted_imts, the_curves):
                     if individual_curves:
@@ -386,7 +393,7 @@ class BaseHazardCalculator(base.Calculator):
         writer.CacheInserter.saveall([models.HazardCurveData(
             hazard_curve=haz_curve,
             poes=list(poes),
-            location=p.location,
+            location='POINT(%s %s)' % (p.lon, p.lat),
             weight=rlz.weight)
             for p, poes in zip(points, curves)])
 

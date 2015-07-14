@@ -54,7 +54,8 @@ INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
 UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
 UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 
-TERMINATE = valid.boolean(config.get('celery', 'terminate_workers_on_revoke'))
+TERMINATE = valid.boolean(
+    config.get('celery', 'terminate_workers_on_revoke') or 'false')
 
 
 class InvalidHazardCalculationID(Exception):
@@ -67,7 +68,8 @@ RISK_HAZARD_MAP = dict(
     classical_bcr=['classical'],
     classical_damage=['classical'],
     event_based_risk=['event_based'],
-    event_based_bcr=['event_based'])
+    event_based_bcr=['event_based'],
+    ebr=['ebr'])
 
 
 def cleanup_after_job(job, terminate):
@@ -107,23 +109,34 @@ def job_stats(job):
     js = job.jobstats
     try:
         yield
-    except:
-        conn = django_db.connections['job_init']
-        if conn.is_dirty():
-            conn.rollback()
-        raise
     finally:
+        tb = traceback.format_exc()  # get the traceback of the error, if any
         job.is_running = False
-        job.save()
+        if tb != 'None\n':
+            # rollback the transactions; unfortunately, for mysterious reasons,
+            # this is not enough and an OperationError may still show up in the
+            # finalization phase when forks are involved
+            for conn in django_db.connections.all():
+                conn.rollback()
+        # try to save the job stats on the database and then clean up;
+        # if there was an error in the calculation, this part may fail;
+        # in such a situation, we simply log the cleanup error without
+        # taking further action, so that the real error can propagate
+        try:
+            job.save()
+            curs.execute("select pg_database_size(%s)", (dbname,))
+            new_dbsize = curs.fetchall()[0][0]
+            js.disk_space = new_dbsize - dbsize
+            js.stop_time = datetime.utcnow()
+            js.save()
+            cleanup_after_job(job, terminate=TERMINATE)
+        except:
+            # log the non-interesting error
+            logs.LOG.error('finalizing', exc_info=True)
 
-        # save job stats
-        curs.execute("select pg_database_size(%s)", (dbname,))
-        new_dbsize = curs.fetchall()[0][0]
-        js.disk_space = new_dbsize - dbsize
-        js.stop_time = datetime.utcnow()
-        js.save()
-
-        cleanup_after_job(job, terminate=TERMINATE)
+        # log the real error, if any
+        if tb != 'None\n':
+            logs.LOG.critical(tb)
 
 
 def create_job(user_name="openquake", log_level='progress'):
@@ -168,11 +181,15 @@ def run_calc(job, log_level, log_file, exports, lite=False):
     :param lite:
         Flag set when the oq-lite calculators are used
     """
-    # let's import the calculator classes here, when they are needed
+    # let's import the calculator classes here, when they are needed;
     # the reason is that the command `$ oq-engine --upgrade-db`
     # does not need them and would raise strange errors during installation
     # time if the PYTHONPATH is not set and commonlib is not visible
     if lite:
+        calc_dir = os.path.join(datastore.DATADIR, 'calc_%d' % job.id)
+        if os.path.exists(calc_dir):
+            os.rename(calc_dir, calc_dir + '.bak')
+            print 'Generated %s.bak' % calc_dir
         from openquake.commonlib.calculators import base
         calculator = base.calculators(job.get_oqparam(), calc_id=job.id)
         calculator.job = job
@@ -184,12 +201,7 @@ def run_calc(job, log_level, log_file, exports, lite=False):
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
     with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
-        try:
-            _do_run_calc(calculator, exports)
-        except:
-            tb = traceback.format_exc()
-            logs.LOG.critical(tb)
-            raise
+        _do_run_calc(calculator, exports)
     return calculator
 
 
@@ -530,8 +542,9 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
         job.save_params(params)
         del params['hazard_calculation_id']
         del params['hazard_output_id']
-    else:  # this is a risk calculation
-        if 'maximum_distance' in params:
+    else:  # this is a risk calculation or a unified hazard-risk calculation
+        if ('maximum_distance' in params and
+                'asset_hazard_distance' not in params):
             raise NameError(
                 'The name of the parameter `maximum_distance` for risk '
                 'calculators has changed.\nIt is now `asset_hazard_distance`. '
@@ -544,7 +557,6 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
         for name, value in hc:
             if name not in params:
                 params[name] = value
-        params['hazard_investigation_time'] = hc.investigation_time
         params['hazard_imtls'] = dict(hc.imtls)
         cfd = hc.continuous_fragility_discretization
         if cfd and cfd != oqparam.continuous_fragility_discretization:
@@ -592,8 +604,6 @@ def job_from_file_lite(cfg_file, username, log_level='info', exports='',
         params.update(extras)
         # build and validate an OqParam object
         oqparam = readinput.get_oqparam(params, calculators=base.calculators)
-        oqparam.concurrent_tasks = int(
-            config.get('celery', 'concurrent_tasks'))
         job.save_params(vars(oqparam))
         job.save()
     return job
