@@ -213,8 +213,9 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
      [<WeightedSequence ['A', 'B'], weight=2>, <WeightedSequence ['C', 'D'], weight=2>, <WeightedSequence ['E'], weight=1>]
 
     """
-    assert hint > 0, hint
     items = list(sequence)
+    assert hint > 0, hint
+    assert len(items) > 0, len(items)
     total_weight = float(sum(weight(item) for item in items))
     return block_splitter(items, math.ceil(total_weight / hint), weight, key)
 
