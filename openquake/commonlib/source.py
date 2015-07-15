@@ -678,7 +678,10 @@ def _collect_source_model_paths(smlt):
     as a uniquified list (no duplicates).
     """
     src_paths = []
-    tree = etree.parse(smlt)
+    try:
+        tree = etree.parse(smlt)
+    except Exception as exc:
+        raise Exception('%s: %s in %s' % (exc.__class__.__name__, exc, smlt))
     for branch_set in tree.xpath('//nrml:logicTreeBranchSet',
                                  namespaces=PARSE_NS_MAP):
 
