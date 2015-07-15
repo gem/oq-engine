@@ -1,10 +1,12 @@
 import numpy
+import re
 from numpy.testing import assert_almost_equal as aae
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9)
 
+from openquake.commonlib import writers
 from openquake.commonlib.tests.calculators import CalculatorTestCase
 
 
@@ -47,7 +49,8 @@ class ScenarioHazardTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_1(self):
-        out = self.run_calc(case_1.__file__, 'job.ini', exports='xml')
+        with writers.floatformat('%10.5E'):
+            out = self.run_calc(case_1.__file__, 'job.ini', exports='xml')
         self.assertEqualFiles('expected.xml', out['gmfs', 'xml'][0])
 
     @attr('qa', 'hazard', 'scenario')
