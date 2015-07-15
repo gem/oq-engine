@@ -671,11 +671,13 @@ class CompositeSourceModel(collections.Sequence):
         return len(self.source_models)
 
 
-def _collect_source_model_paths(smlt):
+def collect_source_model_paths(smlt):
     """
     Given a path to a source model logic tree or a file-like, collect all of
     the soft-linked path names to the source models it contains and return them
     as a uniquified list (no duplicates).
+
+    :param smlt: source model logic tree file
     """
     src_paths = []
     try:

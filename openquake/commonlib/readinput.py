@@ -137,7 +137,7 @@ def get_params(job_inis):
     if smlt:
         params['inputs']['source'] = [
             os.path.join(base_path, src_path)
-            for src_path in source._collect_source_model_paths(smlt)]
+            for src_path in source.collect_source_model_paths(smlt)]
 
     return params
 
