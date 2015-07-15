@@ -397,7 +397,7 @@ class OqJob(djm.Model):
 def get_lon_lat(asset):
     """
     :param asset: an ExposureData instance
-    :returns: (lon, lat) truncated to 5 digits
+    :returns: (lon, lat) rounded to 5 digits
     """
     return valid.longitude(asset.site.x), valid.latitude(asset.site.y)
 
