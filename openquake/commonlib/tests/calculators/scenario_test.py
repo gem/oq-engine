@@ -120,7 +120,8 @@ class ScenarioHazardTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_9(self):
-        out = self.run_calc(case_9.__file__, 'job.ini', exports='xml')
+        with writers.floatformat('%10.6E'):
+            out = self.run_calc(case_9.__file__, 'job.ini', exports='xml')
         f1, f2 = out['gmfs', 'xml']
         self.assertEqualFiles('LinLee2008SSlab_gmf.xml', f1)
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.xml', f2)
