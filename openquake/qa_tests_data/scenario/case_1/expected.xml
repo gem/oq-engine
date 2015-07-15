@@ -14,817 +14,817 @@ xmlns:gml="http://www.opengis.net/gml"
             IMT="PGA"
             ruptureId="scenario-0000000000"
             >
-                <node gmv="6.82E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.27E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.60E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="6.8E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.3E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.6E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000001"
             >
-                <node gmv="3.66E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.56E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.11E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.7E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.1E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000002"
             >
-                <node gmv="8.70E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.11E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.23E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="8.7E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.1E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.2E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000003"
             >
-                <node gmv="3.28E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.36E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.78E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.3E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.4E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.8E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000004"
             >
-                <node gmv="6.97E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.58E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.35E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="7.0E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.4E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000005"
             >
-                <node gmv="5.44E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.63E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.41E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.4E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.4E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000006"
             >
-                <node gmv="2.53E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.19E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.66E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="2.5E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.2E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.7E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000007"
             >
-                <node gmv="5.19E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.93E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.72E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.2E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.9E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.7E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000008"
             >
-                <node gmv="4.44E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.80E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.31E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.4E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.8E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.3E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000009"
             >
-                <node gmv="5.45E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.53E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.16E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.4E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.5E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.2E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000010"
             >
-                <node gmv="4.88E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.34E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.16E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.9E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.3E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.2E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000011"
             >
-                <node gmv="4.55E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.23E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.43E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.6E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.2E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.4E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000012"
             >
-                <node gmv="3.70E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.34E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="9.99E-02" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.7E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.3E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.0E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000013"
             >
-                <node gmv="3.52E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.45E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.51E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.5E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.5E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.5E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000014"
             >
-                <node gmv="6.40E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.14E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.40E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="6.4E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.1E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.4E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000015"
             >
-                <node gmv="3.30E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.16E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.34E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.3E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.2E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.3E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000016"
             >
-                <node gmv="8.55E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.66E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.28E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="8.5E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.7E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.3E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000017"
             >
-                <node gmv="4.53E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.23E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.60E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.5E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.2E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.6E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000018"
             >
-                <node gmv="5.32E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.45E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.36E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.3E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.4E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.4E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000019"
             >
-                <node gmv="5.96E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.46E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.24E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="6.0E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.5E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.2E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000020"
             >
-                <node gmv="3.66E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.63E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.07E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.7E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.1E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000021"
             >
-                <node gmv="5.54E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="3.74E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.38E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.5E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="3.7E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.4E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000022"
             >
-                <node gmv="2.83E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.65E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="8.16E-02" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="2.8E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="8.2E-02" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000023"
             >
-                <node gmv="5.21E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.64E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.51E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.2E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.5E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000024"
             >
-                <node gmv="3.26E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.58E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.88E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.3E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.9E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000025"
             >
-                <node gmv="3.60E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.03E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.93E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.6E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.0E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.9E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000026"
             >
-                <node gmv="6.51E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.65E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="8.32E-02" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="6.5E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.7E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="8.3E-02" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000027"
             >
-                <node gmv="2.90E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.37E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="7.75E-02" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="2.9E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.4E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="7.7E-02" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000028"
             >
-                <node gmv="5.57E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.89E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.70E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.6E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.9E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.7E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000029"
             >
-                <node gmv="9.50E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.94E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.13E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="9.5E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.9E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.1E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000030"
             >
-                <node gmv="6.38E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.33E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="9.62E-02" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="6.4E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.3E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="9.6E-02" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000031"
             >
-                <node gmv="7.58E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.81E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.41E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="7.6E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.8E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.4E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000032"
             >
-                <node gmv="4.09E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.95E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.10E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.1E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.9E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.1E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000033"
             >
-                <node gmv="4.32E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.42E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.47E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.3E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.4E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.5E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000034"
             >
-                <node gmv="7.16E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.68E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.09E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="7.2E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.7E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.1E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000035"
             >
-                <node gmv="6.10E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.72E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.34E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="6.1E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.7E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.3E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000036"
             >
-                <node gmv="2.80E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.04E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.14E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="2.8E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.0E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.1E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000037"
             >
-                <node gmv="6.10E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.28E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.87E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="6.1E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.3E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.9E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000038"
             >
-                <node gmv="4.72E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.31E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.70E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.7E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.3E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.7E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000039"
             >
-                <node gmv="7.20E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.79E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.51E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="7.2E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.8E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.5E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000040"
             >
-                <node gmv="3.14E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.35E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.70E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.1E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.3E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.7E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000041"
             >
-                <node gmv="3.27E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.86E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.83E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.3E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.9E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.8E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000042"
             >
-                <node gmv="5.01E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.94E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.23E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.0E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.9E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.2E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000043"
             >
-                <node gmv="4.83E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.92E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.94E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.8E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.9E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.9E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000044"
             >
-                <node gmv="3.94E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.39E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="8.67E-02" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.9E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.4E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="8.7E-02" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000045"
             >
-                <node gmv="6.94E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.02E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.16E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="6.9E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.0E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.2E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000046"
             >
-                <node gmv="3.97E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.79E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.12E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.0E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.8E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.1E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000047"
             >
-                <node gmv="5.04E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.85E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="8.36E-02" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.0E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.8E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="8.4E-02" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000048"
             >
-                <node gmv="4.80E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.57E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.79E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.8E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.8E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000049"
             >
-                <node gmv="6.61E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.44E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="9.15E-02" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="6.6E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.4E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="9.2E-02" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000050"
             >
-                <node gmv="5.10E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="3.20E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.24E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.1E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="3.2E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.2E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000051"
             >
-                <node gmv="6.80E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.57E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.54E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="6.8E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.5E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000052"
             >
-                <node gmv="3.20E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.77E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.13E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.2E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.8E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.1E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000053"
             >
-                <node gmv="3.81E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.80E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.21E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.8E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.8E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.2E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000054"
             >
-                <node gmv="5.11E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.51E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.33E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.1E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.5E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.3E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000055"
             >
-                <node gmv="3.07E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.30E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.83E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.1E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.3E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.8E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000056"
             >
-                <node gmv="5.55E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="3.16E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.44E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.5E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="3.2E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.4E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000057"
             >
-                <node gmv="5.56E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.38E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.09E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.6E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.4E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.1E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000058"
             >
-                <node gmv="6.20E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.50E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.56E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="6.2E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.5E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.6E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000059"
             >
-                <node gmv="4.68E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.82E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.95E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.7E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.8E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.0E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000060"
             >
-                <node gmv="7.13E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.00E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.36E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="7.1E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.0E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.4E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000061"
             >
-                <node gmv="7.01E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.32E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.31E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="7.0E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.3E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.3E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000062"
             >
-                <node gmv="3.24E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.65E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.93E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.2E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.7E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.9E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000063"
             >
-                <node gmv="5.89E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.32E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="7.36E-02" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.9E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.3E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="7.4E-02" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000064"
             >
-                <node gmv="3.89E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.23E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.83E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.9E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.2E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.8E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000065"
             >
-                <node gmv="4.44E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.71E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.13E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.4E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.7E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.1E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000066"
             >
-                <node gmv="6.96E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.67E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.01E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="7.0E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.7E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.0E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000067"
             >
-                <node gmv="6.45E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.64E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="7.82E-02" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="6.4E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="7.8E-02" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000068"
             >
-                <node gmv="4.36E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="3.75E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.58E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.4E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="3.8E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.6E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000069"
             >
-                <node gmv="7.00E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.50E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.34E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="7.0E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.5E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.3E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000070"
             >
-                <node gmv="5.57E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.59E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.20E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.6E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.2E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000071"
             >
-                <node gmv="4.20E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="3.54E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.22E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.2E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="3.5E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.2E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000072"
             >
-                <node gmv="6.91E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.88E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.83E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="6.9E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.9E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.8E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000073"
             >
-                <node gmv="7.84E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="3.55E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.70E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="7.8E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="3.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.7E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000074"
             >
-                <node gmv="3.50E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.67E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.13E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.5E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.7E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.1E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000075"
             >
-                <node gmv="5.07E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.79E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.44E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.1E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.8E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.4E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000076"
             >
-                <node gmv="3.92E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.41E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.03E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.9E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.4E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.0E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000077"
             >
-                <node gmv="5.11E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.73E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.85E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.1E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.7E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.9E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000078"
             >
-                <node gmv="2.83E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.58E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.13E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="2.8E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.1E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000079"
             >
-                <node gmv="3.95E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.47E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="8.11E-02" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.9E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.5E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="8.1E-02" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000080"
             >
-                <node gmv="4.65E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.43E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.43E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.6E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.4E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.4E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000081"
             >
-                <node gmv="4.05E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.57E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.98E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.0E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.0E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000082"
             >
-                <node gmv="4.13E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.72E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.86E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.1E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.7E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.9E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000083"
             >
-                <node gmv="3.18E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.06E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.38E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.2E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.1E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.4E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000084"
             >
-                <node gmv="4.87E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="3.15E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.41E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.9E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="3.2E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.4E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000085"
             >
-                <node gmv="3.72E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.45E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.08E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.7E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.4E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.1E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000086"
             >
-                <node gmv="7.62E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.60E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.59E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="7.6E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.6E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000087"
             >
-                <node gmv="5.32E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.52E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.66E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.3E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.5E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.7E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000088"
             >
-                <node gmv="7.31E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.58E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.27E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="7.3E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.3E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000089"
             >
-                <node gmv="3.98E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="3.13E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.41E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.0E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="3.1E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.4E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000090"
             >
-                <node gmv="7.29E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="3.04E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.23E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="7.3E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="3.0E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.2E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000091"
             >
-                <node gmv="9.11E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.79E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.05E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="9.1E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.8E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.0E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000092"
             >
-                <node gmv="7.87E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.76E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.28E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="7.9E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.8E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.3E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000093"
             >
-                <node gmv="5.04E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.10E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.35E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="5.0E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.1E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.3E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000094"
             >
-                <node gmv="6.22E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.08E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.29E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="6.2E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.1E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.3E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000095"
             >
-                <node gmv="4.51E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.55E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.10E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.5E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.5E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.1E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000096"
             >
-                <node gmv="2.37E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.74E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.36E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="2.4E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.7E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.4E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000097"
             >
-                <node gmv="2.50E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.51E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.27E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="2.5E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.5E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.3E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000098"
             >
-                <node gmv="3.55E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.79E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.98E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.6E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.8E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.0E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000099"
             >
-                <node gmv="3.75E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.64E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.28E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="3.8E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.6E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.3E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000100"
             >
-                <node gmv="4.76E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="1.24E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="1.34E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.8E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="1.2E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="1.3E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
             <gmf
             IMT="PGA"
             ruptureId="scenario-0000000101"
             >
-                <node gmv="4.44E-01" lat="0.00E+00" lon="0.00E+00"/>
-                <node gmv="2.17E-01" lat="1.00E-01" lon="0.00E+00"/>
-                <node gmv="2.50E-01" lat="2.00E-01" lon="0.00E+00"/>
+                <node gmv="4.4E-01" lat="0.0E+00" lon="0.0E+00"/>
+                <node gmv="2.2E-01" lat="1.0E-01" lon="0.0E+00"/>
+                <node gmv="2.5E-01" lat="2.0E-01" lon="0.0E+00"/>
             </gmf>
         </gmfSet>
     </gmfCollection>
