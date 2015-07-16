@@ -682,16 +682,16 @@ def collect_source_model_paths(smlt):
     src_paths = []
     try:
         tree = etree.parse(smlt)
+        for branch_set in tree.xpath('//nrml:logicTreeBranchSet',
+                                     namespaces=PARSE_NS_MAP):
+
+            if branch_set.get('uncertaintyType') == 'sourceModel':
+                for branch in branch_set.xpath(
+                        './nrml:logicTreeBranch/nrml:uncertaintyModel',
+                        namespaces=PARSE_NS_MAP):
+                    src_paths.append(branch.text)
     except Exception as exc:
         raise Exception('%s: %s in %s' % (exc.__class__.__name__, exc, smlt))
-    for branch_set in tree.xpath('//nrml:logicTreeBranchSet',
-                                 namespaces=PARSE_NS_MAP):
-
-        if branch_set.get('uncertaintyType') == 'sourceModel':
-            for branch in branch_set.xpath(
-                    './nrml:logicTreeBranch/nrml:uncertaintyModel',
-                    namespaces=PARSE_NS_MAP):
-                src_paths.append(branch.text)
     return sorted(set(src_paths))
 
 
