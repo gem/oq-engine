@@ -28,7 +28,7 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, source
+from openquake.commonlib import parallel, source, datastore
 from openquake.baselib.general import AccumDict, split_in_blocks
 
 from openquake.commonlib.calculators import base, calc
@@ -61,8 +61,10 @@ def classical(sources, sitecol, gsims_assoc, monitor):
         source_site_filter=source_site_distance_filter(max_dist),
         rupture_site_filter=rupture_site_distance_filter(max_dist),
         monitor=monitor)
-    return {(trt_model_id, str(gsim)): curves
-            for gsim, curves in zip(gsims, curves_by_gsim)}
+    dic = dict(calc_times=monitor.calc_times)
+    for gsim, curves in zip(gsims, curves_by_gsim):
+        dic[trt_model_id, str(gsim)] = curves
+    return dic
 
 
 def agg_dicts(acc, val):
@@ -70,8 +72,17 @@ def agg_dicts(acc, val):
     Aggregate dictionaries of hazard curves by updating the accumulator
     """
     for key in val:
-        acc[key] = agg_curves(acc[key], val[key])
+        if key == 'calc_times':
+            acc[key].extend(val[key])
+        else:  # aggregate curves
+            acc[key] = agg_curves(acc[key], val[key])
     return acc
+
+
+source_info_dt = numpy.dtype(
+    [('trt_model_id', numpy.uint32),
+     ('source_id', (str, 20)),
+     ('calc_time', numpy.float32)])
 
 
 @base.calculators.add('classical')
@@ -80,6 +91,7 @@ class ClassicalCalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_func = classical
+    source_info = datastore.persistent_attribute('source_info')
 
     def execute(self):
         """
@@ -89,13 +101,16 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
-        sources = self.csm.get_sources()
+        self.sources = self.csm.get_sources()
+        self.source_info = self.datastore.create_dset(
+            'source_info', source_info_dt)
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
+        zerodict['calc_times'] = []
         gsims_assoc = self.rlzs_assoc.gsims_by_trt_id
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
-            (sources, self.sitecol, gsims_assoc, monitor),
+            (self.sources, self.sitecol, gsims_assoc, monitor),
             agg=agg_dicts, acc=zerodict,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
@@ -109,6 +124,15 @@ class ClassicalCalculator(base.HazardCalculator):
         :param curves_by_trt_gsim:
             a dictionary (trt_id, gsim) -> hazard curves
         """
+        # save calculation time per source
+        calc_times = curves_by_trt_gsim.pop('calc_times')
+        info = []
+        for i, dt in calc_times:
+            src = self.sources[i]
+            info.append((src.trt_model_id, src.source_id, dt))
+        info.sort(key=operator.itemgetter(2), reverse=True)
+        self.source_info = numpy.array(info, source_info_dt)
+
         # save curves_by_trt_gsim
         for sm in self.rlzs_assoc.csm_info.source_models:
             group = self.datastore.hdf5.create_group(
