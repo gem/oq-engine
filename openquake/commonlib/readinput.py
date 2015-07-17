@@ -307,7 +307,7 @@ def get_rlzs_assoc(oqparam):
         rlzs = [
             logictree.Realization(
                 value=(str(oqparam.gsim),), weight=1, lt_path=('',),
-                ordinal=0, lt_uid=('*',))]
+                ordinal=0, lt_uid=('@',))]
     return logictree.RlzsAssoc(rlzs)
 
 
