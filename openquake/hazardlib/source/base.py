@@ -38,7 +38,7 @@ class BaseSeismicSource(object):
     __metaclass__ = abc.ABCMeta
 
     __slots__ = ['source_id', 'name', 'tectonic_region_type',
-                 'trt_model_id', 'weight', 'seed']
+                 'trt_model_id', 'weight', 'seed', 'id']
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id
@@ -47,6 +47,7 @@ class BaseSeismicSource(object):
         self.trt_model_id = None  # set by the engine
         self.weight = 1  # set by the engine
         self.seed = None  # set by the engine
+        self.id = None  # set by the engine
 
     @abc.abstractmethod
     def iter_ruptures(self):
