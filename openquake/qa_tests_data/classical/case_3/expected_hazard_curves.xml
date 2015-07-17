@@ -6,7 +6,7 @@
       <gml:Point>
         <gml:pos>0.0 0.0</gml:pos>
       </gml:Point>
-      <poEs>6.321205588E-01 4.848166554E-01 4.541042635E-02</poEs>
+      <poEs>6.321205588E-01 4.848441537E-01 4.549893186E-02</poEs>
     </hazardCurve>
   </hazardCurves>
 </nrml>

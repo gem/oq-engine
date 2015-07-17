@@ -52,6 +52,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_1g(self):
         out = self.run_calc(case_1g.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
-        fname = out['losses_by_key', 'csv'][0]  # agg.csv file
+        fname = out['losses_by_key', 'csv'][0]  # agg-gsimltp_@.csv file
         expected = os.path.join('expected', os.path.basename(fname))
         self.assertEqualFiles(expected, fname)

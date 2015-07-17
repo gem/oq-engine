@@ -20,12 +20,12 @@ xmlns:gml="http://www.opengis.net/gml"
                 <rake>
                     90.0
                 </rake>
-                <hypocenter depth="26.1010071663" lat="40.7262059218" lon="143.002955858"/>
+                <hypocenter depth="26.1010071663" lat="40.72621" lon="143.00296"/>
                 <planarSurface>
                     <topLeft depth="9.0" lat="41.6" lon="143.1"/>
-                    <topRight depth="9.0" lat="40.2004228785" lon="143.914077283"/>
-                    <bottomLeft depth="43.2020143326" lat="41.2516896915" lon="142.073108814"/>
-                    <bottomRight depth="43.2020143326" lat="39.8523326793" lon="142.908427318"/>
+                    <topRight depth="9.0" lat="40.20042" lon="143.91408"/>
+                    <bottomLeft depth="43.2020143326" lat="41.25169" lon="142.07311"/>
+                    <bottomRight depth="43.2020143326" lat="39.85233" lon="142.90843"/>
                 </planarSurface>
             </singlePlaneRupture>
             <multiPlanesRupture
@@ -37,18 +37,18 @@ xmlns:gml="http://www.opengis.net/gml"
                 <rake>
                     0.0
                 </rake>
-                <hypocenter depth="7.14230087749" lat="35.2958992546" lon="139.313501562"/>
+                <hypocenter depth="7.14230087749" lat="35.2959" lon="139.3135"/>
                 <planarSurface>
                     <topLeft depth="2.0" lat="35.363" lon="139.158"/>
-                    <topRight depth="2.0" lat="35.3935307656" lon="138.985539562"/>
-                    <bottomLeft depth="14.7279220614" lat="35.4748337848" lon="139.187942757"/>
-                    <bottomRight depth="14.7279220614" lat="35.5053645462" lon="139.015493698"/>
+                    <topRight depth="2.0" lat="35.39353" lon="138.98554"/>
+                    <bottomLeft depth="14.7279220614" lat="35.47483" lon="139.18794"/>
+                    <bottomRight depth="14.7279220614" lat="35.50536" lon="139.01549"/>
                 </planarSurface>
                 <planarSurface>
                     <topLeft depth="2.0" lat="35.169" lon="139.343"/>
-                    <topRight depth="2.0" lat="35.3580506793" lon="139.174478629"/>
-                    <bottomLeft depth="12.284601755" lat="35.2337409894" lon="139.452176224"/>
-                    <bottomRight depth="12.284601755" lat="35.4227913247" lon="139.283910478"/>
+                    <topRight depth="2.0" lat="35.35805" lon="139.17448"/>
+                    <bottomLeft depth="12.284601755" lat="35.23374" lon="139.45218"/>
+                    <bottomRight depth="12.284601755" lat="35.42279" lon="139.28391"/>
                 </planarSurface>
             </multiPlanesRupture>
             <simpleFaultRupture
@@ -60,7 +60,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <rake>
                     90.0
                 </rake>
-                <hypocenter depth="22.3409889516" lat="43.6239483796" lon="147.943591127"/>
+                <hypocenter depth="22.3409889516" lat="43.62395" lon="147.94359"/>
                 <simpleFaultGeometry>
                     <gml:LineString>
                         <gml:posList>
@@ -87,7 +87,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <rake>
                     90.0
                 </rake>
-                <hypocenter depth="22.3409889516" lat="43.6239483796" lon="147.943591127"/>
+                <hypocenter depth="22.3409889516" lat="43.62395" lon="147.94359"/>
                 <complexFaultGeometry>
                     <faultTopEdge>
                         <gml:LineString>
