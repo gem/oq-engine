@@ -381,8 +381,7 @@ class OqJob(djm.Model):
             # ordering no ruptures are generated and the test
             # qa_tests/hazard/disagg/case_1/test.py fails with a bad
             # error message
-            coords = sorted(
-                set((asset.site.x, asset.site.y) for asset in assets))
+            coords = sorted((asset.site.x, asset.site.y) for asset in assets)
             lons, lats = zip(*coords)
             mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
         else:
