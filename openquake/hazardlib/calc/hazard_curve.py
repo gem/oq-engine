@@ -209,7 +209,11 @@ def hazard_curves_per_trt(
             msg %= (source.source_id, err.message)
             raise_(etype, msg, tb)
 
+        # we are attaching the calculation times to the monitor
+        # so that oq-lite (and the engine) can store them
         monitor.calc_times.append((source.id, time.time() - t0))
+        # NB: source.id is an integer; it should not be confused
+        # with source.source_id, which is a string
     for i in range(len(gnames)):
         for imt in imtls:
             curves[i][imt] = 1. - curves[i][imt]
