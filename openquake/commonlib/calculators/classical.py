@@ -102,8 +102,6 @@ class ClassicalCalculator(base.HazardCalculator):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         self.sources = self.csm.get_sources()
-        self.source_info = self.datastore.create_dset(
-            'source_info', source_info_dt)
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         zerodict['calc_times'] = []
@@ -125,7 +123,10 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary (trt_id, gsim) -> hazard curves
         """
         # save calculation time per source
-        calc_times = curves_by_trt_gsim.pop('calc_times')
+        try:
+            calc_times = curves_by_trt_gsim.pop('calc_times')
+        except KeyError:
+            calc_times = []
         info = []
         for i, dt in calc_times:
             src = self.sources[i]
