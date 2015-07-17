@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import abc
 import logging
 import operator
@@ -105,7 +106,9 @@ class BaseCalculator(object):
             with self.monitor('export', autoflush=True):
                 exported = self.export()
         finally:
-            return exported
+            etype = sys.exc_info()[0]
+            if etype:
+                logging.critical('', exc_info=True)
             if clean_up:
                 try:
                     self.clean_up()

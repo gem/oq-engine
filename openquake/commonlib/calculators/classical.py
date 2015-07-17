@@ -101,14 +101,14 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
-        self.sources = self.csm.get_sources()
+        sources = self.csm.get_sources()
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         zerodict['calc_times'] = []
         gsims_assoc = self.rlzs_assoc.gsims_by_trt_id
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
-            (self.sources, self.sitecol, gsims_assoc, monitor),
+            (sources, self.sitecol, gsims_assoc, monitor),
             agg=agg_dicts, acc=zerodict,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
@@ -126,13 +126,15 @@ class ClassicalCalculator(base.HazardCalculator):
         try:
             calc_times = curves_by_trt_gsim.pop('calc_times')
         except KeyError:
-            calc_times = []
-        info = []
-        for i, dt in calc_times:
-            src = self.sources[i]
-            info.append((src.trt_model_id, src.source_id, dt))
-        info.sort(key=operator.itemgetter(2), reverse=True)
-        self.source_info = numpy.array(info, source_info_dt)
+            pass
+        else:
+            sources = self.csm.get_sources()
+            info = []
+            for i, dt in calc_times:
+                src = sources[i]
+                info.append((src.trt_model_id, src.source_id, dt))
+            info.sort(key=operator.itemgetter(2), reverse=True)
+            self.source_info = numpy.array(info, source_info_dt)
 
         # save curves_by_trt_gsim
         for sm in self.rlzs_assoc.csm_info.source_models:
@@ -277,7 +279,10 @@ def agg_curves_by_trt_gsim(acc, curves_by_trt_gsim):
     in the current tile. Works by side effect, by updating the accumulator.
     """
     for k in curves_by_trt_gsim:
-        acc[k][curves_by_trt_gsim.indices] = curves_by_trt_gsim[k]
+        if k == 'calc_times':
+            acc[k].extend(curves_by_trt_gsim[k])
+        else:
+            acc[k][curves_by_trt_gsim.indices] = curves_by_trt_gsim[k]
     return acc
 
 
@@ -312,5 +317,6 @@ class ClassicalTilingCalculator(ClassicalCalculator):
             position += len(tile)
         acc = {trt_gsim: zero_curves(len(self.sitecol), oq.imtls)
                for trt_gsim in calculator.rlzs_assoc}
+        acc['calc_times'] = []
         return parallel.starmap(classical_tiling, all_args).reduce(
             agg_curves_by_trt_gsim, acc)
