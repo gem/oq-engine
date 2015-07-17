@@ -367,17 +367,8 @@ celeryd_wait $GEM_MAXLOOP"
                  nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
 
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
-                 nosetests  -a '${skip_tests}qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml
-                 nosetests  -a '${skip_tests}qa,hazard,event_based' -v --with-xunit --xunit-file=xunit-qa-hazard-event-based.xml
-                 nosetests  -a '${skip_tests}qa,hazard,disagg' -v --with-xunit --xunit-file=xunit-qa-hazard-disagg.xml
-                 nosetests  -a '${skip_tests}qa,hazard,scenario' -v --with-xunit --xunit-file=xunit-qa-hazard-scenario.xml
-
-                 nosetests  -a '${skip_tests}qa,risk,classical' -v --with-xunit --xunit-file=xunit-qa-risk-classical.xml
-                 nosetests  -a '${skip_tests}qa,risk,event_based' -v --with-xunit --xunit-file=xunit-qa-risk-event-based.xml
-                 nosetests  -a '${skip_tests}qa,risk,classical_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-classical-bcr.xml
-                 nosetests  -a '${skip_tests}qa,risk,event_based_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-event-based-bcr.xml
-                 nosetests  -a '${skip_tests}qa,risk,scenario_damage' -v --with-xunit --xunit-file=xunit-qa-risk-scenario-damage.xml
-                 nosetests  -a '${skip_tests}qa,risk,scenario' -v --with-xunit --xunit-file=xunit-qa-risk-scenario.xml
+                 nosetests  -a '${skip_tests}qa,hazard' -v --with-xunit --xunit-file=xunit-qa-hazard.xml
+                 nosetests  -a '${skip_tests}qa,risk' -v --with-xunit --xunit-file=xunit-qa-risk.xml
 
                  python-coverage xml --include=\"openquake/*\"
         "
