@@ -264,9 +264,8 @@ def export_gmf_xml(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
         gsimpath = rlz.uid
     writer = hazard_writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path=smltpath, gsim_lt_path=gsimpath)
-    with floatformat('%12.8E'):
-        writer.serialize(
-            GmfCollection(sitecol, ruptures, gmfs, investigation_time))
+    writer.serialize(
+        GmfCollection(sitecol, ruptures, gmfs, investigation_time))
     return {key: [dest]}
 
 
