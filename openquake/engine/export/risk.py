@@ -374,13 +374,15 @@ def export_event_loss_csv(key, output, target):
     with FileWrapper(dest, mode='wb') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['Rupture', 'Magnitude', 'Aggregate Loss'])
-
+        rows = []
         for event_loss in models.EventLossData.objects.filter(
-                event_loss__output=output).select_related().order_by(
-                '-aggregate_loss'):
-            writer.writerow([event_loss.rupture.tag,
-                             "%.07f" % event_loss.rupture.rupture.magnitude,
-                             "%.07f" % event_loss.aggregate_loss])
+                event_loss__output=output):
+            rows.append([
+                event_loss.rupture.tag,
+                "%.07f" % event_loss.rupture.rupture.magnitude,
+                "%.07f" % event_loss.aggregate_loss])
+        for row in sorted(rows):
+            writer.writerow(row)
     return dest
 
 
