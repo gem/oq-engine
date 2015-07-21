@@ -19,11 +19,12 @@
 
 set -e
 
-BASE=$(cd `dirname "${BASH_SOURCE[0]}"` && pwd)/builddir
-rm -Rf $BASE
+BASE=$(cd `dirname "${BASH_SOURCE[0]}"` && pwd)
+cd $BASE/..
+#rm -Rf $BASE
 
 REPO=oq-risklib
-EXTRA='--nocheck'
+#EXTRA='--nocheck'
 
 if [ -n "$1" ];
 then
@@ -32,28 +33,19 @@ else
     BRANCH='master'
 fi
 echo $BRANCH
-mkdir -p $BASE/{RPMS,SOURCES,SPECS,SRPMS}
+mkdir -p build-rpm/{RPMS,SOURCES,SPECS,SRPMS}
 
-cd $BASE/SOURCES
-if [ ! -d $REPO ]; then
-    git clone --depth=1 -b $BRANCH https://github.com/gem/${REPO}.git
-    cd $REPO
-else
-    cd $REPO
-    git fetch
-    git reset --hard HEAD
-    git checkout $BRANCH
-    git pull
-fi
 
 LIB=$(cut -d "-" -f 2 <<< $REPO)
 SHA=$(git rev-parse --short HEAD)
 VER=$(cat openquake/${LIB}/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
 
-sed "s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_release_##/git${SHA}/g" redhat/python-${REPO}.spec > $BASE/SPECS/python-${REPO}.spec
+echo $LIB" - "$SHA" - "$VER
 
-git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | pigz > ../${REPO}-${VER}-git${SHA}.tar.gz
-cd ..
+sed "s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_release_##/git${SHA}/g" redhat/python-${REPO}.spec.inc > build-rpm/SPECS/python-${REPO}.spec
 
-mock -r openquake --buildsrpm --spec $BASE/SPECS/python-${REPO}.spec --source $BASE/SOURCES --resultdir=$BASE/SRPMS/
-mock -r openquake $BASE/SRPMS/python-${REPO}-${VER}-git${SHA}.src.rpm --resultdir=$BASE/RPMS $EXTRA
+git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | pigz > build-rpm/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
+
+mock -r openquake --buildsrpm --spec build-rpm/SPECS/python-${REPO}.spec --source build-rpm/SOURCES --resultdir=build-rpm/SRPMS/
+#mock -r openquake $BASE/SRPMS/python-${REPO}-${VER}-git${SHA}.src.rpm --resultdir=$BASE/RPMS $EXTRA
+cd $BASE
