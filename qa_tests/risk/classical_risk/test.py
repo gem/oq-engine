@@ -110,7 +110,7 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
             intensity_measure_types_and_levels=str({'PGA': hazard_imls}))
 
         models.HazardSite.objects.create(
-            hazard_calculation=job, location="POINT(1 1)")
+            hazard_calculation=job, lon=1, lat=1)
         models.HazardCurveData.objects.create(
             hazard_curve=models.HazardCurve.objects.create(
                 output=models.Output.objects.create_output(
@@ -267,6 +267,6 @@ class ClassicalRiskCase4TestCase(
             os.close(fd)
             hd = [['asset_ref', 'lon', 'lat', 'avg_loss~structural',
                    'ins_loss~structural']] + data
-            writers.save_csv(fname, hd, fmt='%10.6E')
+            writers.write_csv(fname, hd, fmt='%10.6E')
             expected = self._test_path('expected/%s.csv' % key)
             self.assertEqual(open(fname).read(), open(expected).read())

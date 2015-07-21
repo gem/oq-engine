@@ -5,7 +5,7 @@ This page describes the additional steps necessary to run the current developmen
 
 ```bash
 sudo apt-get update
-sudo apt-get install git python debconf python-amqp python-celery python-geohash python-lxml python-numpy python-paramiko python-scipy python-shapely python-psycopg2 python-django python-setuptools python-psutil python-mock python-concurrent.futures python-h5py rabbitmq-server postgresql-9.3 postgresql-client postgresql-9.3-postgis-2.1
+sudo apt-get install git python debconf python-amqp python-celery python-geohash python-lxml python-numpy python-scipy python-shapely python-psycopg2 python-django python-setuptools python-psutil python-mock python-concurrent.futures python-h5py rabbitmq-server postgresql-9.3 postgresql-client postgresql-9.3-postgis-2.1
 
 ```
 
