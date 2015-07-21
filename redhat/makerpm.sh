@@ -20,7 +20,7 @@
 set -e
 
 BASE=$(cd `dirname "${BASH_SOURCE[0]}"` && pwd)
-cd $BASE
+cd $BASE/..
 #rm -Rf $BASE
 
 REPO=oq-hazardlib
@@ -33,18 +33,19 @@ else
     BRANCH='master'
 fi
 echo $BRANCH
-mkdir -p $BASE/{RPMS,SOURCES,SPECS,SRPMS}
+mkdir -p build-rpm/{RPMS,SOURCES,SPECS,SRPMS}
 
 
 LIB=$(cut -d "-" -f 2 <<< $REPO)
 SHA=$(git rev-parse --short HEAD)
-VER=$(cat ../openquake/${LIB}/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
+VER=$(cat openquake/${LIB}/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
 
 echo $LIB" - "$SHA" - "$VER
 
-sed "s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_release_##/git${SHA}/g" python-${REPO}.spec.inc > SPECS/python-${REPO}.spec
+sed "s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_release_##/git${SHA}/g" redhat/python-${REPO}.spec.inc > build-rpm/SPECS/python-${REPO}.spec
 
-git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | pigz > SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
+git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | pigz > build-rpm/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
 
-mock -r openquake --buildsrpm --spec SPECS/python-${REPO}.spec --source SOURCES/ --resultdir=SRPMS/
+mock -r openquake --buildsrpm --spec build-rpm/SPECS/python-${REPO}.spec --source build-rpm/SOURCES --resultdir=build-rpm/SRPMS/
 #mock -r openquake $BASE/SRPMS/python-${REPO}-${VER}-git${SHA}.src.rpm --resultdir=$BASE/RPMS $EXTRA
+cd $BASE
