@@ -219,7 +219,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     # ruptures of homogeneous SESCollection
     ses_coll = ses_ruptures[0].rupture.ses_collection
     trt_model = ses_coll.trt_model
-    gsims = rlzs_assoc.get_gsims_by_trt_id()[trt_model.id]
+    gsims = rlzs_assoc.gsims_by_trt_id[trt_model.id]
     calc = GmfCalculator(
         sorted(imts), sorted(gsims), ses_coll,
         hc.truncation_level, models.get_correl_model(job))
@@ -313,12 +313,13 @@ class GmfCalculator(object):
             a :class:`openquake.commonlib.source.RlzsAssoc` instance
         """
         samples = rlzs_assoc.csm_info.get_num_samples(self.trt_model_id)
+        col_ids = rlzs_assoc.col_ids_by_rlz
         for gname, imt_str, site_id in self.gmvs_per_site:
             rlzs = rlzs_assoc[self.trt_model_id, gname]
             if samples > 1:
                 # save only the data for the realization corresponding
                 # to the current SESCollection
-                rlzs = [rlz for rlz in rlzs if self.col_id in rlz.col_ids]
+                rlzs = [rlz for rlz in rlzs if self.col_id in col_ids[rlz]]
             for rlz in rlzs:
                 imt_name, sa_period, sa_damping = from_string(imt_str)
                 inserter.add(models.GmfData(
@@ -408,7 +409,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         rnd = random.Random(hc.random_seed)
         for src in self.composite_model.get_sources():
             src.seed = rnd.randint(0, models.MAX_SINT_32)
-        for trt_id, idx, col_id in self.composite_model.info.get_triples():
+        info = self.composite_model.get_info()
+        for trt_id, idx, col_id in info.get_triples():
             self.initialize_ses_db_records(trt_id, col_id)
         return weights
 

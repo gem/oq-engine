@@ -1,4 +1,5 @@
 import os
+import ast
 import time
 import argparse
 import collections
@@ -112,6 +113,14 @@ def create_ses_gmf(job, fname):
     return ses_coll, gmf
 
 
+def get_coords(wkt_point):
+    """
+    >>> get_coords('POINT(81.2 9.4)')
+    (81.2, 9.4)
+    """
+    return ast.literal_eval(wkt_point[5:].replace(' ', ','))
+
+
 def import_rows(job, ses_coll, gmf_coll, sorted_tags, rows):
     """
     Import a list of records into the gmf_data and hazard_site tables.
@@ -135,8 +144,9 @@ def import_rows(job, ses_coll, gmf_coll, sorted_tags, rows):
         rup_id = tag2id[tag]
         for wkt, gmv in data:
             if wkt not in site_id:  # create a new site
+                coords = get_coords(wkt)
                 site_id[wkt] = models.HazardSite.objects.create(
-                    hazard_calculation=job, location=wkt).id
+                    hazard_calculation=job, lon=coords[0], lat=coords[1]).id
             gmfs.append(
                 models.GmfData(
                     imt=imt[0], sa_period=imt[1], sa_damping=imt[2],
