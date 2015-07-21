@@ -445,14 +445,13 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
             investigation_time=hc.investigation_time,
             imt="PGA", imls=[0.1, 0.2, 0.3])
 
-        for point in ["POINT(-1.01 1.01)", "POINT(0.9 1.01)",
-                      "POINT(0.01 0.01)", "POINT(0.9 0.9)"]:
+        for point in [(-1.01, 1.01), (0.9, 1.01), (0.01, 0.01), (0.9, 0.9)]:
             models.HazardSite.objects.create(
-                hazard_calculation=hazard_job, location=point)
+                hazard_calculation=hazard_job, lon=point[0], lat=point[1])
             models.HazardCurveData.objects.create(
                 hazard_curve=hazard_output,
                 poes=[0.1, 0.2, 0.3],
-                location="%s" % point)
+                location="POINT(%s %s)" % point)
 
     elif output_type == "gmf_scenario":
         hazard_output = models.Gmf.objects.create(

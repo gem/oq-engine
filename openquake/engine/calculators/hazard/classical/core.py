@@ -181,7 +181,7 @@ def _calc_pnes(gsim, r_sites, rupture, imts, imls, truncation_level,
 
 
 @tasks.oqtask
-def compute_hazard_curves(sources, sitecol, info, monitor):
+def compute_hazard_curves(sources, sitecol, gsims_by_trt_id, monitor):
     """
     This task computes R2 * I hazard curves (each one is a
     numpy array of S * L floats) from the given source_ruptures
@@ -191,8 +191,8 @@ def compute_hazard_curves(sources, sitecol, info, monitor):
         a block of source objects
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param info:
-        a :class:`openquake.commonlib.source.CompositionInfo` instance
+    :param gsims_by_trt_id:
+        a dictionary trt_id -> gsim instances
     :param monitor:
         monitor of the currently running job
     :returns:
@@ -208,7 +208,7 @@ def compute_hazard_curves(sources, sitecol, info, monitor):
     sorted_imts = map(from_string, sorted_imts)
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
 
-    gsims = trt_model.get_gsim_instances()
+    gsims = gsims_by_trt_id[trt_model_id]
     curves = [[numpy.ones([total_sites, len(ls)]) for ls in sorted_imls]
               for gsim in gsims]
     if hc.poes_disagg:  # doing disaggregation
