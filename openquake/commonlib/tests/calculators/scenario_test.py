@@ -1,10 +1,12 @@
 import numpy
+import re
 from numpy.testing import assert_almost_equal as aae
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9)
 
+from openquake.commonlib import writers
 from openquake.commonlib.tests.calculators import CalculatorTestCase
 
 
@@ -47,7 +49,20 @@ class ScenarioHazardTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_1(self):
-        out = self.run_calc(case_1.__file__, 'job.ini', exports='xml')
+        # ROUNDING ERROR WARNING (MS): numbers such as 2.5 and 2.4999999999
+        # are extremely close (up to 4E-11) however they must be rounded to
+        # a single digit to compare equal in their string representation; for
+        # this reason the precision here has to be reduced a lot, even it the
+        # numbers are very close. It comes down to the known fact that
+        # comparing the XMLs is not a good idea; suboptimal choises
+        # sometimes have to be made, since we want this test to
+        # to run both on Ubuntu 12.04 and Ubuntu 14.04.
+        # Incidentally, when the approach of comparing the XML was taken,
+        # the idea of supporting at the same time different versions of the
+        # libraries was out of question, so it made a lot of sense to check
+        # the XMLs, since the numbers had to be exactly identical.
+        with writers.floatformat('%5.1E'):
+            out = self.run_calc(case_1.__file__, 'job.ini', exports='xml')
         self.assertEqualFiles('expected.xml', out['gmfs', 'xml'][0])
 
     @attr('qa', 'hazard', 'scenario')
@@ -105,7 +120,8 @@ class ScenarioHazardTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_9(self):
-        out = self.run_calc(case_9.__file__, 'job.ini', exports='xml')
+        with writers.floatformat('%10.6E'):
+            out = self.run_calc(case_9.__file__, 'job.ini', exports='xml')
         f1, f2 = out['gmfs', 'xml']
         self.assertEqualFiles('LinLee2008SSlab_gmf.xml', f1)
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.xml', f2)

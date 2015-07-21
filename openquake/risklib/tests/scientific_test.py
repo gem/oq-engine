@@ -94,7 +94,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             self.COVS_GOOD)
 
         epsilons = scientific.make_epsilons(
-            numpy.zeros((1, 1)), seed=3, correlation=0)
+            numpy.zeros((1, 3)), seed=3, correlation=0)
         self.test_func.set_distribution(epsilons)
 
     def test_vuln_func_constructor_raises_on_bad_imls(self):
@@ -161,7 +161,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             self.COVS_GOOD)
 
     def test_loss_ratio_interp_many_values(self):
-        expected_lrs = numpy.array([0.0161928, 0.07685701, 4.64095499])
+        expected_lrs = numpy.array([0.0161928, 0.05880167, 0.12242504])
         test_input = [0.005, 0.006, 0.0269]
 
         numpy.testing.assert_allclose(
@@ -172,9 +172,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         # of loss ratios (ordinates).
         # This test also ensures that input IML values are 'clipped' to the IML
         # range defined for the vulnerability function.
-        expected_lrs = numpy.array([0.0, 0.07685701, 4.64095499])
+        expected_lrs = numpy.array([0., 0.05880167, 0.12242504])
         test_input = [0.00049, 0.006, 2.7]
-
         numpy.testing.assert_allclose(
             expected_lrs, self.test_func._apply(test_input))
 
@@ -192,7 +191,6 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         # range defined for the vulnerability function.
         expected_covs = numpy.array([0.3, 0.2, 10])
         test_input = [0.0049, 0.006, 0.027]
-
         numpy.testing.assert_allclose(
             expected_covs, self.test_func._cov_for(test_input))
 
@@ -276,6 +274,54 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         aaae(b.build_counts(expected_lrem), expected_counts)
 
 
+class VulnerabilityFunctionBlockSizeTestCase(unittest.TestCase):
+    """
+    Test the block size independency of the vulnerability function
+    """
+    @classmethod
+    def setUpClass(cls):
+        cls.vf = scientific.VulnerabilityFunction(
+            'RM', 'PGA', [0.02, 0.3, 0.5, 0.9, 1.2],
+            [0.05, 0.1, 0.2, 0.4, 0.8],
+            [0.0001, 0.0001, 0.0001, 0.0001, 0.0001])
+
+    def test(self):
+        # values passed as a single block produce the same losses when
+        # passed in several blocks
+
+        gmvs = [0.3307648, 0.77900947, 0., 2.15393227, 0.,
+                0., 0.42448847, 0., 0., 0., 0.15023323,
+                0., 0., 0., 0., 0., 0., 0., 0.51451394, 0.]
+        eps = [0.49671415, 0.64768854, -0.23415337, 1.57921282, -0.46947439,
+               -0.46341769, 0.24196227, -1.72491783, -1.01283112, -0.90802408,
+               1.46564877, 0.0675282, -0.54438272, -1.15099358, -0.60063869,
+               -0.60170661, -0.01349722, 0.82254491, 0.2088636, -1.32818605]
+        singleblock = list(self.vf.apply_to([gmvs], [eps]).reshape(-1))
+
+        # multiblock
+        gmvs_, eps_ = [None] * 7, [None] * 7
+        gmvs_[0] = [0.3307648, 0.77900947, 0.]
+        eps_[0] = [0.49671415, 0.64768854, -0.23415337]
+        gmvs_[1] = [2.15393227, 0., 0.]
+        eps_[1] = [1.57921282, -0.46947439, -0.46341769]
+        gmvs_[2] = [0.42448847, 0., 0.]
+        eps_[2] = [0.24196227, -1.72491783, -1.01283112]
+        gmvs_[3] = [0., 0.15023323, 0.]
+        eps_[3] = [-0.90802408, 1.46564877, 0.0675282]
+        gmvs_[4] = [0., 0., 0.]
+        eps_[4] = [-0.54438272, -1.15099358, -0.60063869]
+        gmvs_[5] = [0., 0., 0.]
+        eps_[5] = [-0.60170661, -0.01349722, 0.82254491]
+        gmvs_[6] = [0.51451394, 0.]
+        eps_[6] = [0.2088636, -1.32818605]
+        multiblock = []
+        for gmvs, eps in zip(gmvs_, eps_):
+            multiblock.extend(self.vf.apply_to([gmvs], [eps]).reshape(-1))
+
+        # this test has been broken forever, finally fixed in OpenQuake 1.5
+        self.assertEqual(singleblock, multiblock)
+
+
 class MeanLossTestCase(unittest.TestCase):
     def test_mean_loss(self):
         vf = scientific.VulnerabilityFunction(
@@ -339,7 +385,7 @@ class LogNormalDistributionTestCase(unittest.TestCase):
         self.dist = scientific.LogNormalDistribution(epsilons)
         samples = self.dist.sample(numpy.array([0., 0., .1, .1]),
                                    numpy.array([0., .1, 0., .1]),
-                                   None)
+                                   None, slice(None))
         numpy.testing.assert_allclose([0., 0., 0.1, 0.10228396], samples)
 
 

@@ -76,7 +76,7 @@ class CalculatorTestCase(unittest.TestCase):
             hc_id = self.calc.datastore.calc_id
             self.calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=hc_id, **kw)
-            result = self.calc.run()
+            result.update(self.calc.run())
         return result
 
     def execute(self, testfile, job_ini):
@@ -108,8 +108,8 @@ class CalculatorTestCase(unittest.TestCase):
         """
         expected = os.path.join(self.testdir, fname1)
         actual = os.path.join(self.calc.oqparam.export_dir, fname2)
-        expected_lines = make_comparable(open(expected))
-        actual_lines = make_comparable(open(actual))
+        expected_lines = make_comparable(open(expected).readlines())
+        actual_lines = make_comparable(open(actual).readlines())
         try:
             for exp, got in zip(expected_lines, actual_lines):
                 if delta:

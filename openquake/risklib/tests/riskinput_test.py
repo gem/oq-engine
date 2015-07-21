@@ -35,12 +35,12 @@ class RiskInputTestCase(unittest.TestCase):
 
     def test_assetcol(self):
         expected = writetmp('''\
-asset_ref:|S20:,site_id:uint32:,structural:float64:,deductible~structural:float64:,insurance_limit~structural:float64:
-a0,0,3000,25,100
-a1,1,2000,0.1,0.2
-a2,2,1000,0.02,0.08
-a3,2,5000,1000,3000
-a4,3,500000,1000,3000
+asset_ref:|S20:,site_id:uint32:,taxonomy:uint32:,fatalities:float64:,structural:float64:,deductible~structural:float64:,insurance_limit~structural:float64:
+a0,0,0,10,3000,25,100
+a1,1,0,20,2000,0.1,0.2
+a2,2,0,30,1000,0.02,0.08
+a3,2,0,0,5000,1000,3000
+a4,3,0,50,500000,1000,3000
 ''')
         assetcol = riskinput.build_asset_collection(self.assets_by_site)
         numpy.testing.assert_equal(
@@ -84,7 +84,7 @@ a4,3,500000,1000,3000
         # this is case with a single SES collection
         ses_ruptures = dstore['sescollection'][0].values()
 
-        gsims_by_trt_id = rupcalc.rlzs_assoc.get_gsims_by_trt_id()
+        gsims_by_trt_id = rupcalc.rlzs_assoc.gsims_by_trt_id
 
         eps_dict = riskinput.make_eps_dict(
             self.assets_by_site, len(ses_ruptures), oq.master_seed,

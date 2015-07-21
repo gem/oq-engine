@@ -46,6 +46,14 @@ from openquake.commonlib import source, sourceconverter
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
 
+info_dt = numpy.dtype([('input_weight', float),
+                       ('output_weight', float),
+                       ('n_imts', numpy.uint32),
+                       ('n_levels', numpy.uint32),
+                       ('n_sites', numpy.uint32),
+                       ('n_sources', numpy.uint32),
+                       ('n_realizations', numpy.uint32)])
+
 
 class DuplicatedPoint(Exception):
     """
@@ -110,8 +118,9 @@ def get_params(job_inis):
     cp.read(job_inis)
 
     # drectory containing the config files we're parsing
-    base_path = os.path.dirname(os.path.abspath(job_inis[0]))
-    params = dict(base_path=base_path, inputs={'job_ini': ','.join(job_inis)})
+    job_ini = os.path.abspath(job_inis[0])
+    base_path = os.path.dirname(job_ini)
+    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
 
     for sect in cp.sections():
         for key, value in cp.items(sect):
@@ -298,7 +307,7 @@ def get_rlzs_assoc(oqparam):
         rlzs = [
             logictree.Realization(
                 value=(str(oqparam.gsim),), weight=1, lt_path=('',),
-                ordinal=0, lt_uid=('*',))]
+                ordinal=0, lt_uid=('@',))]
     return logictree.RlzsAssoc(rlzs)
 
 
@@ -444,7 +453,7 @@ def get_source_models(oqparam, source_model_lt, sitecol=None, in_memory=True):
             gsim_lt = logictree.DummyGsimLogicTree()
         weight = rlz.weight / num_samples
         yield source.SourceModel(
-            sm, weight, smpath, trt_models, gsim_lt, i, num_samples)
+            sm, weight, smpath, trt_models, gsim_lt, i, num_samples, None)
 
 
 def get_composite_source_model(
@@ -522,9 +531,9 @@ def get_job_info(oqparam, source_models, sitecol):
         n_imts = len(imtls)
         n_levels = sum(len(ls) for ls in imtls.itervalues()) / float(n_imts)
 
-    max_realizations = oqparam.number_of_logic_tree_samples or sum(
+    n_realizations = oqparam.number_of_logic_tree_samples or sum(
         sm.gsim_lt.get_num_paths() for sm in source_models)
-    # NB: in the event based case `max_realizations` can be over-estimated,
+    # NB: in the event based case `n_realizations` can be over-estimated,
     # if the method is called in the pre_execute phase, because
     # some tectonic region types may have no occurrencies.
 
@@ -534,7 +543,7 @@ def get_job_info(oqparam, source_models, sitecol):
     # n_sites * n_realizations * n_imts * n_levels;
     # for the event based calculator is given by n_sites * n_realizations
     # * n_levels * n_imts * (n_ses * investigation_time) * NORMALIZATION_FACTOR
-    output_weight = n_sites * n_imts * max_realizations
+    output_weight = n_sites * n_imts * n_realizations
     if oqparam.calculation_mode == 'event_based':
         total_time = (oqparam.investigation_time *
                       oqparam.ses_per_logic_tree_path)
@@ -542,9 +551,10 @@ def get_job_info(oqparam, source_models, sitecol):
     else:
         output_weight *= n_levels
 
-    return dict(input_weight=input_weight, output_weight=output_weight,
-                n_imts=n_imts, n_levels=n_levels, n_sites=n_sites,
-                max_realizations=max_realizations)
+    n_sources = 0  # to be set later
+    return numpy.array([
+        (input_weight, output_weight, n_imts, n_levels, n_sites, n_sources,
+         n_realizations)], info_dt)
 
 
 def get_imts(oqparam):
@@ -735,11 +745,14 @@ def get_exposure(oqparam):
                                  "Missing cost %s for asset %s" % (
                                      missing, asset_id))
 
+        tot_fatalities = 0
         for occupancy in occupancies:
             with context(fname, occupancy):
                 fatalities = 'fatalities_%s' % occupancy['period']
                 values[fatalities] = occupancy['occupants']
-
+                tot_fatalities += values[fatalities]
+        if occupancies:  # store average fatalities
+            values['fatalities_None'] = tot_fatalities / len(occupancies)
         area = float(asset.attrib.get('area', 1))
         ass = workflows.Asset(
             asset_id, taxonomy, number, location, values, area,

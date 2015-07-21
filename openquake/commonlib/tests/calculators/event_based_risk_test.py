@@ -1,6 +1,8 @@
 import os
 from nose.plugins.attrib import attr
 
+from openquake.commonlib.export import export
+from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.tests.calculators import CalculatorTestCase
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a)
@@ -57,8 +59,19 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
 class EBRTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'ebr')
+    def test_case_1(self):
+        # test for the fatalities
+        self.run_calc(case_1.__file__, 'job_ebr.ini', concurrent_tasks=0)
+        ds = DataStore(self.calc.datastore.calc_id,
+                       export_dir=self.calc.datastore.export_dir)
+        fnames = export(('assetcol', 'csv'), ds) + export(
+            ('event_loss_table-rlzs', 'csv'), ds)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + os.path.basename(fname), fname)
+
+    @attr('qa', 'risk', 'ebr')
     def test_case_2(self):
-        out = self.run_calc(case_2.__file__, 'job_haz.ini,job_loss.ini',
+        out = self.run_calc(case_2.__file__, 'job_loss.ini',
                             concurrent_tasks=0, exports='csv')
         [fname] = out['event_loss_table-rlzs', 'csv']
         self.assertEqualFiles(

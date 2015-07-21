@@ -775,10 +775,10 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
                           1, 582, 1, 582, 1, 582, 1, 582],
                          map(len, csm.trt_models))
 
-        # test the method csm_info.get_col_ids
-        col_ids_first = rlzs_assoc.csm_info.get_col_ids(rlzs[0])
+        # test the method get_col_ids
+        col_ids_first = rlzs_assoc.get_col_ids(rlzs[0])
         self.assertEqual(col_ids_first, set([0, 1]))
-        col_ids_last = rlzs_assoc.csm_info.get_col_ids(rlzs[-1])
+        col_ids_last = rlzs_assoc.get_col_ids(rlzs[-1])
         self.assertEqual(col_ids_last, set([16, 17]))
 
         # removing 9 trt_models out of 18
@@ -788,25 +788,16 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         assoc = csm.get_rlzs_assoc()
 
         expected_assoc = """\
-<RlzsAssoc(18)
+<RlzsAssoc(9)
 0,SadighEtAl1997: ['<0,b1_b3_b6,@_b3,w=0.04>']
-1,SadighEtAl1997: ['<0,b1_b3_b6,@_b3,w=0.04>']
 2,SadighEtAl1997: ['<1,b1_b3_b7,@_b3,w=0.12>']
-3,SadighEtAl1997: ['<1,b1_b3_b7,@_b3,w=0.12>']
 4,SadighEtAl1997: ['<2,b1_b3_b8,@_b3,w=0.04>']
-5,SadighEtAl1997: ['<2,b1_b3_b8,@_b3,w=0.04>']
 6,SadighEtAl1997: ['<3,b1_b4_b6,@_b3,w=0.12>']
-7,SadighEtAl1997: ['<3,b1_b4_b6,@_b3,w=0.12>']
 8,SadighEtAl1997: ['<4,b1_b4_b7,@_b3,w=0.36>']
-9,SadighEtAl1997: ['<4,b1_b4_b7,@_b3,w=0.36>']
 10,SadighEtAl1997: ['<5,b1_b4_b8,@_b3,w=0.12>']
-11,SadighEtAl1997: ['<5,b1_b4_b8,@_b3,w=0.12>']
 12,SadighEtAl1997: ['<6,b1_b5_b6,@_b3,w=0.04>']
-13,SadighEtAl1997: ['<6,b1_b5_b6,@_b3,w=0.04>']
 14,SadighEtAl1997: ['<7,b1_b5_b7,@_b3,w=0.12>']
-15,SadighEtAl1997: ['<7,b1_b5_b7,@_b3,w=0.12>']
-16,SadighEtAl1997: ['<8,b1_b5_b8,@_b3,w=0.04>']
-17,SadighEtAl1997: ['<8,b1_b5_b8,@_b3,w=0.04>']>"""
+16,SadighEtAl1997: ['<8,b1_b5_b8,@_b3,w=0.04>']>"""
         self.assertEqual(str(assoc), expected_assoc)
         self.assertEqual(len(assoc.realizations), 9)
 
@@ -831,10 +822,10 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
             str(assoc),
             "<RlzsAssoc(2)\n"
             "0,SadighEtAl1997: ['<0,b1,b1,w=0.2>']\n"
-            "1,SadighEtAl1997: ['<1,b2,b1,w=0.2,col=1>', '<2,b2,b1,w=0.2,col=2>', '<3,b2,b1,w=0.2,col=3>', '<4,b2,b1,w=0.2,col=4>']>")
+            "1,SadighEtAl1997: ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']>")
 
-        # test the method csm_info.get_col_ids
-        col_ids_first = assoc.csm_info.get_col_ids(assoc.realizations[0])
+        # test the method get_col_ids
+        col_ids_first = assoc.get_col_ids(assoc.realizations[0])
         self.assertEqual(col_ids_first, set([0]))
-        col_ids_last = assoc.csm_info.get_col_ids(assoc.realizations[-1])
+        col_ids_last = assoc.get_col_ids(assoc.realizations[-1])
         self.assertEqual(col_ids_last, set([4]))
