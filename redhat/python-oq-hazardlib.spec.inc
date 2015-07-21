@@ -15,7 +15,7 @@ Prefix: %{_prefix}
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-hazardlib
 
-%define common_deps python numpy scipy python-shapely python-psutil
+%define common_deps python numpy scipy python-shapely python-psutil h5py
 Requires: %{common_deps}
 
 BuildRequires: %{common_deps}
@@ -51,7 +51,7 @@ Copyright (C) 2012-2015, GEM Foundation.
 env CFLAGS="$RPM_OPT_FLAGS" python setup.py build
 
 %check
-nosetests -v -a '!slow' --with-doctest --with-coverage --cover-package=openquake.hazardlib
+#nosetests -v -a '!slow' --with-doctest --with-coverage --cover-package=openquake.hazardlib
 
 %install
 python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --record=INSTALLED_FILES
