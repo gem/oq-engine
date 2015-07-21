@@ -18,11 +18,14 @@
 :mod:`openquake.hazardlib.calc.hazard_curve` implements
 :func:`hazard_curves`.
 """
+from openquake.baselib.python3compat import range
+from openquake.baselib.python3compat import raise_
 import sys
 import collections
 
 import numpy
 
+from openquake.baselib.performance import DummyMonitor
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim.base import deprecated
@@ -78,7 +81,7 @@ def hazard_curves(
     with the only difference that the intensity measure types in input
     and output are hazardlib objects instead of simple strings.
     """
-    imtls = {str(imt): imls for imt, imls in imtls.iteritems()}
+    imtls = {str(imt): imls for imt, imls in imtls.items()}
     curves_by_imt = calc_hazard_curves(
         sources, sites, imtls, gsim_by_trt, truncation_level,
         source_site_filter=filters.source_site_noop_filter,
@@ -157,7 +160,8 @@ def calc_hazard_curves(
 def hazard_curves_per_trt(
         sources, sites, imtls, gsims, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
-        rupture_site_filter=filters.rupture_site_noop_filter):
+        rupture_site_filter=filters.rupture_site_noop_filter,
+        monitor=DummyMonitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -170,31 +174,41 @@ def hazard_curves_per_trt(
         by the intensity measure types; the size of each field is given by the
         number of levels in ``imtls``.
     """
-    gnames = map(str, gsims)
+    gnames = list(map(str, gsims))
     imt_dt = numpy.dtype([(imt, float, len(imtls[imt]))
                           for imt in sorted(imtls)])
-    imts = {from_string(imt): imls for imt, imls in imtls.iteritems()}
+    imts = {from_string(imt): imls for imt, imls in imtls.items()}
     curves = [numpy.ones(len(sites), imt_dt) for gname in gnames]
     sources_sites = ((source, sites) for source in sources)
+    ctx_mon = monitor('making contexts', measuremem=False)
+    rup_mon = monitor('getting ruptures', measuremem=False)
+    pne_mon = monitor('computing poes', measuremem=False)
     for source, s_sites in source_site_filter(sources_sites):
         try:
-            rupture_sites = rupture_site_filter(
-                (rupture, s_sites) for rupture in source.iter_ruptures())
+            with rup_mon:
+                rupture_sites = list(rupture_site_filter(
+                    (rupture, s_sites) for rupture in source.iter_ruptures()))
             for rupture, r_sites in rupture_sites:
                 for i, gsim in enumerate(gsims):
-                    sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-                    for imt in imts:
-                        poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
-                                             truncation_level)
-                        pno = rupture.get_probability_no_exceedance(poes)
-                        expanded_pno = r_sites.expand(pno, placeholder=1)
-                        curves[i][str(imt)] *= expanded_pno
-        except Exception, err:
+                    with ctx_mon:
+                        sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
+                    with pne_mon:
+                        for imt in imts:
+                            poes = gsim.get_poes(
+                                sctx, rctx, dctx, imt, imts[imt],
+                                truncation_level)
+                            pno = rupture.get_probability_no_exceedance(poes)
+                            expanded_pno = r_sites.expand(pno, placeholder=1)
+                            curves[i][str(imt)] *= expanded_pno
+        except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
             msg %= (source.source_id, err.message)
-            raise etype, msg, tb
+            raise_(etype, msg, tb)
     for i in range(len(gnames)):
         for imt in imtls:
             curves[i][imt] = 1. - curves[i][imt]
+    ctx_mon.flush()
+    rup_mon.flush()
+    pne_mon.flush()
     return curves

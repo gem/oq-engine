@@ -25,8 +25,7 @@ from operator import attrgetter
 from collections import namedtuple
 
 from openquake.baselib.general import (
-    block_splitter, split_in_blocks, assert_independent, search_module,
-    assert_close)
+    block_splitter, split_in_blocks, search_module, assert_close)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
@@ -56,16 +55,18 @@ class BlockSplitterTestCase(unittest.TestCase):
 
     def test_block_splitter_zero_block_size(self):
         gen = block_splitter(self.DATA, 0)
-        self.assertRaises(ValueError, gen.next)
+        with self.assertRaises(ValueError):
+            next(gen)
 
     def test_block_splitter_block_size_lt_zero(self):
         gen = block_splitter(self.DATA, -1)
-        self.assertRaises(ValueError, gen.next)
+        with self.assertRaises(ValueError):
+            next(gen)
 
     def test_block_splitter_with_generator(self):
         # Test the block with a data set of unknown length
         # (such as a generator)
-        data = xrange(10)
+        data = range(10)
         expected = [
             [0, 1, 2],
             [3, 4, 5],
@@ -77,7 +78,7 @@ class BlockSplitterTestCase(unittest.TestCase):
 
     def test_block_splitter_with_iter(self):
         # Test the block with a data set of unknown length
-        data = iter(range(10))
+        data = range(10)
         expected = [
             [0, 1, 2],
             [3, 4, 5],
@@ -113,14 +114,14 @@ class BlockSplitterTestCase(unittest.TestCase):
             block_splitter([s1, s2, s3, s4, s5], max_weight=6,
                            weight=attrgetter('weight'),
                            kind=attrgetter('typology')))
-        self.assertEqual(map(len, blocks), [2, 2, 1])
+        self.assertEqual(list(map(len, blocks)), [2, 2, 1])
         self.assertEqual([b.weight for b in blocks], [2, 6, 4])
 
         blocks = list(
             split_in_blocks([s1, s2, s3, s4, s5], hint=6,
                             weight=attrgetter('weight'),
                             key=attrgetter('typology')))
-        self.assertEqual(map(len, blocks), [2, 1, 1, 1])
+        self.assertEqual(list(map(len, blocks)), [2, 1, 1, 1])
         self.assertEqual([b.weight for b in blocks], [2, 2, 4, 4])
 
 
@@ -157,7 +158,7 @@ class AssertCloseTestCase(unittest.TestCase):
             gmf2 = {'a': {'PGA': [0.1, 0.2], 'SA(0.1)': [0.3, 0.41]}}
             assert_close(gmf1, gmf2)
 
-        class C:
+        class C(object):
             pass
 
         c1 = C()

@@ -108,7 +108,7 @@ class FrankelEtAl1996MblgAB1987NSHMP2008(GMPE):
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
                    for stddev_type in stddev_types)
 
-        if imt not in self.IMTS_TABLES.keys():
+        if imt not in self.IMTS_TABLES:
             raise ValueError(
                 'IMT %s not supported in FrankelEtAl1996NSHMP. ' % repr(imt) +
                 'FrankelEtAl1996NSHMP does not allow interpolation for ' +

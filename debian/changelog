@@ -1,7 +1,21 @@
+  [Michele Simionato]
+  * fixed the filtering of site IDs
+  * hazardlib now requires h5py
+
   [Graeme Weatherill]
   * Adds Atkinson & Macias (2009) Subduction Interface GMPE
- 
- [Yen-Shin Chen]
+
+  [Yen-Shin Chen]
+  * Rupture: fix bug in get_dppvalue
+
+  [Graeme Weatherill]
+  * Adds 'sample' method to PMF class
+
+  [Matteo Nastasi]
+  * Packaging system improvement
+
+  [Yen-Shin Chen]
+  * Rupture: adds 'rupture_slip_direction' slot
   * Simple fault: Adds 'hypo_list' and 'slip_list' slot
   * Adds 'rcdpp' slot to DistanceContext object
   * ParametricProbabilisticRupture: adds 'rupture_slip_direction' slot and get_dppvalue, get_cdppvalue method

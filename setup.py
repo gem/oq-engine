@@ -1,5 +1,5 @@
-# The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# The OpenQuake Hazard Library
+# Copyright (C) 2012-2015, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -13,22 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
-hazardlib includes modules for modeling seismic sources (point, area and fault),
-earthquake ruptures, temporal (e.g. Poissonian) and magnitude occurrence
-models (e.g. Gutenberg-Richter), magnitude/area scaling relationships,
-ground motion and intensity prediction equations (i.e. GMPEs and IPEs).
-Eventually it will offer a number of calculators for hazard curves,
-stochastic event sets, ground motion fields and disaggregation histograms.
 
-hazardlib aims at becoming an open and comprehensive tool for seismic hazard
-analysis. The GEM Foundation (http://www.globalquakemodel.org/) supports
-the development of the  library by adding the most recent methodologies
-adopted by the seismological/seismic hazard communities. Comments,
-suggestions and criticisms from the community are always very welcome.
-
-Copyright (C) 2012-2014, GEM Foundation.
-"""
 import re
 import sys
 from setuptools import setup, find_packages, Extension
@@ -54,6 +39,24 @@ version = get_version()
 
 url = "http://github.com/gem/oq-hazardlib"
 
+README = """
+hazardlib includes modules for modeling seismic sources (point, area and
+fault), earthquake ruptures, temporal (e.g. Poissonian) and magnitude
+occurrence models (e.g. Gutenberg-Richter), magnitude/area scaling
+relationships, ground motion and intensity prediction equations (i.e. GMPEs and
+IPEs). Eventually it will offer a number of calculators for hazard curves,
+stochastic event sets, ground motion fields and disaggregation histograms.
+
+hazardlib aims at becoming an open and comprehensive tool for seismic hazard
+analysis. The GEM Foundation (http://www.globalquakemodel.org/) supports
+the development of the  library by adding the most recent methodologies
+adopted by the seismological/seismic hazard communities. Comments,
+suggestions and criticisms from the community are always very welcome.
+
+Copyright (C) 2012-2015, GEM Foundation.
+"""
+
+
 geoutils_speedups = Extension('openquake.hazardlib.geo._utils_speedups',
                               sources=['speedups/geoutilsmodule.c'],
                               extra_compile_args=['-Wall', '-O2'])
@@ -68,7 +71,7 @@ setup(
     name='openquake.hazardlib',
     version=version,
     description="hazardlib is a library for performing seismic hazard analysis",
-    long_description=__doc__,
+    long_description=README,
     url=url,
     packages=find_packages(exclude=['tests', 'tests.*']),
     install_requires=[
@@ -79,10 +82,12 @@ setup(
     ext_modules=[geodetic_speedups, geoutils_speedups],
     include_dirs=include_dirs,
     scripts=['openquake/hazardlib/tests/gsim/check_gsim.py'],
-    maintainer='GEM',
-    maintainer_email='info@openquake.org',
+    author='GEM Foundation',
+    author_email='devops@openquake.org',
+    maintainer='GEM Foundation',
+    maintainer_email='devops@openquake.org',
     classifiers=(
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: GNU Affero General Public License v3',
@@ -91,10 +96,11 @@ setup(
         'Topic :: Scientific/Engineering',
     ),
     keywords="seismic hazard",
-    license="GNU AGPL v3",
+    license="AGPL3",
     platforms=["any"],
+    package_data={"openquake.hazardlib": [
+        "README.rst", "LICENSE", "CONTRIBUTORS.txt"]},
     namespace_packages=['openquake'],
-
+    include_package_data=True,
     zip_safe=False,
-
 )

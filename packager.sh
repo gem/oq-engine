@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ "$GEM_SET_DEBUG" = "true" ]; then
+if [ -n "$GEM_SET_DEBUG" -a "$GEM_SET_DEBUG" != "false" ]; then
     export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
     set -x
 fi
@@ -538,6 +538,14 @@ ini_suf="" # currently not included into the version array structure
 
 # version info from debian/changelog
 h="$(grep "^$GEM_DEB_PACKAGE" debian/changelog | head -n 1)"
+
+# is it the first item of changelog ?
+h_first="$(cat debian/changelog | head -n 1)"
+h_is_first=0
+if [ "$h" = "$h_first" ]; then
+    h_is_first=1
+fi
+
 # pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1 | sed -n 's/[-+].*//gp')"
 pkg_name="$(echo "$h" | cut -d ' ' -f 1)"
 pkg_vers="$(echo "$h" | cut -d ' ' -f 2 | cut -d '(' -f 2 | cut -d ')' -f 1)"
@@ -555,8 +563,12 @@ if [ $BUILD_DEVEL -eq 1 ]; then
 
     if [ "$pkg_maj" = "$ini_maj" -a "$pkg_min" = "$ini_min" -a \
          "$pkg_bfx" = "$ini_bfx" -a "$pkg_deb" != "" ]; then
-        deb_ct="$(echo "$pkg_deb" | sed 's/^-//g')"
-        pkg_deb="-$(( deb_ct ))"
+        deb_ct="$(echo "$pkg_deb" | sed 's/^-//g;s/~.*//g')"
+        if [ $h_is_first -eq 1 ]; then
+            pkg_deb="-$(( deb_ct ))"
+        else
+            pkg_deb="-$(( deb_ct + 1))"
+        fi
     else
         pkg_maj="$ini_maj"
         pkg_min="$ini_min"
@@ -601,7 +613,7 @@ if [ 0 -eq 1 ]; then
 
     # mods pre-packaging
     mv LICENSE         openquake
-    mv README.txt      openquake/README
+    mv README.rst      openquake/README
     mv celeryconfig.py openquake
     mv openquake.cfg   openquake
 
