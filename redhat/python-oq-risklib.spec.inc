@@ -28,7 +28,6 @@ BuildRequires: python-nose
 BuildRequires: python-mock
 BuildRequires: python-coverage
 
-
 %description
 OpenQuake Risk Library (oq-risklib)
 -----------------------------------
