@@ -16,28 +16,17 @@ BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-engine
 
-BuildRequires: python
+%define common_deps python numpy scipy python-shapely python-psutil python-lxml python-futures h5py python-amqp python-celery python-psycopg2 python-django rabbitmq-server postgresql-server postgis sudo
+%define oqlib_deps python-oq-hazardlib >= 0.15.0 python-oq-risklib >= 0.8.0
+Requires: %{common_deps}
+Requires: %{oqlib_deps}
+
+BuildRequires: %{common_deps}
+#BuildRequires: %{oqlib_deps}
 BuildRequires: python-setuptools
-
-Requires: python
-Requires: sudo
-Requires: numpy
-Requires: scipy
-Requires: python-amqp
-Requires: python-celery
-Requires: python-lxml
-Requires: python-shapely
-Requires: python-psycopg2
-Requires: python-django
-Requires: python-setuptools
-Requires: python-psutil
-Requires: python-mock
-Requires: python-futures
-Requires: rabbitmq-server
-Requires: postgresql-server postgis
-
-Requires: python-oq-hazardlib >= 0.15.0
-Requires: python-oq-risklib >= 0.8.0
+BuildRequires: python-nose
+BuildRequires: python-mock
+BuildRequires: python-coverage
 
 %description
 
@@ -57,6 +46,9 @@ Copyright (C) 2010-2015, GEM Foundation.
 
 %build
 python setup.py build
+
+%check
+#nosetests -v -a '!slow' --with-doctest --with-coverage --cover-package=openquake.engine
 
 %install
 python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --record=INSTALLED_FILES
