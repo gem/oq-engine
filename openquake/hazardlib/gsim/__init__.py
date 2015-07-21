@@ -37,7 +37,7 @@ def get_available_gsims():
             modname, _ext = os.path.splitext(fname)
             mod = importlib.import_module(
                 'openquake.hazardlib.gsim.' + modname)
-            for cls in mod.__dict__.itervalues():
+            for cls in mod.__dict__.values():
                 if inspect.isclass(cls) and issubclass(
                     cls, GroundShakingIntensityModel) and cls not in (
                         GroundShakingIntensityModel, GMPE, IPE):

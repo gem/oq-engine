@@ -100,6 +100,13 @@ Backarc=False>'
         return self.__str__()
 
 
+def eq(array1, array2):
+    """
+    Compare two numpy arrays for equality and return a boolean
+    """
+    return array1.shape == array2.shape and (array1 == array2).all()
+
+
 class SiteCollection(object):
     """
     A collection of :class:`sites <Site>`.
@@ -256,6 +263,12 @@ class SiteCollection(object):
         """
         return self.total_sites
 
+    def __eq__(self, other):
+        return eq(self.lons, other.lons) and eq(self.lats, other.lats)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __repr__(self):
         return '<SiteCollection with %d sites>' % self.total_sites
 
@@ -402,8 +415,8 @@ class FilteredSiteCollection(object):
         """
         for i, location in enumerate(self.mesh):
             yield Site(location, self.vs30[i], self.vs30measured[i],
-                       self.z1pt0[i], self.z2pt5[i], self.sids[i],
-                       self.backarc[i])
+                       self.z1pt0[i], self.z2pt5[i],
+                       self.backarc[i], self.sids[i])
 
     def __len__(self):
         """Return the number of filtered sites"""

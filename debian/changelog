@@ -1,6 +1,10 @@
+  [Michele Simionato]
+  * fixed the filtering of site IDs
+  * hazardlib now requires h5py
+
   [Graeme Weatherill]
   * Adds Atkinson & Macias (2009) Subduction Interface GMPE
-  
+
   [Yen-Shin Chen]
   * Rupture: fix bug in get_dppvalue
 

@@ -24,7 +24,7 @@ class MonitorTestCase(unittest.TestCase):
         ls = []
         for i in range(3):
             with mon:
-                ls.append(range(100000))  # allocate some RAM
+                ls.append(list(range(100000)))  # allocate some RAM
                 time.sleep(0.1)
         self.assertGreaterEqual(mon.mem, 0)
         mon.flush()
