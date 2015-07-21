@@ -22,6 +22,7 @@ Serializer and related functions to save exposure data to the database.
 
 from openquake.engine.db import models
 from openquake.engine.logs import LOG
+from openquake.commonlib import valid
 from django.db import router
 from django.db import transaction
 
@@ -116,8 +117,8 @@ class ExposureDBWriter(object):
             taxonomy=asset_data.taxonomy,
             area=asset_data.area,
             number_of_units=asset_data.number,
-            site="POINT(%s %s)" % (asset_data.site.longitude,
-                                   asset_data.site.latitude))
+            site="POINT(%s %s)" % (valid.longitude(asset_data.site.longitude),
+                                   valid.latitude(asset_data.site.latitude)))
 
         model = asset_data.exposure_metadata
         deductible_is_absolute = model.conversions.deductible_is_absolute
