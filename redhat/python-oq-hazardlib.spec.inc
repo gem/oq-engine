@@ -1,16 +1,17 @@
-%define repo ##_repo_##
-%define version ##_version_##
-%define release ##_release_##
-%define name python-%{repo}
+%define oqrepo ##_repo_##
+%define oqversion ##_version_##
+%define oqrelease ##_release_##
+%define name python-%{oqrepo}
+%define timestamp %(date +"%s")
 
 Summary: hazardlib is a library for performing seismic hazard analysis
 Name: %{name}
-Version: %{version}
-Release: %{release}
-Source0: %{repo}-%{version}-%{release}.tar.gz
+Version: %{oqversion}
+Release: %{oqrelease}_%{timestamp}
+Source0: %{oqrepo}-%{oqversion}-%{oqrelease}.tar.gz
 License: AGPL3
 Group: Applications/Engineering
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
+BuildRoot: %{_tmppath}/%{name}-%{oqversion}-%{oqrelease}-buildroot
 Prefix: %{_prefix}
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-hazardlib
@@ -45,7 +46,7 @@ Copyright (C) 2012-2015, GEM Foundation.
 
 
 %prep
-%setup -n %{repo}-%{version}-%{release} -n %{repo}-%{version}-%{release}
+%setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{oqrepo}-%{oqversion}-%{oqrelease}
 
 %build
 env CFLAGS="$RPM_OPT_FLAGS" python setup.py build
