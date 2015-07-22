@@ -42,7 +42,7 @@ VER=$(cat openquake/${LIB}/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"
 
 echo $LIB" - "$SHA" - "$VER
 
-sed "s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_release_##/git${SHA}/g" redhat/python-${REPO}.spec.inc > build-rpm/SPECS/python-${REPO}.spec
+sed "s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_release_##/git${SHA}/g" rpm/python-${REPO}.spec.inc > build-rpm/SPECS/python-${REPO}.spec
 
 git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | pigz > build-rpm/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
 
