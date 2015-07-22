@@ -1,16 +1,17 @@
-%define repo ##_repo_##
-%define version ##_version_##
-%define release ##_release_##
-%define name python-%{repo}
+%define oqrepo ##_repo_##
+%define oqversion ##_version_##
+%define oqrelease ##_release_##
+%define name python-%{oqrepo}
+%define timestamp %(date +"%s")
 
 Summary: oq-risklib is a library for performing seismic risk analysis
 Name: %{name}
-Version: %{version}
-Release: %{release}
-Source0: %{repo}-%{version}-%{release}.tar.gz
+Version: %{oqversion}
+Release: %{oqrelease}
+Source0: %{oqrepo}-%{oqversion}-%{oqrelease}.tar.gz
 License: AGPL3
 Group: Applications/Engineering
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
+BuildRoot: %{_tmppath}/%{oqname}-%{oqversion}-%{oqrelease}-buildroot
 Prefix: %{_prefix}
 BuildArch: noarch
 Vendor: GEM Foundation <devops@openquake.org>
@@ -50,7 +51,7 @@ Copyright (C) 2013-2015, GEM Foundation.
 
 
 %prep
-%setup -n %{repo}-%{version}-%{release} -n %{repo}-%{version}-%{release}
+%setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{oqrepo}-%{oqversion}-%{oqrelease}
 
 %build
 python setup.py build
