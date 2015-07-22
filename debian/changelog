@@ -1,3 +1,7 @@
+  [Graeme Weatherill]
+  * Adds the `upper' and `lower' epistemic uncertainty corrections for the
+    NGA West 2 GMPEs used in the 2014 US National Seismic Hazard Map
+  
   [Michele Simionato]
   * fixed the filtering of site IDs
   * hazardlib now requires h5py

@@ -24,7 +24,6 @@ Module exports :class:`AbrahamsonEtAl2014NSHMPUpper`
                :class:`ChiouYoungs2014NSHMPLower`
                :class:`Idriss2014NSHMPUpper`
                :class:`Idriss2014NSHMPLower`
-               
 """
 from __future__ import division
 import numpy as np
@@ -43,11 +42,12 @@ from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import \
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.idriss_2014 import Idriss2014
 
+
 def nga_west2_epistemic_adjustment(magnitude, distance):
     """
     Applies the "average" adjustment factor for epistemic uncertainty
     as defined in Table 17 of Petersen et al., (2014)
-    
+
                    R < 10.  | 10.0 <= R < 30.0  |    R >= 30.0
     -----------------------------------------------------------
       M < 6.0   |   0.37    |      0.22         |       0.22
@@ -63,10 +63,11 @@ def nga_west2_epistemic_adjustment(magnitude, distance):
         adjustment[distance < 10.0] = 0.40
         adjustment[distance >= 30.0] = 0.33
     else:
-        adjustment = 0.25 * np.ones_like(distance)
-        adjustment[distance < 10.0] = 0.23
+        adjustment = 0.23 * np.ones_like(distance)
+        adjustment[distance < 10.0] = 0.25
         adjustment[distance >= 30.0] = 0.23
     return adjustment
+
 
 class AbrahamsonEtAl2014NSHMPUpper(AbrahamsonEtAl2014):
     """
@@ -87,6 +88,7 @@ class AbrahamsonEtAl2014NSHMPUpper(AbrahamsonEtAl2014):
         return mean + nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
             stddevs
 
+
 class AbrahamsonEtAl2014NSHMPLower(AbrahamsonEtAl2014):
     """
     Implements the negative NSHMP adjustment factor for the Abrahamson et al.
@@ -105,6 +107,7 @@ class AbrahamsonEtAl2014NSHMPLower(AbrahamsonEtAl2014):
         # and standard devation
         return mean - nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
             stddevs
+
 
 class BooreEtAl2014NSHMPUpper(BooreEtAl2014):
     """
@@ -264,4 +267,3 @@ class Idriss2014NSHMPLower(Idriss2014):
         # and standard devation
         return mean - nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
             stddevs
-
