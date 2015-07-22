@@ -7,7 +7,7 @@
 Summary: oq-risklib is a library for performing seismic risk analysis
 Name: %{name}
 Version: %{oqversion}
-Release: %{oqrelease}
+Release: %{oqrelease}_%{timestamp}
 Source0: %{oqrepo}-%{oqversion}-%{oqrelease}.tar.gz
 License: AGPL3
 Group: Applications/Engineering
