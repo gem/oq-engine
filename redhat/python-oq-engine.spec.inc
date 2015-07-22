@@ -42,7 +42,7 @@ Copyright (C) 2010-2015, GEM Foundation.
 
 
 %prep
-%setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{repo}-%{oqversion}-%{oqrelease}
+%setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{oqrepo}-%{oqversion}-%{oqrelease}
 
 %build
 python setup.py build
