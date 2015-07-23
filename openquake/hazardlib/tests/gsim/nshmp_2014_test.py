@@ -17,6 +17,10 @@
 """
 Implements the set of tests for the NSHMP adjustments to the NGA West 2
 Ground Motion Prediction Equations
+
+Each of the test tables is generated from the original GMPE tables, which are
+subsequently modified using the adjustment factors presented in the module
+openquake.hazardlib.gsim.nshmp_2014
 """
 import unittest
 import numpy as np

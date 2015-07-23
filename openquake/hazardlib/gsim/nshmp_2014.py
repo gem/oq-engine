@@ -27,13 +27,6 @@ Module exports :class:`AbrahamsonEtAl2014NSHMPUpper`
 """
 from __future__ import division
 import numpy as np
-# standard acceleration of gravity in m/s**2
-from scipy.constants import g
-
-
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, SA
 # NGA West 2 GMPEs
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
@@ -57,7 +50,6 @@ def nga_west2_epistemic_adjustment(magnitude, distance):
     if magnitude < 6.0:
         adjustment = 0.22 * np.ones_like(distance)
         adjustment[distance < 10.0] = 0.37
-        adjustment[distance >= 30.0] = 0.22
     elif magnitude >= 7.0:
         adjustment = 0.36 * np.ones_like(distance)
         adjustment[distance < 10.0] = 0.40
@@ -65,7 +57,6 @@ def nga_west2_epistemic_adjustment(magnitude, distance):
     else:
         adjustment = 0.23 * np.ones_like(distance)
         adjustment[distance < 10.0] = 0.25
-        adjustment[distance >= 30.0] = 0.23
     return adjustment
 
 
