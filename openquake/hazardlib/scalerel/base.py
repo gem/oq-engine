@@ -20,14 +20,14 @@ classes for :class:`ASR <BaseASR>`, :class:`MSR <BaseMSR>`,
 """
 import abc
 import math
+from openquake.baselib.python3compat import with_metaclass
 
 
-class BaseASR(object):
+class BaseASR(with_metaclass(abc.ABCMeta, object)):
     """
     A base class for Area-Magnitude Scaling Relationship.
     Allows calculation of rupture magnitude from area.
     """
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def get_median_mag(self, area, rake):
@@ -42,12 +42,11 @@ class BaseASR(object):
         """
 
 
-class BaseASRSigma(BaseASR):
+class BaseASRSigma(with_metaclass(abc.ABCMeta, BaseASR)):
     """
     Extend :class:`BaseASR` and allows to include uncertainties (sigma) in
     rupture magnitude estimation.
     """
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def get_std_dev_mag(self, rake):
@@ -60,12 +59,11 @@ class BaseASRSigma(BaseASR):
         """
 
 
-class BaseMSR(object):
+class BaseMSR(with_metaclass(abc.ABCMeta)):
     """
     A base class for Magnitude-Area Scaling Relationship.
     Allows calculation of rupture area from magnitude.
     """
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def get_median_area(self, mag, rake):
@@ -82,12 +80,11 @@ class BaseMSR(object):
         """
 
 
-class BaseMSRSigma(BaseMSR):
+class BaseMSRSigma(with_metaclass(abc.ABCMeta, BaseMSR)):
     """
     Extends :class:`BaseMSR` and allows to include uncertainties (sigma) in
     rupture area estimation.
     """
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def get_std_dev_area(self, mag, rake):
