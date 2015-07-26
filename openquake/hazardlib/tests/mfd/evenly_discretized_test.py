@@ -24,14 +24,14 @@ class EvenlyDiscretizedMFDMFDConstraintsTestCase(BaseMFDTestCase):
             EvenlyDiscretizedMFD,
             min_mag=1, bin_width=2, occurrence_rates=[]
         )
-        self.assertEqual(exc.message, 'at least one bin must be specified')
+        self.assertEqual(str(exc), 'at least one bin must be specified')
 
     def test_negative_occurrence_rate(self):
         exc = self.assert_mfd_error(
             EvenlyDiscretizedMFD,
             min_mag=1, bin_width=2, occurrence_rates=[-0.1, 1]
         )
-        self.assertEqual(exc.message, 'all occurrence rates '
+        self.assertEqual(str(exc), 'all occurrence rates '
                                       'must not be negative')
 
     def test_all_zero_occurrence_rates(self):
@@ -39,7 +39,7 @@ class EvenlyDiscretizedMFDMFDConstraintsTestCase(BaseMFDTestCase):
             EvenlyDiscretizedMFD,
             min_mag=1, bin_width=2, occurrence_rates=[0, 0]
         )
-        self.assertEqual(exc.message, 'at least one occurrence rate '
+        self.assertEqual(str(exc), 'at least one occurrence rate '
                                       'must be positive')
 
     def test_negative_minimum_magnitude(self):
@@ -47,14 +47,14 @@ class EvenlyDiscretizedMFDMFDConstraintsTestCase(BaseMFDTestCase):
             EvenlyDiscretizedMFD,
             min_mag=-1, bin_width=2, occurrence_rates=[0.1, 1]
         )
-        self.assertEqual(exc.message, 'minimum magnitude must be non-negative')
+        self.assertEqual(str(exc), 'minimum magnitude must be non-negative')
 
     def test_negative_bin_width(self):
         exc = self.assert_mfd_error(
             EvenlyDiscretizedMFD,
             min_mag=1, bin_width=-2, occurrence_rates=[0.1, 1]
         )
-        self.assertEqual(exc.message, 'bin width must be positive')
+        self.assertEqual(str(exc), 'bin width must be positive')
 
 
 class EvenlyDiscretizedMFDTestCase(BaseMFDTestCase):
@@ -99,5 +99,4 @@ class EvenlyDiscretizedMFDTestCase(BaseMFDTestCase):
             "set_mfd",
             {"min_mag": 4.0, "bin_width": 0.1, "occurrence_rates": [-1, 2, 3]})
 
-        self.assertEqual(exc.message, 'all occurrence rates '
-                                      'must not be negative')
+        self.assertEqual(str(exc), 'all occurrence rates must not be negative')

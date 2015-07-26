@@ -24,7 +24,7 @@ class TruncatedGRMFDConstraintsTestCase(BaseMFDTestCase):
             TruncatedGRMFD,
             min_mag=-1, max_mag=2, bin_width=0.4, a_val=1, b_val=2
         )
-        self.assertEqual(exc.message, 'minimum magnitude must be non-negative')
+        self.assertEqual(str(exc), 'minimum magnitude must be non-negative')
 
     def test_min_mag_higher_than_max_mag(self):
         exc = self.assert_mfd_error(
@@ -33,14 +33,14 @@ class TruncatedGRMFDConstraintsTestCase(BaseMFDTestCase):
         )
         error = 'maximum magnitude must be higher than minimum magnitude ' \
                 'by bin width at least'
-        self.assertEqual(exc.message, error)
+        self.assertEqual(str(exc), error)
 
     def test_negative_bin_width(self):
         exc = self.assert_mfd_error(
             TruncatedGRMFD,
             min_mag=1, max_mag=2, bin_width=-0.4, a_val=1, b_val=0.2
         )
-        self.assertEqual(exc.message, 'bin width must be positive')
+        self.assertEqual(str(exc), 'bin width must be positive')
 
     def test_non_positive_b_val(self):
         error = 'b value must be non-negative'
@@ -48,12 +48,12 @@ class TruncatedGRMFDConstraintsTestCase(BaseMFDTestCase):
             TruncatedGRMFD,
             min_mag=1, max_mag=2, bin_width=0.4, a_val=1, b_val=-2
         )
-        self.assertEqual(exc.message, error)
+        self.assertEqual(str(exc), error)
         exc = self.assert_mfd_error(
             TruncatedGRMFD,
             min_mag=1, max_mag=2, bin_width=0.4, a_val=1, b_val=0
         )
-        self.assertEqual(exc.message, error)
+        self.assertEqual(str(exc), error)
 
     def test_equal_min_mag_and_max_mag(self):
         error = 'maximum magnitude must be higher than minimum magnitude ' \
@@ -62,12 +62,12 @@ class TruncatedGRMFDConstraintsTestCase(BaseMFDTestCase):
             TruncatedGRMFD,
             min_mag=6.5, max_mag=6.5, bin_width=0.1, a_val=0.5, b_val=1.0
         )
-        self.assertEqual(exc.message, error)
+        self.assertEqual(str(exc), error)
         exc = self.assert_mfd_error(
             TruncatedGRMFD,
             min_mag=6.7, max_mag=7.3, bin_width=1.0, a_val=0.5, b_val=1.0
         )
-        self.assertEqual(exc.message, error)
+        self.assertEqual(str(exc), error)
 
 
 class TruncatedGRMFDMFDGetRatesTestCase(BaseMFDTestCase):

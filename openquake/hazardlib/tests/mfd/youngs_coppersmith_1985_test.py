@@ -27,14 +27,14 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
             min_mag=-4.0, a_val=2.0, b_val=1.0, char_mag=6.0, char_rate=0.001,
             bin_width=0.1
         )
-        self.assertEqual(exc.message, 'minimum magnitude must be positive')
+        self.assertEqual(str(exc), 'minimum magnitude must be positive')
 
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
             min_mag=0.0, a_val=2.0, b_val=1.0, char_mag=6.0, char_rate=0.001,
             bin_width=0.1
         )
-        self.assertEqual(exc.message, 'minimum magnitude must be positive')
+        self.assertEqual(str(exc), 'minimum magnitude must be positive')
 
     def test_negative_or_zero_b_val(self):
         exc = self.assert_mfd_error(
@@ -42,14 +42,14 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
             min_mag=4.0, a_val=2.0, b_val=-1.0, char_mag=6.0, char_rate=0.001,
             bin_width=0.1
         )
-        self.assertEqual(exc.message, 'b value must be positive')
+        self.assertEqual(str(exc), 'b value must be positive')
 
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
             min_mag=4.0, a_val=2.0, b_val=0.0, char_mag=6.0, char_rate=0.001,
             bin_width=0.1
         )
-        self.assertEqual(exc.message, 'b value must be positive')
+        self.assertEqual(str(exc), 'b value must be positive')
 
     def test_negative_or_zero_char_mag(self):
         exc = self.assert_mfd_error(
@@ -58,14 +58,14 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
             bin_width=0.1
         )
         error = 'characteristic magnitude must be positive'
-        self.assertEqual(exc.message, error)
+        self.assertEqual(str(exc), error)
 
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
             min_mag=4.0, a_val=2.0, b_val=1.0, char_mag=0.0, char_rate=0.001,
             bin_width=0.1
         )
-        self.assertEqual(exc.message, error)
+        self.assertEqual(str(exc), error)
 
     def test_negative_or_zero_char_rate(self):
         exc = self.assert_mfd_error(
@@ -73,14 +73,14 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
             min_mag=4.0, a_val=2.0, b_val=1.0, char_mag=6.0, char_rate=-0.001,
             bin_width=0.1
         )
-        self.assertEqual(exc.message, 'characteristic rate must be positive')
+        self.assertEqual(str(exc), 'characteristic rate must be positive')
 
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
             min_mag=4.0, a_val=2.0, b_val=1.0, char_mag=6.0, char_rate=0.0,
             bin_width=0.1
         )
-        self.assertEqual(exc.message, 'characteristic rate must be positive')
+        self.assertEqual(str(exc), 'characteristic rate must be positive')
 
     def test_bin_width_out_of_valid_range(self):
         exc = self.assert_mfd_error(
@@ -91,21 +91,21 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
         error = 'bin width must be in the range (0, 0.5] to allow for at ' \
                 'least one magnitude bin representing the characteristic ' \
                 'distribution'
-        self.assertEqual(exc.message, error)
+        self.assertEqual(str(exc), error)
 
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
             min_mag=4.0, a_val=2.0, b_val=1.0, char_mag=6.0, char_rate=0.001,
             bin_width=0.0
         )
-        self.assertEqual(exc.message, error)
+        self.assertEqual(str(exc), error)
 
         exc = self.assert_mfd_error(
             YoungsCoppersmith1985MFD,
             min_mag=4.0, a_val=2.0, b_val=1.0, char_mag=6.0, char_rate=0.001,
             bin_width=0.6
         )
-        self.assertEqual(exc.message, error)
+        self.assertEqual(str(exc), error)
 
     def test_max_mag_GR_too_close_to_min_mag(self):
         exc = self.assert_mfd_error(
@@ -116,7 +116,7 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
         error = ('Maximum magnitude of the G-R distribution (char_mag - 0.25) '
                  'must be greater than the minimum magnitude by at least one '
                  'magnitude bin.')
-        self.assertEqual(exc.message, error)
+        self.assertEqual(str(exc), error)
 
     def test_rate_char_mag_not_equal_rate_char_mag_less_1_pt_25(self):
         # Given the parameters below:
@@ -137,7 +137,7 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
         error = 'Rate of events at the characteristic magnitude is not ' \
                 'equal to the rate of events for magnitude equal to ' \
                 'char_mag - 1.25'
-        self.assertEqual(exc.message, error)
+        self.assertEqual(str(exc), error)
 
     def test_from_total_moment_rate(self):
         mfd = YoungsCoppersmith1985MFD.from_total_moment_rate(
