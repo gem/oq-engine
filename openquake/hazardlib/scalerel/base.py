@@ -23,7 +23,7 @@ import math
 from openquake.baselib.python3compat import with_metaclass
 
 
-class BaseASR(with_metaclass(abc.ABCMeta, object)):
+class BaseASR(with_metaclass(abc.ABCMeta)):
     """
     A base class for Area-Magnitude Scaling Relationship.
     Allows calculation of rupture magnitude from area.

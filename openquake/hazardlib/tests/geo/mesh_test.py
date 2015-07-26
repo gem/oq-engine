@@ -137,7 +137,7 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
             submesh = mesh[0:0]
 
     def test_2d(self):
-        lons = lats = numpy.array(list(range(100))).reshape((10, 10))
+        lons = lats = numpy.arange(100).reshape((10, 10))
         mesh = self._make_mesh(lons, lats)
         submesh = mesh[:3, 5:7]
         self.assertEqual(submesh.lons.shape, (3, 2))
@@ -155,7 +155,7 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
                                             [35.1, 36.1, 37.1, 38.1]]).all())
 
     def test_wrong_indexing(self):
-        coords = numpy.array(list(range(16)))
+        coords = numpy.arange(16)
         mesh = self._make_mesh(coords, coords, coords)
         with self.assertRaises(AssertionError):
             mesh[1]
@@ -167,7 +167,7 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
             mesh[1:, 5]
 
     def test_preserving_the_type(self):
-        lons = lats = numpy.array(list(range(100))).reshape((10, 10))
+        lons = lats = numpy.arange(100).reshape((10, 10))
         mesh = RectangularMesh(lons, lats, depths=None)
         submesh = mesh[1:2, 3:4]
         self.assertIsInstance(submesh, RectangularMesh)
