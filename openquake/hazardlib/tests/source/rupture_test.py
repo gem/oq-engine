@@ -52,7 +52,7 @@ class RuptureCreationTestCase(unittest.TestCase):
     def assert_failed_creation(self, rupture_class, exc, msg, **kwargs):
         with self.assertRaises(exc) as ae:
             make_rupture(rupture_class, **kwargs)
-        self.assertEqual(ae.exception.message, msg)
+        self.assertEqual(str(ae.exception), msg)
 
     def test_negative_magnitude(self):
         self.assert_failed_creation(
@@ -210,7 +210,7 @@ class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
     def assert_failed_creation(self, rupture_class, exc, msg, **kwargs):
         with self.assertRaises(exc) as ae:
             make_rupture(rupture_class, **kwargs)
-        self.assertEqual(ae.exception.message, msg)
+        self.assertEqual(str(ae.exception), msg)
 
     def test_creation(self):
         pmf = PMF([(Decimal('0.8'), 0), (Decimal('0.2'), 1)])

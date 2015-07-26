@@ -189,7 +189,7 @@ def _collect_bins_data(sources, site, imt, iml, gsims,
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
-            msg %= (source.source_id, err.message)
+            msg %= (source.source_id, str(err))
             raise_(etype, msg, tb)
 
     mags = numpy.array(mags, float)

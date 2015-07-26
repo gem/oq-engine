@@ -387,7 +387,7 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
         expected_error = (
             'An error occurred with source id=2. Error: Something bad happened'
         )
-        self.assertEqual(expected_error, ae.exception.message)
+        self.assertEqual(expected_error, str(ae.exception))
 
     def test_no_contributions_from_ruptures(self):
         # Test that the `disaggregation` function returns `None, None` if no

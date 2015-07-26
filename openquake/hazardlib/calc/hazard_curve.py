@@ -203,7 +203,7 @@ def hazard_curves_per_trt(
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
-            msg %= (source.source_id, err.message)
+            msg %= (source.source_id, str(err))
             raise_(etype, msg, tb)
     for i in range(len(gnames)):
         for imt in imtls:

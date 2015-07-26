@@ -49,7 +49,7 @@ class SiteTestCase(unittest.TestCase):
         if error is not None:
             with self.assertRaises(ValueError) as ar:
                 Site(**kwargs)
-            self.assertEqual(ar.exception.message, error)
+            self.assertEqual(str(ar.exception), error)
         else:
             site = Site(**kwargs)
             for attr in kwargs:

@@ -150,7 +150,7 @@ class HazardCurvesTestCase(unittest.TestCase):
         expected_error = (
             'An error occurred with source id=2. Error: Something bad happened'
         )
-        self.assertEqual(expected_error, ae.exception.message)
+        self.assertEqual(expected_error, str(ae.exception))
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
