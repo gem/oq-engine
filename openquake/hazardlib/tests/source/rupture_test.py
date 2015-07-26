@@ -1,3 +1,4 @@
+from __future__ import division
 # The Hazard Library
 # Copyright (C) 2012-2014, GEM Foundation
 #
@@ -116,7 +117,7 @@ class ParametricProbabilisticRuptureTestCase(unittest.TestCase):
                                temporal_occurrence_model=tom)
         numpy.random.seed(37)
         mean = sum(rupture.sample_number_of_occurrences()
-                   for i in xrange(num_samples)) / float(num_samples)
+                   for i in range(num_samples)) / float(num_samples)
         self.assertAlmostEqual(mean, rate * time_span, delta=2e-3)
 
     def test_get_probability_no_exceedance(self):
@@ -177,7 +178,7 @@ class Cdppvalue(unittest.TestCase):
             lon = data[loc][0]
             lat = data[loc][1]
             ref_dpp = data[loc][2]
-            dpp = (rupture.get_dppvalue(Point(lon, lat)))
+            dpp = rupture.get_dppvalue(Point(lon, lat))
 
             self.assertAlmostEqual(dpp, ref_dpp, delta=0.1)
 

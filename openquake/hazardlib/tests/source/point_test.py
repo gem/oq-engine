@@ -1,3 +1,4 @@
+from __future__ import division
 # The Hazard Library
 # Copyright (C) 2012-2014, GEM Foundation
 #
