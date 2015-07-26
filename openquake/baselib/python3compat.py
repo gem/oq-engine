@@ -24,6 +24,7 @@ avoid an external dependency.
 from __future__ import print_function
 import os
 import sys
+import math
 import importlib
 import subprocess
 
@@ -32,6 +33,10 @@ PY2 = sys.version_info[0] == 2
 
 if PY3:
     range = range
+
+    def round(x, d=0):
+        p = 10 ** d
+        return float(math.floor((x * p) + math.copysign(0.5, x))) / p
 
     def raise_(tp, value=None, tb=None):
         """
@@ -51,6 +56,7 @@ if PY3:
 
 else:  # Python 2
     range = xrange
+    round = round
 
     exec('''
 def raise_(tp, value=None, tb=None):
