@@ -250,7 +250,7 @@ class Point(object):
             point.longitude, point.latitude, point.depth,
             distance
         )
-        return [Point(lons[i], lats[i], depths[i]) for i in xrange(len(lons))]
+        return [Point(lons[i], lats[i], depths[i]) for i in range(len(lons))]
 
     def to_polygon(self, radius):
         """

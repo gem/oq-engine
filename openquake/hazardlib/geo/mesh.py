@@ -77,7 +77,7 @@ class Mesh(object):
         lons = numpy.zeros(len(points), dtype=float)
         lats = lons.copy()
         depths = lons.copy()
-        for i in xrange(len(points)):
+        for i in range(len(points)):
             lons[i] = points[i].longitude
             lats[i] = points[i].latitude
             depths[i] = points[i].depth
@@ -110,10 +110,10 @@ class Mesh(object):
         lats = self.lats.flat
         if self.depths is not None:
             depths = self.depths.flat
-            for i in xrange(self.lons.size):
+            for i in range(self.lons.size):
                 yield Point(lons[i], lats[i], depths[i])
         else:
-            for i in xrange(self.lons.size):
+            for i in range(self.lons.size):
                 yield Point(lons[i], lats[i])
 
     def __getitem__(self, item):
@@ -438,7 +438,7 @@ class RectangularMesh(Mesh):
         # line of points. we keep it reversed, such that together
         # with the current line they define the sequence of points
         # around the stripe.
-        prev_line = lines.next()[::-1]
+        prev_line = next(lines)[::-1]
         polygons = []
         for i, line in enumerate(lines):
             coords = numpy.concatenate((prev_line, line, prev_line[0:1]))

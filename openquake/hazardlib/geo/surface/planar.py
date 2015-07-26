@@ -256,7 +256,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
             self.mesh_spacing
         )
         mlons, mlats, mdepths = [], [], []
-        for i in xrange(len(llons)):
+        for i in range(len(llons)):
             lons, lats, depths = geodetic.intervals_between(
                 llons[i], llats[i], ldepths[i], rlons[i], rlats[i], rdepths[i],
                 self.mesh_spacing
