@@ -140,7 +140,7 @@ def get_vulnerability_functions(fname):
     node = nrml.read(fname)
     if node['xmlns'] == nrml.NRML05:
         vmodel = node[0]
-        for vfun in vmodel[1:]:  # the first node is the description
+        for vfun in vmodel.getnodes('vulnerabilityFunction'):
             with context(fname, vfun):
                 imt = vfun.imls['imt']
                 imls = numpy.array(~vfun.imls)
