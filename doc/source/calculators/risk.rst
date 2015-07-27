@@ -27,11 +27,6 @@ Event-Based PSHA Calculator
 ***************************
 .. automodule:: openquake.engine.calculators.risk.event_based_risk.core
 
-*******************************
-Event-Based PSHA BCR Calculator
-*******************************
-.. automodule:: openquake.engine.calculators.risk.event_based_bcr.core
-
 *******************
 Scenario Calculator
 *******************
