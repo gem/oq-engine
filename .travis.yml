@@ -6,7 +6,7 @@ python:
  - "2.7"
 
 install:
-  - sudo apt-get install gfortran libblas3 liblapack3 liblapack-dev python-numpy python-scipy python-psutil python-shapely python-h5py 
+  - sudo apt-get install gfortran liblapack-dev python-numpy python-scipy python-psutil python-shapely python-h5py 
   - python setup.py install
 
 script:
