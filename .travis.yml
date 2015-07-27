@@ -8,6 +8,9 @@ python:
 addons:
   apt:
     packages:
+    - libblas3
+    - liblapack3
+    - liblapack-dev
     - python-numpy
     - python-scipy
     - python-psutil
