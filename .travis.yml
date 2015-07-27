@@ -8,6 +8,7 @@ python:
 addons:
   apt:
     packages:
+    - cython
     - gfortran
     - liblapack-dev
     - python-numpy
