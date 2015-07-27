@@ -12,6 +12,8 @@ addons:
     - liblapack-dev
     - python-numpy
     - python-scipy
+    - libgeos-dev
+    - libhdf5-dev
 
 install:
   - pip install psutil shapely h5py
