@@ -5,9 +5,17 @@ language: python
 python:
  - "2.7"
 
+addons:
+  apt:
+    packages:
+    - python-numpy
+    - python-scipy
+    - python-psutil
+    - python-shapely
+    - python-h5py
+
 install:
-  - pip install numpy scipy psutil shapely h5py
   - python setup.py install
 
 script:
-  nosetests -a'!slow' -v
+  nosetests -a'!slow' -vx
