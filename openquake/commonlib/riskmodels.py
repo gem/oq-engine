@@ -20,7 +20,6 @@
 Reading risk models for risk calculators
 """
 import re
-import os.path
 import logging
 import collections
 
@@ -106,7 +105,7 @@ def get_vfs(inputs, retrofitted=False):
     return vulnerability_functions
 
 
-############################ vulnerability ##################################
+# ########################### vulnerability ############################## #
 
 def filter_vset(elem):
     return elem.tag.endswith('discreteVulnerabilitySet')
@@ -142,17 +141,42 @@ def get_vulnerability_functions(fname):
     if node['xmlns'] == nrml.NRML05:
         vmodel = node[0]
         for vfun in vmodel[1:]:  # the first node is the description
-            imt = vfun.imls['imt']
-            imls = numpy.array(~vfun.imls)
-            taxonomy = vfun['id']
-            loss_ratios, probs = [], []
-            for probabilities in vfun[1:]:
-                loss_ratios.append(probabilities['lr'])
-                probs.append(valid.probabilities(~probabilities))
-            probs = numpy.array(probs)
-            assert probs.shape == (len(loss_ratios), len(imls))
-            vf_dict[imt, taxonomy] = scientific.VulnerabilityFunctionWithPMF(
-                taxonomy, imt, imls, numpy.array(loss_ratios), probs)
+            with context(fname, vfun):
+                imt = vfun.imls['imt']
+                imls = numpy.array(~vfun.imls)
+                taxonomy = vfun['id']
+            if taxonomy in taxonomies:
+                raise InvalidFile(
+                    'Duplicated vulnerabilityFunctionID: %s: %s, line %d' %
+                    (taxonomy, fname, vfun.lineno))
+            if vfun['dist'] == 'PM':
+                loss_ratios, probs = [], []
+                for probabilities in vfun[1:]:
+                    loss_ratios.append(probabilities['lr'])
+                    probs.append(valid.probabilities(~probabilities))
+                probs = numpy.array(probs)
+                assert probs.shape == (len(loss_ratios), len(imls))
+                vf_dict[imt, taxonomy] = (
+                    scientific.VulnerabilityFunctionWithPMF(
+                        taxonomy, imt, imls, numpy.array(loss_ratios), probs))
+            else:
+                with context(fname, vfun):
+                    loss_ratios = ~vfun.meanLRs
+                    coefficients = ~vfun.covLRs
+                if len(loss_ratios) != len(imls):
+                    raise InvalidFile(
+                        'There are %d loss ratios, but %d imls: %s, line %d' %
+                        (len(loss_ratios), len(imls), fname,
+                         vfun.meanLRs.lineno))
+                if len(coefficients) != len(imls):
+                    raise InvalidFile(
+                        'There are %d coefficients, but %d imls: %s, '
+                        'line %d' % (len(coefficients), len(imls), fname,
+                                     vfun.covLRs.lineno))
+                with context(fname, vfun):
+                    vf_dict[imt, taxonomy] = scientific.VulnerabilityFunction(
+                        taxonomy, imt, imls, loss_ratios, coefficients,
+                        vfun['dist'])
         return vf_dict
     # otherwise, read the old format (NRML 0.4)
     for vset in read_nodes(fname, filter_vset,

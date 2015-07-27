@@ -20,7 +20,7 @@ import os
 import shutil
 from xml.etree.ElementTree import iterparse
 
-from openquake.commonlib.nrml import NAMESPACE
+from openquake.commonlib.nrml import NRML05
 from openquake.commonlib import sap, nrml
 from openquake.commonlib.node import read_nodes, context, striptag, LiteralNode
 from openquake.commonlib import InvalidFile, riskmodels
@@ -114,9 +114,9 @@ def upgrade_nrml(directory, dry_run):
                     xmlns, tag = fulltag.split('}')
                 except:  # not a NRML file
                     pass
-                if xmlns[1:] == NAMESPACE:  # already upgraded
+                if xmlns[1:] == NRML05:  # already upgraded
                     pass
-                elif xmlns.startswith('{http://openquake.org/xmlns/nrml/0.4'):
+                elif 'nrml/0.4' in xmlns and 'vulnerability' in f:
                     if not dry_run:
                         print 'Upgrading', path
                         try:
