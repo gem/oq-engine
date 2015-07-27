@@ -8,6 +8,7 @@ python:
 addons:
   apt:
     packages:
+    - gfortran
     - libblas3
     - liblapack3
     - liblapack-dev
