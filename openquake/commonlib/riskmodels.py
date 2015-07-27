@@ -20,16 +20,18 @@
 Reading risk models for risk calculators
 """
 import re
+import os.path
 import logging
 import collections
 
 import numpy
 
-from openquake.commonlib.node import read_nodes, context
+from openquake.commonlib.node import read_nodes, context, LiteralNode
 from openquake.commonlib import InvalidFile, nrml, valid
 from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
 from openquake.commonlib.nrml import nodefactory
+from openquake.commonlib.sourcewriter import obj_to_node
 
 VULNERABILITY_KEY = re.compile('(structural|nonstructural|contents|'
                                'business_interruption|occupants)_([\w_]+)')
@@ -106,13 +108,24 @@ def get_vfs(inputs, retrofitted=False):
 
 ############################ vulnerability ##################################
 
-
 def filter_vset(elem):
     return elem.tag.endswith('discreteVulnerabilitySet')
 
 
-# this works only for discreteVulnerabilitySet, since there are no
-# continuousVulnerabilitySet
+@obj_to_node.add('VulnerabilityFunction')
+def build_vf_node(vf):
+    """
+    Convert a VulnerabilityFunction object into a LiteralNode suitable
+    for XML conversion.
+    """
+    nodes = [LiteralNode('imls', {'imt': vf.imt}, vf.imls),
+             LiteralNode('meanLRs', {}, vf.mean_loss_ratios),
+             LiteralNode('covLRs', {}, vf.covs)]
+    return LiteralNode(
+        'vulnerabilityFunction',
+        {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
+
+
 def get_vulnerability_functions(fname):
     """
     :param fname:
@@ -120,15 +133,13 @@ def get_vulnerability_functions(fname):
     :returns:
         a dictionary imt, taxonomy -> vulnerability function
     """
-    # NB: the vulnerabilitySetID is not an unique ID!
-    # it is right to have several vulnerability sets with the same ID
-    # the IMTs can also be duplicated and with different levels, each
+    # NB: the IMTs can be duplicated and with different levels, each
     # vulnerability function in a set will get its own levels
     imts = set()
     taxonomies = set()
     vf_dict = {}  # imt, taxonomy -> vulnerability function
     node = nrml.read(fname)
-    if node['xmlns'] == 'http://openquake.org/xmlns/nrml/0.5':
+    if node['xmlns'] == nrml.NRML05:
         vmodel = node[0]
         for vfun in vmodel[1:]:  # the first node is the description
             imt = vfun.imls['imt']
