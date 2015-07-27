@@ -340,7 +340,7 @@ class YoungsCoppersmith1985MFD(BaseMFD):
         """
         mag, num_bins = self._get_min_mag_and_num_bins()
         rates = []
-        for i in xrange(num_bins):
+        for i in range(num_bins):
             rate = self._get_rate(mag)
             rates.append((mag, rate))
             mag += self.bin_width

@@ -31,6 +31,7 @@ from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.near_fault import (get_plane_equation, projection_pp,
                                             directp, average_s_rad,
                                             isochone_ratio)
+from openquake.baselib.python3compat import with_metaclass
 
 
 @with_slots
@@ -86,13 +87,12 @@ class Rupture(object):
         self.rupture_slip_direction = rupture_slip_direction
 
 
-class BaseProbabilisticRupture(Rupture):
+class BaseProbabilisticRupture(with_metaclass(abc.ABCMeta, Rupture)):
     """
     Base class for a probabilistic rupture, that is a :class:`Rupture`
     associated with a temporal occurrence model defining probability of
     rupture occurrence in a certain time span.
     """
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def get_probability_no_exceedance(self, poes):

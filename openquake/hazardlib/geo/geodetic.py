@@ -235,7 +235,7 @@ def min_geodetic_distance(mlons, mlats, slons, slats):
                 + cos_mlats * cos_slats[i]
                 * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
             ).clip(-1., 1.)).min()
-            for i in xrange(len(slats))
+            for i in range(len(slats))
         ),
         dtype=float, count=len(slats)
     ) * (2 * EARTH_RADIUS)
@@ -309,7 +309,7 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths, indices=False):
             * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
         ).clip(-1., 1.)) * (2 * EARTH_RADIUS)) ** 2
         + (mdepths - sdepths[i]) ** 2
-        for i in xrange(len(slats))
+        for i in range(len(slats))
     )
     if not indices:
         result = numpy.fromiter((numpy.sqrt(numpy.min(dist_sq))

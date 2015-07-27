@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # The Hazard Library
 # Copyright (C) 2012-2014, GEM Foundation
 #
@@ -22,7 +23,7 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 
-import _simple_fault_test_data as test_data
+from . import _simple_fault_test_data as test_data
 from openquake.hazardlib.tests.geo.surface import _utils as utils
 
 
