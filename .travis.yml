@@ -10,7 +10,6 @@ addons:
     packages:
     - gfortran
     - liblapack-dev
-    - python-scipy
     - libgeos-dev
 
 install:
