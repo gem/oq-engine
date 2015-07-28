@@ -7,7 +7,7 @@
 Summary: hazardlib is a library for performing seismic hazard analysis
 Name: %{name}
 Version: %{oqversion}
-Release: %{oqrelease}_%{timestamp}
+Release: %{timestamp}_%{oqrelease}
 Source0: %{oqrepo}-%{oqversion}-%{oqrelease}.tar.gz
 License: AGPLv3
 Group: Applications/Engineering
