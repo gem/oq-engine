@@ -7,7 +7,7 @@
 Summary: Computes hazard, risk and socio-economic impact of earthquakes
 Name: %{name}
 Version: %{oqversion}
-Release: %{oqrelease}_%{timestamp}
+Release: %{timestamp}_%{oqrelease}
 Source0: %{oqrepo}-%{oqversion}-%{oqrelease}.tar.gz
 License: AGPLv3
 Group: Applications/Engineering
