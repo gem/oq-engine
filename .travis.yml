@@ -17,4 +17,4 @@ install:
   - python setup.py install
 
 script:
-  nosetests -vx openquake
+  PYTHONPATH=$HOME/gem/oq-hazardlib nosetests -a'!slow' -v .
