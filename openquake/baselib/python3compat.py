@@ -32,8 +32,10 @@ PY3 = sys.version_info[0] == 3
 PY2 = sys.version_info[0] == 2
 
 if PY3:
-    range = range
+    import pickle
+    import configparser
 
+    range = range
     def round(x, d=0):
         p = 10 ** d
         return float(math.floor((x * p) + math.copysign(0.5, x))) / p
@@ -55,6 +57,9 @@ if PY3:
         raise exc
 
 else:  # Python 2
+    import cPickle as pickle
+    import ConfigParser as configparser
+
     range = xrange
     round = round
 
