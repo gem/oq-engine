@@ -49,6 +49,12 @@ from openquake import hazardlib, risklib, commonlib
 from openquake.commonlib import readinput, valid, datastore
 
 
+# patch datastore.get_last_calc_id
+def get_last_calc_id(datadir):
+    """Return the latest job_id in the database"""
+    return models.OqJob.objects.latest('id').id
+datastore.get_last_calc_id = get_last_calc_id
+
 INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
 
 UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
