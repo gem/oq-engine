@@ -90,7 +90,7 @@ def get_calc_ids(datadir=DATADIR):
     return sorted(calc_ids)
 
 
-def get_last_calc_id(datadir=DATADIR):
+def get_last_calc_id(datadir):
     """
     Extract the latest calculation ID from the given directory.
     If none is found, return 0.
