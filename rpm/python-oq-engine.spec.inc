@@ -4,7 +4,7 @@
 %define name python-%{oqrepo}
 %define timestamp ##_timestamp_##
 
-Summary: Computes hazard, risk and socio-economic impact of earthquakes.
+Summary: Computes hazard, risk and socio-economic impact of earthquakes
 Name: %{name}
 Version: %{oqversion}
 Release: %{oqrelease}_%{timestamp}
@@ -71,3 +71,5 @@ rm -rf %{buildroot}
 %{_sysconfdir}/openquake/openquake.cfg
 
 %changelog
+* Tue Jul 28 2015 Daniele Viganò <daniele@openquake.org> 1.5.0
+– Initial Packaging
