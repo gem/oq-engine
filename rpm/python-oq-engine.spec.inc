@@ -71,5 +71,5 @@ rm -rf %{buildroot}
 %{_sysconfdir}/openquake/openquake.cfg
 
 %changelog
-* Tue Jul 28 2015 Daniele Viganò <daniele@openquake.org> 1.5.0
+* Tue Jul 28 2015 Daniele Viganò <daniele@openquake.org> 1.5.0-git
 – Initial Packaging
