@@ -18,4 +18,4 @@ install:
   - python setup.py install
 
 script:
-  nosetests -a'!slow' -vx
+  nosetests gem/oq-hazardlib -a'!slow' -vx
