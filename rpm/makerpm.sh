@@ -64,7 +64,7 @@ git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | pigz > bui
 
 mock -r openquake --buildsrpm --spec build-rpm/SPECS/python-${REPO}.spec --source build-rpm/SOURCES --resultdir=build-rpm/SRPMS/
 if [ "$BUILD" == "1" ]; then
-    mock -r openquake build-rpm/SRPMS/python-${REPO}-${VER}-git${SHA}_${TIME}.src.rpm --resultdir=build-rpm/RPMS $EXTRA
+    mock -r openquake build-rpm/SRPMS/python-${REPO}-${VER}-${TIME}_git${SHA}.src.rpm --resultdir=build-rpm/RPMS $EXTRA
 fi
 
 cd $CUR
