@@ -16,18 +16,17 @@ Prefix: %{_prefix}
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-hazardlib
 
-%define common_deps python numpy scipy python-shapely python-psutil h5py
+%define common_deps python numpy scipy python-shapely python-psutil h5py python-mock
+%define dev_deps python-nose python-coverage
 Requires: %{common_deps}
 
 # Since tests are currently not enabled during the packaging phase, the following build dependencies are not required
 #BuildRequires: %{common_deps}
 
 BuildRequires: gcc
+BuildRequires: numpy
 BuildRequires: python-devel
-BuildRequires: python-nose
 BuildRequires: python-setuptools
-BuildRequires: python-mock
-BuildRequires: python-coverage
 
 %description
 
