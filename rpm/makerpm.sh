@@ -30,7 +30,7 @@ if [ -n "$1" ];
 then
     BRANCH="$1"
 else
-    BRANCH='master'
+    BRANCH='HEAD'
 fi
 echo $BRANCH
 mkdir -p build-rpm/{RPMS,SOURCES,SPECS,SRPMS}
