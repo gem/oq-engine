@@ -82,7 +82,7 @@ def hazard_curves(
     with the only difference that the intensity measure types in input
     and output are hazardlib objects instead of simple strings.
     """
-    imtls = {str(imt): imls for imt, imls in list(imtls.items())}
+    imtls = {str(imt): imls for imt, imls in imtls.items()}
     curves_by_imt = calc_hazard_curves(
         sources, sites, imtls, gsim_by_trt, truncation_level,
         source_site_filter=filters.source_site_noop_filter,
