@@ -19,25 +19,37 @@
 
 set -e
 
-BASE=$(cd `dirname "${BASH_SOURCE[0]}"` && pwd)
-cd $BASE/..
-rm -Rf build-rpm
+CUR=$(pwd)
+BASE=$(cd `dirname "${BASH_SOURCE[0]}"`/.. && pwd)
 
 REPO=oq-engine
+BRANCH='HEAD'
 EXTRA='--nocheck'
 
-if [ "$1" == "-l" ]; then
-    BUILD=1
-    shift
-fi
+while (( "$#" )); do
+    case "$1" in
+        "-h")
+            echo "Usage: $0 [-l] [BRANCH]"
+            echo -e "\nOptions:\n\t-l: build RPM locally\n\t-c: clean build dir"
+            exit 0
+            ;;
+        "-l")
+            BUILD=1
+            shift
+            ;;
+        "-c")
+            rm -Rf $BASE/build-rpm
+            echo "$BASE/build-rpm cleaned"
+            exit 0
+            ;;
+        *)
+            BRANCH="$1"
+            shift
+            ;;
+    esac
+done
 
-if [ -n "$1" ];
-then
-    BRANCH="$1"
-else
-    BRANCH='HEAD'
-fi
-
+cd $BASE
 mkdir -p build-rpm/{RPMS,SOURCES,SPECS,SRPMS}
 
 LIB=$(cut -d "-" -f 2 <<< $REPO)
@@ -55,4 +67,4 @@ if [ "$BUILD" == "1" ]; then
     mock -r openquake build-rpm/SRPMS/python-${REPO}-${VER}-git${SHA}_${TIME}.src.rpm --resultdir=build-rpm/RPMS $EXTRA
 fi
 
-cd $BASE
+cd $CUR
