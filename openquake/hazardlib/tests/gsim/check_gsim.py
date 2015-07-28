@@ -19,6 +19,7 @@ Check GMPE/IPE class versus data file in CSV format by calculating standard
 deviation and/or mean value and comparing the result to the expected value.
 """
 from __future__ import print_function
+from __future__ import division
 import csv
 import math
 import sys
