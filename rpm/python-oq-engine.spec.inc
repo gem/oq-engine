@@ -22,7 +22,7 @@ Url: http://github.com/gem/oq-engine
 Requires: %{common_deps}
 Requires: %{oqlib_deps}
 
-# Since tests are currently not enabled during the packaging phase, the following build dependencies are not required 
+# Since tests are currently not enabled during the packaging phase, the following build dependencies are not required
 #BuildRequires: %{common_deps}
 #BuildRequires: %{oqlib_deps}
 
