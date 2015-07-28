@@ -21,6 +21,7 @@
 from openquake.baselib.python3compat import range
 from openquake.baselib.python3compat import raise_
 import sys
+import time
 import collections
 
 import numpy
@@ -183,7 +184,9 @@ def hazard_curves_per_trt(
     ctx_mon = monitor('making contexts', measuremem=False)
     rup_mon = monitor('getting ruptures', measuremem=False)
     pne_mon = monitor('computing poes', measuremem=False)
+    monitor.calc_times = []  # pairs (src_id, delta_t)
     for source, s_sites in source_site_filter(sources_sites):
+        t0 = time.time()
         try:
             with rup_mon:
                 rupture_sites = list(rupture_site_filter(
@@ -205,6 +208,12 @@ def hazard_curves_per_trt(
             msg = 'An error occurred with source id=%s. Error: %s'
             msg %= (source.source_id, str(err))
             raise_(etype, msg, tb)
+
+        # we are attaching the calculation times to the monitor
+        # so that oq-lite (and the engine) can store them
+        monitor.calc_times.append((source.id, time.time() - t0))
+        # NB: source.id is an integer; it should not be confused
+        # with source.source_id, which is a string
     for i in range(len(gnames)):
         for imt in imtls:
             curves[i][imt] = 1. - curves[i][imt]
