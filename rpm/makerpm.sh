@@ -29,7 +29,7 @@ EXTRA='--nocheck'
 while (( "$#" )); do
     case "$1" in
         "-h")
-            echo "Usage: $0 [-l] [BRANCH]"
+            echo "Usage: $0 [-c] [-l] [BRANCH]"
             echo -e "\nOptions:\n\t-l: build RPM locally\n\t-c: clean build dir"
             exit 0
             ;;
