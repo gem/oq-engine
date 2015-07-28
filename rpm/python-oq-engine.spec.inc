@@ -2,7 +2,7 @@
 %define oqversion ##_version_##
 %define oqrelease ##_release_##
 %define name python-%{oqrepo}
-%define timestamp %(date +"%s")
+%define timestamp ##_timestamp_##
 
 Summary: Computes hazard, risk and socio-economic impact of earthquakes.
 Name: %{name}
@@ -22,7 +22,7 @@ Url: http://github.com/gem/oq-engine
 Requires: %{common_deps}
 Requires: %{oqlib_deps}
 
-BuildRequires: %{common_deps}
+#BuildRequires: %{common_deps}
 #BuildRequires: %{oqlib_deps}
 BuildRequires: python-setuptools
 BuildRequires: python-nose
