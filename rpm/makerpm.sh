@@ -51,7 +51,7 @@ sed "s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_release_##/git${SHA}/g
 git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | pigz > build-rpm/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
 
 mock -r openquake --buildsrpm --spec build-rpm/SPECS/python-${REPO}.spec --source build-rpm/SOURCES --resultdir=build-rpm/SRPMS/
-if [ -n $BUILD ]; then
+if [ "$BUILD" == "1" ]; then
     mock -r openquake build-rpm/SRPMS/python-${REPO}-${VER}-git${SHA}_${TIME}.src.rpm --resultdir=build-rpm/RPMS $EXTRA
 fi
 
