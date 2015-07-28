@@ -671,22 +671,27 @@ class CompositeSourceModel(collections.Sequence):
         return len(self.source_models)
 
 
-def _collect_source_model_paths(smlt):
+def collect_source_model_paths(smlt):
     """
     Given a path to a source model logic tree or a file-like, collect all of
     the soft-linked path names to the source models it contains and return them
     as a uniquified list (no duplicates).
+
+    :param smlt: source model logic tree file
     """
     src_paths = []
-    tree = etree.parse(smlt)
-    for branch_set in tree.xpath('//nrml:logicTreeBranchSet',
-                                 namespaces=PARSE_NS_MAP):
+    try:
+        tree = etree.parse(smlt)
+        for branch_set in tree.xpath('//nrml:logicTreeBranchSet',
+                                     namespaces=PARSE_NS_MAP):
 
-        if branch_set.get('uncertaintyType') == 'sourceModel':
-            for branch in branch_set.xpath(
-                    './nrml:logicTreeBranch/nrml:uncertaintyModel',
-                    namespaces=PARSE_NS_MAP):
-                src_paths.append(branch.text)
+            if branch_set.get('uncertaintyType') == 'sourceModel':
+                for branch in branch_set.xpath(
+                        './nrml:logicTreeBranch/nrml:uncertaintyModel',
+                        namespaces=PARSE_NS_MAP):
+                    src_paths.append(branch.text)
+    except Exception as exc:
+        raise Exception('%s: %s in %s' % (exc.__class__.__name__, exc, smlt))
     return sorted(set(src_paths))
 
 

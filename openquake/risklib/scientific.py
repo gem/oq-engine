@@ -27,6 +27,7 @@ import itertools
 import bisect
 
 import numpy
+from numpy.testing import assert_equal
 from scipy import interpolate, stats
 
 from openquake.baselib.general import CallableDict
@@ -254,7 +255,7 @@ class VulnerabilityFunction(object):
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
-        assert imls == sorted(set(imls)), (imls, sorted(set(imls)))
+        assert_equal(imls, sorted(set(imls)))
         assert all(x >= 0.0 for x in imls)
         assert covs is None or len(covs) == len(imls)
         assert len(loss_ratios) == len(imls)
