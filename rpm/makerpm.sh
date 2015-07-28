@@ -21,10 +21,15 @@ set -e
 
 BASE=$(cd `dirname "${BASH_SOURCE[0]}"` && pwd)
 cd $BASE/..
-#rm -Rf $BASE
+rm -Rf build-rpm
 
 REPO=oq-engine
-#EXTRA='--nocheck'
+EXTRA='--nocheck'
+
+if [ "$1" == "-l" ]; then
+    BUILD=1
+    shift
+fi
 
 if [ -n "$1" ];
 then
@@ -32,20 +37,22 @@ then
 else
     BRANCH='HEAD'
 fi
-echo $BRANCH
-mkdir -p build-rpm/{RPMS,SOURCES,SPECS,SRPMS}
 
+mkdir -p build-rpm/{RPMS,SOURCES,SPECS,SRPMS}
 
 LIB=$(cut -d "-" -f 2 <<< $REPO)
 SHA=$(git rev-parse --short HEAD)
 VER=$(cat openquake/${LIB}/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
 TIME=$(date +"%s")
-echo $LIB" - "$SHA" - "$VER
+echo $LIB" - "$BRANCH" - "$SHA" - "$VER
 
 sed "s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_release_##/git${SHA}/g;s/##_timestamp_##/${TIME}/g" rpm/python-${REPO}.spec.inc > build-rpm/SPECS/python-${REPO}.spec
 
 git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | pigz > build-rpm/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
 
 mock -r openquake --buildsrpm --spec build-rpm/SPECS/python-${REPO}.spec --source build-rpm/SOURCES --resultdir=build-rpm/SRPMS/
-#mock -r openquake $BASE/SRPMS/python-${REPO}-${VER}-git${SHA}.src.rpm --resultdir=$BASE/RPMS $EXTRA
+if [ -n $BUILD ]; then
+    mock -r openquake build-rpm/SRPMS/python-${REPO}-${VER}-git${SHA}_${TIME}.src.rpm --resultdir=build-rpm/RPMS $EXTRA
+fi
+
 cd $BASE
