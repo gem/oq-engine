@@ -2,7 +2,7 @@
 %define oqversion ##_version_##
 %define oqrelease ##_release_##
 %define name python-%{oqrepo}
-%define timestamp %(date +"%s")
+%define timestamp ##_timestamp_##
 
 Summary: oq-risklib is a library for performing seismic risk analysis
 Name: %{name}
@@ -22,8 +22,10 @@ Url: http://github.com/gem/oq-risklib
 Requires: %{common_deps}
 Requires: %{oqlib_deps}
 
-BuildRequires: %{common_deps}
+# Since tests are currently not enabled during the packaging phase, the following build dependencies are not required
+#BuildRequires: %{common_deps}
 #BuildRequires: %{oqlib_deps}
+
 BuildRequires: python-setuptools
 BuildRequires: python-nose
 BuildRequires: python-mock
