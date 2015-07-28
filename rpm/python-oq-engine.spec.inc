@@ -9,7 +9,7 @@ Name: %{name}
 Version: %{oqversion}
 Release: %{oqrelease}_%{timestamp}
 Source0: %{oqrepo}-%{oqversion}-%{oqrelease}.tar.gz
-License: AGPL3
+License: AGPLv3
 Group: Applications/Engineering
 BuildRoot: %{_tmppath}/%{name}-%{oqversion}-%{oqrelease}-buildroot
 Prefix: %{_prefix}
@@ -70,3 +70,4 @@ rm -rf %{buildroot}
 %{_datadir}/openquake/engine/celeryconfig.py*
 %{_sysconfdir}/openquake/openquake.cfg
 
+%changelog
