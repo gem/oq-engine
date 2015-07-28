@@ -1,3 +1,5 @@
+from builtins import map
+from builtins import range
 import unittest
 import numpy
 from openquake.commonlib import parallel
@@ -14,7 +16,7 @@ class TaskManagerTestCase(unittest.TestCase):
         res = parallel.apply_reduce(
             get_length, (numpy.arange(10),), concurrent_tasks=3)
         self.assertEqual(res, {'n': 10})
-        self.assertEqual(map(len, parallel.apply_reduce._chunks), [4, 4, 2])
+        self.assertEqual(list(map(len, parallel.apply_reduce._chunks)), [4, 4, 2])
 
     # this case is non-trivial since there is a key, so two groups are
     # generated even if everything is run in a single core
@@ -28,10 +30,10 @@ class TaskManagerTestCase(unittest.TestCase):
 
     def test_spawn(self):
         all_data = [
-            ('a', range(10)), ('b', range(20)), ('c', range(15))]
+            ('a', list(range(10))), ('b', list(range(20))), ('c', list(range(15)))]
         res = {key: parallel.starmap(get_length, [(data,)])
                for key, data in all_data}
-        for key, val in res.iteritems():
+        for key, val in res.items():
             res[key] = val.reduce()
         parallel.TaskManager.restart()
         self.assertEqual(res, {'a': {'n': 10}, 'c': {'n': 15}, 'b': {'n': 20}})

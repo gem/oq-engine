@@ -671,7 +671,7 @@ class LossFractionsWriter(object):
             # map
             map_element = etree.SubElement(container, "map")
 
-            for lon_lat, bin_data in locations_fractions.iteritems():
+            for lon_lat, bin_data in locations_fractions.items():
                 node_element = etree.SubElement(map_element, "node")
                 node_element.set("lon", str(lon_lat[0]))
                 node_element.set("lat", str(lon_lat[1]))
@@ -992,7 +992,7 @@ class DamageWriter(object):
                 data_by_location[loc],
                 lambda r: r.exposure_data.asset_ref,
                 lambda rows: [(r.mean, r.stddev) for r in rows])
-            for asset_ref, data in data_by_asset.iteritems():
+            for asset_ref, data in data_by_asset.items():
                 means, stddevs = zip(*data)
                 dd.append(self.asset_node(asset_ref, means, stddevs))
             node.append(dd)

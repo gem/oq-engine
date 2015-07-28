@@ -22,7 +22,7 @@ Classes for serializing various NRML XML artifacts.
 import json
 import operator
 from collections import OrderedDict
-from itertools import izip
+
 
 import numpy
 
@@ -120,7 +120,7 @@ def _set_metadata(element, metadata, attr_map, transform=str):
         A function accepting and returning a single value to be applied to each
         attribute value. Defaults to `str`.
     """
-    for kw, attr in attr_map.iteritems():
+    for kw, attr in attr_map.items():
         value = metadata.get(kw)
         if value is not None:
             element.set(attr, transform(value))
@@ -235,7 +235,7 @@ class HazardCurveGeoJSONWriter(BaseCurveWriter):
         See :meth:`HazardCurveXMLWriter.serialize` for expected input.
         """
         oqmetadata = {}
-        for key, value in self.metadata.iteritems():
+        for key, value in self.metadata.items():
             if key == 'imls':
                 oqmetadata['IMLs'] = value
             if value is not None:
@@ -462,7 +462,7 @@ def rupture_to_element(rupture, parent=None):
             assert len(rup.lons) % 4 == 0
             assert len(rup.lons) == len(rup.lats) == len(rup.depths)
 
-            for offset in xrange(len(rup.lons) / 4):
+            for offset in range(len(rup.lons) / 4):
                 # looping on the coordinates of the sub surfaces, one
                 # planar surface at the time
                 start = offset * 4
@@ -475,7 +475,7 @@ def rupture_to_element(rupture, parent=None):
                     rup_elem, 'planarSurface')
 
                 top_left, top_right, bottom_left, bottom_right = \
-                    izip(lons, lats, depths)
+                    zip(lons, lats, depths)
 
                 for el_name, corner in (
                         ('topLeft', top_left),
@@ -700,7 +700,7 @@ class HazardMapGeoJSONWriter(HazardMapWriter):
         input.
         """
         oqmetadata = {}
-        for key, value in self.metadata.iteritems():
+        for key, value in self.metadata.items():
             if value is not None:
                 oqmetadata[_ATTR_MAP.get(key)] = str(value)
 

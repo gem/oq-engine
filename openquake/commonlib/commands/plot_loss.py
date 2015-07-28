@@ -16,7 +16,8 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import cPickle
+from __future__ import print_function
+import pickle
 from openquake.commonlib import sap
 
 
@@ -48,9 +49,9 @@ def plot_loss(risk_pik, output_key):
     """
     # read the data
     with open(risk_pik) as f:
-        out = cPickle.load(f)
+        out = pickle.load(f)
     if output_key not in out:
-        print 'key %s not found: availables %s' % (output_key, sorted(out))
+        print('key %s not found: availables %s' % (output_key, sorted(out)))
         return
     loss_curve = out[output_key]
     plt = make_figure(output_key, loss_curve['losses'], loss_curve['poes'])

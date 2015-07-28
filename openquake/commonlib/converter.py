@@ -81,7 +81,7 @@ class Converter(object):
         in order
         """
         rectypes = []
-        for val in vars(records).itervalues():
+        for val in vars(records).values():
             if (isinstance(val, record.MetaRecord) and
                     val.convertername == cls.__name__):
                 rectypes.append(val)
@@ -146,14 +146,14 @@ class Vulnerability(Converter):
 
             # check that we can instantiate a VulnerabilityFunction in risklib
             scientific.VulnerabilityFunction(
-                vf_id, imt, map(float, imls),
-                map(float, ratios), map(float, coeffs))
+                vf_id, imt, list(map(float, imls)),
+                list(map(float, ratios)), list(map(float, coeffs)))
 
             dvf.lossRatio.text = ' '.join(ratios)
             dvf.coefficientsVariation.text = ' '.join(coeffs)
             dvs_node[(set_id,)].append(dvf)
             dvs_node[(set_id,)].IML.text = ' '.join(imls)
-        return Node('vulnerabilityModel', nodes=dvs_node.values())
+        return Node('vulnerabilityModel', nodes=list(dvs_node.values()))
 
 
 ############################# fragility #################################
@@ -261,7 +261,7 @@ class FragilityContinuous(Converter):
         tset = self.tableset
         frag = tset.tableFragilityContinuous[0].to_node()
         ffs_node = record.nodedict(tset.tableFFSetContinuous)
-        frag.nodes.extend(ffs_node.values())
+        frag.nodes.extend(list(ffs_node.values()))
         for (ls, ordinal), data in groupby(
                 tset.tableFFDataContinuous, ['limitState', 'ffs_ordinal']):
             data = list(data)
@@ -357,7 +357,7 @@ class Exposure(Converter):
             try:  # known location
                 loc_id = locations[loc]
             except KeyError:  # yield only new locations
-                loc_id = locations[loc] = str(loc_counter.next())
+                loc_id = locations[loc] = str(next(loc_counter))
                 yield records.Location(loc_id, loc[0], loc[1])
 
             # convert assets
@@ -399,8 +399,8 @@ class Exposure(Converter):
                     Node('area', {'type': area_type, 'unit': area_unit})]))
         if t.tableOccupancy:
             # extract the occupancies corresponding to the first asset
-            _asset_ref, occupancies = groupby(
-                t.tableOccupancy, ['asset_ref']).next()
+            _asset_ref, occupancies = next(groupby(
+                t.tableOccupancy, ['asset_ref']))
             periods = sorted(occ.period for occ in occupancies)
         else:
             periods = []
@@ -525,9 +525,9 @@ class GmfCollection(Converter):
             gmfcoll = tset.tableGmfCollection[0]
         except IndexError:  # no data for GmfCollection
             gmfset_node = self._to_node()
-            return gmfset_node.values()[0]  # there is a single node
+            return list(gmfset_node.values())[0]  # there is a single node
         gmfset_node = self._to_node()
         gmfcoll_node = gmfcoll.to_node()
-        for node in gmfset_node.values():
+        for node in list(gmfset_node.values()):
             gmfcoll_node.append(node)
         return gmfcoll_node

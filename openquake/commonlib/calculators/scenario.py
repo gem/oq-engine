@@ -79,7 +79,7 @@ class ScenarioCalculator(base.HazardCalculator):
                 'All sites were filtered out! '
                 'maximum_distance=%s km' % self.oqparam.maximum_distance)
         self.tags = numpy.array(
-            sorted(['scenario-%010d' % i for i in xrange(n_gmfs)]))
+            sorted(['scenario-%010d' % i for i in range(n_gmfs)]))
         self.computer = GmfComputer(
             rupture, self.sitecol, self.oqparam.imtls, self.gsims,
             trunc_level, correl_model)

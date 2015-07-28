@@ -41,6 +41,7 @@ import abc
 import itertools
 import operator
 import collections
+from openquake.baselib.python3compat import with_metaclass
 
 
 class InvalidRecord(Exception):
@@ -136,7 +137,7 @@ class Field(object):
         self.cast = cast
         self.name = name
         self.default = default
-        self.ordinal = self._counter.next()
+        self.ordinal = next(self._counter)
 
     def __get__(self, rec, rectype):
         if rec is None:
@@ -169,7 +170,7 @@ class MetaRecord(abc.ABCMeta):
         fields = []
         for base in bases:
             fields.extend(getattr(base, 'fields', []))
-        for n, v in dic.iteritems():
+        for n, v in dic.items():
             if isinstance(v, Field):
                 v.name = n
                 fields.append(v)
@@ -192,7 +193,7 @@ class MetaRecord(abc.ABCMeta):
             dic['fields'] = fields
         if '_ntuple' not in dic:
             dic['_ntuple'] = collections.namedtuple(name, fieldnames)
-        dic['_ordinal'] = mcl._counter.next()
+        dic['_ordinal'] = next(mcl._counter)
         if '_constraints' not in dic:
             dic['_constraints'] = []
         return super(MetaRecord, mcl).__new__(mcl, name, bases, dic)
@@ -200,7 +201,7 @@ class MetaRecord(abc.ABCMeta):
     def __init__(cls, name, bases, dic):
         if name != 'Record':
             cls.pkey  # raise an AttributeError if pkey is not defined
-        for n, v in dic.iteritems():
+        for n, v in dic.items():
             # make a bound copy of the unbound Unique and ForeignKey constraint
             if isinstance(v, Unique):
                 unique = Unique(*v.names)
@@ -225,7 +226,7 @@ class MetaRecord(abc.ABCMeta):
         try:
             exec(templ, dic)
         except:
-            print 'Could not build __init__ method, error in:', templ
+            print('Could not build __init__ method, error in:', templ)
             raise
         return dic['__init__']
 
@@ -252,7 +253,7 @@ class MetaRecord(abc.ABCMeta):
         return '<class %s>' % cls.__name__
 
 
-class Record(collections.Sequence):
+class Record(with_metaclass(MetaRecord, collections.Sequence)):
     """
     The abstract base class for the record subclasses. It defines
     a number of methods, including an ``init`` method called by
@@ -262,7 +263,6 @@ class Record(collections.Sequence):
     Records implements the Sequence interface and have a .cast()
     method, a .check_valid() method and a .is_valid() method.
     """
-    __metaclass__ = MetaRecord
     convertername = 'Converter'
 
     @classmethod
@@ -436,7 +436,7 @@ class Table(collections.MutableSequence):
         """Set the i-th record"""
         # TODO: the fk dictionaries must be updated!
         # TODO: there is no unique check here!
-        for name, unique in self._unique_data.iteritems():
+        for name, unique in self._unique_data.items():
             old_key = getattr(self._records[i], name)
             new_key = getattr(new_record, name)
             del unique.dict[old_key]
@@ -446,7 +446,7 @@ class Table(collections.MutableSequence):
     def __delitem__(self, i):
         """Delete the i-th record"""
         # i must be an integer, not a range
-        for name, unique in self._unique_data.iteritems():
+        for name, unique in self._unique_data.items():
             key = getattr(self._records[i], name)
             del unique.dict[key]
         del self._records[i]
@@ -459,7 +459,7 @@ class Table(collections.MutableSequence):
         (in terms of unique constraints, including the primary
         key) raises a KeyError.
         """
-        for name, unique in self._unique_data.iteritems():
+        for name, unique in self._unique_data.items():
             key = getattr(rec, name)
             try:
                 rec = unique.dict[key]

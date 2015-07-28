@@ -140,7 +140,7 @@ class OqParam(valid.ParamSet):
             ffs = get_fragility_functions(
                 fname, self.continuous_fragility_discretization)
             self.risk_imtls = {fset.imt: fset.imls
-                               for fset in ffs.itervalues()}
+                               for fset in ffs.values()}
 
         # check the IMTs vs the GSIMs
         if 'gsim_logic_tree' in self.inputs:
@@ -149,8 +149,8 @@ class OqParam(valid.ParamSet):
                                  'must be no `gsim` key')
             path = os.path.join(
                 self.base_path, self.inputs['gsim_logic_tree'])
-            for gsims in logictree.GsimLogicTree(path, []).values.itervalues():
-                self.check_imts_gsims(map(valid.gsim, gsims))
+            for gsims in logictree.GsimLogicTree(path, []).values.values():
+                self.check_imts_gsims(list(map(valid.gsim, gsims)))
         elif self.gsim is not None:
             self.check_imts_gsims([self.gsim])
 
@@ -191,7 +191,7 @@ class OqParam(valid.ParamSet):
         """
         Return True if there are no intensity measure levels
         """
-        return all(ls is None for ls in self.imtls.itervalues())
+        return all(ls is None for ls in self.imtls.values())
 
     def is_valid_truncation_level_disaggregation(self):
         """
@@ -220,7 +220,7 @@ class OqParam(valid.ParamSet):
             exposure=self.inputs.get('exposure', 0))
         # NB: below we check that all the flags
         # are mutually exclusive
-        return sum(bool(v) for v in flags.values()) == 1 or self.inputs.get(
+        return sum(bool(v) for v in list(flags.values())) == 1 or self.inputs.get(
             'site_model')
 
     def is_valid_poes(self):

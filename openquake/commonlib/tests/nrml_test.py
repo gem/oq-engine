@@ -1,5 +1,5 @@
 import unittest
-import cStringIO
+import io
 from openquake.commonlib.nrml import read, node_to_xml
 
 
@@ -7,7 +7,7 @@ class NrmlTestCase(unittest.TestCase):
 
     def test_nrml(self):
         # can read and write a NRML file converted into a Node object
-        xmlfile = cStringIO.StringIO("""\
+        xmlfile = io.StringIO("""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
       xmlns:gml="http://www.opengis.net/gml">
@@ -33,7 +33,7 @@ class NrmlTestCase(unittest.TestCase):
 </nrml>
 """)
         root = read(xmlfile)
-        outfile = cStringIO.StringIO()
+        outfile = io.StringIO()
         node_to_xml(root, outfile, {})
         self.assertEqual(outfile.getvalue(), """\
 <?xml version="1.0" encoding="utf-8"?>

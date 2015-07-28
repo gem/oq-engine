@@ -36,7 +36,7 @@ def vectors_from_csv(name, dirname):
     fullname = os.path.join(dirname, name + '.csv')
     with open(fullname) as f:
         reader = csv.reader(f)
-        fields = reader.next()
+        fields = next(reader)
         ntclass = collections.namedtuple(name, fields)
-        columns = zip(*[map(float, row) for row in reader])
+        columns = list(zip(*[list(map(float, row)) for row in reader]))
     return ntclass(*columns)

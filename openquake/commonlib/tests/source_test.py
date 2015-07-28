@@ -1,3 +1,7 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import map
 # Copyright (c) 2010-2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -16,7 +20,7 @@
 import os
 import mock
 import unittest
-from StringIO import StringIO
+from io import StringIO
 
 import numpy
 from numpy.testing import assert_allclose
@@ -426,7 +430,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         msg = ('Could not convert occurRates->positivefloats: '
                'float -0.0010614989 < 0, line 25')
         with self.assertRaises(ValueError) as ctx:
-            read_nodes(area_file, filter_sources, ValidNode).next()
+            next(read_nodes(area_file, filter_sources, ValidNode))
         self.assertIn(msg, str(ctx.exception))
 
     def test_raises_useful_error_2(self):
@@ -656,7 +660,7 @@ class TrtModelTestCase(unittest.TestCase):
         self.assertEqual(getattr(sc, attr), value)
 
     def test_content(self):
-        trts = [sc.trt for sc in self.source_collector.itervalues()]
+        trts = [sc.trt for sc in self.source_collector.values()]
         self.assertEqual(
             trts,
             ['Volcanic', 'Subduction Interface', 'Stable Continental Crust',
@@ -730,7 +734,7 @@ class RuptureConverterTestCase(unittest.TestCase):
 
         # at line 7 there is an invalid depth="-5.0"
         with self.assertRaises(ValueError) as ctx:
-            read_nodes(rup_file, filter_ruptures, ValidNode).next()
+            next(read_nodes(rup_file, filter_ruptures, ValidNode))
         self.assertIn('line 7', str(ctx.exception))
 
 
@@ -773,7 +777,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
         self.assertEqual([1, 584, 1, 584, 1, 584, 1, 582, 1, 582,
                           1, 582, 1, 582, 1, 582, 1, 582],
-                         map(len, csm.trt_models))
+                         list(map(len, csm.trt_models)))
 
         # test the method get_col_ids
         col_ids_first = rlzs_assoc.get_col_ids(rlzs[0])

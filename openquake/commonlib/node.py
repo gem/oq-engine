@@ -140,11 +140,11 @@ subnodes, since the generator will be exhausted. Notice that even
 accessing a subnode with the dot notation will avance the
 generator. Finally, nodes containing lazy nodes will not be pickleable.
 """
+from openquake.baselib.python3compat import configparser, with_metaclass
 
 import sys
 import pprint as pp
-import cStringIO
-import ConfigParser
+import io
 from contextlib import contextmanager
 
 from openquake.commonlib.writers import StreamingXMLWriter
@@ -233,9 +233,9 @@ def _displayattrs(attrib, expandattrs):
     if not attrib:
         return ''
     if expandattrs:
-        alist = ['%s=%r' % item for item in sorted(attrib.iteritems())]
+        alist = ['%s=%r' % item for item in sorted(attrib.items())]
     else:
-        alist = attrib.keys()
+        alist = list(attrib.keys())
     return '{%s}' % ', '.join(alist)
 
 
@@ -332,7 +332,7 @@ class Node(object):
         :param expandvals:
           print the values if True, else print only the tag names
         """
-        out = cStringIO.StringIO()
+        out = io.StringIO()
         node_display(self, expandattrs, expandvals, out)
         return out.getvalue()
 
@@ -350,7 +350,7 @@ class Node(object):
         Retrieve a subnode, if i is an integer, or an attribute, if i
         is a string.
         """
-        if isinstance(i, basestring):
+        if isinstance(i, str):
             return self.attrib[i]
         else:  # assume an integer or a slice
             return self.nodes[i]
@@ -360,7 +360,7 @@ class Node(object):
         Update a subnode, if i is an integer, or an attribute, if i
         is a string.
         """
-        if isinstance(i, basestring):
+        if isinstance(i, str):
             self.attrib[i] = value
         else:  # assume an integer or a slice
             self.nodes[i] = value
@@ -370,7 +370,7 @@ class Node(object):
         Remove a subnode, if i is an integer, or an attribute, if i
         is a string.
         """
-        if isinstance(i, basestring):
+        if isinstance(i, str):
             del self.attrib[i]
         else:  # assume an integer or a slice
             del self.nodes[i]
@@ -387,7 +387,7 @@ class Node(object):
         """Return the number of subnodes"""
         return len(self.nodes)
 
-    def __nonzero__(self):
+    def __bool__(self):
         """
         Return True if there are subnodes; it does not iter on the
         subnodes, so for lazy nodes it returns True even if the
@@ -405,18 +405,17 @@ class MetaLiteralNode(type):
     def __new__(meta, name, bases, dic):
         doc = "Known validators:\n%s" % '\n'.join(
             '    %s: `%s`' % (n, v.__name__)
-            for n, v in dic['validators'].iteritems())
+            for n, v in dic['validators'].items())
         dic['__doc__'] = dic.get('__doc__', '') + doc
         dic['__slots__'] = dic.get('__slots__', [])
         return super(MetaLiteralNode, meta).__new__(meta, name, bases, dic)
 
 
-class LiteralNode(Node):
+class LiteralNode(with_metaclass(MetaLiteralNode, Node)):
     """
     Subclasses should define a non-empty dictionary of validators.
     """
     validators = {}  # to be overridden in subclasses
-    __metaclass__ = MetaLiteralNode
 
     def __init__(self, fulltag, attrib=None, text=None,
                  nodes=None, lineno=None):
@@ -433,7 +432,7 @@ class LiteralNode(Node):
                                  (tag, validators[tag].__name__, exc, lineno))
         elif attrib:
             # cast the attributes
-            for n, v in attrib.iteritems():
+            for n, v in attrib.items():
                 if n in validators:
                     try:
                         attrib[n] = validators[n](v)
@@ -451,7 +450,7 @@ def to_literal(self):
     if not self.nodes:
         return (self.tag, self.attrib, self.text, [])
     else:
-        return (self.tag, self.attrib, self.text, map(to_literal, self.nodes))
+        return (self.tag, self.attrib, self.text, list(map(to_literal, self.nodes)))
 
 
 def pprint(self, stream=None, indent=1, width=80, depth=None):
@@ -472,7 +471,7 @@ def node_from_dict(dic, nodefactory=Node):
     nodes = dic.get('nodes', [])
     if not nodes:
         return nodefactory(tag, attrib, text)
-    return nodefactory(tag, attrib, nodes=map(node_from_dict, nodes))
+    return nodefactory(tag, attrib, nodes=list(map(node_from_dict, nodes)))
 
 
 def node_to_dict(node):
@@ -548,7 +547,7 @@ def read_nodes(fname, filter_elem, nodefactory=Node, remove_comments=True):
     except:
         etype, exc, tb = sys.exc_info()
         msg = str(exc)
-        if not unicode(fname) in msg:
+        if not str(fname) in msg:
             msg = '%s in %s' % (msg, fname)
         raise etype, msg, tb
 
@@ -575,7 +574,7 @@ def node_to_xml(node, output=sys.stdout, nsmap=None):
 
     """
     if nsmap:
-        for ns, prefix in nsmap.iteritems():
+        for ns, prefix in nsmap.items():
             if prefix:
                 node['xmlns:' + prefix[:-1]] = ns
             else:
@@ -590,8 +589,8 @@ def node_from_ini(ini_file, nodefactory=Node, root_name='ini'):
 
     :param ini_file: a filename or a file like object in read mode
     """
-    fileobj = open(ini_file) if isinstance(ini_file, basestring) else ini_file
-    cfp = ConfigParser.RawConfigParser()
+    fileobj = open(ini_file) if isinstance(ini_file, str) else ini_file
+    cfp = configparser.RawConfigParser()
     cfp.readfp(fileobj)
     root = nodefactory(root_name)
     sections = cfp.sections()
@@ -610,7 +609,7 @@ def node_to_ini(node, output=sys.stdout):
     """
     for subnode in node:
         output.write(u'\n[%s]\n' % subnode.tag)
-        for name, value in sorted(subnode.attrib.iteritems()):
+        for name, value in sorted(subnode.attrib.items()):
             output.write(u'%s=%s\n' % (name, value))
     output.flush()
 

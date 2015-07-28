@@ -74,7 +74,7 @@ The Node class provides no facility to cast strings into Python types;
 this is a job for the LiteralNode class which can be subclassed and
 supplemented by a dictionary of validators.
 """
-
+from __future__ import print_function
 import sys
 import logging
 from openquake.baselib.general import CallableDict
@@ -103,7 +103,7 @@ class NRMLFile(object):
         self._file = None
 
     def __enter__(self):
-        if isinstance(self._dest, (basestring, buffer)):
+        if isinstance(self._dest, (str, buffer)):
             self._file = open(self._dest, self._mode)
         else:
             # assume it is a file-like; don't change anything
@@ -356,7 +356,7 @@ def read_lazy(source, lazytags):
     except:
         etype, exc, tb = sys.exc_info()
         msg = str(exc)
-        if unicode(source) not in msg:
+        if str(source) not in msg:
             msg = '%s in %s' % (msg, source)
         raise etype, msg, tb
     return nodes
@@ -383,6 +383,6 @@ def write(nodes, output=sys.stdout, fmt='%8.4E'):
 if __name__ == '__main__':
     import sys
     for fname in sys.argv[1:]:
-        print '****** %s ******' % fname
-        print read(fname).to_str()
-        print
+        print('****** %s ******' % fname)
+        print(read(fname).to_str())
+        print()

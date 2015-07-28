@@ -205,7 +205,7 @@ class Workflow(object):
                 self, assets_, hazards, epsilons_, tags, loss_type)
 
     def __repr__(self):
-        return '<%s%s>' % (self.__class__.__name__, self.risk_functions.keys())
+        return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions.keys()))
 
 
 @registry.add('classical_risk')
@@ -495,7 +495,7 @@ class ProbabilisticEventBased(Workflow):
                 scientific.insured_losses, loss_matrix, deductibles, limits)
         else:  # build a zero matrix of size T x N
             ila = numpy.zeros((len(ground_motion_values[0]), len(assets)))
-        if isinstance(assets[0].id, basestring):
+        if isinstance(assets[0].id, str):
             # in oq-lite return early, with just the losses per asset
             cb = scientific.CurveBuilder(self.loss_curve_resolution)
             return scientific.Output(
@@ -615,9 +615,9 @@ class ClassicalBCR(Workflow):
 
         return scientific.Output(
             assets, loss_type,
-            data=zip(eal_original, eal_retrofitted, bcr_results))
+            data=list(zip(eal_original, eal_retrofitted, bcr_results)))
 
-    compute_all_outputs = Classical.compute_all_outputs.im_func
+    compute_all_outputs = Classical.compute_all_outputs.__func__
 
 
 @registry.add('event_based_bcr')
@@ -667,9 +667,9 @@ class ProbabilisticEventBasedBCR(Workflow):
 
         return scientific.Output(
             assets, loss_type,
-            data=zip(eal_original, eal_retrofitted, bcr_results))
+            data=list(zip(eal_original, eal_retrofitted, bcr_results)))
 
-    compute_all_outputs = ProbabilisticEventBased.compute_all_outputs.im_func
+    compute_all_outputs = ProbabilisticEventBased.compute_all_outputs.__func__
 
 
 @registry.add('scenario_risk')
@@ -788,7 +788,7 @@ class ClassicalDamage(Damage):
                    for asset, fraction in zip(assets, fractions)]
         return scientific.Output(assets, 'damage', damages=damages)
 
-    compute_all_outputs = Classical.compute_all_outputs.im_func
+    compute_all_outputs = Classical.compute_all_outputs.__func__
 
 
 # NB: the approach used here relies on the convention of having the

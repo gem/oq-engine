@@ -1,3 +1,4 @@
+from __future__ import division
 # Copyright (c) 2010-2015, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -28,6 +29,7 @@ from openquake.baselib.general import AccumDict, groupby
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import valid, logictree, sourceconverter, parallel
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
+from functools import reduce
 
 
 class DuplicatedID(Exception):
@@ -145,7 +147,7 @@ class TrtModel(collections.Sequence):
                 tm.sources.append(src)
 
         # return TrtModels, ordered by TRT string
-        return sorted(source_stats_dict.itervalues())
+        return sorted(source_stats_dict.values())
 
     def __init__(self, trt, sources=None, num_ruptures=0,
                  min_mag=None, max_mag=None, gsims=None, id=0):
@@ -239,7 +241,7 @@ def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
             logging.info('Parsed %d sources from %s', no, fname)
 
     # return ordered TrtModels
-    return sorted(source_stats_dict.itervalues())
+    return sorted(source_stats_dict.values())
 
 
 def agg_prob(acc, prob):
@@ -341,7 +343,7 @@ class RlzsAssoc(collections.Mapping):
         :returns: a dictionary rlz -> aggregated curves
         """
         ad = AccumDict({rlz: acc for rlz in self.realizations})
-        for key, value in results.iteritems():
+        for key, value in results.items():
             for rlz in self.rlzs_assoc[key]:
                 ad[rlz] = agg(ad[rlz], value)
         return ad
@@ -366,7 +368,7 @@ class RlzsAssoc(collections.Mapping):
                 for rlz in self.rlzs_assoc[trt_id, gs]:
                     col_ids = self.col_ids_by_rlz[rlz]
                     if not col_ids or col_id in col_ids:
-                        for rupid, rows in gmfs_by_rupid.iteritems():
+                        for rupid, rows in gmfs_by_rupid.items():
                             dicts[rlz.ordinal][rupid] = numpy.array(
                                 [r[gs] for r in rows], rows[0][gs].dtype)
         return dicts
@@ -418,13 +420,13 @@ class RlzsAssoc(collections.Mapping):
         probability, which however is close to the sum for small probabilities.
         """
         ad = AccumDict()
-        for key, value in results.iteritems():
+        for key, value in results.items():
             for rlz in self.rlzs_assoc[key]:
                 ad[rlz] = agg(ad.get(rlz, 0), value)
         return ad
 
     def __iter__(self):
-        return self.rlzs_assoc.iterkeys()
+        return iter(self.rlzs_assoc.keys())
 
     def __getitem__(self, key):
         return self.rlzs_assoc[key]
@@ -435,7 +437,7 @@ class RlzsAssoc(collections.Mapping):
     def __repr__(self):
         pairs = []
         for key in sorted(self.rlzs_assoc):
-            rlzs = map(str, self.rlzs_assoc[key])
+            rlzs = list(map(str, self.rlzs_assoc[key]))
             if len(rlzs) > 10:  # short representation
                 rlzs = ['%d realizations' % len(rlzs)]
             pairs.append(('%s,%s' % key, rlzs))
@@ -498,7 +500,7 @@ class CompositionInfo(object):
         """
         Return the maximum number of samples of the source model
         """
-        return max(len(col_ids) for col_ids in self.col_ids_by_trt_id.values())
+        return max(len(col_ids) for col_ids in list(self.col_ids_by_trt_id.values()))
 
     def get_num_samples(self, trt_id):
         """
@@ -532,7 +534,7 @@ class CompositionInfo(object):
                        sm.weight, self.get_num_rlzs(sm)))
             for sm in self.source_models)
         summary = ['%s, %s, trt=%s, weight=%s: %d realization(s)' % ibm
-                   for ibm in info_by_model.itervalues()]
+                   for ibm in info_by_model.values()]
         return '<%s\n%s>' % (
             self.__class__.__name__, '\n'.join(summary))
 
@@ -593,7 +595,7 @@ class CompositeSourceModel(collections.Sequence):
         Return a CompositionInfo instance for the current composite model
         """
         return CompositionInfo(
-            self.source_model_lt, map(get_skeleton, self.source_models))
+            self.source_model_lt, list(map(get_skeleton, self.source_models)))
 
     def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
         """

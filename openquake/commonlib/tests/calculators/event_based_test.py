@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import division
 import math
 from nose.plugins.attrib import attr
 
@@ -62,7 +63,7 @@ def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
         if gmv_close(gmv_site_1) and gmv_close(gmv_site_2):
             count += 1
 
-    prob = 1 - math.exp(- (float(count) / (time_span * num_ses)) * time_span)
+    prob = 1 - math.exp(- (float(count) / num_ses))
     return prob
 
 
@@ -86,7 +87,7 @@ class EventBasedTestCase(CalculatorTestCase):
             dstore.close()
             gmvs_site_1 = []
             gmvs_site_2 = []
-            for rupid, gmf in gmf_by_rupid.iteritems():
+            for rupid, gmf in gmf_by_rupid.items():
                 gmvs_site_1.append(gmf[0])
                 gmvs_site_2.append(gmf[1])
             joint_prob_0_5 = joint_prob_of_occurrence(

@@ -1,3 +1,6 @@
+from builtins import next
+from builtins import zip
+from builtins import object
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2010-2014, GEM Foundation.
@@ -26,7 +29,7 @@ def pairwise(iterable):
     a, b = itertools.tee(iterable)
     # b ahead one step; if b is empty do not raise StopIteration
     next(b, None)
-    return itertools.izip(a, b)  # if a is empty will return an empty iter
+    return zip(a, b)  # if a is empty will return an empty iter
 
 
 class memoized(object):

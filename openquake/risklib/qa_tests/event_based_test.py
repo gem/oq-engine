@@ -15,6 +15,7 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
+from __future__ import division
 import os
 import unittest
 
@@ -39,7 +40,7 @@ class EventBasedTestCase(unittest.TestCase):
     loss_type = 'structural'
 
     def assert_similar(self, a, b):
-        assert a.keys() == b.keys(), (a.keys(), b.keys())
+        assert list(a.keys()) == list(b.keys()), (list(a.keys()), list(b.keys()))
         for k in a:
             self.assertAlmostEqual(a[k], b[k])
 

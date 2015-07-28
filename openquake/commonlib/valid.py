@@ -200,7 +200,7 @@ def utf8(value):
     ValueError: Not UTF-8: '\xe0'
     """
     try:
-        if isinstance(value, unicode):
+        if isinstance(value, str):
             return value.encode('utf-8')
         else:
             return value.decode('utf-8').encode('utf-8')
@@ -344,7 +344,7 @@ def coordinates(value):
     """
     if not value.strip():
         raise ValueError('Empty list of coordinates: %r' % value)
-    return map(lon_lat, value.split(','))
+    return list(map(lon_lat, value.split(',')))
 
 
 def wkt_polygon(value):
@@ -385,7 +385,7 @@ def positivefloats(value):
     :param value: string of whitespace separated floats
     :returns: a list of positive floats
     """
-    return map(positivefloat, value.split())
+    return list(map(positivefloat, value.split()))
 
 
 _BOOL_DICT = {
@@ -439,7 +439,7 @@ def probabilities(value):
     >>> probabilities('0.1, 0.2')  # commas are ignored
     [0.1, 0.2]
     """
-    return map(probability, value.replace(',', ' ').split())
+    return list(map(probability, value.replace(',', ' ').split()))
 
 
 def decreasing_probabilities(value):
@@ -677,7 +677,7 @@ def posList(value):
     if num_values % 3 and num_values % 2:
         raise ValueError('Wrong number: nor pairs not triplets: %s' % values)
     try:
-        return map(float_, values)
+        return list(map(float_, values))
     except Exception as exc:
         raise ValueError('Found a non-float in %s: %s' % (value, exc))
 
@@ -850,12 +850,12 @@ class ParamSet(object):
         any subclass of ParamSet.
         """
         def __init__(cls, name, bases, dic):
-            for name, val in dic.iteritems():
+            for name, val in dic.items():
                 if isinstance(val, Param):
                     val.name = name
 
     def __init__(self, **names_vals):
-        for name, val in names_vals.iteritems():
+        for name, val in names_vals.items():
             if name.startswith(('_', 'is_valid_')):
                 raise NameError('The parameter name %s is not acceptable'
                                 % name)
@@ -888,7 +888,7 @@ class ParamSet(object):
                 raise ValueError(doc + '\nGot:\n' + dump)
 
     def __iter__(self):
-        for item in sorted(vars(self).iteritems()):
+        for item in sorted(vars(self).items()):
             yield item
 
     def __repr__(self):

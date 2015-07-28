@@ -1,3 +1,8 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import map
+from builtins import object
 # Copyright (c) 2010-2014, GEM Foundation.
 #
 # NRML is free software: you can redistribute it and/or modify it
@@ -13,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
-import cStringIO
+import io
 import logging
 from contextlib import contextmanager
 from xml.sax.saxutils import escape, quoteattr
@@ -63,7 +68,7 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     """
     if isinstance(value, basestring):
         return value
-    elif isinstance(value, (int, long)):
+    elif isinstance(value, int):
         return str(value)
     elif hasattr(value, '__len__'):
         return sep.join((scientificformat(f, fmt, sep2) for f in value))
@@ -118,7 +123,7 @@ class StreamingXMLWriter(object):
     def emptyElement(self, name, attrs):
         """Add an empty element (may have attributes)"""
         attr = ' '.join('%s=%s' % (n, quoteattr(scientificformat(v)))
-                        for n, v in sorted(attrs.iteritems()))
+                        for n, v in sorted(attrs.items()))
         self._write('<%s %s/>' % (name, attr))
 
     def start_tag(self, name, attrs=None):
@@ -173,7 +178,7 @@ def tostring(node, indent=4):
     :param node: a node object (typically an ElementTree object)
     :param indent: the indentation to use in the XML (default 4 spaces)
     """
-    out = cStringIO.StringIO()
+    out = io.StringIO()
     writer = StreamingXMLWriter(out, indent)
     writer.serialize(node)
     return out.getvalue()

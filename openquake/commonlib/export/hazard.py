@@ -65,7 +65,7 @@ class SESCollection(object):
         self.investigation_time = investigation_time
 
     def __iter__(self):
-        for idx, sesruptures in sorted(self.idx_ses_dict.iteritems()):
+        for idx, sesruptures in sorted(self.idx_ses_dict.items()):
             yield SES(sesruptures, self.investigation_time, idx)
 
 
@@ -86,7 +86,7 @@ def export_ses_xml(ekey, dstore):
     fnames = []
     for sm in csm_info.source_models:
         for trt_model in sm.trt_models:
-            sesruptures = sescollection[col_id].values()
+            sesruptures = list(sescollection[col_id].values())
             col_id += 1
             ses_coll = SESCollection(
                 groupby(sesruptures, operator.attrgetter('ses_idx')),
@@ -141,7 +141,7 @@ class GmfSet(object):
     def __iter__(self):
         return iter(self.gmfset)
 
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self.gmfset)
 
     def __str__(self):
@@ -228,7 +228,7 @@ class GmfCollection(object):
             imt, sa_period, sa_damping = from_string(imt_str)
             for rupture, gmf in zip(self.ruptures, gmfs):
                 if hasattr(rupture, 'indices'):  # event based
-                    indices = (range(len(self.sitecol))
+                    indices = (list(range(len(self.sitecol)))
                                if rupture.indices is None
                                else rupture.indices)
                     sites = FilteredSiteCollection(
@@ -292,7 +292,7 @@ def export_gmf_csv(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
         except AttributeError:
             indices = sitecol.indices
         if indices is None:
-            indices = range(len(sitecol))
+            indices = list(range(len(sitecol)))
         row = [rupture.tag, ' '.join(map(str, indices))] + \
               [gmf[imt] for imt in imts]
         rows.append(row)
@@ -387,7 +387,7 @@ def export_hcurves_csv(ekey, dstore):
     sitecol = dstore['sitecol']
     key, fmt = ekey
     fnames = []
-    for kind, hcurves in dstore[key].iteritems():
+    for kind, hcurves in dstore[key].items():
         fname = hazard_curve_name(
             ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
         fnames.append(os.path.join(dstore.export_dir, fname))
@@ -422,8 +422,8 @@ def export_gmf(ekey, dstore):
     fnames = []
     for rlz, gmf_by_idx in zip(
             rlzs_assoc.realizations, rlzs_assoc.combine_gmfs(gmfs)):
-        tags = all_tags[gmf_by_idx.keys()]
-        gmfs = gmf_by_idx.values()
+        tags = all_tags[list(gmf_by_idx.keys())]
+        gmfs = list(gmf_by_idx.values())
         if not gmfs:
             continue
         ruptures = [rupture_by_tag[tag] for tag in tags]
@@ -451,7 +451,7 @@ def export_hazard_curves_xml(key, export_dir, fname, sitecol, curves_by_imt,
     """
     mdata = []
     hcurves = []
-    for imt_str, imls in sorted(imtls.iteritems()):
+    for imt_str, imls in sorted(imtls.items()):
         hcurves.append(
             [HazardCurve(site.location, poes)
              for site, poes in zip(sitecol, curves_by_imt[imt_str])])

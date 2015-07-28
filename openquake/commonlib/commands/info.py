@@ -124,7 +124,7 @@ def _info(name, filtersources, weightsources):
         if len(assets_by_site):
             assetcol = riskinput.build_asset_collection(assets_by_site)
             dic = groupby(assetcol, operator.attrgetter('taxonomy'))
-            for taxo, num in dic.iteritems():
+            for taxo, num in dic.items():
                 print('taxonomy #%d, %d assets' % (taxo, num))
             print('total assets = %d' % len(assetcol))
     else:

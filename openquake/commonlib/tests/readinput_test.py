@@ -1,3 +1,6 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -22,7 +25,7 @@ import tempfile
 import mock
 import unittest
 import collections
-from StringIO import StringIO
+from io import StringIO
 
 from numpy.testing import assert_allclose
 
@@ -75,9 +78,9 @@ export_dir = %s
                 params = vars(readinput.get_oqparam(job_config))
                 self.assertEqual(expected_params, params)
                 self.assertEqual(['site_model', 'job_ini'],
-                                 params['inputs'].keys())
+                                 list(params['inputs'].keys()))
                 self.assertEqual([site_model_input, job_config],
-                                 params['inputs'].values())
+                                 list(params['inputs'].values()))
 
                 # checking that warnings work
                 self.assertEqual(warn.call_args[0][0],

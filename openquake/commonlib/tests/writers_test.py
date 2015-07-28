@@ -1,7 +1,7 @@
 import os
 import unittest
 import tempfile
-from cStringIO import StringIO
+from io import StringIO
 from openquake.commonlib.writers import tostring, StreamingXMLWriter, write_csv
 from openquake.commonlib.node import LiteralNode
 from lxml import etree
@@ -11,7 +11,7 @@ import numpy
 
 def assetgen(n):
     "Generate n assets for testing purposes"
-    for i in xrange(n):
+    for i in range(n):
         asset = etree.Element(
             'asset',  dict(id=str(i), number='10', taxonomy='TAXO'))
         etree.SubElement(

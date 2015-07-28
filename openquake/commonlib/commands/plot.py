@@ -1,3 +1,4 @@
+from __future__ import print_function
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -79,13 +80,13 @@ def plot(calc_id, other_id=None, sites='0'):
     haz = datastore.DataStore(calc_id)
     other = datastore.DataStore(other_id) if other_id else None
     oq = haz['oqparam']
-    indices = map(int, sites.split(','))
+    indices = list(map(int, sites.split(',')))
     n_sites = len(haz['sites'])
     if not set(indices) <= set(range(n_sites)):
         invalid = sorted(set(indices) - set(range(n_sites)))
         print('The indices %s are invalid: no graph for them' % invalid)
     valid = sorted(set(range(n_sites)) & set(indices))
-    print 'Found %d site(s); plotting %d of them' % (n_sites, len(valid))
+    print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
     curves_by_rlz, mean_curves = combined_curves(haz)
     if other is None:
         single_curve = len(curves_by_rlz) == 1 or not getattr(

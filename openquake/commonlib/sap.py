@@ -108,7 +108,7 @@ class Parser(object):
         Add an argument to the underlying parser and grow the list
         .all_arguments and the set .names
         """
-        argname = self.argdict.keys()[self._argno]
+        argname = list(self.argdict.keys())[self._argno]
         if argname != name:
             raise NameError(
                 'Setting argument %s, but it should be %s' % (name, argname))
@@ -152,7 +152,7 @@ class Parser(object):
 
     def check_arguments(self):
         """Make sure all arguments have a specification"""
-        for name, default in self.argdict.iteritems():
+        for name, default in self.argdict.items():
             if name not in self.names and default is NODEFAULT:
                 raise NameError('Missing argparse specification for %r' % name)
 

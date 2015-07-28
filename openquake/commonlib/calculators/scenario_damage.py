@@ -45,7 +45,7 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
-    ordinals = range(len(rlzs_assoc.realizations))
+    ordinals = list(range(len(rlzs_assoc.realizations)))
     result = AccumDict({i: AccumDict() for i in ordinals})
     # ordinal -> (key_type, key) -> array
     for out_by_rlz in riskmodel.gen_outputs(

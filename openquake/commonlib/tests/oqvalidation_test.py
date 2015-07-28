@@ -89,7 +89,7 @@ class OqParamTestCase(unittest.TestCase):
             intensity_measure_types='PGV', sites='0.1 0.2',
             maximum_distance=400)
         oq.validate()
-        self.assertEqual(oq.imtls.keys(), ['PGA'])
+        self.assertEqual(list(oq.imtls.keys()), ['PGA'])
 
     def test_missing_hazard_curves_from_gmfs(self):
         with self.assertRaises(ValueError) as ctx:

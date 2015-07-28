@@ -63,7 +63,7 @@ def get_site_ids(rupture, num_sites):
     :returns: the indices of the sites affected by the rupture
     """
     if rupture.indices is None:
-        return range(num_sites)
+        return list(range(num_sites))
     return rupture.indices
 
 
@@ -85,7 +85,7 @@ def counts_per_rlz(num_sites, rlzs_assoc, sescollection):
             counts['rup'][i] += len(sc)
 
             # gmvs per realization
-            for rup in sc.itervalues():
+            for rup in sc.values():
                 counts['gmf'][i] += num_affected_sites(rup, num_sites)
     return counts
 
@@ -106,7 +106,7 @@ def get_gmfs_nbytes(num_sites, num_imts, rlzs_assoc, sescollection):
     # 4 bytes for the idx + 8 bytes * number_of_gsims * number_of_imts
     for sescol, gsims in zip(sescollection, rlzs_assoc.get_gsims_by_col()):
         bytes_per_record = 4 + 8 * len(gsims) * num_imts
-        for tag, rup in sescol.iteritems():
+        for tag, rup in sescol.items():
             nbytes += bytes_per_record * num_affected_sites(rup, num_sites)
     return nbytes
 
@@ -142,7 +142,7 @@ def view_col_rlz_assocs(name, dstore):
     assocs = collections.defaultdict(list)
     for i, col_ids in enumerate(col_ids_list):
         assocs[tuple(col_ids)].append(i)
-    tbl = [['Collections', 'Realizations']] + sorted(assocs.iteritems())
+    tbl = [['Collections', 'Realizations']] + sorted(assocs.items())
     return views.rst_table(tbl)
 
 
@@ -355,7 +355,7 @@ def build_ses_ruptures(
         # creating SESRuptures
         sesruptures = []
         for (col_id, ses_idx), num_occ in sorted(
-                num_occ_by_rup[rup].iteritems()):
+                num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
                 seed = rnd.randint(0, MAX_INT)
                 tag = 'col=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
@@ -405,7 +405,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             key=operator.attrgetter('trt_model_id'))
 
         logging.info('Generated %d SESRuptures',
-                     sum(len(v) for v in ruptures_by_trt.itervalues()))
+                     sum(len(v) for v in ruptures_by_trt.values()))
 
         self.rlzs_assoc = self.csm.get_rlzs_assoc(
             lambda trt: len(ruptures_by_trt.get(trt.id, [])))
@@ -436,7 +436,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             self.tags = numpy.array(tags, (str, 100))
             self.sescollection = sescollection
         with self.monitor('counts_per_rlz'):
-            self.num_ruptures = numpy.array(map(len, sescollection))
+            self.num_ruptures = numpy.array(list(map(len, sescollection)))
             self.counts_per_rlz = counts_per_rlz(
                 len(self.sitecol), self.rlzs_assoc, sescollection)
             self.datastore['counts_per_rlz'].attrs[
@@ -571,7 +571,7 @@ class EventBasedCalculator(ClassicalCalculator):
         self.datasets = {}
         for col_id, sescol in enumerate(self.datastore['sescollection']):
             gmf_dt = gsim_imt_dt(gsims_by_col[col_id], self.oqparam.imtls)
-            for tag, sesrup in sorted(sescol.iteritems()):
+            for tag, sesrup in sorted(sescol.items()):
                 sesrup = sescol[tag]
                 self.sesruptures.append(sesrup)
             if self.oqparam.ground_motion_fields and sescol:

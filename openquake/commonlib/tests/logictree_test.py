@@ -28,7 +28,7 @@ import numpy
 from lxml import etree
 
 
-from StringIO import StringIO as StringIOBase
+from io import StringIO as StringIOBase
 from decimal import Decimal
 from mock import Mock
 
@@ -1114,17 +1114,17 @@ class BranchSetEnumerateTestCase(unittest.TestCase):
         ae = self.assertEqual
 
         paths = bs_root.enumerate_paths()
-        ae(paths.next(), (Decimal('0.2112'), [b0, b00]))
-        ae(paths.next(), (Decimal('0.1728'), [b0, b01]))
-        ae(paths.next(), (Decimal('0.256'), [b0, b02]))
-        ae(paths.next(), (Decimal('0.036'), [b1, b10, b100]))
-        ae(paths.next(), (Decimal('0.32400'), [b1, b10, b101]))
-        self.assertRaises(StopIteration, paths.next)
+        ae(next(paths), (Decimal('0.2112'), [b0, b00]))
+        ae(next(paths), (Decimal('0.1728'), [b0, b01]))
+        ae(next(paths), (Decimal('0.256'), [b0, b02]))
+        ae(next(paths), (Decimal('0.036'), [b1, b10, b100]))
+        ae(next(paths), (Decimal('0.32400'), [b1, b10, b101]))
+        self.assertRaises(StopIteration, paths.__next__)
 
         paths = bs1.enumerate_paths()
-        ae(paths.next(), (Decimal('0.1'), [b10, b100]))
-        ae(paths.next(), (Decimal('0.9'), [b10, b101]))
-        self.assertRaises(StopIteration, paths.next)
+        ae(next(paths), (Decimal('0.1'), [b10, b100]))
+        ae(next(paths), (Decimal('0.9'), [b10, b101]))
+        self.assertRaises(StopIteration, paths.__next__)
 
 
 class BranchSetGetBranchByIdTestCase(unittest.TestCase):

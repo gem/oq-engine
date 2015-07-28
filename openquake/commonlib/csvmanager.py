@@ -20,7 +20,7 @@ import os
 import csv
 import inspect
 import zipfile
-import StringIO
+import io
 import tempfile
 from abc import ABCMeta, abstractmethod
 
@@ -28,6 +28,7 @@ from openquake.commonlib import InvalidFile
 from openquake.commonlib import nrml
 from openquake.commonlib.record import Table
 from openquake.commonlib import record, records, converter
+from future.utils import with_metaclass
 
 
 class FileWrapper(object):
@@ -38,8 +39,8 @@ class FileWrapper(object):
     def __iter__(self):
         return self
 
-    def next(self):
-        return self.fileobj.next()
+    def __next__(self):
+        return next(self.fileobj)
 
     def readline(self):
         return self.fileobj.readline()
@@ -70,24 +71,23 @@ class FileObject(FileWrapper):
     def __init__(self, name, bytestring):
         self.name = name
         self.bytestring = bytestring
-        self.fileobj = StringIO.StringIO(bytestring)
+        self.fileobj = io.StringIO(bytestring)
 
     def close(self):
         data = self.fileobj.getvalue()
         self.fileobj.close()
-        self.fileobj = StringIO.StringIO(data)
+        self.fileobj = io.StringIO(data)
 
 
 class NotInArchive(Exception):
     """Raised when trying to open a non-existing file in the archive"""
 
 
-class Archive(object):
+class Archive(with_metaclass(ABCMeta)):
     """
     Abstract Base Class for Archive classes. Subclasses must override
     the methods ``_open`` and ``extract_filenames``.
     """
-    __metaclass__ = ABCMeta
 
     opened = []
 
@@ -300,7 +300,7 @@ class CSVManager(object):
         """
         managers = {}  # name->manager dictionary
         ct = {}  # converter name -> converter type dictionary
-        for name, value in vars(converter).iteritems():
+        for name, value in vars(converter).items():
             if inspect.isclass(value) and issubclass(
                     value, converter.Converter):
                 ct[name] = value
@@ -318,7 +318,7 @@ class CSVManager(object):
                 man = self.__class__(self.archive, prefix)
                 man.convertertype = ct[recordtype.convertername]
                 managers[prefix] = man
-        return managers.values()
+        return list(managers.values())
 
     def _getconverter(self):
         """
@@ -412,7 +412,7 @@ class CSVManager(object):
             self.rt2file[recordtype] = f = self.archive.open(fname, 'r')
             self.rt2reader[recordtype] = reader = csv.reader(f)
             if self.has_header:
-                header = reader.next()
+                header = next(reader)
                 if header != recordtype.fieldnames:
                     raise InvalidFile(
                         '%s: line 1: got %s as header, expected %s' %

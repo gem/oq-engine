@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import os
 import sys
 import time
@@ -28,17 +29,17 @@ def create(convert, fname):
         out = convert(fname)
     except Exception as e:
         raise
-        print e
+        print(e)
         return
     dt = time.time() - t0
-    print 'Created %s in %s seconds' % (out, dt)
+    print('Created %s in %s seconds' % (out, dt))
     return out
 
 
 def print_invalid(man, limit):
     invalid = man.find_invalid(limit)
     for inv in invalid:
-        print inv
+        print(inv)
     if invalid:
         sys.exit('Found %d invalid records' % len(invalid))
 

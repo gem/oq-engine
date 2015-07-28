@@ -40,7 +40,7 @@ class TableTestCase(unittest.TestCase):
         # test that a Table object support the bracket notation
         self.assertEqual(cast(tbl[0]), (1, 1.0, 2.0))
         self.assertEqual(cast(tbl[1]), (2, 1.0, 2.1))
-        self.assertEqual(map(cast, tbl[2:4]),
+        self.assertEqual(list(map(cast, tbl[2:4])),
                          [(3, 1.0,  2.2), (4, 1.0, 2.3)])
 
     def test_unique_constraint(self):

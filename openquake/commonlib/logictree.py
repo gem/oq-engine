@@ -41,6 +41,7 @@ from openquake.commonlib import nrml, valid
 from openquake.commonlib.node import node_from_xml
 
 import openquake.hazardlib
+from openquake.baselib.python3compat import with_metaclass
 
 #: Minimum value for a seed number
 MIN_SINT_32 = -(2 ** 31)
@@ -80,13 +81,13 @@ class RlzsAssoc(collections.Mapping):
         dicts = [{} for rlz in self.realizations]
         for rlz in self.realizations:
             gs = str(rlz)
-            for rupid, rows in gmfs_by_rupid.iteritems():
+            for rupid, rows in gmfs_by_rupid.items():
                 dicts[rlz.ordinal][rupid] = numpy.array(
                     [r[gs] for r in rows], rows[0][gs].dtype)
         return dicts
 
     def __iter__(self):
-        return self.rlzs_assoc.iterkeys()
+        return iter(self.rlzs_assoc.keys())
 
     def __getitem__(self, key):
         return self.rlzs_assoc[key]
@@ -97,7 +98,7 @@ class RlzsAssoc(collections.Mapping):
     def __repr__(self):
         pairs = []
         for key in sorted(self.rlzs_assoc):
-            rlzs = map(str, self.rlzs_assoc[key])
+            rlzs = list(map(str, self.rlzs_assoc[key]))
             pairs.append(('%s,%s' % key, rlzs))
         return '<%s(%d)\n%s>' % (self.__class__.__name__, len(self),
                                  '\n'.join('%s: %s' % pair for pair in pairs))
@@ -110,7 +111,7 @@ def get_effective_rlzs(rlzs):
     """
     effective = []
     ordinal = 0
-    for uid, group in groupby(rlzs, operator.attrgetter('uid')).iteritems():
+    for uid, group in groupby(rlzs, operator.attrgetter('uid')).items():
         rlz = group[0]
         if all(path == '@' for path in rlz.lt_uid):  # empty realization
             continue
@@ -197,7 +198,7 @@ def sample(weighted_objects, num_samples, rnd):
         A subsequence of the original sequence with `num_samples` elements
     """
     subsequence = []
-    for _ in xrange(num_samples):
+    for _ in range(num_samples):
         subsequence.append(sample_one(weighted_objects, rnd))
     return subsequence
 
@@ -407,7 +408,7 @@ class BranchSet(object):
                                  % self.uncertainty_type)
 
 
-class BaseLogicTree(object):
+class BaseLogicTree(with_metaclass(abc.ABCMeta)):
     """
     Common code for logic tree readers, parsers and verifiers --
     :class:`GMPELogicTree` and :class:`SourceModelLogicTree`.
@@ -439,8 +440,6 @@ class BaseLogicTree(object):
 
     _xmlschema = None
 
-    __metaclass__ = abc.ABCMeta
-
     def __init__(self, content, basepath, filename, validate=True,
                  seed=0, num_samples=0):
         self.basepath = basepath
@@ -450,7 +449,7 @@ class BaseLogicTree(object):
         parser = etree.XMLParser()
         self.branches = {}
         self.open_ends = set()
-        if isinstance(content, unicode):
+        if isinstance(content, str):
             # etree.fromstring() refuses to parse unicode objects
             content = content.encode('latin1')
         try:
@@ -653,7 +652,7 @@ class BaseLogicTree(object):
             # random sampling of the logic tree
             rnd = random.Random(self.seed)
             weight = 1. / self.num_samples
-            for _ in xrange(self.num_samples):
+            for _ in range(self.num_samples):
                 name, sm_lt_path = self.sample_path(rnd)
                 yield Realization(name, weight, tuple(sm_lt_path), None,
                                   tuple(sm_lt_path))
@@ -1105,10 +1104,10 @@ class GsimLogicTree(object):
         # NB: the algorithm assume a symmetric logic tree for the GSIMs;
         # in the future we may relax such assumption
         num_branches = self.get_num_branches()
-        if not sum(num_branches.itervalues()):
+        if not sum(num_branches.values()):
             return 0
         num = 1
-        for val in num_branches.itervalues():
+        for val in num_branches.values():
             if val:  # the branch is effective
                 num *= val
         return num

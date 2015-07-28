@@ -118,7 +118,7 @@ class ClassicalCalculator(base.HazardCalculator):
         rlzs = self.rlzs_assoc.realizations
         nsites = len(self.sitecol)
         if oq.individual_curves:
-            for rlz, curves in curves_by_rlz.iteritems():
+            for rlz, curves in curves_by_rlz.items():
                 self.store_curves('rlz-%d' % rlz.ordinal, curves)
 
         if len(rlzs) == 1:  # cannot compute statistics
@@ -209,11 +209,11 @@ def classical_tiling(calculator, sitecol, position, tileno, monitor):
     calculator.sitecol = sitecol
     calculator.tileno = '.%04d' % tileno
     curves_by_trt_gsim = calculator.execute()
-    curves_by_trt_gsim.indices = range(position, position + len(sitecol))
+    curves_by_trt_gsim.indices = list(range(position, position + len(sitecol)))
     # build the correct realizations from the (reduced) logic tree
     calculator.rlzs_assoc = calculator.csm.get_rlzs_assoc(
         partial(is_effective_trt_model, curves_by_trt_gsim))
-    n_levels = sum(len(imls) for imls in calculator.oqparam.imtls.itervalues())
+    n_levels = sum(len(imls) for imls in calculator.oqparam.imtls.values())
     tup = (len(calculator.sitecol), n_levels, len(calculator.rlzs_assoc),
            len(calculator.rlzs_assoc.realizations))
     logging.info('Processed tile %d, (sites, levels, keys, rlzs)=%s',

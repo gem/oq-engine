@@ -21,6 +21,7 @@ This is an example of script which is useful if you want to play with
 the RiskInput objects. You can enable the pdb and see what is inside
 the objects.
 """
+from __future__ import print_function
 
 import sys
 from openquake.commonlib import readinput
@@ -36,7 +37,7 @@ if __name__ == '__main__':
 
     for imt in gmfs_by_imt:
         ri = risk_model.build_input(imt, gmfs_by_imt[imt], assets_by_site)
-        print ri
+        print(ri)
         #for out in risk_model.gen_outputs([ri]):
         #    print out
         # import pdb; pdb.set_trace()

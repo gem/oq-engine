@@ -1,3 +1,4 @@
+from __future__ import print_function
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -90,7 +91,7 @@ def upgrade_file(path):
         vf_dict, cat_dict = get_vulnerability_functions_04(path)
         node0 = LiteralNode(
             'vulnerabilityModel', cat_dict,
-            nodes=map(riskmodels.obj_to_node, vf_dict.values()))
+            nodes=list(map(riskmodels.obj_to_node, list(vf_dict.values()))))
     with open(path, 'w') as f:
         nrml.write([node0], f)
 
@@ -118,13 +119,13 @@ def upgrade_nrml(directory, dry_run):
                     pass
                 elif 'nrml/0.4' in xmlns and 'vulnerability' in f:
                     if not dry_run:
-                        print 'Upgrading', path
+                        print('Upgrading', path)
                         try:
                             upgrade_file(path)
                         except Exception as exc:
-                            print exc
+                            print(exc)
                     else:
-                        print 'Not upgrading', path
+                        print('Not upgrading', path)
                 ip._file.close()
 
 
