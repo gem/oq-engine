@@ -9,7 +9,7 @@ Name: %{name}
 Version: %{oqversion}
 Release: %{oqrelease}_%{timestamp}
 Source0: %{oqrepo}-%{oqversion}-%{oqrelease}.tar.gz
-License: AGPL3
+License: AGPLv3
 Group: Applications/Engineering
 BuildRoot: %{_tmppath}/%{name}-%{oqversion}-%{oqrelease}-buildroot
 Prefix: %{_prefix}
@@ -66,3 +66,7 @@ rm -rf %{buildroot}
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
 %doc CONTRIBUTORS.txt LICENSE README.rst doc
+
+%changelog
+* Tue Jul 28 2015 Daniele Viganò <daniele@openquake.org> 0.15.0-git
+– Initial Packaging
