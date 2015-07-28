@@ -19,33 +19,52 @@
 
 set -e
 
-BASE=$(cd `dirname "${BASH_SOURCE[0]}"` && pwd)
-cd $BASE/..
-#rm -Rf $BASE
+CUR=$(pwd)
+BASE=$(cd `dirname "${BASH_SOURCE[0]}"`/.. && pwd)
 
 REPO=oq-hazardlib
-#EXTRA='--nocheck'
+BRANCH='HEAD'
+EXTRA='--nocheck'
 
-if [ -n "$1" ];
-then
-    BRANCH="$1"
-else
-    BRANCH='master'
-fi
-echo $BRANCH
+while (( "$#" )); do
+    case "$1" in
+        "-h")
+            echo "Usage: $0 [-l] [BRANCH]"
+            echo -e "\nOptions:\n\t-l: build RPM locally\n\t-c: clean build dir"
+            exit 0
+            ;;
+        "-l")
+            BUILD=1
+            shift
+            ;;
+        "-c")
+            rm -Rf $BASE/build-rpm
+            echo "$BASE/build-rpm cleaned"
+            exit 0
+            ;;
+        *)
+            BRANCH="$1"
+            shift
+            ;;
+    esac
+done
+
+cd $BASE
 mkdir -p build-rpm/{RPMS,SOURCES,SPECS,SRPMS}
-
 
 LIB=$(cut -d "-" -f 2 <<< $REPO)
 SHA=$(git rev-parse --short HEAD)
 VER=$(cat openquake/${LIB}/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")
+TIME=$(date +"%s")
+echo $LIB" - "$BRANCH" - "$SHA" - "$VER
 
-echo $LIB" - "$SHA" - "$VER
-
-sed "s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_release_##/git${SHA}/g" rpm/python-${REPO}.spec.inc > build-rpm/SPECS/python-${REPO}.spec
+sed "s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_release_##/git${SHA}/g;s/##_timestamp_##/${TIME}/g" rpm/python-${REPO}.spec.inc > build-rpm/SPECS/python-${REPO}.spec
 
 git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | pigz > build-rpm/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
 
 mock -r openquake --buildsrpm --spec build-rpm/SPECS/python-${REPO}.spec --source build-rpm/SOURCES --resultdir=build-rpm/SRPMS/
-#mock -r openquake $BASE/SRPMS/python-${REPO}-${VER}-git${SHA}.src.rpm --resultdir=$BASE/RPMS $EXTRA
-cd $BASE
+if [ "$BUILD" == "1" ]; then
+    mock -r openquake build-rpm/SRPMS/python-${REPO}-${VER}-git${SHA}_${TIME}.src.rpm --resultdir=build-rpm/RPMS $EXTRA
+fi
+
+cd $CUR
