@@ -13,8 +13,8 @@ addons:
     - libgeos-dev
 
 install:
+  - pip install psutil shapely
   - python setup.py install
 
 script:
-  ls
   nosetests -vx openquake
