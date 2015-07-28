@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <nrml
-xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <sourceModel
@@ -20,12 +20,12 @@ xmlns:gml="http://www.opengis.net/gml"
                 <rake>
                     90.0
                 </rake>
-                <hypocenter depth="26.1010071663" lat="40.72621" lon="143.00296"/>
+                <hypocenter depth="26.101" lat="40.726" lon="143.0"/>
                 <planarSurface>
                     <topLeft depth="9.0" lat="41.6" lon="143.1"/>
-                    <topRight depth="9.0" lat="40.20042" lon="143.91408"/>
-                    <bottomLeft depth="43.2020143326" lat="41.25169" lon="142.07311"/>
-                    <bottomRight depth="43.2020143326" lat="39.85233" lon="142.90843"/>
+                    <topRight depth="9.0" lat="40.2" lon="143.91"/>
+                    <bottomLeft depth="43.202" lat="41.252" lon="142.07"/>
+                    <bottomRight depth="43.202" lat="39.852" lon="142.91"/>
                 </planarSurface>
             </singlePlaneRupture>
             <multiPlanesRupture
@@ -37,18 +37,18 @@ xmlns:gml="http://www.opengis.net/gml"
                 <rake>
                     0.0
                 </rake>
-                <hypocenter depth="7.14230087749" lat="35.2959" lon="139.3135"/>
+                <hypocenter depth="7.1423" lat="35.296" lon="139.31"/>
                 <planarSurface>
-                    <topLeft depth="2.0" lat="35.363" lon="139.158"/>
-                    <topRight depth="2.0" lat="35.39353" lon="138.98554"/>
-                    <bottomLeft depth="14.7279220614" lat="35.47483" lon="139.18794"/>
-                    <bottomRight depth="14.7279220614" lat="35.50536" lon="139.01549"/>
+                    <topLeft depth="2.0" lat="35.363" lon="139.16"/>
+                    <topRight depth="2.0" lat="35.394" lon="138.99"/>
+                    <bottomLeft depth="14.728" lat="35.475" lon="139.19"/>
+                    <bottomRight depth="14.728" lat="35.505" lon="139.02"/>
                 </planarSurface>
                 <planarSurface>
-                    <topLeft depth="2.0" lat="35.169" lon="139.343"/>
-                    <topRight depth="2.0" lat="35.35805" lon="139.17448"/>
-                    <bottomLeft depth="12.284601755" lat="35.23374" lon="139.45218"/>
-                    <bottomRight depth="12.284601755" lat="35.42279" lon="139.28391"/>
+                    <topLeft depth="2.0" lat="35.169" lon="139.34"/>
+                    <topRight depth="2.0" lat="35.358" lon="139.17"/>
+                    <bottomLeft depth="12.285" lat="35.234" lon="139.45"/>
+                    <bottomRight depth="12.285" lat="35.423" lon="139.28"/>
                 </planarSurface>
             </multiPlanesRupture>
             <simpleFaultRupture
@@ -60,11 +60,11 @@ xmlns:gml="http://www.opengis.net/gml"
                 <rake>
                     90.0
                 </rake>
-                <hypocenter depth="22.3409889516" lat="43.62395" lon="147.94359"/>
+                <hypocenter depth="22.341" lat="43.624" lon="147.94"/>
                 <simpleFaultGeometry>
                     <gml:LineString>
                         <gml:posList>
-                            147.95765532 43.202 148.383817171 43.437802108 148.513274767 43.5073618737 148.68326636 43.6028104565 148.757 43.6397977024
+                            147.96 43.202 148.38 43.438 148.51 43.507 148.68 43.603 148.76 43.64
                         </gml:posList>
                     </gml:LineString>
                     <dip>
@@ -87,19 +87,19 @@ xmlns:gml="http://www.opengis.net/gml"
                 <rake>
                     90.0
                 </rake>
-                <hypocenter depth="22.3409889516" lat="43.62395" lon="147.94359"/>
+                <hypocenter depth="22.341" lat="43.624" lon="147.94"/>
                 <complexFaultGeometry>
                     <faultTopEdge>
                         <gml:LineString>
                             <gml:posList>
-                                148.757 43.6397977024 5.0 148.68326636 43.6028104565 5.0 148.513274767 43.5073618737 5.0 148.383817171 43.437802108 5.0 147.95765532 43.202 5.0
+                                148.76 43.64 5.0 148.68 43.603 5.0 148.51 43.507 5.0 148.38 43.438 5.0 147.96 43.202 5.0
                             </gml:posList>
                         </gml:LineString>
                     </faultTopEdge>
                     <faultBottomEdge>
                         <gml:LineString>
                             <gml:posList>
-                                147.918627082 44.0019999999 35.499999993 147.809969704 43.9459551382 35.5000000113 147.709392281 43.897024163 35.4999999884 147.504476757 43.8034344556 35.500000001 147.357 43.7268375482 35.5000000054
+                                147.92 44.002 35.5 147.81 43.946 35.5 147.71 43.897 35.5 147.5 43.803 35.5 147.36 43.727 35.5
                             </gml:posList>
                         </gml:LineString>
                     </faultBottomEdge>

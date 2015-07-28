@@ -69,6 +69,7 @@ class ConvertGoodFilesTestCase(unittest.TestCase):
                              (fname, outname))
 
     def test_vulnerability(self):
+        raise unittest.SkipTest  # use format NRML 0.5
         self.check_round_trip('vulnerability-model-discrete.xml')
 
     def test_fragility_discrete(self):
