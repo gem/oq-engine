@@ -17,4 +17,4 @@ install:
   - python setup.py install
 
 script:
-  cd .. && nosetests -v -a'!slow' oq-hazardlib/openquake
+  cd .. && python -m unittest discover oq-hazardlib/openquake -p *test.py
