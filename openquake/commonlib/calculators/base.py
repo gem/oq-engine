@@ -340,6 +340,9 @@ class HazardCalculator(BaseCalculator):
                     'Expected output size=%s',
                     self.job_info['output_weight'])
 
+    def post_process(self):
+        """For compatibility with the engine"""
+
 
 class RiskCalculator(HazardCalculator):
     """
