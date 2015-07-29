@@ -20,7 +20,7 @@
 set -e
 
 CUR=$(pwd)
-BASE=$(dirname $(dirname $(realpath "${0}")))
+BASE=$(cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 
 REPO=oq-risklib
 BRANCH='HEAD'
