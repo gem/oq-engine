@@ -66,7 +66,6 @@ geodetic_speedups = Extension('openquake.hazardlib.geo._geodetic_speedups',
 
 include_dirs = [numpy.get_include()]
 
-
 # hack to make unittest to understand the attributes added by nose
 # this is used only to skip the slow tests
 def addTest(self, test):
@@ -114,6 +113,7 @@ setup(
         "README.rst", "LICENSE", "CONTRIBUTORS.txt"]},
     namespace_packages=['openquake'],
     include_package_data=True,
-    test_suite='openquake.hazardlib',
+    test_loader='openquake.baselib.testloader:TestLoader',
+    test_suite='openquake.baselib,openquake.hazardlib',
     zip_safe=False,
 )
