@@ -17,4 +17,4 @@ install:
   - python setup.py install
 
 script:
-  PYTHONPATH=$HOME/gem/oq-hazardlib python -m unittest discover . -p *test.py
+  cd .. && python -m unittest discover oq-hazardlib/openquake -p *test.py
