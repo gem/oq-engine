@@ -33,7 +33,7 @@ from decimal import Decimal
 from mock import Mock
 
 import openquake.hazardlib
-from openquake.commonlib import logictree, readinput, tests
+from openquake.commonlib import logictree, readinput, tests, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
@@ -1816,3 +1816,12 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
         self.assertEqual(self.uncertainties_applied,
                          [('maxMagGRRelative', 0.2),
                           ('bGRRelative', 0.1)])
+
+    def test_parse_invalid_smlt(self):
+        smlt = os.path.join(DATADIR, 'source_model_logic_tree.xml')
+        with self.assertRaises(Exception) as ctx:
+            source.collect_source_model_paths(smlt)
+        msg = str(ctx.exception)
+        self.assertIn('XMLSyntaxError:', msg)
+        # make sure the file name is in the error message
+        self.assertIn('tests/data/source_model_logic_tree.xml', msg)
