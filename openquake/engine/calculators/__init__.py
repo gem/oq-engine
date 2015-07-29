@@ -21,4 +21,5 @@ from openquake.baselib.general import CallableDict, import_all
 # an ordered dictionary of calculator classes
 calculators = CallableDict(lambda job: job.get_param('calculation_mode'))
 
+import openquake.engine.utils.tasks  # monkey patch commonlib.parallel
 import_all('openquake.engine.calculators')
