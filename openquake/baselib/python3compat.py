@@ -34,8 +34,7 @@ PY2 = sys.version_info[0] == 2
 if PY3:
     import pickle
     import configparser
-    import builtins
-    exec_ = getattr(builtins, 'exec')
+    exec_ = eval('exec')
 
     range = range
 
