@@ -1,13 +1,13 @@
 %define oqrepo ##_repo_##
 %define oqversion ##_version_##
 %define oqrelease ##_release_##
-%define name python-%{oqrepo}
-%define timestamp ##_timestamp_##
+%define oqname python-%{oqrepo}
+%define oqtimestamp ##_timestamp_##
 
 Summary: oq-risklib is a library for performing seismic risk analysis
-Name: %{name}
+Name: %{oqname}
 Version: %{oqversion}
-Release: %{timestamp}_%{oqrelease}
+Release: %{oqtimestamp}_%{oqrelease}
 Source0: %{oqrepo}-%{oqversion}-%{oqrelease}.tar.gz
 License: AGPLv3
 Group: Applications/Engineering
@@ -73,5 +73,5 @@ rm -rf %{buildroot}
 %doc LICENSE README.md doc demos
 
 %changelog
-* Tue Jul 28 2015 Daniele Viganò <daniele@openquake.org> 0.8.0-git
-– Initial Packaging
+* %(date -d @%{oqtimestamp} '+%a %b %d %Y') Daniele Viganò <daniele@openquake.org> %{oqversion}-%{oqtimestamp}_%{oqrelease}
+– Unstable release of %{oqname}
