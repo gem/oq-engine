@@ -1,6 +1,3 @@
-from future import standard_library
-standard_library.install_aliases()
-from builtins import object
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -22,7 +19,7 @@ from builtins import object
 import os
 import re
 import shutil
-import pickle
+from openquake.baselib.python3compat import pickle
 import collections
 
 import numpy

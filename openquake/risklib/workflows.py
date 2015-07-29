@@ -16,6 +16,7 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
+import sys
 import inspect
 import functools
 import collections
@@ -617,7 +618,8 @@ class ClassicalBCR(Workflow):
             assets, loss_type,
             data=list(zip(eal_original, eal_retrofitted, bcr_results)))
 
-    compute_all_outputs = Classical.compute_all_outputs.__func__
+    compute_all_outputs = (Classical.compute_all_outputs if sys.version > '3'
+                           else Classical.compute_all_outputs.__func__)
 
 
 @registry.add('event_based_bcr')
@@ -669,7 +671,9 @@ class ProbabilisticEventBasedBCR(Workflow):
             assets, loss_type,
             data=list(zip(eal_original, eal_retrofitted, bcr_results)))
 
-    compute_all_outputs = ProbabilisticEventBased.compute_all_outputs.__func__
+    compute_all_outputs = (
+        ProbabilisticEventBased.compute_all_outputs if sys.version > '3' else
+        ProbabilisticEventBased.compute_all_outputs.__func__)
 
 
 @registry.add('scenario_risk')
@@ -788,7 +792,9 @@ class ClassicalDamage(Damage):
                    for asset, fraction in zip(assets, fractions)]
         return scientific.Output(assets, 'damage', damages=damages)
 
-    compute_all_outputs = Classical.compute_all_outputs.__func__
+    compute_all_outputs = (
+        Classical.compute_all_outputs if sys.version > '3' else
+        Classical.compute_all_outputs.__func__)
 
 
 # NB: the approach used here relies on the convention of having the

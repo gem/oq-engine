@@ -1,8 +1,3 @@
-from future import standard_library
-standard_library.install_aliases()
-from builtins import str
-from builtins import map
-from builtins import object
 # Copyright (c) 2010-2014, GEM Foundation.
 #
 # NRML is free software: you can redistribute it and/or modify it

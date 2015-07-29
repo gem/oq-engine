@@ -1,7 +1,3 @@
-from future import standard_library
-standard_library.install_aliases()
-from builtins import range
-from builtins import object
 # Copyright (c) 2012-2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
