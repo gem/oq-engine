@@ -13,7 +13,6 @@ addons:
     - libgeos-dev
 
 install:
-  - pip install psutil shapely
   - python setup.py develop
 
 script:
