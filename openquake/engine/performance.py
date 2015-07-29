@@ -98,3 +98,6 @@ class EnginePerformanceMonitor(PerformanceMonitor):
             pgmemory=None)
         self.mem = 0
         self.duration = 0
+
+    def collect_performance(self):
+        """For compatibility with oq-lite"""
