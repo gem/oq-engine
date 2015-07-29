@@ -143,7 +143,7 @@ class BaseCalculator(object):
         of output files.
         """
 
-    def export(self):
+    def export(self, exports=''):
         """
         Export all the outputs in the datastore in the given export formats.
 
@@ -151,7 +151,7 @@ class BaseCalculator(object):
         """
         exported = {}
         individual_curves = self.oqparam.individual_curves
-        for fmt in self.oqparam.exports:
+        for fmt in (exports.split(',') or self.oqparam.exports):
             if not fmt:
                 continue
             for key in self.datastore:
