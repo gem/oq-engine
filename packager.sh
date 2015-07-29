@@ -510,7 +510,7 @@ _pkgtest_innervm_run () {
             echo \"Running \$ini\"
             for loop in \$(seq 1 $GEM_MAXLOOP); do
                 set +e
-                oq-engine --run-hazard  \$ini --exports xml -l info
+                oq-engine --run \$ini --exports xml -l info
                 oq_ret=\$?
                 set -e
                 if [ \$oq_ret -eq 0 ]; then
