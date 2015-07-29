@@ -1,6 +1,3 @@
-from builtins import next
-from builtins import zip
-from builtins import object
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2010-2014, GEM Foundation.
