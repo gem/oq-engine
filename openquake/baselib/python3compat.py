@@ -34,8 +34,11 @@ PY2 = sys.version_info[0] == 2
 if PY3:
     import pickle
     import configparser
+    import builtins
+    exec_ = getattr(builtins, 'exec')
 
     range = range
+
     def round(x, d=0):
         p = 10 ** d
         return float(math.floor((x * p) + math.copysign(0.5, x))) / p
@@ -62,6 +65,19 @@ else:  # Python 2
 
     range = xrange
     round = round
+
+    # taken from six
+    def exec_(_code_, _globs_=None, _locs_=None):
+        """Execute code in a namespace."""
+        if _globs_ is None:
+            frame = sys._getframe(1)
+            _globs_ = frame.f_globals
+            if _locs_ is None:
+                _locs_ = frame.f_locals
+            del frame
+        elif _locs_ is None:
+            _locs_ = _globs_
+        exec("""exec _code_ in _globs_, _locs_""")
 
     exec('''
 def raise_(tp, value=None, tb=None):
