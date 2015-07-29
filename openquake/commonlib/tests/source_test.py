@@ -422,7 +422,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     </sourceModel>
 </nrml>
-""")
+""".decode('utf8'))
         msg = ('Could not convert occurRates->positivefloats: '
                'float -0.0010614989 < 0, line 25')
         with self.assertRaises(ValueError) as ctx:
@@ -471,7 +471,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     </sourceModel>
 </nrml>
-""")
+""".decode('utf8'))
         [area] = read_nodes(area_file, filter_sources, ValidNode)
         with self.assertRaises(NameError) as ctx:
             self.converter.convert_node(area)
@@ -530,7 +530,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         </simpleFaultSource>
     </sourceModel>
 </nrml>
-""")
+""".decode('utf8'))
         # check that the error raised by hazardlib is wrapped correctly
         msg = ('node simpleFaultSource: hypo_list and slip_list have to be '
                'both given')
@@ -726,7 +726,7 @@ class RuptureConverterTestCase(unittest.TestCase):
         </simpleFaultGeometry>
     </simpleFaultRupture>
 </nrml>
-''')
+'''.decode('utf8'))
 
         # at line 7 there is an invalid depth="-5.0"
         with self.assertRaises(ValueError) as ctx:
