@@ -24,6 +24,7 @@ avoid an external dependency.
 from __future__ import print_function
 import os
 import sys
+import math
 import importlib
 import subprocess
 
@@ -31,7 +32,13 @@ PY3 = sys.version_info[0] == 3
 PY2 = sys.version_info[0] == 2
 
 if PY3:
+    import pickle
+    import configparser
+
     range = range
+    def round(x, d=0):
+        p = 10 ** d
+        return float(math.floor((x * p) + math.copysign(0.5, x))) / p
 
     def raise_(tp, value=None, tb=None):
         """
@@ -50,7 +57,11 @@ if PY3:
         raise exc
 
 else:  # Python 2
+    import cPickle as pickle
+    import ConfigParser as configparser
+
     range = xrange
+    round = round
 
     exec('''
 def raise_(tp, value=None, tb=None):

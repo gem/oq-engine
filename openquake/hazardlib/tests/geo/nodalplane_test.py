@@ -22,14 +22,14 @@ class NodalPlaneTestCase(unittest.TestCase):
     def _test_broken_input(self, broken_parameter, **kwargs):
         with self.assertRaises(ValueError) as ae:
             NodalPlane(**kwargs)
-        self.assertTrue(ae.exception.message.startswith(broken_parameter),
-                        ae.exception.message)
+        self.assertTrue(str(ae.exception).startswith(broken_parameter),
+                        str(ae.exception))
 
         checker = getattr(NodalPlane, 'check_%s' % broken_parameter)
         with self.assertRaises(ValueError) as ae:
             checker(kwargs[broken_parameter])
-        self.assertTrue(ae.exception.message.startswith(broken_parameter),
-                        ae.exception.message)
+        self.assertTrue(str(ae.exception).startswith(broken_parameter),
+                        str(ae.exception))
 
     def test_strike_out_of_range(self):
         self._test_broken_input('strike', strike=-0.1, dip=1, rake=0)

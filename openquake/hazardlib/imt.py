@@ -20,6 +20,7 @@ types.
 import re
 import operator
 import functools
+from openquake.baselib.python3compat import with_metaclass
 
 # NB: (MS) the management of the IMTs implemented here is horrible and will
 # be thrown away when we will need to introduce a new IMT.
@@ -48,8 +49,18 @@ def from_string(imt):
         return imt_class(None, None)
 
 
+class IMTMeta(type):
+    """Metaclass setting the __slots__ and the properties of IMT classes"""
+    def __new__(mcs, name, bases, dct):
+        dct['__slots__'] = ()
+        cls = type.__new__(mcs, name, bases, dct)
+        for index, field in enumerate(cls._fields):
+            setattr(cls, field, property(operator.itemgetter(index + 1)))
+        return cls
+
+
 @functools.total_ordering
-class _IMT(tuple):
+class _IMT(with_metaclass(IMTMeta, tuple)):
     """
     Base class for intensity measure type.
 
@@ -58,14 +69,6 @@ class _IMT(tuple):
     are any).
     """
     _fields = ()
-
-    class __metaclass__(type):
-        def __new__(mcs, name, bases, dct):
-            dct['__slots__'] = ()
-            cls = type.__new__(mcs, name, bases, dct)
-            for index, field in enumerate(cls._fields):
-                setattr(cls, field, property(operator.itemgetter(index + 1)))
-            return cls
 
     def __new__(cls, sa_period=None, sa_damping=None):
         return tuple.__new__(cls, (cls.__name__, sa_period, sa_damping))

@@ -22,13 +22,13 @@ import abc
 import numpy
 import math
 from openquake.hazardlib.geo import geodetic, utils, Point, Line
+from openquake.baselib.python3compat import with_metaclass
 
 
-class BaseSurface(object):
+class BaseSurface(with_metaclass(abc.ABCMeta)):
     """
     Base class for a surface in 3D-space.
     """
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def get_min_distance(self, mesh):
@@ -185,7 +185,7 @@ class BaseSurface(object):
         """
 
 
-class BaseQuadrilateralSurface(BaseSurface):
+class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
     """
     Base class for a quadrilateral surface in 3D-space.
 
@@ -195,7 +195,6 @@ class BaseQuadrilateralSurface(BaseSurface):
     :meth:`get_width() <.base.BaseSurface.get_width>`,
     and can override any others just for the sake of performance
     """
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self):
         self._mesh = None
@@ -352,7 +351,7 @@ class BaseQuadrilateralSurface(BaseSurface):
         # Computing distances
         dists = numpy.array(dists)
         iii = abs(dists).argmin(axis=0)
-        dst = dists[iii, range(dists.shape[1])]
+        dst = dists[iii, list(range(dists.shape[1]))]
 
         return dst
 

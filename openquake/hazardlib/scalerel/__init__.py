@@ -43,7 +43,7 @@ def _get_available_class(base_class):
             modname, _ext = os.path.splitext(fname)
             mod = importlib.import_module(
                 'openquake.hazardlib.scalerel.' + modname)
-            for cls in mod.__dict__.itervalues():
+            for cls in mod.__dict__.values():
                 if inspect.isclass(cls) and issubclass(cls, base_class) \
                         and cls != base_class \
                         and not inspect.isabstract(cls):

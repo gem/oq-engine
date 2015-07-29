@@ -82,12 +82,12 @@ class SpeedupsRegistry(object):
         assert inspect.getargspec(func) == inspect.getargspec(altfunc), \
             "functions signatures are different in %s and %s" % \
             (func, altfunc)
-        self.funcs[func] = (func.func_code, altfunc.func_code)
+        self.funcs[func] = (func.__code__, altfunc.__code__)
         if self.enabled:
             # here we substitute the "func_code" attribute of the function,
             # which allows us not to worry of when and how is this function
             # being imported by other modules
-            func.func_code = altfunc.func_code
+            func.__code__ = altfunc.__code__
 
     def enable(self):
         """
@@ -95,7 +95,7 @@ class SpeedupsRegistry(object):
         """
         for func in self.funcs:
             origcode, altcode = self.funcs[func]
-            func.func_code = altcode
+            func.__code__ = altcode
         self.enabled = True
 
     def disable(self):
@@ -104,7 +104,7 @@ class SpeedupsRegistry(object):
         """
         for func in self.funcs:
             origcode, altcode = self.funcs[func]
-            func.func_code = origcode
+            func.__code__ = origcode
         self.enabled = False
 
 

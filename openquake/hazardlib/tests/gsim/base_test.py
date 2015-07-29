@@ -128,7 +128,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         self.assertIsInstance(iml_poes, numpy.ndarray)
         [poe] = iml_poes
         expected_poe = 0.006516701082128207
-        self.assertAlmostEqual(poe, expected_poe, places=6)
+        self.assertAlmostEqual(float(poe), expected_poe, places=6)
         self.assertEqual(get_mean_and_stddevs.call_count, 1)
 
     def test_zero_truncation(self):

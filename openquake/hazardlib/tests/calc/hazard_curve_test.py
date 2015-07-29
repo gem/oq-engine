@@ -40,6 +40,7 @@ class HazardCurvesTestCase(unittest.TestCase):
             self.time_span = time_span
             self.ruptures = ruptures
             self.tectonic_region_type = trt
+            self.id = 0
 
         def iter_ruptures(self):
             return iter(self.ruptures)
@@ -150,7 +151,7 @@ class HazardCurvesTestCase(unittest.TestCase):
         expected_error = (
             'An error occurred with source id=2. Error: Something bad happened'
         )
-        self.assertEqual(expected_error, ae.exception.message)
+        self.assertEqual(expected_error, str(ae.exception))
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
@@ -161,7 +162,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
 
         def __call__(self, sources_sites):
             for source, sites in self.chained_generator(sources_sites):
-                self.counts.append((source.source_id, map(int, sites.vs30)))
+                self.counts.append((source.source_id, list(map(int, sites.vs30))))
                 yield source, sites
 
     class SitesCounterRuptureFilter(object):
@@ -171,7 +172,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
 
         def __call__(self, ruptures_sites):
             for rupture, sites in self.chained_generator(ruptures_sites):
-                self.counts.append((rupture.mag, map(int, sites.vs30)))
+                self.counts.append((rupture.mag, list(map(int, sites.vs30))))
                 yield rupture, sites
 
     def test_point_sources(self):

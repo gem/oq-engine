@@ -17,7 +17,9 @@
 Module :mod:`openquake.hazardlib.source.simple_fault` defines
 :class:`SimpleFaultSource`.
 """
+from __future__ import division
 import math
+from openquake.baselib.python3compat import range
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -174,8 +176,8 @@ class SimpleFaultSource(ParametricSeismicSource):
 
             occurrence_rate = mag_occ_rate / float(num_rup)
 
-            for first_row in xrange(num_rup_along_width):
-                for first_col in xrange(num_rup_along_length):
+            for first_row in range(num_rup_along_width):
+                for first_col in range(num_rup_along_length):
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
                                             first_col: first_col + rup_cols]
 

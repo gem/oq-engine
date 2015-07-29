@@ -18,6 +18,8 @@
 Check GMPE/IPE class versus data file in CSV format by calculating standard
 deviation and/or mean value and comparing the result to the expected value.
 """
+from __future__ import print_function
+from __future__ import division
 import csv
 import math
 import sys
@@ -84,7 +86,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
                 msg = 'file %r line %r imt %r. Context object ' \
                       'has changed after get_mean_and_stddevs has been ' \
                       'called' % (datafile.name, linenum, imt)
-                print >> sys.stderr, msg
+                print(msg, file=sys.stderr)
                 break
 
             if result_type == 'MEAN':
@@ -104,7 +106,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
                           datafile.name, linenum, imt, result_type.lower(),
                           expected_result[0], result[0], discrep_percentage[0]
                       )
-                print >> sys.stderr, msg
+                print(msg, file=sys.stderr)
                 break
 
         if debug and (errors or not numpy.all(ctxs)):
@@ -359,6 +361,6 @@ if __name__ == '__main__':
         debug=args.debug
     )
     if not args.quiet:
-        print >> sys.stderr, stats
+        print(stats, file=sys.stderr)
     if errors:
         exit(127)

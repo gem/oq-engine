@@ -173,8 +173,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
         # count how many SESs have 0,1 or 2 occurrences, and then normalize
         # by the total number of SESs generated. This gives the probability
         # of having 0, 1 or 2 occurrences
-        n_occs1 = numpy.array(n_rups1.values())
-        n_occs2 = numpy.array(n_rups2.values())
+        n_occs1 = numpy.array(list(n_rups1.values()))
+        n_occs2 = numpy.array(list(n_rups2.values()))
 
         p_occs1_0 = float(len(n_occs1[n_occs1 == 0])) / num_sess
         p_occs1_1 = float(len(n_occs1[n_occs1 == 1])) / num_sess

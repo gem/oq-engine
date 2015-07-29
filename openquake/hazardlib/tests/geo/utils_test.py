@@ -122,7 +122,7 @@ class GetSphericalBoundingBox(unittest.TestCase):
                            ([0, 10, -175], [0] * 4)]:
             with self.assertRaises(ValueError) as ae:
                 self.func(lons, lats)
-                self.assertEqual(ae.exception.message,
+                self.assertEqual(str(ae.exception),
                                  'points collection has longitudinal '
                                  'extent wider than 180 deg')
 
@@ -155,7 +155,7 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         proj = utils.get_orthographic_projection(180, 180, 45, 45)
         with self.assertRaises(ValueError) as ar:
             proj(90, -45)
-        self.assertEqual(ar.exception.message,
+        self.assertEqual(str(ar.exception),
                          'some points are too far from the projection '
                          'center lon=180.0 lat=45.0')
 

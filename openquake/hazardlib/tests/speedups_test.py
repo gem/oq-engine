@@ -24,6 +24,7 @@ class SpeedupsRegistryTestCase(unittest.TestCase):
 
         def orig():
             return 'orig'
+
         def alt():
             return 'alt'
 
@@ -36,14 +37,14 @@ class SpeedupsRegistryTestCase(unittest.TestCase):
         self.assertEqual(self.orig(), 'orig')
         self.registry.register(self.orig, self.alt)
         self.assertEqual(self.orig(), 'alt')
-        self.assertEqual(self.registry.funcs.keys(), [self.orig])
+        self.assertEqual(list(self.registry.funcs), [self.orig])
 
     def test_register_disabled(self):
         self.registry.disable()
         self.assertEqual(self.orig(), 'orig')
         self.registry.register(self.orig, self.alt)
         self.assertEqual(self.orig(), 'orig')
-        self.assertEqual(self.registry.funcs.keys(), [self.orig])
+        self.assertEqual(list(self.registry.funcs), [self.orig])
 
     def test_enable_disable(self):
         self.registry.register(self.orig, self.alt)
