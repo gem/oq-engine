@@ -182,9 +182,8 @@ class Cdppvalue(unittest.TestCase):
             self.assertAlmostEqual(dpp, ref_dpp, delta=0.1)
 
     @attr('slow')
-    @unittest.skip
     def test_get_cdppvalue(self):
-
+        raise unittest.SkipTest
         rupture = self.make_rupture_fordpp(
             ParametricProbabilisticRupture, occurrence_rate=0.01,
             temporal_occurrence_model=PoissonTOM(50))
