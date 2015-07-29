@@ -1,6 +1,3 @@
-from builtins import next
-from builtins import zip
-from builtins import object
 # The Hazard Library
 # Copyright (C) 2012-2014, GEM Foundation
 #
