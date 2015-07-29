@@ -113,7 +113,7 @@ class StreamingXMLWriter(object):
         if not isinstance(text, str):
             text = text.encode(self.encoding, 'xmlcharrefreplace')
         spaces = ' ' * (self.indent * self.indentlevel)
-        self.stream.write(spaces + text.strip() + '\n')
+        self.stream.write((spaces + text.strip() + '\n').decode('utf8'))
 
     def emptyElement(self, name, attrs):
         """Add an empty element (may have attributes)"""
