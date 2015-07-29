@@ -51,7 +51,10 @@ from openquake.commonlib import readinput, valid, datastore
 
 # patch datastore.get_last_calc_id
 def get_last_calc_id(datadir):
-    """Return the latest job_id in the database"""
+    """
+    Return the latest calc_id by looking both at the datastore
+    and the database.
+    """
     calcs = datastore.get_calc_ids(datadir)
     calc_id = 0 if not calcs else calcs[-1]
     job_id = models.OqJob.objects.latest('id').id
