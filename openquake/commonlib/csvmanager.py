@@ -28,7 +28,7 @@ from openquake.commonlib import InvalidFile
 from openquake.commonlib import nrml
 from openquake.commonlib.record import Table
 from openquake.commonlib import record, records, converter
-from future.utils import with_metaclass
+from openquake.baselib.python3compat import with_metaclass
 
 
 class FileWrapper(object):

@@ -385,9 +385,12 @@ class Node(object):
 
     def __len__(self):
         """Return the number of subnodes"""
-        return len(self.nodes)
+        try:
+            return len(self.nodes)
+        except:
+            import pdb; pdb.set_trace()
 
-    def __bool__(self):
+    def __nonzero__(self):
         """
         Return True if there are subnodes; it does not iter on the
         subnodes, so for lazy nodes it returns True even if the
