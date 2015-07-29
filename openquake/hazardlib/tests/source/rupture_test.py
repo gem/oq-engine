@@ -184,7 +184,6 @@ class Cdppvalue(unittest.TestCase):
 
     @attr('slow')
     def test_get_cdppvalue(self):
-        raise unittest.SkipTest
         rupture = self.make_rupture_fordpp(
             ParametricProbabilisticRupture, occurrence_rate=0.01,
             temporal_occurrence_model=PoissonTOM(50))
