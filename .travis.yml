@@ -14,7 +14,7 @@ addons:
 
 install:
   - pip install psutil shapely
-  - python setup.py install
+  - python setup.py develop
 
 script:
   python setup.py test
