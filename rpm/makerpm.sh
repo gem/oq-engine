@@ -24,7 +24,7 @@ BASE=$(cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
 
 REPO=oq-hazardlib
 BRANCH='HEAD'
-EXTRA='--nocheck'
+EXTRA=''
 
 while (( "$#" )); do
     case "$1" in
