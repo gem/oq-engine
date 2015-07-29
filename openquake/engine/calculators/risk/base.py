@@ -191,12 +191,9 @@ class RiskCalculator(base.Calculator):
                                        "classical_damage"]:
                 filters = dict(output_type='hazard_curve_multi',
                                hazard_curve__lt_realization__isnull=False)
-            elif oq.calculation_mode in [
-                    "event_based_risk", "event_based_bcr"]:
+            elif oq.calculation_mode in ["event_based_risk"]:
                 filters = dict(
                     output_type='gmf', gmf__lt_realization__isnull=False)
-            elif oq.calculation_mode == "event_based_fr":
-                filters = dict(output_type='ses')
             elif oq.calculation_mode in ['scenario_risk', 'scenario_damage']:
                 filters = dict(output_type='gmf_scenario')
             else:
