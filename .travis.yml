@@ -17,4 +17,4 @@ install:
   - python setup.py install
 
 script:
-  PYTHONPATH=$HOME/gem/oq-hazardlib nosetests -a'!slow' -v .
+  python -m unittest discover -p *test.py
