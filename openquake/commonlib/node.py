@@ -48,7 +48,7 @@ with two subnodes a and b:
 
 Node objects can be converted into nicely indented strings:
 
->>> print root.to_str()
+>>> print(root.to_str())
 root
   a 'A1'
   b{attrb='B'} 'B1'
@@ -109,7 +109,7 @@ Node objects can be easily converted into ElementTree objects:
 Then is trivial to generate the XML representation of a node:
 
 >>> from lxml import etree
->>> print etree.tostring(node_to_elem(root))
+>>> print(etree.tostring(node_to_elem(root)))
 <root><a>A1</a><b attrb="B">B1</b></root>
 
 Generating XML files larger than the available memory require some
@@ -244,7 +244,8 @@ def _display(node, indent, expandattrs, expandvals, output):
     attrs = _displayattrs(node.attrib, expandattrs)
     val = ' %s' % repr(node.text) \
         if expandvals and node.text is not None else ''
-    output.write(indent + striptag(node.tag) + attrs + val + '\n')
+    output.write(
+        (indent + striptag(node.tag) + attrs + val + '\n').decode('utf8'))
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output)
 
@@ -385,10 +386,7 @@ class Node(object):
 
     def __len__(self):
         """Return the number of subnodes"""
-        try:
-            return len(self.nodes)
-        except:
-            import pdb; pdb.set_trace()
+        return len(self.nodes)
 
     def __nonzero__(self):
         """
@@ -397,6 +395,9 @@ class Node(object):
         generator is empty.
         """
         return bool(self.nodes)
+
+    if sys.version > '3':
+        __bool__ = __nonzero__
 
 
 class MetaLiteralNode(type):
