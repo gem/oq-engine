@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the calculator EventBasedBCR
   * Longitude and latitude are now rounded to 5 digits
   * Fixed a very subtle bug in the vulnerability functions, potentially
     affecting calculations with nonzero coefficients of variation and nonzero
