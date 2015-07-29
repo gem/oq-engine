@@ -114,6 +114,7 @@ setup(
         "README.rst", "LICENSE", "CONTRIBUTORS.txt"]},
     namespace_packages=['openquake'],
     include_package_data=True,
-    test_suite='openquake.hazardlib',
+    test_loader='openquake.baselib.testloader:TestLoader',
+    test_suite='openquake.baselib,openquake.hazardlib',
     zip_safe=False,
 )
