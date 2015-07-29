@@ -146,7 +146,7 @@ import sys
 import pprint as pp
 import io
 from contextlib import contextmanager
-
+from openquake.baselib.python3compat import raise_, exec_
 from openquake.commonlib.writers import StreamingXMLWriter
 
 try:
@@ -525,7 +525,7 @@ def node_to_elem(root):
     output = []
     generate_elem(output.append, root, 1)  # print "\n".join(output)
     namespace = {"Element": etree.Element, "SubElement": etree.SubElement}
-    exec "\n".join(output) in namespace
+    exec_("\n".join(output), globals(), namespace)
     return namespace["e1"]
 
 
@@ -549,7 +549,7 @@ def read_nodes(fname, filter_elem, nodefactory=Node, remove_comments=True):
         msg = str(exc)
         if not str(fname) in msg:
             msg = '%s in %s' % (msg, fname)
-        raise etype, msg, tb
+        raise_(etype, msg, tb)
 
 
 def node_from_xml(xmlfile, nodefactory=Node):
@@ -635,4 +635,4 @@ def context(fname, node):
         etype, exc, tb = sys.exc_info()
         msg = 'node %s: %s, line %s of %s' % (
             striptag(node.tag), exc, node.lineno, fname)
-        raise etype, msg, tb
+        raise_(etype, msg, tb)

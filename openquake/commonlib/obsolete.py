@@ -21,6 +21,7 @@
 ############################################################################
 
 import sys
+from openquake.baselib.python3compat import raise_
 try:
     from openquake.nrmllib import models as nrml_models
 except ImportError:
@@ -107,7 +108,7 @@ class NrmlHazardlibConverter(object):
             msg = ("The following error has occurred with "
                    "source id='%s', name='%s': %s" %
                    (src.id, src.name, err.message))
-            raise etype, msg, tb
+            raise_(etype, msg, tb)
 
     def _nrml_rupture_to_hazardlib(self, src):
         """

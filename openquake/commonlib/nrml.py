@@ -78,6 +78,7 @@ from __future__ import print_function
 import sys
 import logging
 from openquake.baselib.general import CallableDict
+from openquake.baselib.python3compat import raise_
 from openquake.commonlib import valid, writers
 from openquake.commonlib.node import node_to_xml, \
     Node, LiteralNode, node_from_elem, striptag, parse, iterparse
@@ -358,7 +359,7 @@ def read_lazy(source, lazytags):
         msg = str(exc)
         if str(source) not in msg:
             msg = '%s in %s' % (msg, source)
-        raise etype, msg, tb
+        raise_(etype, msg, tb)
     return nodes
 
 
