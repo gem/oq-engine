@@ -68,5 +68,5 @@ rm -rf %{buildroot}
 %doc CONTRIBUTORS.txt LICENSE README.rst doc
 
 %changelog
-* Tue Jul 28 2015 Daniele Viganò <daniele@openquake.org> 0.15.0-git
-– Initial Packaging
+* %(date -d @%{oqtimestamp} '+%a %b %d %Y') Daniele Viganò <daniele@openquake.org> %{oqversion}-%{oqtimestamp}_%{oqrelease}
+– Unstable release of %{oqname}
