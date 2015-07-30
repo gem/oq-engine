@@ -66,11 +66,11 @@ geodetic_speedups = Extension('openquake.hazardlib.geo._geodetic_speedups',
 
 include_dirs = [numpy.get_include()]
 
-
 setup(
     name='openquake.hazardlib',
     version=version,
-    description="hazardlib is a library for performing seismic hazard analysis",
+    description="hazardlib is a library for performing seismic "
+    "hazard analysis",
     long_description=README,
     url=url,
     packages=find_packages(exclude=['tests', 'tests.*']),
@@ -102,5 +102,7 @@ setup(
         "README.rst", "LICENSE", "CONTRIBUTORS.txt"]},
     namespace_packages=['openquake'],
     include_package_data=True,
+    test_loader='openquake.baselib.runtests:TestLoader',
+    test_suite='openquake.baselib,openquake.hazardlib',
     zip_safe=False,
 )
