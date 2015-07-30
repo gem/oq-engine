@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
-
+import codecs
 import numpy
 
 from openquake.hazardlib.source import AreaSource
@@ -42,23 +42,22 @@ class DisaggTestCase(unittest.TestCase):
             hypocenter_distribution=PMF([(1.0, 5.0)]),
             upper_seismogenic_depth=0.0,
             lower_seismogenic_depth=10.0,
-            magnitude_scaling_relationship = WC1994(),
+            magnitude_scaling_relationship=WC1994(),
             rupture_aspect_ratio=1.0,
-            polygon=Polygon([Point(-0.5,-0.5), Point(-0.5,0.5),
-                             Point(0.5,0.5), Point(0.5,-0.5)]),
+            polygon=Polygon([Point(-0.5, -0.5), Point(-0.5, 0.5),
+                             Point(0.5, 0.5), Point(0.5, -0.5)]),
             area_discretization=9.0,
             rupture_mesh_spacing=1.0,
             temporal_occurrence_model=PoissonTOM(50.)
         )
-        site = Site(location=Point(0.0,0.0),
+        site = Site(location=Point(0.0, 0.0),
                     vs30=800.0,
                     vs30measured=True,
                     z1pt0=500.0,
                     z2pt5=2.0)
         gsims = {'Active Shallow Crust': BooreAtkinson2008()}
-        imt = SA(period=0.1,damping=5.0)
+        imt = SA(period=0.1, damping=5.0)
         iml = 0.2
-        time_span = 50.0
         truncation_level = 3.0
         n_epsilons = 3
         mag_bin_width = 0.2
@@ -90,7 +89,7 @@ class DisaggTestCase(unittest.TestCase):
         )
         self.assertEqual(trt_bins, ['Active Shallow Crust'])
 
-        expected_matrix = numpy.fromstring("""\
+        expected_matrix = numpy.fromstring(codecs.decode(codecs.decode(b"""\
 eJztnXlcTdv7x3eSJuVEKSWOg5LSPVEZytm7lESl5Ia4nG6GuF1FdUWGTcpYMpZolEa5hwgN7OIm
 lEYNKOeWBlNFyZDqd/q9vq+v8717da99zz5N9vs/S6+1nr3Ws/Y6e33W8ywIoiCVcM+brec1YbSo
 fvtn5mYYmsTNHN+wGP7v/591TK2FLWEoO1H1caMJ/Dc1kcupjGMOYWy8PRQU/REWFiS31xqGLsZ2
@@ -184,5 +183,5 @@ Tf+ZILpJdzTkTBnVdZ4eHvqY8y33i9E5doHFgHGZd+Dontsk+OEw0/cNXXp3T31P/RMrV5g/fEbC
 c5GFf9WB1V268MyfPF7x63F35rVpVbHw82hPnuKYYkB/ordPde07I1qO7ZsGoL6Mnt7RdpqM/UwF
 Nel7gDyKhBkqLaZERnxB8LlDUkTiZSj+HXUbExBQHB9RpN59KCcjHiSn9r0WIA4LlV3x5CJgXUAP
 NpRJAfK4Qs8XqReSkY+u6eonXVBeRAqK/ohy3LXjZOi5/h2he0qoeUFB0Qv8H5mRW2E=\
-""".decode('base64').decode('zip')).reshape((8, 8, 6, 6, 3, 1))
+""", 'base64'), 'zip')).reshape((8, 8, 6, 6, 3, 1))
         numpy.testing.assert_almost_equal(diss_matrix, expected_matrix)

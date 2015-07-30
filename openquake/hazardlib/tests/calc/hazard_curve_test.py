@@ -162,7 +162,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
 
         def __call__(self, sources_sites):
             for source, sites in self.chained_generator(sources_sites):
-                self.counts.append((source.source_id, map(int, sites.vs30)))
+                self.counts.append((source.source_id, list(map(int, sites.vs30))))
                 yield source, sites
 
     class SitesCounterRuptureFilter(object):
@@ -172,7 +172,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
 
         def __call__(self, ruptures_sites):
             for rupture, sites in self.chained_generator(ruptures_sites):
-                self.counts.append((rupture.mag, map(int, sites.vs30)))
+                self.counts.append((rupture.mag, list(map(int, sites.vs30))))
                 yield rupture, sites
 
     def test_point_sources(self):
