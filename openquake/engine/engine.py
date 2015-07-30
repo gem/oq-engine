@@ -162,6 +162,7 @@ def create_job(user_name="openquake", log_level='progress'):
         :class:`openquake.engine.db.models.OqJob` instance.
     """
     return models.OqJob.objects.create(
+        id=get_calc_id() + 1,
         user_name=user_name,
         log_level=log_level,
         oq_version=openquake.engine.__version__,
@@ -195,7 +196,7 @@ def run_calc(job, log_level, log_file, exports, lite=False):
     # time if the PYTHONPATH is not set and commonlib is not visible
     if lite:
         calc_dir = os.path.join(
-            datastore.DATADIR, 'calc_%d' % get_last_calc_id(job.id))
+            datastore.DATADIR, 'calc_%d' % get_calc_id(job.id))
         if os.path.exists(calc_dir):
             os.rename(calc_dir, calc_dir + '.bak')
             print 'Generated %s.bak' % calc_dir
