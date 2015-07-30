@@ -449,9 +449,6 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         parser = etree.XMLParser()
         self.branches = {}
         self.open_ends = set()
-        if isinstance(content, str):
-            # etree.fromstring() refuses to parse unicode objects
-            content = content.encode('latin1')
         try:
             tree = etree.fromstring(content, parser=parser)
         except etree.XMLSyntaxError as exc:

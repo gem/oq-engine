@@ -4,7 +4,6 @@ import shutil
 import tempfile
 import unittest
 
-from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.commands.info import info
 from openquake.commonlib.commands.show import show
 from openquake.commonlib.commands.export import export
@@ -14,7 +13,6 @@ from openquake.qa_tests_data.classical import case_1
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5
-from functools import reduce
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
