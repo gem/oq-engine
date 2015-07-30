@@ -710,7 +710,7 @@ class UHSXMLWriterTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.expected_xml = io.StringIO("""\
+        cls.expected_xml = io.StringIO(u"""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <uniformHazardSpectra sourceModelTreePath="foo" gsimTreePath="bar" investigationTime="50.0" poE="0.1">
@@ -730,7 +730,7 @@ class UHSXMLWriterTestCase(unittest.TestCase):
   </uniformHazardSpectra>
 </nrml>
 """)
-        cls.expected_mean_xml = io.StringIO("""\
+        cls.expected_mean_xml = io.StringIO(u"""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <uniformHazardSpectra statistics="mean" investigationTime="50.0" poE="0.1">
@@ -750,7 +750,7 @@ class UHSXMLWriterTestCase(unittest.TestCase):
   </uniformHazardSpectra>
 </nrml>
 """)
-        cls.expected_quantile_xml = io.StringIO("""\
+        cls.expected_quantile_xml = io.StringIO(u"""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <uniformHazardSpectra statistics="quantile" quantileValue="0.95" investigationTime="50.0" poE="0.1">

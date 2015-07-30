@@ -86,12 +86,13 @@ class StreamingXMLWriter(object):
                 writer.serialize(node)
             writer.end_tag('root')
     """
-    def __init__(self, stream, indent=4, encoding='utf-8', nsmap=None):
+    def __init__(self, bytestream, indent=4, encoding='utf-8', nsmap=None):
         """
         :param stream: the stream or a file where to write the XML
         :param int indent: the indentation to use in the XML (default 4 spaces)
         """
-        self.stream = stream
+        assert not isinstance(bytestream, io.StringIO)  # common error
+        self.stream = bytestream
         self.indent = indent
         self.encoding = encoding
         self.indentlevel = 0
@@ -110,10 +111,11 @@ class StreamingXMLWriter(object):
 
     def _write(self, text):
         """Write text by respecting the current indentlevel"""
-        if not isinstance(text, str):
-            text = text.encode(self.encoding, 'xmlcharrefreplace')
         spaces = ' ' * (self.indent * self.indentlevel)
-        self.stream.write((spaces + text.strip() + '\n').decode('utf8'))
+        t = spaces + text.strip() + '\n'
+        if hasattr(text, 'encode'):
+            text = text.encode(self.encoding, 'xmlcharrefreplace')
+        self.stream.write(t)  # expected unicode
 
     def emptyElement(self, name, attrs):
         """Add an empty element (may have attributes)"""
@@ -173,7 +175,7 @@ def tostring(node, indent=4):
     :param node: a node object (typically an ElementTree object)
     :param indent: the indentation to use in the XML (default 4 spaces)
     """
-    out = io.StringIO()
+    out = io.BytesIO()
     writer = StreamingXMLWriter(out, indent)
     writer.serialize(node)
     return out.getvalue()

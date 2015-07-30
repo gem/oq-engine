@@ -20,6 +20,7 @@ Tests for python logic tree processor.
 """
 
 import os
+import codecs
 import random
 import unittest
 import collections
@@ -28,7 +29,7 @@ import numpy
 from lxml import etree
 
 
-from io import StringIO as StringIOBase
+from io import BytesIO
 from decimal import Decimal
 from mock import Mock
 
@@ -42,7 +43,7 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
-class StringIO(StringIOBase):
+class StringIO(BytesIO):
     def __repr__(self):
         return '<StringIO>'
 
@@ -67,11 +68,11 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
 
 
 def _make_nrml(content):
-    return """\
+    return (u"""\
     <nrml xmlns:gml="http://www.opengis.net/gml"\
           xmlns="http://openquake.org/xmlns/nrml/0.4">\
         %s
-    </nrml>""" % content
+    </nrml>""" % content).encode('utf8')
 
 
 def _whatever_sourcemodel():
@@ -1119,12 +1120,12 @@ class BranchSetEnumerateTestCase(unittest.TestCase):
         ae(next(paths), (Decimal('0.256'), [b0, b02]))
         ae(next(paths), (Decimal('0.036'), [b1, b10, b100]))
         ae(next(paths), (Decimal('0.32400'), [b1, b10, b101]))
-        self.assertRaises(StopIteration, paths.__next__)
+        self.assertRaises(StopIteration, lambda: next(paths))
 
         paths = bs1.enumerate_paths()
         ae(next(paths), (Decimal('0.1'), [b10, b100]))
         ae(next(paths), (Decimal('0.9'), [b10, b101]))
-        self.assertRaises(StopIteration, paths.__next__)
+        self.assertRaises(StopIteration, lambda: next(paths))
 
 
 class BranchSetGetBranchByIdTestCase(unittest.TestCase):
@@ -1432,6 +1433,8 @@ class BranchSetFilterTestCase(unittest.TestCase):
 
 class GsimLogicTreeTestCase(unittest.TestCase):
     def parse_invalid(self, xml, errorclass, errormessage=None):
+        if hasattr(xml, 'encode'):
+            xml = xml.encode('utf8')
         with self.assertRaises(errorclass) as exc:
             logictree.GsimLogicTree(StringIO(xml), ['Shield'])
         if errormessage is not None:
@@ -1611,8 +1614,9 @@ class GsimLogicTreeTestCase(unittest.TestCase):
 
     def test_SHARE(self):
         # this is actually a reduced version of the full SHARE logic tree
-        xml = open(os.path.join(DATADIR, 'gmpe_logic_tree_share_reduced.xml')
-                   ).read()
+        xml = codecs.open(
+            os.path.join(DATADIR, 'gmpe_logic_tree_share_reduced.xml'),
+            encoding='utf8').read().encode('utf8')
         as_model_trts = ['Active Shallow Crust', 'Stable Shallow Crust',
                          'Shield', 'Volcanic']
         fs_bg_model_trts = ['Active Shallow Crust', 'Stable Shallow Crust']

@@ -88,7 +88,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         self.assertRaises(ValueError, writer.serialize, None)
 
     def test_serialize_a_model(self):
-        expected = io.StringIO("""\
+        expected = io.BytesIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -138,7 +138,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         _utils.assert_xml_equal(expected, self.filename)
 
     def test_serialize_an_insured_loss_curve(self):
-        expected = io.StringIO("""\
+        expected = io.BytesIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -189,7 +189,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         _utils.assert_xml_equal(expected, self.filename)
 
     def test_serialize_statistics_metadata(self):
-        expected = io.StringIO("""\
+        expected = io.BytesIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -238,7 +238,7 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
         self.assertRaises(ValueError, writer.serialize, None)
 
     def test_serialize_a_model(self):
-        expected = io.StringIO("""\
+        expected = io.BytesIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml
   xmlns:gml="http://www.opengis.net/gml"
@@ -271,7 +271,7 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
         _utils.assert_xml_equal(expected, self.filename)
 
     def test_serialize_statistics_metadata(self):
-        expected = io.StringIO("""\
+        expected = io.BytesIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml
   xmlns:gml="http://www.opengis.net/gml"
@@ -341,7 +341,7 @@ class LossMapWriterTestCase(unittest.TestCase):
         self.assertRaises(ValueError, writer.serialize, None)
 
     def test_serialize_a_model_xml(self):
-        expected = io.StringIO("""\
+        expected = io.BytesIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -404,7 +404,7 @@ class LossMapWriterTestCase(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_serialize_optional_metadata_xml(self):
-        expected = io.StringIO("""\
+        expected = io.BytesIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -470,7 +470,7 @@ class LossMapWriterTestCase(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_serialize_using_hazard_realization_xml(self):
-        expected = io.StringIO("""\
+        expected = io.BytesIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -594,7 +594,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
         self.assertRaises(ValueError, writer.serialize, None)
 
     def test_serialize_a_model(self):
-        expected = io.StringIO("""\
+        expected = io.BytesIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <bcrMap interestRate="10.0" assetLifeExpectancy="50.0" statistics="mean" lossType="structural">
@@ -640,7 +640,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
         _utils.assert_xml_equal(expected, self.filename)
 
     def test_serialize_optional_metadata(self):
-        expected = io.StringIO("""\
+        expected = io.BytesIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <bcrMap interestRate="10.0" assetLifeExpectancy="50.0" statistics="quantile" quantileValue="0.5" lossCategory="economic" unit="USD" lossType="structural">
@@ -670,7 +670,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
         _utils.assert_xml_equal(expected, self.filename)
 
     def test_serialize_using_hazard_realization(self):
-        expected = io.StringIO("""\
+        expected = io.BytesIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <bcrMap interestRate="10.0" assetLifeExpectancy="50.0" sourceModelTreePath="b1|b2" gsimTreePath="b1|b2" lossCategory="economic" unit="USD" lossType="structural">

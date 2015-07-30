@@ -76,7 +76,7 @@ root
 
     def test_ini(self):
         # can read and write a .ini file converted into a Node object
-        inifile = io.StringIO("""\
+        inifile = io.StringIO(u"""\
 [general]
 a = 1
 b = 2
@@ -102,7 +102,7 @@ param=yyy
 
     def test_xml(self):
         # can read and write a .xml file converted into a Node object
-        xmlfile = io.StringIO("""\
+        xmlfile = io.StringIO(u"""\
 <root>
 <general>
 <a>1</a>
@@ -113,7 +113,7 @@ param=yyy
 </root>
 """)
         node = n.node_from_xml(xmlfile)
-        outfile = io.StringIO()
+        outfile = io.BytesIO()
         n.node_to_xml(node, outfile)
         self.assertEqual(outfile.getvalue(), """\
 <?xml version="1.0" encoding="utf-8"?>
@@ -170,7 +170,7 @@ param=yyy
 ValidNode test implementation. Known validators:
     a: `float`
     b: `int`''')
-        xmlfile = io.StringIO("""\
+        xmlfile = io.StringIO(u"""\
 <root>
 <general>
 <a>1</a>

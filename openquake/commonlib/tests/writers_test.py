@@ -1,7 +1,7 @@
 import os
 import unittest
 import tempfile
-from io import StringIO
+from io import BytesIO
 from openquake.commonlib.writers import tostring, StreamingXMLWriter, write_csv
 from openquake.commonlib.node import LiteralNode
 from lxml import etree
@@ -69,7 +69,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
         self.assertLess(allocated, 204800)  # < 200 KB
 
     def test_zero_node(self):
-        s = StringIO()
+        s = BytesIO()
         node = LiteralNode('zero', {}, 0)
         with StreamingXMLWriter(s) as writer:
             writer.serialize(node)
