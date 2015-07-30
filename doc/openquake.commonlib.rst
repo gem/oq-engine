@@ -9,22 +9,6 @@ commonlib Package
     :undoc-members:
     :show-inheritance:
 
-:mod:`converter` Module
------------------------
-
-.. automodule:: openquake.commonlib.converter
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`csvmanager` Module
-------------------------
-
-.. automodule:: openquake.commonlib.csvmanager
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 :mod:`datastore` Module
 ------------------------
 
@@ -65,14 +49,6 @@ commonlib Package
     :undoc-members:
     :show-inheritance:
 
-:mod:`obsolete` Module
-----------------------
-
-.. automodule:: openquake.commonlib.obsolete
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 :mod:`oqvalidation` Module
 --------------------------
 
@@ -93,22 +69,6 @@ commonlib Package
 -----------------------
 
 .. automodule:: openquake.commonlib.readinput
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`record` Module
---------------------
-
-.. automodule:: openquake.commonlib.record
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`records` Module
----------------------
-
-.. automodule:: openquake.commonlib.records
     :members:
     :undoc-members:
     :show-inheritance:

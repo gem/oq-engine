@@ -565,11 +565,14 @@ class CompositeSourceModel(collections.Sequence):
         Extract the sources contained in the internal source models.
         """
         sources = []
+        ordinal = 0
         for trt_model in self.trt_models:
             for src in trt_model:
                 if hasattr(src, 'trt_model_id'):
                     # .trt_model_id is missing for source nodes
                     src.trt_model_id = trt_model.id
+                    src.id = ordinal
+                    ordinal += 1
                 sources.append(src)
         return sources
 
