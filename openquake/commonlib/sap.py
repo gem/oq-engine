@@ -57,7 +57,7 @@ from collections import OrderedDict
 NODEFAULT = object()
 
 
-def get_parentparser(parser, description=None, help=True, version='0.0'):
+def get_parentparser(parser, description=None, help=True):
     """
     :param parser: :class:`argparse.ArgumentParser` instance or None
     :param description: string used to build a new parser if parser is None
@@ -67,7 +67,7 @@ def get_parentparser(parser, description=None, help=True, version='0.0'):
     """
     if parser is None:
         return argparse.ArgumentParser(
-            description=description, version=version, add_help=help)
+            description=description, add_help=help)
     elif hasattr(parser, 'parentparser'):
         return parser.parentparser
     else:
@@ -81,8 +81,7 @@ class Parser(object):
     composed together, by dispatching on a given name (if not given,
     the function name is used).
     """
-    def __init__(self, func, name=None, parentparser=None,
-                 help=True, version='0.0'):
+    def __init__(self, func, name=None, parentparser=None, help=True):
         self.func = func
         self.name = name or func.__name__
         args, self.varargs, varkw, defaults = inspect.getargspec(func)
@@ -92,7 +91,7 @@ class Parser(object):
         alldefaults = (NODEFAULT,) * nodefaults + defaults
         self.argdict = OrderedDict(zip(args, alldefaults))
         self.parentparser = get_parentparser(
-            parentparser, description=func.__doc__, help=help, version=version)
+            parentparser, description=func.__doc__, help=help)
         self.names = set()
         self.all_arguments = []
         self._group = self.parentparser
@@ -174,7 +173,7 @@ class Parser(object):
         return self.parentparser.format_help()
 
 
-def compose(parsers, name='main', description=None, version='0.0', help=True):
+def compose(parsers, name='main', description=None, help=True):
     """
     Collects together different arguments parsers and builds a single
     Parser dispatching on the subparsers depending on
@@ -185,7 +184,7 @@ def compose(parsers, name='main', description=None, version='0.0', help=True):
     """
     assert len(parsers) >= 1, parsers
     parentparser = argparse.ArgumentParser(
-        description=description, version=version, add_help=help)
+        description=description, add_help=help)
     subparsers = parentparser.add_subparsers(
         help='available subcommands (see sub help)')
     for p in parsers:
