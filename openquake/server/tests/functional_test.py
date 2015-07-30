@@ -114,12 +114,12 @@ class EngineServerTestCase(unittest.TestCase):
 
     def test_ok(self):
         job_id = self.postzip('archive_ok.zip')
-        log = self.get('%d/log/:' % job_id)
+        log = self.get('%s/log/:' % job_id)
         self.assertGreater(len(log), 0)
         self.wait()
-        results = self.get('%d/results' % job_id)
+        results = self.get('%s/results' % job_id)
         for res in results:
-            text = self.get_text('result/%d' % res['id'])
+            text = self.get_text('result/%s' % res['id'])
             self.assertGreater(len(text), 0)
         self.assertGreater(len(results), 0)
 
@@ -127,11 +127,11 @@ class EngineServerTestCase(unittest.TestCase):
         # the rupture XML file has a syntax error
         job_id = self.postzip('archive_err_1.zip')
         self.wait()
-        tb = self.get('%d/traceback' % job_id)
+        tb = self.get('%s/traceback' % job_id)
         print 'Error in job', job_id, '\n'.join(tb)
         self.assertGreater(len(tb), 0)
 
-        resp = self.post('%d/remove' % job_id)
+        resp = self.post('%s/remove' % job_id)
         assert resp.status_code == 200, resp
         # make sure job_id is no more in the list of relevant jobs
         job_ids = [job['id'] for job in self.get('list', relevant=True)]
