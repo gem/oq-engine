@@ -16,7 +16,7 @@
 import os
 import mock
 import unittest
-from io import StringIO
+from io import StringIO, BytesIO
 
 import numpy
 from numpy.testing import assert_allclose
@@ -381,7 +381,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
                 DUPLICATE_ID_SRC_MODEL, converter)
 
     def test_raises_useful_error_1(self):
-        area_file = StringIO("""\
+        area_file = BytesIO(b"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -422,7 +422,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     </sourceModel>
 </nrml>
-""".decode('utf8'))
+""")
         msg = ('Could not convert occurRates->positivefloats: '
                'float -0.0010614989 < 0, line 25')
         with self.assertRaises(ValueError) as ctx:
@@ -430,7 +430,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         self.assertIn(msg, str(ctx.exception))
 
     def test_raises_useful_error_2(self):
-        area_file = StringIO("""\
+        area_file = BytesIO(b"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -471,7 +471,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     </sourceModel>
 </nrml>
-""".decode('utf8'))
+""")
         [area] = read_nodes(area_file, filter_sources, ValidNode)
         with self.assertRaises(NameError) as ctx:
             self.converter.convert_node(area)
@@ -480,7 +480,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             " found in 'areaSource', line 5 of", str(ctx.exception))
 
     def test_hypolist_but_not_sliplist(self):
-        simple_file = StringIO("""\
+        simple_file = BytesIO(b"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -530,7 +530,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         </simpleFaultSource>
     </sourceModel>
 </nrml>
-""".decode('utf8'))
+""")
         # check that the error raised by hazardlib is wrapped correctly
         msg = ('node simpleFaultSource: hypo_list and slip_list have to be '
                'both given')
@@ -704,7 +704,7 @@ class RuptureConverterTestCase(unittest.TestCase):
             converter.convert_node(node)
 
     def test_ill_formed_rupture(self):
-        rup_file = StringIO('''\
+        rup_file = BytesIO(b'''\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -726,7 +726,7 @@ class RuptureConverterTestCase(unittest.TestCase):
         </simpleFaultGeometry>
     </simpleFaultRupture>
 </nrml>
-'''.decode('utf8'))
+''')
 
         # at line 7 there is an invalid depth="-5.0"
         with self.assertRaises(ValueError) as ctx:
