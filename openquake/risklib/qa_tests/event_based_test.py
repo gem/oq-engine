@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (c) 2010-2014, GEM Foundation.
+# Copyright (c) 2010-2015, GEM Foundation.
 #
 # OpenQuake Risklib is free software: you can redistribute it and/or
 # modify it under the terms of the GNU Affero General Public License
@@ -15,7 +15,6 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from __future__ import division
 import os
 import unittest
 
@@ -40,7 +39,7 @@ class EventBasedTestCase(unittest.TestCase):
     loss_type = 'structural'
 
     def assert_similar(self, a, b):
-        assert list(a.keys()) == list(b.keys()), (list(a.keys()), list(b.keys()))
+        assert list(a) == list(b), (list(a), list(b))
         for k in a:
             self.assertAlmostEqual(a[k], b[k])
 
@@ -221,9 +220,9 @@ class EventBasedTestCase(unittest.TestCase):
         epsilons = scientific.make_epsilons(gmf[0:2], seed=1, correlation=0)
         loss_ratios = vf.apply_to(gmf[0:2], epsilons)
 
-        values = [3000, 1000]
+        values = [3000., 1000.]
         insured_limits = [1250., 40.]
-        deductibles = [40, 13]
+        deductibles = [40., 13.]
 
         insured_average_losses = [
             scientific.average_loss(scientific.event_based(
@@ -232,10 +231,8 @@ class EventBasedTestCase(unittest.TestCase):
                     deductibles[i] / values[i], insured_limits[i] / values[i]),
                 50, 50, 20))
             for i, lrs in enumerate(loss_ratios)]
-
-        numpy.testing.assert_allclose(
-            [207.86489132 / 3000,   38.07815797 / 1000],
-            insured_average_losses)
+        numpy.testing.assert_allclose([0.05667045, 0.02542965],
+                                      insured_average_losses)
 
         wf = workflows.ProbabilisticEventBased(
             'PGA', 'SOME-TAXONOMY',
