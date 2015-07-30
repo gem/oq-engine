@@ -49,14 +49,14 @@ from openquake import hazardlib, risklib, commonlib
 from openquake.commonlib import readinput, valid, datastore
 
 
-def get_last_calc_id(job_id=None):
+def get_calc_id(job_id=None):
     """
     Return the latest calc_id by looking both at the datastore
     and the database.
     """
     calcs = datastore.get_calc_ids(datastore.DATADIR)
     calc_id = 0 if not calcs else calcs[-1]
-    return max(calc_id, job_id or models.OqJob.objects.latest('id').id)
+    return max(calc_id + 1, job_id or models.OqJob.objects.latest('id').id)
 
 INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
 
