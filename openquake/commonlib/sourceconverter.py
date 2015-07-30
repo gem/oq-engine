@@ -24,9 +24,6 @@ from openquake.commonlib.node import context, striptag
 from openquake.commonlib import valid
 from openquake.commonlib import parallel
 
-# this must stay here for the nrml_converters: don't remove it!
-from openquake.commonlib.obsolete import NrmlHazardlibConverter
-
 # the following is arbitrary, it is used to decide when to parallelize
 # the filtering (MS)
 LOTS_OF_SOURCES_SITES = 1E5  # arbitrary, set by Michele Simionato
