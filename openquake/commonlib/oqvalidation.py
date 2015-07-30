@@ -148,7 +148,7 @@ class OqParam(valid.ParamSet):
                 raise ValueError('If `gsim_logic_tree_file` is set, there '
                                  'must be no `gsim` key')
             path = os.path.join(
-                self.base_path, self.inputs['gsim_logic_tree'])
+                str(self.base_path), self.inputs['gsim_logic_tree'])
             for gsims in logictree.GsimLogicTree(path, []).values.values():
                 self.check_imts_gsims(list(map(valid.gsim, gsims)))
         elif self.gsim is not None:

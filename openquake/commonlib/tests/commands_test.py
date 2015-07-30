@@ -1,4 +1,5 @@
 import os
+import sys
 import mock
 import shutil
 import tempfile
@@ -29,7 +30,10 @@ class Print(object):
 
     @classmethod
     def patch(cls):
-        return mock.patch('__builtin__.print', cls())
+        if sys.version > '3':
+            return mock.patch('builtins.print', cls())
+        else:
+            return mock.patch('__builtin__.print', cls())
 
 
 class InfoTestCase(unittest.TestCase):
