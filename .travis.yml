@@ -2,6 +2,8 @@ sudo: false
 
 language: python
 
+cache: pip
+
 python:
  - "3.4"
 
@@ -13,7 +15,8 @@ addons:
     - libgeos-dev
 
 install:
+  - pip install scipy shapely psutil
   - python setup.py develop
 
 script:
-  python setup.py test
+  - python setup.py test
