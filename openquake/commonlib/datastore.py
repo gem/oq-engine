@@ -82,6 +82,8 @@ def get_calc_ids(datadir=DATADIR):
     """
     Extract the available calculation IDs from the datadir, in order.
     """
+    if not os.path.exists(datadir):
+        return []
     calc_ids = []
     for f in os.listdir(DATADIR):
         mo = re.match('calc_(\d+)', f)
