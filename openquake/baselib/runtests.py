@@ -35,3 +35,9 @@ def addTest(self, test):
             return
     self._tests.append(test)
 unittest.BaseTestSuite.addTest = addTest
+
+
+if __name__ == '__main__':
+    import sys
+    suite = TestLoader().loadTestsFromNames([sys.argv[1]])
+    unittest.TextTestRunner(verbosity=2).run(suite)
