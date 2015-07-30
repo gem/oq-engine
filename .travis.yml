@@ -4,7 +4,7 @@ language: python
 
 cache:
   directories:
-    - $HOME/.cache/pip
+    - $HOME/pkgcache
 
 python:
  - "3.4"
