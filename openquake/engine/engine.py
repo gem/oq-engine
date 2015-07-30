@@ -49,17 +49,14 @@ from openquake import hazardlib, risklib, commonlib
 from openquake.commonlib import readinput, valid, datastore
 
 
-# patch datastore.get_last_calc_id
-def get_last_calc_id(datadir):
+def get_last_calc_id(job_id=None):
     """
     Return the latest calc_id by looking both at the datastore
     and the database.
     """
-    calcs = datastore.get_calc_ids(datadir)
+    calcs = datastore.get_calc_ids(datastore.DATADIR)
     calc_id = 0 if not calcs else calcs[-1]
-    job_id = models.OqJob.objects.latest('id').id
-    return max(calc_id, job_id)
-datastore.get_last_calc_id = get_last_calc_id
+    return max(calc_id, job_id or models.OqJob.objects.latest('id').id)
 
 INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
 
@@ -197,7 +194,8 @@ def run_calc(job, log_level, log_file, exports, lite=False):
     # does not need them and would raise strange errors during installation
     # time if the PYTHONPATH is not set and commonlib is not visible
     if lite:
-        calc_dir = os.path.join(datastore.DATADIR, 'calc_%d' % job.id)
+        calc_dir = os.path.join(
+            datastore.DATADIR, 'calc_%d' % get_last_calc_id(job.id))
         if os.path.exists(calc_dir):
             os.rename(calc_dir, calc_dir + '.bak')
             print 'Generated %s.bak' % calc_dir
