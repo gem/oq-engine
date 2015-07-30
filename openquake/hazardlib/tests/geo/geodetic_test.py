@@ -20,7 +20,7 @@ import numpy
 
 from openquake.hazardlib.geo import geodetic
 
-from openquake.hazardlib.tests import SpeedupsTestCase
+from openquake.hazardlib.tests import speedups_on_off
 
 Point = collections.namedtuple("Point",  'lon lat')
 
@@ -30,7 +30,8 @@ LAX = (118 + 24 / 60., 33 + 57 / 60.)
 JFK = (73 + 47 / 60., 40 + 38 / 60.)
 
 
-class TestGeodeticDistance(SpeedupsTestCase):
+@speedups_on_off
+class TestGeodeticDistance(unittest.TestCase):
     def test_LAX_to_JFK(self):
         dist = geodetic.geodetic_distance(*(LAX + JFK))
         self.assertAlmostEqual(dist, 0.623585 * geodetic.EARTH_RADIUS,
@@ -126,7 +127,8 @@ class TestAzimuth(unittest.TestCase):
         self.assertTrue(numpy.allclose(az, eazimuths), str(az))
 
 
-class TestDistance(SpeedupsTestCase):
+@speedups_on_off
+class TestDistance(unittest.TestCase):
     def test(self):
         p1 = (0, 0, 10)
         p2 = (0.5, -0.3, 5)
@@ -134,7 +136,8 @@ class TestDistance(SpeedupsTestCase):
         self.assertAlmostEqual(distance, 65.0295143)
 
 
-class MinDistanceTest(SpeedupsTestCase):
+@speedups_on_off
+class MinDistanceTest(unittest.TestCase):
     # test relies on geodetic.distance() to work right
     def _test(self, mlons, mlats, mdepths, slons, slats, sdepths,
               expected_mpoint_indices):

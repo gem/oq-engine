@@ -21,7 +21,7 @@ import shapely.geometry
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo import utils
 
-from openquake.hazardlib.tests import SpeedupsTestCase
+from openquake.hazardlib.tests import speedups_on_off
 
 
 class CleanPointTestCase(unittest.TestCase):
@@ -331,7 +331,8 @@ class NormalizedTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
 
 
-class ConvexToPointDistanceTestCase(SpeedupsTestCase):
+@speedups_on_off
+class ConvexToPointDistanceTestCase(unittest.TestCase):
     polygon = shapely.geometry.Polygon([
         (0, 0), (1, 0), (1, 1), (0, 1)
     ])
