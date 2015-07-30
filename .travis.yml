@@ -18,7 +18,7 @@ addons:
     - libhdf5-serial-dev
 
 install:
-  - pip install scipy shapely psutil
+  - pip install https://dl.dropboxusercontent.com/u/418677/scipy-0.16.0-cp34-cp34m-linux_x86_64.whl
   - python setup.py develop
 
 script:
