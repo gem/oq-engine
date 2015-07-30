@@ -459,7 +459,8 @@ class EBRCalculator(ebr.EventBasedRiskCalculator):
         self.job = job
         oq = job.get_oqparam()
         monitor = EnginePerformanceMonitor('ebr', job.id)
-        super(EBRCalculator, self).__init__(oq, monitor, job.id)
+        calc_id = engine.get_last_calc_id(job.id)
+        super(EBRCalculator, self).__init__(oq, monitor, calc_id)
         job.ds_calc_dir = self.datastore.calc_dir
         job.save()
 
