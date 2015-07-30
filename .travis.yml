@@ -15,9 +15,10 @@ addons:
     - gfortran
     - liblapack-dev
     - libgeos-dev
+    - libhdf5-serial-dev
 
 install:
-  - pip install scipy shapely psutil
+  - pip install scipy cython shapely psutil h5py
   - python setup.py develop
 
 script:
