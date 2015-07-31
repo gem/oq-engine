@@ -3,6 +3,8 @@
 local_settings.py
 doc/build/**/*
 build
+build-deb
+build-rpm
 .metadata/
 build-stamp
 tests/data/*.fake
