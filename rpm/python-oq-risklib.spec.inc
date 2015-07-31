@@ -73,5 +73,5 @@ rm -rf %{buildroot}
 %doc LICENSE README.md doc demos
 
 %changelog
-* %(date -d @%{oqtimestamp} '+%a %b %d %Y') Daniele Viganò <daniele@openquake.org> %{oqversion}-%{oqtimestamp}_%{oqrelease}
+* %(date -d @%{oqtimestamp} '+%a %b %d %Y') GEM Automatic Packager <gem-autopack@openquake.org> %{oqversion}-%{oqtimestamp}_%{oqrelease}
 – Unstable release of %{oqname}
