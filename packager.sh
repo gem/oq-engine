@@ -497,6 +497,10 @@ _pkgtest_innervm_run () {
     # run celeryd daemon
     ssh $lxc_ip "cd /usr/share/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
+    # FIXME
+    echo "Wait some seconds to allow celery come alive..."
+    sleep 30s
+
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run all of the hazard and risk demos
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
