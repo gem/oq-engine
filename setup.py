@@ -77,7 +77,8 @@ setup(
     install_requires=[
         'numpy',
         'scipy',
-        'shapely'
+        'shapely',
+        'psutil',
     ],
     ext_modules=[geodetic_speedups, geoutils_speedups],
     include_dirs=include_dirs,

@@ -46,7 +46,7 @@ def speedups_on_off(cls):
                 speedups.enable()
         return method2
 
-    for name, member in vars(cls).items():
+    for name, member in list(vars(cls).items()):
         if not name.startswith('test_'):
             continue
         if not callable(member):

@@ -630,9 +630,9 @@ class DeprecatedTestCase(unittest.TestCase):
             dummy()
         warning_msg, warning_type = warn.call_args[0]
         self.assertIs(warning_type, DeprecationWarning)
-        self.assertEqual(
-            warning_msg, 'openquake.hazardlib.tests.gsim.base_test.dummy '
-            'has been deprecated. Use dummy_new instead.')
+        self.assertIn(
+            'gsim.base_test.dummy has been deprecated. Use dummy_new instead.',
+            warning_msg)
 
         # check that at the second call the warning is not printed
         with mock.patch('warnings.warn') as warn:
