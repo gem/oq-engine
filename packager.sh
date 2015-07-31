@@ -431,8 +431,6 @@ _pkgtest_innervm_run () {
         oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini
         echo 'running ProbabilisticEventBased...'
         oq-lite run ProbabilisticEventBased/job_risk.ini
-        echo 'running EventLossTableDemo...'        
-        oq-lite run ProbabilisticEventBased/job.ini
         oq-lite export -1 /event_loss_table-rlzs csv /tmp
         echo 'Show all the oq-lite calculations'
         oq-lite show 0
