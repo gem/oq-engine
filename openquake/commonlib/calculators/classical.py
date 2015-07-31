@@ -28,7 +28,7 @@ from openquake.hazardlib.calc.hazard_curve import (
 from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, datastore, source
+from openquake.commonlib import parallel, source
 from openquake.baselib.general import AccumDict, split_in_blocks
 
 from openquake.commonlib.calculators import base, calc
@@ -80,7 +80,6 @@ class ClassicalCalculator(base.HazardCalculator):
     Classical PSHA calculator
     """
     core_func = classical
-    curves_by_trt_gsim = datastore.persistent_attribute('curves_by_trt_gsim')
 
     def execute(self):
         """
@@ -110,7 +109,21 @@ class ClassicalCalculator(base.HazardCalculator):
         :param curves_by_trt_gsim:
             a dictionary (trt_id, gsim) -> hazard curves
         """
-        self.curves_by_trt_gsim = curves_by_trt_gsim
+        # save curves_by_trt_gsim
+        for sm in self.rlzs_assoc.csm_info.source_models:
+            group = self.datastore.hdf5.create_group(
+                'curves_by_sm/' + '_'.join(sm.path))
+            group.attrs['source_model'] = sm.name
+            for tm in sm.trt_models:
+                for gsim in tm.gsims:
+                    try:
+                        curves = curves_by_trt_gsim[tm.id, gsim]
+                    except KeyError:  # no data for the trt_model
+                        pass
+                    else:
+                        ts = '%03d-%s' % (tm.id, gsim)
+                        group[ts] = curves
+                        group[ts].attrs['trt'] = tm.trt
         oq = self.oqparam
         zc = zero_curves(len(self.sitecol.complete), oq.imtls)
         curves_by_rlz = self.rlzs_assoc.combine_curves(
@@ -119,7 +132,7 @@ class ClassicalCalculator(base.HazardCalculator):
         nsites = len(self.sitecol)
         if oq.individual_curves:
             for rlz, curves in curves_by_rlz.items():
-                self.store_curves('rlz-%d' % rlz.ordinal, curves)
+                self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
 
         if len(rlzs) == 1:  # cannot compute statistics
             [self.mean_curves] = curves_by_rlz.values()
@@ -158,26 +171,35 @@ class ClassicalCalculator(base.HazardCalculator):
                 curves[imt], self.oqparam.imtls[imt], self.oqparam.poes)
         return maps
 
-    def store_curves(self, dset, curves):
+    def store_curves(self, kind, curves, rlz=None):
         """
         Store all kind of curves, optionally computing maps and uhs curves.
 
-        :param dset: the HDF5 dataset where to store the curves
+        :param kind: the kind of curves to store
         :param curves: an array of N curves to store
+        :param rlz: hazard realization, if any
         """
         if not self.persistent:  # do nothing
             return
         oq = self.oqparam
-        h5 = self.datastore.hdf5
-        h5['hcurves/' + dset] = curves
+        self._store('hcurves/' + kind, curves, rlz)
         if oq.hazard_maps or oq.uniform_hazard_spectra:
             # hmaps is a composite array of shape (N, P)
             hmaps = self.hazard_maps(curves)
             if oq.hazard_maps:
-                h5['hmaps/' + dset] = hmaps
+                self._store('hmaps/' + kind, hmaps, rlz, poes=oq.poes)
             if oq.uniform_hazard_spectra:
                 # uhs is an array of shape (N, I, P)
-                self.datastore.hdf5['uhs/' + dset] = calc.make_uhs(hmaps)
+                self._store('uhs/' + kind, calc.make_uhs(hmaps), rlz,
+                            poes=oq.poes)
+
+    def _store(self, name, curves, rlz, **kw):
+        self.datastore.hdf5[name] = curves
+        dset = self.datastore.hdf5[name]
+        if rlz is not None:
+            dset.attrs['uid'] = rlz.uid
+        for k, v in kw.items():
+            dset.attrs[k] = v
 
 
 def is_effective_trt_model(result_dict, trt_model):
