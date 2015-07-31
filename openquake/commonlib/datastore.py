@@ -84,6 +84,8 @@ def get_calc_ids(datadir=DATADIR):
     """
     Extract the available calculation IDs from the datadir, in order.
     """
+    if not os.path.exists(datadir):
+        return []
     calc_ids = []
     for f in os.listdir(DATADIR):
         mo = re.match('calc_(\d+)', f)
@@ -92,7 +94,7 @@ def get_calc_ids(datadir=DATADIR):
     return sorted(calc_ids)
 
 
-def get_last_calc_id(datadir=DATADIR):
+def get_last_calc_id(datadir):
     """
     Extract the latest calculation ID from the given directory.
     If none is found, return 0.

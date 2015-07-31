@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" 
- 	  xmlns="http://openquake.org/xmlns/nrml/0.4">
+ 	  xmlns="http://openquake.org/xmlns/nrml/0.5">
   <fragilityModel format="continuous">
     <description>Fragility Functions for Case 1d</description>
     <limitStates>slight moderate extreme complete</limitStates>

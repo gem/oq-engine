@@ -26,7 +26,7 @@ from lxml import etree
 from openquake.commonlib.nrml import NRMLFile, SERIALIZE_NS_MAP
 from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib.node import Node
-from openquake.commonlib import nrml, writers
+from openquake.commonlib import nrml
 
 DmgState = collections.namedtuple("DmgState", 'dmg_state lsi')
 
@@ -1056,6 +1056,6 @@ class DamageWriter(object):
         """
         fname = fname or writetmp()
         node = getattr(self, key + '_node')(data)
-        with open(fname, 'w') as out, writers.floatformat(fmt):
-            nrml.write([node], out)
+        with open(fname, 'w') as out:
+            nrml.write([node], out, fmt)
         return fname

@@ -143,7 +143,7 @@ class BaseCalculator(object):
         of output files.
         """
 
-    def export(self):
+    def export(self, exports=None):
         """
         Export all the outputs in the datastore in the given export formats.
 
@@ -151,7 +151,8 @@ class BaseCalculator(object):
         """
         exported = {}
         individual_curves = self.oqparam.individual_curves
-        for fmt in self.oqparam.exports:
+        fmts = exports.split(',') if exports else self.oqparam.exports
+        for fmt in fmts:
             if not fmt:
                 continue
             for key in self.datastore:
@@ -339,6 +340,9 @@ class HazardCalculator(BaseCalculator):
                 logging.info(
                     'Expected output size=%s',
                     self.job_info['output_weight'])
+
+    def post_process(self):
+        """For compatibility with the engine"""
 
 
 class RiskCalculator(HazardCalculator):
