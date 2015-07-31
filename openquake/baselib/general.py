@@ -422,7 +422,7 @@ def assert_independent(package, *packages):
     """
     assert packages, 'At least one package must be specified'
     import_package = 'from openquake.baselib.general import import_all\n' \
-                     'print import_all("%s")' % package
+                     'print(import_all("%s"))' % package
     imported_modules = run_in_process(import_package)
     for mod in imported_modules:
         for pkg in packages:
