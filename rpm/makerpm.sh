@@ -20,7 +20,7 @@
 set -e
 
 CUR=$(pwd)
-BASE=$(cd "$0" && /bin/pwd)/..
+BASE=$(cd "$@" && /bin/pwd)/..
 
 REPO=oq-engine
 BRANCH='HEAD'
