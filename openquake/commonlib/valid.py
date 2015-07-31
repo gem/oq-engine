@@ -192,10 +192,10 @@ def utf8(value):
     r"""
     Check that the string is UTF-8. Returns an encode bytestring.
 
-    >>> utf8(b'\xe0')
+    >>> utf8(b'\xe0')  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    ValueError: Not UTF-8: b'\xe0'
+    ValueError: Not UTF-8: ...
     """
     try:
         if isinstance(value, bytes):
