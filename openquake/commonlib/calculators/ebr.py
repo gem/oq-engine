@@ -140,8 +140,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.datastore.hdf5.create_group(out)
             for l, loss_type in enumerate(loss_types):
                 for r, rlz in enumerate(self.rlzs_assoc.realizations):
-                    key = '/%s/%s' % (loss_type, rlz.uid)
+                    key = '/%s/rlz-%03d' % (loss_type, rlz.ordinal)
                     dset = self.datastore.create_dset(out + key, elt_dt)
+                    dset.attrs['uid'] = rlz.uid
                     self.datasets[o, l, r] = dset
 
     def execute(self):

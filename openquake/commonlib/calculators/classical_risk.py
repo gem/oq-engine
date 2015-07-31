@@ -78,8 +78,12 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 self.assoc_assets_sites(self.sitecol)
 
         logging.info('Preparing the risk input')
-        self.riskinputs = self.build_riskinputs(
-            self.datastore['curves_by_trt_gsim'])
+        curves_by_trt_gsim = {}
+        for dset in self.datastore['curves_by_sm'].values():
+            for key, curves in dset.items():
+                trt_id, gsim = key.split('-')
+                curves_by_trt_gsim[int(trt_id), gsim] = curves.value
+        self.riskinputs = self.build_riskinputs(curves_by_trt_gsim)
 
     def post_execute(self, result):
         """

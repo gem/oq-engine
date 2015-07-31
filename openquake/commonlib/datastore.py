@@ -75,7 +75,9 @@ class ByteCounter(object):
         self.nbytes = nbytes
 
     def __call__(self, name, dset_or_group):
-        self.nbytes += get_nbytes(dset_or_group)
+        nbytes = get_nbytes(dset_or_group)
+        if nbytes:
+            self.nbytes += nbytes
 
 
 def get_calc_ids(datadir=DATADIR):
