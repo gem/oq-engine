@@ -81,7 +81,7 @@ def agg_dicts(acc, val):
 
 source_info_dt = numpy.dtype(
     [('trt_model_id', numpy.uint32),
-     ('source_id', (str, 20)),
+     ('source_id', (bytes, 20)),
      ('calc_time', numpy.float32)])
 
 
