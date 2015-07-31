@@ -20,6 +20,8 @@ from xml.sax.saxutils import escape, quoteattr
 
 import numpy  # this is needed by the doctests, don't remove it
 
+from openquake.baselib.python3compat import unicode
+
 
 @contextmanager
 def floatformat(fmt_string):
@@ -63,7 +65,7 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     """
     if isinstance(value, bytes):
         return value.encode('utf8')
-    elif isinstance(value, str):
+    elif isinstance(value, unicode):
         return value
     elif hasattr(value, '__len__'):
         return sep.join((scientificformat(f, fmt, sep2) for f in value))
