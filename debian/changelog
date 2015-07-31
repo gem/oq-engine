@@ -1,9 +1,13 @@
+  [Michele Simionato]
+  * Now hazardlib unofficially supports Python 3
+  * Added support for python setup.py test
+
   [Graeme Weatherill]
   * Adds the `upper' and `lower' epistemic uncertainty corrections for the
     NGA West 2 GMPEs used in the 2014 US National Seismic Hazard Map
   
   [Michele Simionato]
-  * fixed the filtering of site IDs
+  * Fixed the filtering of site IDs
   * hazardlib now requires h5py
 
   [Graeme Weatherill]

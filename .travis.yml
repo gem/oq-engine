@@ -1,0 +1,15 @@
+sudo: false
+
+language: python
+
+python:
+ - "3.4"
+
+install:
+  - pip install http://ftp.openquake.org/python-wheels/Shapely-1.5.9-py3-none-any.whl
+  - pip install http://ftp.openquake.org/python-wheels/scipy-0.16.0-cp34-cp34m-linux_x86_64.whl
+  - pip install http://ftp.openquake.org/python-wheels/h5py-2.5.0-cp34-cp34m-linux_x86_64.whl
+  - python setup.py develop
+
+script:
+  - python setup.py test
