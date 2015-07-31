@@ -633,6 +633,9 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         """
         return str(self) == str(other)
 
+    def __hash__(self):
+        return hash(str(self))
+
     def __str__(self):
         """
         To be overridden in subclasses if the GSIM takes parameters.
