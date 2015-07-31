@@ -44,7 +44,7 @@ calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
-rlz_dt = numpy.dtype([('uid', (str, 200)), ('weight', float)])
+rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('weight', float)])
 
 
 class BaseCalculator(with_metaclass(abc.ABCMeta)):
