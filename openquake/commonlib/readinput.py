@@ -19,6 +19,7 @@
 import os
 import csv
 import gzip
+import codecs
 import zipfile
 import logging
 import operator
@@ -361,7 +362,7 @@ def get_source_model_lt(oqparam):
         instance
     """
     fname = oqparam.inputs['source_model_logic_tree']
-    content = file(fname).read()
+    content = codecs.open(fname, encoding='utf8').read().encode('utf8')
     return logictree.SourceModelLogicTree(
         content, oqparam.base_path, fname, validate=False,
         seed=oqparam.random_seed,
@@ -434,7 +435,7 @@ def get_source_models(oqparam, source_model_lt, sitecol=None, in_memory=True):
                     raise
         else:  # just collect the TRT models
             smodel = next(read_nodes(fname, lambda el: 'sourceModel' in el.tag,
-                                source.nodefactory['sourceModel']))
+                                     source.nodefactory['sourceModel']))
             trt_models = source.TrtModel.collect(smodel)
         trts = [mod.trt for mod in trt_models]
         source_model_lt.tectonic_region_types.update(trts)
@@ -686,7 +687,7 @@ def get_exposure(oqparam):
         insurance_limits = {}
         retrofitting_values = {}
         with context(fname, asset):
-            asset_id = asset['id']
+            asset_id = asset['id'].encode('utf8')
             if asset_id in asset_refs:
                 raise DuplicatedID(asset_id)
             asset_refs.add(asset_id)

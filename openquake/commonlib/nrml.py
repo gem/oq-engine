@@ -104,7 +104,7 @@ class NRMLFile(object):
         self._file = None
 
     def __enter__(self):
-        if isinstance(self._dest, (str, buffer)):
+        if isinstance(self._dest, (str, bytes)):
             self._file = open(self._dest, self._mode)
         else:
             # assume it is a file-like; don't change anything

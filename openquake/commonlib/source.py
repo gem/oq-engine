@@ -741,8 +741,8 @@ SourceInfo = collections.namedtuple(
 
 source_info_dt = numpy.dtype(
     [('trt_model_id', numpy.uint32),
-     ('source_id', (str, 20)),
-     ('source_class', (str, 20)),
+     ('source_id', (bytes, 20)),
+     ('source_class', (bytes, 20)),
      ('weight', numpy.float32),
      ('split_num', numpy.uint32),
      ('filter_time', numpy.float32),

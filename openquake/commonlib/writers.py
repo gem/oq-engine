@@ -61,10 +61,10 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     >>> scientificformat([[0.1, 0.2], [0.3, 0.4]], '%4.1E')
     '1.0E-01:2.0E-01 3.0E-01:4.0E-01'
     """
-    if isinstance(value, basestring):
+    if isinstance(value, bytes):
+        return value.encode('utf8')
+    elif isinstance(value, str):
         return value
-    elif isinstance(value, int):
-        return str(value)
     elif hasattr(value, '__len__'):
         return sep.join((scientificformat(f, fmt, sep2) for f in value))
     elif isinstance(value, (float, numpy.float64, numpy.float32)):
@@ -78,7 +78,7 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
 
 class StreamingXMLWriter(object):
     """
-    A stream-based XML writer. The typical usage is something like this::
+    A bynary stream XML writer. The typical usage is something like this::
 
         with StreamingXMLWriter(output_file) as writer:
             writer.start_tag('root')
@@ -113,9 +113,9 @@ class StreamingXMLWriter(object):
         """Write text by respecting the current indentlevel"""
         spaces = ' ' * (self.indent * self.indentlevel)
         t = spaces + text.strip() + '\n'
-        if hasattr(text, 'encode'):
-            text = text.encode(self.encoding, 'xmlcharrefreplace')
-        self.stream.write(t)  # expected unicode
+        if hasattr(t, 'encode'):
+            t = t.encode(self.encoding, 'xmlcharrefreplace')
+        self.stream.write(t)  # expected bytes
 
     def emptyElement(self, name, attrs):
         """Add an empty element (may have attributes)"""
@@ -264,7 +264,7 @@ def write_csv(dest, data, sep=',', fmt='%12.8E', header=None):
         header = header or []
     else:
         header = header or build_header(data.dtype)
-    with open(dest, 'wb') as f:
+    with open(dest, 'w') as f:
         if header:
             f.write(sep.join(header) + '\n')
             all_fields = [col.split(':', 1)[0].split('-')

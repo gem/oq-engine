@@ -115,7 +115,6 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
   </lossCurves>
 </nrml>
 """)
-
         writer = writers.LossCurveXMLWriter(
             self.filename, investigation_time=10.0,
             source_model_tree_path="b1_b2_b3",

@@ -292,7 +292,7 @@ class AggregateLossCurveXMLWriter(object):
         if data is None:
             raise ValueError("You can not serialize an empty document")
 
-        with NRMLFile(self._dest, 'w') as output:
+        with NRMLFile(self._dest, 'wb') as output:
             root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
 
             aggregate_loss_curve = etree.SubElement(root, "aggregateLossCurve")
@@ -768,7 +768,7 @@ class BCRMapXMLWriter(object):
 
         _assert_valid_input(data)
 
-        with open(self._path, "w") as output:
+        with open(self._path, "wb") as output:
             root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
 
             for bcr in data:

@@ -50,7 +50,7 @@ def compose_arrays(a1, a2):
     return composite
 
 asset_dt = numpy.dtype(
-    [('asset_ref', str, 20), ('lon', float), ('lat', float)])
+    [('asset_ref', bytes, 20), ('lon', float), ('lat', float)])
 
 
 def get_assets(dstore):

@@ -54,15 +54,5 @@ class memoized(object):
         return functools.partial(self.__call__, obj)
 
 
-def _composed(f, g, *args, **kwargs):
-    return f(g(*args, **kwargs))
-
-
-def compose(*a):
-    try:
-        return functools.partial(_composed, a[0], compose(*a[1:]))
-    except IndexError:
-        return a[0]
-
-
-numpy_map = compose(numpy.array, map)
+def numpy_map(f, *args):
+    return numpy.array(list(map(f, *args)))

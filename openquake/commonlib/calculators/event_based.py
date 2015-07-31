@@ -433,7 +433,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
                         sr.tag, len(sr.tag))
         logging.info('Saving the SES collection')
         with self.monitor('saving ruptures', autoflush=True):
-            self.tags = numpy.array(tags, (str, 100))
+            self.tags = numpy.array(tags, (bytes, 100))
             self.sescollection = sescollection
         with self.monitor('counts_per_rlz'):
             self.num_ruptures = numpy.array(list(map(len, sescollection)))

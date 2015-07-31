@@ -65,8 +65,6 @@ def compose(*validators):
     Implement composition of validators. For instance
 
     >>> utf8_not_empty = compose(utf8, not_empty)
-    >>> utf8_not_empty  # doctest: +ELLIPSIS
-    <function compose(utf8,not_empty) at ...>
     """
     def composed_validator(value):
         out = value
@@ -194,16 +192,16 @@ def utf8(value):
     r"""
     Check that the string is UTF-8. Returns an encode bytestring.
 
-    >>> utf8('\xe0')
+    >>> utf8(b'\xe0')
     Traceback (most recent call last):
     ...
-    ValueError: Not UTF-8: '\xe0'
+    ValueError: Not UTF-8: b'\xe0'
     """
     try:
-        if isinstance(value, str):
-            return value.encode('utf-8')
+        if isinstance(value, bytes):
+            return value.decode('utf-8')
         else:
-            return value.decode('utf-8').encode('utf-8')
+            return value
     except:
         raise ValueError('Not UTF-8: %r' % value)
 

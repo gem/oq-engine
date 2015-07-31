@@ -96,7 +96,7 @@ a4,3,0,50,500000,1000,3000
 
         assets, hazards, epsilons = ri.get_all(rlzs_assoc, self.assets_by_site)
         self.assertEqual([a.id for a in assets],
-                         ['a0', 'a1', 'a2', 'a3', 'a4'])
+                         [b'a0', b'a1', b'a2', b'a3', b'a4'])
         self.assertEqual(set(a.taxonomy for a in assets),
                          set(['RM', 'RC', 'W']))
         self.assertEqual(list(map(len, epsilons)), [20] * 5)
