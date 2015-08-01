@@ -570,7 +570,6 @@ class CompositeSourceModel(collections.Sequence):
                     # .trt_model_id is missing for source nodes
                     src.trt_model_id = trt_model.id
                     src.id = ordinal
-                    ordinal += 1
                 sources.append(src)
                 ordinal += 1
         return sources
