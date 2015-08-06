@@ -314,7 +314,6 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
             self.hypocenter, self.surface.get_resampled_top_edge(),
             self.surface.mesh.depths[0][0], self.surface.mesh.depths[-1][0],
             self.surface.get_dip())
-
         idx_nxtp = True
         hypocenter = self.hypocenter
 
