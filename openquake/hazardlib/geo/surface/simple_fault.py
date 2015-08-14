@@ -172,13 +172,17 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         return cls(mesh)
 
     @classmethod
-    def get_fault_patch_vertices(cls, fault_trace, upper_seismogenic_depth,
+    def get_fault_patch_vertices(cls, rupture_top_edge,
+                                 upper_seismogenic_depth,
                                  lower_seismogenic_depth, dip, index_patch=1):
         """
         Get surface main vertices.
         Parameters are the same as for :meth:`from_fault_data`, excluding
-        mesh spacing.
+        fault_trace, and mesh spacing.
 
+        :param rupture_top_edge:
+            A :class:`~openquake.hazardlib.geo.line.Line` representing the
+            rupture surface's top edge.
         :param index_patch:
             Indicate the patch of the fault in order to output the vertices.
             The fault patch numbering follows the same logic of the right-hand
@@ -191,7 +195,7 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         dip_tan = math.tan(math.radians(dip))
         hdist_bottom = (
             lower_seismogenic_depth - upper_seismogenic_depth) / dip_tan
-        strike = fault_trace[0].azimuth(fault_trace[-1])
+        strike = rupture_top_edge[0].azimuth(rupture_top_edge[-1])
         azimuth = (strike + 90.0) % 360
         # Collect coordinates of vertices on the top and bottom edge
         lons = []
@@ -201,7 +205,7 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         t_lon = []
         t_lat = []
         t_dep = []
-        for point in fault_trace.points:
+        for point in rupture_top_edge.points:
             top_edge_point = point
             bottom_edge_point = point.point_at(hdist_bottom, 0, azimuth)
             lons.append(top_edge_point.longitude)
@@ -216,8 +220,8 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             all_deps = numpy.array(deps + list(reversed(t_dep)), float)
         index1 = int(index_patch - 1)
         index2 = int(index_patch)
-        index3 = int(2 * len(fault_trace) - (index_patch + 1))
-        index4 = int(2 * len(fault_trace) - index_patch)
+        index3 = int(2 * len(rupture_top_edge) - (index_patch + 1))
+        index4 = int(2 * len(rupture_top_edge) - index_patch)
         p0 = Point(all_lons[index1], all_lats[index1], all_deps[index1])
         p1 = Point(all_lons[index2], all_lats[index2], all_deps[index2])
         p2 = Point(all_lons[index3], all_lats[index3], all_deps[index3])
@@ -225,7 +229,7 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         return p0, p1, p2, p3
 
     @classmethod
-    def hypocentre_patch_index(cls, hypocentre, fault_trace,
+    def hypocentre_patch_index(cls, hypocentre, rupture_top_edge,
                                upper_seismogenic_depth,
                                lower_seismogenic_depth, dip):
         """
@@ -235,9 +239,9 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         :param hypocentre:
             :class:`~openquake.hazardlib.geo.point.Point` object
             representing the location of hypocentre.
-        :param openquake.hazardlib.geo.line.Line fault_trace:
-            Geographical line representing the intersection between
-            the fault surface and the earth surface.
+        :param rupture_top_edge:
+            A :class:`~openquake.hazardlib.geo.line.Line` representing the
+            rupture surface's top edge.
         :param upper_seismo_depth:
             Minimum depth ruptures can reach, in km (i.e. depth
             to fault's top edge).
@@ -251,12 +255,12 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             An integer corresponding to the index of the fault patch which
             contains the hypocentre.
         """
-        totaln_patch = len(fault_trace)
+        totaln_patch = len(rupture_top_edge)
         for index in range(1, totaln_patch):
 
             p0, p1, p2, p3 = cls.get_fault_patch_vertices(
-                fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
-                dip, index_patch=index)
+                rupture_top_edge, upper_seismogenic_depth,
+                lower_seismogenic_depth, dip, index_patch=index)
 
             [normal, dist_to_plane] = get_plane_equation(p0, p1, p2,
                                                          hypocentre)
