@@ -181,8 +181,8 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         fault_trace, and mesh spacing.
 
         :param rupture_top_edge:
-            A :class:`~openquake.hazardlib.geo.line.Line` representing the
-            rupture surface's top edge.
+            A instances of :class:`openquake.hazardlib.geo.line.Line`
+            representing the rupture surface's top edge.
         :param index_patch:
             Indicate the patch of the fault in order to output the vertices.
             The fault patch numbering follows the same logic of the right-hand
@@ -240,8 +240,8 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             :class:`~openquake.hazardlib.geo.point.Point` object
             representing the location of hypocentre.
         :param rupture_top_edge:
-            A :class:`~openquake.hazardlib.geo.line.Line` representing the
-            rupture surface's top edge.
+            A instances of :class:`openquake.hazardlib.geo.line.Line`
+            representing the rupture surface's top edge.
         :param upper_seismo_depth:
             Minimum depth ruptures can reach, in km (i.e. depth
             to fault's top edge).
@@ -264,7 +264,6 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
 
             [normal, dist_to_plane] = get_plane_equation(p0, p1, p2,
                                                          hypocentre)
-            print [normal, dist_to_plane]
             if (numpy.allclose(dist_to_plane, 0., atol=25., rtol=0.)):
                 return index
 
