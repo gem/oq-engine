@@ -293,7 +293,7 @@ class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):
         self.assertAlmostEqual(p7.latitude, 45.2995, delta=0.1)
         self.assertAlmostEqual(p7.depth, 14., delta=0.1)
 
-    def test_get_fault_vertices_3d_test2_upper_seismogenic_depth_with_depth(self):
+    def test_get_fault_vertices_3d_upper_seismogenic_depth_with_depth(self):
         p0, p1, p2, p3 = SimpleFaultSurface.get_fault_patch_vertices(
             Line([Point(10., 45.0), Point(10., 45.5)]),
             upper_seismogenic_depth=10., lower_seismogenic_depth=14.,
@@ -307,10 +307,10 @@ class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):
         self.assertAlmostEqual(p1.latitude, 45.5, delta=0.1)
         self.assertAlmostEqual(p1.depth, 10., delta=0.1)
         self.assertAlmostEqual(p2.longitude, 10.0, delta=0.1)
-        self.assertAlmostEqual(p2.latitude, 45.0, delta=0.1)
+        self.assertAlmostEqual(p2.latitude, 45.5, delta=0.1)
         self.assertAlmostEqual(p2.depth, 14., delta=0.1)
         self.assertAlmostEqual(p3.longitude, 10.0, delta=0.1)
-        self.assertAlmostEqual(p3.latitude, 45.5, delta=0.1)
+        self.assertAlmostEqual(p3.latitude, 45.0, delta=0.1)
         self.assertAlmostEqual(p3.depth, 14., delta=0.1)
 
 
