@@ -16,7 +16,7 @@
 import os
 import mock
 import unittest
-from StringIO import StringIO
+from io import StringIO, BytesIO
 
 import numpy
 from numpy.testing import assert_allclose
@@ -381,7 +381,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
                 DUPLICATE_ID_SRC_MODEL, converter)
 
     def test_raises_useful_error_1(self):
-        area_file = StringIO("""\
+        area_file = BytesIO(b"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -426,11 +426,11 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         msg = ('Could not convert occurRates->positivefloats: '
                'float -0.0010614989 < 0, line 25')
         with self.assertRaises(ValueError) as ctx:
-            read_nodes(area_file, filter_sources, ValidNode).next()
+            next(read_nodes(area_file, filter_sources, ValidNode))
         self.assertIn(msg, str(ctx.exception))
 
     def test_raises_useful_error_2(self):
-        area_file = StringIO("""\
+        area_file = BytesIO(b"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -480,7 +480,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             " found in 'areaSource', line 5 of", str(ctx.exception))
 
     def test_hypolist_but_not_sliplist(self):
-        simple_file = StringIO("""\
+        simple_file = BytesIO(b"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -656,7 +656,7 @@ class TrtModelTestCase(unittest.TestCase):
         self.assertEqual(getattr(sc, attr), value)
 
     def test_content(self):
-        trts = [sc.trt for sc in self.source_collector.itervalues()]
+        trts = [sc.trt for sc in self.source_collector.values()]
         self.assertEqual(
             trts,
             ['Volcanic', 'Subduction Interface', 'Stable Continental Crust',
@@ -704,7 +704,7 @@ class RuptureConverterTestCase(unittest.TestCase):
             converter.convert_node(node)
 
     def test_ill_formed_rupture(self):
-        rup_file = StringIO('''\
+        rup_file = BytesIO(b'''\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -730,7 +730,7 @@ class RuptureConverterTestCase(unittest.TestCase):
 
         # at line 7 there is an invalid depth="-5.0"
         with self.assertRaises(ValueError) as ctx:
-            read_nodes(rup_file, filter_ruptures, ValidNode).next()
+            next(read_nodes(rup_file, filter_ruptures, ValidNode))
         self.assertIn('line 7', str(ctx.exception))
 
 
@@ -773,7 +773,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
         self.assertEqual([1, 584, 1, 584, 1, 584, 1, 582, 1, 582,
                           1, 582, 1, 582, 1, 582, 1, 582],
-                         map(len, csm.trt_models))
+                         list(map(len, csm.trt_models)))
 
         # test the method get_col_ids
         col_ids_first = rlzs_assoc.get_col_ids(rlzs[0])

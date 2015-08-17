@@ -107,7 +107,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             losses_by_lt_asset = result[rlz_no]
             by_asset = operator.itemgetter(1)
             for asset, keys in general.groupby(
-                    losses_by_lt_asset, by_asset).iteritems():
+                    losses_by_lt_asset, by_asset).items():
                 asset_no = self.asset_no_by_id[asset]
                 losses = []
                 for (loss_type, _) in keys:

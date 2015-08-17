@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import division
 import collections
 import itertools
 import operator
@@ -111,7 +112,7 @@ def calc_gmfs_fast(oqparam, sitecol):
         rupture, sitecol, imts, gsim,
         trunc_level, n_gmfs, correl_model,
         filters.rupture_site_distance_filter(max_dist), seed)
-    return {str(imt): matrix for imt, matrix in res.iteritems()}
+    return {str(imt): matrix for imt, matrix in res.items()}
 
 # ######################### hazard maps ################################### #
 
@@ -234,8 +235,8 @@ def make_uhs(maps):
         an array N x I x P where I the number of intensity measure types of
         kind SA (with PGA = SA(0)), containing the hazard maps
     """
-    sorted_imts = map(str, sorted(
+    sorted_imts = list(map(str, sorted(
         from_string(imt) for imt in maps.dtype.fields
-        if imt.startswith('SA') or imt == 'PGA'))
+        if imt.startswith('SA') or imt == 'PGA')))
     hmaps = numpy.array([maps[imt] for imt in sorted_imts])  # I * N * P
     return hmaps.transpose(1, 0, 2)  # N * I * P

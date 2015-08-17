@@ -13,12 +13,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
-import cStringIO
+import io
 import logging
 from contextlib import contextmanager
 from xml.sax.saxutils import escape, quoteattr
 
 import numpy  # this is needed by the doctests, don't remove it
+
+from openquake.baselib.python3compat import unicode
 
 
 @contextmanager
@@ -61,10 +63,10 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     >>> scientificformat([[0.1, 0.2], [0.3, 0.4]], '%4.1E')
     '1.0E-01:2.0E-01 3.0E-01:4.0E-01'
     """
-    if isinstance(value, basestring):
+    if isinstance(value, bytes):
+        return value.encode('utf8')
+    elif isinstance(value, unicode):
         return value
-    elif isinstance(value, (int, long)):
-        return str(value)
     elif hasattr(value, '__len__'):
         return sep.join((scientificformat(f, fmt, sep2) for f in value))
     elif isinstance(value, (float, numpy.float64, numpy.float32)):
@@ -78,7 +80,7 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
 
 class StreamingXMLWriter(object):
     """
-    A stream-based XML writer. The typical usage is something like this::
+    A bynary stream XML writer. The typical usage is something like this::
 
         with StreamingXMLWriter(output_file) as writer:
             writer.start_tag('root')
@@ -86,12 +88,13 @@ class StreamingXMLWriter(object):
                 writer.serialize(node)
             writer.end_tag('root')
     """
-    def __init__(self, stream, indent=4, encoding='utf-8', nsmap=None):
+    def __init__(self, bytestream, indent=4, encoding='utf-8', nsmap=None):
         """
         :param stream: the stream or a file where to write the XML
         :param int indent: the indentation to use in the XML (default 4 spaces)
         """
-        self.stream = stream
+        assert not isinstance(bytestream, io.StringIO)  # common error
+        self.stream = bytestream
         self.indent = indent
         self.encoding = encoding
         self.indentlevel = 0
@@ -110,15 +113,16 @@ class StreamingXMLWriter(object):
 
     def _write(self, text):
         """Write text by respecting the current indentlevel"""
-        if not isinstance(text, str):
-            text = text.encode(self.encoding, 'xmlcharrefreplace')
         spaces = ' ' * (self.indent * self.indentlevel)
-        self.stream.write(spaces + text.strip() + '\n')
+        t = spaces + text.strip() + '\n'
+        if hasattr(t, 'encode'):
+            t = t.encode(self.encoding, 'xmlcharrefreplace')
+        self.stream.write(t)  # expected bytes
 
     def emptyElement(self, name, attrs):
         """Add an empty element (may have attributes)"""
         attr = ' '.join('%s=%s' % (n, quoteattr(scientificformat(v)))
-                        for n, v in sorted(attrs.iteritems()))
+                        for n, v in sorted(attrs.items()))
         self._write('<%s %s/>' % (name, attr))
 
     def start_tag(self, name, attrs=None):
@@ -173,7 +177,7 @@ def tostring(node, indent=4):
     :param node: a node object (typically an ElementTree object)
     :param indent: the indentation to use in the XML (default 4 spaces)
     """
-    out = cStringIO.StringIO()
+    out = io.BytesIO()
     writer = StreamingXMLWriter(out, indent)
     writer.serialize(node)
     return out.getvalue()
@@ -262,7 +266,7 @@ def write_csv(dest, data, sep=',', fmt='%12.8E', header=None):
         header = header or []
     else:
         header = header or build_header(data.dtype)
-    with open(dest, 'wb') as f:
+    with open(dest, 'w') as f:
         if header:
             f.write(sep.join(header) + '\n')
             all_fields = [col.split(':', 1)[0].split('-')

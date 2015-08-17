@@ -20,7 +20,7 @@ from openquake.commonlib.writers import tostring
 
 
 def get_path(fname_or_fileobject):
-    if isinstance(fname_or_fileobject, basestring):
+    if isinstance(fname_or_fileobject, str):
         return fname_or_fileobject
     elif hasattr(fname_or_fileobject, 'getvalue'):
         return writetmp(fname_or_fileobject.getvalue())

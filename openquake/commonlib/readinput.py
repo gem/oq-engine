@@ -19,13 +19,12 @@
 import os
 import csv
 import gzip
+import codecs
 import zipfile
 import logging
 import operator
 import tempfile
 import collections
-import ConfigParser
-
 import numpy
 from shapely import wkt, geometry
 
@@ -40,6 +39,7 @@ from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_vfs
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.performance import DummyMonitor
+from openquake.baselib.python3compat import configparser
 
 from openquake.commonlib import source, sourceconverter
 
@@ -114,7 +114,7 @@ def get_params(job_inis):
     if not_found:  # something was not found
         raise IOError('File not found: %s' % not_found[0])
 
-    cp = ConfigParser.ConfigParser()
+    cp = configparser.ConfigParser()
     cp.read(job_inis)
 
     # drectory containing the config files we're parsing
@@ -251,7 +251,7 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
     """
     if mesh is None:
         mesh = get_mesh(oqparam)
-    site_ids = site_ids or range(len(mesh))
+    site_ids = site_ids or list(range(len(mesh)))
     if oqparam.inputs.get('site_model'):
         if site_model_params is None:
             # read the parameters directly from their file
@@ -279,8 +279,8 @@ def get_gsims(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    gsims = map(str, get_rlzs_assoc(oqparam).realizations)
-    return map(valid.gsim, gsims)
+    gsims = list(map(str, get_rlzs_assoc(oqparam).realizations))
+    return list(map(valid.gsim, gsims))
 
 
 def get_rlzs_assoc(oqparam):
@@ -362,7 +362,7 @@ def get_source_model_lt(oqparam):
         instance
     """
     fname = oqparam.inputs['source_model_logic_tree']
-    content = file(fname).read()
+    content = codecs.open(fname, encoding='utf8').read().encode('utf8')
     return logictree.SourceModelLogicTree(
         content, oqparam.base_path, fname, validate=False,
         seed=oqparam.random_seed,
@@ -434,8 +434,8 @@ def get_source_models(oqparam, source_model_lt, sitecol=None, in_memory=True):
                 else:
                     raise
         else:  # just collect the TRT models
-            smodel = read_nodes(fname, lambda el: 'sourceModel' in el.tag,
-                                source.nodefactory['sourceModel']).next()
+            smodel = next(read_nodes(fname, lambda el: 'sourceModel' in el.tag,
+                                     source.nodefactory['sourceModel']))
             trt_models = source.TrtModel.collect(smodel)
         trts = [mod.trt for mod in trt_models]
         source_model_lt.tectonic_region_types.update(trts)
@@ -529,7 +529,7 @@ def get_job_info(oqparam, source_models, sitecol):
         n_levels = 0
     else:  # there are levels
         n_imts = len(imtls)
-        n_levels = sum(len(ls) for ls in imtls.itervalues()) / float(n_imts)
+        n_levels = sum(len(ls) for ls in imtls.values()) / float(n_imts)
 
     n_realizations = oqparam.number_of_logic_tree_samples or sum(
         sm.gsim_lt.get_num_paths() for sm in source_models)
@@ -561,7 +561,7 @@ def get_imts(oqparam):
     """
     Return a sorted list of IMTs as hazardlib objects
     """
-    return map(imt.from_string, sorted(oqparam.imtls))
+    return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
 def get_risk_model(oqparam):
@@ -582,14 +582,14 @@ def get_risk_model(oqparam):
             oqparam.steps_per_interval,
         )
         riskmodel.damage_states = fragility_functions.damage_states
-        for taxonomy, ffs in fragility_functions.iteritems():
+        for taxonomy, ffs in fragility_functions.items():
             imt = ffs.imt
             risk_models[imt, taxonomy] = workflows.get_workflow(
                 imt, taxonomy, oqparam, fragility_functions=dict(damage=ffs))
     elif oqparam.calculation_mode.endswith('_bcr'):
         # bcr calculators
-        vfs_orig = get_vfs(oqparam.inputs, retrofitted=False).items()
-        vfs_retro = get_vfs(oqparam.inputs, retrofitted=True).items()
+        vfs_orig = list(get_vfs(oqparam.inputs, retrofitted=False).items())
+        vfs_retro = list(get_vfs(oqparam.inputs, retrofitted=True).items())
         for (imt_taxo, vf_orig), (imt_taxo_, vf_retro) in \
                 zip(vfs_orig, vfs_retro):
             assert imt_taxo == imt_taxo_  # same imt and taxonomy
@@ -599,7 +599,7 @@ def get_risk_model(oqparam):
                 vulnerability_functions_retro=vf_retro)
     else:
         # classical, event based and scenario calculators
-        for imt_taxo, vfs in get_vfs(oqparam.inputs).iteritems():
+        for imt_taxo, vfs in get_vfs(oqparam.inputs).items():
             risk_models[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 vulnerability_functions=vfs)
@@ -687,7 +687,7 @@ def get_exposure(oqparam):
         insurance_limits = {}
         retrofitting_values = {}
         with context(fname, asset):
-            asset_id = asset['id']
+            asset_id = asset['id'].encode('utf8')
             if asset_id in asset_refs:
                 raise DuplicatedID(asset_id)
             asset_refs.add(asset_id)
@@ -847,13 +847,13 @@ def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
             raise err.__class__('%s: file %s, line %d' % (err, csvfile, line))
         data += {imt: [numpy.array(values)]}
     points = lon_lats.pop(imts[0])
-    for other_imt, other_points in lon_lats.iteritems():
+    for other_imt, other_points in lon_lats.items():
         if points != other_points:
             raise ValueError('Inconsistent locations between %s and %s' %
                              (imts[0], other_imt))
     lons, lats = zip(*sorted(points))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    return mesh, {imt: numpy.array(lst) for imt, lst in data.iteritems()}
+    return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
 
 
 def get_sitecol_hcurves(oqparam):
@@ -864,8 +864,8 @@ def get_sitecol_hcurves(oqparam):
         the site collection and the hazard curves, by reading
         a CSV file with format `IMT lon lat poe1 ... poeN`
     """
-    imts = oqparam.imtls.keys()
-    num_values = map(len, oqparam.imtls.values())
+    imts = list(oqparam.imtls)
+    num_values = list(map(len, list(oqparam.imtls.values())))
     with open(oqparam.inputs['hazard_curves']) as csvfile:
         mesh, hcurves_by_imt = get_mesh_csvdata(
             csvfile, imts, num_values, valid.decreasing_probabilities)
@@ -883,7 +883,7 @@ def get_gmfs(oqparam, sitecol):
         a composite array of shape (N, R) read from a CSV file with format
         `tag indices [gmv1 ... gmvN] * num_imts`
     """
-    imts = oqparam.imtls.keys()
+    imts = list(oqparam.imtls)
     imt_dt = numpy.dtype([(imt, float) for imt in imts])
     num_gmfs = oqparam.number_of_ground_motion_fields
     gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
@@ -893,7 +893,7 @@ def get_gmfs(oqparam, sitecol):
         for lineno, line in enumerate(csvfile, 1):
             row = line.split(',')
             try:
-                indices = map(valid.positiveint, row[1].split())
+                indices = list(map(valid.positiveint, row[1].split()))
             except:
                 raise InvalidFile(
                     'The second column in %s is expected to contain integer '
@@ -954,4 +954,4 @@ def get_mesh_hcurves(oqparam):
             raise err.__class__('%s: file %s, line %d' % (err, csvfile, line))
     lons, lats = zip(*sorted(lon_lats))
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
-    return mesh, {imt: numpy.array(lst) for imt, lst in data.iteritems()}
+    return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
