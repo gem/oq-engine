@@ -67,7 +67,7 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
         AccumDict)
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         rup_slice = out_by_rlz.rup_slice
-        rup_ids = range(rup_slice.start, rup_slice.stop)
+        rup_ids = list(range(rup_slice.start, rup_slice.stop))
         for out in out_by_rlz:
             lti = lt_idx[out.loss_type]
             agg_losses = out.event_loss_per_asset.sum(axis=1)
@@ -80,7 +80,7 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
                     losses[1, lti, out.hid] += {rup_id: ins_loss}
     for idx, dic in numpy.ndenumerate(losses):
         if dic:
-            losses[idx] = [numpy.array(dic.items(), elt_dt)]
+            losses[idx] = [numpy.array(list(dic.items()), elt_dt)]
         else:
             losses[idx] = []
     return losses

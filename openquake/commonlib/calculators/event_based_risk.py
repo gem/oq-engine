@@ -237,11 +237,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
             if elass:
                 data_by_lt = collections.defaultdict(list)
-                for (loss_type, asset_id), rows in elass.iteritems():
+                for (loss_type, asset_id), rows in elass.items():
                     for tag, loss, ins_loss in rows:
                         data_by_lt[loss_type].append(
                             (tag, asset_id, loss, ins_loss))
-                for loss_type, data in data_by_lt.iteritems():
+                for loss_type, data in data_by_lt.items():
                     event_loss_asset[i][loss_type] = sorted(
                         # data contains rows (tag, asset, loss, ins_loss)
                         (t, a, l, i) for t, a, l, i in data
@@ -273,7 +273,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
             if elagg:
                 for loss_type, rows in groupby(
-                        elagg, operator.itemgetter(0)).iteritems():
+                        elagg, operator.itemgetter(0)).items():
                     event_loss[i][loss_type] = [row[1:] for row in rows]
                     # aggregate loss curve for all tags
                     losses, poes, avg, _ = self.build_agg_loss_curve_and_map(

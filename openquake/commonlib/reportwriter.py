@@ -2,7 +2,7 @@
 """
 Utilities to build a report writer generating a .rst report for a calculation
 """
-
+from __future__ import print_function
 import os
 from openquake.commonlib import readinput, datastore
 from openquake.commonlib.calculators import base
@@ -79,7 +79,7 @@ def main(directory):
         for f in files:
             if f in ('job.ini', 'job_haz.ini', 'job_hazard.ini'):
                 job_ini = os.path.join(cwd, f)
-                print job_ini
+                print(job_ini)
                 build_report(job_ini)
 
 if __name__ == '__main__':

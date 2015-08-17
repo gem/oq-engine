@@ -34,7 +34,7 @@ class DifferentFiles(Exception):
 def columns(line):
     data = []
     for column in line.split(','):
-        data.append(numpy.array(map(float, column.split(' '))))
+        data.append(numpy.array(list(map(float, column.split(' ')))))
     return data
 
 

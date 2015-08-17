@@ -22,7 +22,7 @@ import tempfile
 import mock
 import unittest
 import collections
-from StringIO import StringIO
+from io import BytesIO, StringIO
 
 from numpy.testing import assert_allclose
 
@@ -74,10 +74,10 @@ export_dir = %s
             with mock.patch('logging.warn') as warn:
                 params = vars(readinput.get_oqparam(job_config))
                 self.assertEqual(expected_params, params)
-                self.assertEqual(['site_model', 'job_ini'],
-                                 params['inputs'].keys())
-                self.assertEqual([site_model_input, job_config],
-                                 params['inputs'].values())
+                items = sorted(params['inputs'].items())
+                keys, values = zip(*items)
+                self.assertEqual(('job_ini', 'site_model'), keys)
+                self.assertEqual((job_config, site_model_input), values)
 
                 # checking that warnings work
                 self.assertEqual(warn.call_args[0][0],
@@ -204,7 +204,7 @@ investigation_time = 50.
 class ClosestSiteModelTestCase(unittest.TestCase):
 
     def test_get_site_model(self):
-        data = StringIO('''\
+        data = BytesIO(b'''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -330,7 +330,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
 class ReadCsvTestCase(unittest.TestCase):
     def test_get_mesh_csvdata_ok(self):
-        fakecsv = StringIO("""\
+        fakecsv = StringIO(u"""\
 PGA 12.0 42.0 0.14 0.15 0.16
 PGA 12.0 42.1 0.44 0.45 0.46
 PGA 12.0 42.2 0.64 0.65 0.66
@@ -350,7 +350,7 @@ PGV 12.0 42.2 0.54 0.55 0.56
                                       [0.54, 0.55, 0.56]])
 
     def test_get_mesh_csvdata_different_levels(self):
-        fakecsv = StringIO("""\
+        fakecsv = StringIO(u"""\
 PGA 12.0 42.0 0.14 0.15 0.16
 PGA 12.0 42.1 0.44 0.45 0.46
 PGA 12.0 42.2 0.64 0.65 0.66
@@ -371,7 +371,7 @@ PGV 12.0 42.2 0.54 0.55
 
     def test_get_mesh_csvdata_err1(self):
         # a negative probability
-        fakecsv = StringIO("""\
+        fakecsv = StringIO(u"""\
 PGA 12.0 42.0 0.14 0.15 0.16
 PGA 12.0 42.1 0.44 0.45 0.46
 PGA 12.0 42.2 0.64 0.65 0.66
@@ -386,7 +386,7 @@ PGV 12.0 42.2 0.54 0.55 0.56
 
     def test_get_mesh_csvdata_err2(self):
         # a duplicated point
-        fakecsv = StringIO("""\
+        fakecsv = StringIO(u"""\
 PGA 12.0 42.0 0.14 0.15 0.16
 PGA 12.0 42.1 0.44 0.45 0.46
 PGA 12.0 42.2 0.64 0.65 0.66
@@ -400,7 +400,7 @@ PGV 12.0 42.1 0.34 0.35 0.36
 
     def test_get_mesh_csvdata_err3(self):
         # a missing location for PGV
-        fakecsv = StringIO("""\
+        fakecsv = StringIO(u"""\
 PGA 12.0 42.0 0.14 0.15 0.16
 PGA 12.0 42.1 0.44 0.45 0.46
 PGA 12.0 42.2 0.64 0.65 0.66
@@ -415,7 +415,7 @@ PGV 12.0 42.1 0.34 0.35 0.36
 
     def test_get_mesh_csvdata_err4(self):
         # inconsistent number of levels
-        fakecsv = StringIO("""\
+        fakecsv = StringIO(u"""\
 PGA 12.0 42.0 0.14 0.15
 PGA 12.0 42.1 0.44 0.45 0.46
 PGA 12.0 42.2 0.64
@@ -427,7 +427,7 @@ PGA 12.0 42.2 0.64
 
     def test_get_mesh_csvdata_err5(self):
         # unexpected IMT
-        fakecsv = StringIO("""\
+        fakecsv = StringIO(u"""\
 PGA 12.0 42.0 0.14 0.15
 PGA 12.0 42.1 0.44 0.45
 PGA 12.0 42.2 0.64 0.65
@@ -438,7 +438,7 @@ PGA 12.0 42.2 0.64 0.65
         self.assertIn("Got 'PGA', expected PGV", str(ctx.exception))
 
     def test_get_mesh_hcurves_ok(self):
-        fakecsv = StringIO("""\
+        fakecsv = StringIO(u"""\
 0 0, 0.42 0.24 0.14, 0.25 0.16 0.08
 0 1, 0.42 0.24 0.14, 0.45 0.40 0.18
 0 2, 0.42 0.24 0.14, 0.65 0.64 0.60

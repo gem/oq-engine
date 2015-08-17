@@ -43,12 +43,13 @@ class ReadCompositeArrayTestCase(unittest.TestCase):
 
     def test_read_ok(self):
         got = read_composite_array(fname)
-        expected = '''\
-[('a0', 81.2985, 0.0, 29.1098, 0.0, 542.1328)
- ('a1', 83.0823, 0.0, 27.9006, 0.0, 254.7904)
- ('a2', 85.7477, 0.0, 27.9015, 0.0, 653.871)
- ('a3', 85.7477, 0.0, 27.9015, 0.0, 806.2714)]'''
-        self.assertEqual(str(got), expected)
+        expected = numpy.array(
+            [(b'a0', 81.2985, 0.0, 29.1098, 0.0, 542.1328),
+             (b'a1', 83.0823, 0.0, 27.9006, 0.0, 254.7904),
+             (b'a2', 85.7477, 0.0, 27.9015, 0.0, 653.871),
+             (b'a3', 85.7477, 0.0, 27.9015, 0.0, 806.2714)],
+            got.dtype)
+        numpy.testing.assert_equal(got, expected)
 
     def test_read_err1(self):
         with self.assertRaises(InvalidFile) as ctx:

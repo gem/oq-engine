@@ -31,6 +31,7 @@ from openquake.baselib.performance import DummyMonitor
 from openquake.commonlib import readinput, datastore, logictree, export, source
 from openquake.commonlib.parallel import apply_reduce
 from openquake.risklib import riskinput
+from openquake.baselib.python3compat import with_metaclass
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -46,7 +47,7 @@ class AssetSiteAssociationError(Exception):
 rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('weight', float)])
 
 
-class BaseCalculator(object):
+class BaseCalculator(with_metaclass(abc.ABCMeta)):
     """
     Abstract base class for all calculators.
 
@@ -54,7 +55,6 @@ class BaseCalculator(object):
     :param monitor: monitor object
     :param calc_id: numeric calculation ID
     """
-    __metaclass__ = abc.ABCMeta
 
     oqparam = datastore.persistent_attribute('oqparam')
     sitemesh = datastore.persistent_attribute('sitemesh')
@@ -312,7 +312,7 @@ class HazardCalculator(BaseCalculator):
                 'sitemesh' not in self.datastore.parent):
             col = self.sitecol.complete
             mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
-            self.sitemesh = numpy.array(zip(col.lons, col.lats), mesh_dt)
+            self.sitemesh = numpy.array(list(zip(col.lons, col.lats)), mesh_dt)
 
     def read_sources(self):
         """
@@ -394,7 +394,7 @@ class RiskCalculator(HazardCalculator):
 
                 # collect the hazards by key into hazards by imt
                 hdata = collections.defaultdict(lambda: [{} for _ in indices])
-                for key, hazards_by_imt in hazards_by_key.iteritems():
+                for key, hazards_by_imt in hazards_by_key.items():
                     for imt in imtls:
                         hazards_by_site = hazards_by_imt[imt]
                         for i, haz in enumerate(hazards_by_site[indices]):
@@ -476,7 +476,7 @@ def get_gmfs(calc):
     # build a matrix N x R for each GSIM realization
     gmfs = {(trt_id, gsim): numpy.zeros((N, R), imt_dt)
             for trt_id, gsim in calc.rlzs_assoc}
-    for rupid, rows in sorted(gmf_by_idx.iteritems()):
+    for rupid, rows in sorted(gmf_by_idx.items()):
         for sid, gmv in zip(haz_sitecol.indices, rows):
             if sid in risk_indices:
                 for trt_id, gsim in gmfs:

@@ -1,10 +1,10 @@
 import os
+import sys
 import mock
 import shutil
 import tempfile
 import unittest
 
-from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.commands.info import info
 from openquake.commonlib.commands.show import show
 from openquake.commonlib.commands.export import export
@@ -30,7 +30,8 @@ class Print(object):
 
     @classmethod
     def patch(cls):
-        return mock.patch('__builtin__.print', cls())
+        bprint = 'builtins.print' if sys.version > '3' else '__builtin__.print'
+        return mock.patch(bprint, cls())
 
 
 class InfoTestCase(unittest.TestCase):

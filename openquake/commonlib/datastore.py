@@ -19,7 +19,7 @@
 import os
 import re
 import shutil
-import cPickle
+from openquake.baselib.python3compat import pickle
 import collections
 
 import numpy
@@ -279,13 +279,13 @@ class DataStore(collections.MutableMapping):
         except AttributeError:  # val is a group
             return val
         if not shape:
-            val = cPickle.loads(val.value)
+            val = pickle.loads(val.value)
         return val
 
     def __setitem__(self, key, value):
         if (not isinstance(value, numpy.ndarray) or
                 value.dtype is numpy.dtype(object)):
-            val = numpy.array(cPickle.dumps(value, cPickle.HIGHEST_PROTOCOL))
+            val = numpy.array(pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
         else:
             val = value
         if key in self.hdf5:

@@ -50,7 +50,7 @@ def compose_arrays(a1, a2):
     return composite
 
 asset_dt = numpy.dtype(
-    [('asset_ref', str, 20), ('lon', float), ('lat', float)])
+    [('asset_ref', bytes, 20), ('lon', float), ('lat', float)])
 
 
 def get_assets(dstore):
@@ -147,7 +147,7 @@ def export_loss_curves_rlzs(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     rlz_by_dset = {rlz.uid: rlz for rlz in rlzs}
     fnames = []
-    for dset, curves in dstore.get(ekey[0], {}).iteritems():
+    for dset, curves in dstore.get(ekey[0], {}).items():
         prefix = 'rlz-%03d' % rlz_by_dset[dset].ordinal
         fnames.extend(
             _export_curves_csv(name, assets, curves[:], dstore.export_dir,
@@ -178,7 +178,7 @@ def export_loss_curves_stats(ekey, dstore):
     else:
         raise ValueError(name)
     fnames = []
-    for dset, curves in dstore.get(ekey[0], {}).iteritems():
+    for dset, curves in dstore.get(ekey[0], {}).items():
         fnames.extend(
             _export_curves_csv(name, assets, curves[:], dstore.export_dir,
                                dset, columns))
@@ -264,7 +264,7 @@ def export_damage(ekey, dstore):
         dd_asset = []
         shape = oqparam.number_of_ground_motion_fields, len(dmg_states)
         totals = numpy.zeros(shape)  # R x D matrix
-        for (key_type, key), values in result.iteritems():
+        for (key_type, key), values in result.items():
             if key_type == 'taxonomy':
                 # values are fractions, R x D matrix
                 totals += values
@@ -358,7 +358,7 @@ def _export_classical_damage_csv(export_dir, fname, damage_states,
         writer.writerow(['asset_ref'] + [ds.dmg_state for ds in damage_states])
         for asset_ref in sorted(fractions_by_asset):
             data = fractions_by_asset[asset_ref]
-            writer.writerow([asset_ref] + map(scientificformat, data))
+            writer.writerow([asset_ref] + list(map(scientificformat, data)))
     return dest
 
 
@@ -391,7 +391,7 @@ def export_risk(ekey, dstore):
         result = losses_by_key[i]
         suffix = '' if rlz.uid == '*' else '-gsimltp_%s' % rlz.uid
         losses = AccumDict()
-        for key, values in result.iteritems():
+        for key, values in result.items():
             key_type, loss_type = key
             unit = unit_by_lt[loss_type]
             if key_type in ('agg', 'ins'):
@@ -446,5 +446,5 @@ def export_assetcol(ekey, dstore):
             columns[i] = sitemesh[assetcol[field]]
         else:
             columns[i] = assetcol[field]
-    writers.write_csv(dest, [header] + zip(*columns), fmt='%s')
+    writers.write_csv(dest, [header] + list(zip(*columns)), fmt='%s')
     return [dest]

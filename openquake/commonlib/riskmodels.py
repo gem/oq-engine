@@ -99,7 +99,7 @@ def get_vfs(inputs, retrofitted=False):
         if key not in inputs:
             continue
         vf_dict = get_vulnerability_functions(inputs[key])
-        for (imt, tax), vf in vf_dict.iteritems():
+        for (imt, tax), vf in vf_dict.items():
             vulnerability_functions[imt, tax][
                 cost_type_to_loss_type(cost_type)] = vf
     return vulnerability_functions
@@ -220,7 +220,7 @@ def get_imtls_from_vulnerabilities(inputs):
     # NB: different loss types may have different IMLs for the same IMT
     # in that case we merge the IMLs
     imtls = {}
-    for loss_type, fname in vulnerability_files(inputs).iteritems():
+    for loss_type, fname in vulnerability_files(inputs).items():
         for (imt, taxonomy), vf in get_vulnerability_functions(fname).items():
             imls = list(vf.imls)
             if imt in imtls and imtls[imt] != imls:

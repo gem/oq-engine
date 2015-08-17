@@ -13,8 +13,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
-import cStringIO
-import cPickle
+import io
+import pickle
 import unittest
 
 from openquake.commonlib import node as n
@@ -76,7 +76,7 @@ root
 
     def test_ini(self):
         # can read and write a .ini file converted into a Node object
-        inifile = cStringIO.StringIO("""\
+        inifile = io.StringIO(u"""\
 [general]
 a = 1
 b = 2
@@ -86,7 +86,7 @@ param = xxx
 param = yyy
 """)
         node = n.node_from_ini(inifile)
-        outfile = cStringIO.StringIO()
+        outfile = io.StringIO()
         n.node_to_ini(node, outfile)
         self.assertEqual(outfile.getvalue(), '''
 [general]
@@ -102,7 +102,7 @@ param=yyy
 
     def test_xml(self):
         # can read and write a .xml file converted into a Node object
-        xmlfile = cStringIO.StringIO("""\
+        xmlfile = io.StringIO(u"""\
 <root>
 <general>
 <a>1</a>
@@ -113,7 +113,7 @@ param=yyy
 </root>
 """)
         node = n.node_from_xml(xmlfile)
-        outfile = cStringIO.StringIO()
+        outfile = io.BytesIO()
         n.node_to_xml(node, outfile)
         self.assertEqual(outfile.getvalue(), """\
 <?xml version="1.0" encoding="utf-8"?>
@@ -159,7 +159,7 @@ param=yyy
 
     def test_can_pickle(self):
         node = n.Node('tag')
-        self.assertEqual(cPickle.loads(cPickle.dumps(node)), node)
+        self.assertEqual(pickle.loads(pickle.dumps(node)), node)
 
     def test_node_factory(self):
         class ValidNode(n.LiteralNode):
@@ -170,7 +170,7 @@ param=yyy
 ValidNode test implementation. Known validators:
     a: `float`
     b: `int`''')
-        xmlfile = cStringIO.StringIO("""\
+        xmlfile = io.StringIO(u"""\
 <root>
 <general>
 <a>1</a>
