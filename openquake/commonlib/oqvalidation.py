@@ -220,7 +220,7 @@ class OqParam(valid.ParamSet):
             exposure=self.inputs.get('exposure', 0))
         # NB: below we check that all the flags
         # are mutually exclusive
-        return sum(bool(v) for v in list(flags.values())) == 1 or self.inputs.get(
+        return sum(bool(v) for v in flags.values()) == 1 or self.inputs.get(
             'site_model')
 
     def is_valid_poes(self):

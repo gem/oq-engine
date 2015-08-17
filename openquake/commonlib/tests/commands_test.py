@@ -30,10 +30,8 @@ class Print(object):
 
     @classmethod
     def patch(cls):
-        if sys.version > '3':
-            return mock.patch('builtins.print', cls())
-        else:
-            return mock.patch('__builtin__.print', cls())
+        bprint = 'builtins.print' if sys.version > '3' else '__builtin__.print'
+        return mock.patch(bprint, cls())
 
 
 class InfoTestCase(unittest.TestCase):

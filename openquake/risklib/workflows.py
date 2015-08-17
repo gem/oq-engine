@@ -206,7 +206,7 @@ class Workflow(object):
                 self, assets_, hazards, epsilons_, tags, loss_type)
 
     def __repr__(self):
-        return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions.keys()))
+        return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
 
 
 @registry.add('classical_risk')

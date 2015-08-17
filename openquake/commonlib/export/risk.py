@@ -58,7 +58,7 @@ def get_assets(dstore):
     :param dstore: a datastore with a key `specific_assets`
     :returns: an ordered array of records (asset_ref, lon, lat)
     """
-    assets = sorted(sum(list(map(list, dstore['assets_by_site'])), []),
+    assets = sorted(sum(map(list, dstore['assets_by_site']), []),
                     key=operator.attrgetter('id'))
     asset_data = numpy.array(
         [(asset.id, asset.location[0], asset.location[1])
@@ -298,7 +298,7 @@ def export_damage(ekey, dstore):
         collapse_map = [dda for dda in dd_asset if dda.dmg_state == max_damage]
         f4 = export_dmg_xml(('collapse_map', 'xml'), oqparam.export_dir,
                             dmg_states, collapse_map, suffix)
-        fnames.extend(sum(list((f1 + f2 + f3 + f4).values()), []))
+        fnames.extend(sum((f1 + f2 + f3 + f4).values(), []))
     return sorted(fnames)
 
 

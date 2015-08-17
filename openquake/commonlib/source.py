@@ -426,7 +426,7 @@ class RlzsAssoc(collections.Mapping):
         return ad
 
     def __iter__(self):
-        return iter(self.rlzs_assoc.keys())
+        return iter(self.rlzs_assoc)
 
     def __getitem__(self, key):
         return self.rlzs_assoc[key]
@@ -500,7 +500,7 @@ class CompositionInfo(object):
         """
         Return the maximum number of samples of the source model
         """
-        return max(len(col_ids) for col_ids in list(self.col_ids_by_trt_id.values()))
+        return max(len(col_ids) for col_ids in self.col_ids_by_trt_id.values())
 
     def get_num_samples(self, trt_id):
         """

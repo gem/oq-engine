@@ -107,7 +107,7 @@ class Parser(object):
         Add an argument to the underlying parser and grow the list
         .all_arguments and the set .names
         """
-        argname = list(self.argdict.keys())[self._argno]
+        argname = list(self.argdict)[self._argno]
         if argname != name:
             raise NameError(
                 'Setting argument %s, but it should be %s' % (name, argname))

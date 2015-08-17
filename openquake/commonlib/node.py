@@ -235,7 +235,7 @@ def _displayattrs(attrib, expandattrs):
     if expandattrs:
         alist = ['%s=%r' % item for item in sorted(attrib.items())]
     else:
-        alist = list(attrib.keys())
+        alist = list(attrib)
     return '{%s}' % ', '.join(alist)
 
 

@@ -422,7 +422,7 @@ def export_gmf(ekey, dstore):
     fnames = []
     for rlz, gmf_by_idx in zip(
             rlzs_assoc.realizations, rlzs_assoc.combine_gmfs(gmfs)):
-        tags = all_tags[list(gmf_by_idx.keys())]
+        tags = all_tags[list(gmf_by_idx)]
         gmfs = list(gmf_by_idx.values())
         if not gmfs:
             continue

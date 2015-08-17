@@ -864,7 +864,7 @@ def get_sitecol_hcurves(oqparam):
         the site collection and the hazard curves, by reading
         a CSV file with format `IMT lon lat poe1 ... poeN`
     """
-    imts = list(oqparam.imtls.keys())
+    imts = list(oqparam.imtls)
     num_values = list(map(len, list(oqparam.imtls.values())))
     with open(oqparam.inputs['hazard_curves']) as csvfile:
         mesh, hcurves_by_imt = get_mesh_csvdata(
@@ -883,7 +883,7 @@ def get_gmfs(oqparam, sitecol):
         a composite array of shape (N, R) read from a CSV file with format
         `tag indices [gmv1 ... gmvN] * num_imts`
     """
-    imts = list(oqparam.imtls.keys())
+    imts = list(oqparam.imtls)
     imt_dt = numpy.dtype([(imt, float) for imt in imts])
     num_gmfs = oqparam.number_of_ground_motion_fields
     gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)

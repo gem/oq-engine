@@ -52,7 +52,7 @@ def build_asset_collection(assets_by_site, time_event=None):
             break
     else:  # no break
         raise ValueError('There are no assets!')
-    candidate_loss_types = list(first_asset.values.keys())
+    candidate_loss_types = list(first_asset.values)
     loss_types = []
     the_fatalities = 'fatalities_%s' % time_event
     for candidate in candidate_loss_types:
@@ -146,7 +146,8 @@ class RiskModel(collections.Mapping):
         """
         by_imt = operator.itemgetter(0)
         by_taxo = operator.itemgetter(1)
-        return list(groupby(self, by_imt, lambda group: list(map(by_taxo, group))).items())
+        dic = groupby(self, by_imt, lambda group: list(map(by_taxo, group)))
+        return list(dic.items())
 
     def __getitem__(self, imt_taxo):
         return self._workflows[imt_taxo]
