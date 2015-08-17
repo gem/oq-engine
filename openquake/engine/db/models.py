@@ -1866,7 +1866,7 @@ class LossFraction(djm.Model):
                 key=operator.attrgetter('loss'),
                 reverse=True))
 
-    def iteritems(self):
+    def items(self):
         """
         Yields tuples with two elements. The first one is a location
         (described by a lon/lat tuple), the second one is a dictionary
