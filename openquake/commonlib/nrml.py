@@ -78,7 +78,7 @@ from __future__ import print_function
 import sys
 import logging
 from openquake.baselib.general import CallableDict
-from openquake.baselib.python3compat import raise_
+from openquake.baselib.python3compat import unicode, raise_
 from openquake.commonlib import valid, writers
 from openquake.commonlib.node import node_to_xml, \
     Node, LiteralNode, node_from_elem, striptag, parse, iterparse
@@ -104,7 +104,7 @@ class NRMLFile(object):
         self._file = None
 
     def __enter__(self):
-        if isinstance(self._dest, (str, bytes)):
+        if isinstance(self._dest, (unicode, bytes)):
             self._file = open(self._dest, self._mode)
         else:
             # assume it is a file-like; don't change anything
