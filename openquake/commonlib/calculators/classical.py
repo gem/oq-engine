@@ -61,7 +61,7 @@ def classical(sources, sitecol, gsims_assoc, monitor):
         source_site_filter=source_site_distance_filter(max_dist),
         rupture_site_filter=rupture_site_distance_filter(max_dist),
         monitor=monitor)
-    dic = dict(calc_times=monitor.calc_times)
+    dic = dict(monitor=monitor)
     for gsim, curves in zip(gsims, curves_by_gsim):
         dic[trt_model_id, str(gsim)] = curves
     return dic
@@ -72,8 +72,8 @@ def agg_dicts(acc, val):
     Aggregate dictionaries of hazard curves by updating the accumulator
     """
     for key in val:
-        if key == 'calc_times':
-            acc[key].extend(val[key])
+        if key == 'monitor':
+            acc['calc_times'].extend(val[key].calc_times)
         else:  # aggregate curves
             acc[key] = agg_curves(acc[key], val[key])
     return acc
@@ -280,7 +280,7 @@ def agg_curves_by_trt_gsim(acc, curves_by_trt_gsim):
     """
     for k in curves_by_trt_gsim:
         if k == 'calc_times':
-            acc[k].extend(curves_by_trt_gsim[k])
+            acc['calc_times'].extend(curves_by_trt_gsim[k])
         else:
             acc[k][curves_by_trt_gsim.indices] = curves_by_trt_gsim[k]
     return acc
