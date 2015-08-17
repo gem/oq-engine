@@ -497,6 +497,10 @@ _pkgtest_innervm_run () {
     # run celeryd daemon
     ssh $lxc_ip "cd /usr/share/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
+    # FIXME
+    echo "Wait some seconds to allow celery come alive..."
+    sleep 30s
+
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run all of the hazard and risk demos
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
@@ -506,11 +510,16 @@ _pkgtest_innervm_run () {
             set -x
         fi
         cd /usr/share/doc/python-oq-risklib/examples/demos
+
+        ## comment this demo is you get a segmentation fault!        
+        echo \"Running ProbabilisticEventBased/job_risk.ini\"
+        oq-engine --run ProbabilisticEventBased/job_risk.ini
+
         for ini in \$(find . -name job.ini | sort); do
             echo \"Running \$ini\"
             for loop in \$(seq 1 $GEM_MAXLOOP); do
                 set +e
-                oq-engine --run-hazard  \$ini --exports xml -l info
+                oq-engine --run \$ini --exports xml
                 oq_ret=\$?
                 set -e
                 if [ \$oq_ret -eq 0 ]; then
@@ -529,7 +538,7 @@ _pkgtest_innervm_run () {
             if [ -f \$demo_dir/job_hazard.ini ]; then
             cd \$demo_dir
             echo \"Running \$demo_dir/job_hazard.ini\"
-            oq-engine --run-hazard job_hazard.ini -l info
+            oq-engine --run-hazard job_hazard.ini
             job_id=\$(oq-engine --list-hazard-calculations | tail -1 | awk '{print \$1}')
             echo \"Running \$demo_dir/job_risk.ini\"
             oq-engine --run-risk job_risk.ini --exports csv,xml --hazard-calculation-id \$job_id -l info
