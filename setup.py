@@ -74,5 +74,7 @@ setup(
             'oq-lite = openquake.commonlib.commands.__main__:oq_lite']},
     namespace_packages=['openquake'],
     include_package_data=True,
+    test_loader='openquake.baselib.runtests:TestLoader',
+    test_suite='openquake.risklib,openquake.commonlib',
     zip_safe=False,
 )

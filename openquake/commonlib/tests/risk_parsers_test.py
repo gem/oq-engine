@@ -16,7 +16,7 @@
 
 import os
 import unittest
-import StringIO
+import io
 
 from openquake.commonlib import risk_parsers as parsers
 from openquake.commonlib import InvalidFile
@@ -42,7 +42,7 @@ class ExposureModelParserTestCase(unittest.TestCase):
 """
 
         self.assertRaises(InvalidFile, parsers.ExposureModelParser,
-                          StringIO.StringIO(invalid_exposure))
+                          io.BytesIO(invalid_exposure))
 
     def test_parsing(self):
         exposure = """\
@@ -97,7 +97,7 @@ class ExposureModelParserTestCase(unittest.TestCase):
 </nrml>
 """
 
-        parser = parsers.ExposureModelParser(StringIO.StringIO(exposure))
+        parser = parsers.ExposureModelParser(io.BytesIO(exposure))
 
         for i, asset_data in enumerate(parser):
             self.assertEqual(

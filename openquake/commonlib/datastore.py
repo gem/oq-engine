@@ -19,7 +19,7 @@
 import os
 import re
 import shutil
-import cPickle
+from openquake.baselib.python3compat import pickle
 import collections
 
 import numpy
@@ -83,6 +83,8 @@ def get_calc_ids(datadir=DATADIR):
     """
     Extract the available calculation IDs from the datadir, in order.
     """
+    if not os.path.exists(datadir):
+        return []
     calc_ids = []
     for f in os.listdir(DATADIR):
         mo = re.match('calc_(\d+)', f)
@@ -91,7 +93,7 @@ def get_calc_ids(datadir=DATADIR):
     return sorted(calc_ids)
 
 
-def get_last_calc_id(datadir=DATADIR):
+def get_last_calc_id(datadir):
     """
     Extract the latest calculation ID from the given directory.
     If none is found, return 0.
@@ -276,13 +278,13 @@ class DataStore(collections.MutableMapping):
         except AttributeError:  # val is a group
             return val
         if not shape:
-            val = cPickle.loads(val.value)
+            val = pickle.loads(val.value)
         return val
 
     def __setitem__(self, key, value):
         if (not isinstance(value, numpy.ndarray) or
                 value.dtype is numpy.dtype(object)):
-            val = numpy.array(cPickle.dumps(value, cPickle.HIGHEST_PROTOCOL))
+            val = numpy.array(pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
         else:
             val = value
         if key in self.hdf5:

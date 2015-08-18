@@ -20,7 +20,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                             exports='csv', individual_curves='false',
                             concurrent_tasks=0)
         all_csv = []
-        for fnames in out.itervalues():
+        for fnames in out.values():
             for fname in fnames:
                 if fname.endswith('.csv') and is_ok(fname):
                     all_csv.append(fname)

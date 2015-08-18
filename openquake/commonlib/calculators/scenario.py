@@ -79,7 +79,8 @@ class ScenarioCalculator(base.HazardCalculator):
                 'All sites were filtered out! '
                 'maximum_distance=%s km' % self.oqparam.maximum_distance)
         self.tags = numpy.array(
-            sorted(['scenario-%010d' % i for i in xrange(n_gmfs)]))
+            sorted(['scenario-%010d' % i for i in range(n_gmfs)]),
+            (bytes, 100))
         self.computer = GmfComputer(
             rupture, self.sitecol, self.oqparam.imtls, self.gsims,
             trunc_level, correl_model)
@@ -95,9 +96,10 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         logging.info('Computing the GMFs')
         args = (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs'))
-        return parallel.apply_reduce(
+        gmf_by_tag = parallel.apply_reduce(
             self.core_func.__func__, args,
             concurrent_tasks=self.oqparam.concurrent_tasks)
+        return gmf_by_tag
 
     def post_execute(self, gmf_by_tag):
         """

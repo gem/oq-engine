@@ -1,3 +1,4 @@
+from __future__ import division
 # Copyright (c) 2015, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -16,16 +17,13 @@
 import math
 import copy
 import operator
-from itertools import izip
+
 
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import context, striptag
 from openquake.commonlib import valid
 from openquake.commonlib import parallel
-
-# this must stay here for the nrml_converters: don't remove it!
-from openquake.commonlib.obsolete import NrmlHazardlibConverter
 
 # the following is arbitrary, it is used to decide when to parallelize
 # the filtering (MS)
@@ -69,7 +67,7 @@ def area_to_point_sources(area_src, area_src_disc):
             bin_width=area_mfd.bin_width,
             occurrence_rates=new_occur_rates)
 
-    for i, (lon, lat) in enumerate(izip(mesh.lons, mesh.lats)):
+    for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
         pt = source.PointSource(
             # Generate a new ID and name
             source_id='%s-%s' % (area_src.source_id, i),
@@ -194,7 +192,7 @@ def split_coords_2d(seq):
             lons.append(valid.longitude(el))
         elif i % 2 == 1:
             lats.append(valid.latitude(el))
-    return zip(lons, lats)
+    return list(zip(lons, lats))
 
 
 def split_coords_3d(seq):
@@ -213,7 +211,7 @@ def split_coords_3d(seq):
             lats.append(valid.latitude(el))
         elif i % 3 == 2:
             depths.append(valid.depth(el))
-    return zip(lons, lats, depths)
+    return list(zip(lons, lats, depths))
 
 
 class RuptureConverter(object):
@@ -315,7 +313,7 @@ class RuptureConverter(object):
                 self.geo_lines(surface_node),
                 self.complex_fault_mesh_spacing)
         else:  # a collection of planar surfaces
-            planar_surfaces = map(self.geo_planar, surface_nodes)
+            planar_surfaces = list(map(self.geo_planar, surface_nodes))
             surface = geo.MultiSurface(planar_surfaces)
         return surface
 

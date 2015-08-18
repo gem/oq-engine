@@ -35,7 +35,7 @@ class SapTestCase(unittest.TestCase):
             ['1', '2', False, '3'], p.callfunc('1 -b=2 -d=3'.split()))
 
     def test_group(self):
-        p = sap.Parser(f, version=None)
+        p = sap.Parser(f)
         p.arg('a', 'first argument')
         p.opt('b', 'second argument')
         p.group('other arguments')
@@ -63,7 +63,7 @@ other arguments:
             p.flg('c', 'third argument')
 
     def test_no_help(self):
-        p = sap.Parser(f, help=None, version=None)
+        p = sap.Parser(f, help=None)
         p.arg('a', 'first argument')
         p.opt('b', 'second argument')
         self.assertEqual(p.help(), '''\
@@ -84,11 +84,10 @@ optional arguments:
         p = sap.Parser(lambda a_long_argument: None)
         p.opt('a_long_argument', 'a long argument')
         self.assertEqual(p.help(), '''\
-usage: nosetests [-h] [-v] [-a A_LONG_ARGUMENT]
+usage: nosetests [-h] [-a A_LONG_ARGUMENT]
 
 optional arguments:
   -h, --help            show this help message and exit
-  -v, --version         show program's version number and exit
   -a A_LONG_ARGUMENT, --a-long-argument A_LONG_ARGUMENT
                         a long argument
 ''')

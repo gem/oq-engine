@@ -69,7 +69,7 @@ def classify_gsim_lt(gsim_lt):
     """
     :returns: "trivial", "simple" or "complex"
     """
-    num_branches = gsim_lt.get_num_branches().values()
+    num_branches = list(gsim_lt.get_num_branches().values())
     num_gsims = '(%s)' % ','.join(map(str, num_branches))
     multi_gsim_trts = sum(1 for num_gsim in num_branches if num_gsim > 1)
     if multi_gsim_trts == 0:
@@ -146,4 +146,4 @@ def view_inputs(token, dstore):
     except KeyError:  # there is no 'source' in scenario calculations
         source_models = []
     return rst_table(
-        build_links(inputs.items() + source_models), header=['Name', 'File'])
+        build_links(list(inputs.items()) + source_models), header=['Name', 'File'])

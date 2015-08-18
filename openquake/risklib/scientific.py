@@ -32,6 +32,7 @@ from scipy import interpolate, stats
 
 from openquake.baselib.general import CallableDict
 from openquake.risklib import utils
+from openquake.baselib.python3compat import with_metaclass
 
 
 class Output(object):
@@ -56,7 +57,7 @@ class Output(object):
             self.__class__.__name__, self.loss_type, self.hid)
 
     def __str__(self):
-        items = '\n'.join('%s=%s' % item for item in vars(self).iteritems())
+        items = '\n'.join('%s=%s' % item for item in vars(self).items())
         return '<%s\n%s>' % (self.__class__.__name__, items)
 
 
@@ -129,7 +130,7 @@ class VulnerabilityFunction(object):
         else:
             self.covs = numpy.zeros(self.imls.shape)
 
-        for lr, cov in itertools.izip(self.mean_loss_ratios, self.covs):
+        for lr, cov in zip(self.mean_loss_ratios, self.covs):
             if lr == 0.0 and cov > 0.0:
                 msg = ("It is not valid to define a loss ratio = 0.0 with a "
                        "corresponding coeff. of variation > 0.0")
@@ -314,7 +315,7 @@ class VulnerabilityFunction(object):
 
         for row, loss_ratio in enumerate(loss_ratios):
             for col, (mean_loss_ratio, stddev) in enumerate(
-                    itertools.izip(self.mean_loss_ratios, self.stddevs)):
+                    zip(self.mean_loss_ratios, self.stddevs)):
                 lrem[row][col] = self.distribution.survival(
                     loss_ratio, mean_loss_ratio, stddev)
         return loss_ratios, lrem
@@ -332,9 +333,9 @@ class VulnerabilityFunction(object):
            VulnerabilityFunction`
         """
         return numpy.array(
-            [max(0, self.imls[0] - ((self.imls[1] - self.imls[0]) / 2))] +
+            [max(0, self.imls[0] - (self.imls[1] - self.imls[0]) / 2.)] +
             [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
-            [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
+            [self.imls[-1] + (self.imls[-1] - self.imls[-2]) / 2.])
 
     def __repr__(self):
         return '<VulnerabilityFunction(%s, %s)>' % (self.id, self.imt)
@@ -537,7 +538,7 @@ class FragilityFunctionList(list):
         vars(self).update(attrs)
 
     def __repr__(self):
-        kvs = ['%s=%s' % item for item in vars(self).iteritems()]
+        kvs = ['%s=%s' % item for item in vars(self).items()]
         return '<FragilityFunctionList %s>' % ', '.join(kvs)
 
 #
@@ -547,15 +548,13 @@ class FragilityFunctionList(list):
 DISTRIBUTIONS = CallableDict()
 
 
-class Distribution(object):
+class Distribution(with_metaclass(abc.ABCMeta)):
     """
     A Distribution class models continuous probability distribution of
     random variables used to sample losses of a set of assets. It is
     usually registered with a name (e.g. LN, BT, PM) by using
     :class:`openquake.baselib.general.CallableDict`
     """
-
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def sample(self, means, covs, stddevs, idxs):
@@ -737,7 +736,7 @@ class DiscreteDistribution(Distribution):
         ret = []
         for i in range(probs.shape[1]):
             pmf = stats.rv_discrete(name='pmf', values=(
-                range(len(loss_ratios)), probs[:, i]))
+                numpy.arange(len(loss_ratios)), probs[:, i]))
             ret.append(loss_ratios[pmf.rvs()])
         return ret
 
@@ -896,7 +895,7 @@ def classical_damage(
     poes_per_damage_state = []
     for ff in fragility_functions:
         frequency_of_exceedence_per_damage_state = numpy.dot(
-            annual_frequency_of_occurrence, map(ff, imls))
+            annual_frequency_of_occurrence, list(map(ff, imls)))
         poe_per_damage_state = 1. - numpy.exp(
             - frequency_of_exceedence_per_damage_state
             * risk_investigation_time)
@@ -1105,7 +1104,7 @@ def mean_curve(values, weights=None):
     Compute the mean by using numpy.average on the first axis.
     """
     if weights:
-        weights = map(float, weights)
+        weights = list(map(float, weights))
         assert abs(sum(weights) - 1.) < 1E-12, sum(weights) - 1.
     else:
         weights = [1. / len(values)] * len(values)
@@ -1302,8 +1301,8 @@ class StatsBuilder(object):
         """
         Normalize the loss curves by using the provided normalization function
         """
-        return map(self.normalize_curves,
-                   numpy.array(loss_curves).transpose(1, 0, 2, 3))
+        return list(map(self.normalize_curves,
+                   numpy.array(loss_curves).transpose(1, 0, 2, 3)))
 
     def build(self, all_outputs):
         """

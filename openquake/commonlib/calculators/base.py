@@ -31,6 +31,7 @@ from openquake.baselib.performance import DummyMonitor
 from openquake.commonlib import readinput, datastore, logictree, export, source
 from openquake.commonlib.parallel import apply_reduce
 from openquake.risklib import riskinput
+from openquake.baselib.python3compat import with_metaclass
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -43,10 +44,10 @@ calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
-rlz_dt = numpy.dtype([('uid', (str, 200)), ('weight', float)])
+rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('weight', float)])
 
 
-class BaseCalculator(object):
+class BaseCalculator(with_metaclass(abc.ABCMeta)):
     """
     Abstract base class for all calculators.
 
@@ -54,7 +55,6 @@ class BaseCalculator(object):
     :param monitor: monitor object
     :param calc_id: numeric calculation ID
     """
-    __metaclass__ = abc.ABCMeta
 
     oqparam = datastore.persistent_attribute('oqparam')
     sitemesh = datastore.persistent_attribute('sitemesh')
@@ -66,7 +66,7 @@ class BaseCalculator(object):
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('taxonomies')
     job_info = datastore.persistent_attribute('job_info')
-    source_info = datastore.persistent_attribute('source_info')
+    source_pre_info = datastore.persistent_attribute('source_pre_info')
     performance = datastore.persistent_attribute('performance')
     csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
@@ -143,7 +143,7 @@ class BaseCalculator(object):
         of output files.
         """
 
-    def export(self):
+    def export(self, exports=None):
         """
         Export all the outputs in the datastore in the given export formats.
 
@@ -151,7 +151,8 @@ class BaseCalculator(object):
         """
         exported = {}
         individual_curves = self.oqparam.individual_curves
-        for fmt in self.oqparam.exports:
+        fmts = exports.split(',') if exports else self.oqparam.exports
+        for fmt in fmts:
             if not fmt:
                 continue
             for key in self.datastore:
@@ -311,7 +312,7 @@ class HazardCalculator(BaseCalculator):
                 'sitemesh' not in self.datastore.parent):
             col = self.sitecol.complete
             mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
-            self.sitemesh = numpy.array(zip(col.lons, col.lats), mesh_dt)
+            self.sitemesh = numpy.array(list(zip(col.lons, col.lats)), mesh_dt)
 
     def read_sources(self):
         """
@@ -327,7 +328,7 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam, self.sitecol, self.SourceProcessor,
                     self.monitor)
                 # we could manage limits here
-                self.source_info = self.csm.source_info
+                self.source_pre_info = self.csm.source_info
                 self.job_info = readinput.get_job_info(
                     self.oqparam, self.csm, self.sitecol)
                 self.csm.count_ruptures()
@@ -339,6 +340,9 @@ class HazardCalculator(BaseCalculator):
                 logging.info(
                     'Expected output size=%s',
                     self.job_info['output_weight'])
+
+    def post_process(self):
+        """For compatibility with the engine"""
 
 
 class RiskCalculator(HazardCalculator):
@@ -390,7 +394,7 @@ class RiskCalculator(HazardCalculator):
 
                 # collect the hazards by key into hazards by imt
                 hdata = collections.defaultdict(lambda: [{} for _ in indices])
-                for key, hazards_by_imt in hazards_by_key.iteritems():
+                for key, hazards_by_imt in hazards_by_key.items():
                     for imt in imtls:
                         hazards_by_site = hazards_by_imt[imt]
                         for i, haz in enumerate(hazards_by_site[indices]):
@@ -472,7 +476,7 @@ def get_gmfs(calc):
     # build a matrix N x R for each GSIM realization
     gmfs = {(trt_id, gsim): numpy.zeros((N, R), imt_dt)
             for trt_id, gsim in calc.rlzs_assoc}
-    for rupid, rows in sorted(gmf_by_idx.iteritems()):
+    for rupid, rows in sorted(gmf_by_idx.items()):
         for sid, gmv in zip(haz_sitecol.indices, rows):
             if sid in risk_indices:
                 for trt_id, gsim in gmfs:

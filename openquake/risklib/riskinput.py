@@ -52,7 +52,7 @@ def build_asset_collection(assets_by_site, time_event=None):
             break
     else:  # no break
         raise ValueError('There are no assets!')
-    candidate_loss_types = first_asset.values.keys()
+    candidate_loss_types = list(first_asset.values)
     loss_types = []
     the_fatalities = 'fatalities_%s' % time_event
     for candidate in candidate_loss_types:
@@ -147,7 +147,8 @@ class RiskModel(collections.Mapping):
         """
         by_imt = operator.itemgetter(0)
         by_taxo = operator.itemgetter(1)
-        return groupby(self, by_imt, lambda group: map(by_taxo, group)).items()
+        dic = groupby(self, by_imt, lambda group: list(map(by_taxo, group)))
+        return list(dic.items())
 
     def __getitem__(self, imt_taxo):
         return self._workflows[imt_taxo]
@@ -185,14 +186,14 @@ class RiskModel(collections.Mapping):
         Yield :class:`RiskInputFromRuptures` instances.
         """
         imt_taxonomies = list(self.get_imt_taxonomies())
-        num_epsilons = len(eps_dict.itervalues().next())
+        num_epsilons = len(next(iter(eps_dict.values())))
         by_col = operator.attrgetter('col_id')
         rup_start = rup_stop = 0
         for ses_ruptures, indices in split_in_blocks_2(
                 all_ruptures, range(num_epsilons), hint or 1, key=by_col):
             rup_stop += len(ses_ruptures)
             gsims = gsims_by_col[ses_ruptures[0].col_id]
-            edic = {asset: eps[indices] for asset, eps in eps_dict.iteritems()}
+            edic = {asset: eps[indices] for asset, eps in eps_dict.items()}
             yield RiskInputFromRuptures(
                 imt_taxonomies, sitecol, ses_ruptures,
                 gsims, trunc_level, correl_model, edic,
@@ -308,7 +309,7 @@ def make_eps_dict(assets_by_site, num_samples, seed, correlation):
     eps_dict = {}  # asset_id -> epsilons
     all_assets = (a for assets in assets_by_site for a in assets)
     assets_by_taxo = groupby(all_assets, operator.attrgetter('taxonomy'))
-    for taxonomy, assets in assets_by_taxo.iteritems():
+    for taxonomy, assets in assets_by_taxo.items():
         shape = (len(assets), num_samples)
         logging.info('Building %s epsilons for taxonomy %s', shape, taxonomy)
         zeros = numpy.zeros(shape)
@@ -337,7 +338,7 @@ def expand(array, N):
         raise ValueError('Empty array')
     elif n >= N:
         return array
-    return numpy.array([array[i % n] for i in xrange(N)])
+    return numpy.array([array[i % n] for i in range(N)])
 
 
 class RiskInputFromRuptures(object):
@@ -405,7 +406,7 @@ class RiskInputFromRuptures(object):
         """
         assets, hazards, epsilons = [], [], []
         gmfs = self.compute_expand_gmfs()
-        gsims = map(str, self.gsims)
+        gsims = list(map(str, self.gsims))
         trt_id = rlzs_assoc.csm_info.get_trt_id(self.col_id)
         for assets_, hazard in zip(assets_by_site, gmfs.T):
             haz_by_imt_rlz = {imt: {} for imt in self.imts}

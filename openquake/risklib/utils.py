@@ -26,7 +26,7 @@ def pairwise(iterable):
     a, b = itertools.tee(iterable)
     # b ahead one step; if b is empty do not raise StopIteration
     next(b, None)
-    return itertools.izip(a, b)  # if a is empty will return an empty iter
+    return zip(a, b)  # if a is empty will return an empty iter
 
 
 class memoized(object):
@@ -54,15 +54,5 @@ class memoized(object):
         return functools.partial(self.__call__, obj)
 
 
-def _composed(f, g, *args, **kwargs):
-    return f(g(*args, **kwargs))
-
-
-def compose(*a):
-    try:
-        return functools.partial(_composed, a[0], compose(*a[1:]))
-    except IndexError:
-        return a[0]
-
-
-numpy_map = compose(numpy.array, map)
+def numpy_map(f, *args):
+    return numpy.array(list(map(f, *args)))

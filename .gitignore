@@ -8,5 +8,7 @@
 *_flymake.py
 TAGS
 build
+build-deb
+build-rpm
 dist
 *.swp

@@ -82,7 +82,7 @@ a4,3,0,50,500000,1000,3000
         dstore = get_datastore(rupcalc)
 
         # this is case with a single SES collection
-        ses_ruptures = dstore['sescollection'][0].values()
+        ses_ruptures = list(dstore['sescollection'][0].values())
 
         gsims_by_trt_id = rupcalc.rlzs_assoc.gsims_by_trt_id
 
@@ -96,7 +96,7 @@ a4,3,0,50,500000,1000,3000
 
         assets, hazards, epsilons = ri.get_all(rlzs_assoc, self.assets_by_site)
         self.assertEqual([a.id for a in assets],
-                         ['a0', 'a1', 'a2', 'a3', 'a4'])
+                         [b'a0', b'a1', b'a2', b'a3', b'a4'])
         self.assertEqual(set(a.taxonomy for a in assets),
                          set(['RM', 'RC', 'W']))
-        self.assertEqual(map(len, epsilons), [20] * 5)
+        self.assertEqual(list(map(len, epsilons)), [20] * 5)

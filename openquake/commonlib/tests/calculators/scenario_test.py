@@ -1,3 +1,4 @@
+from __future__ import division
 import numpy
 import unittest
 from numpy.testing import assert_almost_equal as aae
@@ -29,7 +30,7 @@ class ScenarioHazardTestCase(CalculatorTestCase):
     def frequencies(self, case, fst_value, snd_value):
         result = self.execute(case.__file__, 'job.ini')
         [imt] = self.calc.oqparam.imtls
-        [gsim] = map(str, self.calc.gsims)
+        [gsim] = list(map(str, self.calc.gsims))
         gmf = numpy.array([result[tag][gsim][imt] for tag in sorted(result)]).T
         realizations = float(self.calc.oqparam.number_of_ground_motion_fields)
         gmvs_within_range_fst = count_close(fst_value, gmf[0], gmf[1])
@@ -39,12 +40,12 @@ class ScenarioHazardTestCase(CalculatorTestCase):
 
     def medians(self, case):
         result = self.execute(case.__file__, 'job.ini')
-        [gsim] = map(str, self.calc.gsims)
+        [gsim] = list(map(str, self.calc.gsims))
         median = self.calc.oqparam.imtls.copy()
         for imt in median:
             gmfs = numpy.array([result[tag][gsim][imt]  # shape (N, R)
                                 for tag in sorted(result)]).T
-            median[imt] = map(numpy.median, gmfs)  # shape N
+            median[imt] = list(map(numpy.median, gmfs))  # shape N
         return median
 
     @attr('qa', 'hazard', 'scenario')

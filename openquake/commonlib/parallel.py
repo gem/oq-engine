@@ -22,7 +22,6 @@ TODO: write documentation.
 
 import os
 import sys
-import cPickle
 import logging
 import operator
 import functools
@@ -30,6 +29,7 @@ import traceback
 import time
 from datetime import datetime
 from concurrent.futures import as_completed, ProcessPoolExecutor
+from openquake.baselib.python3compat import pickle
 
 import psutil
 
@@ -155,7 +155,7 @@ class Pickled(object):
     """
     def __init__(self, obj):
         self.clsname = obj.__class__.__name__
-        self.pik = cPickle.dumps(obj, cPickle.HIGHEST_PROTOCOL)
+        self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
 
     def __repr__(self):
         """String representation of the pickled object"""
@@ -167,7 +167,7 @@ class Pickled(object):
 
     def unpickle(self):
         """Unpickle the underlying object"""
-        return cPickle.loads(self.pik)
+        return pickle.loads(self.pik)
 
 
 def get_pickled_sizes(obj):
@@ -186,7 +186,7 @@ def get_pickled_sizes(obj):
     """
     sizes = []
     attrs = getattr(obj, '__dict__',  {})
-    for name, value in attrs.iteritems():
+    for name, value in attrs.items():
         sizes.append((name, len(Pickled(value))))
     return len(Pickled(obj)), sorted(
         sizes, key=lambda pair: pair[1], reverse=True)
@@ -357,13 +357,14 @@ class TaskManager(object):
             acc = AccumDict()
         log_percent = log_percent_gen(
             self.name, len(self.results), self.progress)
-        log_percent.next()
+        next(log_percent)
 
-        def agg_and_percent(acc, (val, exc)):
+        def agg_and_percent(acc, val_exc):
+            (val, exc) = val_exc
             if exc:
                 raise RuntimeError(val)
             res = agg(acc, val)
-            log_percent.next()
+            next(log_percent)
             return res
 
         if self.no_distribute:

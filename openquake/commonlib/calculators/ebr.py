@@ -69,7 +69,7 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
     C = monitor.oqparam.loss_curve_resolution
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         rup_slice = out_by_rlz.rup_slice
-        rup_ids = range(rup_slice.start, rup_slice.stop)
+        rup_ids = list(range(rup_slice.start, rup_slice.stop))
         for out in out_by_rlz:
             lti = lt_idx[out.loss_type]
             asset_ids = [a.idx for a in out.assets]
@@ -150,7 +150,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.datastore.hdf5.create_group(out)
             for l, loss_type in enumerate(loss_types):
                 for r, rlz in enumerate(self.rlzs_assoc.realizations):
-                    key = '/%s/%s' % (loss_type, rlz.uid)
+                    key = '/%s/rlz-%03d' % (loss_type, rlz.ordinal)
                     if o in (0, 1):
                         dset = self.datastore.create_dset(out + key, elt_dt)
                     else:

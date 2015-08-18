@@ -70,7 +70,7 @@ def read_composite_array(fname, sep=','):
             dt = dtype.fields[name][0]
             ts_pairs.append((dt.subdtype[0].type if dt.subdtype else dt.type,
                              dt.shape))
-        col_ids = range(1, len(ts_pairs) + 1)
+        col_ids = list(range(1, len(ts_pairs) + 1))
         num_columns = len(col_ids)
         records = []
         col, col_id = '', 0
@@ -108,6 +108,6 @@ def read_array(fname, sep=','):
         records = []
         for line in f:
             row = line.split(sep)
-            record = [map(float, col.split()) for col in row]
+            record = [list(map(float, col.split())) for col in row]
             records.append(record)
         return numpy.array(records)
