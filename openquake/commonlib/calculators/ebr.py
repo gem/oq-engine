@@ -155,6 +155,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.poes_dt = numpy.dtype((float, oq.loss_curve_resolution))
         self.outs = OUTPUTS
         self.datasets = {}
+        self.monitor.oqparam = self.oqparam
+        # ugly: attaching an attribute needed in the task function
+        self.monitor.num_outputs = len(self.outs)
+        # attaching two other attributes used in riskinput.gen_outputs
+        self.monitor.assets_by_site = self.assets_by_site
+        self.monitor.num_assets = N = self.count_assets()
         for o, out in enumerate(self.outs):
             self.datastore.hdf5.create_group(out)
             for l, loss_type in enumerate(loss_types):
@@ -164,23 +170,17 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         dset = self.datastore.create_dset(out + key, elt_dt)
                     else:  # risk curves
                         dset = self.datastore.create_dset(
-                            out + key, self.poes_dt)
+                            out + key, self.poes_dt, N)
                     self.datasets[o, l, r] = dset
 
     def execute(self):
         """
         Run the ebr calculator in parallel and aggregate the results
         """
-        self.monitor.oqparam = oq = self.oqparam
-        # ugly: attaching an attribute needed in the task function
-        self.monitor.num_outputs = len(self.outs)
-        # attaching two other attributes used in riskinput.gen_outputs
-        self.monitor.assets_by_site = self.assets_by_site
-        self.monitor.num_assets = self.count_assets()
         return apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
-            concurrent_tasks=oq.concurrent_tasks,
+            concurrent_tasks=self.oqparam.concurrent_tasks,
             agg=self.agg,
             acc=cube(self.monitor.num_outputs, self.L, self.R, list),
             weight=operator.attrgetter('weight'),
@@ -211,13 +211,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for (o, l, r), arrays in numpy.ndenumerate(result):
                 if not arrays:  # empty list
                     continue
-                if o in (ELT, ILT):
+                if o in (ELT, ILT):  # loss tables
                     losses = numpy.concatenate(arrays)
                     self.datasets[o, l, r].extend(losses)
                     saved[self.outs[o]] += losses.nbytes
                 else:  # risk curves
                     poes = scientific.build_poes(sum(arrays), nses)
-                    self.datasets[o, l, r].dset[:] = poes  # matrix N x R
+                    self.datasets[o, l, r].dset[:] = poes  # matrix N x C
                     saved[self.outs[o]] += poes.nbytes
                 self.datastore.hdf5.flush()
 
