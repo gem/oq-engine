@@ -764,11 +764,13 @@ class CurveBuilder(object):
       poes = build_poes(counts, tses, time_span)
       loss_ratio_curve = (builder.ratios, poes)
     """
-    def __init__(self, loss_ratios):
+    def __init__(self, loss_type, loss_ratios):
+        self.loss_type = loss_type
         self.ratios = loss_ratios
         self.curve_resolution = R = len(loss_ratios)
         self.loss_curve_dt = numpy.dtype([
             ('losses', (float, R)), ('poes', (float, R)), ('avg', float)])
+        self.poes_dt = numpy.dtype([('poes', (float, R)), ('avg', float)])
 
     def build_counts(self, loss_matrix):
         """
@@ -782,6 +784,23 @@ class CurveBuilder(object):
             counts[i, :] = numpy.array([(loss_ratios > ratio).sum()
                                         for ratio in self.ratios])
         return counts
+
+    def build_flr_curves(self, counts_matrix, nses, assetcol):
+        """
+        :param counts_matrix: a matrix N x C
+        :param nses: the number of effective SES
+        :param assetcol: asset collection array with N elements
+        """
+        n = len(assetcol)
+        assert len(counts_matrix) == n, (len(counts_matrix), n)
+        avalues = assetcol[self.loss_type]
+        poe_matrix = build_poes(counts_matrix, nses)
+        ls = []
+        for i, poes, avalue in zip(range(n), poe_matrix, avalues):
+            losses = self.ratios * avalue
+            avg = average_loss((losses, poes))
+            ls.append((poes, avg))
+        return numpy.array(ls, self.poes_dt)
 
     def build_loss_curves(self, poe_matrix, asset_values, indices, N):
         """
@@ -799,6 +818,10 @@ class CurveBuilder(object):
             avg = average_loss((losses, poes))
             lcs[i] = (losses, poes, avg)
         return lcs
+
+    def __repr__(self):
+        return '<%s %s=%s>' % (self.__class__.__name__, self.loss_type,
+                               self.loss_ratios)
 
 
 def build_poes(counts, nses):
@@ -1299,7 +1322,7 @@ class StatsBuilder(object):
         Normalize the loss curves by using the provided normalization function
         """
         return list(map(self.normalize_curves,
-                   numpy.array(loss_curves).transpose(1, 0, 2, 3)))
+                        numpy.array(loss_curves).transpose(1, 0, 2, 3)))
 
     def build(self, all_outputs):
         """

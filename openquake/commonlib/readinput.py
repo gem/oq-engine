@@ -604,6 +604,10 @@ def get_risk_model(oqparam):
                 imt_taxo[0], imt_taxo[1], oqparam,
                 vulnerability_functions=vfs)
 
+    riskmodel.make_curve_builders(oqparam)
+    for workflow in risk_models.values():
+        workflow.riskmodel = riskmodel
+
     return riskmodel
 
 # ########################### exposure ############################ #

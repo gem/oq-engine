@@ -152,7 +152,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         loss_types = self.riskmodel.get_loss_types()
         self.L = len(loss_types)
         self.R = len(self.rlzs_assoc.realizations)
-        self.poes_dt = numpy.dtype((float, oq.loss_curve_resolution))
         self.outs = OUTPUTS
         self.datasets = {}
         self.monitor.oqparam = self.oqparam
@@ -164,13 +163,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         for o, out in enumerate(self.outs):
             self.datastore.hdf5.create_group(out)
             for l, loss_type in enumerate(loss_types):
+                rc_dt = self.riskmodel.curve_builders[loss_type].poes_dt
                 for r, rlz in enumerate(self.rlzs_assoc.realizations):
                     key = '/%s/rlz-%03d' % (loss_type, rlz.ordinal)
-                    if o in (ELT, ILT):
+                    if o in (ELT, ILT):  # loss tables
                         dset = self.datastore.create_dset(out + key, elt_dt)
                     else:  # risk curves
-                        dset = self.datastore.create_dset(
-                            out + key, self.poes_dt, N)
+                        dset = self.datastore.create_dset(out + key, rc_dt, N)
                     self.datasets[o, l, r] = dset
 
     def execute(self):
@@ -206,6 +205,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         nses = self.oqparam.ses_per_logic_tree_path
         saved = {out: 0 for out in self.outs}
+        loss_types = self.riskmodel.get_loss_types()
         with self.monitor('saving loss table',
                           autoflush=True, measuremem=True):
             for (o, l, r), arrays in numpy.ndenumerate(result):
@@ -216,9 +216,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     self.datasets[o, l, r].extend(losses)
                     saved[self.outs[o]] += losses.nbytes
                 else:  # risk curves
-                    poes = scientific.build_poes(sum(arrays), nses)
-                    self.datasets[o, l, r].dset[:] = poes  # matrix N x C
-                    saved[self.outs[o]] += poes.nbytes
+                    lt = loss_types[l]
+                    cb = self.riskmodel.curve_builders[lt]
+                    curves = cb.build_flr_curves(
+                        sum(arrays), nses, self.assetcol)
+                    self.datasets[o, l, r].dset[:] = curves
+                    saved[self.outs[o]] += curves.nbytes
                 self.datastore.hdf5.flush()
 
         for out in self.outs:

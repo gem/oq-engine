@@ -117,6 +117,21 @@ class RiskModel(collections.Mapping):
         self.damage_states = damage_states  # not None for damage calculations
         self._workflows = workflows
 
+    def make_curve_builders(self, oqparam):
+        """
+        Populate the inner dictionary .curve_builders, with is a map
+        loss_type -> CurveBuilder instance.
+        """
+        self.curve_builders = collections.OrderedDict()
+        for loss_type in self.get_loss_types():
+            if not oqparam.loss_ratios:
+                loss_ratios = numpy.logspace(
+                    -10, 0, oqparam.loss_curve_resolution)
+            else:
+                loss_ratios = oqparam.loss_ratios[loss_type]
+            self.curve_builders[loss_type] = scientific.CurveBuilder(
+                loss_type, loss_ratios)
+
     def get_loss_types(self):
         """
         :returns: a sorted list with all the loss_types contained in the model

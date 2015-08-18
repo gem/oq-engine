@@ -169,6 +169,7 @@ class Workflow(object):
     Base class. Can be used in the tests as a mock.
     """
     time_event = None  # used in scenario_risk
+    riskmodel = None  # set by get_risk_model
 
     def __init__(self, imt, taxonomy, risk_functions):
         self.imt = imt
@@ -431,7 +432,8 @@ class ProbabilisticEventBased(Workflow):
             ses_per_logic_tree_path,
             loss_curve_resolution,
             conditional_loss_poes,
-            insured_losses=False):
+            insured_losses=False,
+            loss_ratios=()):
         """
         See :func:`openquake.risklib.scientific.event_based` for a description
         of the input parameters.
@@ -449,6 +451,7 @@ class ProbabilisticEventBased(Workflow):
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
         self.return_loss_matrix = True
+        self.loss_ratios = loss_ratios
 
     def event_loss(self, loss_matrix, event_ids):
         """
@@ -502,8 +505,7 @@ class ProbabilisticEventBased(Workflow):
             ila = numpy.zeros((len(ground_motion_values[0]), len(assets)))
         if isinstance(assets[0].id, str):
             # in oq-lite return early, with just the losses per asset
-            fixed_ratios = numpy.logspace(-10, 0, self.loss_curve_resolution)
-            cb = scientific.CurveBuilder(fixed_ratios)
+            cb = self.riskmodel.curve_builders[loss_type]
             return scientific.Output(
                 assets, loss_type,
                 event_loss_per_asset=ela,
