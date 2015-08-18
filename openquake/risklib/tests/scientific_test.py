@@ -273,7 +273,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         # this is a test with curve_resolution=5, i.e. with ratios
         # [0., 0.25, 0.5, 0.75, 1.]; for each row in the lrem we
         # count how many ratios are larger that each ratio
-        b = scientific.CurveBuilder(curve_resolution=5)
+        b = scientific.CurveBuilder(numpy.linspace(0, 1, 5))
         aaae(b.build_counts(expected_lrem), expected_counts)
 
 

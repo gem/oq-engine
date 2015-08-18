@@ -23,7 +23,6 @@ This module includes the scientific API of the oq-risklib
 from __future__ import division
 import abc
 import copy
-import itertools
 import bisect
 
 import numpy
@@ -760,14 +759,14 @@ class CurveBuilder(object):
     """
     Build loss ratio curves. The usage is something like this:
 
-      builder = CurveBuilder(curve_resolution)
+      builder = CurveBuilder(loss_ratios)
       counts = builder.build_counts(loss_matrix)
       poes = builder.build_poes(counts, tses, time_span)
       loss_ratio_curve = (builder.ratios, poes)
     """
-    def __init__(self, curve_resolution):
-        self.curve_resolution = R = curve_resolution
-        self.ratios = numpy.logspace(-10, 0, curve_resolution)
+    def __init__(self, loss_ratios):
+        self.ratios = loss_ratios
+        self.curve_resolution = R = len(loss_ratios)
         self.loss_curve_dt = numpy.dtype([
             ('losses', (float, R)), ('poes', (float, R)), ('avg', float)])
 

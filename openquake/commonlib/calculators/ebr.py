@@ -194,7 +194,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param result:
             a numpy array of shape (O, L, R) containing lists of arrays
         """
-        cb = scientific.CurveBuilder(self.oqparam.loss_curve_resolution)
         nses = self.oqparam.ses_per_logic_tree_path
         saved = {out: 0 for out in self.outs}
         with self.monitor('saving loss table',
@@ -205,7 +204,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 if o in (0, 1):
                     losses = numpy.concatenate(arrays)
                 else:
-                    losses = cb.build_poes(sum(arrays), nses)
+                    losses = scientific.build_poes(sum(arrays), nses)
                 self.datasets[o, l, r].extend(losses)
                 self.datastore.hdf5.flush()
                 saved[self.outs[o]] += losses.nbytes

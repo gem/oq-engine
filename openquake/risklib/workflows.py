@@ -509,7 +509,8 @@ class ProbabilisticEventBased(Workflow):
             ila = numpy.zeros((len(ground_motion_values[0]), len(assets)))
         if isinstance(assets[0].id, str):
             # in oq-lite return early, with just the losses per asset
-            cb = scientific.CurveBuilder(self.loss_curve_resolution)
+            fixed_ratios = numpy.logspace(-10, 0, self.loss_curve_resolution)
+            cb = scientific.CurveBuilder(fixed_ratios)
             return scientific.Output(
                 assets, loss_type,
                 event_loss_per_asset=ela,

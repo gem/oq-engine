@@ -211,7 +211,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             loss_maps = self.zeros(N, self.loss_map_dt)
         agg_loss_curve = self.zeros(1, self.loss_curve_dt)
 
-        cb = scientific.CurveBuilder(C)
+        cb = scientific.CurveBuilder(numpy.linspace(0, 1, C))
         for i in sorted(result):
             rlz = rlzs[i]
 
