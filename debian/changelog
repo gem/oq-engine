@@ -10,7 +10,7 @@
   * Initial support for Django 1.7
 
   [Daniele Viganò]
-  * Remove the bin/openquake wrapper: now only bin/oq-engine is
+  * Removed the bin/openquake wrapper: now only bin/oq-engine is
     available
 
   [Michele Simionato]
