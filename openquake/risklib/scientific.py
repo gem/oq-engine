@@ -772,13 +772,31 @@ class CurveBuilder(object):
             ('losses', (f32, R)), ('poes', (f32, R)), ('avg', f32)])
         self.poes_dt = numpy.dtype([('poes', (f32, R)), ('avg', f32)])
 
+    def get_counts(self, N, counts_by_idx):
+        """
+        Return a matrix of shape (N, C), with nonzero entries at
+        the indices given by the counts_by_idx dictionary.
+
+        :param N: the number of assets
+        :param counts_by_idx: a map asset_idx -> [C indices]
+
+        >>> cb = CurveBuilder('structural', [0.1, 0.2, 0.3, 0.9])
+        >>> cb.get_counts(3, {1: [4, 3, 2, 1], 2: [4, 0, 0, 0]})
+        array([[0, 0, 0, 0],
+               [4, 3, 2, 1],
+               [4, 0, 0, 0]], dtype=uint32)
+        """
+        counts = numpy.zeros((N, self.curve_resolution), numpy.uint32)
+        if counts_by_idx:
+            counts[list(counts_by_idx)] = counts_by_idx.values()
+        return counts
+
     def build_counts(self, loss_matrix):
         """
         :param loss_matrix:
             a matrix of loss ratios of size N x R, N = #assets, R = #ruptures
         """
-        N = len(loss_matrix)
-        counts = numpy.zeros((N, self.curve_resolution), numpy.uint32)
+        counts = self.get_counts(len(loss_matrix), {})
         for i, loss_ratios in enumerate(loss_matrix):
             # build the counts for each asset
             counts[i, :] = numpy.array([(loss_ratios > ratio).sum()

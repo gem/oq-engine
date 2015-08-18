@@ -505,7 +505,7 @@ class ProbabilisticEventBased(Workflow):
             ila = numpy.zeros((len(ground_motion_values[0]), len(assets)))
         if isinstance(assets[0].id, str):
             # in oq-lite return early, with just the losses per asset
-            cb = self.riskmodel.curve_builders[loss_type]
+            cb = self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
             return scientific.Output(
                 assets, loss_type,
                 event_loss_per_asset=ela,

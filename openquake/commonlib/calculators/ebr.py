@@ -66,12 +66,10 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
         a numpy array of shape (O, L, R); each element is a list containing
         a single array of dtype elt_dt, or an empty list
     """
-    lt_idx = {lt: lti for lti, lt in enumerate(riskmodel.get_loss_types())}
+    lt_idx = {lt: lti for lti, lt in enumerate(riskmodel.loss_types)}
     losses = cube(
         monitor.num_outputs, len(lt_idx), len(rlzs_assoc.realizations),
         AccumDict)
-    N = monitor.num_assets
-    C = monitor.oqparam.loss_curve_resolution
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         rup_slice = out_by_rlz.rup_slice
         rup_ids = list(range(rup_slice.start, rup_slice.stop))
@@ -86,6 +84,7 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
                     losses[ELT, lti, out.hid] += {rup_id: loss}
                 if ins_loss > 0:
                     losses[ILT, lti, out.hid] += {rup_id: ins_loss}
+            # dictionaries asset_idx -> array of C counts
             losses[FRC, lti, out.hid] += dict(
                 zip(asset_ids, out.counts_matrix))
             if out.insured_counts_matrix.sum():
@@ -93,13 +92,12 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
                     zip(asset_ids, out.insured_counts_matrix))
 
     for idx, dic in numpy.ndenumerate(losses):
+        o, l, r = idx
         if dic:
-            if idx[0] in (ELT, ILT):
+            if o in (ELT, ILT):
                 losses[idx] = [numpy.array(dic.items(), elt_dt)]
             else:  # risk curves
-                counts_matrix = numpy.zeros((N, C), numpy.uint32)
-                counts_matrix[dic.keys()] = dic.values()
-                losses[idx] = [counts_matrix] if counts_matrix.sum() else []
+                losses[idx] = [dic]
         else:
             losses[idx] = []
     return losses
@@ -152,7 +150,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
         # preparing empty datasets
-        loss_types = self.riskmodel.get_loss_types()
+        loss_types = self.riskmodel.loss_types
         self.L = len(loss_types)
         self.R = len(self.rlzs_assoc.realizations)
         self.outs = OUTPUTS
@@ -166,7 +164,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         for o, out in enumerate(self.outs):
             self.datastore.hdf5.create_group(out)
             for l, loss_type in enumerate(loss_types):
-                rc_dt = self.riskmodel.curve_builders[loss_type].poes_dt
+                rc_dt = self.riskmodel.curve_builders[l].poes_dt
                 for r, rlz in enumerate(self.rlzs_assoc.realizations):
                     key = '/%s/rlz-%03d' % (loss_type, rlz.ordinal)
                     if o in (ELT, ILT):  # loss tables
@@ -208,7 +206,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         nses = self.oqparam.ses_per_logic_tree_path
         saved = {out: 0 for out in self.outs}
-        loss_types = self.riskmodel.get_loss_types()
+        N = len(self.assetcol)
         with self.monitor('saving loss table',
                           autoflush=True, measuremem=True):
             for (o, l, r), arrays in numpy.ndenumerate(result):
@@ -219,10 +217,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     self.datasets[o, l, r].extend(losses)
                     saved[self.outs[o]] += losses.nbytes
                 else:  # risk curves
-                    lt = loss_types[l]
-                    cb = self.riskmodel.curve_builders[lt]
+                    dic = sum(arrays, AccumDict())
+                    cb = self.riskmodel.curve_builders[l]
+                    counts_matrix = cb.get_counts(N, dic)
                     curves = cb.build_flr_curves(
-                        sum(arrays), nses, self.assetcol)
+                        counts_matrix, nses, self.assetcol)
                     self.datasets[o, l, r].dset[:] = curves
                     saved[self.outs[o]] += curves.nbytes
                 self.datastore.hdf5.flush()
