@@ -377,12 +377,6 @@ class Classical(Workflow):
         return all_outputs
 
 
-def debug(assets, loss_matrix):
-    for a, row in zip(assets, loss_matrix):
-        debug.acc[a.asset_ref].extend(row)
-debug.acc = collections.defaultdict(list)
-
-
 @registry.add('event_based_risk', 'ebr')
 class ProbabilisticEventBased(Workflow):
     """
@@ -498,7 +492,6 @@ class ProbabilisticEventBased(Workflow):
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
         values = get_values(loss_type, assets)
-        # debug(assets, loss_matrix)
         ela = loss_matrix.T * values  # matrix with T x N elements
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = [a.deductible(loss_type) for a in assets]
@@ -516,6 +509,7 @@ class ProbabilisticEventBased(Workflow):
                 event_loss_per_asset=ela,
                 insured_loss_per_asset=ila,
                 counts_matrix=cb.build_counts(loss_matrix),
+                insured_counts_matrix=cb.build_counts(ila),
                 tags=event_ids)
 
         # in the engine, compute more stuff on the workers

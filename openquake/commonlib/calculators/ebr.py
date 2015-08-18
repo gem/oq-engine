@@ -29,6 +29,11 @@ from openquake.commonlib.parallel import apply_reduce
 
 elt_dt = numpy.dtype([('rup_id', numpy.uint32), ('loss', numpy.float32)])
 
+OUTPUTS = ['event_loss_table-rlzs', 'insured_loss_table-rlzs',
+           'rcurves-rlzs', 'insured_rcurves-rlzs']
+
+ELT, ILT, FRC, IRC = 0, 1, 2, 3
+
 
 def cube(O, L, R, factory):
     """
@@ -78,19 +83,23 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
             for rup_id, loss, ins_loss in zip(
                     rup_ids, agg_losses, agg_ins_losses):
                 if loss > 0:
-                    losses[0, lti, out.hid] += {rup_id: loss}
+                    losses[ELT, lti, out.hid] += {rup_id: loss}
                 if ins_loss > 0:
-                    losses[1, lti, out.hid] += {rup_id: ins_loss}
-            losses[2, lti, out.hid] += dict(zip(asset_ids, out.counts_matrix))
+                    losses[ILT, lti, out.hid] += {rup_id: ins_loss}
+            losses[FRC, lti, out.hid] += dict(
+                zip(asset_ids, out.counts_matrix))
+            if out.insured_counts_matrix.sum():
+                losses[IRC, lti, out.hid] += dict(
+                    zip(asset_ids, out.insured_counts_matrix))
 
     for idx, dic in numpy.ndenumerate(losses):
         if dic:
-            if idx[0] in (0, 1):
+            if idx[0] in (ELT, ILT):
                 losses[idx] = [numpy.array(dic.items(), elt_dt)]
-            else:
+            else:  # risk curves
                 counts_matrix = numpy.zeros((N, C), numpy.uint32)
                 counts_matrix[dic.keys()] = dic.values()
-                losses[idx] = [counts_matrix]
+                losses[idx] = [counts_matrix] if counts_matrix.sum() else []
         else:
             losses[idx] = []
     return losses
@@ -99,7 +108,8 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
 @base.calculators.add('ebr')
 class EventBasedRiskCalculator(base.RiskCalculator):
     """
-    Event based PSHA calculator generating the event loss table only.
+    Event based PSHA calculator generating the event loss table and
+    fixed ratios loss curves.
     """
     pre_calculator = 'event_based_rupture'
     core_func = ebr
@@ -143,17 +153,16 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.L = len(loss_types)
         self.R = len(self.rlzs_assoc.realizations)
         poes_dt = numpy.dtype((float, oq.loss_curve_resolution))
-        self.outs = ['event_loss_table-rlzs', 'insured_loss_table-rlzs',
-                     'rcurves-rlzs']
+        self.outs = OUTPUTS
         self.datasets = {}
         for o, out in enumerate(self.outs):
             self.datastore.hdf5.create_group(out)
             for l, loss_type in enumerate(loss_types):
                 for r, rlz in enumerate(self.rlzs_assoc.realizations):
                     key = '/%s/rlz-%03d' % (loss_type, rlz.ordinal)
-                    if o in (0, 1):
+                    if o in (ELT, ILT):
                         dset = self.datastore.create_dset(out + key, elt_dt)
-                    else:
+                    else:  # risk curves
                         dset = self.datastore.create_dset(out + key, poes_dt)
                     self.datasets[o, l, r] = dset
 
@@ -163,7 +172,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         self.monitor.oqparam = oq = self.oqparam
         # ugly: attaching an attribute needed in the task function
-        self.monitor.num_outputs = 3
+        self.monitor.num_outputs = len(self.outs)
         # attaching two other attributes used in riskinput.gen_outputs
         self.monitor.assets_by_site = self.assets_by_site
         self.monitor.num_assets = self.count_assets()
@@ -201,13 +210,17 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for (o, l, r), arrays in numpy.ndenumerate(result):
                 if not arrays:  # empty list
                     continue
-                if o in (0, 1):
+                if o in (ELT, ILT):
                     losses = numpy.concatenate(arrays)
-                else:
+                else:  # risk curves
                     losses = scientific.build_poes(sum(arrays), nses)
                 self.datasets[o, l, r].extend(losses)
                 self.datastore.hdf5.flush()
                 saved[self.outs[o]] += losses.nbytes
         for out in self.outs:
-            self.datastore[out].attrs['nbytes'] = saved[out]
-            logging.info('Saved %s in %s', humansize(saved[out]), out)
+            nbytes = saved[out]
+            if nbytes:
+                self.datastore[out].attrs['nbytes'] = nbytes
+                logging.info('Saved %s in %s', humansize(nbytes), out)
+            else:  # remove empty outputs
+                del self.datastore[out]

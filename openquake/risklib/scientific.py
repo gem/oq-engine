@@ -761,7 +761,7 @@ class CurveBuilder(object):
 
       builder = CurveBuilder(loss_ratios)
       counts = builder.build_counts(loss_matrix)
-      poes = builder.build_poes(counts, tses, time_span)
+      poes = build_poes(counts, tses, time_span)
       loss_ratio_curve = (builder.ratios, poes)
     """
     def __init__(self, loss_ratios):
@@ -783,15 +783,6 @@ class CurveBuilder(object):
                                         for ratio in self.ratios])
         return counts
 
-    def build_poes(self, counts, nses):
-        """
-        :param counts: an array of counts of exceedence for the bins
-        :param nses: number of effective stochastic event sets
-        :returns: an array of PoEs
-        """
-        rates_of_exceedance = numpy.array(counts, float) / nses
-        return 1. - numpy.exp(-rates_of_exceedance)
-
     def build_loss_curves(self, poe_matrix, asset_values, indices, N):
         """
         :param poe_matrix: a matrix n x C, with n <= N
@@ -808,6 +799,16 @@ class CurveBuilder(object):
             avg = average_loss((losses, poes))
             lcs[i] = (losses, poes, avg)
         return lcs
+
+
+def build_poes(counts, nses):
+    """
+    :param counts: an array of counts of exceedence for the bins
+    :param nses: number of stochastic event sets
+    :returns: an array of PoEs
+    """
+    rates_of_exceedance = numpy.array(counts, float) / nses
+    return 1. - numpy.exp(-rates_of_exceedance)
 
 
 def event_based(loss_values, tses, time_span, curve_resolution):
@@ -830,11 +831,8 @@ def event_based(loss_values, tses, time_span, curve_resolution):
     counts = [(loss_values > loss).sum() for loss in reference_losses]
     # NB: (loss_values > loss).sum() is MUCH more efficient than
     # sum(loss_values > loss). Incredibly more efficient in memory.
-
-    rates_of_exceedance = numpy.array(counts) * time_span / float(tses)
-
-    poes = 1. - numpy.exp(-rates_of_exceedance)
-    return numpy.array([reference_losses, poes])
+    return numpy.array(
+        [reference_losses, build_poes(counts, tses / time_span)])
 
 
 #

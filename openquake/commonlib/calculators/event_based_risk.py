@@ -227,7 +227,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     assets, counts = d.keys(), d.values()
                     indices = numpy.array([asset.idx for asset in assets])
                     asset_values = workflows.get_values(loss_type, assets)
-                    poes = cb.build_poes(counts, oq.ses_per_logic_tree_path)
+                    poes = scientific.build_poes(
+                        counts, oq.ses_per_logic_tree_path)
                     lcurves = cb.build_loss_curves(
                         poes, asset_values, indices, N)
                     self.store('lcurves/' + loss_type, rlz, lcurves)
