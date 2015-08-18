@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib.general import AccumDict, humansize
 from openquake.commonlib.calculators import base
 from openquake.commonlib import readinput, parallel, datastore
-from openquake.risklib import riskinput, scientific
+from openquake.risklib import riskinput
 from openquake.commonlib.parallel import apply_reduce
 
 elt_dt = numpy.dtype([('rup_id', numpy.uint32), ('loss', numpy.float32)])
@@ -132,6 +132,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         correl_model = readinput.get_correl_model(oq)
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
         assets_by_site = self.assets_by_site
+        # the following is needed!
+        self.assetcol = riskinput.build_asset_collection(
+            assets_by_site, oq.time_event)
 
         logging.info('Populating the risk inputs')
         rup_by_tag = sum(self.datastore['sescollection'], AccumDict())

@@ -767,9 +767,10 @@ class CurveBuilder(object):
         self.loss_type = loss_type
         self.ratios = loss_ratios
         self.curve_resolution = R = len(loss_ratios)
+        f32 = numpy.float32
         self.loss_curve_dt = numpy.dtype([
-            ('losses', (float, R)), ('poes', (float, R)), ('avg', float)])
-        self.poes_dt = numpy.dtype([('poes', (float, R)), ('avg', float)])
+            ('losses', (f32, R)), ('poes', (f32, R)), ('avg', f32)])
+        self.poes_dt = numpy.dtype([('poes', (f32, R)), ('avg', f32)])
 
     def build_counts(self, loss_matrix):
         """
