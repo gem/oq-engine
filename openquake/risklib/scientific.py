@@ -759,10 +759,9 @@ class CurveBuilder(object):
     """
     Build loss ratio curves. The usage is something like this:
 
-      builder = CurveBuilder(loss_ratios)
+      builder = CurveBuilder(loss_type, loss_ratios)
       counts = builder.build_counts(loss_matrix)
-      poes = build_poes(counts, tses, time_span)
-      loss_ratio_curve = (builder.ratios, poes)
+      curves = build_flr_curves(counts, nses, assetcol)
     """
     def __init__(self, loss_type, loss_ratios):
         self.loss_type = loss_type
