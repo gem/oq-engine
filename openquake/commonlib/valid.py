@@ -29,6 +29,7 @@ from decimal import Decimal
 
 import numpy
 
+from openquake.baselib.python3compat import with_metaclass
 from openquake.hazardlib import imt, scalerel, gsim
 from openquake.baselib.general import distinct
 
@@ -807,8 +808,19 @@ class Param(object):
         return self
 
 
+class MetaParamSet(type):
+    """
+    Set the `.name` attribute of every Param instance defined inside
+    any subclass of ParamSet.
+    """
+    def __init__(cls, name, bases, dic):
+        for name, val in dic.items():
+            if isinstance(val, Param):
+                val.name = name
+
+
 # used in commonlib.oqvalidation
-class ParamSet(object):
+class ParamSet(with_metaclass(MetaParamSet)):
     """
     A set of valid interrelated parameters. Here is an example
     of usage:
@@ -839,18 +851,30 @@ class ParamSet(object):
     >>> mp.a = '2'
     >>> mp.a
     '2'
+
+    A dictionary with the literal strings can be extracted as follows:
+
+    >>> mp.items()
+    [('a', "'2'"), ('b', '7.2')]
+
+    It is possible to build a new object from a list of items, which
+    are assumed to be already validated:
+
+    >>> MyParams.from_items([('a', "'2'"), ('b', '7.2')])
+    <MyParams a='2', b=7.2>
     """
     params = {}
 
-    class __metaclass__(type):
-        """
-        Set the `.name` attribute of every Param instance defined inside
-        any subclass of ParamSet.
-        """
-        def __init__(cls, name, bases, dic):
-            for name, val in dic.items():
-                if isinstance(val, Param):
-                    val.name = name
+    @classmethod
+    def from_items(cls, items):
+        self = cls.__new__(cls)
+        for k, v in items:
+            setattr(self, k, ast.literal_eval(v))
+        return self
+
+    def items(self):
+        dic = self.__dict__
+        return [(k, repr(dic[k])) for k in sorted(dic)]
 
     def __init__(self, **names_vals):
         for name, val in names_vals.items():
@@ -891,5 +915,5 @@ class ParamSet(object):
 
     def __repr__(self):
         names = sorted(n for n in vars(self) if not n.startswith('_'))
-        nameval = ', '.join('%s=%s' % (n, getattr(self, n)) for n in names)
+        nameval = ', '.join('%s=%r' % (n, getattr(self, n)) for n in names)
         return '<%s %s>' % (self.__class__.__name__, nameval)
