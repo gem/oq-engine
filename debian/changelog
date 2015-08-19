@@ -1,4 +1,7 @@
-[Michele Simionato]
+  [Michele Simionato]
+  * Changed the splitting of fault sources to reduce the number of generated
+    sources and avoid data transfer failures if rupture_mesh_spacing is too
+    small
   * Changed the event loss table export: now the CSV file does not contain
     the magnitude and the rows are ordered by rupture tag first and loss second
   * Removed the calculator EventBasedBCR
