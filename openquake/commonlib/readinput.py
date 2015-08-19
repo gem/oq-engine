@@ -669,12 +669,13 @@ def get_exposure(oqparam):
     aggregated = set()
     per_asset = set()
     for ct in exposure.cost_types:
-        ctype = ct['name']
-        if (ct['type'] == 'aggregated' or
-                exposure.area['type'] == 'aggregated'):
-            aggregated.add(ctype)
-        elif ct['type'] == 'per_asset':
-            per_asset.add(ctype)
+        cname = ct['name']
+        ctype = ct['type']
+        atype = exposure.area['type']
+        if ctype == 'aggregated' or atype == 'aggregated':
+            aggregated.add(cname)
+        elif ctype == 'per_asset' or atype == 'per_asset':
+            per_asset.add(cname)
 
     all_cost_types = set(vulnerability_files(oqparam.inputs))
     relevant_cost_types = all_cost_types - set(['occupants'])
