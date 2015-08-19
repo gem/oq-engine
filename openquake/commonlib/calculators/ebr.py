@@ -164,15 +164,19 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         for o, out in enumerate(self.outs):
             self.datastore.hdf5.create_group(out)
             for l, loss_type in enumerate(loss_types):
-                rc_dt = self.riskmodel.curve_builders[l].poes_dt
+                cb = self.riskmodel.curve_builders[l]
                 for r, rlz in enumerate(self.rlzs_assoc.realizations):
                     key = '/%s/rlz-%03d' % (loss_type, rlz.ordinal)
                     if o in (ELT, ILT):  # loss tables
                         dset = self.datastore.create_dset(out + key, elt_dt)
                     else:  # risk curves
-                        dset = self.datastore.create_dset(out + key, rc_dt, N)
+                        dset = self.datastore.create_dset(
+                            out + key, cb.poes_dt, N)
                     self.datasets[o, l, r] = dset
-
+                if o in (FRC, IRC):
+                    grp = self.datastore['%s/%s' % (out, loss_type)]
+                    grp.attrs['loss_ratios'] = cb.ratios
+                
     def execute(self):
         """
         Run the ebr calculator in parallel and aggregate the results
@@ -218,9 +222,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     saved[self.outs[o]] += losses.nbytes
                 else:  # risk curves, data is a list of counts dictionaries
                     cb = self.riskmodel.curve_builders[l]
-                    nbytes = sum(sum(v.nbytes for v in d.values())
-                                 for d in data)
-                    logging.info('Got %s of data', humansize(nbytes))
                     counts_matrix = cb.get_counts(N, data)
                     curves = cb.build_flr_curves(
                         counts_matrix, nses, self.assetcol)
