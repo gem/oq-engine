@@ -314,7 +314,7 @@ def _digitize_lons(lons, lon_bins):
             if i_lon != 0:
                 extents = get_longitudinal_extent(lon_bins[i_lon], lons)
                 lon_idx &= extents >= 0
-            idx[lon_idx] = int(i_lon)
+            idx[lon_idx] = i_lon
         return numpy.array(idx)
     else:
         return numpy.digitize(lons, lon_bins) - 1

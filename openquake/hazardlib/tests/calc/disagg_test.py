@@ -229,12 +229,12 @@ class DigitizeLonsTestCase(unittest.TestCase):
     def test1(self):
         idx = disagg._digitize_lons(self.lons1, self.bins1)
         expected = numpy.array([0, 1, 1, 2, 2, 3], dtype=int)
-        self.assertTrue(numpy.array_equal(idx, expected)) 
+        self.assertTrue(numpy.testing.assert_equal(idx, expected)) 
 
     def test2(self):
         idx = disagg._digitize_lons(self.lons2, self.bins2)
         expected = numpy.array([0, 0, 1, 1, 2], dtype=int)
-        self.assertTrue(numpy.array_equal(idx, expected)) 
+        self.assertTrue(numpy.testing.assert_equall(idx, expected)) 
         
 
 class DefineBinsTestCase(unittest.TestCase):
