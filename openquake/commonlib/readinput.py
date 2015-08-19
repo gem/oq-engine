@@ -669,11 +669,12 @@ def get_exposure(oqparam):
     aggregated = set()
     per_asset = set()
     for ct in exposure.cost_types:
-        cname = ct['name']
-        ctype = ct['type']
-        atype = exposure.area['type']
+        cname = ct['name']  # structural, nonstructural, ...
+        atype = exposure.area['type']  # aggregated, per_asset, ...
+        ctype = ct['type']  # aggregated, per_asset, ...
         if ctype == 'aggregated' or atype == 'aggregated':
             aggregated.add(cname)
+        # NB: aggregated is considered per_area, not per_area
         elif ctype == 'per_asset' or atype == 'per_asset':
             per_asset.add(cname)
 
