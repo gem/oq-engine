@@ -172,11 +172,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params([os.path.join(basedir, job_ini)])
 
-    if 'investigation_time' in job_ini and hc_id:
-        raise NameError(
-            'You cannot use the name `investigation_time` in a risk '
-            'configuration file. Use `risk_investigation_time` instead.')
-
     oqparam = OqParam(**job_ini)
     oqparam.validate()
     return oqparam

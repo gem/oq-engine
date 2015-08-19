@@ -67,7 +67,7 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
         a single array of dtype elt_dt, or an empty list
     """
     lti = riskmodel.lti  # loss type -> index
-    losses = cube(
+    result = cube(
         monitor.num_outputs, len(lti), len(rlzs_assoc.realizations),
         AccumDict)
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
@@ -81,26 +81,28 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
             for rup_id, loss, ins_loss in zip(
                     rup_ids, agg_losses, agg_ins_losses):
                 if loss > 0:
-                    losses[ELT, l, out.hid] += {rup_id: loss}
+                    result[ELT, l, out.hid] += {rup_id: loss}
                 if ins_loss > 0:
-                    losses[ILT, l, out.hid] += {rup_id: ins_loss}
-            # dictionaries asset_idx -> array of C counts
-            losses[FRC, l, out.hid] += dict(
-                zip(asset_ids, out.counts_matrix))
-            if out.insured_counts_matrix.sum():
-                losses[IRC, l, out.hid] += dict(
-                    zip(asset_ids, out.insured_counts_matrix))
+                    result[ILT, l, out.hid] += {rup_id: ins_loss}
 
-    for idx, dic in numpy.ndenumerate(losses):
+            # dictionaries asset_idx -> array of C counts
+            if len(riskmodel.curve_builders[l].ratios):
+                result[FRC, l, out.hid] += dict(
+                    zip(asset_ids, out.counts_matrix))
+                if out.insured_counts_matrix.sum():
+                    result[IRC, l, out.hid] += dict(
+                        zip(asset_ids, out.insured_counts_matrix))
+
+    for idx, dic in numpy.ndenumerate(result):
         o, l, r = idx
         if dic:
             if o in (ELT, ILT):
-                losses[idx] = [numpy.array(dic.items(), elt_dt)]
+                result[idx] = [numpy.array(dic.items(), elt_dt)]
             else:  # risk curves
-                losses[idx] = [dic]
+                result[idx] = [dic]
         else:
-            losses[idx] = []
-    return losses
+            result[idx] = []
+    return result
 
 
 @base.calculators.add('ebr')
@@ -165,18 +167,21 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.datastore.hdf5.create_group(out)
             for l, loss_type in enumerate(loss_types):
                 cb = self.riskmodel.curve_builders[l]
+                build_curves = len(cb.ratios)
                 for r, rlz in enumerate(self.rlzs_assoc.realizations):
                     key = '/%s/rlz-%03d' % (loss_type, rlz.ordinal)
                     if o in (ELT, ILT):  # loss tables
                         dset = self.datastore.create_dset(out + key, elt_dt)
                     else:  # risk curves
+                        if not build_curves:
+                            continue
                         dset = self.datastore.create_dset(
                             out + key, cb.poes_dt, N)
                     self.datasets[o, l, r] = dset
-                if o in (FRC, IRC):
+                if o in (FRC, IRC) and build_curves:
                     grp = self.datastore['%s/%s' % (out, loss_type)]
                     grp.attrs['loss_ratios'] = cb.ratios
-                
+
     def execute(self):
         """
         Run the ebr calculator in parallel and aggregate the results
@@ -190,14 +195,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('col_id'))
 
-    def agg(self, acc, losses):
+    def agg(self, acc, result):
         """
         Aggregate list of arrays in longer lists.
 
         :param acc: accumulator array of shape (O, L, R)
-        :param losses: a numpy array of shape (O, L, R)
+        :param result: a numpy array of shape (O, L, R)
         """
-        for idx, arrays in numpy.ndenumerate(losses):
+        for idx, arrays in numpy.ndenumerate(result):
             acc[idx].extend(arrays)
         return acc
 
