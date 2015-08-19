@@ -26,11 +26,9 @@ from openquake.baselib.general import CallableDict
 from openquake.commonlib import valid
 from openquake.risklib import utils, scientific
 
-
 registry = CallableDict()
 
 
-# TODO: must be applied to retrofitted too
 class CostCalculator(object):
     """
     Return the value of an asset for the given loss type depending
@@ -155,11 +153,12 @@ class Asset(object):
         """
         return self.insurance_limits[loss_type]
 
-    # TODO: do we need a BCR calculator for fatalities?
-    def retrofitted(self, loss_type):
+    def retrofitted(self, loss_type, time_event=None):
         """
         :returns: the asset retrofitted value for `loss_type`
         """
+        if loss_type == 'fatalities':
+            return self.values['fatalities_' + str(time_event)]
         return self.calc(loss_type, self.retrofitting_values,
                          self.area, self.number)
 
