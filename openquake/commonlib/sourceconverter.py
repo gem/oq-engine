@@ -91,11 +91,15 @@ def area_to_point_sources(area_src, area_src_disc):
 
 def split_fault_source(src):
     """
-    Utility splitting a fault source into several fault sources.
+    Generator splitting a fault source into several fault sources.
 
     :param src:
         an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
     """
+    # NB: the splitting is tricky; if you don't split, you will not
+    # take advantage of the multiple cores; if you split too much,
+    # the data transfer will kill you, i.e. multiprocessing/celery
+    # will fail to transmit to the workers the generated sources
     max_mag = src.get_min_max_mag()[1]
     if (max_mag > MAGNITUDE_FOR_RUPTURE_SPLITTING and
             src.count_ruptures() <= MAX_RUPTURE_SPLITTING):
