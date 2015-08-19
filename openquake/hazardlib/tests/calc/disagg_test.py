@@ -133,7 +133,6 @@ class _BaseDisaggTestCase(unittest.TestCase):
         self.sources = [self.source1, self.source2]
 
 
-
 class CollectBinsDataTestCase(_BaseDisaggTestCase):
     def test_no_filters(self):
         (mags, dists, lons, lats, trts, trt_bins, probs_no_exceed) = \
@@ -236,6 +235,7 @@ class DigitizeLonsTestCase(unittest.TestCase):
         idx = disagg._digitize_lons(self.lons2, self.bins2)
         expected = numpy.array([0, 0, 1, 1, 2], dtype=int)
         self.assertTrue(numpy.array_equal(idx, expected)) 
+        
 
 class DefineBinsTestCase(unittest.TestCase):
     def test(self):
