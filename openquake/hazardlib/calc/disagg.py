@@ -319,22 +319,6 @@ def _digitize_lons(lons, lon_bins):
     else:
         return numpy.digitize(lons, lon_bins) - 1
 
-    """
-        if cross_idl(lon_bins[0], lon_bins[-1]):
-        idx = numpy.zeros_like(lons, dtype=numpy.int)
-        for i_lon in range(len(lon_bins) - 1):
-            if i_lon != 0:
-                extents = get_longitudinal_extent(lon_bins[i_lon], lons)
-                lon_idx &= extents >= 0
-            else:
-                extents = get_longitudinal_extent(lons, lon_bins[i_lon + 1])
-                lon_idx = extents > 0
-            idx[lon_idx] = int(i_lon)
-        return idx
-    else:
-        return numpy.digitize(lons, lon_bins) - 1
-    """
-
 
 def mag_pmf(matrix):
     """
