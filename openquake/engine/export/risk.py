@@ -368,21 +368,11 @@ def export_event_loss_csv(key, output, target):
     """
     Export Event Loss Table in CSV format
     """
-
     dest = _get_result_export_dest(target, output)
-
-    with FileWrapper(dest, mode='wb') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(['Rupture', 'Magnitude', 'Aggregate Loss'])
-        rows = []
-        for event_loss in models.EventLossData.objects.filter(
-                event_loss__output=output):
-            rows.append([
-                event_loss.rupture.tag,
-                "%.07f" % event_loss.rupture.rupture.magnitude,
-                "%.07f" % event_loss.aggregate_loss])
-        for row in sorted(rows):
-            writer.writerow(row)
+    rows = models.EventLossData.objects.filter(event_loss__output=output)
+    data = sorted((row.rupture.tag, row.aggregate_loss) for row in rows)
+    writers.write_csv(
+        dest, [['Rupture', 'Aggregate Loss']] + data, fmt='%10.6E')
     return dest
 
 
