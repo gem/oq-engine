@@ -114,3 +114,12 @@ Calculation context
 .. autoclass:: RuptureContext
 
 .. autoclass:: DistancesContext
+
+GMPE Tables
+-----------
+
+.. autoclass:: AmplificationTable
+    :members:
+
+.. autoclass:: GMPETable
+    :members:

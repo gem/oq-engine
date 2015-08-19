@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Adds support for GMPEs to be implemented in the form of HDF5 binary tables
+  
   [Michele Simionato]
   * Now hazardlib unofficially supports Python 3
   * Added support for python setup.py test
