@@ -765,30 +765,31 @@ class CurveBuilder(object):
     """
     def __init__(self, loss_type, loss_ratios):
         self.loss_type = loss_type
-        self.ratios = loss_ratios
+        self.ratios = numpy.array(loss_ratios, numpy.float32)
         self.curve_resolution = R = len(loss_ratios)
         f32 = numpy.float32
         self.loss_curve_dt = numpy.dtype([
             ('losses', (f32, R)), ('poes', (f32, R)), ('avg', f32)])
         self.poes_dt = numpy.dtype([('poes', (f32, R)), ('avg', f32)])
 
-    def get_counts(self, N, counts_by_idx):
+    def get_counts(self, N, count_dicts):
         """
         Return a matrix of shape (N, C), with nonzero entries at
-        the indices given by the counts_by_idx dictionary.
+        the indices given by the count_dicts
 
         :param N: the number of assets
         :param counts_by_idx: a map asset_idx -> [C indices]
 
         >>> cb = CurveBuilder('structural', [0.1, 0.2, 0.3, 0.9])
-        >>> cb.get_counts(3, {1: [4, 3, 2, 1], 2: [4, 0, 0, 0]})
+        >>> cb.get_counts(3, [{1: [4, 3, 2, 1]}, {2: [4, 0, 0, 0]},
+        ...                   {1: [1, 0, 0, 0]}, {2: [2, 0, 0, 0]}])
         array([[0, 0, 0, 0],
-               [4, 3, 2, 1],
-               [4, 0, 0, 0]], dtype=uint32)
+               [5, 3, 2, 1],
+               [6, 0, 0, 0]], dtype=uint32)
         """
         counts = numpy.zeros((N, self.curve_resolution), numpy.uint32)
-        if counts_by_idx:
-            counts[list(counts_by_idx)] = counts_by_idx.values()
+        for count_dict in count_dicts:
+            counts[list(count_dict)] += count_dict.values()
         return counts
 
     def build_counts(self, loss_matrix):
@@ -848,8 +849,7 @@ def build_poes(counts, nses):
     :param nses: number of stochastic event sets
     :returns: an array of PoEs
     """
-    rates_of_exceedance = numpy.array(counts, float) / nses
-    return 1. - numpy.exp(-rates_of_exceedance)
+    return 1. - numpy.exp(- numpy.array(counts, numpy.float32) / nses)
 
 
 def event_based(loss_values, tses, time_span, curve_resolution):

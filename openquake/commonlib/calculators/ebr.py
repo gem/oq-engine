@@ -66,29 +66,29 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
         a numpy array of shape (O, L, R); each element is a list containing
         a single array of dtype elt_dt, or an empty list
     """
-    lt_idx = {lt: lti for lti, lt in enumerate(riskmodel.loss_types)}
+    lti = riskmodel.lti  # loss type -> index
     losses = cube(
-        monitor.num_outputs, len(lt_idx), len(rlzs_assoc.realizations),
+        monitor.num_outputs, len(lti), len(rlzs_assoc.realizations),
         AccumDict)
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         rup_slice = out_by_rlz.rup_slice
         rup_ids = list(range(rup_slice.start, rup_slice.stop))
         for out in out_by_rlz:
-            lti = lt_idx[out.loss_type]
+            l = lti[out.loss_type]
             asset_ids = [a.idx for a in out.assets]
             agg_losses = out.event_loss_per_asset.sum(axis=1)
             agg_ins_losses = out.insured_loss_per_asset.sum(axis=1)
             for rup_id, loss, ins_loss in zip(
                     rup_ids, agg_losses, agg_ins_losses):
                 if loss > 0:
-                    losses[ELT, lti, out.hid] += {rup_id: loss}
+                    losses[ELT, l, out.hid] += {rup_id: loss}
                 if ins_loss > 0:
-                    losses[ILT, lti, out.hid] += {rup_id: ins_loss}
+                    losses[ILT, l, out.hid] += {rup_id: ins_loss}
             # dictionaries asset_idx -> array of C counts
-            losses[FRC, lti, out.hid] += dict(
+            losses[FRC, l, out.hid] += dict(
                 zip(asset_ids, out.counts_matrix))
             if out.insured_counts_matrix.sum():
-                losses[IRC, lti, out.hid] += dict(
+                losses[IRC, l, out.hid] += dict(
                     zip(asset_ids, out.insured_counts_matrix))
 
     for idx, dic in numpy.ndenumerate(losses):
@@ -209,17 +209,19 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         N = len(self.assetcol)
         with self.monitor('saving loss table',
                           autoflush=True, measuremem=True):
-            for (o, l, r), arrays in numpy.ndenumerate(result):
-                if not arrays:  # empty list
+            for (o, l, r), data in numpy.ndenumerate(result):
+                if not data:  # empty list
                     continue
-                if o in (ELT, ILT):  # loss tables
-                    losses = numpy.concatenate(arrays)
+                if o in (ELT, ILT):  # loss tables, data is a list of arrays
+                    losses = numpy.concatenate(data)
                     self.datasets[o, l, r].extend(losses)
                     saved[self.outs[o]] += losses.nbytes
-                else:  # risk curves
-                    dic = sum(arrays, AccumDict())
+                else:  # risk curves, data is a list of counts dictionaries
                     cb = self.riskmodel.curve_builders[l]
-                    counts_matrix = cb.get_counts(N, dic)
+                    nbytes = sum(sum(v.nbytes for v in d.values())
+                                 for d in data)
+                    logging.info('Got %s of data', humansize(nbytes))
+                    counts_matrix = cb.get_counts(N, data)
                     curves = cb.build_flr_curves(
                         counts_matrix, nses, self.assetcol)
                     self.datasets[o, l, r].dset[:] = curves
