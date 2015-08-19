@@ -1,4 +1,6 @@
-  [Michele Simionato]
+[Michele Simionato]
+  * Changed the event loss table export: now the CSV file does not contain
+    the magnitude and the rows are ordered by rupture tag first and loss second
   * Removed the calculator EventBasedBCR
   * Longitude and latitude are now rounded to 5 digits
   * Fixed a very subtle bug in the vulnerability functions, potentially
