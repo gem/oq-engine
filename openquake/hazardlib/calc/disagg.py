@@ -300,16 +300,21 @@ def _digitize_lons(lons, lon_bins):
     Return indices of the bins to which each value in lons belongs.
     Takes into account the case in which longitude values cross the
     international date line.
+
+    :parameter lons:
+        An instance of :mod:`numpy.array`. 
+    :parameter lons_bins:
+        An instance of :mod:`numpy.array`. 
     """
     if cross_idl(lon_bins[0], lon_bins[-1]):
-        idx = []
+        idx = numpy.zeros_like(lons, dtype=numpy.int)
         for i_lon in range(len(lon_bins) - 1):
             extents = get_longitudinal_extent(lons, lon_bins[i_lon + 1])
             lon_idx = extents > 0
             if i_lon != 0:
                 extents = get_longitudinal_extent(lon_bins[i_lon], lons)
                 lon_idx &= extents >= 0
-            idx.append(lon_idx)
+            idx[lon_idx] = i_lon
         return numpy.array(idx)
     else:
         return numpy.digitize(lons, lon_bins) - 1
