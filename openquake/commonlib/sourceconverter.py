@@ -99,7 +99,10 @@ def split_fault_source(src):
     # NB: the splitting is tricky; if you don't split, you will not
     # take advantage of the multiple cores; if you split too much,
     # the data transfer will kill you, i.e. multiprocessing/celery
-    # will fail to transmit to the workers the generated sources
+    # will fail to transmit to the workers the generated sources.
+    # Heere I (MS) have set MAX_RUPTURE_SPLITTING to 100, meaning that
+    # at worse the data transfer will increase by a factor of 100 and at
+    # most 100 cores will be used for a source of large enough magnitude
     max_mag = src.get_min_max_mag()[1]
     if (max_mag > MAGNITUDE_FOR_RUPTURE_SPLITTING and
             src.count_ruptures() <= MAX_RUPTURE_SPLITTING):
