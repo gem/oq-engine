@@ -133,6 +133,7 @@ class _BaseDisaggTestCase(unittest.TestCase):
         self.sources = [self.source1, self.source2]
 
 
+
 class CollectBinsDataTestCase(_BaseDisaggTestCase):
     def test_no_filters(self):
         (mags, dists, lons, lats, trts, trt_bins, probs_no_exceed) = \
@@ -215,6 +216,26 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
         aae(probs_no_exceed, exp_p_ne)
         self.assertEqual(trt_bins, ['trt1'])
 
+
+class DigitizeLonsTestCase(unittest.TestCase):
+
+    def setUp(self):
+        # First test
+        self.lons1 = numpy.array([179.2, 179.6, 179.8, -179.9, -179.7, -179.1])
+        self.bins1 = numpy.array([179.0, 179.5, 180.0, -179.5, -179])
+        # Second test
+        self.lons2 = numpy.array([90.0, 90.3, 90.5, 90.7, 91.3])
+        self.bins2 = numpy.array([90.0, 90.5, 91.0, 91.5])
+
+    def test1(self):
+        idx = disagg._digitize_lons(self.lons1, self.bins1)
+        expected = numpy.array([0, 1, 1, 2, 2, 3], dtype=int)
+        self.assertTrue(numpy.array_equal(idx, expected)) 
+
+    def test2(self):
+        idx = disagg._digitize_lons(self.lons2, self.bins2)
+        expected = numpy.array([0, 0, 1, 1, 2], dtype=int)
+        self.assertTrue(numpy.array_equal(idx, expected)) 
 
 class DefineBinsTestCase(unittest.TestCase):
     def test(self):
