@@ -771,8 +771,8 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         rlzs_assoc = csm.get_rlzs_assoc()
         rlzs = rlzs_assoc.realizations
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
-        self.assertEqual([1, 584, 1, 584, 1, 584, 1, 582, 1, 582,
-                          1, 582, 1, 582, 1, 582, 1, 582],
+        self.assertEqual([1, 14, 1, 14, 1, 14, 1, 12, 1, 12,
+                          1, 12, 1, 12, 1, 12, 1, 12],
                          list(map(len, csm.trt_models)))
 
         # test the method get_col_ids
