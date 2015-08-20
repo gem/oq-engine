@@ -157,6 +157,7 @@ def get_data_transfer(dstore):
     Determine the amount of data transferred from the controller node
     to the workers and back in a classical calculation.
 
+    :param dstore: a :class:`openquake.commonlib.datastore.DataStore` instance
     :returns: (block_info, to_send_forward, to_send_back)
     """
     oqparam = dstore['oqparam']

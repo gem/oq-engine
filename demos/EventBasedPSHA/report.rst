@@ -16,6 +16,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0        
 random_seed                  23         
 master_seed                  0          
+concurrent_tasks             32         
 ============================ ===========
 
 Input files
@@ -59,11 +60,3 @@ Collections <-> realizations
 Collections Realizations
 (0,)        [0]         
 =========== ============
-
-Expected data transfer for the sources
---------------------------------------
-================================= =========
-Number of tasks to be generated   35       
-Estimated data to be sent forward 123.65 KB
-Estimated data to be sent back    5 KB     
-================================= =========

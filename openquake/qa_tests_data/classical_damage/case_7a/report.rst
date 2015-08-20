@@ -16,6 +16,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   20.0     
 random_seed                  42       
 master_seed                  0        
+concurrent_tasks             32       
 ============================ =========
 
 Input files
@@ -46,3 +47,11 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(1)
   0,SadighEtAl1997: ['<0,b1,b1,w=1.0>']>
+
+Expected data transfer for the sources
+--------------------------------------
+================================= ========
+Number of tasks to be generated   14      
+Estimated data to be sent forward 26.73 KB
+Estimated data to be sent back    6 KB    
+================================= ========
