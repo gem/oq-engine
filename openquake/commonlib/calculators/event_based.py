@@ -37,7 +37,7 @@ from openquake.commonlib.util import max_rel_diff_index
 from openquake.commonlib.calculators import base, views
 from openquake.commonlib.calculators.calc import MAX_INT, gmvs_to_haz_curve
 from openquake.commonlib.calculators.classical import (
-    ClassicalCalculator, agg_dicts)
+    ClassicalCalculator, store_source_chunks, agg_dicts)
 
 # ######################## rupture calculator ############################ #
 
@@ -404,6 +404,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
 
+        store_source_chunks(self.datastore)
         logging.info('Generated %d SESRuptures',
                      sum(len(v) for v in ruptures_by_trt.values()))
 

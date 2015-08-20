@@ -18,6 +18,8 @@
 
 import os.path
 import operator
+import numpy
+
 from openquake.baselib.general import groupby, split_in_blocks, humansize
 from openquake.commonlib import parallel
 from openquake.commonlib.datastore import view
@@ -151,6 +153,9 @@ def view_inputs(token, dstore):
     return rst_table(
         build_links(list(inputs.items()) + source_models), header=['Name', 'File'])
 
+block_dt = numpy.dtype([('num_srcs', numpy.uint32),
+                        ('weight', numpy.float32)])
+
 
 def get_data_transfer(dstore):
     """
@@ -180,7 +185,7 @@ def get_data_transfer(dstore):
         args = (block, sitecol, gsims_assoc, parallel.PerformanceMonitor(''))
         to_send_forward += sum(len(p) for p in parallel.pickle_sequence(args))
         block_info.append((len(block), block.weight))
-    return block_info, to_send_forward, to_send_back
+    return numpy.array(block_info, block_dt), to_send_forward, to_send_back
 
 
 @view.add('data_transfer')
