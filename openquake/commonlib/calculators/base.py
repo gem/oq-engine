@@ -66,6 +66,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('taxonomies')
     job_info = datastore.persistent_attribute('job_info')
+    source_chunks = datastore.persistent_attribute('source_chunks')
     source_pre_info = datastore.persistent_attribute('source_pre_info')
     performance = datastore.persistent_attribute('performance')
     csm = datastore.persistent_attribute('composite_source_model')

@@ -288,6 +288,7 @@ class TaskManager(object):
             for chunk in chunks:
                 acc = agg(acc, task_func(chunk, *args))
             return acc
+        logging.info('Starting %d tasks', len(chunks))
         self = cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
         return self.reduce(agg, acc)
 
