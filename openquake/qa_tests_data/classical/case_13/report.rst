@@ -16,6 +16,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0     
 random_seed                  23       
 master_seed                  0        
+concurrent_tasks             32       
 ============================ =========
 
 Input files
@@ -50,3 +51,11 @@ Realizations per (TRT, GSIM)
   0,ChiouYoungs2008: ['<1,aFault_aPriori_D2.1,ChiouYoungs2008,w=0.25>']
   1,BooreAtkinson2008: ['<2,bFault_stitched_D2.1_Char,BooreAtkinson2008,w=0.25>']
   1,ChiouYoungs2008: ['<3,bFault_stitched_D2.1_Char,ChiouYoungs2008,w=0.25>']>
+
+Expected data transfer for the sources
+--------------------------------------
+================================== =======
+Number of tasks to generate        33     
+Estimated sources to send          1.27 MB
+Estimated hazard curves to receive 281 KB 
+================================== =======
