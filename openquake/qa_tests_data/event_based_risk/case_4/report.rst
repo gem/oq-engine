@@ -41,7 +41,7 @@ Composite source model
 smlt_path                weight source_model_file                                        gsim_logic_tree        num_realizations num_sources
 ======================== ====== ======================================================== ====================== ================ ===========
 AreaSource               0.500  `models/src/as_model.xml <models/src/as_model.xml>`_     simple(0,0,0,0,0,4,0)  4/4              1319       
-FaultSourceAndBackground 0.200  `models/src/fsbg_model.xml <models/src/fsbg_model.xml>`_ simple(0,0,0,0,0,4,0)  4/4              1083       
+FaultSourceAndBackground 0.200  `models/src/fsbg_model.xml <models/src/fsbg_model.xml>`_ simple(0,0,0,0,0,4,0)  4/4              5674       
 SeiFaCrust               0.300  `models/src/ss_model.xml <models/src/ss_model.xml>`_     trivial(0,0,0,0,0,0,0) 0/0              0          
 ======================== ====== ======================================================== ====================== ================ ===========
 
@@ -66,7 +66,7 @@ Non-empty rupture collections
 col smlt_path                TRT                  num_ruptures
 === ======================== ==================== ============
 5   AreaSource               Active Shallow Crust 24          
-9   FaultSourceAndBackground Active Shallow Crust 13          
+9   FaultSourceAndBackground Active Shallow Crust 14          
 === ======================== ==================== ============
 
 Collections <-> realizations
