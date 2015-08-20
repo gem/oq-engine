@@ -28,7 +28,6 @@ from openquake.commonlib import parallel
 # the following is arbitrary, it is used to decide when to parallelize
 # the filtering (MS)
 LOTS_OF_SOURCES_SITES = 1E5  # arbitrary, set by Michele Simionato
-MAX_RUPTURE_SPLITTING = 100  # arbitrary, set by Michele Simionato
 MAGNITUDE_FOR_RUPTURE_SPLITTING = 6.5  # given by Marco Pagani
 # NB: the parameter MAGNITUDE_FOR_RUPTURE_SPLITTING cannot go in a
 # configuration file, otherwise the tests will break by changing it;
@@ -89,6 +88,29 @@ def area_to_point_sources(area_src, area_src_disc):
         yield pt
 
 
+def split_fault_source_by_magnitude(src):
+    """
+    Utility splitting a fault source into fault sources with a single
+    magnitude bin.
+
+    :param src:
+        an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
+    """
+    splitlist = []
+    i = 0
+    for mag, rate in src.mfd.get_annual_occurrence_rates():
+        if not rate:  # ignore zero occurency rate
+            continue
+        new_src = copy.copy(src)
+        new_src.source_id = '%s-%s' % (src.source_id, i)
+        new_src.mfd = mfd.EvenlyDiscretizedMFD(
+            min_mag=mag, bin_width=src.mfd.bin_width,
+            occurrence_rates=[rate])
+        i += 1
+        splitlist.append(new_src)
+    return splitlist
+
+
 def split_fault_source(src):
     """
     Generator splitting a fault source into several fault sources.
@@ -103,28 +125,15 @@ def split_fault_source(src):
     # Heere I (MS) have set MAX_RUPTURE_SPLITTING to 100, meaning that
     # at worse the data transfer will increase by a factor of 100 and at
     # most 100 cores will be used for a source of large enough magnitude
-    max_mag = src.get_min_max_mag()[1]
-    if (max_mag > MAGNITUDE_FOR_RUPTURE_SPLITTING and
-            src.count_ruptures() <= MAX_RUPTURE_SPLITTING):
-        # split on SingleRuptureSources
-        for i, rupture in enumerate(src.iter_ruptures()):
-            yield SingleRuptureSource(
-                rupture, '%s-%s' % (src.source_id, i),
-                src.tectonic_region_type, src.trt_model_id)
-    else:
-        # too small magnitude or too many ruptures:
-        # split on annual occurrence rates
-        i = 0
-        for mag, rate in src.mfd.get_annual_occurrence_rates():
-            if not rate:  # ignore zero occurency rate
-                continue
-            new_src = copy.copy(src)
-            new_src.source_id = '%s-%s' % (src.source_id, i)
-            new_src.mfd = mfd.EvenlyDiscretizedMFD(
-                min_mag=mag, bin_width=src.mfd.bin_width,
-                occurrence_rates=[rate])
-            i += 1
-            yield new_src
+    for s in split_fault_source_by_magnitude(src):
+        if s.mfd.min_mag < MAGNITUDE_FOR_RUPTURE_SPLITTING:
+            yield s  # don't split, there would too many ruptures
+        else:
+            # split on SingleRuptureSources
+            for i, rupture in enumerate(s.iter_ruptures()):
+                yield SingleRuptureSource(
+                    rupture, '%s,%s' % (s.source_id, i),
+                    s.tectonic_region_type, s.trt_model_id)
 
 
 class SingleRuptureSource(object):

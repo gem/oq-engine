@@ -34,7 +34,7 @@ Composite source model
 ========= ====== ====================================== =============== ================ ===========
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations num_sources
 ========= ====== ====================================== =============== ================ ===========
-b11       1.00   `source_model.xml <source_model.xml>`_ trivial(1,1)    1/1              215        
+b11       1.00   `source_model.xml <source_model.xml>`_ trivial(1,1)    1/1              1539       
 ========= ====== ====================================== =============== ================ ===========
 
 Realizations per (TRT, GSIM)
