@@ -33,7 +33,7 @@ from openquake.risklib import workflows, riskinput
 
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
-from openquake.commonlib import nrml, valid, logictree, InvalidFile
+from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
 from openquake.commonlib.oqvalidation import vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_vfs
@@ -453,7 +453,7 @@ def get_source_models(oqparam, source_model_lt, sitecol=None, in_memory=True):
 
 def get_composite_source_model(
         oqparam, sitecol=None, SourceProcessor=source.SourceFilterSplitter,
-        monitor=DummyMonitor(), no_distribute=False):
+        monitor=DummyMonitor(), no_distribute=parallel.no_distribute()):
     """
     Build the source models by splitting the sources. If prefiltering is
     enabled, also reduce the GSIM logic trees in the underlying source models.
