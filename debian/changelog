@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added data transfer information to the CSV reports
   * Fixed several bugs in the ebr calculator
   * The composite source model is saved in the HDF5 file
   * Added a command `oq-lite info --report job.ini` to produce a report
