@@ -17,9 +17,7 @@ import mock
 import os
 import shutil
 import tempfile
-import unittest
 
-from collections import namedtuple
 from lxml import etree
 from nose.plugins.attrib import attr
 
@@ -27,7 +25,6 @@ from openquake.commonlib import nrml
 
 from openquake.engine.db import models
 from openquake.engine.export import core
-from openquake.engine.export import hazard
 
 from openquake.engine.tests.export.core_test import \
     BaseExportTestCase, number_of
