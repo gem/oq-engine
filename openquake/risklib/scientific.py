@@ -24,7 +24,6 @@ from __future__ import division
 
 import abc
 import copy
-import itertools
 import bisect
 
 import numpy
