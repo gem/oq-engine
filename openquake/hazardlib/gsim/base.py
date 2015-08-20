@@ -1025,9 +1025,11 @@ def hdf_arrays_to_dict(hdfgroup):
     """
     return dict([(key, hdfgroup[key][:]) for key in hdfgroup.keys()])
 
+
 class AmplificationTable(object):
     """
     Class to apply amplification from the GMPE tables
+
     :param tuple shape:
         Shape of the amplification arrays as a tuple of (Number Distances,
         Number IMTs, Number Magnitudes, Number Amplification Levels)
