@@ -33,6 +33,8 @@ from openquake.baselib.general import CallableDict
 from openquake.risklib import utils
 from openquake.baselib.python3compat import with_metaclass
 
+F32 = numpy.float32
+
 
 class Output(object):
     """
@@ -765,12 +767,11 @@ class CurveBuilder(object):
     """
     def __init__(self, loss_type, loss_ratios):
         self.loss_type = loss_type
-        self.ratios = numpy.array(loss_ratios, numpy.float32)
+        self.ratios = numpy.array(loss_ratios, F32)
         self.curve_resolution = R = len(loss_ratios)
-        f32 = numpy.float32
         self.loss_curve_dt = numpy.dtype([
-            ('losses', (f32, R)), ('poes', (f32, R)), ('avg', f32)])
-        self.poes_dt = numpy.dtype([('poes', (f32, R)), ('avg', f32)])
+            ('losses', (F32, R)), ('poes', (F32, R)), ('avg', F32)])
+        self.poes_dt = numpy.dtype([('poes', (F32, R)), ('avg', F32)])
 
     def get_counts(self, N, count_dicts):
         """
@@ -850,7 +851,7 @@ def build_poes(counts, nses):
     :param nses: number of stochastic event sets
     :returns: an array of PoEs
     """
-    return 1. - numpy.exp(- numpy.array(counts, numpy.float32) / nses)
+    return 1. - numpy.exp(- numpy.array(counts, F32) / nses)
 
 
 def event_based(loss_values, tses, time_span, curve_resolution):
