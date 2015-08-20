@@ -35,8 +35,8 @@ Composite source model
 ========= ====== ========================================== =============== ================ ===========
 smlt_path weight source_model_file                          gsim_logic_tree num_realizations num_sources
 ========= ====== ========================================== =============== ================ ===========
-b1        0.50   `source_model_1.xml <source_model_1.xml>`_ complex(2,2)    4/4              215        
-b2        0.50   `source_model_2.xml <source_model_2.xml>`_ complex(2,2)    4/4              306        
+b1        0.50   `source_model_1.xml <source_model_1.xml>`_ complex(2,2)    4/4              1539       
+b2        0.50   `source_model_2.xml <source_model_2.xml>`_ complex(2,2)    4/4              1593       
 ========= ====== ========================================== =============== ================ ===========
 
 Realizations per (TRT, GSIM)
