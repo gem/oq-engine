@@ -53,7 +53,6 @@ def get_nbytes(dset):
     elif hasattr(dset, 'value'):
         # else extract nbytes from the underlying array
         return dset.value.nbytes
-    return None
 
 
 class ByteCounter(object):
@@ -300,6 +299,10 @@ class DataStore(collections.MutableMapping):
                                (key, exc, self.hdf5path))
 
     def __delitem__(self, key):
+        if (h5py.version.version <= '2.0.1' and not
+                hasattr(self.hdf5[key], 'shape')):
+            # avoid bug when deleting groups that produces a segmentation fault
+            return
         del self.hdf5[key]
 
     def __iter__(self):

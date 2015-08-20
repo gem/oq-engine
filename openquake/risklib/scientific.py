@@ -21,7 +21,6 @@
 This module includes the scientific API of the oq-risklib
 """
 from __future__ import division
-
 import abc
 import copy
 import bisect
@@ -449,7 +448,6 @@ class VulnerabilityFunctionWithPMF(object):
         # TODO: to be implemented if the classical risk calculator
         # needs to support the pmf vulnerability format
 
-
     def __repr__(self):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
 
@@ -736,7 +734,8 @@ class DiscreteDistribution(Distribution):
     def sample(self, loss_ratios, probs):
         ret = []
         for i in range(probs.shape[1]):
-            pmf = stats.rv_discrete(name='pmf', values=(list(range(len(loss_ratios))), probs[:,i]))
+            pmf = stats.rv_discrete(name='pmf', values=(
+                numpy.arange(len(loss_ratios)), probs[:, i]))
             ret.append(loss_ratios[pmf.rvs()])
         return ret
 
@@ -751,6 +750,7 @@ class DiscreteDistribution(Distribution):
         # needs to support the pmf vulnerability format
         return
 
+
 #
 # Event Based
 #
@@ -759,54 +759,98 @@ class CurveBuilder(object):
     """
     Build loss ratio curves. The usage is something like this:
 
-      builder = CurveBuilder(curve_resolution)
+      builder = CurveBuilder(loss_type, loss_ratios)
       counts = builder.build_counts(loss_matrix)
-      poes = builder.build_poes(counts, tses, time_span)
-      loss_ratio_curve = (builder.ratios, poes)
+      curves = build_rcurves(counts, nses, assetcol)
     """
-    def __init__(self, curve_resolution):
-        self.curve_resolution = R = curve_resolution
-        self.ratios = numpy.linspace(0, 1, curve_resolution)
+    def __init__(self, loss_type, loss_ratios):
+        self.loss_type = loss_type
+        self.ratios = numpy.array(loss_ratios, numpy.float32)
+        self.curve_resolution = R = len(loss_ratios)
+        f32 = numpy.float32
         self.loss_curve_dt = numpy.dtype([
-            ('losses', (float, R)), ('poes', (float, R)), ('avg', float)])
+            ('losses', (f32, R)), ('poes', (f32, R)), ('avg', f32)])
+        self.poes_dt = numpy.dtype([('poes', (f32, R)), ('avg', f32)])
+
+    def get_counts(self, N, count_dicts):
+        """
+        Return a matrix of shape (N, C), with nonzero entries at
+        the indices given by the count_dicts
+
+        :param N: the number of assets
+        :param counts_by_idx: a map asset_idx -> [C indices]
+
+        >>> cb = CurveBuilder('structural', [0.1, 0.2, 0.3, 0.9])
+        >>> cb.get_counts(3, [{1: [4, 3, 2, 1]}, {2: [4, 0, 0, 0]},
+        ...                   {1: [1, 0, 0, 0]}, {2: [2, 0, 0, 0]}])
+        array([[0, 0, 0, 0],
+               [5, 3, 2, 1],
+               [6, 0, 0, 0]], dtype=uint32)
+        """
+        counts = numpy.zeros((N, self.curve_resolution), numpy.uint32)
+        for count_dict in count_dicts:
+            counts[list(count_dict)] += count_dict.values()
+        return counts
 
     def build_counts(self, loss_matrix):
         """
         :param loss_matrix:
             a matrix of loss ratios of size N x R, N = #assets, R = #ruptures
         """
-        N = len(loss_matrix)
-        counts = numpy.zeros((N, self.curve_resolution), numpy.uint32)
+        counts = self.get_counts(len(loss_matrix), {})
         for i, loss_ratios in enumerate(loss_matrix):
             # build the counts for each asset
             counts[i, :] = numpy.array([(loss_ratios > ratio).sum()
                                         for ratio in self.ratios])
         return counts
 
-    def build_poes(self, counts, tses, time_span):
+    def build_rcurves(self, counts_matrix, nses, assetcol):
         """
-        :param counts: an array of counts of exceedence for the bins
-        :param tses: Time representative of the stochastic event set
-        :param time_span: Investigation Time spanned by the hazard input
-        :returns: an array of PoEs
+        :param counts_matrix: a matrix N x C
+        :param nses: the number of effective SES (SES x samples)
+        :param assetcol: asset collection array with N elements
+        :returns: a composite array of dtype poes_dt with N elements
         """
-        rates_of_exceedance = numpy.array(counts, float) / tses
-        return 1. - numpy.exp(-rates_of_exceedance * time_span)
+        n = len(assetcol)
+        assert len(counts_matrix) == n, (len(counts_matrix), n)
+        avalues = assetcol[self.loss_type]
+        poe_matrix = build_poes(counts_matrix, nses)
+        ls = []
+        for i, poes, avalue in zip(range(n), poe_matrix, avalues):
+            losses = self.ratios * avalue
+            avg = average_loss((losses, poes))
+            ls.append((poes, avg))
+        return numpy.array(ls, self.poes_dt)
 
-    def build_loss_curves(self, poe_matrix, asset_values):
+    def build_loss_curves(self, poe_matrix, asset_values, indices, N):
         """
-        :param poe_matrix: a matrix N x C
-        :param asset_values: N asset values for a given loss_type
+        :param poe_matrix: a matrix n x C, with n <= N
+        :param asset_values: n asset values for a given loss_type
+        :param indices: n asset indices in the range [0, .., N-1]
+        :param N: the total number of assets
         """
-        N = len(asset_values)
-        assert len(poe_matrix) == N, (len(poe_matrix), N)
+        n = len(asset_values)
+        assert len(poe_matrix) == n, (len(poe_matrix), n)
+        assert n <= N, (n, N)
         lcs = numpy.zeros(N, self.loss_curve_dt)
-        for i, value in enumerate(asset_values):
+        for i, poes, value in zip(indices, poe_matrix, asset_values):
             losses = self.ratios * value
-            poes = poe_matrix[i]
             avg = average_loss((losses, poes))
             lcs[i] = (losses, poes, avg)
         return lcs
+
+    def __repr__(self):
+        return '<%s %s=%s>' % (self.__class__.__name__, self.loss_type,
+                               self.loss_ratios)
+
+
+def build_poes(counts, nses):
+    """
+    :param counts: an array of counts of exceedence for the bins
+    :param nses: number of stochastic event sets
+    :returns: an array of PoEs
+    """
+    return 1. - numpy.exp(- numpy.array(counts, numpy.float32) / nses)
 
 
 def event_based(loss_values, tses, time_span, curve_resolution):
@@ -826,15 +870,11 @@ def event_based(loss_values, tses, time_span, curve_resolution):
     reference_losses = numpy.linspace(
         0, numpy.max(loss_values), curve_resolution)
     # counts how many loss_values are bigger than the reference loss
-    times = [(loss_values > loss).sum() for loss in reference_losses]
+    counts = [(loss_values > loss).sum() for loss in reference_losses]
     # NB: (loss_values > loss).sum() is MUCH more efficient than
     # sum(loss_values > loss). Incredibly more efficient in memory.
-
-    rates_of_exceedance = numpy.array(times) / float(tses)
-
-    poes = 1. - numpy.exp(-rates_of_exceedance * time_span)
-
-    return numpy.array([reference_losses, poes])
+    return numpy.array(
+        [reference_losses, build_poes(counts, tses / time_span)])
 
 
 #
@@ -1301,7 +1341,7 @@ class StatsBuilder(object):
         Normalize the loss curves by using the provided normalization function
         """
         return list(map(self.normalize_curves,
-                   numpy.array(loss_curves).transpose(1, 0, 2, 3)))
+                        numpy.array(loss_curves).transpose(1, 0, 2, 3)))
 
     def build(self, all_outputs):
         """

@@ -172,11 +172,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params([os.path.join(basedir, job_ini)])
 
-    if 'investigation_time' in job_ini and hc_id:
-        raise NameError(
-            'You cannot use the name `investigation_time` in a risk '
-            'configuration file. Use `risk_investigation_time` instead.')
-
     oqparam = OqParam(**job_ini)
     oqparam.validate()
     return oqparam
@@ -603,6 +598,10 @@ def get_risk_model(oqparam):
             risk_models[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 vulnerability_functions=vfs)
+
+    riskmodel.make_curve_builders(oqparam)
+    for workflow in risk_models.values():
+        workflow.riskmodel = riskmodel
 
     return riskmodel
 

@@ -29,6 +29,11 @@ from openquake.commonlib.parallel import apply_reduce
 
 elt_dt = numpy.dtype([('rup_id', numpy.uint32), ('loss', numpy.float32)])
 
+OUTPUTS = ['event_loss_table-rlzs', 'insured_loss_table-rlzs',
+           'rcurves-rlzs', 'insured_rcurves-rlzs']
+
+ELT, ILT, FRC, IRC = 0, 1, 2, 3
+
 
 def cube(O, L, R, factory):
     """
@@ -61,35 +66,50 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
         a numpy array of shape (O, L, R); each element is a list containing
         a single array of dtype elt_dt, or an empty list
     """
-    lt_idx = {lt: lti for lti, lt in enumerate(riskmodel.get_loss_types())}
-    losses = cube(
-        monitor.num_outputs, len(lt_idx), len(rlzs_assoc.realizations),
+    lti = riskmodel.lti  # loss type -> index
+    result = cube(
+        monitor.num_outputs, len(lti), len(rlzs_assoc.realizations),
         AccumDict)
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         rup_slice = out_by_rlz.rup_slice
         rup_ids = list(range(rup_slice.start, rup_slice.stop))
         for out in out_by_rlz:
-            lti = lt_idx[out.loss_type]
+            l = lti[out.loss_type]
+            asset_ids = [a.idx for a in out.assets]
             agg_losses = out.event_loss_per_asset.sum(axis=1)
             agg_ins_losses = out.insured_loss_per_asset.sum(axis=1)
             for rup_id, loss, ins_loss in zip(
                     rup_ids, agg_losses, agg_ins_losses):
                 if loss > 0:
-                    losses[0, lti, out.hid] += {rup_id: loss}
+                    result[ELT, l, out.hid] += {rup_id: loss}
                 if ins_loss > 0:
-                    losses[1, lti, out.hid] += {rup_id: ins_loss}
-    for idx, dic in numpy.ndenumerate(losses):
+                    result[ILT, l, out.hid] += {rup_id: ins_loss}
+
+            # dictionaries asset_idx -> array of C counts
+            if len(riskmodel.curve_builders[l].ratios):
+                result[FRC, l, out.hid] += dict(
+                    zip(asset_ids, out.counts_matrix))
+                if out.insured_counts_matrix.sum():
+                    result[IRC, l, out.hid] += dict(
+                        zip(asset_ids, out.insured_counts_matrix))
+
+    for idx, dic in numpy.ndenumerate(result):
+        o, l, r = idx
         if dic:
-            losses[idx] = [numpy.array(list(dic.items()), elt_dt)]
+            if o in (ELT, ILT):
+                result[idx] = [numpy.array(dic.items(), elt_dt)]
+            else:  # risk curves
+                result[idx] = [dic]
         else:
-            losses[idx] = []
-    return losses
+            result[idx] = []
+    return result
 
 
 @base.calculators.add('ebr')
 class EventBasedRiskCalculator(base.RiskCalculator):
     """
-    Event based PSHA calculator generating the event loss table only.
+    Event based PSHA calculator generating the event loss table and
+    fixed ratios loss curves.
     """
     pre_calculator = 'event_based_rupture'
     core_func = ebr
@@ -112,6 +132,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         correl_model = readinput.get_correl_model(oq)
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
         assets_by_site = self.assets_by_site
+        # the following is needed to set the asset idx attribute
+        self.assetcol = riskinput.build_asset_collection(
+            assets_by_site, oq.time_event)
 
         logging.info('Populating the risk inputs')
         rup_by_tag = sum(self.datastore['sescollection'], AccumDict())
@@ -129,49 +152,57 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
         # preparing empty datasets
-        loss_types = self.riskmodel.get_loss_types()
+        loss_types = self.riskmodel.loss_types
         self.L = len(loss_types)
         self.R = len(self.rlzs_assoc.realizations)
-        self.outs = ['event_loss_table-rlzs']
-        if oq.insured_losses:
-            self.outs.append('insured_loss_table-rlzs')
+        self.outs = OUTPUTS
         self.datasets = {}
+        self.monitor.oqparam = self.oqparam
+        # ugly: attaching an attribute needed in the task function
+        self.monitor.num_outputs = len(self.outs)
+        # attaching two other attributes used in riskinput.gen_outputs
+        self.monitor.assets_by_site = self.assets_by_site
+        self.monitor.num_assets = N = self.count_assets()
         for o, out in enumerate(self.outs):
             self.datastore.hdf5.create_group(out)
             for l, loss_type in enumerate(loss_types):
+                cb = self.riskmodel.curve_builders[l]
+                build_curves = len(cb.ratios)
                 for r, rlz in enumerate(self.rlzs_assoc.realizations):
                     key = '/%s/rlz-%03d' % (loss_type, rlz.ordinal)
-                    dset = self.datastore.create_dset(out + key, elt_dt)
-                    dset.attrs['uid'] = rlz.uid
+                    if o in (ELT, ILT):  # loss tables
+                        dset = self.datastore.create_dset(out + key, elt_dt)
+                    else:  # risk curves
+                        if not build_curves:
+                            continue
+                        dset = self.datastore.create_dset(
+                            out + key, cb.poes_dt, N)
                     self.datasets[o, l, r] = dset
+                if o in (FRC, IRC) and build_curves:
+                    grp = self.datastore['%s/%s' % (out, loss_type)]
+                    grp.attrs['loss_ratios'] = cb.ratios
 
     def execute(self):
         """
         Run the ebr calculator in parallel and aggregate the results
         """
-        self.monitor.oqparam = oq = self.oqparam
-        # ugly: attaching an attribute needed in the task function
-        self.monitor.num_outputs = 2 if oq.insured_losses else 1
-        # attaching two other attributes used in riskinput.gen_outputs
-        self.monitor.assets_by_site = self.assets_by_site
-        self.monitor.num_assets = self.count_assets()
         return apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
-            concurrent_tasks=oq.concurrent_tasks,
+            concurrent_tasks=self.oqparam.concurrent_tasks,
             agg=self.agg,
             acc=cube(self.monitor.num_outputs, self.L, self.R, list),
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('col_id'))
 
-    def agg(self, acc, losses):
+    def agg(self, acc, result):
         """
         Aggregate list of arrays in longer lists.
 
         :param acc: accumulator array of shape (O, L, R)
-        :param losses: a numpy array of shape (O, L, R)
+        :param result: a numpy array of shape (O, L, R)
         """
-        for idx, arrays in numpy.ndenumerate(losses):
+        for idx, arrays in numpy.ndenumerate(result):
             acc[idx].extend(arrays)
         return acc
 
@@ -182,16 +213,31 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param result:
             a numpy array of shape (O, L, R) containing lists of arrays
         """
+        nses = self.oqparam.ses_per_logic_tree_path
         saved = {out: 0 for out in self.outs}
+        N = len(self.assetcol)
         with self.monitor('saving loss table',
                           autoflush=True, measuremem=True):
-            for (o, l, r), arrays in numpy.ndenumerate(result):
-                if not arrays:  # empty list
+            for (o, l, r), data in numpy.ndenumerate(result):
+                if not data:  # empty list
                     continue
-                losses = numpy.concatenate(arrays)
-                self.datasets[o, l, r].extend(losses)
+                if o in (ELT, ILT):  # loss tables, data is a list of arrays
+                    losses = numpy.concatenate(data)
+                    self.datasets[o, l, r].extend(losses)
+                    saved[self.outs[o]] += losses.nbytes
+                else:  # risk curves, data is a list of counts dictionaries
+                    cb = self.riskmodel.curve_builders[l]
+                    counts_matrix = cb.get_counts(N, data)
+                    curves = cb.build_rcurves(
+                        counts_matrix, nses, self.assetcol)
+                    self.datasets[o, l, r].dset[:] = curves
+                    saved[self.outs[o]] += curves.nbytes
                 self.datastore.hdf5.flush()
-                saved[self.outs[o]] += losses.nbytes
+
         for out in self.outs:
-            self.datastore[out].attrs['nbytes'] = saved[out]
-            logging.info('Saved %s in %s', humansize(saved[out]), out)
+            nbytes = saved[out]
+            if nbytes:
+                self.datastore[out].attrs['nbytes'] = nbytes
+                logging.info('Saved %s in %s', humansize(nbytes), out)
+            else:  # remove empty outputs
+                del self.datastore[out]
