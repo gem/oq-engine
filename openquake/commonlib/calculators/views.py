@@ -176,10 +176,10 @@ def get_data_transfer(dstore):
     to_send_forward = 0
     to_send_back = 0
     block_info = []
-    for block in split_in_blocks(sources, oqparam.concurrent_tasks,
+    for block in split_in_blocks(sources, oqparam.concurrent_tasks or 1,
                                  operator.attrgetter('weight'),
                                  operator.attrgetter('trt_model_id')):
-        num_gsims = num_gsims_by_trt[block[0].trt_model_id]
+        num_gsims = num_gsims_by_trt.get(block[0].trt_model_id, 0)
         back = info['n_sites'] * info['n_levels'] * info['n_imts'] * num_gsims
         to_send_back += back * 8  # 8 bytes per float
         args = (block, sitecol, gsims_assoc, parallel.PerformanceMonitor(''))
@@ -195,7 +195,8 @@ def data_transfer(token, dstore):
     to the workers and back in a classical calculation.
     """
     block_info, to_send_forward, to_send_back = get_data_transfer(dstore)
-    tbl = [('Number of tasks to be generated', len(block_info)),
-           ('Estimated data to be sent forward', humansize(to_send_forward)),
-           ('Estimated data to be sent back', humansize(to_send_back))]
+    tbl = [
+        ('Number of tasks to generate', len(block_info)),
+        ('Estimated sources to send', humansize(to_send_forward)),
+        ('Estimated hazard curves to receive', humansize(to_send_back))]
     return rst_table(tbl)

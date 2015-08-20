@@ -13,7 +13,7 @@ def indent(text):
     return '  ' + '\n  '.join(text.splitlines())
 
 
-class ReportBuilder(object):
+class ReportWriter(object):
     """
     A particularly smart view over the datastore
     """
@@ -62,19 +62,19 @@ def build_report(job_ini, output_dir=None):
     calc = base.calculators(oq)
     calc.pre_execute()
     ds = datastore.DataStore(calc.datastore.calc_id)
-    rb = ReportBuilder(ds)
+    rw = ReportWriter(ds)
     report = os.path.join(output_dir, 'report.rst')
     for name in ('params', 'inputs'):
-        rb.add(name)
+        rw.add(name)
     if 'scenario' not in oq.calculation_mode:
-        rb.add('csm_info')
-    rb.add('rlzs_assoc', calc.rlzs_assoc)
+        rw.add('csm_info')
+    rw.add('rlzs_assoc', calc.rlzs_assoc)
     if 'num_ruptures' in ds:
-        rb.add('rupture_collections')
-        rb.add('col_rlz_assocs')
-    if oq.calculation_mode in ('classical', 'ebr'):
-        rb.add('data_transfer')
-    rb.save(report)
+        rw.add('rupture_collections')
+        rw.add('col_rlz_assocs')
+    if oq.calculation_mode in ('classical', 'event_based', 'ebr'):
+        rw.add('data_transfer')
+    rw.save(report)
     return report
 
 

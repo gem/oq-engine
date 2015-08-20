@@ -60,3 +60,11 @@ Collections <-> realizations
 Collections Realizations
 (0,)        [0]         
 =========== ============
+
+Expected data transfer for the sources
+--------------------------------------
+================================= =========
+Number of tasks to be generated   35       
+Estimated data to be sent forward 123.65 KB
+Estimated data to be sent back    5 KB     
+================================= =========

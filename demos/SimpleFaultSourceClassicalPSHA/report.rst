@@ -48,8 +48,8 @@ Realizations per (TRT, GSIM)
 
 Expected data transfer for the sources
 --------------------------------------
-================================= =========
-Number of tasks to be generated   5        
-Estimated data to be sent forward 169.39 KB
-Estimated data to be sent back    9 MB     
-================================= =========
+================================== =======
+Number of tasks to generate        31     
+Estimated sources to send          2.68 MB
+Estimated hazard curves to receive 61 MB  
+================================== =======

@@ -61,7 +61,7 @@ class EBRTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'ebr')
     def test_case_1(self):
         # test for the fatalities
-        self.run_calc(case_1.__file__, 'job_ebr.ini', concurrent_tasks=0)
+        self.run_calc(case_1.__file__, 'job_ebr.ini')
         ds = DataStore(self.calc.datastore.calc_id,
                        export_dir=self.calc.datastore.export_dir)
         fnames = export(('assetcol', 'csv'), ds) + export(
@@ -71,8 +71,9 @@ class EBRTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'ebr')
     def test_case_2(self):
-        out = self.run_calc(case_2.__file__, 'job_loss.ini',
-                            concurrent_tasks=0, exports='csv')
+        out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
+                            concurrent_tasks=0)
+        # this also tests that concurrent_tasks=0 does not give issues
         [fname] = out['event_loss_table-rlzs', 'csv']
         self.assertEqualFiles(
             'expected/event_loss_table-b1,b1-structural.csv', fname)
@@ -89,7 +90,7 @@ class EBRTestCase(CalculatorTestCase):
     def test_case_4(self):
         # Turkey with SHARE logic tree
         out = self.run_calc(case_4.__file__, 'job_ebr.ini',
-                            concurrent_tasks=0, exports='csv')
+                            exports='csv')
         fnames = out['event_loss_table-rlzs', 'csv']
         for fname in fnames:
             self.assertEqualFiles('expected/' + os.path.basename(fname), fname)
@@ -98,7 +99,7 @@ class EBRTestCase(CalculatorTestCase):
     def test_case_4a(self):
         # the case of a site_model.xml with 7 sites but only 1 asset
         out = self.run_calc(case_4a.__file__, 'job_hazard.ini',
-                            concurrent_tasks=0, exports='csv')
+                            exports='csv')
         [fname] = out['gmfs', 'csv']
         self.assertEqualFiles(
             'expected/gmf-smltp_b1-gsimltp_b1.csv', fname)
