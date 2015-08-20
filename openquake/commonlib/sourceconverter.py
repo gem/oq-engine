@@ -88,33 +88,52 @@ def area_to_point_sources(area_src, area_src_disc):
         yield pt
 
 
-def split_fault_source(src):
+def split_fault_source_by_magnitude(src):
     """
-    Generator splitting a fault source into several fault sources,
-    one for each magnitude.
+    Utility splitting a fault source into fault sources with a single
+    magnitude bin.
 
     :param src:
         an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
     """
-    i = 0  # split source index
-    max_mag = src.get_min_max_mag()[1]
-    if max_mag > MAGNITUDE_FOR_RUPTURE_SPLITTING:
-        for rupture in src.iter_ruptures():
-            i += 1
-            yield SingleRuptureSource(
-                rupture, '%s-%s' % (src.source_id, i),
-                src.tectonic_region_type, src.trt_model_id)
-    else:  # split on the annual occurrence rates
-        for mag, rate in src.mfd.get_annual_occurrence_rates():
-            if not rate:  # ignore zero occurency rate
-                continue
-            new_src = copy.copy(src)
-            new_src.source_id = '%s-%s' % (src.source_id, i)
-            new_src.mfd = mfd.EvenlyDiscretizedMFD(
-                min_mag=mag, bin_width=src.mfd.bin_width,
-                occurrence_rates=[rate])
-            i += 1
-            yield new_src
+    splitlist = []
+    i = 0
+    for mag, rate in src.mfd.get_annual_occurrence_rates():
+        if not rate:  # ignore zero occurency rate
+            continue
+        new_src = copy.copy(src)
+        new_src.source_id = '%s-%s' % (src.source_id, i)
+        new_src.mfd = mfd.EvenlyDiscretizedMFD(
+            min_mag=mag, bin_width=src.mfd.bin_width,
+            occurrence_rates=[rate])
+        i += 1
+        splitlist.append(new_src)
+    return splitlist
+
+
+def split_fault_source(src):
+    """
+    Generator splitting a fault source into several fault sources.
+
+    :param src:
+        an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
+    """
+    # NB: the splitting is tricky; if you don't split, you will not
+    # take advantage of the multiple cores; if you split too much,
+    # the data transfer will kill you, i.e. multiprocessing/celery
+    # will fail to transmit to the workers the generated sources.
+    # Heere I (MS) have set MAX_RUPTURE_SPLITTING to 100, meaning that
+    # at worse the data transfer will increase by a factor of 100 and at
+    # most 100 cores will be used for a source of large enough magnitude
+    for s in split_fault_source_by_magnitude(src):
+        if s.mfd.min_mag < MAGNITUDE_FOR_RUPTURE_SPLITTING:
+            yield s  # don't split, there would too many ruptures
+        else:
+            # split on SingleRuptureSources
+            for i, rupture in enumerate(s.iter_ruptures()):
+                yield SingleRuptureSource(
+                    rupture, '%s,%s' % (s.source_id, i),
+                    s.tectonic_region_type, s.trt_model_id)
 
 
 class SingleRuptureSource(object):
