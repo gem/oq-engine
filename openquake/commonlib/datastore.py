@@ -301,7 +301,7 @@ class DataStore(collections.MutableMapping):
     def __delitem__(self, key):
         if (h5py.version.version <= '2.0.1' and not
                 hasattr(self.hdf5[key], 'shape')):
-            # old bug when deleting groups that produces a segmentation fault
+            # avoid bug when deleting groups that produces a segmentation fault
             return
         del self.hdf5[key]
 

@@ -761,7 +761,7 @@ class CurveBuilder(object):
 
       builder = CurveBuilder(loss_type, loss_ratios)
       counts = builder.build_counts(loss_matrix)
-      curves = build_flr_curves(counts, nses, assetcol)
+      curves = build_rcurves(counts, nses, assetcol)
     """
     def __init__(self, loss_type, loss_ratios):
         self.loss_type = loss_type
@@ -804,11 +804,12 @@ class CurveBuilder(object):
                                         for ratio in self.ratios])
         return counts
 
-    def build_flr_curves(self, counts_matrix, nses, assetcol):
+    def build_rcurves(self, counts_matrix, nses, assetcol):
         """
         :param counts_matrix: a matrix N x C
-        :param nses: the number of effective SES
+        :param nses: the number of effective SES (SES x samples)
         :param assetcol: asset collection array with N elements
+        :returns: a composite array of dtype poes_dt with N elements
         """
         n = len(assetcol)
         assert len(counts_matrix) == n, (len(counts_matrix), n)

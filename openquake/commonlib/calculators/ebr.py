@@ -132,7 +132,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         correl_model = readinput.get_correl_model(oq)
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
         assets_by_site = self.assets_by_site
-        # the following is needed!
+        # the following is needed to set the asset idx attribute
         self.assetcol = riskinput.build_asset_collection(
             assets_by_site, oq.time_event)
 
@@ -228,7 +228,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 else:  # risk curves, data is a list of counts dictionaries
                     cb = self.riskmodel.curve_builders[l]
                     counts_matrix = cb.get_counts(N, data)
-                    curves = cb.build_flr_curves(
+                    curves = cb.build_rcurves(
                         counts_matrix, nses, self.assetcol)
                     self.datasets[o, l, r].dset[:] = curves
                     saved[self.outs[o]] += curves.nbytes
