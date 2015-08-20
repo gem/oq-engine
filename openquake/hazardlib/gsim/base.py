@@ -1028,41 +1028,42 @@ def hdf_arrays_to_dict(hdfgroup):
 
 class AmplificationTable(object):
     """
-    Class to apply amplification from the GMPE tables
+    Class to apply amplification from the GMPE tables.
 
-    :param tuple shape:
+    :param shape:
         Shape of the amplification arrays as a tuple of (Number Distances,
         Number IMTs, Number Magnitudes, Number Amplification Levels)
-    :param numpy.ndarray periods:
+    :param periods:
         Spectral periods defined in table
-    :param numpy.ndarray mean:
+    :param mean:
         Amplification factors for the mean ground motion
-    :param numpy.ndarray sigma:
+    :param sigma:
         List of modification factors for the standard deviation of ground
         motion
-    :param numpy.ndarray magnitudes:
+    :param magnitudes:
         Magnitude values for the tables
-    :param numpy.ndarray distances:
+    :param distances:
         Distance values for the tables
-    :param str parameter:
+    :param parameter:
         Parameter to which the amplification applies. Must be an element
         inside the __slots__ defines in the :class: openquake.hazardlib.
         gsim.base.RuptureContext or the :class: openquake.hazardlib.gsim.base.
         SitesContext
-    :param numpy.ndarray values:
+    :param values:
         Array of values to which each amplification table corresponds
-    :param str element:
+    :param element:
         Indicates if the amplification corresponds to a rupture attribute or
         a site attribute
     """
     def __init__(self, amplification_group, magnitudes, distances):
         """
-        Setup the amplification factors
+        Setup the amplification factors.
+
         :param amplification_group:
             Amplification model as instance of :class: h5py.Group
-        :param numpy.ndarray magnitudes:
+        :param magnitudes:
             Array of magnitudes
-        :param numpy.ndarray distances:
+        :param distances:
             Array of distances
         """
         self.shape = None
@@ -1128,7 +1129,8 @@ class AmplificationTable(object):
     def get_amplification_factors(self, imt, sctx, rctx, dists, stddev_types):
         """
         Returns the amplification factors for the given rupture and site
-        conditions
+        conditions.
+
         :param imt:
             Intensity measure type as an instance of the :class:
             openquake.hazardlib.imt
@@ -1138,9 +1140,9 @@ class AmplificationTable(object):
         :param rctx:
             Rupture parameters as instance of the :class:
             openquake.hazardlib.gsim.base.RuptureContext
-        :param numpy.ndarray dists:
+        :param dists:
             Source to site distances (km)
-        :param list stddev_types:
+        :param stddev_types:
             List of required standard deviation types
         :returns:
             * mean_amp - Amplification factors applied to the median ground
@@ -1175,7 +1177,8 @@ class AmplificationTable(object):
     def get_mean_table(self, imt, rctx):
         """
         Returns amplification factors for the mean, given the rupture and
-        intensity measure type
+        intensity measure type.
+
         :returns:
             amplification table as an array of [Number Distances,
             Number Levels]
@@ -1202,7 +1205,8 @@ class AmplificationTable(object):
     def get_sigma_tables(self, imt, rctx, stddev_types):
         """
         Returns modification factors for the standard deviations, given the
-        rupture and intensity measure type
+        rupture and intensity measure type.
+
         :returns:
             List of standard deviation modification tables, each as an array
             of [Number Distances, Number Levels]
@@ -1250,10 +1254,10 @@ class GMPETable(GMPE):
        log-T|log-IML space between neighbouring spectral periods.
 
     ii) The IML values are then interpolated to the correct magnitude using
-       linear-M|log-IML space
+        linear-M|log-IML space
 
     iii) The IML values are then interpolated to the correct distance via
-       linear-D|linear-IML interpolation
+         linear-D|linear-IML interpolation
     """
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
 
@@ -1399,11 +1403,11 @@ class GMPETable(GMPE):
     def _get_mean(self, data, dctx, dists):
         """
         Returns the mean intensity measure level from the tables
-        :param numpy.ndarray data:
+        :param data:
             The intensity measure level vector for the given magnitude and IMT
-        :param str key:
+        :param key:
             The distance type
-        :param numpy.ndrray distances:
+        :param distances:
             The distance vector for the given magnitude and IMT
         """
         interpolator_mean = interp1d(dists, data,
@@ -1424,14 +1428,15 @@ class GMPETable(GMPE):
     def _get_stddevs(self, dists, mag, dctx, imt, stddev_types):
         """
         Returns the total standard deviation of the intensity measure level
-        from the tables
+        from the tables.
+
         :param fle:
             HDF5 data stream as instance of :class: h5py.File
-        :param numpy.ndrray distances:
+        :param distances:
             The distance vector for the given magnitude and IMT
-        :param str key:
+        :param key:
             The distance type
-        :param float mag:
+        :param mag:
             The rupture magnitude
         """
         stddevs = []
@@ -1452,7 +1457,8 @@ class GMPETable(GMPE):
         """
         Returns the vector of ground motions or standard deviations
         corresponding to the specific magnitude and intensity measure type.
-        :param str val_type:
+
+        :param val_type:
             String indicating the type of data {"IMLs", "Total", "Inter" etc}
         """
         if isinstance(imt, (imt_module.PGA, imt_module.PGV)):
@@ -1488,9 +1494,10 @@ class GMPETable(GMPE):
     def apply_magnitude_interpolation(self, mag, iml_table):
         """
         Interpolates the tables to the required magnitude level
+
         :param float mag:
             Magnitude
-        :param numpy.ndarray iml_table:
+        :param iml_table:
             Intensity measure level table
         """
         # Get magnitude values
