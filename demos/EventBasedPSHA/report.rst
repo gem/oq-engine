@@ -63,8 +63,8 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-================================= =========
-Number of tasks to be generated   35       
-Estimated data to be sent forward 123.65 KB
-Estimated data to be sent back    5 KB     
-================================= =========
+================================== =========
+Number of tasks to generate        35       
+Estimated sources to send          123.65 KB
+Estimated hazard curves to receive 5 KB     
+================================== =========
