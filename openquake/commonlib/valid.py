@@ -565,6 +565,24 @@ def intensity_measure_types_and_levels(value):
     return dic
 
 
+def loss_ratios(value):
+    """
+    :param value: input string
+    :returns: dictionary loss_type -> loss ratios
+
+    >>> loss_ratios('{"structural": [0.1, 0.2]}')
+    {'structural': [0.1, 0.2]}
+    """
+    dic = dictionary(value)
+    for lt, ratios in dic.items():
+        for ratio in ratios:
+            if not 0 <= ratio <= 1:
+                raise ValueError('Loss ratio %f for loss_type %s is not in '
+                                 'the range [0, 1]' % (ratio, lt))
+        check_levels(ratios, lt)  # ValueError if the levels are invalid
+    return dic
+
+
 def dictionary(value):
     """
     :param value:

@@ -79,6 +79,7 @@ class OqParam(valid.ParamSet):
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
     loss_curve_resolution = valid.Param(valid.positiveint, 50)
+    loss_ratios = valid.Param(valid.loss_ratios, ())
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 0)
     master_seed = valid.Param(valid.positiveint, 0)

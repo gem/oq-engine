@@ -84,6 +84,7 @@ def build_asset_collection(assets_by_site, time_event=None):
     fields = ['asset_ref', 'site_id'] + float_fields
     for sid, assets_ in enumerate(assets_by_site):
         for asset in sorted(assets_, key=operator.attrgetter('id')):
+            asset.idx = asset_ordinal
             record = assetcol[asset_ordinal]
             asset_ordinal += 1
             for field in fields:
@@ -115,6 +116,24 @@ class RiskModel(collections.Mapping):
     def __init__(self, workflows, damage_states=None):
         self.damage_states = damage_states  # not None for damage calculations
         self._workflows = workflows
+        self.loss_types = []
+        self.curve_builders = []
+        self.lti = {}  # loss_type -> idx
+
+    def make_curve_builders(self, oqparam):
+        """
+        Populate the inner lists .loss_types, .curve_builders.
+        """
+        for i, loss_type in enumerate(self.get_loss_types()):
+            if not oqparam.loss_ratios:
+                loss_ratios = numpy.logspace(
+                    -10, 0, oqparam.loss_curve_resolution)
+            else:
+                loss_ratios = oqparam.loss_ratios[loss_type]
+            cb = scientific.CurveBuilder(loss_type, loss_ratios)
+            self.curve_builders.append(cb)
+            self.loss_types.append(loss_type)
+            self.lti[loss_type] = i
 
     def get_loss_types(self):
         """
