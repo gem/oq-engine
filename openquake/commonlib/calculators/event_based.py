@@ -657,10 +657,7 @@ class EventBasedCalculator(ClassicalCalculator):
             oq.export_dir = export_dir
             # use a different datastore
             self.cl = ClassicalCalculator(oq, self.monitor)
-            # copy the relevant attributes
-            self.cl.csm = self.csm
-            self.cl.sitecol = self.sitecol.complete
-            self.cl.rlzs_assoc = self.csm.get_rlzs_assoc()
+            self.cl.datastore.parent = self.datastore
             result = self.cl.run(pre_execute=False, clean_up=False)
             for imt in self.mean_curves.dtype.fields:
                 rdiff, index = max_rel_diff_index(
