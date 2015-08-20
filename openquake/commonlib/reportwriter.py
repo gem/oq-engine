@@ -4,6 +4,7 @@ Utilities to build a report writer generating a .rst report for a calculation
 """
 from __future__ import print_function
 import os
+
 from openquake.commonlib import readinput, datastore
 from openquake.commonlib.calculators import base
 
@@ -23,6 +24,7 @@ class ReportBuilder(object):
         rupture_collections='Non-empty rupture collections',
         col_rlz_assocs='Collections <-> realizations',
         rlzs_assoc='Realizations per (TRT, GSIM)',
+        data_transfer='Expected data transfer for the sources'
     )
 
     def __init__(self, dstore):
@@ -70,6 +72,8 @@ def build_report(job_ini, output_dir=None):
     if 'num_ruptures' in ds:
         rb.add('rupture_collections')
         rb.add('col_rlz_assocs')
+    if oq.calculation_mode in ('classical', 'ebr'):
+        rb.add('data_transfer')
     rb.save(report)
     return report
 

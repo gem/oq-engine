@@ -447,3 +447,11 @@ Realizations per (TRT, GSIM)
   160,ChiouYoungs2008: ['<322,b11_b23_b33_b43_b53,b12_b21,w=0.003111185284>', '<323,b11_b23_b33_b43_b53,b12_b22,w=0.003111185284>']
   161,Campbell2003: ['<321,b11_b23_b33_b43_b53,b11_b22,w=0.003111185284>', '<323,b11_b23_b33_b43_b53,b12_b22,w=0.003111185284>']
   161,ToroEtAl2002: ['<320,b11_b23_b33_b43_b53,b11_b21,w=0.003111185284>', '<322,b11_b23_b33_b43_b53,b12_b21,w=0.003111185284>']>
+
+Expected data transfer for the sources
+--------------------------------------
+================================= =======
+Number of tasks to be generated   162    
+Estimated data to be sent forward 5.09 MB
+Estimated data to be sent back    48 KB  
+================================= =======

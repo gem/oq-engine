@@ -46,3 +46,11 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(1)
   0,ChiouYoungs2008: ['<0,b1,b1,w=1.0>']>
+
+Expected data transfer for the sources
+--------------------------------------
+================================= =======
+Number of tasks to be generated   32     
+Estimated data to be sent forward 2.01 MB
+Estimated data to be sent back    4 MB   
+================================= =======

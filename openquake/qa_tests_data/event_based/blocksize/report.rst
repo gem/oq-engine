@@ -16,6 +16,7 @@ width_of_mfd_bin             0.5
 area_source_discretization   10.0       
 random_seed                  1024       
 master_seed                  0          
+concurrent_tasks             32         
 ============================ ===========
 
 Input files
