@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2014-2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -22,43 +22,12 @@ import operator
 import logging
 import tempfile
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import humansize, split_in_blocks, groupby
+from openquake.baselib.general import humansize, groupby
 from openquake.commonlib import (
-    sap, readinput, nrml, source, parallel, datastore, reportwriter)
+    sap, readinput, nrml, source, datastore, reportwriter)
 from openquake.commonlib.calculators import base
 from openquake.risklib import riskinput
 from openquake.hazardlib import gsim
-from openquake.baselib.general import groupby
-
-
-def data_transfer(calc):
-    """
-    Determine the amount of data transferred from the controller node
-    to the workers and back in a classical calculation.
-
-    :returns: a triple (num_tasks, to_send_forward, to_send_back)
-    """
-    oqparam = calc.oqparam
-    info = calc.job_info
-    calc.monitor.oqparam = oqparam
-    sources = calc.csm.get_sources()
-    num_gsims_by_trt = groupby(calc.rlzs_assoc, operator.itemgetter(0),
-                               lambda group: sum(1 for row in group))
-    gsims_assoc = calc.rlzs_assoc.gsims_by_trt_id
-    to_send_forward = 0
-    to_send_back = 0
-    n_tasks = 0
-    for block in split_in_blocks(sources, oqparam.concurrent_tasks,
-                                 operator.attrgetter('weight'),
-                                 operator.attrgetter('trt_model_id')):
-        num_gsims = num_gsims_by_trt[block[0].trt_model_id]
-        back = info['n_sites'] * info['n_levels'] * info['n_imts'] * num_gsims
-        to_send_back += back * 8  # 8 bytes per float
-        args = (block, calc.sitecol, gsims_assoc, calc.monitor)
-        logging.info('Pickling task args #%d', n_tasks)
-        to_send_forward += sum(len(p) for p in parallel.pickle_sequence(args))
-        n_tasks += 1
-    return n_tasks, to_send_forward, to_send_back
 
 
 def _print_info(dstore, filtersources=True, weightsources=True):
@@ -131,8 +100,7 @@ def _info(name, filtersources, weightsources):
         print("No info for '%s'" % name)
 
 
-def info(name, filtersources=False, weightsources=False,
-         datatransfer=False, report=False):
+def info(name, filtersources=False, weightsources=False, report=False):
     """
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
@@ -142,18 +110,6 @@ def info(name, filtersources=False, weightsources=False,
         if report:
             tmp = tempfile.gettempdir()
             print('Generated', reportwriter.build_report(name, tmp))
-        elif datatransfer:
-            oqparam = readinput.get_oqparam(name)
-            calc = base.calculators(oqparam)
-            calc.pre_execute()
-            _print_info(calc.datastore, weightsources=True)
-            if 'classical' in oqparam.calculation_mode:
-                n_tasks, to_send_forward, to_send_back = data_transfer(calc)
-                print('Number of tasks to be generated: %d' % n_tasks)
-                print('Estimated data to be sent forward: %s' %
-                      humansize(to_send_forward))
-                print('Estimated data to be sent back: %s' %
-                      humansize(to_send_back))
         else:
             _info(name, filtersources, weightsources)
     if mon.duration > 1:
@@ -164,5 +120,4 @@ parser = sap.Parser(info)
 parser.arg('name', 'calculator name, job.ini file or zip archive')
 parser.flg('filtersources', 'flag to enable filtering of the source models')
 parser.flg('weightsources', 'flag to enable weighting of the source models')
-parser.flg('datatransfer', 'flag to enable data transfer calculation')
 parser.flg('report', 'flag to enable building a report in rst format')

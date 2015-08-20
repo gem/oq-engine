@@ -16,6 +16,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0      
 random_seed                  23       
 master_seed                  0        
+concurrent_tasks             32       
 ============================ =========
 
 Input files
@@ -87,3 +88,11 @@ Realizations per (TRT, GSIM)
   16,ChiouYoungs2008: ['<34,b11_b23_b33,b12_b21,w=0.027889>', '<35,b11_b23_b33,b12_b22,w=0.027889>']
   17,Campbell2003: ['<33,b11_b23_b33,b11_b22,w=0.027889>', '<35,b11_b23_b33,b12_b22,w=0.027889>']
   17,ToroEtAl2002: ['<32,b11_b23_b33,b11_b21,w=0.027889>', '<34,b11_b23_b33,b12_b21,w=0.027889>']>
+
+Expected data transfer for the sources
+--------------------------------------
+================================== ========
+Number of tasks to generate        45      
+Estimated sources to send          46.91 MB
+Estimated hazard curves to receive 13 KB   
+================================== ========

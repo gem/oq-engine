@@ -17,6 +17,11 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os.path
+import operator
+import numpy
+
+from openquake.baselib.general import groupby, split_in_blocks, humansize
+from openquake.commonlib import parallel
 from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import build_header
 
@@ -124,7 +129,7 @@ def view_params(token, dstore):
               'ses_per_logic_tree_path', 'truncation_level',
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
-              'random_seed', 'master_seed')
+              'random_seed', 'master_seed', 'concurrent_tasks')
     return rst_table([(param, getattr(oq, param)) for param in params])
 
 
@@ -147,3 +152,51 @@ def view_inputs(token, dstore):
         source_models = []
     return rst_table(
         build_links(list(inputs.items()) + source_models), header=['Name', 'File'])
+
+block_dt = numpy.dtype([('num_srcs', numpy.uint32),
+                        ('weight', numpy.float32)])
+
+
+def get_data_transfer(dstore):
+    """
+    Determine the amount of data transferred from the controller node
+    to the workers and back in a classical calculation.
+
+    :param dstore: a :class:`openquake.commonlib.datastore.DataStore` instance
+    :returns: (block_info, to_send_forward, to_send_back)
+    """
+    oqparam = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    rlzs_assoc = dstore['rlzs_assoc']
+    info = dstore['job_info']
+    sources = dstore['composite_source_model'].get_sources()
+    num_gsims_by_trt = groupby(rlzs_assoc, operator.itemgetter(0),
+                               lambda group: sum(1 for row in group))
+    gsims_assoc = rlzs_assoc.gsims_by_trt_id
+    to_send_forward = 0
+    to_send_back = 0
+    block_info = []
+    for block in split_in_blocks(sources, oqparam.concurrent_tasks or 1,
+                                 operator.attrgetter('weight'),
+                                 operator.attrgetter('trt_model_id')):
+        num_gsims = num_gsims_by_trt.get(block[0].trt_model_id, 0)
+        back = info['n_sites'] * info['n_levels'] * info['n_imts'] * num_gsims
+        to_send_back += back * 8  # 8 bytes per float
+        args = (block, sitecol, gsims_assoc, parallel.PerformanceMonitor(''))
+        to_send_forward += sum(len(p) for p in parallel.pickle_sequence(args))
+        block_info.append((len(block), block.weight))
+    return numpy.array(block_info, block_dt), to_send_forward, to_send_back
+
+
+@view.add('data_transfer')
+def data_transfer(token, dstore):
+    """
+    Determine the amount of data transferred from the controller node
+    to the workers and back in a classical calculation.
+    """
+    block_info, to_send_forward, to_send_back = get_data_transfer(dstore)
+    tbl = [
+        ('Number of tasks to generate', len(block_info)),
+        ('Estimated sources to send', humansize(to_send_forward)),
+        ('Estimated hazard curves to receive', humansize(to_send_back))]
+    return rst_table(tbl)

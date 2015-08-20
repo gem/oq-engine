@@ -77,14 +77,6 @@ n_imts 1
 curve_matrix_size 232 B'''
         self.assertEqual(exp, str(p))
 
-    def test_data_transfer(self):
-        path = os.path.join(DATADIR, 'frenchbug.zip')
-        with Print.patch() as p:
-            info(path, datatransfer=True)
-        got = str(p)
-        self.assertIn('RlzsAssoc', got)
-        self.assertIn('Number of tasks to be generated: 14', got)
-
 
 class RunShowExportTestCase(unittest.TestCase):
     @classmethod
