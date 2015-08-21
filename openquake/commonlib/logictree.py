@@ -25,6 +25,7 @@ with attributes `value`, `weight`, `lt_path` and `ordinal`.
 
 import abc
 import os
+import sys
 import random
 import re
 import itertools
@@ -37,6 +38,7 @@ from lxml import etree
 import numpy
 
 from openquake.baselib.general import groupby
+from openquake.baselib.python3compat import raise_
 from openquake.commonlib import nrml, valid
 from openquake.commonlib.node import node_from_xml
 
@@ -1143,8 +1145,9 @@ class GsimLogicTree(object):
                     try:
                         gsim = valid.gsim(
                             uncertainty.text.strip(), **uncertainty.attrib)
-                    except ValueError as e:
-                        raise NameError('%s in file %r' % (e, self.fname))
+                    except:
+                        etype, exc, tb = sys.exc_info()
+                        raise_(etype, '%s in file %r' % (exc, self.fname), tb)
                     self.values[trt].append(gsim)
                     bt = BranchTuple(
                         branchset, branch_id, gsim, weight, effective)
