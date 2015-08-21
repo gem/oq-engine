@@ -53,7 +53,7 @@ MAX_SINT_32 = (2 ** 31) - 1
 
 Realization = namedtuple('Realization', 'value weight lt_path ordinal lt_uid')
 Realization.uid = property(lambda self: '_'.join(self.lt_uid))  # unique ID
-Realization.__str__ = lambda self: self.value[0]  # the first GSIM
+Realization.__str__ = lambda self: str(self.value[0])  # the first GSIM
 
 
 class RlzsAssoc(collections.Mapping):

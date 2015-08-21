@@ -95,5 +95,8 @@ class ValidationTestCase(unittest.TestCase):
             def __repr__(self):
                 return '<FakeGsim(%s)>' % self.arg
         valid.GSIM['FakeGsim'] = FakeGsim
-        gsim = valid.gsim('FakeGsim(0.1)')
-        self.assertEqual(repr(gsim), '<FakeGsim(0.1)>')
+        try:
+            gsim = valid.gsim('FakeGsim', arg='0.1')
+            self.assertEqual(repr(gsim), '<FakeGsim(0.1)>')
+        finally:
+            del valid.GSIM['FakeGsim']
