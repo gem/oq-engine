@@ -1,3 +1,4 @@
+rupture_tag,aggregate_loss,insured_loss
 col=00|ses=0003|src=1|rup=001-01,a0,3.461644E+02,0.000000E+00
 col=00|ses=0003|src=1|rup=001-02,a0,1.018580E+03,0.000000E+00
 col=00|ses=0003|src=2|rup=001-01,a1,9.634527E+01,0.000000E+00

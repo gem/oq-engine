@@ -16,6 +16,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   0.05     
 random_seed                  1066     
 master_seed                  0        
+concurrent_tasks             32       
 ============================ =========
 
 Input files
@@ -34,7 +35,7 @@ Composite source model
 ========= ====== ====================================== =============== ================ ===========
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations num_sources
 ========= ====== ====================================== =============== ================ ===========
-b1        1.00   `source_model.xml <source_model.xml>`_ trivial(1)      1/1              31351      
+b1        1.00   `source_model.xml <source_model.xml>`_ trivial(1)      1/1              31353      
 ========= ====== ====================================== =============== ================ ===========
 
 Realizations per (TRT, GSIM)
@@ -44,3 +45,11 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(1)
   0,SadighEtAl1997: ['<0,b1,b1,w=1.0>']>
+
+Expected data transfer for the sources
+--------------------------------------
+================================== =======
+Number of tasks to generate        32     
+Estimated sources to send          6.83 MB
+Estimated hazard curves to receive 768 B  
+================================== =======

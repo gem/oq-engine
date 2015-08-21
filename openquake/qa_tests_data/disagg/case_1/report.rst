@@ -16,6 +16,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   10.0          
 random_seed                  9000          
 master_seed                  0             
+concurrent_tasks             32            
 ============================ ==============
 
 Input files
@@ -34,7 +35,7 @@ Composite source model
 ========= ====== ====================================== =============== ================ ===========
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations num_sources
 ========= ====== ====================================== =============== ================ ===========
-b1        1.00   `source_model.xml <source_model.xml>`_ trivial(1)      1/1              878        
+b1        1.00   `source_model.xml <source_model.xml>`_ trivial(1)      1/1              209        
 ========= ====== ====================================== =============== ================ ===========
 
 Realizations per (TRT, GSIM)
