@@ -19,6 +19,7 @@
 import os
 import sys
 import abc
+import ast
 import logging
 import operator
 import collections
@@ -55,8 +56,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     :param monitor: monitor object
     :param calc_id: numeric calculation ID
     """
-
-    oqparam = datastore.persistent_attribute('oqparam')
     sitemesh = datastore.persistent_attribute('sitemesh')
     sitecol = datastore.persistent_attribute('sitecol')
     rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
@@ -77,14 +76,13 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                  persistent=True):
         self.monitor = monitor
         if persistent:
-            self.datastore = datastore.DataStore(calc_id)
+            self.datastore = datastore.DataStore(
+                calc_id, params=oqparam.to_params())
         else:
             self.datastore = general.AccumDict()
             self.datastore.hdf5 = {}
         self.datastore.export_dir = oqparam.export_dir
-        if 'oqparam' not in self.datastore:  # new datastore
-            self.oqparam = oqparam
-        # else we are doing a precalculation; oqparam has been already stored
+        self.oqparam = oqparam
         self.persistent = persistent
 
     def run(self, pre_execute=True, clean_up=True, concurrent_tasks=None,
@@ -246,13 +244,14 @@ class HazardCalculator(BaseCalculator):
                 if 'scenario' not in self.oqparam.calculation_mode:
                     self.csm = precalc.csm
             else:  # read previously computed data
-                self.datastore.parent = datastore.DataStore(precalc_id)
+                pparams = self.oqparam.to_params()
+                self.datastore.parent = datastore.DataStore(
+                    precalc_id, params=pparams)
                 # merge old oqparam into the new ones, when possible
                 new = vars(self.oqparam)
-                for name, value in self.datastore.parent['oqparam']:
+                for name, value in pparams:
                     if name not in new:  # add missing parameter
-                        new[name] = value
-                self.oqparam = self.oqparam
+                        new[name] = ast.literal_eval(value)
                 self.read_exposure_sitecol()
 
         else:  # we are in a basic calculator

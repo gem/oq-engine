@@ -168,7 +168,7 @@ class DataStore(collections.MutableMapping):
     lexicographically according to their name.
     """
     def __init__(self, calc_id=None, datadir=DATADIR, parent=(),
-                 export_dir='.'):
+                 export_dir='.', params=()):
         if not os.path.exists(datadir):
             os.makedirs(datadir)
         if calc_id is None:  # use a new datastore
@@ -191,6 +191,14 @@ class DataStore(collections.MutableMapping):
         self.hdf5path = os.path.join(self.calc_dir, 'output.hdf5')
         mode = 'r+' if os.path.exists(self.hdf5path) else 'w'
         self.hdf5 = h5py.File(self.hdf5path, mode, libver='latest')
+        for name, value in params:
+            self.hdf5.attrs[name] = value
+
+    def items(self):
+        """
+        Returns the HDF5 attributes as a sorted list of pairs (name, value)
+        """
+        return sorted(self.hdf5.attrs.items())
 
     def create_dset(self, key, dtype, size=None):
         """

@@ -25,7 +25,7 @@ import numpy
 from openquake.commonlib.calculators import base
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import readinput, oqvalidation, datastore
-
+from openquake.commonlib.oqvalidation import OqParam
 
 class DifferentFiles(Exception):
     pass
@@ -40,7 +40,7 @@ def columns(line):
 
 def get_datastore(calc):
     ds = datastore.DataStore(calc.datastore.calc_id)
-    hc_id = ds['oqparam'].hazard_calculation_id
+    hc_id = OqParam.from_(ds).hazard_calculation_id
     if hc_id:
         ds.parent = datastore.DataStore(hc_id)
     return ds
