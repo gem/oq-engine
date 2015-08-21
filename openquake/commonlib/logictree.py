@@ -1139,11 +1139,15 @@ class GsimLogicTree(object):
                     weight = Decimal(branch.uncertaintyWeight.text)
                     weights.append(weight)
                     branch_id = branch['branchID']
-                    uncertainty = branch.uncertaintyModel.text.strip()
-                    self.validate_gsim(uncertainty)
-                    self.values[trt].append(uncertainty)
+                    uncertainty = branch.uncertaintyModel
+                    try:
+                        gsim = valid.gsim(
+                            uncertainty.text.strip(), **uncertainty.attrib)
+                    except ValueError as e:
+                        raise NameError('%s in file %r' % (e, self.fname))
+                    self.values[trt].append(gsim)
                     bt = BranchTuple(
-                        branchset, branch_id, uncertainty, weight, effective)
+                        branchset, branch_id, gsim, weight, effective)
                     branches.append(bt)
                 assert sum(weights) == 1, weights
         if len(trts) > len(set(trts)):
@@ -1151,18 +1155,6 @@ class GsimLogicTree(object):
                 'Found duplicated applyToTectonicRegionType=%s' % trts)
         branches.sort(key=lambda b: (b.bset['branchSetID'], b.id))
         return trts, branches
-
-    def validate_gsim(self, value):
-        """
-        Checks that the value is a class name in the dictionary reported
-        by get_available_gsims, i.e. a GSIM class.
-
-        :param str value: the name of an existing GSIM class
-        """
-        try:
-            valid.gsim(value)
-        except ValueError as e:
-            raise NameError('%s in file %r' % (e, self.fname))
 
     def get_gsim_by_trt(self, rlz, trt):
         """
@@ -1189,8 +1181,6 @@ class GsimLogicTree(object):
             lt_uid = []
             value = []
             for trt, branch in zip(self.all_trts, branches):
-                assert branch.uncertainty in self.values[trt], \
-                    branch.uncertainty  # sanity check
                 lt_path.append(branch.id)
                 lt_uid.append(branch.id if branch.effective else '@')
                 weight *= branch.weight

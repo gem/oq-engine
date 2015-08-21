@@ -34,11 +34,10 @@ from decimal import Decimal
 from mock import Mock
 
 import openquake.hazardlib
-from openquake.commonlib import logictree, readinput, tests, source
+from openquake.commonlib import logictree, readinput, tests, source, valid
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
-
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -1748,13 +1747,45 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         gsim_lt = self.parse_valid(xml, ["Stable Shallow Crust"])
         [rlz] = gsim_lt
         gsim = gsim_lt.get_gsim_by_trt(rlz, 'Stable Shallow Crust')
-        self.assertEqual(gsim, 'AkkarBommer2010')
+        self.assertEqual(str(gsim), 'AkkarBommer2010')
         # this test was broken in release 1.4, a wrong ordering
         # of the value gave back LinLee2008SSlab instead of AkkarBommer2010
-        self.assertEqual(rlz.value, (
+        self.assertEqual(map(str, rlz.value), [
             'AkkarBommer2010', 'AkkarBommer2010', 'ToroEtAl2002SHARE',
             'ZhaoEtAl2006SInter', 'ZhaoEtAl2006SSlab', 'FaccioliEtAl2010',
-            'LinLee2008SSlab'))
+            'LinLee2008SSlab'])
+
+    def test_gsim_with_kwargs(self):
+        class FakeGMPETable(object):
+            def __init__(self, gmpe_table):
+                self.gmpe_table = gmpe_table
+
+            def __str__(self):
+                return 'FakeGMPETable(gmpe_table="%s")' % self.gmpe_table
+
+        valid.GSIM['FakeGMPETable'] = FakeGMPETable
+        try:
+            xml = _make_nrml("""\
+            <logicTree logicTreeID="lt1">
+                <logicTreeBranchingLevel branchingLevelID="bl1">
+                    <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                branchSetID="bs1"
+                                applyToTectonicRegionType="Shield">
+                        <logicTreeBranch branchID="b1">
+                            <uncertaintyModel gmpe_table="Wcrust_rjb_med.hdf5">
+                                FakeGMPETable
+                            </uncertaintyModel>
+                            <uncertaintyWeight>1.0</uncertaintyWeight>
+                        </logicTreeBranch>
+                    </logicTreeBranchSet>
+                </logicTreeBranchingLevel>
+            </logicTree>
+            """)
+            gsim_lt = self.parse_valid(xml, ['Shield'])
+            self.assertEqual(str(gsim_lt), '''<GsimLogicTree
+Shield,b1,FakeGMPETable(gmpe_table="Wcrust_rjb_med.hdf5"),w=1.0>''')
+        finally:
+            del valid.GSIM['FakeGMPETable']
 
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
