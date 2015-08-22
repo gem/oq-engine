@@ -3,7 +3,7 @@ from nose.plugins.attrib import attr
 
 from openquake.commonlib.export import export
 from openquake.commonlib.datastore import DataStore
-from openquake.commonlib.tests.calculators import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a)
 

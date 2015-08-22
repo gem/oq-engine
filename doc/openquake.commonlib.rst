@@ -134,6 +134,6 @@ Subpackages
 
 .. toctree::
 
-    openquake.commonlib.calculators
+    openquake.calculators
     openquake.commonlib.commands
 

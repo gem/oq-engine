@@ -163,7 +163,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
         the parameter name.
     """
     # UGLY: this is here to avoid circular imports
-    from openquake.commonlib.calculators import base
+    from openquake.calculators import base
 
     OqParam.calculation_mode.validator.choices = tuple(
         calculators or base.calculators)

@@ -5,7 +5,7 @@ from nose.plugins.attrib import attr
 from openquake.qa_tests_data.scenario_risk import (
     case_1g, case_3, occupants, case_6a)
 
-from openquake.commonlib.tests.calculators import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase
 
 
 class ScenarioRiskTestCase(CalculatorTestCase):

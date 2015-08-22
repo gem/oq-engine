@@ -1,6 +1,6 @@
 import unittest
 import numpy
-from openquake.commonlib.calculators import calc
+from openquake.calculators import calc
 
 aaae = numpy.testing.assert_array_almost_equal
 

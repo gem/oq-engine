@@ -21,7 +21,7 @@ import logging
 
 from openquake.baselib.general import AccumDict
 from openquake.commonlib import readinput, parallel, logictree, datastore
-from openquake.commonlib.calculators import base
+from openquake.calculators import base
 
 
 @parallel.litetask

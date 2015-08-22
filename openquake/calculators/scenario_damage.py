@@ -22,7 +22,7 @@ import logging
 from openquake.commonlib import parallel, datastore
 from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
-from openquake.commonlib.calculators import base
+from openquake.calculators import base
 
 
 @parallel.litetask
