@@ -43,7 +43,7 @@ from openquake.hazardlib.calc import gmf
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 
-from openquake.commonlib.calculators.event_based import (
+from openquake.calculators.event_based import (
     sample_ruptures, build_ses_ruptures)
 
 from openquake.engine import writer

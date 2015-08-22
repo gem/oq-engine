@@ -25,7 +25,7 @@ import numpy
 
 from itertools import izip
 
-from openquake.commonlib.calculators import calc
+from openquake.calculators import calc
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine.writer import CacheInserter
