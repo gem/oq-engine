@@ -24,7 +24,7 @@ import numpy
 from openquake.hazardlib.geo import mesh
 from openquake.risklib import scientific
 from openquake.risklib.utils import numpy_map
-from openquake.commonlib.calculators import ebr
+from openquake.calculators import ebr
 
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
