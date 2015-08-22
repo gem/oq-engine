@@ -205,7 +205,7 @@ def run_calc(job, log_level, log_file, exports, lite=False):
         if os.path.exists(calc_dir):
             os.rename(calc_dir, calc_dir + '.bak')
             print 'Generated %s.bak' % calc_dir
-        from openquake.commonlib.calculators import base
+        from openquake.calculators import base
         calculator = base.calculators(job.get_oqparam(), calc_id=job.id)
         calculator.job = job
         calculator.monitor = EnginePerformanceMonitor('', job.id)
@@ -609,7 +609,7 @@ def job_from_file_lite(cfg_file, username, log_level='info', exports='',
     :raises:
         `RuntimeError` if the input job configuration is not valid
     """
-    from openquake.commonlib.calculators import base
+    from openquake.calculators import base
     # create the current job
     job = create_job(user_name=username, log_level=log_level)
     models.JobStats.objects.create(oq_job=job)

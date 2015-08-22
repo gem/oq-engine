@@ -41,7 +41,7 @@ aaae = numpy.testing.assert_array_almost_equal
 
 
 # package prefix used for mock.patching
-MOCK_PREFIX = "openquake.commonlib.calculators.calc"
+MOCK_PREFIX = "openquake.calculators.calc"
 
 
 class HazardMapTaskFuncTestCase(unittest.TestCase):
