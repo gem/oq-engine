@@ -25,6 +25,7 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.general import humansize, groupby
 from openquake.commonlib import (
     sap, readinput, nrml, source, datastore, reportwriter)
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.calculators import base
 from openquake.risklib import riskinput
 from openquake.hazardlib import gsim
@@ -32,7 +33,7 @@ from openquake.hazardlib import gsim
 
 def _print_info(dstore, filtersources=True, weightsources=True):
     assoc = dstore['rlzs_assoc']
-    oqparam = dstore['oqparam']
+    oqparam = OqParam.from_(dstore.attrs)
     csm = dstore['composite_source_model']
     sitecol = dstore['sitecol']
     print(csm.get_info())

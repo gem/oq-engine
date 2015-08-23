@@ -124,7 +124,7 @@ def view_rupture_collections(token, dstore):
 
 @view.add('params')
 def view_params(token, dstore):
-    oq = OqParam.from_(dstore)
+    oq = OqParam.from_(dstore.attrs)
     params = ('calculation_mode', 'number_of_logic_tree_samples',
               'maximum_distance', 'investigation_time',
               'ses_per_logic_tree_path', 'truncation_level',
@@ -145,7 +145,7 @@ def build_links(items):
 
 @view.add('inputs')
 def view_inputs(token, dstore):
-    inputs = OqParam.from_(dstore).inputs.copy()
+    inputs = OqParam.from_(dstore.attrs).inputs.copy()
     try:
         source_models = [('source', fname) for fname in inputs['source']]
         del inputs['source']
@@ -167,7 +167,7 @@ def get_data_transfer(dstore):
     :param dstore: a :class:`openquake.commonlib.datastore.DataStore` instance
     :returns: (block_info, to_send_forward, to_send_back)
     """
-    oqparam = OqParam.from_(dstore)
+    oqparam = OqParam.from_(dstore.attrs)
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['rlzs_assoc']
     info = dstore['job_info']

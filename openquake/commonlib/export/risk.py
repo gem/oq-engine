@@ -27,6 +27,7 @@ from openquake.baselib.general import AccumDict
 from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers, riskmodels
 from openquake.commonlib.writers import scientificformat
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
@@ -249,7 +250,7 @@ def export_damage(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    oqparam = dstore['oqparam']
+    oqparam = OqParam.from_(dstore.attrs)
     riskmodel = dstore['riskmodel']
     rlzs = dstore['rlzs_assoc'].realizations
     damages_by_key = dstore['damages_by_key']
@@ -381,7 +382,7 @@ def export_risk(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    oqparam = dstore['oqparam']
+    oqparam = OqParam.from_(dstore.attrs)
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                   for ct in dstore['cost_types']}
     unit_by_lt['fatalities'] = 'people'

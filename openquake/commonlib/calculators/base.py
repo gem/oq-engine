@@ -30,6 +30,7 @@ from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general
 from openquake.baselib.performance import DummyMonitor
 from openquake.commonlib import readinput, datastore, logictree, export, source
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import apply_reduce
 from openquake.risklib import riskinput
 from openquake.baselib.python3compat import with_metaclass
@@ -81,6 +82,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         else:
             self.datastore = general.AccumDict()
             self.datastore.hdf5 = {}
+            self.datastore.attrs = {}
         self.datastore.export_dir = oqparam.export_dir
         self.oqparam = oqparam
         self.persistent = persistent
@@ -244,13 +246,13 @@ class HazardCalculator(BaseCalculator):
                 if 'scenario' not in self.oqparam.calculation_mode:
                     self.csm = precalc.csm
             else:  # read previously computed data
-                pparams = self.oqparam.to_params()
-                self.datastore.parent = datastore.DataStore(
-                    precalc_id, params=pparams)
+                self.datastore.parent = datastore.DataStore(precalc_id)
                 # merge old oqparam into the new ones, when possible
+                # without this, a lot of tests break, including classical_risk
                 new = vars(self.oqparam)
-                for name, value in pparams:
+                for name, value in self.datastore.parent.attrs.items():
                     if name not in new:  # add missing parameter
+                        self.datastore.attrs[name] = value
                         new[name] = ast.literal_eval(value)
                 self.read_exposure_sitecol()
 
@@ -291,7 +293,7 @@ class HazardCalculator(BaseCalculator):
                 logging.warn('Associated %d assets to %d sites, %d discarded',
                              ok_assets, num_sites, num_assets - ok_assets)
         elif (self.datastore.parent and 'exposure' in
-              self.datastore.parent['oqparam'].inputs):
+              OqParam.from_(self.datastore.parent.attrs).inputs):
             logging.info('Re-using the already imported exposure')
         else:  # no exposure
             logging.info('Reading the site collection')

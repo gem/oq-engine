@@ -884,20 +884,24 @@ class ParamSet(with_metaclass(MetaParamSet)):
     params = {}
 
     @classmethod
-    def from_(cls, obj_with_items):
+    def from_(cls, dic):
         """
-        Build a new ParamSet from an object with a method .items() returning
-        list of pairs (name, valrepr) which are assumed to be already valid.
+        Build a new ParamSet from a dictionary of string-value parameters
+        which are assumed to be already valid.
         """
         self = cls.__new__(cls)
-        for k, v in obj_with_items.items():
-            setattr(self, k, ast.literal_eval(v))
+        for k, v in dic.items():
+            try:
+                setattr(self, k, ast.literal_eval(v))
+            except:
+                import pdb; pdb.set_trace()
         return self
 
     def to_params(self):
         """
-        Convert the instance dictionary into a list of pairs (name, valrepr)
-        where valrepr is the string representation of the underlying value.
+        Convert the instance dictionary into a sorted list of pairs
+        (name, valrepr) where valrepr is the string representation of
+        the underlying value.
         """
         dic = self.__dict__
         return [(k, repr(dic[k])) for k in sorted(dic)]

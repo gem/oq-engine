@@ -27,6 +27,7 @@ from openquake.baselib.general import AccumDict, groupby, humansize
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.commonlib.export import export
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.writers import (
     scientificformat, floatformat, write_csv)
 from openquake.commonlib import hazard_writers
@@ -76,7 +77,7 @@ def export_ses_xml(ekey, dstore):
     :param dstore: datastore object
     """
     fmt = ekey[-1]
-    oq = dstore['oqparam']
+    oq = OqParam.from_(dstore.attrs)
     try:
         csm_info = dstore['rlzs_assoc'].csm_info
     except AttributeError:  # for scenario calculators don't export
@@ -382,7 +383,7 @@ def export_hcurves_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    oq = dstore['oqparam']
+    oq = OqParam.from_(dstore.attrs)
     rlzs_assoc = dstore['rlzs_assoc']
     sitecol = dstore['sitecol']
     key, fmt = ekey
@@ -409,7 +410,7 @@ def export_gmf(ekey, dstore):
     rlzs_assoc = dstore['rlzs_assoc']
     rupture_by_tag = sum(dstore['sescollection'], AccumDict())
     all_tags = dstore['tags'].value
-    oq = dstore['oqparam']
+    oq = OqParam.from_(dstore.attrs)
     investigation_time = (None if oq.calculation_mode == 'scenario'
                           else oq.investigation_time)
     samples = oq.number_of_logic_tree_samples

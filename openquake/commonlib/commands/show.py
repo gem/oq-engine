@@ -21,6 +21,7 @@ import os
 import shutil
 from openquake.commonlib import sap, datastore
 from openquake.baselib.general import humansize
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.commands.plot import combined_curves
 from openquake.commonlib.util import rmsep
 
@@ -39,7 +40,7 @@ def show(calc_id, key=None, rlzs=None):
         rows = []
         for calc_id in datastore.get_calc_ids(datastore.DATADIR):
             try:
-                oq = datastore.DataStore(calc_id)['oqparam']
+                oq = OqParam.from_(datastore.DataStore(calc_id).attrs)
             except:  # invalid datastore directory
                 shutil.rmtree(os.path.join(
                     datastore.DATADIR, 'calc_%s' % calc_id))
@@ -60,7 +61,7 @@ def show(calc_id, key=None, rlzs=None):
             print(obj)
         return
     # print all keys
-    oq = ds['oqparam']
+    oq = OqParam.from_(ds.attrs)
     print(oq.calculation_mode, 'calculation (%r) saved in %s contains:' %
           (oq.description, ds.calc_dir))
     for key in ds:
