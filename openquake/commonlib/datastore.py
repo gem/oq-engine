@@ -195,6 +195,17 @@ class DataStore(collections.MutableMapping):
         for name, value in params:
             self.attrs[name] = value
 
+    def set_parent(self, parent):
+        """
+        Give a parent to a datastore and update its .attrs with the parent
+        attributes, which are assumed to be literal strings.
+        """
+        self.parent = parent
+        # merge parent attrs into child attrs
+        for name, value in self.parent.attrs.items():
+            if name not in self.attrs:  # add missing parameter
+                self.attrs[name] = value
+
     def create_dset(self, key, dtype, size=None):
         """
         Create a one-dimensional HDF5 dataset.
@@ -320,6 +331,15 @@ class DataStore(collections.MutableMapping):
 
     def __repr__(self):
         return '<%s %d>' % (self.__class__.__name__, self.calc_id)
+
+
+class Fake(dict):
+    """
+    A fake datastore as a dict subclass, useful in tests and such
+    """
+    def __init__(self, attrs, **kwargs):
+        self.attrs = {k: repr(v) for k, v in attrs.items()}
+        self.update(kwargs)
 
 
 def persistent_attribute(key):

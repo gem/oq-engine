@@ -891,10 +891,7 @@ class ParamSet(with_metaclass(MetaParamSet)):
         """
         self = cls.__new__(cls)
         for k, v in dic.items():
-            try:
-                setattr(self, k, ast.literal_eval(v))
-            except:
-                import pdb; pdb.set_trace()
+            setattr(self, k, ast.literal_eval(v))
         return self
 
     def to_params(self):

@@ -246,14 +246,8 @@ class HazardCalculator(BaseCalculator):
                 if 'scenario' not in self.oqparam.calculation_mode:
                     self.csm = precalc.csm
             else:  # read previously computed data
-                self.datastore.parent = datastore.DataStore(precalc_id)
-                # merge old oqparam into the new ones, when possible
-                # without this, a lot of tests break, including classical_risk
-                new = vars(self.oqparam)
-                for name, value in self.datastore.parent.attrs.items():
-                    if name not in new:  # add missing parameter
-                        self.datastore.attrs[name] = value
-                        new[name] = ast.literal_eval(value)
+                self.datastore.set_parent(datastore.DataStore(precalc_id))
+                self.oqparam = OqParam.from_(self.datastore.attrs)
                 self.read_exposure_sitecol()
 
         else:  # we are in a basic calculator

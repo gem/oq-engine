@@ -29,7 +29,7 @@ class DataStoreTestCase(unittest.TestCase):
         self.assertEqual(view('key1_upper', self.dstore), 'VALUE1')
 
     def test_hdf5(self):
-        # optional test, run only if h5py is available
+        # run only if h5py is available
         try:
             import h5py
         except ImportError:
@@ -57,3 +57,10 @@ class DataStoreTestCase(unittest.TestCase):
 
         # it is possible to store twice the same key (work around a bug)
         self.dstore['key1'] = 'value1'
+
+    def test_parent(self):
+        self.dstore.attrs['a'] = 2
+        parent = DataStore(params=[('a', 1), ('b', 2)])
+        self.dstore.set_parent(parent)
+        attrs = sorted(self.dstore.attrs.items())
+        self.assertEqual(attrs, [('a', 2), ('b', 2)])

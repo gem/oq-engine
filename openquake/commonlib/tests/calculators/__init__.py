@@ -40,8 +40,8 @@ def columns(line):
 
 def get_datastore(calc):
     ds = datastore.DataStore(calc.datastore.calc_id)
-    hc_id = ds.attrs['hazard_calculation_id']
-    if hc_id != 'None':
+    hc_id = ds.attrs.get('hazard_calculation_id')
+    if hc_id:
         ds.parent = datastore.DataStore(int(hc_id))
     return ds
 
