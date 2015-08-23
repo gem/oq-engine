@@ -43,8 +43,8 @@ def gsim(value):
     """
     Make sure the given value is the name of an available GSIM class.
 
-    >>> gsim('BooreAtkinson2011')  # doctest: +ELLIPSIS
-    <openquake.hazardlib.gsim.boore_atkinson_2011.BooreAtkinson2011 ...>
+    >>> gsim('BooreAtkinson2011')
+    'BooreAtkinson2011()'
     """
     if value.endswith(')'):
         gsim_name, argstr = value[:-1].split('(', 1)
@@ -870,15 +870,15 @@ class ParamSet(with_metaclass(MetaParamSet)):
     >>> mp.a
     '2'
 
-    A dictionary with the literal strings can be extracted as follows:
+    A list with the literal strings can be extracted as follows:
 
-    >>> mp.items()
+    >>> mp.to_params()
     [('a', "'2'"), ('b', '7.2')]
 
-    It is possible to build a new object from a list of items, which
-    are assumed to be already validated:
+    It is possible to build a new object from a dictionary of parameters
+    which are assumed to be already validated:
 
-    >>> MyParams.from_items([('a', "'2'"), ('b', '7.2')])
+    >>> MyParams.from_(dict(a="'2'", b='7.2'))
     <MyParams a='2', b=7.2>
     """
     params = {}
