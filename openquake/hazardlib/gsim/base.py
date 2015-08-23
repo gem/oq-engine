@@ -649,7 +649,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         To be overridden in subclasses if the GSIM takes parameters.
         """
         kwargs = ', '.join('%s=%r' % kv for kv in sorted(self.kwargs.items()))
-        return "'%s(%s)'" % (self.__class__.__name__, kwargs)
+        return "<%s(%s)>" % (self.__class__.__name__, kwargs)
 
 
 def _truncnorm_sf(truncation_level, values):
