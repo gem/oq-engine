@@ -649,8 +649,9 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         Default string representation for GSIM instances. It contains
         the name and values of the arguments, if any.
         """
+        # NB: ast.literal_eval(repr(gsim)) must work
         kwargs = ', '.join('%s=%r' % kv for kv in sorted(self.kwargs.items()))
-        return "%s(%s)" % (self.__class__.__name__, kwargs)
+        return repr("%s(%s)" % (self.__class__.__name__, kwargs))
 
 
 def _truncnorm_sf(truncation_level, values):
