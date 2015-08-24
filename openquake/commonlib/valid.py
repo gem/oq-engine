@@ -39,26 +39,21 @@ GSIM = gsim.get_available_gsims()
 
 
 # more tests are in tests/valid_test.py
-def gsim(value):
+def gsim(value, **kwargs):
     """
     Make sure the given value is the name of an available GSIM class.
 
     >>> gsim('BooreAtkinson2011')
     'BooreAtkinson2011()'
     """
-    if value.endswith(')'):
-        gsim_name, argstr = value[:-1].split('(', 1)
-        args = ast.literal_eval(argstr + ',') if argstr.strip() else ()
-    else:
-        gsim_name, args = value, ()
     try:
-        gsim_class = GSIM[gsim_name]
+        gsim_class = GSIM[value]
     except KeyError:
-        raise ValueError('Unknown GSIM: %s' % gsim_name)
+        raise ValueError('Unknown GSIM: %s' % value)
     try:
-        return gsim_class(*args)
+        return gsim_class(**kwargs)
     except TypeError:
-        raise ValueError('Could not instantiate %s' % value)
+        raise ValueError('Could not instantiate %s%s' % (value, kwargs))
 
 
 def compose(*validators):
