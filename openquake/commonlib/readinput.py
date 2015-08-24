@@ -45,7 +45,7 @@ from openquake.commonlib import source, sourceconverter
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
-MAX_PARAM_DISTANCE = 5  # km, given by Graeme Weatherill
+MAX_SITE_MODEL_DISTANCE = 5  # km, given by Graeme Weatherill
 
 info_dt = numpy.dtype([('input_weight', float),
                        ('output_weight', float),
@@ -257,7 +257,7 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
         for i, pt in zip(site_ids, mesh):
             param, dist = site_model_params.\
                 get_closest(pt.longitude, pt.latitude)
-            if dist >= MAX_PARAM_DISTANCE:
+            if dist >= MAX_SITE_MODEL_DISTANCE:
                 logging.warn('The site parameter associated to %s came from a '
                              'distance of %d km!' % (pt, dist))
             sitecol.append(
