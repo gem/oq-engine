@@ -152,7 +152,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         """
         Test that the set function operates correctly
         """
-        self.assertSetEqual(self.amp_table.get_set(), set(("vs30",)))
+        self.assertSetEqual(self.amp_table.get_set(), {"vs30"})
 
     def test_get_mean_table(self, idx=0):
         """

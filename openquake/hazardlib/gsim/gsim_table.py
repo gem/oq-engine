@@ -157,7 +157,7 @@ class AmplificationTable(object):
         """
         Return the parameter as an instance a Python set
         """
-        return set((self.parameter,))
+        return {self.parameter}
 
     def get_amplification_factors(self, imt, sctx, rctx, dists, stddev_types):
         """
@@ -232,7 +232,7 @@ class AmplificationTable(object):
             period_table = interpolator(numpy.log10(imt.period))
             # Interpolate magnitude - linear-log space
             mag_interpolator = interp1d(self.magnitudes, period_table, axis=1)
-            output_table = 10.0 ** (mag_interpolator(rctx.mag))
+            output_table = 10.0 ** mag_interpolator(rctx.mag)
         return output_table
 
     def get_sigma_tables(self, imt, rctx, stddev_types):
@@ -304,7 +304,7 @@ class GMPETable(GMPE):
 
     REQUIRES_DISTANCES = set(())
 
-    REQUIRES_RUPTURE_PARAMETERS = set(("mag",))
+    REQUIRES_RUPTURE_PARAMETERS = {"mag"}
 
     GMPE_TABLE = None
 
@@ -335,7 +335,7 @@ class GMPETable(GMPE):
         fle = h5py.File(self.GMPE_TABLE, "r")
         self.distance_type = fle["Distances"].attrs["metric"]
         self.REQUIRES_DISTANCES.clear()
-        self.REQUIRES_DISTANCES.update(set((self.distance_type,)))
+        self.REQUIRES_DISTANCES.add(self.distance_type)
         # Load in magnitude
         self.m_w = fle["Mw"][:]
         # Load in distances
@@ -440,6 +440,8 @@ class GMPETable(GMPE):
         :param distances:
             The distance vector for the given magnitude and IMT
         """
+        # For values outside of the interpolation range use -999. to ensure
+        # value is identifiable and outside of potential real values
         interpolator_mean = interp1d(dists, data,
                                      bounds_error=False,
                                      fill_value=-999.)

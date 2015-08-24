@@ -25,7 +25,6 @@ import math
 import warnings
 import functools
 import contextlib
-from copy import deepcopy
 
 import scipy.stats
 from scipy.special import ndtr
