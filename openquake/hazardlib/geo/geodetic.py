@@ -55,6 +55,8 @@ class GeographicObjects(object):
         :param max_distance: distance in km (or None)
         """
         zeros = numpy.zeros_like(self.lons)
+        # NB: it would be much cleaner if min_distance returned both
+        # the index and the min_dist, but we would need to work at C level :-(
         index = min_distance(self.lons, self.lats, zeros, lon, lat, 0.,
                              indices=True)
         min_dist = min_distance(self.lons, self.lats, zeros, lon, lat, 0.)
