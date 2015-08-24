@@ -282,7 +282,7 @@ class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
                                              np.array([0.1, 0.5, 1.0]))
         # 6. Means and Standard Deviations
         expected_mean, expected_sigma = self._build_mean_and_stddev_table()
-        for key in self.amp_table.mean.keys():
+        for key in self.amp_table.mean:
             np.testing.assert_array_almost_equal(self.amp_table.mean[key],
                                                  expected_mean[key])
             np.testing.assert_array_almost_equal(
