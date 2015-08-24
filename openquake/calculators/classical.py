@@ -29,10 +29,10 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter, \
     rupture_site_distance_filter
 from openquake.risklib import scientific
 from openquake.commonlib import parallel, source, datastore
-from openquake.commonlib.calculators.views import get_data_transfer
+from openquake.calculators.views import get_data_transfer
 from openquake.baselib.general import AccumDict, split_in_blocks
 
-from openquake.commonlib.calculators import base, calc
+from openquake.calculators import base, calc
 
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')

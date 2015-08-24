@@ -4,7 +4,7 @@ from nose.plugins.attrib import attr
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_5, case_5a)
 
-from openquake.commonlib.tests.calculators import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase
 
 
 class ScenarioDamageTestCase(CalculatorTestCase):

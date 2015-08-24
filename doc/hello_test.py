@@ -1,4 +1,4 @@
-from openquake.commonlib.tests.calculators import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase
 
 
 class HelloTestCase(CalculatorTestCase):

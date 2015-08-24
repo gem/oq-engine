@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import general
 from openquake.risklib import workflows, riskinput
 from openquake.commonlib import readinput, parallel, datastore
-from openquake.commonlib.calculators import base
+from openquake.calculators import base
 
 
 @parallel.litetask

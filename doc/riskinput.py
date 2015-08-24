@@ -25,7 +25,7 @@ from __future__ import print_function
 
 import sys
 from openquake.commonlib import readinput
-from openquake.commonlib.calculators.calc import calc_gmfs
+from openquake.calculators.calc import calc_gmfs
 
 if __name__ == '__main__':
     job_ini = sys.argv[1:]

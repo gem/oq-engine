@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.commonlib.calculators import base
+from openquake.calculators import base
 
 
 @base.calculators.add('disaggregation')

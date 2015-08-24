@@ -1,5 +1,5 @@
 from nose.plugins.attrib import attr
-from openquake.commonlib.tests.calculators import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical_tiling import case_1
 
 
