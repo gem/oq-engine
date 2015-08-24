@@ -22,7 +22,7 @@ import unittest
 
 import numpy
 
-from openquake.commonlib.calculators import base
+from openquake.calculators import base
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import readinput, oqvalidation, datastore
 

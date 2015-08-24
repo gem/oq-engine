@@ -20,7 +20,7 @@ import os
 from openquake.baselib.general import import_all
 
 # make sure the `base,calculators` dictionary is populated
-import_all('openquake.commonlib.calculators')
+import_all('openquake.calculators')
 
 # import the development packages if any
 extras = os.environ.get('OQLITEIMPORT', '')

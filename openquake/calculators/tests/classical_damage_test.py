@@ -2,7 +2,7 @@ from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.classical_damage import (
     case_1, case_2)
-from openquake.commonlib.tests.calculators import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase
 
 
 class ClassicalDamageCase1TestCase(CalculatorTestCase):

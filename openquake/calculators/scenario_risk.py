@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import general
 from openquake.commonlib import parallel, datastore
-from openquake.commonlib.calculators import base
+from openquake.calculators import base
 
 
 def lpa(assets, means, stddevs):

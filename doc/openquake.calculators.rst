@@ -4,7 +4,7 @@ calculators Package
 :mod:`calculators` Package
 --------------------------
 
-.. automodule:: openquake.commonlib.calculators
+.. automodule:: openquake.calculators
     :members:
     :undoc-members:
     :show-inheritance:
@@ -12,7 +12,7 @@ calculators Package
 :mod:`calc` Module
 ------------------
 
-.. automodule:: openquake.commonlib.calculators.calc
+.. automodule:: openquake.calculators.calc
     :members:
     :undoc-members:
     :show-inheritance:
@@ -20,7 +20,7 @@ calculators Package
 :mod:`event_based` Module
 ------------------------------
 
-.. automodule:: openquake.commonlib.calculators.event_based
+.. automodule:: openquake.calculators.event_based
     :members:
     :undoc-members:
     :show-inheritance:
@@ -28,7 +28,7 @@ calculators Package
 :mod:`ebr` Module
 ------------------
 
-.. automodule:: openquake.commonlib.calculators.ebr
+.. automodule:: openquake.calculators.ebr
     :members:
     :undoc-members:
     :show-inheritance:
@@ -36,7 +36,7 @@ calculators Package
 :mod:`scenario` Module
 ------------------------
 
-.. automodule:: openquake.commonlib.calculators.scenario
+.. automodule:: openquake.calculators.scenario
     :members:
     :undoc-members:
     :show-inheritance:
@@ -44,7 +44,7 @@ calculators Package
 :mod:`scenario_damage` Module
 -------------------------------
 
-.. automodule:: openquake.commonlib.calculators.scenario_damage
+.. automodule:: openquake.calculators.scenario_damage
     :members:
     :undoc-members:
     :show-inheritance:
@@ -52,7 +52,7 @@ calculators Package
 :mod:`scenario_risk` Module
 -----------------------------
 
-.. automodule:: openquake.commonlib.calculators.scenario
+.. automodule:: openquake.calculators.scenario
     :members:
     :undoc-members:
     :show-inheritance:
@@ -60,7 +60,7 @@ calculators Package
 :mod:`scenario_risk` Module
 -----------------------------
 
-.. automodule:: openquake.commonlib.calculators.scenario
+.. automodule:: openquake.calculators.scenario
     :members:
     :undoc-members:
     :show-inheritance:
@@ -68,7 +68,7 @@ calculators Package
 :mod:`classical` Module
 --------------------------
 
-.. automodule:: openquake.commonlib.calculators.classical
+.. automodule:: openquake.calculators.classical
     :members:
     :undoc-members:
     :show-inheritance:
@@ -76,7 +76,7 @@ calculators Package
 :mod:`classical_damage` Module
 -------------------------------
 
-.. automodule:: openquake.commonlib.calculators.classical_damage
+.. automodule:: openquake.calculators.classical_damage
     :members:
     :undoc-members:
     :show-inheritance:
@@ -84,7 +84,7 @@ calculators Package
 :mod:`classical_risk` Module
 -----------------------------
 
-.. automodule:: openquake.commonlib.calculators.classical_risk
+.. automodule:: openquake.calculators.classical_risk
     :members:
     :undoc-members:
     :show-inheritance:

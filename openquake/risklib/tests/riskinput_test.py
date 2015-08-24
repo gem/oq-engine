@@ -4,8 +4,8 @@ import numpy
 from openquake.baselib.general import writetmp
 from openquake.commonlib import readinput, readers
 from openquake.risklib import riskinput
-from openquake.commonlib.calculators import event_based
-from openquake.commonlib.tests.calculators import get_datastore
+from openquake.calculators import event_based
+from openquake.calculators.tests import get_datastore
 from openquake.qa_tests_data.event_based_risk import case_2
 
 

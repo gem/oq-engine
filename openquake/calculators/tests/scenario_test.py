@@ -8,7 +8,7 @@ from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9)
 
 from openquake.commonlib import writers
-from openquake.commonlib.tests.calculators import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase
 
 
 def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):

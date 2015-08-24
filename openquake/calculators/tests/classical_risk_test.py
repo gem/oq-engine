@@ -3,7 +3,7 @@ from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.classical_risk import (
     case_1, case_2, case_3, case_4)
-from openquake.commonlib.tests.calculators import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase
 
 
 class ClassicalRiskTestCase(CalculatorTestCase):
