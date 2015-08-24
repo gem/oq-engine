@@ -211,7 +211,7 @@ class HazardCalculator(BaseCalculator):
         for assets in self.assets_by_site:
             if len(assets):
                 lon, lat = assets[0].location
-                site = siteobjects.get_closest(lon, lat, maximum_distance)
+                site, _ = siteobjects.get_closest(lon, lat, maximum_distance)
                 if site:
                     assets_by_sid += {site.id: list(assets)}
         if not assets_by_sid:
