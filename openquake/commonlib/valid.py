@@ -44,7 +44,7 @@ def gsim(value):
     Make sure the given value is the name of an available GSIM class.
 
     >>> gsim('BooreAtkinson2011')
-    BooreAtkinson2011()
+    'BooreAtkinson2011()'
     """
     if value.endswith(')'):
         gsim_name, argstr = value[:-1].split('(', 1)
