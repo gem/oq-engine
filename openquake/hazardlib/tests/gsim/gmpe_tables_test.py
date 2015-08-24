@@ -33,7 +33,7 @@ from openquake.hazardlib import imt as imt_module
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__),
                               "data",
-                              "GSIMTABLES")
+                              "gsimtables")
 
 
 def midpoint(low, high, point=0.5):

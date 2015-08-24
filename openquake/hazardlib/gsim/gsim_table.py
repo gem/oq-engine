@@ -13,7 +13,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+"""
+Module :mod:`openquake.hazardlib.gsim.gsim_table` defines the
+:class:`openquake.hazardlib.gsim.gsim_table.GMPETable` for defining GMPEs
+in the form of binary tables, and
+:class:`openquake.hazardlib.gsim.gsim_table.AmplificationTable` for defining
+the corresponding amplification of the IMLs
+"""
 
 from __future__ import division
 
