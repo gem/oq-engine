@@ -23,8 +23,8 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import (
-    GMPE, IPE, SitesContext, RuptureContext, DistancesContext, GMPETable,
+from openquake.hazardlib.gsim.gsim_table import (
+    GMPE, SitesContext, RuptureContext, DistancesContext, GMPETable,
     AmplificationTable, hdf_arrays_to_dict)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib import const
@@ -49,8 +49,6 @@ class HDFArraysToDictTestCase(unittest.TestCase):
     a dictionary
     """
     def setUp(self):
-        """
-        """
         self.fle = h5py.File("foo.hdf5")
         self.group = self.fle.create_group("TestGroup")
         dset1 = self.group.create_dataset("DSET1", (3, 3), dtype="f")
@@ -66,9 +64,9 @@ class HDFArraysToDictTestCase(unittest.TestCase):
         expected_dset1 = np.zeros([3, 3])
         expected_dset2 = np.ones([3, 3])
         output_dict = hdf_arrays_to_dict(self.group)
-        self.assertTrue(isinstance(output_dict, dict))
-        self.assertTrue("DSET1" in output_dict.keys())
-        self.assertTrue("DSET2" in output_dict.keys())
+        assert isinstance(output_dict, dict)
+        self.assertIn("DSET1", output_dict)
+        self.assertIn("DSET2", output_dict)
         np.testing.assert_array_almost_equal(output_dict["DSET1"],
                                              expected_dset1)
         np.testing.assert_array_almost_equal(output_dict["DSET2"],
@@ -118,7 +116,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
                                              np.array([0.1, 0.5, 1.0]))
         # 6. Means and Standard Deviations
         expected_mean, expected_sigma = self._build_mean_and_stddev_table()
-        for key in self.amp_table.mean.keys():
+        for key in self.amp_table.mean:
             np.testing.assert_array_almost_equal(self.amp_table.mean[key],
                                                  expected_mean[key])
             np.testing.assert_array_almost_equal(
@@ -390,7 +388,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         """
         Verify that the data is loaded successfully
         """
-        gsim = GMPETable(self.TABLE_FILE)
+        gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         np.testing.assert_array_almost_equal(gsim.distances,
                                              self.fle["Distances"][:])
         np.testing.assert_array_almost_equal(gsim.m_w,
@@ -418,7 +416,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         is any provided - should raise an error
         """
         with self.assertRaises(IOError) as ioe:
-            gsim = GMPETable(None)
+            gsim = GMPETable(gmpe_table=None)
         self.assertEqual(str(ioe.exception),
                          "GMPE Table Not Defined!")
 
@@ -427,7 +425,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         Tests the retreival of the IML tables for 'good' conditions without
         applying magnitude interpolations
         """
-        gsim = GMPETable(self.TABLE_FILE)
+        gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         # PGA
         np.testing.assert_array_almost_equal(
             gsim._return_tables(6.0, imt_module.PGA(), "IMLs"),
@@ -454,7 +452,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         Tests the retreival of the IML tables for 'good' conditions with
         magnitude interpolations
         """
-        gsim = GMPETable(self.TABLE_FILE)
+        gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         expected_table_pgv = np.array([midpoint(20., 40.),
                                        midpoint(10., 20.),
                                        midpoint(5., 10.)])
@@ -474,7 +472,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         Tests that an error is raised when inputting a magnitude value
         outside the supported range
         """
-        gsim = GMPETable(self.TABLE_FILE)
+        gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         with self.assertRaises(ValueError) as ve:
             gsim._return_tables(7.5, imt_module.PGA(), "IMLs")
         self.assertEqual(
@@ -486,7 +484,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         Tests that an error is raised when inputting a period value
         outside the supported range
         """
-        gsim = GMPETable(self.TABLE_FILE)
+        gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         with self.assertRaises(ValueError) as ve:
             gsim._return_tables(6.0, imt_module.SA(2.5), "IMLs")
         self.assertEqual(
@@ -497,7 +495,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         """
         Tests the full execution of the GMPE tables for valid data
         """
-        gsim = GMPETable(self.TABLE_FILE)
+        gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         rctx = RuptureContext()
         rctx.mag = 6.0
         dctx = DistancesContext()
@@ -534,7 +532,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         Tests the full execution of the GMPE tables for valid data with
         amplification
         """
-        gsim = GMPETable(self.TABLE_FILE)
+        gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         rctx = RuptureContext()
         rctx.mag = 6.0
         dctx = DistancesContext()
@@ -563,7 +561,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         Tests the execution of the GMPE with an unsupported standard deviation
         type
         """
-        gsim = GMPETable(self.TABLE_FILE)
+        gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         rctx = RuptureContext()
         rctx.mag = 6.0
         dctx = DistancesContext()
@@ -600,7 +598,7 @@ class GSIMTableTestCaseMultiStdDev(unittest.TestCase):
         The table file contains data for Inter and intra event standard
         deviation, as well as an IMT that is not recognised by OpenQuake
         """
-        gsim = GMPETable(self.TABLE_FILE)
+        gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         expected_stddev_set = set((const.StdDev.TOTAL,
                                    const.StdDev.INTER_EVENT,
                                    const.StdDev.INTRA_EVENT))
@@ -624,7 +622,7 @@ class GSIMTableTestCaseRupture(unittest.TestCase):
         """
         Tests instantiation of class
         """
-        gsim = GMPETable(self.TABLE_FILE)
+        gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         expected_rupture_set = set(("mag", "rake"))
         self.assertSetEqual(gsim.REQUIRES_RUPTURE_PARAMETERS,
                             expected_rupture_set)
@@ -636,7 +634,7 @@ class GSIMTableTestCaseRupture(unittest.TestCase):
         """
         Tests the full execution of the GMPE tables for valid data
         """
-        gsim = GMPETable(self.TABLE_FILE)
+        gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         rctx = RuptureContext()
         rctx.mag = 6.0
         rctx.rake = 90.0
@@ -673,7 +671,7 @@ class GSIMTableTestCaseBadFile(unittest.TestCase):
         Tests missing period information
         """
         with self.assertRaises(ValueError) as ve:
-            gsim = GMPETable(self.TABLE_FILE)
+            gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         self.assertEqual(str(ve.exception),
                          "Spectral Acceleration must be accompanied by periods"
                          )
@@ -690,7 +688,7 @@ class GSIMTableTestCaseNoAmplification(unittest.TestCase):
         """
         Tests instantiation without amplification
         """
-        gsim = GMPETable(self.TABLE_FILE)
+        gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         self.assertIsNone(gsim.amplification)
         self.assertSetEqual(gsim.REQUIRES_SITES_PARAMETERS, set(()))
         self.assertSetEqual(gsim.REQUIRES_RUPTURE_PARAMETERS, set(("mag",)))
@@ -699,7 +697,7 @@ class GSIMTableTestCaseNoAmplification(unittest.TestCase):
         """
         Tests mean and standard deviations without amplification
         """
-        gsim = GMPETable(self.TABLE_FILE)
+        gsim = GMPETable(gmpe_table=self.TABLE_FILE)
         rctx = RuptureContext()
         rctx.mag = 6.0
         dctx = DistancesContext()
@@ -736,8 +734,8 @@ class GSIMTableQATestCase(BaseGSIMTestCase):
     2015 Canadian National Seismic Hazard Map
     """
     GSIM_CLASS = GMPETable
-    MEAN_FILE = "GSIMTABLES/Wcrust_rjb_med_MEAN.csv"
-    STD_TOTAL_FILE = "GSIMTABLES/Wcrust_rjb_med_TOTAL.csv"
+    MEAN_FILE = "gsimtables/Wcrust_rjb_med_MEAN.csv"
+    STD_TOTAL_FILE = "gsimtables/Wcrust_rjb_med_TOTAL.csv"
 
     def setUp(self):
         self.GSIM_CLASS.GMPE_TABLE = os.path.join(BASE_DATA_PATH,
