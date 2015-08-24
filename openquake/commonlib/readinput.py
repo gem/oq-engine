@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2014-2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -45,6 +45,7 @@ from openquake.commonlib import source, sourceconverter
 
 # the following is quite arbitrary, it gives output weights that I like (MS)
 NORMALIZATION_FACTOR = 1E-2
+MAX_PARAM_DISTANCE = 5  # km, given by Graeme Weatherill
 
 info_dt = numpy.dtype([('input_weight', float),
                        ('output_weight', float),
@@ -254,8 +255,11 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
                 get_site_model(oqparam))
         sitecol = []
         for i, pt in zip(site_ids, mesh):
-            param = site_model_params.\
+            param, dist = site_model_params.\
                 get_closest(pt.longitude, pt.latitude)
+            if dist >= MAX_PARAM_DISTANCE:
+                logging.warn('The site parameter associated to %s came from a '
+                             'distance of %d km!' % (pt, dist))
             sitecol.append(
                 site.Site(pt, param.vs30, param.measured,
                           param.z1pt0, param.z2pt5, param.backarc, i))
