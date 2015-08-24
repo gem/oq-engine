@@ -201,10 +201,8 @@ investigation_time = 50.
                       str(ctx.exception))
 
 
-class ClosestSiteModelTestCase(unittest.TestCase):
-
-    def test_get_site_model(self):
-        data = BytesIO(b'''\
+def sitemodel():
+    return BytesIO(b'''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -214,8 +212,13 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         <site lon="0.0" lat="0.2" vs30="200.0" vs30Type="inferred" z1pt0="100.0" z2pt5="2.0" backarc="False" />
     </siteModel>
 </nrml>''')
+
+
+class ClosestSiteModelTestCase(unittest.TestCase):
+
+    def test_get_site_model(self):
         oqparam = mock.Mock()
-        oqparam.inputs = dict(site_model=data)
+        oqparam.inputs = dict(site_model=sitemodel())
         expected = [
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
                             vs30=1200.0, backarc=False, lon=0.0, lat=0.0),
@@ -224,6 +227,20 @@ class ClosestSiteModelTestCase(unittest.TestCase):
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
                             vs30=200.0, backarc=False, lon=0.0, lat=0.2)]
         self.assertEqual(list(readinput.get_site_model(oqparam)), expected)
+
+    def test_get_far_away_parameter(self):
+        oqparam = mock.Mock()
+        oqparam.maximum_distance = 100
+        oqparam.sites = [(1.0, 0)]
+        oqparam.inputs = dict(site_model=sitemodel())
+        with mock.patch('logging.warn') as warn:
+            readinput.get_site_collection(oqparam)
+        # check that the warning was raised
+        self.assertEqual(
+            warn.call_args[0][0],
+            'The site parameter associated to '
+            '<Latitude=0.000000, Longitude=1.000000, Depth=0.0000> '
+            'came from a distance of 111 km!')
 
 
 class ExposureTestCase(unittest.TestCase):
