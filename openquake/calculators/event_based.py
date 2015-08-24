@@ -35,6 +35,7 @@ from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.util import max_rel_diff_index
 
 from openquake.calculators import base, views
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.calculators.calc import MAX_INT, gmvs_to_haz_curve
 from openquake.calculators.classical import (
     ClassicalCalculator, store_source_chunks, agg_dicts)
@@ -120,7 +121,7 @@ def view_gmfs_total_size(name, dstore):
         and 8 bytes for each float (there are num_imts floats per gmf)
     """
     nbytes = 0
-    num_imts = len(dstore['oqparam'].imtls)
+    num_imts = len(OqParam.from_(dstore.attrs).imtls)
     for counts in dstore['counts_per_rlz']:
         nbytes += 8 * counts['gmf'] * (num_imts + 1)
     return humansize(nbytes)

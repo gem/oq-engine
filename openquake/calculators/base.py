@@ -19,6 +19,7 @@
 import os
 import sys
 import abc
+import ast
 import logging
 import operator
 import collections
@@ -29,6 +30,7 @@ from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general
 from openquake.baselib.performance import DummyMonitor
 from openquake.commonlib import readinput, datastore, logictree, export, source
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import apply_reduce
 from openquake.risklib import riskinput
 from openquake.baselib.python3compat import with_metaclass
@@ -55,8 +57,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     :param monitor: monitor object
     :param calc_id: numeric calculation ID
     """
-
-    oqparam = datastore.persistent_attribute('oqparam')
     sitemesh = datastore.persistent_attribute('sitemesh')
     sitecol = datastore.persistent_attribute('sitecol')
     rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
@@ -77,14 +77,14 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                  persistent=True):
         self.monitor = monitor
         if persistent:
-            self.datastore = datastore.DataStore(calc_id)
+            self.datastore = datastore.DataStore(
+                calc_id, params=oqparam.to_params())
         else:
             self.datastore = general.AccumDict()
             self.datastore.hdf5 = {}
+            self.datastore.attrs = {}
         self.datastore.export_dir = oqparam.export_dir
-        if 'oqparam' not in self.datastore:  # new datastore
-            self.oqparam = oqparam
-        # else we are doing a precalculation; oqparam has been already stored
+        self.oqparam = oqparam
         self.persistent = persistent
 
     def run(self, pre_execute=True, clean_up=True, concurrent_tasks=None,
@@ -246,13 +246,8 @@ class HazardCalculator(BaseCalculator):
                 if 'scenario' not in self.oqparam.calculation_mode:
                     self.csm = precalc.csm
             else:  # read previously computed data
-                self.datastore.parent = datastore.DataStore(precalc_id)
-                # merge old oqparam into the new ones, when possible
-                new = vars(self.oqparam)
-                for name, value in self.datastore.parent['oqparam']:
-                    if name not in new:  # add missing parameter
-                        new[name] = value
-                self.oqparam = self.oqparam
+                self.datastore.set_parent(datastore.DataStore(precalc_id))
+                self.oqparam = OqParam.from_(self.datastore.attrs)
                 self.read_exposure_sitecol()
 
         else:  # we are in a basic calculator
@@ -292,7 +287,7 @@ class HazardCalculator(BaseCalculator):
                 logging.warn('Associated %d assets to %d sites, %d discarded',
                              ok_assets, num_sites, num_assets - ok_assets)
         elif (self.datastore.parent and 'exposure' in
-              self.datastore.parent['oqparam'].inputs):
+              OqParam.from_(self.datastore.parent.attrs).inputs):
             logging.info('Re-using the already imported exposure')
         else:  # no exposure
             logging.info('Reading the site collection')

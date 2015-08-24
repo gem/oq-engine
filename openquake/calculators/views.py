@@ -22,6 +22,7 @@ import numpy
 
 from openquake.baselib.general import groupby, split_in_blocks, humansize
 from openquake.commonlib import parallel
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import build_header
 
@@ -123,7 +124,7 @@ def view_rupture_collections(token, dstore):
 
 @view.add('params')
 def view_params(token, dstore):
-    oq = dstore['oqparam']
+    oq = OqParam.from_(dstore.attrs)
     params = ('calculation_mode', 'number_of_logic_tree_samples',
               'maximum_distance', 'investigation_time',
               'ses_per_logic_tree_path', 'truncation_level',
@@ -144,14 +145,15 @@ def build_links(items):
 
 @view.add('inputs')
 def view_inputs(token, dstore):
-    inputs = dstore['oqparam'].inputs.copy()
+    inputs = OqParam.from_(dstore.attrs).inputs.copy()
     try:
         source_models = [('source', fname) for fname in inputs['source']]
         del inputs['source']
     except KeyError:  # there is no 'source' in scenario calculations
         source_models = []
     return rst_table(
-        build_links(list(inputs.items()) + source_models), header=['Name', 'File'])
+        build_links(list(inputs.items()) + source_models),
+        header=['Name', 'File'])
 
 block_dt = numpy.dtype([('num_srcs', numpy.uint32),
                         ('weight', numpy.float32)])
@@ -165,7 +167,7 @@ def get_data_transfer(dstore):
     :param dstore: a :class:`openquake.commonlib.datastore.DataStore` instance
     :returns: (block_info, to_send_forward, to_send_back)
     """
-    oqparam = dstore['oqparam']
+    oqparam = OqParam.from_(dstore.attrs)
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['rlzs_assoc']
     info = dstore['job_info']

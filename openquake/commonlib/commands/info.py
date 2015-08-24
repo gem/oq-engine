@@ -26,13 +26,14 @@ from openquake.baselib.general import humansize, groupby
 from openquake.commonlib import (
     sap, readinput, nrml, source, datastore, reportwriter)
 from openquake.calculators import base
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.risklib import riskinput
 from openquake.hazardlib import gsim
 
 
 def _print_info(dstore, filtersources=True, weightsources=True):
     assoc = dstore['rlzs_assoc']
-    oqparam = dstore['oqparam']
+    oqparam = OqParam.from_(dstore.attrs)
     csm = dstore['composite_source_model']
     sitecol = dstore['sitecol']
     print(csm.get_info())
@@ -86,10 +87,10 @@ def _info(name, filtersources, weightsources):
                 sp = source.BaseSourceProcessor  # do nothing
             csm = readinput.get_composite_source_model(oqparam, sitecol, sp)
             assoc = csm.get_rlzs_assoc()
-            _print_info(
-                dict(rlzs_assoc=assoc, oqparam=oqparam,
-                     composite_source_model=csm, sitecol=sitecol),
-                filtersources, weightsources)
+            dstore = datastore.Fake(
+                vars(oqparam), rlzs_assoc=assoc, composite_source_model=csm,
+                sitecol=sitecol)
+            _print_info(dstore, filtersources, weightsources)
         if len(assets_by_site):
             assetcol = riskinput.build_asset_collection(assets_by_site)
             dic = groupby(assetcol, operator.attrgetter('taxonomy'))

@@ -7,6 +7,7 @@ import os
 
 from openquake.commonlib import readinput, datastore
 from openquake.calculators import base
+from openquake.commonlib.oqvalidation import OqParam
 
 
 def indent(text):
@@ -28,7 +29,7 @@ class ReportWriter(object):
     )
 
     def __init__(self, dstore):
-        description = dstore['oqparam'].description
+        description = OqParam.from_(dstore.attrs).description
         self.dstore = dstore
         self.text = description + '\n' + '=' * len(description)
 

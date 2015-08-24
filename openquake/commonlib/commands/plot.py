@@ -17,7 +17,7 @@ from __future__ import print_function
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.commonlib import sap, datastore
+from openquake.commonlib import sap, datastore, oqvalidation
 from openquake.risklib import scientific
 
 
@@ -79,7 +79,7 @@ def plot(calc_id, other_id=None, sites='0'):
     # read the hazard data
     haz = datastore.DataStore(calc_id)
     other = datastore.DataStore(other_id) if other_id else None
-    oq = haz['oqparam']
+    oq = oqvalidation.OqParam.from_(haz.attrs)
     indices = list(map(int, sites.split(',')))
     n_sites = len(haz['sites'])
     if not set(indices) <= set(range(n_sites)):

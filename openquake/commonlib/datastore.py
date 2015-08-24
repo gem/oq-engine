@@ -168,7 +168,7 @@ class DataStore(collections.MutableMapping):
     lexicographically according to their name.
     """
     def __init__(self, calc_id=None, datadir=DATADIR, parent=(),
-                 export_dir='.'):
+                 export_dir='.', params=()):
         if not os.path.exists(datadir):
             os.makedirs(datadir)
         if calc_id is None:  # use a new datastore
@@ -191,6 +191,20 @@ class DataStore(collections.MutableMapping):
         self.hdf5path = os.path.join(self.calc_dir, 'output.hdf5')
         mode = 'r+' if os.path.exists(self.hdf5path) else 'w'
         self.hdf5 = h5py.File(self.hdf5path, mode, libver='latest')
+        self.attrs = self.hdf5.attrs
+        for name, value in params:
+            self.attrs[name] = value
+
+    def set_parent(self, parent):
+        """
+        Give a parent to a datastore and update its .attrs with the parent
+        attributes, which are assumed to be literal strings.
+        """
+        self.parent = parent
+        # merge parent attrs into child attrs
+        for name, value in self.parent.attrs.items():
+            if name not in self.attrs:  # add missing parameter
+                self.attrs[name] = value
 
     def create_dset(self, key, dtype, size=None):
         """
@@ -317,6 +331,15 @@ class DataStore(collections.MutableMapping):
 
     def __repr__(self):
         return '<%s %d>' % (self.__class__.__name__, self.calc_id)
+
+
+class Fake(dict):
+    """
+    A fake datastore as a dict subclass, useful in tests and such
+    """
+    def __init__(self, attrs, **kwargs):
+        self.attrs = {k: repr(v) for k, v in attrs.items()}
+        self.update(kwargs)
 
 
 def persistent_attribute(key):

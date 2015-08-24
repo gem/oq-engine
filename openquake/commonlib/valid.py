@@ -29,6 +29,7 @@ from decimal import Decimal
 
 import numpy
 
+from openquake.baselib.python3compat import with_metaclass
 from openquake.hazardlib import imt, scalerel, gsim
 from openquake.baselib.general import distinct
 
@@ -42,7 +43,7 @@ def gsim(value):
     """
     Make sure the given value is the name of an available GSIM class.
 
-    >>> gsim('BooreAtkinson2011')  # doctest: +ELLIPSIS
+    >>> gsim('BooreAtkinson2011')
     'BooreAtkinson2011()'
     """
     if value.endswith(')'):
@@ -825,8 +826,19 @@ class Param(object):
         return self
 
 
+class MetaParamSet(type):
+    """
+    Set the `.name` attribute of every Param instance defined inside
+    any subclass of ParamSet.
+    """
+    def __init__(cls, name, bases, dic):
+        for name, val in dic.items():
+            if isinstance(val, Param):
+                val.name = name
+
+
 # used in commonlib.oqvalidation
-class ParamSet(object):
+class ParamSet(with_metaclass(MetaParamSet)):
     """
     A set of valid interrelated parameters. Here is an example
     of usage:
@@ -857,18 +869,39 @@ class ParamSet(object):
     >>> mp.a = '2'
     >>> mp.a
     '2'
+
+    A list with the literal strings can be extracted as follows:
+
+    >>> mp.to_params()
+    [('a', "'2'"), ('b', '7.2')]
+
+    It is possible to build a new object from a dictionary of parameters
+    which are assumed to be already validated:
+
+    >>> MyParams.from_(dict(a="'2'", b='7.2'))
+    <MyParams a='2', b=7.2>
     """
     params = {}
 
-    class __metaclass__(type):
+    @classmethod
+    def from_(cls, dic):
         """
-        Set the `.name` attribute of every Param instance defined inside
-        any subclass of ParamSet.
+        Build a new ParamSet from a dictionary of string-valued parameters
+        which are assumed to be already valid.
         """
-        def __init__(cls, name, bases, dic):
-            for name, val in dic.items():
-                if isinstance(val, Param):
-                    val.name = name
+        self = cls.__new__(cls)
+        for k, v in dic.items():
+            setattr(self, k, ast.literal_eval(v))
+        return self
+
+    def to_params(self):
+        """
+        Convert the instance dictionary into a sorted list of pairs
+        (name, valrepr) where valrepr is the string representation of
+        the underlying value.
+        """
+        dic = self.__dict__
+        return [(k, repr(dic[k])) for k in sorted(dic)]
 
     def __init__(self, **names_vals):
         for name, val in names_vals.items():
@@ -909,5 +942,5 @@ class ParamSet(object):
 
     def __repr__(self):
         names = sorted(n for n in vars(self) if not n.startswith('_'))
-        nameval = ', '.join('%s=%s' % (n, getattr(self, n)) for n in names)
+        nameval = ', '.join('%s=%r' % (n, getattr(self, n)) for n in names)
         return '<%s %s>' % (self.__class__.__name__, nameval)
