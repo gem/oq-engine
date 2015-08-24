@@ -25,7 +25,7 @@ import numpy.testing
 from openquake.baselib.general import groupby
 from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.util import max_rel_diff_index
-from openquake.commonlib.tests.calculators import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_4, case_5, case_6, case_7, case_12,
     case_13, case_17, case_18)

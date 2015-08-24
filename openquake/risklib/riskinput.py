@@ -403,7 +403,7 @@ class RiskInputFromRuptures(object):
             an array R x N where N is the number of sites and
             R is the number of ruptures.
         """
-        from openquake.commonlib.calculators.event_based import make_gmfs
+        from openquake.calculators.event_based import make_gmfs
         gmfs = make_gmfs(
             self.ses_ruptures, self.sitecol, self.imts,
             self.gsims, self.trunc_level, self.correl_model, DummyMonitor())

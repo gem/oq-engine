@@ -14,7 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from openquake.commonlib.tests.calculators import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase
 
 
 class ScenarioTestCase(CalculatorTestCase):

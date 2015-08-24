@@ -25,8 +25,8 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.general import humansize, groupby
 from openquake.commonlib import (
     sap, readinput, nrml, source, datastore, reportwriter)
+from openquake.calculators import base
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.calculators import base
 from openquake.risklib import riskinput
 from openquake.hazardlib import gsim
 

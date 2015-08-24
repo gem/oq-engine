@@ -6,8 +6,8 @@ from __future__ import print_function
 import os
 
 from openquake.commonlib import readinput, datastore
+from openquake.calculators import base
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.calculators import base
 
 
 def indent(text):

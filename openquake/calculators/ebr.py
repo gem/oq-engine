@@ -22,7 +22,7 @@ import operator
 import numpy
 
 from openquake.baselib.general import AccumDict, humansize
-from openquake.commonlib.calculators import base
+from openquake.calculators import base
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.risklib import riskinput
 from openquake.commonlib.parallel import apply_reduce
