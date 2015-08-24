@@ -202,19 +202,21 @@ class GeographicObjectsTest(unittest.TestCase):
         self.points = geodetic.GeographicObjects([p1, p2, p3])
 
     def test_closest(self):
-        point = self.points.get_closest(0.0, 0.21)
+        point, dist = self.points.get_closest(0.0, 0.21)
         self.assertEqual(point, Point(0.0, 0.2))
-        point = self.points.get_closest(0.0, 0.29)
+        point, dist = self.points.get_closest(0.0, 0.29)
         self.assertEqual(point, Point(0.0, 0.3))
 
     def test_exact_point(self):
-        point = self.points.get_closest(0.0, 0.2)
+        point, dist = self.points.get_closest(0.0, 0.2)
         self.assertEqual(point, Point(0.0, 0.2))
 
     def test_max_distance(self):
-        point = self.points.get_closest(0.0, 0.21, max_distance=100)  # close
+        point, dist = self.points.get_closest(
+            0.0, 0.21, max_distance=100)  # close
         self.assertEqual(point, Point(0.0, 0.2))
-        point = self.points.get_closest(0.0, 0.21, max_distance=0.1)  # far
+        point, dist = self.points.get_closest(
+            0.0, 0.21, max_distance=0.1)  # far
         self.assertIsNone(point)
 
 
