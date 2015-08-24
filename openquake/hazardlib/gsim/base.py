@@ -646,7 +646,8 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
 
     def __repr__(self):
         """
-        To be overridden in subclasses if the GSIM takes parameters.
+        Default string representation for GSIM instances. It contains
+        the name and values of the arguments, if any.
         """
         kwargs = ', '.join('%s=%r' % kv for kv in sorted(self.kwargs.items()))
         return "%s(%s)" % (self.__class__.__name__, kwargs)
