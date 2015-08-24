@@ -886,7 +886,7 @@ class ParamSet(with_metaclass(MetaParamSet)):
     @classmethod
     def from_(cls, dic):
         """
-        Build a new ParamSet from a dictionary of string-value parameters
+        Build a new ParamSet from a dictionary of string-valued parameters
         which are assumed to be already valid.
         """
         self = cls.__new__(cls)
