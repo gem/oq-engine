@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * If a site parameter is more distant than 5 kilometers from its closest
+    site, a warning is logged
   * Changed the splitting of fault sources to reduce the number of generated
     sources and avoid data transfer failures if rupture_mesh_spacing is too
     small
