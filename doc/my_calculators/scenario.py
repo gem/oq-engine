@@ -1,4 +1,4 @@
-from openquake.commonlib.calculators import base
+from openquake.calculators import base
 from openquake.commonlib import readinput
 from openquake.hazardlib.calc.gmf import ground_motion_fields
 from openquake.commonlib.export import export

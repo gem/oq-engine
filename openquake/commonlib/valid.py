@@ -43,7 +43,7 @@ def gsim(value, **kwargs):
     Make sure the given value is the name of an available GSIM class.
 
     >>> gsim('BooreAtkinson2011')  # doctest: +ELLIPSIS
-    'BooreAtkinson2011'
+    'BooreAtkinson2011()'
     """
     try:
         gsim_class = GSIM[value]

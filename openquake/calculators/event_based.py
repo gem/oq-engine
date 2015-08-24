@@ -34,9 +34,9 @@ from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.util import max_rel_diff_index
 
-from openquake.commonlib.calculators import base, views
-from openquake.commonlib.calculators.calc import MAX_INT, gmvs_to_haz_curve
-from openquake.commonlib.calculators.classical import (
+from openquake.calculators import base, views
+from openquake.calculators.calc import MAX_INT, gmvs_to_haz_curve
+from openquake.calculators.classical import (
     ClassicalCalculator, store_source_chunks, agg_dicts)
 
 # ######################## rupture calculator ############################ #

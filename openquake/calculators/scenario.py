@@ -26,7 +26,7 @@ from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput, parallel, datastore
 
-from openquake.commonlib.calculators import base, calc
+from openquake.calculators import base, calc
 
 Rupture = collections.namedtuple('Rupture', 'tag seed rupture')
 

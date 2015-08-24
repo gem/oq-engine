@@ -20,7 +20,7 @@ import logging
 
 from openquake.baselib import performance, general
 from openquake.commonlib import sap, readinput, valid, datastore
-from openquake.commonlib.calculators import base
+from openquake.calculators import base
 
 
 def run2(job_haz, job_risk, concurrent_tasks, exports, monitor):

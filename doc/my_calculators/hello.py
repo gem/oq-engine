@@ -1,5 +1,5 @@
 import os
-from openquake.commonlib.calculators import base
+from openquake.calculators import base
 
 
 @base.calculators.add('hello')
