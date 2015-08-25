@@ -344,10 +344,19 @@ def list_imported_outputs():
     engine.print_outputs_summary(outputs)
 
 
+def latest_hc_id(hc_id):
+    """
+    Return the last calculation of the current user; hc_id must
+    be a negative number like -1, -2, ...
+    """
+    return models.OqJob.objects.filter(
+        user_name=getpass.getuser()).latest('id').id + hc_id + 1
+
+
 def export_outputs(hc_id, target_dir, export_type):
     if hc_id < 0:
         # make it possible commands like `oq-engine --eos -1 /tmp`
-        hc_id = models.OqJob.objects.latest('id').id + hc_id
+        hc_id = latest_hc_id(hc_id)
     for output in models.Output.objects.filter(oq_job=hc_id):
         print 'Exporting %s...' % output
         export(output.id, target_dir, export_type)
@@ -504,7 +513,7 @@ def main():
     hc_id = args.hazard_calculation_id
     if hc_id and int(hc_id) < 0:
         # make it possible commands like `oq-engine --run job_risk.ini --hc -1`
-        hc_id = models.OqJob.objects.latest('id').id + int(hc_id)
+        hc_id = latest_hc_id(int(hc_id))
     if args.run:
         job_inis = map(expanduser, args.run.split(','))
         if len(job_inis) not in (1, 2):
