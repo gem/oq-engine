@@ -288,8 +288,7 @@ def export_gmf_xml(key, output, target):
     dest = _get_result_export_dest(haz_calc.id, target, output.gmf)
     writer = hazard_writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path, gsim_lt_path)
-    with floatformat('%12.8E'):
-        writer.serialize(gmf)
+    writer.serialize(gmf)
     return dest
 
 
