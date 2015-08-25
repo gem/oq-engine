@@ -356,7 +356,8 @@ class EventBasedGMFXMLWriter(object):
         self.sm_lt_path = sm_lt_path
         self.gsim_lt_path = gsim_lt_path
 
-    def serialize(self, data):
+    # 5 digits after the decimal point is the precision of lon/lat
+    def serialize(self, data, fmt='%9.5E'):
         """
         Serialize a collection of ground motion fields to XML.
 
@@ -400,7 +401,7 @@ class EventBasedGMFXMLWriter(object):
         gmf_container.nodes = gmf_set_nodes
 
         with open(self.dest, 'w') as dest:
-            nrml.write([gmf_container], dest)
+            nrml.write([gmf_container], dest, fmt)
 
 
 def rupture_to_element(rupture, parent=None):

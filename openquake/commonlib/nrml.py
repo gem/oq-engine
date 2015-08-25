@@ -363,7 +363,7 @@ def read_lazy(source, lazytags):
     return nodes
 
 
-def write(nodes, output=sys.stdout, fmt='%8.4E'):
+def write(nodes, output=sys.stdout, fmt='%9.5E'):
     """
     Convert nodes into a NRML file. output must be a file
     object open in write mode. If you want to perform a
