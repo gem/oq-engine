@@ -356,8 +356,8 @@ class EventBasedGMFXMLWriter(object):
         self.sm_lt_path = sm_lt_path
         self.gsim_lt_path = gsim_lt_path
 
-    # we want at least 1+6 digits of precision
-    def serialize(self, data, fmt='%8.6E'):
+    # we want at least 1+7 digits of precision
+    def serialize(self, data, fmt='%10.7E'):
         """
         Serialize a collection of ground motion fields to XML.
 
