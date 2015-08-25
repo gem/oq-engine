@@ -565,7 +565,7 @@ def main():
 
     # export
     elif args.list_outputs is not None:
-        engine.list_outputs(args.list_outputs)
+        engine.list_outputs(latest_hc_id(int(args.list_outputs)))
     elif args.list_hazard_outputs is not None:
         deprecate('--list-hazard-outputs', '--list-outputs')
         engine.list_outputs(args.list_hazard_outputs)
