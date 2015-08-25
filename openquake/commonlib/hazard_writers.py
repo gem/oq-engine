@@ -356,8 +356,8 @@ class EventBasedGMFXMLWriter(object):
         self.sm_lt_path = sm_lt_path
         self.gsim_lt_path = gsim_lt_path
 
-    # 5 digits after the decimal point is the precision of lon/lat
-    def serialize(self, data, fmt='%9.5E'):
+    # we want at least 1+6 digits of precision
+    def serialize(self, data, fmt='%8.6E'):
         """
         Serialize a collection of ground motion fields to XML.
 
