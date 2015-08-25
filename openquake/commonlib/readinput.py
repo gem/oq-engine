@@ -669,10 +669,13 @@ def get_exposure(oqparam):
         region = None
     fname = oqparam.inputs['exposure']
     exposure, assets_node = get_exposure_lazy(fname)
-    aggregated = {
-        ct['name']: (ct['type'] == 'aggregated' or
-                     exposure.area['type'] == 'aggregated')
-        for ct in exposure.cost_types}
+
+    cc = workflows.CostCalculator({}, {})
+    for ct in exposure.cost_types:
+        name = ct['name']  # structural, nonstructural, ...
+        cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
+        cc.area_types[name] = exposure.area['type']
+
     all_cost_types = set(vulnerability_files(oqparam.inputs))
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
@@ -759,7 +762,7 @@ def get_exposure(oqparam):
         area = float(asset.attrib.get('area', 1))
         ass = workflows.Asset(
             asset_id, taxonomy, number, location, values, area,
-            deductibles, insurance_limits, retrofitting_values, aggregated)
+            deductibles, insurance_limits, retrofitting_values, cc)
         exposure.assets.append(ass)
         exposure.taxonomies.add(taxonomy)
     if region:

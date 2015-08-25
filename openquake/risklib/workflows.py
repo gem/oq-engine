@@ -26,8 +26,54 @@ from openquake.baselib.general import CallableDict
 from openquake.commonlib import valid
 from openquake.risklib import utils, scientific
 
-
 registry = CallableDict()
+
+
+class CostCalculator(object):
+    """
+    Return the value of an asset for the given loss type depending
+    on the cost types declared in the exposure, as follows:
+
+        case 1: cost type: aggregated:
+            cost = economic value
+        case 2: cost type: per asset:
+            cost * number (of assets) = economic value
+        case 3: cost type: per area and area type: aggregated:
+            cost * area = economic value
+        case 4: cost type: per area and area type: per asset:
+            cost * area * number = economic value
+
+    The same "formula" applies to retrofitting cost.
+    """
+    def __init__(self, cost_types, area_types):
+        for ct in cost_types.values():
+            assert ct in ('aggregated', 'per_asset', 'per_area'), ct
+        for at in area_types.values():
+            assert at in ('aggregated', 'per_asset'), at
+        self.cost_types = cost_types
+        self.area_types = area_types
+
+    def __call__(self, loss_type, values, area, number):
+        cost = values[loss_type]
+        if cost is None:
+            return numpy.nan
+        cost_type = self.cost_types[loss_type]
+        if cost_type == "aggregated":
+            return cost
+        if cost_type == "per_asset":
+            return cost * number
+        if cost_type == "per_area":
+            area_type = self.area_types[loss_type]
+            if area_type == "aggregated":
+                return cost * area
+            elif area_type == "per_asset":
+                return cost * area * number
+        # this should never happen
+        raise RuntimeError('Unable to compute cost')
+
+costcalculator = CostCalculator(
+    cost_types=dict(structural='per_area'),
+    area_types=dict(structural='per_asset'))
 
 
 class Asset(object):
@@ -51,7 +97,7 @@ class Asset(object):
                  deductibles=None,
                  insurance_limits=None,
                  retrofitting_values=None,
-                 aggregated=None,
+                 calc=costcalculator,
                  idx=None):
         """
         :param asset_id:
@@ -72,8 +118,8 @@ class Asset(object):
             the value of the asset) keyed by loss types
         :param dict retrofitting_values:
             asset retrofitting values keyed by loss types
-        :param dict aggregated:
-            if the cost is aggregated, do not multiply by the number
+        :param calc:
+            cost calculator instance
         :param idx:
             asset collection index
         """
@@ -86,7 +132,7 @@ class Asset(object):
         self.retrofitting_values = retrofitting_values
         self.deductibles = deductibles
         self.insurance_limits = insurance_limits
-        self.aggregated = aggregated or {}
+        self.calc = calc
         self.idx = idx
 
     def value(self, loss_type, time_event=None):
@@ -95,9 +141,7 @@ class Asset(object):
         """
         if loss_type == 'fatalities':
             return self.values['fatalities_' + str(time_event)]
-        value = self.values[loss_type]
-        number = 1 if self.aggregated.get(loss_type) else self.number
-        return numpy.nan if value is None else value * number * self.area
+        return self.calc(loss_type, self.values, self.area, self.number)
 
     def deductible(self, loss_type):
         """
@@ -109,14 +153,16 @@ class Asset(object):
         """
         :returns: the deductible of the asset for `loss_type`
         """
-
         return self.insurance_limits[loss_type]
 
-    def retrofitted(self, loss_type):
+    def retrofitted(self, loss_type, time_event=None):
         """
         :returns: the asset retrofitted value for `loss_type`
         """
-        return self.retrofitting_values[loss_type]
+        if loss_type == 'fatalities':
+            return self.values['fatalities_' + str(time_event)]
+        return self.calc(loss_type, self.retrofitting_values,
+                         self.area, self.number)
 
     def __repr__(self):
         return '<Asset %s>' % self.id
