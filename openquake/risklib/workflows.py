@@ -32,7 +32,7 @@ registry = CallableDict()
 class CostCalculator(object):
     """
     Return the value of an asset for the given loss type depending
-    on the cost types declared in the exposure, as follows:    data as follows:
+    on the cost types declared in the exposure, as follows:
 
         case 1: cost type: aggregated:
             cost = economic value
