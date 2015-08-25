@@ -540,7 +540,7 @@ _pkgtest_innervm_run () {
             echo \"Running \$demo_dir/job_hazard.ini\"
             oq-engine --run-hazard job_hazard.ini
             echo \"Running \$demo_dir/job_risk.ini\"
-            oq-engine --run-risk job_risk.ini --exports csv,xml --hazard-calculation-id -1 -l info
+            oq-engine --run-risk job_risk.ini --exports csv,xml --hazard-calculation-id -1
             cd -
             fi
         done"
