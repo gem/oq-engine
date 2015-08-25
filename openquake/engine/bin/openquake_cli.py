@@ -345,6 +345,9 @@ def list_imported_outputs():
 
 
 def export_outputs(hc_id, target_dir, export_type):
+    if hc_id < 0:
+        # make it possible commands like `oq-engine --eos -1 /tmp`
+        hc_id = models.OqJob.objects.latest('id').id + hc_id
     for output in models.Output.objects.filter(oq_job=hc_id):
         print 'Exporting %s...' % output
         export(output.id, target_dir, export_type)
@@ -498,7 +501,11 @@ def main():
         list_inputs(args.list_inputs)
 
     # hazard or hazard+risk
-    elif args.run:
+    hc_id = args.hazard_calculation_id
+    if hc_id and int(hc_id) < 0:
+        # make it possible commands like `oq-engine --run job_risk.ini --hc -1`
+        hc_id = models.OqJob.objects.latest('id').id + int(hc_id)
+    if args.run:
         job_inis = map(expanduser, args.run.split(','))
         if len(job_inis) not in (1, 2):
             sys.exit('%s should be a .ini filename or a pair of filenames '
@@ -519,7 +526,7 @@ def main():
             run_job(
                 expanduser(args.run), args.log_level, log_file,
                 args.exports, hazard_output_id=args.hazard_output_id,
-                hazard_calculation_id=args.hazard_calculation_id)
+                hazard_calculation_id=hc_id)
     # hazard
     elif args.list_hazard_calculations:
         list_calculations('hazard')
@@ -543,7 +550,7 @@ def main():
             expanduser(args.run_risk),
             args.log_level, log_file, args.exports,
             hazard_output_id=args.hazard_output_id,
-            hazard_calculation_id=args.hazard_calculation_id)
+            hazard_calculation_id=hc_id)
     elif args.delete_risk_calculation is not None:
         del_calc(args.delete_risk_calculation, args.yes)
 
