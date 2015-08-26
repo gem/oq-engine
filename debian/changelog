@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Introduced a new experimental command
+    `oq-engine --show-view CALCULATION_ID VIEW_NAME`; the only view available
+    for the moment is `mean_avg_losses`
   * Negative calculation IDs are interpreted in a Pythonic way, i.e. -1
     means the last calculation, -2 the calculation before the last one, etc.
   * If a site parameter is more distant than 5 kilometers from its closest
