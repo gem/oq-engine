@@ -223,16 +223,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for loss_type, tag in data_by_lt_tag:
                 d = data_by_lt_tag[loss_type, tag]
                 if tag == 'counts_matrix':
-                    assets, counts = d.keys(), d.values()
-                    indices = numpy.array([asset.idx for asset in assets])
-                    asset_values = workflows.get_values(loss_type, assets)
-                    poes = scientific.build_poes(
-                        counts, oq.ses_per_logic_tree_path)
-                    cb = scientific.CurveBuilder(
-                        loss_type, numpy.linspace(0, 1, C))
-                    lcurves = cb.build_loss_curves(
-                        poes, asset_values, indices, N)
-                    self.store('lcurves/' + loss_type, rlz, lcurves)
                     continue
 
                 for aid, loss, ins_loss in d['data']:
