@@ -17,6 +17,10 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.baselib.general import CallableDict
+from openquake.engine.utils import tasks  # really UGLY hack:
+# we need to monkey patch commonlib.parallel *before* importing
+# calculators.views; the ugliness will disappear when the engine
+# calculator will disappear
 from openquake.calculators.views import rst_table
 from openquake.engine.db import models
 
