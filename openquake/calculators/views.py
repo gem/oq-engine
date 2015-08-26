@@ -207,7 +207,10 @@ def data_transfer(token, dstore):
 # this is used by event_based_risk
 @view.add('mean_avg_losses')
 def view_mean_avg_losses(token, dstore):
-    loss_curves = dstore['loss_curves-stats/mean'].value
+    try:
+        loss_curves = dstore['loss_curves-stats/mean'].value
+    except KeyError:  # there is a single realization
+        loss_curves = dstore['loss_curves-rlzs/b1,b1'].value
     loss_types = list(loss_curves.dtype.fields)
     assets = dstore['assetcol']['asset_ref']
 
