@@ -29,7 +29,9 @@ view = CallableDict()
 def mean_avg_losses(key, job_id):
     outputs = models.Output.objects.filter(
         oq_job=job_id, display_name__contains='Mean Loss Curves'
-    ).order_by('display_name')
+    ).order_by('display_name') or models.Output.objects.filter(
+        oq_job=job_id, display_name__contains='loss curves. type='
+    ).order_by('display_name')  # there could be a single realization
     if len(outputs) == 0:
         return 'No %s for calculation %d' % (key, job_id)
     data_by_lt = {}
