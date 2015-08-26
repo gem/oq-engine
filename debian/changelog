@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Negative calculation IDs are interpreted in a Pythonic way, i.e. -1
+    means the last calculation, -2 the calculation before the last one, etc.
   * If a site parameter is more distant than 5 kilometers from its closest
     site, a warning is logged
   * Changed the splitting of fault sources to reduce the number of generated
