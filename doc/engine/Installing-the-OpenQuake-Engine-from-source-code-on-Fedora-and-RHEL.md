@@ -16,7 +16,7 @@ $ curl -s http://ftp.openquake.org/rhel/7/openquake.repo | sudo tee /etc/yum.rep
 ### Install the OpenQuake Engine dependencies
 
 ```bash
-$ sudo yum install sudo git gcc python-amqp python-celery python-lxml numpy python-paramiko scipy python-shapely python-psycopg2 python-django python-setuptools python-psutil python-mock python-futures rabbitmq-server postgresql-server postgis h5py
+$ sudo yum install sudo git gcc python-amqp python-celery numpy python-paramiko scipy python-shapely python-psycopg2 python-django python-setuptools python-psutil python-mock python-futures rabbitmq-server postgresql-server postgis h5py
 ```
 
 ## PostgreSQL initialization
