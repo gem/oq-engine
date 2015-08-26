@@ -47,7 +47,8 @@ def rst_table(data, header=None):
         # not a composite array
         header = header or ()
     else:
-        header = header or build_header(data.dtype)
+        if not header:
+            header = [col.split(':')[0] for col in build_header(data.dtype)]
     if header:
         col_sizes = [len(col) for col in header]
     else:
