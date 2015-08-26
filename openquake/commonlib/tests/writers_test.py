@@ -4,7 +4,7 @@ import tempfile
 from io import BytesIO
 from openquake.commonlib.writers import tostring, StreamingXMLWriter, write_csv
 from openquake.commonlib.node import LiteralNode
-from lxml import etree
+from xml.etree import ElementTree as etree
 
 import numpy
 

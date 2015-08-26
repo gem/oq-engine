@@ -33,14 +33,14 @@ import collections
 import operator
 from collections import namedtuple
 from decimal import Decimal
-from lxml import etree
+from xml.etree import ElementTree as etree
 
 import numpy
 
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 from openquake.commonlib import nrml, valid
-from openquake.commonlib.node import node_from_xml
+from openquake.commonlib.node import node_from_xml, iterparse, fromstring
 
 import openquake.hazardlib
 from openquake.baselib.python3compat import with_metaclass
@@ -448,12 +448,11 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         self.filename = filename
         self.seed = seed
         self.num_samples = num_samples
-        parser = etree.XMLParser()
         self.branches = {}
         self.open_ends = set()
         try:
-            tree = etree.fromstring(content, parser=parser)
-        except etree.XMLSyntaxError as exc:
+            tree = fromstring(content)
+        except etree.ParseError as exc:
             # Wrap etree parsing exception to :exc:`ParsingError`.
             raise ParsingError(self.filename, self.basepath, str(exc))
         [tree] = tree.findall('{%s}logicTree' % self.NRML)
@@ -972,13 +971,13 @@ class SourceModelLogicTree(BaseLogicTree):
         sourcetype_slice = slice(len('{%s}' % self.NRML), - len('Source'))
 
         fh = self._get_source_model(source_model)
-        eventstream = etree.iterparse(fh, tag='{%s}*' % self.NRML)
+        eventstream = iterparse(fh)
         while True:
             try:
                 _, node = next(eventstream)
             except StopIteration:
                 break
-            except etree.XMLSyntaxError as exc:
+            except etree.ParseError as exc:
                 raise ParsingError(source_model, self.basepath, str(exc))
             if node.tag not in all_source_types:
                 continue
@@ -987,15 +986,7 @@ class SourceModelLogicTree(BaseLogicTree):
             source_type = node.tag[sourcetype_slice]
             self.source_ids.add(source_id)
             self.source_types.add(source_type)
-
-            # saving memory by removing already processed nodes.
-            # see http://lxml.de/parsing.html#modifying-the-tree
             node.clear()
-            parent = node.getparent()
-            prev = node.getprevious()
-            while prev is not None:
-                parent.remove(prev)
-                prev = node.getprevious()
 
     def make_apply_uncertainties(self, branch_ids):
         """

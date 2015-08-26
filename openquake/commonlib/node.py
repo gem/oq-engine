@@ -148,32 +148,39 @@ import io
 from contextlib import contextmanager
 from openquake.baselib.python3compat import raise_, exec_
 from openquake.commonlib.writers import StreamingXMLWriter
-
-try:
-    from lxml import etree
-    COMPATPARSER = etree.ETCompatXMLParser()
-
-    def parse(source, **kw):
-        """Thin wrapper around etree.parse"""
-        return etree.parse(source, parser=COMPATPARSER, **kw)
-
-    def iterparse(source, events=('end',), **kw):
-        """Thin wrapper around etree.iterparse"""
-        return etree.iterparse(source, events, **kw)
-
-except ImportError:
-    from xml.etree import ElementTree
-
-    def parse(source, remove_comments=True, **kw):
-        """Thin wrapper around ElementTree.parse"""
-        return ElementTree.parse(source, **kw)
-
-    def iterparse(source, events=('end',), remove_comments=True, **kw):
-        """Thin wrapper around ElementTree.iterparse"""
-        return ElementTree.iterparse(source, events, **kw)
+from xml.etree import ElementTree
 
 
-## this is duplicated from hazardlib to avoid a dependency
+class SourceLineParser(ElementTree.XMLParser):
+    """
+    A custom parser managing line numbers
+    """
+    def _start(self, tag, attrib_in):
+        elem = super(SourceLineParser, self)._start(tag, attrib_in)
+        elem.sourceline = self.parser.ErrorLineNumber
+        # there is also ErrorColumnNumber available, if wanted
+        return elem
+
+
+def fromstring(s):
+    """Parse an XML string and return a tree"""
+    parser = SourceLineParser(target=ElementTree.TreeBuilder())
+    for text in s.split():
+        parser.feed(text)
+    return parser.close()
+
+
+def parse(source, remove_comments=True, **kw):
+    """Thin wrapper around ElementTree.parse"""
+    return ElementTree.parse(source, parser=SourceLineParser(), **kw)
+
+
+def iterparse(source, events=('end',), remove_comments=True, **kw):
+    """Thin wrapper around ElementTree.iterparse"""
+    return ElementTree.iterparse(source, events, SourceLineParser(), **kw)
+
+
+# this is duplicated from hazardlib to avoid a dependency
 def with_slots(cls):
     """
     Decorator for a class with __slots__. It automatically defines

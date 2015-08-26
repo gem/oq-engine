@@ -26,7 +26,7 @@ import unittest
 import collections
 
 import numpy
-from lxml import etree
+from xml.etree import ElementTree as etree
 
 
 from io import BytesIO
@@ -1443,8 +1443,8 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         return logictree.GsimLogicTree(StringIO(xml), tectonic_region_types)
 
     def test_not_xml(self):
-        self.parse_invalid('xxx', etree.XMLSyntaxError)
-        self.parse_invalid('<?xml foo bar baz', etree.XMLSyntaxError)
+        self.parse_invalid('xxx', etree.ParseError)
+        self.parse_invalid('<?xml foo bar baz', etree.ParseError)
 
     def test_invalid_schema(self):
         xml = _make_nrml("""\
@@ -1857,6 +1857,6 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
         with self.assertRaises(Exception) as ctx:
             source.collect_source_model_paths(smlt)
         msg = str(ctx.exception)
-        self.assertIn('XMLSyntaxError:', msg)
+        self.assertIn('ParsingError:', msg)
         # make sure the file name is in the error message
         self.assertIn('tests/data/source_model_logic_tree.xml', msg)
