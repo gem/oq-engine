@@ -17,8 +17,8 @@ import mock
 import os
 import shutil
 import tempfile
+from xml.etree import ElementTree as etree
 
-from lxml import etree
 from nose.plugins.attrib import attr
 
 from openquake.commonlib import nrml

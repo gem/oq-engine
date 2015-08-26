@@ -26,6 +26,5 @@ Django | 1.6
 Numpy | 1.6 to 1.8
 Scipy | 0.9 to 0.13
 h5py | 2.0 to 2.0
-lxml2 | 2.3, 3.3
 futures |
 psutil |
