@@ -42,7 +42,7 @@ except ImportError:
 import openquake.engine
 
 from openquake.engine import __version__
-from openquake.engine import engine, logs
+from openquake.engine import engine, logs, views
 from openquake.engine.db import models, upgrade_manager
 from openquake.engine.export import core
 from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
@@ -55,7 +55,6 @@ HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = ("Please specify the ID of the hazard output (or "
                       "job) to be used by using '%s (or %s) <id>'" %
                       (HAZARD_OUTPUT_ARG, HAZARD_CALCULATION_ARG))
-
 
 def deprecate(option, newoption):
     """
@@ -190,12 +189,19 @@ def set_up_arg_parser():
         help='List outputs for the specified calculation',
         metavar='CALCULATION_ID')
 
+    export_grp.add_argument(
+        '--show-view',
+        '--sv',
+        help='Show a view of the specified calculation',
+        nargs=2, metavar=('CALCULATION_ID', 'VIEW_NAME'))
+
     # deprecated options
     export_grp.add_argument(
         '--list-hazard-outputs',
         '--lho',
         help='List outputs for the specified calculation [deprecated]',
         metavar='CALCULATION_ID')
+
     export_grp.add_argument(
         '--list-risk-outputs',
         '--lro',
@@ -566,6 +572,9 @@ def main():
     # export
     elif args.list_outputs is not None:
         engine.list_outputs(latest_hc_id(int(args.list_outputs)))
+    elif args.show_view is not None:
+        job_id, view_name = args.show_view
+        print views.view(view_name, latest_hc_id(int(job_id)))
     elif args.list_hazard_outputs is not None:
         deprecate('--list-hazard-outputs', '--list-outputs')
         engine.list_outputs(args.list_hazard_outputs)
