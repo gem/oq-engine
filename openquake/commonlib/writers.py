@@ -14,6 +14,7 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import types
 import logging
 from contextlib import contextmanager
 from xml.sax.saxutils import escape, quoteattr
@@ -144,6 +145,10 @@ class StreamingXMLWriter(object):
 
     def serialize(self, node):
         """Serialize a node object (typically an ElementTree object)"""
+        if isinstance(node.tag, types.FunctionType):
+            # this looks like a bug of ElementTree: comments are stored as
+            # functions!?? see https://hg.python.org/sandbox/python2.7/file/tip/Lib/xml/etree/ElementTree.py#l458
+            return
         if self.nsmap is not None:
             tag = self.shorten(node.tag)
         else:

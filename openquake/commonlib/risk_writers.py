@@ -28,8 +28,6 @@ from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib.node import Node
 from openquake.commonlib import nrml
 
-#for k, v in SERIALIZE_NS_MAP.items():
-#    et.register_namespace(k or '', v)
 
 DmgState = collections.namedtuple("DmgState", 'dmg_state lsi')
 
@@ -184,8 +182,7 @@ class LossCurveXMLWriter(object):
                     losses = et.SubElement(loss_curve, "stdDevLoss")
                     losses.text = "%.4e" % curve.stddev_loss
 
-            output.write(et.tostring(
-                root, encoding="UTF-8"))
+            nrml.write(list(root), output)
 
     def _create_loss_curves_elem(self, root):
         """
@@ -335,8 +332,7 @@ class AggregateLossCurveXMLWriter(object):
                 losses = et.SubElement(aggregate_loss_curve, "stdDevLoss")
                 losses.text = "%.4e" % data.stddev_loss
 
-            output.write(et.tostring(
-                root, encoding="UTF-8"))
+            nrml.write(list(root), output)
 
 
 class LossMapWriter(object):
@@ -461,8 +457,7 @@ class LossMapXMLWriter(LossMapWriter):
                 else:
                     loss_elem.set("value", str(loss.value))
 
-            output.write(et.tostring(
-                root, encoding="UTF-8"))
+            nrml.write(list(root), output)
 
     def _create_loss_map_elem(self, root):
         """
@@ -677,8 +672,7 @@ class LossFractionsWriter(object):
                 node_element.set("lat", str(lon_lat[1]))
                 write_bins(node_element, bin_data)
 
-            output.write(et.tostring(
-                root, encoding="UTF-8"))
+            nrml.write(list(root), output)
 
 
 class BCRMapXMLWriter(object):
@@ -791,8 +785,7 @@ class BCRMapXMLWriter(object):
                 bcr_elem.set("aalRetr", str(
                     bcr.average_annual_loss_retrofitted))
 
-            output.write(et.tostring(
-                root, encoding="UTF-8"))
+            nrml.write(list(root), output)
 
     def _create_bcr_map_elem(self, root):
         """

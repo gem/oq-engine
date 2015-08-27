@@ -190,12 +190,9 @@ class HazardCurveXMLWriter(BaseCurveWriter):
               have `x` and `y` to represent lon and lat, respectively.
         """
         with nrml.NRMLFile(self.dest, 'w') as fh:
-            root = ElementTree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
+            root = et.Element('nrml')
             self.add_hazard_curves(root, self.metadata, data)
-
-            fh.write(ElementTree.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding='UTF-8'))
+            nrml.write(list(root), fh)
 
     def add_hazard_curves(self, root, metadata, data):
         """
@@ -204,20 +201,20 @@ class HazardCurveXMLWriter(BaseCurveWriter):
         `serialize` and the constructor for a description of `data`
         and `metadata`, respectively.
         """
-        hazard_curves = ElementTree.SubElement(root, 'hazardCurves')
+        hazard_curves = et.SubElement(root, 'hazardCurves')
 
         _set_metadata(hazard_curves, metadata, _ATTR_MAP)
 
-        imls_elem = ElementTree.SubElement(hazard_curves, 'IMLs')
+        imls_elem = et.SubElement(hazard_curves, 'IMLs')
         imls_elem.text = ' '.join(map(scientificformat, metadata['imls']))
         gml_ns = nrml.SERIALIZE_NS_MAP['gml']
 
         for hc in data:
-            hc_elem = ElementTree.SubElement(hazard_curves, 'hazardCurve')
-            gml_point = ElementTree.ree.SubElement(hc_elem, '{%s}Point' % gml_ns)
-            gml_pos = ElementTree.SubElement(gml_point, '{%s}pos' % gml_ns)
+            hc_elem = et.SubElement(hazard_curves, 'hazardCurve')
+            gml_point = et.SubElement(hc_elem, '{%s}Point' % gml_ns)
+            gml_pos = et.SubElement(gml_point, '{%s}pos' % gml_ns)
             gml_pos.text = '%s %s' % (hc.location.x, hc.location.y)
-            poes_elem = ElementTree.SubElement(hc_elem, 'poEs')
+            poes_elem = et.SubElement(hc_elem, 'poEs')
             poes_elem.text = ' '.join(map(scientificformat, hc.poes))
 
 
@@ -302,15 +299,11 @@ class MultiHazardCurveXMLWriter(object):
            :class:`openquake.commonlib.hazard_writers.HazardCurveXMLWriter`
         """
         with nrml.NRMLFile(self.dest, 'w') as fh:
-            root = et.Element('nrml',
-                                 nsmap=nrml.SERIALIZE_NS_MAP)
+            root = et.Element('nrml')
             for metadata, curve_data in zip(self.metadata_set, curve_set):
                 writer = HazardCurveXMLWriter(self.dest, **metadata)
                 writer.add_hazard_curves(root, metadata, curve_data)
-
-            fh.write(et.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding='UTF-8'))
+            nrml.write(list(root), fh)
 
 
 def gen_gmfs(gmf_set):
@@ -604,9 +597,7 @@ class SESXMLWriter(object):
                 for rupture in ruptures:
                     rupture_to_element(rupture, ses_elem)
 
-            fh.write(et.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding='UTF-8'))
+            nrml.write(list(root), fh)
 
 
 class HazardMapWriter(object):
@@ -680,9 +671,7 @@ class HazardMapXMLWriter(HazardMapWriter):
                 node.set('lat', str(lat))
                 node.set('iml', str(iml))
 
-            fh.write(et.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding='UTF-8'))
+            nrml.write(list(root), fh)
 
 
 class HazardMapGeoJSONWriter(HazardMapWriter):
@@ -847,9 +836,7 @@ class DisaggXMLWriter(object):
                     prob.set('index', index)
                     prob.set('value', scientificformat(value))
 
-            fh.write(et.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding='UTF-8'))
+            nrml.write(list(root), fh)
 
 
 class UHSXMLWriter(BaseCurveWriter):
@@ -915,6 +902,4 @@ class UHSXMLWriter(BaseCurveWriter):
                 imls_elem = et.SubElement(uhs_elem, 'IMLs')
                 imls_elem.text = ' '.join([str(x) for x in uhs.imls])
 
-            fh.write(et.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding='UTF-8'))
+            nrml.write(list(root), fh)
