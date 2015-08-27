@@ -15,7 +15,7 @@ sudo apt-get remove --purge python-oq.*
 
 The complete list of dependencies is:
 ```
-python python-celery python-geohash python-lxml python-numpy python-paramiko python-scipy python-shapely python-psycopg2 python-setuptools python-psutil python-mock python-h5py python-concurrent.futures rabbitmq-server python-django16 postgresql-9.1 postgresql-9.1-postgis
+python python-celery python-geohash python-numpy python-paramiko python-scipy python-shapely python-psycopg2 python-setuptools python-psutil python-mock python-h5py python-concurrent.futures rabbitmq-server python-django16 postgresql-9.1 postgresql-9.1-postgis
 ```
 
 

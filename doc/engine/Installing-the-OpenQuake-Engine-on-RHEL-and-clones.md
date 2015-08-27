@@ -10,7 +10,7 @@ Supported releases: **RHEL/Scientific Linux/CentOS 7**.
 The following dependencies are required. They will be installed automatically by the `oq-engine` package:
 
 ```
-sudo python-amqp python-celery python-lxml numpy scipy python-shapely python-psycopg2 python-django python-setuptools python-psutil python-mock python-futures rabbitmq-server postgresql-server postgis
+sudo python-amqp python-celery numpy scipy python-shapely python-psycopg2 python-django python-setuptools python-psutil python-mock python-futures rabbitmq-server postgresql-server postgis
 ```
 
 

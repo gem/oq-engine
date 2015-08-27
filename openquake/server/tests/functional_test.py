@@ -140,7 +140,7 @@ class EngineServerTestCase(unittest.TestCase):
     def test_err_2(self):
         # the file logic-tree-source-model.xml is missing
         tb_str = self.postzip('archive_err_2.zip')
-        self.assertIn('failed to load external entity', tb_str)
+        self.assertIn('No such file', tb_str)
 
     def test_err_3(self):
         # there is no file job.ini, job_hazard.ini or job_risk.ini
