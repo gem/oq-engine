@@ -155,25 +155,21 @@ class SourceLineParser(ElementTree.XMLParser):
     """
     A custom parser managing line numbers
     """
-    def _start(self, tag, attrib_in):
-        elem = super(SourceLineParser, self)._start(tag, attrib_in)
-        elem.sourceline = self.parser.ErrorLineNumber
-        # there is also ErrorColumnNumber available, if wanted
+    def _start_list(self, tag, attrib_in):
+        elem = super(SourceLineParser, self)._start_list(tag, attrib_in)
+        elem.lineno = self.parser.CurrentLineNumber
+        # there is also CurrentColumnNumber available, if wanted
         return elem
 
 
-def fromstring(s):
-    # NB: for mysterious reasons line numbers are lost :-(
+def fromstring(text):
     """Parse an XML string and return a tree"""
-    parser = SourceLineParser(target=ElementTree.TreeBuilder())
-    for text in s.splitlines():
-        parser.feed(text)
-    return parser.close()
+    return ElementTree.fromstring(text, SourceLineParser())
 
 
 def parse(source, remove_comments=True, **kw):
     """Thin wrapper around ElementTree.parse"""
-    return ElementTree.parse(source, parser=SourceLineParser(), **kw)
+    return ElementTree.parse(source, SourceLineParser(), **kw)
 
 
 def iterparse(source, events=('end',), remove_comments=True, **kw):
@@ -505,7 +501,7 @@ def node_from_elem(elem, nodefactory=Node, lazy=()):
     Convert (recursively) an ElementTree object into a Node object.
     """
     children = list(elem)
-    lineno = getattr(elem, 'sourceline', None)
+    lineno = getattr(elem, 'lineno', None)
     if not children:
         return nodefactory(elem.tag, dict(elem.attrib), elem.text,
                            lineno=lineno)
@@ -537,7 +533,8 @@ def node_to_elem(root):
     # generate code to create a tree
     output = []
     generate_elem(output.append, root, 1)  # print "\n".join(output)
-    namespace = {"Element": etree.Element, "SubElement": etree.SubElement}
+    namespace = {"Element": ElementTree.Element,
+                 "SubElement": ElementTree.SubElement}
     exec_("\n".join(output), globals(), namespace)
     return namespace["e1"]
 

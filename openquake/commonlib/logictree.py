@@ -40,7 +40,7 @@ import numpy
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 from openquake.commonlib import nrml, valid
-from openquake.commonlib.node import node_from_xml, iterparse, fromstring
+from openquake.commonlib.node import node_from_xml, parse, iterparse
 
 import openquake.hazardlib
 from openquake.baselib.python3compat import with_metaclass
@@ -161,7 +161,7 @@ class ValidationError(LogicTreeError):
     """
     def __init__(self, node, *args, **kwargs):
         super(ValidationError, self).__init__(*args, **kwargs)
-        self.lineno = getattr(node, 'sourceline', '?')
+        self.lineno = getattr(node, 'lineno', '?')
 
     def __str__(self):
         return 'filename %r, line %s: %s' % (
@@ -413,14 +413,8 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
     Common code for logic tree readers, parsers and verifiers --
     :class:`GMPELogicTree` and :class:`SourceModelLogicTree`.
 
-    :param content:
-        Raw string containing the logic tree xml content.
-    :param basepath:
-        Base path for logic tree itself and all files that it references.
     :param filename:
-        Name of logic tree file, supposed to be relative to ``basepath``.
-        That filename together with ``basepath`` are only used for reporting
-        errors, the actual data is read from ``content``.
+        Full pathname of logic tree file
     :param validate:
         Boolean indicating whether or not the tree should be validated
         while parsed. This should be set to ``True`` on initial load
@@ -440,7 +434,7 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
 
     _xmlschema = None
 
-    def __init__(self, content, filename, validate=True,
+    def __init__(self, filename, validate=True,
                  seed=0, num_samples=0):
         self.filename = filename
         self.basepath = os.path.dirname(filename)
@@ -449,7 +443,7 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         self.branches = {}
         self.open_ends = set()
         try:
-            tree = fromstring(content)
+            tree = parse(filename)
         except etree.ParseError as exc:
             # Wrap etree parsing exception to :exc:`ParsingError`.
             raise ParsingError(self.filename, str(exc))
