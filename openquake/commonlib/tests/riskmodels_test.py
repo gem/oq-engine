@@ -14,9 +14,9 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-import io
 import numpy
 from numpy.testing import assert_almost_equal
+from openquake.baselib.general import writetmp
 from openquake.commonlib.riskmodels import (
     get_vulnerability_functions, get_fragility_functions)
 from openquake.commonlib import InvalidFile
@@ -27,7 +27,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
     def test_different_levels_ok(self):
         # the same IMT can appear with different levels in different
         # vulnerability functions
-        vuln_content = io.BytesIO(b"""\
+        vuln_content = writetmp(u"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
       xmlns:gml="http://www.opengis.net/gml">
@@ -68,7 +68,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
         # multiple IMTs.
         # In this test input, we've defined two functions in separate sets
         # with the same ID and different IMTs.
-        vuln_content = io.BytesIO(b"""\
+        vuln_content = writetmp(u"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
       xmlns:gml="http://www.opengis.net/gml">
@@ -106,7 +106,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
     def test_lr_eq_0_cov_gt_0(self):
         # If a vulnerability function loss ratio is 0 and its corresponding CoV
         # is > 0, a ValueError should be raised
-        vuln_content = io.BytesIO(b"""\
+        vuln_content = writetmp(u"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
       xmlns:gml="http://www.opengis.net/gml">
@@ -132,7 +132,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
                       ar.exception.message)
 
     def test_missing_minIML(self):
-        vuln_content = io.BytesIO(b"""\
+        vuln_content = writetmp(u"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -157,7 +157,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
                          ar.exception.message)
 
     def test_missing_maxIML(self):
-        vuln_content = io.BytesIO(b"""\
+        vuln_content = writetmp(u"""\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
