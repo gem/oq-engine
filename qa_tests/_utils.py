@@ -22,12 +22,15 @@ import filecmp
 
 from nose.plugins.attrib import attr
 
-from openquake.commonlib.nrml import PARSE_NS_MAP
+from openquake.commonlib.nrml import PARSE_NS_MAP, NRML05
+from openquake.commonlib.writers import tostring
 from openquake.engine.db import models
 
-from lxml import etree
+from xml.etree import ElementTree as et
 
 from openquake.engine.tests.utils import helpers
+
+PARSE_NS_MAP['nrml'] = NRML05  # temporary hack until we remove NRML 0.4
 
 
 class BaseQATestCase(unittest.TestCase):
@@ -61,9 +64,8 @@ class BaseQATestCase(unittest.TestCase):
             Paths to XML files, or a file-like object containing the XML
             contents.
         """
-        contents_a = etree.tostring(etree.parse(a), pretty_print=True)
-        contents_b = etree.tostring(etree.parse(b), pretty_print=True)
-
+        contents_a = tostring(et.parse(a).getroot(), nsmap=PARSE_NS_MAP)
+        contents_b = tostring(et.parse(b).getroot(), nsmap=PARSE_NS_MAP)
         self.assertEqual(contents_a, contents_b)
 
     def assert_equals_var_tolerance(self, expected, actual):
@@ -166,25 +168,25 @@ class DisaggHazardTestCase(BaseQATestCase):
             Paths to XML files, or file-like objects containing the XML
             contents.
         """
-        exp_tree = etree.parse(expected)
-        act_tree = etree.parse(actual)
+        exp_tree = et.parse(expected)
+        act_tree = et.parse(actual)
 
         # First, compare the <disaggMatrices> container element, check attrs,
         # etc.
-        [exp_dms] = exp_tree.xpath(
+        [exp_dms] = exp_tree.findall(
             '//nrml:disaggMatrices', namespaces=PARSE_NS_MAP
         )
-        [act_dms] = act_tree.xpath(
+        [act_dms] = act_tree.findall(
             '//nrml:disaggMatrices', namespaces=PARSE_NS_MAP
         )
         self.assertEqual(exp_dms.attrib, act_dms.attrib)
 
         # Then, loop over each <disaggMatrix>, check attrs, then loop over each
         # <prob> and compare indices and values.
-        exp_dm = exp_tree.xpath(
+        exp_dm = exp_tree.findall(
             '//nrml:disaggMatrix', namespaces=PARSE_NS_MAP
         )
-        act_dm = act_tree.xpath(
+        act_dm = act_tree.findall(
             '//nrml:disaggMatrix', namespaces=PARSE_NS_MAP
         )
         self.assertEqual(len(exp_dm), len(act_dm))
@@ -198,8 +200,8 @@ class DisaggHazardTestCase(BaseQATestCase):
             aac(float(act_matrix.attrib['iml']), float(matrix.attrib['iml']))
 
             # compare probabilities
-            exp_probs = matrix.xpath('./nrml:prob', namespaces=PARSE_NS_MAP)
-            act_probs = act_matrix.xpath(
+            exp_probs = matrix.findall('./nrml:prob', namespaces=PARSE_NS_MAP)
+            act_probs = act_matrix.findall(
                 './nrml:prob', namespaces=PARSE_NS_MAP
             )
             self.assertEqual(len(exp_probs), len(act_probs))
