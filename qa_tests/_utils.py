@@ -23,9 +23,10 @@ import filecmp
 from nose.plugins.attrib import attr
 
 from openquake.commonlib.nrml import PARSE_NS_MAP
+from openquake.commonlib.writers import tostring
 from openquake.engine.db import models
 
-from lxml import etree
+from xml.etree import ElementTree as et
 
 from openquake.engine.tests.utils import helpers
 
@@ -61,8 +62,8 @@ class BaseQATestCase(unittest.TestCase):
             Paths to XML files, or a file-like object containing the XML
             contents.
         """
-        contents_a = etree.tostring(etree.parse(a), pretty_print=True)
-        contents_b = etree.tostring(etree.parse(b), pretty_print=True)
+        contents_a = tostring(et.parse(a).getroot(), nsmap=PARSE_NS_MAP)
+        contents_b = tostring(et.parse(b).getroot(), nsmap=PARSE_NS_MAP)
 
         self.assertEqual(contents_a, contents_b)
 
@@ -166,8 +167,8 @@ class DisaggHazardTestCase(BaseQATestCase):
             Paths to XML files, or file-like objects containing the XML
             contents.
         """
-        exp_tree = etree.parse(expected)
-        act_tree = etree.parse(actual)
+        exp_tree = et.parse(expected)
+        act_tree = et.parse(actual)
 
         # First, compare the <disaggMatrices> container element, check attrs,
         # etc.
