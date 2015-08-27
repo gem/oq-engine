@@ -287,3 +287,14 @@ def write_csv(dest, data, sep=',', fmt='%12.8E', header=None):
                 f.write(sep.join(scientificformat(col, fmt)
                                  for col in row) + '\n')
     return dest
+
+if __name__ == '__main__':  # pretty print of NRML files
+    import sys
+    import shutil
+    from openquake.commonlib import nrml
+    nrmlfiles = sys.argv[1:]
+    for fname in nrmlfiles:
+        node = nrml.read(fname)
+        shutil.copy(fname, fname + '.bak')
+        with open(fname, 'w') as out:
+            nrml.write(list(node), out)

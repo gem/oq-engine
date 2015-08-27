@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">
   <disaggMatrices sourceModelTreePath="b1" gsimTreePath="b1" IMT="PGA" investigationTime="50.0" lon="10.1" lat="40.1" magBinEdges="5.000000000E+00, 6.000000000E+00, 7.000000000E+00, 8.000000000E+00" distBinEdges="0.000000000E+00, 2.500000000E+01, 5.000000000E+01, 7.500000000E+01, 1.000000000E+02" lonBinEdges="9.000000000E+00, 1.050000000E+01, 1.200000000E+01" latBinEdges="3.900000000E+01, 4.050000000E+01" epsBinEdges="-3.000000000E+00, -1.000000000E+00, 1.000000000E+00, 3.000000000E+00" tectonicRegionTypes="Active Shallow Crust">
     <disaggMatrix type="Mag" dims="3" poE="1.000000000E-01" iml="3.004997757E-01">
       <prob index="0" value="5.580770883E-02"/>
