@@ -169,7 +169,7 @@ class StreamingXMLWriter(object):
         pass
 
 
-def tostring(node, indent=4):
+def tostring(node, indent=4, nsmap=None):
     """
     Convert a node into an XML string by using the StreamingXMLWriter.
     This is useful for testing purposes.
@@ -178,7 +178,7 @@ def tostring(node, indent=4):
     :param indent: the indentation to use in the XML (default 4 spaces)
     """
     out = io.BytesIO()
-    writer = StreamingXMLWriter(out, indent)
+    writer = StreamingXMLWriter(out, indent, nsmap=nsmap)
     writer.serialize(node)
     return out.getvalue()
 

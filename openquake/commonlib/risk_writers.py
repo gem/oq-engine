@@ -28,6 +28,9 @@ from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib.node import Node
 from openquake.commonlib import nrml
 
+#for k, v in SERIALIZE_NS_MAP.items():
+#    et.register_namespace(k or '', v)
+
 DmgState = collections.namedtuple("DmgState", 'dmg_state lsi')
 
 DmgDistPerTaxonomy = collections.namedtuple(
@@ -151,7 +154,7 @@ class LossCurveXMLWriter(object):
         _assert_valid_input(data)
 
         with NRMLFile(self._dest, 'w') as output:
-            root = et.Element("nrml", nsmap=SERIALIZE_NS_MAP)
+            root = et.Element("nrml")
 
             for curve in data:
                 if self._loss_curves is None:
@@ -182,8 +185,7 @@ class LossCurveXMLWriter(object):
                     losses.text = "%.4e" % curve.stddev_loss
 
             output.write(et.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding="UTF-8"))
+                root, encoding="UTF-8"))
 
     def _create_loss_curves_elem(self, root):
         """
@@ -293,7 +295,7 @@ class AggregateLossCurveXMLWriter(object):
             raise ValueError("You can not serialize an empty document")
 
         with NRMLFile(self._dest, 'wb') as output:
-            root = et.Element("nrml", nsmap=SERIALIZE_NS_MAP)
+            root = et.Element("nrml")
 
             aggregate_loss_curve = et.SubElement(root, "aggregateLossCurve")
 
@@ -334,8 +336,7 @@ class AggregateLossCurveXMLWriter(object):
                 losses.text = "%.4e" % data.stddev_loss
 
             output.write(et.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding="UTF-8"))
+                root, encoding="UTF-8"))
 
 
 class LossMapWriter(object):
@@ -437,7 +438,7 @@ class LossMapXMLWriter(LossMapWriter):
         _assert_valid_input(data)
 
         with NRMLFile(self._dest, 'w') as output:
-            root = et.Element("nrml", nsmap=SERIALIZE_NS_MAP)
+            root = et.Element("nrml")
 
             loss_map_el = self._create_loss_map_elem(root)
 
@@ -461,8 +462,7 @@ class LossMapXMLWriter(LossMapWriter):
                     loss_elem.set("value", str(loss.value))
 
             output.write(et.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding="UTF-8"))
+                root, encoding="UTF-8"))
 
     def _create_loss_map_elem(self, root):
         """
@@ -639,7 +639,7 @@ class LossFractionsWriter(object):
                 bin_element.set("fraction", "%.5f" % fraction)
 
         with NRMLFile(self.dest, 'w') as output:
-            root = et.Element("nrml", nsmap=SERIALIZE_NS_MAP)
+            root = et.Element("nrml")
 
             # container element
             container = et.SubElement(root, "lossFraction")
@@ -678,8 +678,7 @@ class LossFractionsWriter(object):
                 write_bins(node_element, bin_data)
 
             output.write(et.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding="UTF-8"))
+                root, encoding="UTF-8"))
 
 
 class BCRMapXMLWriter(object):
@@ -769,7 +768,7 @@ class BCRMapXMLWriter(object):
         _assert_valid_input(data)
 
         with open(self._path, "wb") as output:
-            root = et.Element("nrml", nsmap=SERIALIZE_NS_MAP)
+            root = et.Element("nrml")
 
             for bcr in data:
                 if self._bcr_map is None:
@@ -793,8 +792,7 @@ class BCRMapXMLWriter(object):
                     bcr.average_annual_loss_retrofitted))
 
             output.write(et.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding="UTF-8"))
+                root, encoding="UTF-8"))
 
     def _create_bcr_map_elem(self, root):
         """
