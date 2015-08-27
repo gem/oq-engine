@@ -19,6 +19,7 @@ from openquake.baselib.general import writetmp
 from openquake.commonlib.writers import tostring
 from openquake.commonlib.nrml import PARSE_NS_MAP
 
+
 def get_path(fname_or_fileobject):
     if isinstance(fname_or_fileobject, str):
         return fname_or_fileobject

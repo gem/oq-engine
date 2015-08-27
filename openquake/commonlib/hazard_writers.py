@@ -581,8 +581,7 @@ class SESXMLWriter(object):
             Each of these should be a triple of `lon`, `lat`, `depth`.
         """
         with nrml.NRMLFile(self.dest, 'w') as fh:
-            root = et.Element('nrml',
-                                 nsmap=nrml.SERIALIZE_NS_MAP)
+            root = et.Element('nrml')
             ses_container = et.SubElement(
                 root, 'stochasticEventSetCollection')
             ses_container.set(SM_TREE_PATH, self.sm_lt_path)
@@ -658,11 +657,8 @@ class HazardMapXMLWriter(HazardMapWriter):
         input.
         """
         with nrml.NRMLFile(self.dest, 'w') as fh:
-            root = et.Element('nrml',
-                                 nsmap=nrml.SERIALIZE_NS_MAP)
-
+            root = et.Element('nrml')
             hazard_map = et.SubElement(root, 'hazardMap')
-
             _set_metadata(hazard_map, self.metadata, _ATTR_MAP)
 
             for lon, lat, iml in data:
@@ -798,8 +794,7 @@ class DisaggXMLWriter(object):
         """
 
         with nrml.NRMLFile(self.dest, 'w') as fh:
-            root = et.Element('nrml',
-                                 nsmap=nrml.SERIALIZE_NS_MAP)
+            root = et.Element('nrml')
 
             diss_matrices = et.SubElement(root, 'disaggMatrices')
 
@@ -884,7 +879,7 @@ class UHSXMLWriter(BaseCurveWriter):
         gml_ns = nrml.SERIALIZE_NS_MAP['gml']
 
         with nrml.NRMLFile(self.dest, 'w') as fh:
-            root = et.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
+            root = et.Element('nrml')
 
             uh_spectra = et.SubElement(root, 'uniformHazardSpectra')
 
