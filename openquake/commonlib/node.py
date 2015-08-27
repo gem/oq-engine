@@ -128,8 +128,8 @@ soon as you start iterating on the lazytree. In particular
 list(lazytree) will generated all of them. If your goal is to
 store the tree on the filesystem in XML format you should use
 a writing routine converting a subnode at the time, without
-requiring the full list of them. The routines provided by lxml
-and ElementTree are no good, however commonlib.writers
+requiring the full list of them. The routines provided by
+ElementTree are no good, however commonlib.writers
 provide an StreamingXMLWriter just for that purpose.
 
 Lazy trees should *not* be used unless it is absolutely necessary in
@@ -578,8 +578,7 @@ def node_to_xml(node, output=sys.stdout, nsmap=None):
     everything in memory. If you just want the string representation
     use commonlib.writers.tostring(node).
 
-    :param node: a Node-compatible object
-                 (lxml nodes and ElementTree nodes are fine)
+    :param node: a Node-compatible object (ElementTree nodes are fine)
     :param nsmap: if given, shorten the tags with aliases
 
     """
