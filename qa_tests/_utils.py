@@ -64,8 +64,8 @@ class BaseQATestCase(unittest.TestCase):
             Paths to XML files, or a file-like object containing the XML
             contents.
         """
-        contents_a = tostring(et.parse(a).getroot(), PARSE_NS_MAP)
-        contents_b = tostring(et.parse(b).getroot(), PARSE_NS_MAP)
+        contents_a = tostring(et.parse(a).getroot(), nsmap=PARSE_NS_MAP)
+        contents_b = tostring(et.parse(b).getroot(), nsmap=PARSE_NS_MAP)
         self.assertEqual(contents_a, contents_b)
 
     def assert_equals_var_tolerance(self, expected, actual):
