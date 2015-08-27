@@ -687,7 +687,7 @@ def collect_source_model_paths(smlt):
     src_paths = []
     try:
         tree = etree.parse(smlt)
-        for branch_set in tree.findall('//nrml:logicTreeBranchSet',
+        for branch_set in tree.findall('.//nrml:logicTreeBranchSet',
                                        namespaces=PARSE_NS_MAP):
 
             if branch_set.get('uncertaintyType') == 'sourceModel':

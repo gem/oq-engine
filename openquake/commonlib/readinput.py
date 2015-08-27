@@ -363,8 +363,7 @@ def get_source_model_lt(oqparam):
     fname = oqparam.inputs['source_model_logic_tree']
     content = codecs.open(fname, encoding='utf8').read().encode('utf8')
     return logictree.SourceModelLogicTree(
-        content, oqparam.base_path, fname, validate=False,
-        seed=oqparam.random_seed,
+        content, fname, validate=False, seed=oqparam.random_seed,
         num_samples=oqparam.number_of_logic_tree_samples)
 
 

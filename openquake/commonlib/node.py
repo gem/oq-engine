@@ -163,9 +163,10 @@ class SourceLineParser(ElementTree.XMLParser):
 
 
 def fromstring(s):
+    # NB: for mysterious reasons line numbers are lost :-(
     """Parse an XML string and return a tree"""
     parser = SourceLineParser(target=ElementTree.TreeBuilder())
-    for text in s.split():
+    for text in s.splitlines():
         parser.feed(text)
     return parser.close()
 
@@ -226,7 +227,7 @@ def with_slots(cls):
     return cls
 
 
-######################## utilities for the Node class #########################
+# ###################### utilities for the Node class ####################### #
 
 
 def _displayattrs(attrib, expandattrs):

@@ -57,7 +57,7 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
             self.validate_uncertainty_value = self.__fail
         content = files[filename]
         super(_TestableSourceModelLogicTree, self).__init__(
-            content, basepath, filename, validate)
+            content, filename, validate)
 
     def _get_source_model(self, filename):
         return StringIO(self.files[filename])
@@ -169,7 +169,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             _TestableSourceModelLogicTree(filename, files, basepath)
         exc = arc.exception
         self.assertEqual(exc.filename, exc_filename or filename)
-        self.assertEqual(exc.basepath, basepath)
         return exc
 
     def test_logictree_invalid_xml(self):
@@ -1857,6 +1856,6 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
         with self.assertRaises(Exception) as ctx:
             source.collect_source_model_paths(smlt)
         msg = str(ctx.exception)
-        self.assertIn('ParsingError:', msg)
+        self.assertIn('ParseError:', msg)
         # make sure the file name is in the error message
         self.assertIn('tests/data/source_model_logic_tree.xml', msg)
