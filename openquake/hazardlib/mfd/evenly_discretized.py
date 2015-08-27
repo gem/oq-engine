@@ -18,7 +18,7 @@ Module :mod:`openquake.hazardlib.mfd.evenly_discretized` defines an evenly
 discretized MFD.
 """
 from openquake.hazardlib.mfd.base import BaseMFD
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots
