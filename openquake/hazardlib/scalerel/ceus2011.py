@@ -18,7 +18,7 @@ Module :mod:`openquake.hazardlib.scalerel.ceus2011` implements
 :class:`CEUS2011`.
 """
 from openquake.hazardlib.scalerel.base import BaseMSR
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots

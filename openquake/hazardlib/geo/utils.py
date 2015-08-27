@@ -22,7 +22,7 @@ import shapely.geometry
 
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.geodetic import EARTH_RADIUS
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 def clean_points(points):

@@ -22,7 +22,7 @@ import shapely.geometry
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 #: Polygon upsampling step for long edges, in kilometers.
 #: See :func:`get_resampled_coordinates`.
