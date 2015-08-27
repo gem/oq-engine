@@ -14,6 +14,7 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import types
 import logging
 from contextlib import contextmanager
 from xml.sax.saxutils import escape, quoteattr
@@ -144,6 +145,10 @@ class StreamingXMLWriter(object):
 
     def serialize(self, node):
         """Serialize a node object (typically an ElementTree object)"""
+        if isinstance(node.tag, types.FunctionType):
+            # this looks like a bug of ElementTree: comments are stored as
+            # functions!?? see https://hg.python.org/sandbox/python2.7/file/tip/Lib/xml/etree/ElementTree.py#l458
+            return
         if self.nsmap is not None:
             tag = self.shorten(node.tag)
         else:
@@ -169,7 +174,7 @@ class StreamingXMLWriter(object):
         pass
 
 
-def tostring(node, indent=4):
+def tostring(node, indent=4, nsmap=None):
     """
     Convert a node into an XML string by using the StreamingXMLWriter.
     This is useful for testing purposes.
@@ -178,7 +183,7 @@ def tostring(node, indent=4):
     :param indent: the indentation to use in the XML (default 4 spaces)
     """
     out = io.BytesIO()
-    writer = StreamingXMLWriter(out, indent)
+    writer = StreamingXMLWriter(out, indent, nsmap=nsmap)
     writer.serialize(node)
     return out.getvalue()
 
@@ -282,3 +287,14 @@ def write_csv(dest, data, sep=',', fmt='%12.8E', header=None):
                 f.write(sep.join(scientificformat(col, fmt)
                                  for col in row) + '\n')
     return dest
+
+if __name__ == '__main__':  # pretty print of NRML files
+    import sys
+    import shutil
+    from openquake.commonlib import nrml
+    nrmlfiles = sys.argv[1:]
+    for fname in nrmlfiles:
+        node = nrml.read(fname)
+        shutil.copy(fname, fname + '.bak')
+        with open(fname, 'w') as out:
+            nrml.write(list(node), out)

@@ -21,12 +21,13 @@ import json
 import operator
 import collections
 
-from lxml import etree
+from xml.etree import ElementTree as et
 
 from openquake.commonlib.nrml import NRMLFile, SERIALIZE_NS_MAP
 from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib.node import Node
 from openquake.commonlib import nrml
+
 
 DmgState = collections.namedtuple("DmgState", 'dmg_state lsi')
 
@@ -151,46 +152,44 @@ class LossCurveXMLWriter(object):
         _assert_valid_input(data)
 
         with NRMLFile(self._dest, 'w') as output:
-            root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
+            root = et.Element("nrml")
 
             for curve in data:
                 if self._loss_curves is None:
                     self._create_loss_curves_elem(root)
 
-                loss_curve = etree.SubElement(self._loss_curves, "lossCurve")
+                loss_curve = et.SubElement(self._loss_curves, "lossCurve")
 
                 _append_location(loss_curve, curve.location)
                 loss_curve.set("assetRef", curve.asset_ref)
 
-                poes = etree.SubElement(loss_curve, "poEs")
+                poes = et.SubElement(loss_curve, "poEs")
                 poes.text = " ".join([str(p) for p in curve.poes])
 
-                losses = etree.SubElement(loss_curve, "losses")
+                losses = et.SubElement(loss_curve, "losses")
                 losses.text = " ".join([str(p) for p in curve.losses])
 
                 if curve.loss_ratios is not None:
-                    loss_ratios = etree.SubElement(loss_curve, "lossRatios")
+                    loss_ratios = et.SubElement(loss_curve, "lossRatios")
 
                     loss_ratios.text = " ".join(
                         [str(p) for p in curve.loss_ratios])
 
-                losses = etree.SubElement(loss_curve, "averageLoss")
+                losses = et.SubElement(loss_curve, "averageLoss")
                 losses.text = "%.4e" % curve.average_loss
 
                 if curve.stddev_loss is not None:
-                    losses = etree.SubElement(loss_curve, "stdDevLoss")
+                    losses = et.SubElement(loss_curve, "stdDevLoss")
                     losses.text = "%.4e" % curve.stddev_loss
 
-            output.write(etree.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding="UTF-8"))
+            nrml.write(list(root), output)
 
     def _create_loss_curves_elem(self, root):
         """
         Create the <lossCurves /> element with associated attributes.
         """
 
-        self._loss_curves = etree.SubElement(root, "lossCurves")
+        self._loss_curves = et.SubElement(root, "lossCurves")
 
         if self._insured:
             self._loss_curves.set("insured", str(self._insured))
@@ -293,9 +292,9 @@ class AggregateLossCurveXMLWriter(object):
             raise ValueError("You can not serialize an empty document")
 
         with NRMLFile(self._dest, 'wb') as output:
-            root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
+            root = et.Element("nrml")
 
-            aggregate_loss_curve = etree.SubElement(root, "aggregateLossCurve")
+            aggregate_loss_curve = et.SubElement(root, "aggregateLossCurve")
 
             aggregate_loss_curve.set("investigationTime",
                                      str(self._investigation_time))
@@ -320,22 +319,20 @@ class AggregateLossCurveXMLWriter(object):
 
             aggregate_loss_curve.set("lossType", self._loss_type)
 
-            poes = etree.SubElement(aggregate_loss_curve, "poEs")
+            poes = et.SubElement(aggregate_loss_curve, "poEs")
             poes.text = " ".join([str(p) for p in data.poes])
 
-            losses = etree.SubElement(aggregate_loss_curve, "losses")
+            losses = et.SubElement(aggregate_loss_curve, "losses")
             losses.text = " ".join(["%.4f" % p for p in data.losses])
 
-            losses = etree.SubElement(aggregate_loss_curve, "averageLoss")
+            losses = et.SubElement(aggregate_loss_curve, "averageLoss")
             losses.text = "%.4e" % data.average_loss
 
             if data.stddev_loss is not None:
-                losses = etree.SubElement(aggregate_loss_curve, "stdDevLoss")
+                losses = et.SubElement(aggregate_loss_curve, "stdDevLoss")
                 losses.text = "%.4e" % data.stddev_loss
 
-            output.write(etree.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding="UTF-8"))
+            nrml.write(list(root), output)
 
 
 class LossMapWriter(object):
@@ -437,7 +434,7 @@ class LossMapXMLWriter(LossMapWriter):
         _assert_valid_input(data)
 
         with NRMLFile(self._dest, 'w') as output:
-            root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
+            root = et.Element("nrml")
 
             loss_map_el = self._create_loss_map_elem(root)
 
@@ -447,11 +444,11 @@ class LossMapXMLWriter(LossMapWriter):
 
                 if (current_location is None or
                         loss.location.wkt != current_location):
-                    current_node = etree.SubElement(loss_map_el, "node")
+                    current_node = et.SubElement(loss_map_el, "node")
                     current_location = _append_location(
                         current_node, loss.location)
 
-                loss_elem = etree.SubElement(current_node, "loss")
+                loss_elem = et.SubElement(current_node, "loss")
                 loss_elem.set("assetRef", str(loss.asset_ref))
 
                 if loss.std_dev is not None:
@@ -460,16 +457,14 @@ class LossMapXMLWriter(LossMapWriter):
                 else:
                     loss_elem.set("value", str(loss.value))
 
-            output.write(etree.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding="UTF-8"))
+            nrml.write(list(root), output)
 
     def _create_loss_map_elem(self, root):
         """
         Create the <lossMap /> element with associated attributes.
         """
 
-        loss_map = etree.SubElement(root, "lossMap")
+        loss_map = et.SubElement(root, "lossMap")
         loss_map.set("investigationTime", str(self._investigation_time))
         loss_map.set("poE", str(self._poe))
 
@@ -633,16 +628,16 @@ class LossFractionsWriter(object):
 
         def write_bins(parent, bin_data):
             for value, (absolute_loss, fraction) in bin_data.items():
-                bin_element = etree.SubElement(parent, "bin")
+                bin_element = et.SubElement(parent, "bin")
                 bin_element.set("value", str(value))
                 bin_element.set("absoluteLoss", "%.4e" % absolute_loss)
                 bin_element.set("fraction", "%.5f" % fraction)
 
         with NRMLFile(self.dest, 'w') as output:
-            root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
+            root = et.Element("nrml")
 
             # container element
-            container = etree.SubElement(root, "lossFraction")
+            container = et.SubElement(root, "lossFraction")
             container.set("investigationTime",
                           "%.2f" % self.hazard_metadata.investigation_time)
 
@@ -665,21 +660,19 @@ class LossFractionsWriter(object):
             container.set("lossType", self.loss_type)
 
             # total fractions
-            total = etree.SubElement(container, "total")
+            total = et.SubElement(container, "total")
             write_bins(total, total_fractions)
 
             # map
-            map_element = etree.SubElement(container, "map")
+            map_element = et.SubElement(container, "map")
 
             for lon_lat, bin_data in locations_fractions.items():
-                node_element = etree.SubElement(map_element, "node")
+                node_element = et.SubElement(map_element, "node")
                 node_element.set("lon", str(lon_lat[0]))
                 node_element.set("lat", str(lon_lat[1]))
                 write_bins(node_element, bin_data)
 
-            output.write(etree.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding="UTF-8"))
+            nrml.write(list(root), output)
 
 
 class BCRMapXMLWriter(object):
@@ -769,7 +762,7 @@ class BCRMapXMLWriter(object):
         _assert_valid_input(data)
 
         with open(self._path, "wb") as output:
-            root = etree.Element("nrml", nsmap=SERIALIZE_NS_MAP)
+            root = et.Element("nrml")
 
             for bcr in data:
                 if self._bcr_map is None:
@@ -778,11 +771,11 @@ class BCRMapXMLWriter(object):
                 bcr_node = self._bcr_nodes.get(bcr.location.wkt)
 
                 if bcr_node is None:
-                    bcr_node = etree.SubElement(self._bcr_map, "node")
+                    bcr_node = et.SubElement(self._bcr_map, "node")
                     _append_location(bcr_node, bcr.location)
                     self._bcr_nodes[bcr.location.wkt] = bcr_node
 
-                bcr_elem = etree.SubElement(bcr_node, "bcr")
+                bcr_elem = et.SubElement(bcr_node, "bcr")
                 bcr_elem.set("assetRef", str(bcr.asset_ref))
                 bcr_elem.set("ratio", str(bcr.bcr))
 
@@ -792,16 +785,14 @@ class BCRMapXMLWriter(object):
                 bcr_elem.set("aalRetr", str(
                     bcr.average_annual_loss_retrofitted))
 
-            output.write(etree.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding="UTF-8"))
+            nrml.write(list(root), output)
 
     def _create_bcr_map_elem(self, root):
         """
         Create the <bcrMap /> element with associated attributes.
         """
 
-        self._bcr_map = etree.SubElement(root, "bcrMap")
+        self._bcr_map = et.SubElement(root, "bcrMap")
 
         self._bcr_map.set("interestRate", str(self._interest_rate))
         self._bcr_map.set("assetLifeExpectancy",
@@ -834,8 +825,8 @@ def _append_location(element, location):
     Append the geographical location to the given element.
     """
     gml_ns = SERIALIZE_NS_MAP["gml"]
-    gml_point = etree.SubElement(element, "{%s}Point" % gml_ns)
-    gml_pos = etree.SubElement(gml_point, "{%s}pos" % gml_ns)
+    gml_point = et.SubElement(element, "{%s}Point" % gml_ns)
+    gml_pos = et.SubElement(gml_point, "{%s}pos" % gml_ns)
     gml_pos.text = "%s %s" % (location.x, location.y)
 
     return location.wkt

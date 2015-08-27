@@ -17,8 +17,7 @@
 """
 Module containing parsers for risk input artifacts.
 """
-
-from lxml import etree
+from openquake.commonlib.node import iterparse
 from collections import namedtuple
 
 from openquake.commonlib import nrml
@@ -86,8 +85,7 @@ class ExposureModelParser(object):
         """
         Parse the document iteratively.
         """
-        for event, element in etree.iterparse(
-                self._source, events=('start', 'end')):
+        for event, element in iterparse(self._source, events=('start', 'end')):
 
             # exposure metadata
             if event == 'start' and element.tag == '%sexposureModel' % NRML:

@@ -104,12 +104,12 @@ It is possible to add and remove attributes freely:
 Node objects can be easily converted into ElementTree objects:
 
 >>> node_to_elem(root)  #doctest: +ELLIPSIS
-<Element root at ...>
+<Element 'root' at ...>
 
 Then is trivial to generate the XML representation of a node:
 
->>> from lxml import etree
->>> print(etree.tostring(node_to_elem(root)))
+>>> from xml.etree import ElementTree
+>>> print(ElementTree.tostring(node_to_elem(root)))
 <root><a>A1</a><b attrb="B">B1</b></root>
 
 Generating XML files larger than the available memory require some
@@ -128,8 +128,8 @@ soon as you start iterating on the lazytree. In particular
 list(lazytree) will generated all of them. If your goal is to
 store the tree on the filesystem in XML format you should use
 a writing routine converting a subnode at the time, without
-requiring the full list of them. The routines provided by lxml
-and ElementTree are no good, however commonlib.writers
+requiring the full list of them. The routines provided by
+ElementTree are no good, however commonlib.writers
 provide an StreamingXMLWriter just for that purpose.
 
 Lazy trees should *not* be used unless it is absolutely necessary in
@@ -149,32 +149,36 @@ from contextlib import contextmanager
 from openquake.baselib.python3compat import raise_, exec_
 from openquake.baselib.slots import with_slots
 from openquake.commonlib.writers import StreamingXMLWriter
-
-try:
-    from lxml import etree
-    COMPATPARSER = etree.ETCompatXMLParser()
-
-    def parse(source, **kw):
-        """Thin wrapper around etree.parse"""
-        return etree.parse(source, parser=COMPATPARSER, **kw)
-
-    def iterparse(source, events=('end',), **kw):
-        """Thin wrapper around etree.iterparse"""
-        return etree.iterparse(source, events, **kw)
-
-except ImportError:
-    from xml.etree import ElementTree
-
-    def parse(source, remove_comments=True, **kw):
-        """Thin wrapper around ElementTree.parse"""
-        return ElementTree.parse(source, **kw)
-
-    def iterparse(source, events=('end',), remove_comments=True, **kw):
-        """Thin wrapper around ElementTree.iterparse"""
-        return ElementTree.iterparse(source, events, **kw)
+from xml.etree import ElementTree
 
 
-######################## utilities for the Node class #########################
+class SourceLineParser(ElementTree.XMLParser):
+    """
+    A custom parser managing line numbers
+    """
+    def _start_list(self, tag, attrib_in):
+        elem = super(SourceLineParser, self)._start_list(tag, attrib_in)
+        elem.lineno = self.parser.CurrentLineNumber
+        # there is also CurrentColumnNumber available, if wanted
+        return elem
+
+
+def fromstring(text):
+    """Parse an XML string and return a tree"""
+    return ElementTree.fromstring(text, SourceLineParser())
+
+
+def parse(source, remove_comments=True, **kw):
+    """Thin wrapper around ElementTree.parse"""
+    return ElementTree.parse(source, SourceLineParser(), **kw)
+
+
+def iterparse(source, events=('end',), remove_comments=True, **kw):
+    """Thin wrapper around ElementTree.iterparse"""
+    return ElementTree.iterparse(source, events, SourceLineParser(), **kw)
+
+
+# ###################### utilities for the Node class ####################### #
 
 
 def _displayattrs(attrib, expandattrs):
@@ -452,7 +456,7 @@ def node_from_elem(elem, nodefactory=Node, lazy=()):
     Convert (recursively) an ElementTree object into a Node object.
     """
     children = list(elem)
-    lineno = getattr(elem, 'sourceline', None)
+    lineno = getattr(elem, 'lineno', None)
     if not children:
         return nodefactory(elem.tag, dict(elem.attrib), elem.text,
                            lineno=lineno)
@@ -484,7 +488,8 @@ def node_to_elem(root):
     # generate code to create a tree
     output = []
     generate_elem(output.append, root, 1)  # print "\n".join(output)
-    namespace = {"Element": etree.Element, "SubElement": etree.SubElement}
+    namespace = {"Element": ElementTree.Element,
+                 "SubElement": ElementTree.SubElement}
     exec_("\n".join(output), globals(), namespace)
     return namespace["e1"]
 
@@ -528,8 +533,7 @@ def node_to_xml(node, output=sys.stdout, nsmap=None):
     everything in memory. If you just want the string representation
     use commonlib.writers.tostring(node).
 
-    :param node: a Node-compatible object
-                 (lxml nodes and ElementTree nodes are fine)
+    :param node: a Node-compatible object (ElementTree nodes are fine)
     :param nsmap: if given, shorten the tags with aliases
 
     """

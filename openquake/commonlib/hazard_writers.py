@@ -26,7 +26,7 @@ from collections import OrderedDict
 
 import numpy
 
-from lxml import etree
+from xml.etree import ElementTree as et
 
 from openquake.commonlib import node, nrml
 from openquake.commonlib.writers import scientificformat
@@ -111,7 +111,7 @@ def _set_metadata(element, metadata, attr_map, transform=str):
     Set metadata attributes on a given ``element``.
 
     :param element:
-        :class:`lxml.etree._Element` instance
+        :class:`xml.etree.ElementTree.Element` instance
     :param metadata:
         Dictionary of metadata items containing attribute data for ``element``.
     :param attr_map:
@@ -190,12 +190,9 @@ class HazardCurveXMLWriter(BaseCurveWriter):
               have `x` and `y` to represent lon and lat, respectively.
         """
         with nrml.NRMLFile(self.dest, 'w') as fh:
-            root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
+            root = et.Element('nrml')
             self.add_hazard_curves(root, self.metadata, data)
-
-            fh.write(etree.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding='UTF-8'))
+            nrml.write(list(root), fh)
 
     def add_hazard_curves(self, root, metadata, data):
         """
@@ -204,20 +201,20 @@ class HazardCurveXMLWriter(BaseCurveWriter):
         `serialize` and the constructor for a description of `data`
         and `metadata`, respectively.
         """
-        hazard_curves = etree.SubElement(root, 'hazardCurves')
+        hazard_curves = et.SubElement(root, 'hazardCurves')
 
         _set_metadata(hazard_curves, metadata, _ATTR_MAP)
 
-        imls_elem = etree.SubElement(hazard_curves, 'IMLs')
+        imls_elem = et.SubElement(hazard_curves, 'IMLs')
         imls_elem.text = ' '.join(map(scientificformat, metadata['imls']))
         gml_ns = nrml.SERIALIZE_NS_MAP['gml']
 
         for hc in data:
-            hc_elem = etree.SubElement(hazard_curves, 'hazardCurve')
-            gml_point = etree.SubElement(hc_elem, '{%s}Point' % gml_ns)
-            gml_pos = etree.SubElement(gml_point, '{%s}pos' % gml_ns)
+            hc_elem = et.SubElement(hazard_curves, 'hazardCurve')
+            gml_point = et.SubElement(hc_elem, '{%s}Point' % gml_ns)
+            gml_pos = et.SubElement(gml_point, '{%s}pos' % gml_ns)
             gml_pos.text = '%s %s' % (hc.location.x, hc.location.y)
-            poes_elem = etree.SubElement(hc_elem, 'poEs')
+            poes_elem = et.SubElement(hc_elem, 'poEs')
             poes_elem.text = ' '.join(map(scientificformat, hc.poes))
 
 
@@ -302,15 +299,11 @@ class MultiHazardCurveXMLWriter(object):
            :class:`openquake.commonlib.hazard_writers.HazardCurveXMLWriter`
         """
         with nrml.NRMLFile(self.dest, 'w') as fh:
-            root = etree.Element('nrml',
-                                 nsmap=nrml.SERIALIZE_NS_MAP)
+            root = et.Element('nrml')
             for metadata, curve_data in zip(self.metadata_set, curve_set):
                 writer = HazardCurveXMLWriter(self.dest, **metadata)
                 writer.add_hazard_curves(root, metadata, curve_data)
-
-            fh.write(etree.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding='UTF-8'))
+            nrml.write(list(root), fh)
 
 
 def gen_gmfs(gmf_set):
@@ -415,11 +408,11 @@ def rupture_to_element(rupture, parent=None):
         attached to the parent.
     """
     if parent is None:
-        rup_elem = etree.Element('rupture')
+        rup_elem = et.Element('rupture')
     else:
-        rup_elem = etree.SubElement(parent, 'rupture')
+        rup_elem = et.SubElement(parent, 'rupture')
 
-    rup_elem.append(etree.Comment('rupture seed=%d' % rupture.seed))
+    rup_elem.append(et.Comment('rupture seed=%d' % rupture.seed))
 
     rup = rupture.rupture
     rup_elem.set('id', rupture.tag)
@@ -433,13 +426,13 @@ def rupture_to_element(rupture, parent=None):
         # rup is from a simple or complex fault source
         # the rup geometry is represented by a mesh of 3D
         # points
-        mesh_elem = etree.SubElement(rup_elem, 'mesh')
+        mesh_elem = et.SubElement(rup_elem, 'mesh')
 
         # we assume the mesh components (lons, lats, depths)
         # are of uniform shape
         for i, row in enumerate(rup.lons):
             for j, col in enumerate(row):
-                node_elem = etree.SubElement(mesh_elem, 'node')
+                node_elem = et.SubElement(mesh_elem, 'node')
                 node_elem.set('row', str(i))
                 node_elem.set('col', str(j))
                 node_elem.set('lon', str(rup.lons[i][j]))
@@ -472,7 +465,7 @@ def rupture_to_element(rupture, parent=None):
                 lats = rup.lats[start:end]  # 4 lats of the current surface
                 depths = rup.depths[start:end]  # 4 depths
 
-                ps_elem = etree.SubElement(
+                ps_elem = et.SubElement(
                     rup_elem, 'planarSurface')
 
                 top_left, top_right, bottom_left, bottom_right = \
@@ -484,7 +477,7 @@ def rupture_to_element(rupture, parent=None):
                         ('bottomLeft', bottom_left),
                         ('bottomRight', bottom_right)):
 
-                    corner_elem = etree.SubElement(ps_elem, el_name)
+                    corner_elem = et.SubElement(ps_elem, el_name)
                     corner_elem.set('lon', str(corner[0]))
                     corner_elem.set('lat', str(corner[1]))
                     corner_elem.set('depth', str(corner[2]))
@@ -493,7 +486,7 @@ def rupture_to_element(rupture, parent=None):
             # rupture is from a point or area source
             # the rupture geometry is represented by four 3D
             # corner points
-            ps_elem = etree.SubElement(rup_elem, 'planarSurface')
+            ps_elem = et.SubElement(rup_elem, 'planarSurface')
 
             # create the corner point elements, in the order of:
             # * top left
@@ -506,7 +499,7 @@ def rupture_to_element(rupture, parent=None):
                     ('bottomLeft', rup.bottom_left_corner),
                     ('bottomRight', rup.bottom_right_corner)):
 
-                corner_elem = etree.SubElement(ps_elem, el_name)
+                corner_elem = et.SubElement(ps_elem, el_name)
                 corner_elem.set('lon', str(corner[0]))
                 corner_elem.set('lat', str(corner[1]))
                 corner_elem.set('depth', str(corner[2]))
@@ -588,25 +581,22 @@ class SESXMLWriter(object):
             Each of these should be a triple of `lon`, `lat`, `depth`.
         """
         with nrml.NRMLFile(self.dest, 'w') as fh:
-            root = etree.Element('nrml',
-                                 nsmap=nrml.SERIALIZE_NS_MAP)
-            ses_container = etree.SubElement(
+            root = et.Element('nrml')
+            ses_container = et.SubElement(
                 root, 'stochasticEventSetCollection')
             ses_container.set(SM_TREE_PATH, self.sm_lt_path)
             for ses in data:
                 ruptures = list(ses)
                 if not ruptures:  # empty SES, don't export it
                     continue
-                ses_elem = etree.SubElement(
+                ses_elem = et.SubElement(
                     ses_container, 'stochasticEventSet')
                 ses_elem.set('id', str(ses.ordinal or 1))
                 ses_elem.set('investigationTime', str(ses.investigation_time))
                 for rupture in ruptures:
                     rupture_to_element(rupture, ses_elem)
 
-            fh.write(etree.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding='UTF-8'))
+            nrml.write(list(root), fh)
 
 
 class HazardMapWriter(object):
@@ -667,22 +657,17 @@ class HazardMapXMLWriter(HazardMapWriter):
         input.
         """
         with nrml.NRMLFile(self.dest, 'w') as fh:
-            root = etree.Element('nrml',
-                                 nsmap=nrml.SERIALIZE_NS_MAP)
-
-            hazard_map = etree.SubElement(root, 'hazardMap')
-
+            root = et.Element('nrml')
+            hazard_map = et.SubElement(root, 'hazardMap')
             _set_metadata(hazard_map, self.metadata, _ATTR_MAP)
 
             for lon, lat, iml in data:
-                node = etree.SubElement(hazard_map, 'node')
+                node = et.SubElement(hazard_map, 'node')
                 node.set('lon', str(lon))
                 node.set('lat', str(lat))
                 node.set('iml', str(iml))
 
-            fh.write(etree.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding='UTF-8'))
+            nrml.write(list(root), fh)
 
 
 class HazardMapGeoJSONWriter(HazardMapWriter):
@@ -809,10 +794,9 @@ class DisaggXMLWriter(object):
         """
 
         with nrml.NRMLFile(self.dest, 'w') as fh:
-            root = etree.Element('nrml',
-                                 nsmap=nrml.SERIALIZE_NS_MAP)
+            root = et.Element('nrml')
 
-            diss_matrices = etree.SubElement(root, 'disaggMatrices')
+            diss_matrices = et.SubElement(root, 'disaggMatrices')
 
             _set_metadata(diss_matrices, self.metadata, _ATTR_MAP)
 
@@ -821,7 +805,7 @@ class DisaggXMLWriter(object):
                           transform=transform)
 
             for result in data:
-                diss_matrix = etree.SubElement(diss_matrices, 'disaggMatrix')
+                diss_matrix = et.SubElement(diss_matrices, 'disaggMatrix')
 
                 # Check that we have bin edges defined for each dimension label
                 # (mag, dist, lon, lat, eps, TRT)
@@ -841,15 +825,13 @@ class DisaggXMLWriter(object):
                 diss_matrix.set('iml', scientificformat(result.iml))
 
                 for idxs, value in numpy.ndenumerate(result.matrix):
-                    prob = etree.SubElement(diss_matrix, 'prob')
+                    prob = et.SubElement(diss_matrix, 'prob')
 
                     index = ','.join([str(x) for x in idxs])
                     prob.set('index', index)
                     prob.set('value', scientificformat(value))
 
-            fh.write(etree.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding='UTF-8'))
+            nrml.write(list(root), fh)
 
 
 class UHSXMLWriter(BaseCurveWriter):
@@ -897,24 +879,22 @@ class UHSXMLWriter(BaseCurveWriter):
         gml_ns = nrml.SERIALIZE_NS_MAP['gml']
 
         with nrml.NRMLFile(self.dest, 'w') as fh:
-            root = etree.Element('nrml', nsmap=nrml.SERIALIZE_NS_MAP)
+            root = et.Element('nrml')
 
-            uh_spectra = etree.SubElement(root, 'uniformHazardSpectra')
+            uh_spectra = et.SubElement(root, 'uniformHazardSpectra')
 
             _set_metadata(uh_spectra, self.metadata, _ATTR_MAP)
 
-            periods_elem = etree.SubElement(uh_spectra, 'periods')
+            periods_elem = et.SubElement(uh_spectra, 'periods')
             periods_elem.text = ' '.join([str(x)
                                           for x in self.metadata['periods']])
 
             for uhs in data:
-                uhs_elem = etree.SubElement(uh_spectra, 'uhs')
-                gml_point = etree.SubElement(uhs_elem, '{%s}Point' % gml_ns)
-                gml_pos = etree.SubElement(gml_point, '{%s}pos' % gml_ns)
+                uhs_elem = et.SubElement(uh_spectra, 'uhs')
+                gml_point = et.SubElement(uhs_elem, '{%s}Point' % gml_ns)
+                gml_pos = et.SubElement(gml_point, '{%s}pos' % gml_ns)
                 gml_pos.text = '%s %s' % (uhs.location.x, uhs.location.y)
-                imls_elem = etree.SubElement(uhs_elem, 'IMLs')
+                imls_elem = et.SubElement(uhs_elem, 'IMLs')
                 imls_elem.text = ' '.join([str(x) for x in uhs.imls])
 
-            fh.write(etree.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding='UTF-8'))
+            nrml.write(list(root), fh)

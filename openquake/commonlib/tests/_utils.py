@@ -17,6 +17,7 @@ from xml.etree.ElementTree import parse
 
 from openquake.baselib.general import writetmp
 from openquake.commonlib.writers import tostring
+from openquake.commonlib.nrml import PARSE_NS_MAP
 
 
 def get_path(fname_or_fileobject):
@@ -40,8 +41,8 @@ def assert_xml_equal(a, b):
     """
     path_a = get_path(a)
     path_b = get_path(b)
-    content_a = tostring(parse(a).getroot())
-    content_b = tostring(parse(b).getroot())
+    content_a = tostring(parse(a).getroot(), nsmap=PARSE_NS_MAP)
+    content_b = tostring(parse(b).getroot(), nsmap=PARSE_NS_MAP)
     if content_a != content_b:
         raise AssertionError('The files %s and %s are different!' %
                              (path_a, path_b))

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">
   <hazardCurves sourceModelTreePath="source_model_1" gsimTreePath="ChiouYoungs2008_YoungsEtAl1997SSlab" IMT="PGA" investigationTime="1.0">
     <IMLs>5.000000000E-03 7.000000000E-03 9.800000000E-03 1.370000000E-02 1.920000000E-02 2.690000000E-02 3.760000000E-02 5.270000000E-02 7.380000000E-02 1.030000000E-01 1.450000000E-01 2.030000000E-01 2.840000000E-01 3.970000000E-01 5.560000000E-01 7.780000000E-01 1.090000000E+00 1.520000000E+00 2.130000000E+00</IMLs>
     <hazardCurve>

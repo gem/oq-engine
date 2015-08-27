@@ -21,7 +21,7 @@ import operator
 import itertools
 import collections
 import random
-from lxml import etree
+from xml.etree import ElementTree as etree
 
 import numpy
 
@@ -687,11 +687,11 @@ def collect_source_model_paths(smlt):
     src_paths = []
     try:
         tree = etree.parse(smlt)
-        for branch_set in tree.xpath('//nrml:logicTreeBranchSet',
-                                     namespaces=PARSE_NS_MAP):
+        for branch_set in tree.findall('.//nrml:logicTreeBranchSet',
+                                       namespaces=PARSE_NS_MAP):
 
             if branch_set.get('uncertaintyType') == 'sourceModel':
-                for branch in branch_set.xpath(
+                for branch in branch_set.findall(
                         './nrml:logicTreeBranch/nrml:uncertaintyModel',
                         namespaces=PARSE_NS_MAP):
                     src_paths.append(branch.text)
