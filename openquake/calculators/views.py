@@ -47,7 +47,8 @@ def rst_table(data, header=None):
         # not a composite array
         header = header or ()
     else:
-        header = header or build_header(data.dtype)
+        if not header:
+            header = [col.split(':')[0] for col in build_header(data.dtype)]
     if header:
         col_sizes = [len(col) for col in header]
     else:
@@ -202,3 +203,28 @@ def data_transfer(token, dstore):
         ('Estimated sources to send', humansize(to_send_forward)),
         ('Estimated hazard curves to receive', humansize(to_send_back))]
     return rst_table(tbl)
+
+
+# this is used by event_based_risk
+@view.add('mean_avg_losses')
+def view_mean_avg_losses(token, dstore):
+    try:
+        loss_curves = dstore['loss_curves-stats/mean'].value
+    except KeyError:  # there is a single realization
+        loss_curves = dstore['loss_curves-rlzs/b1,b1'].value
+    loss_types = list(loss_curves.dtype.fields)
+    assets = dstore['assetcol']['asset_ref']
+
+    data_by_lt = {}
+    for lt in loss_types:
+        data = loss_curves[lt]['avg']
+        data_by_lt[lt] = dict(zip(assets, data))
+    dt_list = [('asset_ref', '|S20')] + [(str(ltype), numpy.float32)
+                                         for ltype in sorted(data_by_lt)]
+    avg_loss_dt = numpy.dtype(dt_list)
+    losses = numpy.zeros(len(data_by_lt[lt]), avg_loss_dt)
+    for lt, loss_by_asset in data_by_lt.items():
+        assets = sorted(loss_by_asset)
+        losses[lt] = [loss_by_asset[a] for a in assets]
+    losses['asset_ref'] = assets
+    return rst_table(losses)
