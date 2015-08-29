@@ -13,4 +13,4 @@ install:
   - python setup.py develop
 
 script:
-  - python setup.py test
+  - find . -name \*_test.py | parallel nosetests -v
