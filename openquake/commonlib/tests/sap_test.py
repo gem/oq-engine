@@ -42,7 +42,7 @@ class SapTestCase(unittest.TestCase):
         p.flg('c', 'third argument')
         p.opt('d', 'fourth argument')
         self.assertEqual(p.help(), '''\
-usage: nosetests [-h] [-b B] [-c] [-d 1] a
+usage: %s [-h] [-b B] [-c] [-d 1] a
 
 positional arguments:
   a            first argument
@@ -54,7 +54,7 @@ optional arguments:
 other arguments:
   -c, --c      third argument
   -d 1, --d 1  fourth argument
-''')
+''' % p.parentparser.prog)
 
     def test_NameError(self):
         p = sap.Parser(f)
@@ -67,14 +67,14 @@ other arguments:
         p.arg('a', 'first argument')
         p.opt('b', 'second argument')
         self.assertEqual(p.help(), '''\
-usage: nosetests [-b B] a
+usage: %s [-b B] a
 
 positional arguments:
   a            first argument
 
 optional arguments:
   -b B, --b B  second argument
-''')
+''' % p.parentparser.prog)
         # missing argparse specification for 'c'
         with self.assertRaises(NameError):
             p.check_arguments()
@@ -84,10 +84,10 @@ optional arguments:
         p = sap.Parser(lambda a_long_argument: None)
         p.opt('a_long_argument', 'a long argument')
         self.assertEqual(p.help(), '''\
-usage: nosetests [-h] [-a A_LONG_ARGUMENT]
+usage: %s [-h] [-a A_LONG_ARGUMENT]
 
 optional arguments:
   -h, --help            show this help message and exit
   -a A_LONG_ARGUMENT, --a-long-argument A_LONG_ARGUMENT
                         a long argument
-''')
+''' % p.parentparser.prog)
