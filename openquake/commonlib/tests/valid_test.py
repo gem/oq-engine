@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 import unittest
 from openquake.hazardlib import imt
 from openquake.commonlib import valid
@@ -5,6 +6,16 @@ from openquake.commonlib import valid
 
 class ValidationTestCase(unittest.TestCase):
     # more is done in the doctests inside commonlib.valid
+
+    def test_source_id(self):
+        self.assertEqual(valid.source_id('0'), '0')
+        self.assertEqual(valid.source_id('1-0'), '1-0')
+        with self.assertRaises(ValueError):
+            valid.source_id('0|1')
+        with self.assertRaises(ValueError):
+            valid.source_id('à')
+        with self.assertRaises(ValueError):
+            valid.source_id('\t')
 
     def test_name(self):
         self.assertEqual(valid.name('x'), 'x')

@@ -160,6 +160,16 @@ name = Regex(r'^[a-zA-Z_]\w*$')
 name_with_dashes = Regex(r'^[a-zA-Z_][\w\-]*$')
 
 
+def source_id(value):
+    """
+    Check the source id; the only accepted chars are a-zA-Z0-9_-
+    """
+    if re.match(r'^[\w_\-]+$', value):
+        return value
+    raise ValueError(
+        'The source id %r contains invalid characters' % value)
+
+
 class FloatRange(object):
     def __init__(self, minrange, maxrange):
         self.minrange = minrange
