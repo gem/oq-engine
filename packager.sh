@@ -429,6 +429,7 @@ _pkgtest_innervm_run () {
         oq-lite run ClassicalPSHA/job_risk.ini --hc -1
         echo 'running ScenarioDamage...'
         oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini
+        oq-lite export -1 damages_by_key xml /tmp
         echo 'running ProbabilisticEventBased...'
         oq-lite run ProbabilisticEventBased/job_risk.ini
         oq-lite export -1 /event_loss_table-rlzs csv /tmp

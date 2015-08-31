@@ -94,6 +94,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         if concurrent_tasks is not None:
             self.oqparam.concurrent_tasks = concurrent_tasks
         vars(self.oqparam).update(kw)
+        for name, val in self.oqparam.to_params():
+            self.datastore.attrs[name] = val
         exported = {}
         try:
             if pre_execute:
