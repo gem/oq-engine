@@ -153,7 +153,7 @@ class ValidNode(LiteralNode):
         weight=valid.probability,
         alongStrike=valid.probability,
         downDip=valid.probability,
-        id=valid.source_id,
+        id=valid.simple_id,
         )
 
 

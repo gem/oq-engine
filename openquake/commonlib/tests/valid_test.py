@@ -7,15 +7,17 @@ from openquake.commonlib import valid
 class ValidationTestCase(unittest.TestCase):
     # more is done in the doctests inside commonlib.valid
 
-    def test_source_id(self):
-        self.assertEqual(valid.source_id('0'), '0')
-        self.assertEqual(valid.source_id('1-0'), '1-0')
+    def test_simple_id(self):
+        self.assertEqual(valid.simple_id('0'), '0')
+        self.assertEqual(valid.simple_id('1-0'), '1-0')
         with self.assertRaises(ValueError):
-            valid.source_id('0|1')
+            valid.simple_id('0|1')
         with self.assertRaises(ValueError):
-            valid.source_id('à')
+            valid.simple_id('à')
         with self.assertRaises(ValueError):
-            valid.source_id('\t')
+            valid.simple_id('\t')
+        with self.assertRaises(ValueError):
+            valid.simple_id('a' * 101)
 
     def test_name(self):
         self.assertEqual(valid.name('x'), 'x')
