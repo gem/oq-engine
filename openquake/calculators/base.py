@@ -95,7 +95,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             self.oqparam.concurrent_tasks = concurrent_tasks
         vars(self.oqparam).update(kw)
         for name, val in self.oqparam.to_params():
-            self.datastore.attrs[name] = val
+            try:
+                self.datastore.attrs[name] = val
+            except RuntimeError:  # this happens sometimes in old h5py versions
+                logging.error('Could not set %r to %r', name, val)
         exported = {}
         try:
             if pre_execute:
