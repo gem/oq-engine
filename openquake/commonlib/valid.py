@@ -159,6 +159,21 @@ name = Regex(r'^[a-zA-Z_]\w*$')
 
 name_with_dashes = Regex(r'^[a-zA-Z_][\w\-]*$')
 
+MAX_ID_LENGTH = 100
+
+
+def simple_id(value):
+    """
+    Check the source id; the only accepted chars are a-zA-Z0-9_-
+    """
+    if len(value) > MAX_ID_LENGTH:
+        raise ValueError('The ID %r is longer than %d character' %
+                         (value, MAX_ID_LENGTH))
+    if re.match(r'^[\w_\-]+$', value):
+        return value
+    raise ValueError(
+        'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-' % value)
+
 
 class FloatRange(object):
     def __init__(self, minrange, maxrange):
