@@ -35,6 +35,7 @@ def import_hazard_curves(fileobj):
         base_path=os.path.dirname(fname),
         intensity_measure_types_and_levels={imt_str: imls},
         description='HazardCurve importer, file %s' % os.path.basename(fname),
+        maximum_distance=1000.,
         calculation_mode='classical'))
 
     out = models.Output.objects.create(
