@@ -172,7 +172,7 @@ def simple_id(value):
     if re.match(r'^[\w_\-]+$', value):
         return value
     raise ValueError(
-        'The ID %r contains invalid characters' % value)
+        'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-' % value)
 
 
 class FloatRange(object):
