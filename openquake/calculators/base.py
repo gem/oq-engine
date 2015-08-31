@@ -19,7 +19,6 @@
 import os
 import sys
 import abc
-import ast
 import logging
 import operator
 import collections
@@ -107,14 +106,17 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             with self.monitor('export', autoflush=True):
                 exported = self.export()
         finally:
-            etype = sys.exc_info()[0]
-            if etype:
+            critical = sys.exc_info()[0]
+            if critical:
                 logging.critical('', exc_info=True)
             if clean_up:
                 try:
                     self.clean_up()
                 except:
-                    logging.error('Cleanup error', exc_info=True)
+                    # display the cleanup error only if there was no
+                    # critical error, to avoid covering it
+                    if critical is None:
+                        logging.error('Cleanup error', exc_info=True)
             return exported
 
     def core_func(*args):

@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2014-2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -16,5 +16,34 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import unittest
+import mock
+from openquake.calculators.base import BaseCalculator
 
-# TODO: add tests here
+
+class FakeParams(object):
+    export_dir = '/tmp'
+
+    def to_params(self):
+        return {}
+
+
+class ErrorCalculator(BaseCalculator):
+    def pre_execute(self):
+        pass
+
+    def execute(self):
+        1 / 0
+
+    def post_execute(self):
+        pass
+
+
+class BaseCalculatorTestCase(unittest.TestCase):
+    def test_critical(self):
+        calc = ErrorCalculator(FakeParams())
+        with mock.patch('logging.error') as error, mock.patch(
+                'logging.critical') as critical:
+            calc.run()
+        self.assertEqual(error.call_count, 0)
+        self.assertEqual(critical.call_count, 1)
