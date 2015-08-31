@@ -76,8 +76,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                  persistent=True):
         self.monitor = monitor
         if persistent:
-            self.datastore = datastore.DataStore(
-                calc_id, params=oqparam.to_params())
+            self.datastore = datastore.DataStore(calc_id)
         else:
             self.datastore = general.AccumDict()
             self.datastore.hdf5 = {}
@@ -95,10 +94,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             self.oqparam.concurrent_tasks = concurrent_tasks
         vars(self.oqparam).update(kw)
         for name, val in self.oqparam.to_params():
-            try:
-                self.datastore.attrs[name] = val
-            except RuntimeError:  # this happens sometimes in old h5py versions
-                logging.error('Could not set %r to %r', name, val)
+            self.datastore.attrs[name] = val
+        self.datastore.hdf5.flush()
         exported = {}
         try:
             if pre_execute:
