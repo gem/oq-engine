@@ -335,7 +335,7 @@ celeryd_wait() {
     if command -v celeryctl &> /dev/null; then
         # celery 2.4
         celery=celeryctl
-    elseif if command -v celery &> /dev/null; then
+    elif command -v celery &> /dev/null; then
         # celery 3
         celery=celery
     else
