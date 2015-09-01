@@ -37,7 +37,7 @@ RISK_CALCULATORS = [
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 
-BOGUS_DEFAULT = 1E-6  # used a a default for the site parameters
+BOGUS_DEFAULT = 1E-6  # used as default for the site parameters
 
 
 class OqParam(valid.ParamSet):
@@ -110,7 +110,8 @@ class OqParam(valid.ParamSet):
         valid.positivefloat, BOGUS_DEFAULT)
     reference_vs30_type = valid.Param(
         valid.Choice('measured', 'inferred'), 'measured')
-    reference_vs30_value = valid.Param(valid.positivefloat, BOGUS_DEFAULT)
+    reference_vs30_value = valid.Param(
+        valid.positivefloat, BOGUS_DEFAULT)
     reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.coordinates, None)
     region_constraint = valid.Param(valid.wkt_polygon, None)
@@ -182,7 +183,9 @@ class OqParam(valid.ParamSet):
                         (invalid_imts, gsim))
 
             if 'site_model' not in self.inputs:
-                # check there is a value for each required site parameter
+                # look at the required sites parameters: they must have
+                # a non-bogus value; the other parameters can keep a bogus
+                # value since they are not used by the calculator
                 for param in gsim.REQUIRES_SITES_PARAMETERS:
                     param_name = self.siteparam[param]
                     param_value = getattr(self, param_name)
