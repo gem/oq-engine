@@ -177,12 +177,14 @@ class OqParam(valid.ParamSet):
                         'The IMT %s is not accepted by the GSIM %s' %
                         (invalid_imts, gsim))
 
-            # check there is a value for each required site parameter
-            for param in gsim.REQUIRES_SITES_PARAMETERS:
-                param_name = self.siteparam[param]
-                param_value = getattr(self, param_name)
-                if param_value is None:
-                    raise ValueError('Please set a value for %s' % param_name)
+            if 'site_model' not in self.inputs:
+                # check there is a value for each required site parameter
+                for param in gsim.REQUIRES_SITES_PARAMETERS:
+                    param_name = self.siteparam[param]
+                    param_value = getattr(self, param_name)
+                    if param_value is None:
+                        raise ValueError('Please set a value for %s'
+                                         % param_name)
 
     @property
     def tses(self):
