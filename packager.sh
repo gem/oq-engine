@@ -332,8 +332,19 @@ _devtest_innervm_run () {
 celeryd_wait() {
     local cw_nloop=\"\$1\" cw_ret cw_i
 
+    if command -v celeryctl &> /dev/null; then
+        # celery 2.4
+        celery=celeryctl
+    elif command -v celery &> /dev/null; then
+        # celery 3
+        celery=celery
+    else
+        echo \"ERROR: no Celery available\"
+        return 1
+    fi
+
     for cw_i in \$(seq 1 \$cw_nloop); do
-        cw_ret=\"\$(celeryctl status)\"
+        cw_ret=\"\$(\$celery status)\"
         if echo \"\$cw_ret\" | grep -iq '^error:'; then
             if echo \"\$cw_ret\" | grep -ivq '^error: no nodes replied'; then
                 return 1
