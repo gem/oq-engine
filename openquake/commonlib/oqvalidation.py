@@ -39,6 +39,13 @@ CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 
 
 class OqParam(valid.ParamSet):
+    siteparam = dict(
+        vs30measured='reference_vs30_type',
+        vs30='reference_vs30_value',
+        z1pt0='reference_depth_to_1pt0km_per_sec',
+        z2pt5='reference_depth_to_2pt5km_per_sec',
+        backarc='reference_backarc',
+    )
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
@@ -95,11 +102,11 @@ class OqParam(valid.ParamSet):
     quantile_hazard_curves = valid.Param(valid.probabilities, [])
     quantile_loss_curves = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
-    reference_depth_to_1pt0km_per_sec = valid.Param(valid.positivefloat, 1.)
-    reference_depth_to_2pt5km_per_sec = valid.Param(valid.positivefloat, 1.)
+    reference_depth_to_1pt0km_per_sec = valid.Param(valid.positivefloat, None)
+    reference_depth_to_2pt5km_per_sec = valid.Param(valid.positivefloat, None)
     reference_vs30_type = valid.Param(
         valid.Choice('measured', 'inferred'), 'measured')
-    reference_vs30_value = valid.Param(valid.positivefloat, 1.)
+    reference_vs30_value = valid.Param(valid.positivefloat, None)
     reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.coordinates, None)
     region_constraint = valid.Param(valid.wkt_polygon, None)
@@ -151,11 +158,11 @@ class OqParam(valid.ParamSet):
             path = os.path.join(
                 self.base_path, self.inputs['gsim_logic_tree'])
             for gsims in logictree.GsimLogicTree(path, []).values.values():
-                self.check_imts_gsims(list(map(valid.gsim, gsims)))
+                self.check_gsims(gsims)
         elif self.gsim is not None:
-            self.check_imts_gsims([self.gsim])
+            self.check_gsims([self.gsim])
 
-    def check_imts_gsims(self, gsims):
+    def check_gsims(self, gsims):
         """
         :param gsims: a sequence of GSIM instances
         """
@@ -169,6 +176,13 @@ class OqParam(valid.ParamSet):
                     raise ValueError(
                         'The IMT %s is not accepted by the GSIM %s' %
                         (invalid_imts, gsim))
+
+            # check there is a value for each required site parameter
+            for param in gsim.REQUIRES_SITES_PARAMETERS:
+                param_name = self.siteparam[param]
+                param_value = getattr(self, param_name)
+                if param_value is None:
+                    raise ValueError('Please set a value for %s' % param_name)
 
     @property
     def tses(self):

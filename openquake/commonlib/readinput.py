@@ -19,7 +19,6 @@
 import os
 import csv
 import gzip
-import codecs
 import zipfile
 import logging
 import operator
