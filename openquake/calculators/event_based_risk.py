@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib.general import AccumDict, groupby
 from openquake.calculators import base
 from openquake.commonlib import readinput, parallel, datastore
-from openquake.risklib import riskinput, scientific, workflows
+from openquake.risklib import riskinput, scientific
 
 
 @parallel.litetask
