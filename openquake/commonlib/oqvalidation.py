@@ -37,6 +37,8 @@ RISK_CALCULATORS = [
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 
+BOGUS_DEFAULT = 1E-6  # used a a default for the site parameters
+
 
 class OqParam(valid.ParamSet):
     siteparam = dict(
@@ -102,11 +104,13 @@ class OqParam(valid.ParamSet):
     quantile_hazard_curves = valid.Param(valid.probabilities, [])
     quantile_loss_curves = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
-    reference_depth_to_1pt0km_per_sec = valid.Param(valid.positivefloat, None)
-    reference_depth_to_2pt5km_per_sec = valid.Param(valid.positivefloat, None)
+    reference_depth_to_1pt0km_per_sec = valid.Param(
+        valid.positivefloat, BOGUS_DEFAULT)
+    reference_depth_to_2pt5km_per_sec = valid.Param(
+        valid.positivefloat, BOGUS_DEFAULT)
     reference_vs30_type = valid.Param(
         valid.Choice('measured', 'inferred'), 'measured')
-    reference_vs30_value = valid.Param(valid.positivefloat, None)
+    reference_vs30_value = valid.Param(valid.positivefloat, BOGUS_DEFAULT)
     reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.coordinates, None)
     region_constraint = valid.Param(valid.wkt_polygon, None)
@@ -182,7 +186,7 @@ class OqParam(valid.ParamSet):
                 for param in gsim.REQUIRES_SITES_PARAMETERS:
                     param_name = self.siteparam[param]
                     param_value = getattr(self, param_name)
-                    if param_value is None:
+                    if param_value == BOGUS_DEFAULT:
                         raise ValueError('Please set a value for %s'
                                          % param_name)
 
