@@ -250,20 +250,6 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
-    def is_valid_site_model(self):
-        """
-        In absence of a site_model file the site model parameters
-        must be all set.
-        """
-        if self.calculation_mode in HAZARD_CALCULATORS and (
-                'site_model' not in self.inputs):
-            return (self.reference_vs30_type and
-                    self.reference_vs30_value and
-                    self.reference_depth_to_2pt5km_per_sec and
-                    self.reference_depth_to_1pt0km_per_sec)
-        else:
-            return True
-
     def is_valid_maximum_distance(self):
         """
         The maximum_distance must be set for all hazard calculators
