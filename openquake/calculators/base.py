@@ -76,8 +76,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                  persistent=True):
         self.monitor = monitor
         if persistent:
-            self.datastore = datastore.DataStore(
-                calc_id, params=oqparam.to_params())
+            self.datastore = datastore.DataStore(calc_id)
         else:
             self.datastore = general.AccumDict()
             self.datastore.hdf5 = {}
@@ -94,6 +93,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         if concurrent_tasks is not None:
             self.oqparam.concurrent_tasks = concurrent_tasks
         vars(self.oqparam).update(kw)
+        for name, val in self.oqparam.to_params():
+            self.datastore.attrs[name] = val
+        self.datastore.hdf5.flush()
         exported = {}
         try:
             if pre_execute:
@@ -442,7 +444,7 @@ class RiskCalculator(HazardCalculator):
         res = apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks,
+            concurrent_tasks=self.oqparam.concurrent_tasks or 1,
             weight=get_weight, key=self.riskinput_key)
         return res
 
