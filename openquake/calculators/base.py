@@ -19,7 +19,6 @@
 import os
 import sys
 import abc
-import ast
 import logging
 import operator
 import collections
@@ -77,8 +76,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                  persistent=True):
         self.monitor = monitor
         if persistent:
-            self.datastore = datastore.DataStore(
-                calc_id, params=oqparam.to_params())
+            self.datastore = datastore.DataStore(calc_id)
         else:
             self.datastore = general.AccumDict()
             self.datastore.hdf5 = {}
@@ -95,6 +93,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         if concurrent_tasks is not None:
             self.oqparam.concurrent_tasks = concurrent_tasks
         vars(self.oqparam).update(kw)
+        for name, val in self.oqparam.to_params():
+            self.datastore.attrs[name] = val
+        self.datastore.hdf5.flush()
         exported = {}
         try:
             if pre_execute:
@@ -107,14 +108,17 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             with self.monitor('export', autoflush=True):
                 exported = self.export()
         finally:
-            etype = sys.exc_info()[0]
-            if etype:
+            critical = sys.exc_info()[0]
+            if critical:
                 logging.critical('', exc_info=True)
             if clean_up:
                 try:
                     self.clean_up()
                 except:
-                    logging.error('Cleanup error', exc_info=True)
+                    # display the cleanup error only if there was no
+                    # critical error, to avoid covering it
+                    if critical is None:
+                        logging.error('Cleanup error', exc_info=True)
             return exported
 
     def core_func(*args):
@@ -440,7 +444,7 @@ class RiskCalculator(HazardCalculator):
         res = apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks,
+            concurrent_tasks=self.oqparam.concurrent_tasks or 1,
             weight=get_weight, key=self.riskinput_key)
         return res
 
