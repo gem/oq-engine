@@ -566,26 +566,23 @@ class ProbabilisticEventBased(Workflow):
         curves = utils.numpy_map(self.curves, loss_matrix)
         # sum on ruptures; compute the fractional losses
         average_losses = loss_matrix.sum(axis=1) * self.time_ratio
-        stddev_losses = numpy.std(loss_matrix, axis=1)
         maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
         elt = self.event_loss(ela, event_ids)
 
         if self.insured_losses and loss_type != 'fatalities':
             insured_curves = utils.numpy_map(self.curves, ila)
-            # check correctness of this
             average_insured_losses = ila.sum(axis=0) * self.time_ratio
-            stddev_insured_losses = numpy.std(ila, axis=1)
         else:
             insured_curves = None
             average_insured_losses = None
-            stddev_insured_losses = None
+        n = len(assets)
         return scientific.Output(
             assets, loss_type,
             loss_matrix=loss_matrix if self.return_loss_matrix else None,
             loss_curves=curves, average_losses=average_losses,
-            stddev_losses=stddev_losses, insured_curves=insured_curves,
+            stddev_losses=[None] * n, insured_curves=insured_curves,
             average_insured_losses=average_insured_losses,
-            stddev_insured_losses=stddev_insured_losses,
+            stddev_insured_losses=[None] * n,
             loss_maps=maps, event_loss_table=elt)
 
     def compute_all_outputs(self, getter, loss_type):
