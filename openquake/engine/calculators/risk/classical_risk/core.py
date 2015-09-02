@@ -182,8 +182,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
     core = staticmethod(classical)
 
-    validators = base.RiskCalculator.validators + [
-        validation.ExposureHasInsuranceBounds]
+    validators = base.RiskCalculator.validators
 
     output_builders = [writers.LossCurveMapBuilder,
                        writers.ConditionalLossFractionBuilder]
