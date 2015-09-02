@@ -41,6 +41,8 @@ get_imt = operator.attrgetter('imt')
 
 calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
 
+Site = collections.namedtuple('Site', 'sid lon lat')
+
 
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
@@ -204,20 +206,16 @@ class HazardCalculator(BaseCalculator):
         """
         maximum_distance = self.oqparam.asset_hazard_distance
 
-        def getlon(site):
-            return site.location.longitude
-
-        def getlat(site):
-            return site.location.latitude
-
-        siteobjects = geodetic.GeographicObjects(sitecol, getlon, getlat)
+        siteobjects = geodetic.GeographicObjects(
+            Site(sid, lon, lat) for sid, lon, lat in
+            zip(sitecol.sids, sitecol.lons, sitecol.lats))
         assets_by_sid = general.AccumDict()
         for assets in self.assets_by_site:
             if len(assets):
                 lon, lat = assets[0].location
                 site, _ = siteobjects.get_closest(lon, lat, maximum_distance)
                 if site:
-                    assets_by_sid += {site.id: list(assets)}
+                    assets_by_sid += {site.sid: list(assets)}
         if not assets_by_sid:
             raise AssetSiteAssociationError(
                 'Could not associate any site to any assets within the '
