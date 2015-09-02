@@ -189,7 +189,8 @@ class OqParam(valid.ParamSet):
                 for param in gsim.REQUIRES_SITES_PARAMETERS:
                     param_name = self.siteparam[param]
                     param_value = getattr(self, param_name)
-                    if numpy.isnan(param_value):
+                    if (isinstance(param_value, float) and
+                            numpy.isnan(param_value)):
                         raise ValueError('Please set a value for %s'
                                          % param_name)
 
