@@ -191,8 +191,9 @@ class OqParam(valid.ParamSet):
                     param_value = getattr(self, param_name)
                     if (isinstance(param_value, float) and
                             numpy.isnan(param_value)):
-                        raise ValueError('Please set a value for %s'
-                                         % param_name)
+                        raise ValueError(
+                            'Please set a value for %r, this is required by '
+                            'the GSIM %s' % (param_name, gsim))
 
     @property
     def tses(self):

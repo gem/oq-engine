@@ -211,3 +211,15 @@ class OqParamTestCase(unittest.TestCase):
         self.assertIn('The IMT PGV is not accepted by the GSIM ToroEtAl2002',
                       str(ctx.exception))
 
+    def test_required_site_param(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='scenario',
+                gsim='AbrahamsonSilva1997',
+                sites='0.1 0.2',
+                maximum_distance=400,
+                intensity_measure_types='PGA',
+            ).validate()
+        self.assertIn("Please set a value for 'reference_vs30_value', this is"
+                      " required by the GSIM AbrahamsonSilva1997",
+                      str(ctx.exception))
