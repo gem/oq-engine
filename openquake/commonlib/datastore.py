@@ -124,7 +124,7 @@ class Hdf5Dataset(object):
             self.dset.attrs['nbytes'] = 0
         else:  # fixed-shape dataset
             if isinstance(shape, tuple):
-                n = numpy.product(shape)
+                n = numpy.prod(shape)
             else:  # integer shape
                 n = shape
                 shape = (n,)
