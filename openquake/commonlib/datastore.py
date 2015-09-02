@@ -111,28 +111,33 @@ class Hdf5Dataset(object):
     :param hdf5: a h5py.File object
     :param key: an hdf5 key string
     :param dtype: dtype of the dataset (usually composite)
-    :param size: size of the dataset (if None, the dataset is extendable)
+    :param shape: shape of the dataset (if None, the dataset is extendable)
     """
-    def __init__(self, hdf5, key, dtype, size):
+    def __init__(self, hdf5, key, dtype, shape):
         self.hdf5 = hdf5
         self.key = key
         self.dtype = dtype
-        if size is None:  # extendable dataset
+        if shape is None:  # extendable dataset
             self.dset = self.hdf5.create_dataset(
                 key, (0,), dtype, chunks=True, maxshape=(None,))
             self.size = 0
             self.dset.attrs['nbytes'] = 0
-        else:  # fixed-size dataset
-            self.dset = self.hdf5.create_dataset(key, (size,), dtype)
-            self.size = size
-            self.dset.attrs['nbytes'] = size * numpy.zeros(1, dtype).nbytes
+        else:  # fixed-shape dataset
+            if isinstance(shape, tuple):
+                n = numpy.product(shape)
+            else:  # integer shape
+                n = shape
+                shape = (n,)
+            self.dset = self.hdf5.create_dataset(key, shape, dtype)
+            self.size = n
+            self.dset.attrs['nbytes'] = n * numpy.zeros(1, dtype).nbytes
         self.attrs = self.dset.attrs
 
     def extend(self, array):
         """
         Extend the dataset with the given array, which must have
         the expected dtype. This method will give an error if used
-        with a fixed-size dataset.
+        with a fixed-shape dataset.
         """
         newsize = self.size + len(array)
         self.dset.resize((newsize,))

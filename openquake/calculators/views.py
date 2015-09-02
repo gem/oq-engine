@@ -25,6 +25,7 @@ from openquake.commonlib import parallel
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import build_header
+from openquake.risklib import scientific
 
 
 def rst_table(data, header=None):
@@ -228,3 +229,27 @@ def view_mean_avg_losses(token, dstore):
         losses[lt] = [loss_by_asset[a] for a in assets]
     losses['asset_ref'] = assets
     return rst_table(losses)
+
+
+# this is used by the ebr calculator
+@view.add('avg_losses')
+def view_avg_losses(token, dstore):
+    rcurves = dstore['rcurves-rlzs']
+    loss_types = sorted(rcurves)
+    assetcol = dstore['assetcol'].value
+    assets = assetcol['asset_ref']
+    data_by_lt = {}
+    for lt in loss_types:
+        data = rcurves[lt]['rlz-000'].value
+        data_by_lt[lt] = dict(zip(assets, data))
+    dt_list = [('asset_ref', '|S20')] + [(str(ltype), numpy.float32)
+                                         for ltype in sorted(data_by_lt)]
+    avg_loss_dt = numpy.dtype(dt_list)
+    avglosses = numpy.zeros(len(data_by_lt[lt]), avg_loss_dt)
+    for lt, poes_by_asset in data_by_lt.items():
+        ratios = rcurves[lt].attrs['loss_ratios']
+        avglosses[lt] = [scientific.average_loss(
+            (ratios * a[lt], poes_by_asset[a['asset_ref']]))
+            for a in assetcol]
+    avglosses['asset_ref'] = assets
+    return rst_table(avglosses)

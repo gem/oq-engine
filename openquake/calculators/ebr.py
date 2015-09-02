@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib.general import AccumDict, humansize
 from openquake.calculators import base
 from openquake.commonlib import readinput, parallel, datastore
-from openquake.risklib import riskinput
+from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import apply_reduce
 
 OUTPUTS = ['event_loss_table-rlzs', 'specific_losses-rlzs',
@@ -193,7 +193,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.datastore.hdf5.create_group(out)
             for l, loss_type in enumerate(loss_types):
                 cb = self.riskmodel.curve_builders[l]
-                build_curves = len(cb.ratios)
+                C = len(cb.ratios)  # curve resolution
                 for r, rlz in enumerate(self.rlzs_assoc.realizations):
                     key = '/%s/rlz-%03d' % (loss_type, rlz.ordinal)
                     if o == AGGLOSS:  # loss tables
@@ -201,12 +201,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     elif o == SPECLOSS:  # specific losses
                         dset = self.datastore.create_dset(out + key, ela_dt)
                     else:  # risk curves
-                        if not build_curves:
+                        if not C:
                             continue
                         dset = self.datastore.create_dset(
-                            out + key, cb.poes_dt, N)
+                            out + key, numpy.float32, (N, C))
                     self.datasets[o, l, r] = dset
-                if o == RC and build_curves:
+                if o == RC and C:
                     grp = self.datastore['%s/%s' % (out, loss_type)]
                     grp.attrs['loss_ratios'] = cb.ratios
 
@@ -256,10 +256,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 else:  # risk curves, data is a list of counts dictionaries
                     cb = self.riskmodel.curve_builders[l]
                     counts_matrix = cb.get_counts(N, data)
-                    curves = cb.build_rcurves(
-                        counts_matrix, nses, self.assetcol)
-                    self.datasets[o, l, r].dset[:] = curves
-                    saved[self.outs[o]] += curves.nbytes
+                    poes = scientific.build_poes(counts_matrix, nses)
+                    self.datasets[o, l, r].dset[:] = poes
+                    saved[self.outs[o]] += poes.nbytes
                 self.datastore.hdf5.flush()
 
         for out in self.outs:
