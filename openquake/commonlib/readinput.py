@@ -809,8 +809,8 @@ def get_sitecol_assets(oqparam, exposure):
     mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     sitecol = get_site_collection(oqparam, mesh)
     assets_by_site = []
-    for lon, lat in zip(sitecol.lons, sitecol.lats):
-        assets = assets_by_loc[lon, lat]
+    for lonlat in zip(sitecol.lons, sitecol.lats):
+        assets = assets_by_loc[lonlat]
         assets_by_site.append(sorted(assets, key=operator.attrgetter('id')))
     return sitecol, numpy.array(assets_by_site)
 
