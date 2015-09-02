@@ -184,7 +184,7 @@ class OqParam(valid.ParamSet):
 
             if 'site_model' not in self.inputs:
                 # look at the required sites parameters: they must have
-                # a non-bogus value; the other parameters can keep a bogus
+                # a valid value; the other parameters can keep a NaN
                 # value since they are not used by the calculator
                 for param in gsim.REQUIRES_SITES_PARAMETERS:
                     param_name = self.siteparam[param]
