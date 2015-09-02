@@ -19,6 +19,8 @@
 import os
 import logging
 import collections
+import numpy
+
 from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import (
     get_fragility_functions, get_imtls_from_vulnerabilities,
@@ -36,8 +38,6 @@ RISK_CALCULATORS = [
     'classical_damage', 'ebr']
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
-
-BOGUS_DEFAULT = 1E-6  # used as default for the site parameters
 
 
 class OqParam(valid.ParamSet):
@@ -105,13 +105,13 @@ class OqParam(valid.ParamSet):
     quantile_loss_curves = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
-        valid.positivefloat, BOGUS_DEFAULT)
+        valid.positivefloat, numpy.nan)
     reference_depth_to_2pt5km_per_sec = valid.Param(
-        valid.positivefloat, BOGUS_DEFAULT)
+        valid.positivefloat, numpy.nan)
     reference_vs30_type = valid.Param(
         valid.Choice('measured', 'inferred'), 'measured')
     reference_vs30_value = valid.Param(
-        valid.positivefloat, BOGUS_DEFAULT)
+        valid.positivefloat, numpy.nan)
     reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.coordinates, None)
     region_constraint = valid.Param(valid.wkt_polygon, None)
@@ -189,7 +189,7 @@ class OqParam(valid.ParamSet):
                 for param in gsim.REQUIRES_SITES_PARAMETERS:
                     param_name = self.siteparam[param]
                     param_value = getattr(self, param_name)
-                    if param_value == BOGUS_DEFAULT:
+                    if numpy.isnan(param_value):
                         raise ValueError('Please set a value for %s'
                                          % param_name)
 
