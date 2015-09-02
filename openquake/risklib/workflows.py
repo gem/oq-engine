@@ -498,7 +498,7 @@ class ProbabilisticEventBased(Workflow):
         self.insured_losses = insured_losses
         self.return_loss_matrix = True
         self.loss_ratios = loss_ratios
-        self.time_ratio = risk_investigation_time / (
+        self.time_ratio = time_span / (
             investigation_time * ses_per_logic_tree_path)
 
     def event_loss(self, loss_matrix, event_ids):
