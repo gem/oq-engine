@@ -266,10 +266,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     self.datasets[o, l, r].extend(losses)
                     saved[self.outs[o]] += losses.nbytes
                 elif o == AVGLOSS:  # average losses
+                    lt = self.riskmodel.loss_types[l]
                     avgloss_by_aid = sum(data, AccumDict())
                     lst = []
-                    for i in range(N):
-                        avg = avgloss_by_aid[i]
+                    for i, asset in enumerate(self.assetcol):
+                        avg = avgloss_by_aid[i] * asset[lt]
                         lst.append((avg[0], avg[1]))
                     avglosses = numpy.array(lst, avg_dt)
                     self.datasets[o, l, r].dset[:] = avglosses
