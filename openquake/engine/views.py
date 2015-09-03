@@ -64,12 +64,10 @@ def view_mean_avg_losses(key, job_id):
     names = losses.dtype.names
     rows = []
     if ins_losses is None:
-        for loss in losses:
-            row = [loss['asset_ref']] + [loss[lt] for lt in names[1:]]
-            rows.append(row)
-    else:
-        for loss, iloss in zip(losses, ins_losses):
-            row = [loss['asset_ref']] + [
-                '%s %s' % (loss[lt], iloss[lt]) for lt in names[1:]]
-            rows.append(row)
+        ins_losses = numpy.empty_like(losses)
+        ins_losses.fill(numpy.nan)
+    for loss, iloss in zip(losses, ins_losses):
+        row = [loss['asset_ref']] + [
+            (loss[lt], iloss[lt]) for lt in names[1:]]
+        rows.append(row)
     return rst_table(rows, header=names)
