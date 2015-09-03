@@ -24,11 +24,10 @@ from openquake.baselib.general import groupby, split_in_blocks, humansize
 from openquake.commonlib import parallel
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.datastore import view
-from openquake.commonlib.writers import build_header
-from openquake.risklib import scientific
+from openquake.commonlib.writers import build_header, scientificformat
 
 
-def rst_table(data, header=None):
+def rst_table(data, header=None, fmt='%9.7E'):
     """
     Build a .rst table from a matrix.
     
@@ -56,19 +55,19 @@ def rst_table(data, header=None):
         col_sizes = [len(str(col)) for col in data[0]]
     body = []
     for row in data:
-        row = tuple(map(str, row))
+        row = tuple(scientificformat(col, fmt) for col in row)
         for (i, col) in enumerate(row):
             col_sizes[i] = max(col_sizes[i], len(col))
         body.append(row)
 
     sepline = ' '.join(('=' * size for size in col_sizes))
-    fmt = ' '.join(('%-{}s'.format(size) for size in col_sizes))
+    templ = ' '.join(('%-{}s'.format(size) for size in col_sizes))
     if header:
-        lines = [sepline, fmt % tuple(header), sepline]
+        lines = [sepline, templ % tuple(header), sepline]
     else:
         lines = [sepline]
     for row in body:
-        lines.append(fmt % row)
+        lines.append(templ % row)
     lines.append(sepline)
     return '\n'.join(lines)
 
@@ -234,22 +233,16 @@ def view_mean_avg_losses(token, dstore):
 # this is used by the ebr calculator
 @view.add('avg_losses')
 def view_avg_losses(token, dstore):
-    rcurves = dstore['rcurves-rlzs']
-    loss_types = sorted(rcurves)
-    assetcol = dstore['assetcol'].value
-    assets = assetcol['asset_ref']
-    data_by_lt = {}
+    assets = dstore['assetcol'].value['asset_ref']
+    group = dstore['avg_losses-rlzs']
+    loss_types = sorted(group)
+    dt_list = [('asset_ref', '|S20')] + [(str(ltype), (numpy.float32, 2))
+                                         for ltype in loss_types]
+    losses = numpy.empty(len(assets), numpy.dtype(dt_list))
+    losses.fill(numpy.nan)
+    losses['asset_ref'] = assets
     for lt in loss_types:
-        data = rcurves[lt]['rlz-000'].value
-        data_by_lt[lt] = dict(zip(assets, data))
-    dt_list = [('asset_ref', '|S20')] + [(str(ltype), numpy.float32)
-                                         for ltype in sorted(data_by_lt)]
-    avg_loss_dt = numpy.dtype(dt_list)
-    avglosses = numpy.zeros(len(data_by_lt[lt]), avg_loss_dt)
-    for lt, poes_by_asset in data_by_lt.items():
-        ratios = rcurves[lt].attrs['loss_ratios']
-        avglosses[lt] = [scientific.average_loss(
-            (ratios * a[lt], poes_by_asset[a['asset_ref']]))
-            for a in assetcol]
-    avglosses['asset_ref'] = assets
-    return rst_table(avglosses)
+        for asset, loss, pair in zip(
+                assets, losses, group[lt]['rlz-000'].value):
+            loss[lt] = pair
+    return rst_table(losses)
