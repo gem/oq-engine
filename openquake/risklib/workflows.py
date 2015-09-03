@@ -542,6 +542,8 @@ class ProbabilisticEventBased(Workflow):
         """
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
+        # sum on ruptures; compute the fractional losses
+        average_losses = loss_matrix.sum(axis=1) * self.time_ratio
         values = get_values(loss_type, assets)
         ela = loss_matrix.T * values  # matrix with T x N elements
         if self.insured_losses and loss_type != 'fatalities':
@@ -549,8 +551,10 @@ class ProbabilisticEventBased(Workflow):
             limits = [a.insurance_limit(loss_type) for a in assets]
             ila = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
+            average_insured_losses = ila.sum(axis=0) * self.time_ratio
         else:  # build a zero matrix of size T x N
             ila = numpy.zeros((len(ground_motion_values[0]), len(assets)))
+            average_insured_losses = [0] * len(assets)
         if isinstance(assets[0].id, str):
             # in oq-lite return early, with just the losses per asset
             cb = self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
@@ -558,31 +562,29 @@ class ProbabilisticEventBased(Workflow):
                 assets, loss_type,
                 event_loss_per_asset=ela,
                 insured_loss_per_asset=ila,
+                average_losses=average_losses,
+                average_insured_losses=average_insured_losses,
                 counts_matrix=cb.build_counts(loss_matrix),
                 insured_counts_matrix=cb.build_counts(ila),
                 tags=event_ids)
 
         # in the engine, compute more stuff on the workers
         curves = utils.numpy_map(self.curves, loss_matrix)
-        # sum on ruptures; compute the fractional losses
-        average_losses = loss_matrix.sum(axis=1) * self.time_ratio
         maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
         elt = self.event_loss(ela, event_ids)
 
         if self.insured_losses and loss_type != 'fatalities':
             insured_curves = utils.numpy_map(self.curves, ila)
-            average_insured_losses = ila.sum(axis=0) * self.time_ratio
         else:
             insured_curves = None
-            average_insured_losses = None
         n = len(assets)
         return scientific.Output(
             assets, loss_type,
             loss_matrix=loss_matrix if self.return_loss_matrix else None,
             loss_curves=curves, average_losses=average_losses,
-            stddev_losses=[None] * n, insured_curves=insured_curves,
+            insured_curves=insured_curves,
             average_insured_losses=average_insured_losses,
-            stddev_insured_losses=[None] * n,
+            stddev_losses=[None] * n, stddev_insured_losses=[None] * n,
             loss_maps=maps, event_loss_table=elt)
 
     def compute_all_outputs(self, getter, loss_type):

@@ -28,15 +28,16 @@ from openquake.commonlib import readinput, parallel, datastore
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import apply_reduce
 
-OUTPUTS = ['event_loss_table-rlzs', 'specific_losses-rlzs',
+OUTPUTS = ['event_loss_table-rlzs', 'avg_losses-rlzs', 'specific_losses-rlzs',
            'rcurves-rlzs', 'insured_rcurves-rlzs']
 
-AGGLOSS, SPECLOSS, RC, IC = 0, 1, 2, 3
+AGGLOSS, AVGLOSS, SPECLOSS, RC, IC = 0, 1, 2, 3, 4
 
 elt_dt = numpy.dtype([('rup_id', numpy.uint32), ('loss', numpy.float32),
                       ('ins_loss',  numpy.float32)])
 ela_dt = numpy.dtype([('rup_id', numpy.uint32), ('ass_id', numpy.uint32),
                       ('loss', numpy.float32), ('ins_loss',  numpy.float32)])
+avg_dt = numpy.dtype([('loss', numpy.float32), ('ins_loss',  numpy.float32)])
 
 
 def cube(O, L, R, factory):
@@ -112,6 +113,13 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
                     result[IC, l, out.hid].append(dict(
                         zip(asset_ids, out.insured_counts_matrix)))
 
+            # average losses
+            dic = {}
+            for aid, avgloss, ins_avgloss in zip(
+                    asset_ids, out.average_losses, out.average_insured_losses):
+                dic[aid] = numpy.array([avgloss, ins_avgloss])
+            result[AVGLOSS, l, out.hid].append(dic)
+
     for idx, lst in numpy.ndenumerate(result):
         o, l, r = idx
         if lst:
@@ -122,6 +130,8 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
                 result[idx] = [numpy.array([(rup, loss[0], loss[1])
                                             for rup, loss in acc.items()],
                                            elt_dt)]
+            elif o == AVGLOSS:
+                result[idx] = lst
             elif o == SPECLOSS:
                 result[idx] = [numpy.array(lst, ela_dt)]
             else:  # risk curves
@@ -198,6 +208,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     key = '/%s/rlz-%03d' % (loss_type, rlz.ordinal)
                     if o == AGGLOSS:  # loss tables
                         dset = self.datastore.create_dset(out + key, elt_dt)
+                    elif o == AVGLOSS:  # average losses
+                        dset = self.datastore.create_dset(out + key, avg_dt, N)
                     elif o == SPECLOSS:  # specific losses
                         dset = self.datastore.create_dset(out + key, ela_dt)
                     else:  # risk curves
@@ -253,6 +265,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     losses = numpy.concatenate(data)
                     self.datasets[o, l, r].extend(losses)
                     saved[self.outs[o]] += losses.nbytes
+                elif o == AVGLOSS:  # average losses
+                    avgloss_by_aid = sum(data, AccumDict())
+                    lst = []
+                    for i in range(N):
+                        avg = avgloss_by_aid[i]
+                        lst.append((avg[0], avg[1]))
+                    avglosses = numpy.array(lst, avg_dt)
+                    self.datasets[o, l, r].dset[:] = avglosses
+                    saved[self.outs[o]] += avglosses.nbytes
                 else:  # risk curves, data is a list of counts dictionaries
                     cb = self.riskmodel.curve_builders[l]
                     counts_matrix = cb.get_counts(N, data)
