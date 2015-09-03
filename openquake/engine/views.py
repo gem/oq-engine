@@ -29,15 +29,14 @@ import numpy
 view = CallableDict()
 
 
-@view.add('mean_avg_losses')
-def mean_avg_losses(key, job_id):
+def mean_avg_losses(key, job_id, mean_display_name, rlz_display_name):
     outputs = models.Output.objects.filter(
-        oq_job=job_id, display_name__contains='Mean Loss Curves'
+        oq_job=job_id, display_name__startswith=mean_display_name
     ).order_by('display_name') or models.Output.objects.filter(
-        oq_job=job_id, display_name__contains='loss curves. type='
+        oq_job=job_id, display_name__startswith=rlz_display_name
     ).order_by('display_name')  # there could be a single realization
     if len(outputs) == 0:
-        return 'No %s for calculation %d' % (key, job_id)
+        return
     data_by_lt = {}
     for output in outputs:
         lt = output.loss_curve.loss_type
@@ -51,4 +50,24 @@ def mean_avg_losses(key, job_id):
         assets = sorted(loss_by_asset)
         losses[lt] = [loss_by_asset[a] for a in assets]
     losses['asset_ref'] = assets
-    return rst_table(losses)
+    return losses
+
+
+@view.add('mean_avg_losses')
+def view_mean_avg_losses(key, job_id):
+    losses = mean_avg_losses(
+        key, job_id, 'Mean Loss Curves', 'loss curves. type=')
+    if losses is None:
+        return 'No %s for calculation %d' % (key, job_id)
+    ins_losses = mean_avg_losses(
+        key, job_id, 'Mean Insured Curves', 'insured loss curves. type=')
+    names = losses.dtype.names
+    rows = []
+    if ins_losses is None:
+        ins_losses = numpy.empty_like(losses)
+        ins_losses.fill(numpy.nan)
+    for loss, iloss in zip(losses, ins_losses):
+        row = [loss['asset_ref']] + [
+            (loss[lt], iloss[lt]) for lt in names[1:]]
+        rows.append(row)
+    return rst_table(rows, header=names)

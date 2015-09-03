@@ -330,8 +330,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     core = staticmethod(event_based)
 
     # FIXME(lp). Validate sites_disagg to ensure non-empty outputs
-    validators = base.RiskCalculator.validators + [
-        validation.ExposureHasInsuranceBounds]
+    validators = base.RiskCalculator.validators
 
     output_builders = [writers.EventLossCurveMapBuilder,
                        writers.LossFractionBuilder]
