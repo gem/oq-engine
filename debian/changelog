@@ -1,4 +1,10 @@
   [Michele Simionato]
+  * Removed excessive checking on the exposure attributes `deductible` and
+    `insuredLimit` that made it impossible to run legitimate calculations
+  * Changed the way the average losses (and insured average losses) are
+    computed by the event based risk calculator
+  * Set to NULL the stddev_losses and stddev_insured_losses for the event based
+    risk calculator, since they were computed incorrectly
   * Introduced a new experimental command
     `oq-engine --show-view CALCULATION_ID VIEW_NAME`; the only view available
     for the moment is `mean_avg_losses`

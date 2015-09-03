@@ -115,7 +115,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     core = staticmethod(scenario)
 
     validators = base.RiskCalculator.validators + [
-        validation.ExposureHasInsuranceBounds,
         validation.ExposureHasTimeEvent]
 
     output_builders = [writers.LossMapBuilder]
