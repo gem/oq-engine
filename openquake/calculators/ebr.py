@@ -256,6 +256,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         nses = self.oqparam.ses_per_logic_tree_path
         saved = {out: 0 for out in self.outs}
         N = len(self.assetcol)
+        zero2 = numpy.zeros(2)
         with self.monitor('saving loss table',
                           autoflush=True, measuremem=True):
             for (o, l, r), data in numpy.ndenumerate(result):
@@ -270,7 +271,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     avgloss_by_aid = sum(data, AccumDict())
                     lst = []
                     for i, asset in enumerate(self.assetcol):
-                        avg = avgloss_by_aid[i] * asset[lt]
+                        avg = avgloss_by_aid.get(i, zero2) * asset[lt]
                         lst.append((avg[0], avg[1]))
                     avglosses = numpy.array(lst, avg_dt)
                     self.datasets[o, l, r].dset[:] = avglosses
