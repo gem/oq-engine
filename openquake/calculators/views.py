@@ -205,19 +205,19 @@ def data_transfer(token, dstore):
     return rst_table(tbl)
 
 
-# this is used by event_based_risk
-@view.add('mean_avg_losses')
-def view_mean_avg_losses(token, dstore):
-    try:
-        loss_curves = dstore['loss_curves-stats/mean'].value
-    except KeyError:  # there is a single realization
-        loss_curves = dstore['loss_curves-rlzs/b1,b1'].value
-    loss_types = list(loss_curves.dtype.fields)
+# this is used by the ebr calculator
+@view.add('old_avg_losses')
+def view_old_avg_losses(token, dstore):
+    stats = 'specific/loss_curves-stats' in dstore
+    group = (dstore['specific/loss_curves-stats'] if stats
+             else dstore['specific/loss_curves-rlzs'])
+    loss_types = group.dtype.names
     assets = dstore['assetcol']['asset_ref']
 
     data_by_lt = {}
     for lt in loss_types:
-        data = loss_curves[lt]['avg']
+        loss_curves = group[lt]['mean'] if stats else group[lt]['rlz-000']
+        data = loss_curves.value['avg']
         data_by_lt[lt] = dict(zip(assets, data))
     dt_list = [('asset_ref', '|S20')] + [(str(ltype), numpy.float32)
                                          for ltype in sorted(data_by_lt)]
@@ -231,10 +231,10 @@ def view_mean_avg_losses(token, dstore):
 
 
 # this is used by the ebr calculator
-@view.add('avg_losses')
-def view_avg_losses(token, dstore):
+@view.add('mean_avg_losses')
+def view_mean_avg_losses(token, dstore):
     assets = dstore['assetcol'].value['asset_ref']
-    group = dstore['avg_losses-rlzs']
+    group = dstore['avg_losses-stats']
     loss_types = sorted(group)
     dt_list = [('asset_ref', '|S20')] + [(str(ltype), (numpy.float32, 2))
                                          for ltype in loss_types]
@@ -242,7 +242,7 @@ def view_avg_losses(token, dstore):
     losses.fill(numpy.nan)
     losses['asset_ref'] = assets
     for lt in loss_types:
-        for asset, loss, pair in zip(
-                assets, losses, group[lt]['rlz-000'].value):
+        pairs = group[lt]['mean'].value  # [(loss, ins_loss), ...]
+        for asset, loss, pair in zip(assets, losses, pairs):
             loss[lt] = pair
     return rst_table(losses)

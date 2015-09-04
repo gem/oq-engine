@@ -485,21 +485,19 @@ class ProbabilisticEventBased(Workflow):
         of the input parameters.
         """
         time_span = risk_investigation_time or investigation_time
-        tses = (time_span * ses_per_logic_tree_path * (
-            number_of_logic_tree_samples or 1))
+        self.ses_ratio = time_span / (
+            investigation_time * ses_per_logic_tree_path)
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.loss_curve_resolution = loss_curve_resolution
         self.curves = functools.partial(
             scientific.event_based, curve_resolution=loss_curve_resolution,
-            time_span=time_span, tses=tses)
+            ses_ratio=self.ses_ratio)
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
         self.return_loss_matrix = True
         self.loss_ratios = loss_ratios
-        self.time_ratio = time_span / (
-            investigation_time * ses_per_logic_tree_path)
 
     def event_loss(self, loss_matrix, event_ids):
         """
@@ -543,7 +541,7 @@ class ProbabilisticEventBased(Workflow):
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
         # sum on ruptures; compute the fractional losses
-        average_losses = loss_matrix.sum(axis=1) * self.time_ratio
+        average_losses = loss_matrix.sum(axis=1) * self.ses_ratio
         values = get_values(loss_type, assets)
         ela = loss_matrix.T * values  # matrix with T x N elements
         if self.insured_losses and loss_type != 'fatalities':
@@ -551,7 +549,7 @@ class ProbabilisticEventBased(Workflow):
             limits = [a.insurance_limit(loss_type) for a in assets]
             ila = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
-            average_insured_losses = ila.sum(axis=0) * self.time_ratio
+            average_insured_losses = ila.sum(axis=0) * self.ses_ratio
         else:  # build a zero matrix of size T x N
             ila = numpy.zeros((len(ground_motion_values[0]), len(assets)))
             average_insured_losses = [numpy.nan] * len(assets)

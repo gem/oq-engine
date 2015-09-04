@@ -60,7 +60,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 class EBRTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'ebr')
     def test_case_1(self):
-        # test for the fatalities
+        # test for the fatalities, with loss curves disabled
         self.run_calc(case_1.__file__, 'job_ebr.ini')
         ds = DataStore(self.calc.datastore.calc_id,
                        export_dir=self.calc.datastore.export_dir)
