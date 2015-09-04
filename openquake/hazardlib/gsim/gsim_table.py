@@ -45,7 +45,7 @@ from openquake.baselib.python3compat import with_metaclass
 
 def hdf_arrays_to_dict(hdfgroup):
     """
-    Convert an hdf5 group containins only data sets to a dictionary of
+    Convert an hdf5 group contains only data sets to a dictionary of
     data sets
     :param hdfgroup:
         Instance of :class: h5py.Group
@@ -310,8 +310,15 @@ class GMPETable(GMPE):
 
     def __init__(self, gmpe_table=None):
         """
-        Instantiate - either with a GMPE table or otherwise it will take
-        the GMPE table defined
+        If the path to the GMPE table is not assigned as an attribute of the
+        class then instantiate with a path to the GMPE table. If the
+        gmpe_table is input this will replace the path to the hdf5 file if it
+        has already been assigned. Otherwise, if the path to the hdf5 file
+        is not assigned as a property or the class nor is it input at
+        instantiation, an error will be raised
+
+        :param str gmpe_table:
+            Path to the hdf5 file containing the GMPE table
         """
         if not self.GMPE_TABLE:
             if gmpe_table:
