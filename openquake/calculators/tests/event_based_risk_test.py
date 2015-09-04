@@ -18,7 +18,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def assert_stats_ok(self, pkg):
         out = self.run_calc(pkg.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv', individual_curves='false',
-                            concurrent_tasks=0)
+                            concurrent_tasks=0, calculation_mode='ebr')
         all_csv = []
         for fnames in out.values():
             for fname in fnames:
@@ -35,7 +35,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_haz.ini,job_risk.ini',
-                            concurrent_tasks=0, exports='csv')
+                            concurrent_tasks=0, exports='csv',
+                            calculation_mode='ebr')
         [fname] = out['loss_curves-rlzs', 'csv']
         self.assertEqualFiles(
             'expected/rlz-000-structural-loss_curves.csv', fname)

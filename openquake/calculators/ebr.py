@@ -292,7 +292,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             else:  # remove empty outputs
                 del self.datastore[out]
 
-        if 'specific' in self.datastore:
+        if self.oqparam.specific_assets:
             self.build_specific_loss_curves(
                 self.datastore['specific/losses-rlzs'])
 
@@ -428,7 +428,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for i, path in enumerate(stat.paths):
                 self.store(path % 'loss_curves', loss_curve_stats[i])
                 self.store(path % 'ins_curves', ins_curve_stats[i])
-                self.store(path % 'loss_maps', loss_map_stats[i])
+                if oq.conditional_loss_poes:
+                    self.store(path % 'loss_maps', loss_map_stats[i])
 
         stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
         stats.compute_and_store('avg_losses', self.datastore)
