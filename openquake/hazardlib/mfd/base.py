@@ -92,3 +92,9 @@ class BaseMFD(with_metaclass(abc.ABCMeta)):
         :return:
             Magnitude value, float number.
         """
+
+    def __str__(self):
+        """
+        Returns the name of the magnitude frequency distribution class
+        """
+        return self.__class__.__name__
