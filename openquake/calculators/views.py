@@ -246,3 +246,4 @@ def view_mean_avg_losses(token, dstore):
         for asset, loss, pair in zip(assets, losses, pairs):
             loss[lt] = pair
     return rst_table(losses)
+

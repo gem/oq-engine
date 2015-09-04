@@ -29,7 +29,7 @@ from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import apply_reduce
 
 OUTPUTS = ['event_loss_table-rlzs', 'avg_losses-rlzs', 'specific/losses-rlzs',
-           'rcurves-rlzs', 'insured_rcurves-rlzs']
+           'rcurves-rlzs', 'icurves-rlzs']
 
 AGGLOSS, AVGLOSS, SPECLOSS, RC, IC = 0, 1, 2, 3, 4
 
@@ -216,7 +216,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         if not C:
                             continue
                         dset = self.datastore.create_dset(
-                            out + key, numpy.float32, (N, C))
+                            out + key, cb.lr_dt, N)
                     self.datasets[o, l, r] = dset
                 if o == RC and C:
                     grp = self.datastore['%s/%s' % (out, loss_type)]
@@ -280,7 +280,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     cb = self.riskmodel.curve_builders[l]
                     counts_matrix = cb.get_counts(N, data)
                     poes = scientific.build_poes(counts_matrix, nses)
-                    self.datasets[o, l, r].dset[:] = poes
+                    self.datasets[o, l, r] = poes.view(cb.lr_dt)
                     saved[self.outs[o]] += poes.nbytes
                 self.datastore.hdf5.flush()
 

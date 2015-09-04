@@ -771,6 +771,8 @@ class CurveBuilder(object):
         R = self.curve_resolution or 1  # avoid bug in hdf5 2.0
         self.loss_curve_dt = numpy.dtype([
             ('losses', (F32, R)), ('poes', (F32, R)), ('avg', F32)])
+        self.lr_dt = numpy.dtype([('lr%s' % lr, numpy.float32)
+                                  for lr in self.ratios])
 
     def get_counts(self, N, count_dicts):
         """

@@ -70,7 +70,8 @@ class CalculatorTestCase(unittest.TestCase):
         """
         inis = job_ini.split(',')
         assert len(inis) in (1, 2), inis
-        self.calc = self.get_calc(testfile, inis[0], **kw)
+        haz_kw = kw if len(inis) == 1 else {}
+        self.calc = self.get_calc(testfile, inis[0], **haz_kw)
         result = self.calc.run()
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
