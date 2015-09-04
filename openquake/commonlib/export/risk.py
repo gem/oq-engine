@@ -41,8 +41,8 @@ def compose_arrays(a1, a2):
     Compose composite arrays by generating an extended datatype containing
     all the fields. The two arrays must have the same shape.
     """
-    fields1 = [(f, dt[0]) for f, dt in a1.dtype.fields.items()]
-    fields2 = [(f, dt[0]) for f, dt in a2.dtype.fields.items()]
+    fields1 = [(f, a1.dtype.fields[f][0]) for f in a1.dtype.names]
+    fields2 = [(f, a2.dtype.fields[f][0]) for f in a2.dtype.names]
     composite = numpy.zeros(a1.shape, numpy.dtype(fields1 + fields2))
     for f1 in dict(fields1):
         composite[f1] = a1[f1]
@@ -179,22 +179,23 @@ def export_loss_curves_stats(ekey, dstore):
     else:
         raise ValueError(name)
     fnames = []
-    for dset, curves in dstore.get(ekey[0], {}).items():
+    for lt, dset in dstore.get(ekey[0], {}).items():
         fnames.extend(
-            _export_curves_csv(name, assets, curves[:], dstore.export_dir,
-                               dset, columns))
+            _export_curves_csv(name, assets, lt, dset, dstore.export_dir,
+                               columns))
     return fnames
 
 
-def _export_curves_csv(name, assets, curves, export_dir, prefix, columns=None):
+def _export_curves_csv(name, assets, loss_type, dset, export_dir,
+                       columns=None):
     fnames = []
-    for loss_type in curves.dtype.fields:
+    for stat in dset:
         if assets is None:
-            data = curves[loss_type]
+            data = dset[stat].value
         else:
-            data = compose_arrays(assets, curves[loss_type])
+            data = compose_arrays(assets, dset[stat].value)
         dest = os.path.join(
-            export_dir, '%s-%s-%s.csv' % (prefix, loss_type, name))
+            export_dir, '%s-%s-%s.csv' % (stat, loss_type, name))
         writers.write_csv(dest, data, fmt='%10.6E', header=columns)
         fnames.append(dest)
     return fnames

@@ -1140,6 +1140,22 @@ def loss_map_matrix(poes, curves):
     ).reshape((len(poes), len(curves)))
 
 
+def calc_loss_maps(conditional_loss_poes, asset_values, ratios, poe_matrix):
+    """
+    Compute loss maps from the PoE matrix (i.e. the loss curves).
+
+    :param conditional_loss_poes: an array of P PoEs
+    :param asset_values: asset values for the current loss type
+    :param ratios: loss ratios for the current loss type
+    :poe_matrix: an N x C matrix of PoEs
+    :returns: a matrix N x P
+    """
+    curves = []
+    for avalue, poes in zip(asset_values, poe_matrix):
+        curves.append((ratios * avalue, poes))
+    return loss_map_matrix(conditional_loss_poes, curves).T
+
+
 def mean_curve(values, weights=None):
     """
     Compute the mean by using numpy.average on the first axis.
