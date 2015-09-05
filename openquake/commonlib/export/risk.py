@@ -73,12 +73,25 @@ def get_assets(dstore):
     :param dstore: a datastore with a key `specific_assets`
     :returns: an ordered array of records (asset_ref, lon, lat)
     """
+    assets = sorted(sum(map(list, dstore['assets_by_site']), []),
+                    key=operator.attrgetter('id'))
+    asset_data = numpy.array(
+        [(asset.id, asset.location[0], asset.location[1])
+         for asset in assets], asset_dt)
+    return asset_data
+
+
+def get_assets_sites(dstore):
+    """
+    :param dstore: a datastore with a key `specific_assets`
+    :returns: an ordered array of records (asset_ref, lon, lat)
+    """
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
     rows = []
-    for i, asset in enumerate(assetcol):
+    for asset in assetcol:
         loc = sitemesh[asset['site_id']]
-        rows.append((i, loc[0], loc[1]))
+        rows.append((asset['asset_ref'], loc[0], loc[1]))
     return numpy.array(rows, asset_dt)
 
 
@@ -180,7 +193,7 @@ def export_avglosses_csv(ekey, dstore):
     ('specific-loss_maps-stats', 'csv'),
 )
 def export_ebr(ekey, dstore):
-    assets = get_assets(dstore)
+    assets = get_assets_sites(dstore)
     outs = extract_outputs(ekey[0], dstore, dstore.export_dir, ekey[1])
     for out in outs:
         writers.write_csv(

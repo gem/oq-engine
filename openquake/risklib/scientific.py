@@ -784,7 +784,7 @@ class CurveBuilder(object):
         :param N: the number of assets
         :param count_dicts: a list of maps asset_idx -> [C indices]
 
-        >>> cb = CurveBuilder('structural', [0.1, 0.2, 0.3, 0.9])
+        >>> cb = CurveBuilder('structural', [0.1, 0.2, 0.3, 0.9], True)
         >>> cb.get_counts(3, [{1: [4, 3, 2, 1]}, {2: [4, 0, 0, 0]},
         ...                   {1: [1, 0, 0, 0]}, {2: [2, 0, 0, 0]}])
         array([[0, 0, 0, 0],
@@ -804,7 +804,7 @@ class CurveBuilder(object):
         counts = self.get_counts(len(loss_matrix), {})
         for i, loss_ratios in enumerate(loss_matrix):
             # build the counts for each asset
-            counts[i, :] = numpy.array([(loss_ratios > ratio).sum()
+            counts[i, :] = numpy.array([(loss_ratios >= ratio).sum()
                                         for ratio in self.ratios])
         return counts
 
