@@ -275,7 +275,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     dset = self.datasets[o, l, r].dset
                     for i, asset in enumerate(self.assetcol):
                         avg = avgloss_by_aid.get(i, zero2) * asset[lt]
-                        dset[i] = avg
+                        dset[i][:] = avg
                     saved[self.outs[o]] += avg.nbytes * N
                 elif cb.user_provided:  # risk curves
                     # data is a list of dicts asset idx -> counts
