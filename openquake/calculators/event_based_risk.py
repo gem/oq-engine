@@ -21,12 +21,15 @@ import operator
 import collections
 
 import numpy
+import h5py.version
 
 from openquake.baselib.general import AccumDict, humansize
 from openquake.calculators import base
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import apply_reduce
+
+OLD_H5PY = h5py.version.version <= '2.0.1'
 
 OUTPUTS = ['agg_losses-rlzs', 'avg_losses-rlzs', 'specific-losses-rlzs',
            'rcurves-rlzs', 'icurves-rlzs']
@@ -275,7 +278,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     dset = self.datasets[o, l, r].dset
                     for i, asset in enumerate(self.assetcol):
                         avg = avgloss_by_aid.get(i, zero2) * asset[lt]
-                        dset[i][:] = avg
+                        if OLD_H5PY:  # workaround
+                            dset[i][:] = avg
+                        else:
+                            dset[i] = avg
                     saved[self.outs[o]] += avg.nbytes * N
                 elif cb.user_provided:  # risk curves
                     # data is a list of dicts asset idx -> counts
