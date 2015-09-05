@@ -24,7 +24,7 @@ import numpy
 from openquake.hazardlib.geo import mesh
 from openquake.risklib import scientific
 from openquake.risklib.utils import numpy_map
-from openquake.calculators import ebr
+from openquake.calculators import event_based_risk
 
 from openquake.engine.calculators.risk import (
     base, hazard_getters, writers)
@@ -449,7 +449,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
 
 @calculators.add('ebr')
-class EBRCalculator(ebr.EventBasedRiskCalculator):
+class EBRCalculator(event_based_risk.EventBasedRiskCalculator):
     """
     Smaller Event Based risk calculator for the event loss table.
     """
