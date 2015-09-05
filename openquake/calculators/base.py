@@ -162,7 +162,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         for fmt in fmts:
             if not fmt:
                 continue
-            for key in self.datastore:
+            for key in self.datastore:  # top level keys
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
                 ekey = (key, fmt)

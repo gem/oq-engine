@@ -28,7 +28,7 @@ from openquake.commonlib import readinput, parallel, datastore
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import apply_reduce
 
-OUTPUTS = ['agg_losses-rlzs', 'avg_losses-rlzs', 'specific/losses-rlzs',
+OUTPUTS = ['agg_losses-rlzs', 'avg_losses-rlzs', 'specific-losses-rlzs',
            'rcurves-rlzs', 'icurves-rlzs']
 
 AGGLOSS, AVGLOSS, SPECLOSS, RC, IC = 0, 1, 2, 3, 4
@@ -141,7 +141,7 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
     return result
 
 
-@base.calculators.add('ebr')
+@base.calculators.add('event_based_risk', 'ebr')
 class EventBasedRiskCalculator(base.RiskCalculator):
     """
     Event based PSHA calculator generating the event loss table and
@@ -296,7 +296,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         if self.oqparam.specific_assets:
             self.build_specific_loss_curves(
-                self.datastore['specific/losses-rlzs'])
+                self.datastore['specific-losses-rlzs'])
 
         rlzs = self.rlzs_assoc.realizations
         if len(rlzs) > 1:
@@ -307,6 +307,18 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         #         'rcurves-rlzs' in self.datastore):
         #     self.build_loss_maps()
 
+    def clean_up(self):
+        """
+        Final checks and cleanup
+        """
+        if (self.oqparam.ground_motion_fields and
+                'gmf_by_trt_gsim' not in self.datastore):
+            logging.warn(
+                'Even if the flag `ground_motion_fields` was set the GMFs '
+                'were not saved.\nYou should use the event_based hazard '
+                'calculator to do that, not the risk one')
+        super(EventBasedRiskCalculator, self).clean_up()
+
     def build_specific_loss_curves(self, group, kind='loss'):
         ses_ratio = self.oqparam.ses_ratio
         for loss_type, builder in zip(group, self.riskmodel.curve_builders):
@@ -316,7 +328,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     losses_by_aid[ela['ass_id']].append(ela[kind])
                 curves = builder.build_loss_curves(
                     self.assetcol, losses_by_aid, ses_ratio)
-                key = 'specific/loss_curves-rlzs/%s/%s' % (loss_type, rlz)
+                key = 'specific-loss_curves-rlzs/%s/%s' % (loss_type, rlz)
                 self.datastore[key] = curves
 
     def build_loss_maps(self):
@@ -378,7 +390,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         rlzs = self.rlzs_assoc.realizations
         stats = []
         for loss_type in self.riskmodel.loss_types:
-            group = self.datastore['/specific/loss_curves-rlzs/%s' % loss_type]
+            group = self.datastore['/specific-loss_curves-rlzs/%s' % loss_type]
             data = []
             for rlz, dataset in zip(rlzs, group.values()):
                 lcs = dataset.value
@@ -388,7 +400,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     assets, loss_type, rlz.ordinal, rlz.weight,
                     loss_curves=losses_poes, insured_curves=None)
                 data.append(out)
-            stats.append(builder.build(data, root='specific'))
+            stats.append(builder.build(data, prefix='specific-'))
         return stats
 
     def compute_store_stats(self, rlzs):

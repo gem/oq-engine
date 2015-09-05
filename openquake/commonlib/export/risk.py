@@ -172,12 +172,12 @@ def export_avglosses_csv(ekey, dstore):
     ('icurves-rlzs', 'csv'),
     ('rcurves-stats', 'csv'),
     ('icurves-stats', 'csv'),
-    ('specific/loss_curves-rlzs', 'csv'),
-    ('specific/ins_curves-rlzs', 'csv'),
-    ('specific/loss_maps-rlzs', 'csv'),
-    ('specific/loss_curves-stats', 'csv'),
-    ('specific/ins_curves-stats', 'csv'),
-    ('specific/loss_maps-stats', 'csv'),
+    ('specific-loss_curves-rlzs', 'csv'),
+    ('specific-ins_curves-rlzs', 'csv'),
+    ('specific-loss_maps-rlzs', 'csv'),
+    ('specific-loss_curves-stats', 'csv'),
+    ('specific-ins_curves-stats', 'csv'),
+    ('specific-loss_maps-stats', 'csv'),
 )
 def export_ebr(ekey, dstore):
     assets = get_assets(dstore)

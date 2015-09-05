@@ -108,6 +108,8 @@ class CalculatorTestCase(unittest.TestCase):
         files can be equal only up to the ordering.
         """
         expected = os.path.join(self.testdir, fname1)
+        if not os.path.exists(expected) and self.OVERWRITE_EXPECTED:
+            open(expected, 'w').write('')
         actual = os.path.join(self.calc.oqparam.export_dir, fname2)
         expected_lines = make_comparable(open(expected).readlines())
         actual_lines = make_comparable(open(actual).readlines())

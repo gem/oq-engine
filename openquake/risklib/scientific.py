@@ -1408,7 +1408,7 @@ class StatsBuilder(object):
         return list(map(self.normalize_curves,
                         numpy.array(loss_curves).transpose(1, 0, 2, 3)))
 
-    def build(self, all_outputs, root=''):
+    def build(self, all_outputs, prefix=''):
         """
         Build all statistics from a set of risk outputs.
 
@@ -1467,12 +1467,12 @@ class StatsBuilder(object):
 
         clp = len(self.conditional_loss_poes)
         loss_type = outputs[0].loss_type
-        paths = ['/'.join([root, '%s-stats', loss_type, name])
+        paths = ['/'.join([prefix + '%s-stats', loss_type, name])
                  for name in self.mean_quantiles]
         # generate paths like
-        # <root>/%s-stats/structural/mean
-        # <root>/%s-stats/structural/quantile-0.1
-        # <root>/%s-stats/structural/quantile-0.2
+        # <prefix>%s-stats/structural/mean
+        # <prefix>%s-stats/structural/quantile-0.1
+        # <prefix>%s-stats/structural/quantile-0.2
         # ...
         return Output(
             assets=outputs[0].assets,
@@ -1491,7 +1491,7 @@ class StatsBuilder(object):
             quantile_average_insured_losses=quantile_average_insured_losses,
             quantiles=self.quantiles,
             conditional_loss_poes=self.conditional_loss_poes,
-            root=root, paths=paths)
+            prefix=prefix, paths=paths)
 
 
 def _combine_mq(mean, quantile):
