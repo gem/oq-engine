@@ -27,7 +27,7 @@ from openquake.risklib.utils import numpy_map
 from openquake.calculators import ebr
 
 from openquake.engine.calculators.risk import (
-    base, hazard_getters, validation, writers)
+    base, hazard_getters, writers)
 from openquake.engine.db import models
 from openquake.engine import engine, writer, logs
 from openquake.engine.calculators import calculators
@@ -427,8 +427,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
                     if aggregate_losses:
                         aggregate_loss = scientific.event_based(
-                            aggregate_losses, tses=tses,
-                            time_span=oq.investigation_time,
+                            aggregate_losses, ses_ratio=oq.ses_ratio,
                             curve_resolution=oq.loss_curve_resolution)
 
                         models.AggregateLossCurveData.objects.create(
