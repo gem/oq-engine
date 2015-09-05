@@ -367,7 +367,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for rlz, dataset in zip(rlzs, group.values()):
                 ratios = group.attrs['loss_ratios']
                 lcs = []
-                for avalue, poes in zip(asset_values, dataset.value):
+                for avalue, poes in zip(asset_values, dataset['poes']):
                     lcs.append((avalue * ratios, poes))
                 losses_poes = numpy.array(lcs)  # -> shape (N, 2, C)
                 out = scientific.Output(
@@ -392,7 +392,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             group = self.datastore['/specific-loss_curves-rlzs/%s' % loss_type]
             data = []
             for rlz, dataset in zip(rlzs, group.values()):
-                lcs = dataset.value
+                lcs = dataset['poes']
                 losses_poes = numpy.array(  # -> shape (N, 2, C)
                     [lcs['losses'], lcs['poes']]).transpose(1, 0, 2)
                 out = scientific.Output(
