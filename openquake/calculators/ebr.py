@@ -272,13 +272,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 elif o == AVGLOSS:  # average losses
                     lt = self.riskmodel.loss_types[l]
                     avgloss_by_aid = sum(data, AccumDict())
-                    lst = []
+                    dset = self.datasets[o, l, r].dset
                     for i, asset in enumerate(self.assetcol):
                         avg = avgloss_by_aid.get(i, zero2) * asset[lt]
-                        lst.append(tuple(avg))
-                    avglosses = numpy.array(lst, avg_dt)
-                    self.datasets[o, l, r].dset[:] = avglosses
-                    saved[self.outs[o]] += avglosses.nbytes
+                        dset[i][0] = avg[0]  # working around a limitation of h5py 2.0
+                        dset[i][1] = avg[1]
+                    saved[self.outs[o]] += avg.nbytes * N
                 elif cb.user_provided:  # risk curves
                     # data is a list of dicts asset idx -> counts
                     poes = cb.build_poes(N, data, ses_ratio)
