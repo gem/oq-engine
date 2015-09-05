@@ -15,7 +15,6 @@
 
 import os
 import unittest
-import collections
 
 from nose.plugins.attrib import attr
 import numpy
