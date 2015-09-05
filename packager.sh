@@ -432,7 +432,7 @@ _pkgtest_innervm_run () {
         oq-lite export -1 damages_by_key xml /tmp
         echo 'running ProbabilisticEventBased...'
         oq-lite run ProbabilisticEventBased/job_risk.ini
-        oq-lite export -1 /event_loss_table-rlzs csv /tmp
+        oq-lite export -1 /agg_losses-rlzs csv /tmp
         echo 'Show all the oq-lite calculations'
         oq-lite show 0
         "

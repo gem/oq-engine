@@ -759,20 +759,22 @@ class DiscreteDistribution(Distribution):
 
 class CurveBuilder(object):
     """
-    Build loss ratio curves. The usage is something like this:
+    Build loss ratio curves. The loss ratios can be provided
+    by the user or automatically generated (user_provided=False).
+    The usage is something like this:
 
-      builder = CurveBuilder(loss_type, loss_ratios)
+      builder = CurveBuilder(loss_type, loss_ratios, user_provided=True)
       counts = builder.build_counts(loss_matrix)
     """
-    def __init__(self, loss_type, loss_ratios):
+    def __init__(self, loss_type, loss_ratios, user_provided):
         self.loss_type = loss_type
         self.ratios = numpy.array(loss_ratios, F32)
+        self.user_provided = user_provided
         self.curve_resolution = len(loss_ratios)
         R = self.curve_resolution or 1  # avoid bug in hdf5 2.0
         self.loss_curve_dt = numpy.dtype([
             ('losses', (F32, R)), ('poes', (F32, R)), ('avg', F32)])
-        self.lr_dt = numpy.dtype([('lr%s' % lr, numpy.float32)
-                                  for lr in self.ratios])
+        self.lr_dt = numpy.dtype([('poes', (F32, R))])
 
     def get_counts(self, N, count_dicts):
         """
@@ -780,7 +782,7 @@ class CurveBuilder(object):
         the indices given by the count_dicts
 
         :param N: the number of assets
-        :param counts_by_idx: a map asset_idx -> [C indices]
+        :param count_dicts: a list of maps asset_idx -> [C indices]
 
         >>> cb = CurveBuilder('structural', [0.1, 0.2, 0.3, 0.9])
         >>> cb.get_counts(3, [{1: [4, 3, 2, 1]}, {2: [4, 0, 0, 0]},
@@ -806,8 +808,17 @@ class CurveBuilder(object):
                                         for ratio in self.ratios])
         return counts
 
-    def build_loss_curves(self, assetcol, loss_type, losses_by_aid,
-                          ses_ratio):
+    def build_poes(self, N, count_dicts, ses_ratio):
+        """
+        :param N: the number of assets
+        :param count_dicts: a list of maps asset_idx -> [C indices]
+        :param ses_ratio: event based factor
+        """
+        counts_matrix = self.get_counts(N, count_dicts)
+        poes = build_poes(counts_matrix, 1. / ses_ratio)
+        return poes.view(self.lr_dt)
+
+    def build_loss_curves(self, assetcol, losses_by_aid, ses_ratio):
         """
         :param assetcol: asset collection object
         :param losses_by_aid: a dictionary asset_idx -> losses
@@ -815,7 +826,7 @@ class CurveBuilder(object):
         """
         lcs = numpy.zeros(len(assetcol), self.loss_curve_dt)
         zeros = numpy.zeros(self.curve_resolution)
-        for i, value in enumerate(assetcol[loss_type]):
+        for i, value in enumerate(assetcol[self.loss_type]):
             all_losses = losses_by_aid.get(i)
             if all_losses is None:  # no losses for the given asset
                 lcs[i] = (self.ratios * value, zeros, 0)
@@ -827,8 +838,9 @@ class CurveBuilder(object):
         return lcs
 
     def __repr__(self):
-        return '<%s %s=%s>' % (self.__class__.__name__, self.loss_type,
-                               self.loss_ratios)
+        return '<%s %s=%s user_provided=%s>' % (
+            self.__class__.__name__, self.loss_type,
+            self.loss_ratios, self.user_provided)
 
 
 # should I use the ses_ratio here?
@@ -1372,7 +1384,8 @@ class SimpleStats(object):
                 ins_values = quantile_curve([d.T[1] for d in data], q, weights)
                 path = '%s-stats/%s/quantile-%s' % (name, loss_type, q)
                 dstore[path] = numpy.array([values, ins_values]).T  # N x 2
-        
+
+
 class StatsBuilder(object):
     """
     A class to build risk statistics

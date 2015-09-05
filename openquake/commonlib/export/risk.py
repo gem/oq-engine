@@ -41,9 +41,21 @@ Output = collections.namedtuple('Output', 'ltype path array')
 def compose_arrays(a1, a2):
     """
     Compose composite arrays by generating an extended datatype containing
-    all the fields. The two arrays must have the same shape.
+    all the fields. The two arrays must have the same length.
     """
+    assert len(a1) == len(a2),  (len(a1), len(a2))
     fields1 = [(f, a1.dtype.fields[f][0]) for f in a1.dtype.names]
+    if a2.dtype.names is None:  # the second array is not composite
+        assert len(a2.shape) == 2, a2.shape
+        width = a2.shape[1]
+        fields2 = [('value%d' % i, a2.dtype) for i in range(width)]
+        composite = numpy.zeros(a1.shape, numpy.dtype(fields1 + fields2))
+        for f1 in dict(fields1):
+            composite[f1] = a1[f1]
+        for i in range(width):
+            composite['value%d' % i] = a2[:, i]
+        return composite
+
     fields2 = [(f, a2.dtype.fields[f][0]) for f in a2.dtype.names]
     composite = numpy.zeros(a1.shape, numpy.dtype(fields1 + fields2))
     for f1 in dict(fields1):
@@ -175,17 +187,23 @@ def export_ebr(ekey, dstore):
             out.path, compose_arrays(assets, out.array), fmt='%9.7E')
     return [out.path for out in outs]
 
-# TODO: an export for elt and ela
+
+@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'))
+def export_agg_losses(ekey, dstore):
+    tags = dstore['tags']
+    outs = extract_outputs(ekey[0], dstore, dstore.export_dir, ekey[1])
+    header = ['rupture_tag', 'aggregate_loss', 'insured_loss']
+    for out in outs:
+        data = [[tags[rec['rup_id']], rec['loss'], rec['ins_loss']]
+                for rec in out.array]
+        writers.write_csv(out.path, sorted(data), fmt='%9.7E', header=header)
+    return [out.path for out in outs]
 
 
 # TODO: the export is doing too much; probably we should store
 # a better data structure
 @export.add(('damages_by_key', 'xml'))
 def export_damage(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
     oqparam = OqParam.from_(dstore.attrs)
     riskmodel = dstore['riskmodel']
     rlzs = dstore['rlzs_assoc'].realizations
@@ -263,10 +281,6 @@ def export_dmg_xml(key, export_dir, damage_states, dmg_data, suffix):
 
 @export.add(('damages_by_rlz', 'csv'))
 def export_classical_damage_csv(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
     damages_by_rlz = dstore['damages_by_rlz']
     rlzs = dstore['rlzs_assoc'].realizations
     damage_states = dstore['riskmodel'].damage_states
@@ -312,12 +326,6 @@ PerAssetLoss = collections.namedtuple(  # the loss map
 
 @export.add(('losses_by_key', 'csv'))
 def export_risk(ekey, dstore):
-    """
-    Export the loss curves of a given realization in CSV format.
-
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
     oqparam = OqParam.from_(dstore.attrs)
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                   for ct in dstore['cost_types']}
@@ -368,9 +376,6 @@ def export_loss_csv(key, export_dir, data, suffix):
 
 @export.add(('assetcol', 'csv'))
 def export_assetcol(ekey, dstore):
-    """
-    Export the asset collection in CSV.
-    """
     assetcol = dstore[ekey[0]].value
     sitemesh = dstore['sitemesh'].value
     taxonomies = dstore['taxonomies'].value

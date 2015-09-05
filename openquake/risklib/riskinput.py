@@ -128,9 +128,10 @@ class RiskModel(collections.Mapping):
             if not oqparam.loss_ratios:
                 loss_ratios = numpy.linspace(
                     0, 1, oqparam.loss_curve_resolution + 1)[1:]
-            else:
+                cb = scientific.CurveBuilder(loss_type, loss_ratios, False)
+            else:  # user-provided loss ratios
                 loss_ratios = oqparam.loss_ratios[loss_type]
-            cb = scientific.CurveBuilder(loss_type, loss_ratios)
+                cb = scientific.CurveBuilder(loss_type, loss_ratios, True)
             self.curve_builders.append(cb)
             self.loss_types.append(loss_type)
             self.lti[loss_type] = i

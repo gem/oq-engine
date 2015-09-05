@@ -28,7 +28,7 @@ from openquake.commonlib import readinput, parallel, datastore
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import apply_reduce
 
-OUTPUTS = ['event_loss_table-rlzs', 'avg_losses-rlzs', 'specific/losses-rlzs',
+OUTPUTS = ['agg_losses-rlzs', 'avg_losses-rlzs', 'specific/losses-rlzs',
            'rcurves-rlzs', 'icurves-rlzs']
 
 AGGLOSS, AVGLOSS, SPECLOSS, RC, IC = 0, 1, 2, 3, 4
@@ -106,7 +106,7 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
                         (rup_id, numpy.array([loss, ins_loss])))
 
             # dictionaries asset_idx -> array of counts
-            if len(riskmodel.curve_builders[l].ratios):
+            if riskmodel.curve_builders[l].user_provided:
                 result[RC, l, out.hid].append(dict(
                     zip(asset_ids, out.counts_matrix)))
                 if out.insured_counts_matrix.sum():
@@ -243,6 +243,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param result: a numpy array of shape (O, L, R)
         """
         for idx, arrays in numpy.ndenumerate(result):
+            # TODO: special case for avg_losses, they can be summed
+            # instead of extending the list of arrays
             acc[idx].extend(arrays)
         return acc
 
@@ -253,7 +255,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param result:
             a numpy array of shape (O, L, R) containing lists of arrays
         """
-        nses = self.oqparam.ses_per_logic_tree_path
+        ses_ratio = self.oqparam.ses_ratio
         saved = {out: 0 for out in self.outs}
         N = len(self.assetcol)
         zero2 = numpy.zeros(2)
@@ -262,6 +264,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for (o, l, r), data in numpy.ndenumerate(result):
                 if not data:  # empty list
                     continue
+                cb = self.riskmodel.curve_builders[l]
                 if o in (AGGLOSS, SPECLOSS):  # data is a list of arrays
                     losses = numpy.concatenate(data)
                     self.datasets[o, l, r].extend(losses)
@@ -276,11 +279,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     avglosses = numpy.array(lst, avg_dt)
                     self.datasets[o, l, r].dset[:] = avglosses
                     saved[self.outs[o]] += avglosses.nbytes
-                else:  # risk curves, data is a list of counts dictionaries
-                    cb = self.riskmodel.curve_builders[l]
-                    counts_matrix = cb.get_counts(N, data)
-                    poes = scientific.build_poes(counts_matrix, nses)
-                    self.datasets[o, l, r] = poes.view(cb.lr_dt)
+                elif cb.user_provided:  # risk curves
+                    # data is a list of dicts asset idx -> counts
+                    poes = cb.build_poes(N, data, ses_ratio)
+                    self.datasets[o, l, r] = poes
                     saved[self.outs[o]] += poes.nbytes
                 self.datastore.hdf5.flush()
 
@@ -313,7 +315,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 for ela in dset.value:
                     losses_by_aid[ela['ass_id']].append(ela[kind])
                 curves = builder.build_loss_curves(
-                    self.assetcol, loss_type, losses_by_aid, ses_ratio)
+                    self.assetcol, losses_by_aid, ses_ratio)
                 key = 'specific/loss_curves-rlzs/%s/%s' % (loss_type, rlz)
                 self.datastore[key] = curves
 
@@ -426,21 +428,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 loss_map_stats[:] = maps
 
             for i, path in enumerate(stat.paths):
-                self.store(path % 'loss_curves', loss_curve_stats[i])
-                self.store(path % 'ins_curves', ins_curve_stats[i])
+                self._store(path % 'loss_curves', loss_curve_stats[i])
+                self._store(path % 'ins_curves', ins_curve_stats[i])
                 if oq.conditional_loss_poes:
-                    self.store(path % 'loss_maps', loss_map_stats[i])
+                    self._store(path % 'loss_maps', loss_map_stats[i])
 
         stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
         stats.compute_and_store('avg_losses', self.datastore)
 
-    def store(self, path, curves):
-        """
-        Store loss curves, maps and aggregates
-
-        :param path: the dataset where to store the curves
-        :param curves: an array of curves to store
-        """
+    def _store(self, path, curves):
         if curves.view(float).sum():
             # there are some nonzero values
             self.datastore[path] = curves

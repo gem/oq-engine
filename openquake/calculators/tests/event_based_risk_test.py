@@ -65,8 +65,10 @@ class EBRTestCase(CalculatorTestCase):
         self.run_calc(case_1.__file__, 'job_ebr.ini')
         ds = DataStore(self.calc.datastore.calc_id,
                        export_dir=self.calc.datastore.export_dir)
-        fnames = export(('assetcol', 'csv'), ds) + export(
-            ('event_loss_table-rlzs', 'csv'), ds)
+        fnames = export(
+            ('assetcol', 'csv'), ds) + export(
+                ('agg_losses-rlzs', 'csv'), ds) + export(
+                    ('avg_losses-stats', 'csv'), ds)
         for fname in fnames:
             self.assertEqualFiles('expected/' + os.path.basename(fname), fname)
 
@@ -75,9 +77,9 @@ class EBRTestCase(CalculatorTestCase):
         out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
                             concurrent_tasks=0)
         # this also tests that concurrent_tasks=0 does not give issues
-        [fname] = out['event_loss_table-rlzs', 'csv']
+        [fname] = out['agg_losses-rlzs', 'csv']
         self.assertEqualFiles(
-            'expected/event_loss_table-b1,b1-structural.csv', fname)
+            'expected/agg_losses-b1,b1-structural.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4_hazard(self):
@@ -92,7 +94,7 @@ class EBRTestCase(CalculatorTestCase):
         # Turkey with SHARE logic tree
         out = self.run_calc(case_4.__file__, 'job_ebr.ini',
                             exports='csv')
-        fnames = out['event_loss_table-rlzs', 'csv']
+        fnames = out['agg_losses-rlzs', 'csv']
         for fname in fnames:
             self.assertEqualFiles('expected/' + os.path.basename(fname), fname)
 
