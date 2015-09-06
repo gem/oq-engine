@@ -128,6 +128,7 @@ def run_risk(sorted_assocs, calc, monitor):
             with get_haz_mon:
                 getter = calc.getter_class(
                     imt, taxonomy, hazard_outputs, assets)
+                getter.epsilon_sampling = eps_sampling
             logs.LOG.info(
                 'Read %d data for %d assets of taxonomy %s, imt=%s',
                 len(set(getter.site_ids)), len(assets), taxonomy, imt)
