@@ -91,7 +91,8 @@ class HazardGetter(object):
    :attr site_ids:
         The ids of the sites associated to the hazards
     """
-    def __init__(self, imt, taxonomy, hazard_outputs, assets):
+    def __init__(self, imt, taxonomy, hazard_outputs, assets,
+                 epsilon_sampling=None):
         self.imt = imt
         self.taxonomy = taxonomy
         self.hazard_outputs = hazard_outputs
@@ -205,9 +206,8 @@ class GroundMotionGetter(HazardGetter):
     Hazard getter for loading ground motion values.
     """ + HazardGetter.__doc__
 
-    epsilon_sampling = None  # set later
-
-    def __init__(self, imt, taxonomy, hazard_outputs, assets):
+    def __init__(self, imt, taxonomy, hazard_outputs, assets,
+                 epsilon_sampling=None):
         """
         Perform the needed queries on the database to populate
         hazards and epsilons.
@@ -224,8 +224,7 @@ class GroundMotionGetter(HazardGetter):
             rids = sc.get_ruptures().values_list('id', flat=True)
             self.rupture_ids.extend(rids)
         num_ruptures = len(self.rupture_ids)
-        num_samples = (min(self.epsilon_sampling, num_ruptures)
-                       if self.epsilon_sampling else num_ruptures)
+        num_samples = min(epsilon_sampling, num_ruptures)
         epsilons = numpy.zeros((len(assets), num_samples))
         for i, asset_site_id in enumerate(self.asset_site_ids):
             eps = models.Epsilon.objects.get(asset_site=asset_site_id)
