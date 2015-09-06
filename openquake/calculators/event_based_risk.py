@@ -382,6 +382,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             stats.append(builder.build(data))
         return stats
 
+    # TODO: add a direct test
     def build_specific_stats(self, builder):
         """
         Compute all statistics for the specified assets starting from the

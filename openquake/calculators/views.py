@@ -241,17 +241,13 @@ def view_mean_avg_losses(token, dstore):
         group = dstore['avg_losses-rlzs']
         single_rlz = True
     loss_types = sorted(group)
-    dt_list = [('asset_ref', '|S20')] + [(str(ltype), (numpy.float32, 2))
-                                         for ltype in loss_types]
-    losses = numpy.empty(len(assets), numpy.dtype(dt_list))
-    losses.fill(numpy.nan)
-    losses['asset_ref'] = assets
-    for lt in loss_types:
+    header = ['asset_ref'] + loss_types
+    losses = [[a] + [None] * len(loss_types) for a in assets]
+    for lti, lt in enumerate(loss_types):
         if single_rlz:
             [key] = list(group[lt])
         else:
             key = 'mean'
-        pairs = group[lt][key].value  # [(loss, ins_loss), ...]
-        for asset, loss, pair in zip(assets, losses, pairs):
-            loss[lt] = pair
-    return rst_table(losses)
+        for aid, pair in enumerate(group[lt][key]):
+            losses[aid][lti + 1] = pair  # loss, ins_loss
+    return rst_table(sorted(losses), header=header)
