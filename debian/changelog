@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed a distribution bug in the epsilons: it means that all event based
+    risk calculation with nonzero coefficients of variations will produce
+    slightly different numbers
   * Removed excessive checking on the exposure attributes `deductible` and
     `insuredLimit` that made it impossible to run legitimate calculations
   * Changed the way the average losses (and insured average losses) are
