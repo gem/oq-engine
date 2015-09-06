@@ -23,7 +23,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import groupby, split_in_blocks_2
+from openquake.baselib.general import groupby, split_in_blocks
 from openquake.baselib.performance import DummyMonitor
 from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific
@@ -205,11 +205,12 @@ class RiskModel(collections.Mapping):
         Yield :class:`RiskInputFromRuptures` instances.
         """
         imt_taxonomies = list(self.get_imt_taxonomies())
-        num_epsilons = len(next(iter(eps_dict.values())))
         by_col = operator.attrgetter('col_id')
         rup_start = rup_stop = 0
-        for ses_ruptures, indices in split_in_blocks_2(
-                all_ruptures, range(num_epsilons), hint or 1, key=by_col):
+        num_epsilons = len(eps_dict[next(iter(eps_dict))])
+        for ses_ruptures in split_in_blocks(
+                all_ruptures, hint or 1, key=by_col):
+            indices = [sr.ordinal % num_epsilons for sr in ses_ruptures]
             rup_stop += len(ses_ruptures)
             gsims = gsims_by_col[ses_ruptures[0].col_id]
             edic = {asset: eps[indices] for asset, eps in eps_dict.items()}
