@@ -429,7 +429,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         aggregate_loss = scientific.event_based(
                             aggregate_losses, ses_ratio=oq.ses_ratio,
                             curve_resolution=oq.loss_curve_resolution)
-
                         models.AggregateLossCurveData.objects.create(
                             loss_curve=models.LossCurve.objects.create(
                                 aggregate=True, insured=False,
@@ -443,9 +442,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                                     "agg_loss_curve")),
                             losses=aggregate_loss[0],
                             poes=aggregate_loss[1],
-                            average_loss=scientific.average_loss(
-                                aggregate_loss),
-                            stddev_loss=numpy.std(aggregate_losses))
+                            average_loss=(sum(aggregate_losses) *
+                                          self.oqparam.ses_ratio),
+                            stddev_loss=None)
 
 
 @calculators.add('ebr')
