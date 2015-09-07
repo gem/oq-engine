@@ -436,15 +436,14 @@ SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.oqparam.id,
             self._rupture_ids[scid] = rupids = ses_coll.get_ruptures(
                 ).values_list('id', flat=True)
             num_ruptures += len(rupids)
-        # build the epsilons, except for scenario_damage
-        if self.calculation_mode != 'scenario_damage':
-            samples = (min(epsilon_sampling, num_ruptures)
-                       if epsilon_sampling else num_ruptures)
-            logs.LOG.info(
-                'Building (%d, %d) epsilons for taxonomy %s',
-                self.num_assets, samples, self.taxonomy)
-            asset_sites = models.AssetSite.objects.filter(
-                job=self.calc.job, asset__taxonomy=self.taxonomy)
-            eps = make_epsilons(
-                self.num_assets, samples, oq.master_seed, oq.asset_correlation)
-            models.Epsilon.saveall(asset_sites, eps)
+        # build the epsilons
+        samples = (min(epsilon_sampling, num_ruptures)
+                   if epsilon_sampling else num_ruptures)
+        logs.LOG.info(
+            'Building (%d, %d) epsilons for taxonomy %s',
+            self.num_assets, samples, self.taxonomy)
+        asset_sites = models.AssetSite.objects.filter(
+            job=self.calc.job, asset__taxonomy=self.taxonomy)
+        eps = make_epsilons(
+            self.num_assets, samples, oq.master_seed, oq.asset_correlation)
+        models.Epsilon.saveall(asset_sites, eps)
