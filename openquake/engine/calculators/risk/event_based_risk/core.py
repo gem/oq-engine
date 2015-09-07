@@ -388,7 +388,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
           Compute aggregate loss curves and event loss tables
         """
         oq = self.oqparam
-        tses = oq.investigation_time * oq.ses_per_logic_tree_path
         with self.monitor('post processing', autoflush=True):
             inserter = writer.CacheInserter(models.EventLossData,
                                             max_cache_size=10000)
@@ -442,8 +441,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                                     "agg_loss_curve")),
                             losses=aggregate_loss[0],
                             poes=aggregate_loss[1],
-                            average_loss=(sum(aggregate_losses) *
-                                          self.oqparam.ses_ratio),
+                            average_loss=sum(aggregate_losses),
                             stddev_loss=None)
 
 
