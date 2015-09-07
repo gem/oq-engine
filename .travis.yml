@@ -5,6 +5,11 @@ language: python
 python:
  - "3.4"
 
+addons:
+  apt:
+    packages:
+    - parallel
+
 install:
   - pip install http://ftp.openquake.org/python-wheels/Cython-0.22.1-cp34-cp34m-linux_x86_64.whl
   - pip install http://ftp.openquake.org/python-wheels/Shapely-1.5.9-py3-none-any.whl
@@ -13,4 +18,4 @@ install:
   - python setup.py develop
 
 script:
-  - python setup.py test
+  - find . -name \*_test.py | parallel "nosetests -v -a'!slow'"
