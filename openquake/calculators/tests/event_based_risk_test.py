@@ -8,7 +8,9 @@ from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a)
 
 
-def is_ok(fname):
+def is_stat(fname):
+    # True if the CSV file is related to a statistical output
+    # hack: this is determined by the absence of commas in the filename
     return ',' not in fname and any(x in fname for x in (
         'loss_curve', 'loss_map', 'agg_loss', 'avg_loss'))
 
@@ -22,7 +24,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         all_csv = []
         for fnames in out.values():
             for fname in fnames:
-                if fname.endswith('.csv') and is_ok(fname):
+                if fname.endswith('.csv') and is_stat(fname):
                     all_csv.append(fname)
         for fname in all_csv:
             self.assertEqualFiles(
