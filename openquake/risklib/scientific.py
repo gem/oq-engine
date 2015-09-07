@@ -1092,20 +1092,6 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
 
 # ####################### statistics #################################### #
 
-def average_loss(losses_poes):
-    """
-    Given a loss curve with `poes` over `losses` defined on a given
-    time span it computes the average loss on this period of time.
-
-    :note: As the loss curve is supposed to be piecewise linear as it
-           is a result of a linear interpolation, we compute an exact
-           integral by using the trapeizodal rule with the width given by the
-           loss bin width.
-    """
-    losses, poes = losses_poes
-    return numpy.dot(-pairwise_diff(losses), pairwise_mean(poes))
-
-
 def pairwise_mean(values):
     "Averages between a value and the next value in a sequence"
     return numpy.array([numpy.mean(pair) for pair in utils.pairwise(values)])
@@ -1213,6 +1199,24 @@ def quantile_curve(curves, quantile, weights=None):
     return numpy.array(result_curve)
 
 
+def quantile_matrix(values, quantiles, weights):
+    """
+    :param curves:
+        a matrix N x R, where N is the number of assets and R the number
+        of realizations
+    :param quantile:
+        a list of Q quantiles
+    :param weights:
+        a list of R weights
+    :returns:
+        a matrix Q x N
+    """
+    result = numpy.zeros((len(quantiles), len(values)))
+    for i, q in enumerate(quantiles):
+        result[i] = quantile_curve(values, q, weights)
+    return result
+
+
 def exposure_statistics(
         loss_curves, map_poes, weights, quantiles):
     """
@@ -1230,13 +1234,11 @@ def exposure_statistics(
         the quantile levels used to compute quantile results
 
     :returns:
-        a tuple with six elements:
+        a tuple with four elements:
             1. a numpy array with N mean loss curves
-            2. a numpy array with N mean average losses
-            3. a numpy array with P x N mean map values
-            4. a numpy array with Q x N quantile loss curves
-            5. a numpy array with Q x N quantile average loss values
-            6. a numpy array with Q x P quantile map values
+            2. a numpy array with P x N mean map values
+            3. a numpy array with Q x N quantile loss curves
+            4. a numpy array with Q x P quantile map values
     """
     curve_resolution = len(loss_curves[0][0])
     map_nr = len(map_poes)
@@ -1244,10 +1246,8 @@ def exposure_statistics(
     # Collect per-asset statistic along the last dimension of the
     # following arrays
     mean_curves = numpy.zeros((0, 2, curve_resolution))
-    mean_average_losses = numpy.array([])
     mean_maps = numpy.zeros((map_nr, 0))
     quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
-    quantile_average_losses = numpy.zeros((len(quantiles), 0,))
     quantile_maps = numpy.zeros((len(quantiles), map_nr, 0))
 
     for loss_ratios, curves_poes in loss_curves:
@@ -1257,23 +1257,14 @@ def exposure_statistics(
 
         mean_curves = numpy.vstack(
             (mean_curves, _mean_curve[numpy.newaxis, :]))
-        mean_average_losses = numpy.append(
-            mean_average_losses, average_loss(_mean_curve))
-
         mean_maps = numpy.hstack((mean_maps, _mean_maps[:, numpy.newaxis]))
+
         quantile_curves = numpy.hstack(
             (quantile_curves, _quantile_curves[:, numpy.newaxis]))
-
-        _quantile_average_losses = utils.numpy_map(
-            average_loss, _quantile_curves)
-        quantile_average_losses = numpy.hstack(
-            (quantile_average_losses,
-             _quantile_average_losses[:, numpy.newaxis]))
         quantile_maps = numpy.dstack(
             (quantile_maps, _quantile_maps[:, :, numpy.newaxis]))
 
-    return (mean_curves, mean_average_losses, mean_maps,
-            quantile_curves, quantile_average_losses, quantile_maps)
+    return (mean_curves, mean_maps, quantile_curves, quantile_maps)
 
 
 def asset_statistics(
@@ -1442,23 +1433,33 @@ class StatsBuilder(object):
         outputs = []
         weights = []
         loss_curves = []
+        average_losses = []
+        average_insured_losses = []
         for out in all_outputs:
             outputs.append(out)
             weights.append(out.weight)
             loss_curves.append(out.loss_curves)
-        (mean_curves, mean_average_losses, mean_maps,
-         quantile_curves, quantile_average_losses, quantile_maps) = (
-             exposure_statistics(
-                 self.normalize(loss_curves),
-                 self.conditional_loss_poes + self.poes_disagg,
-                 weights, self.quantiles))
+            average_losses.append(out.average_losses)
+            average_insured_losses.append(out.average_insured_losses)
+        mean_average_losses = mean_curve(average_losses, weights)
+        quantile_average_losses = quantile_matrix(
+            average_losses, self.quantiles, weights)
+        import pdb; pdb.set_trace()
+        (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
+            exposure_statistics(
+                self.normalize(loss_curves),
+                self.conditional_loss_poes + self.poes_disagg,
+                weights, self.quantiles))
 
         if outputs[0].insured_curves is not None:
+            mean_average_insured_losses = mean_curve(
+                average_insured_losses, weights)
+            quantile_average_insured_losses = quantile_matrix(
+                average_insured_losses, self.quantiles, weights)
             loss_curves = [out.insured_curves for out in outputs]
-            (mean_insured_curves, mean_average_insured_losses, _,
-             quantile_insured_curves, quantile_average_insured_losses, _) = (
-                 exposure_statistics(
-                     self.normalize(loss_curves), [], weights, self.quantiles))
+            (mean_insured_curves, _, quantile_insured_curves, _) = (
+                exposure_statistics(
+                    self.normalize(loss_curves), [], weights, self.quantiles))
         else:
             mean_insured_curves = None
             mean_average_insured_losses = None
