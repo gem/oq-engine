@@ -1199,6 +1199,21 @@ def quantile_curve(curves, quantile, weights=None):
     return numpy.array(result_curve)
 
 
+# TODO: remove this from openquake.risklib.qa_tests.bcr_test
+def average_loss(losses_poes):
+    """
+    Given a loss curve with `poes` over `losses` defined on a given
+    time span it computes the average loss on this period of time.
+
+    :note: As the loss curve is supposed to be piecewise linear as it
+           is a result of a linear interpolation, we compute an exact
+           integral by using the trapeizodal rule with the width given by the
+           loss bin width.
+    """
+    losses, poes = losses_poes
+    return numpy.dot(-pairwise_diff(losses), pairwise_mean(poes))
+
+
 def quantile_matrix(values, quantiles, weights):
     """
     :param curves:
@@ -1444,7 +1459,6 @@ class StatsBuilder(object):
         mean_average_losses = mean_curve(average_losses, weights)
         quantile_average_losses = quantile_matrix(
             average_losses, self.quantiles, weights)
-        import pdb; pdb.set_trace()
         (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
             exposure_statistics(
                 self.normalize(loss_curves),
