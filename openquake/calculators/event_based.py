@@ -226,8 +226,8 @@ class SESRupture(object):
         self.tag = tag
         self.col_id = col_id
         # extract the SES ordinal (>=1) from the rupture tag
-        # for instance 'col=00|ses=0001|src=1|rup=001-01' => 1
-        pieces = tag.split('|')
+        # for instance 'col=00~ses=0001~src=1~rup=001-01' => 1
+        pieces = tag.split('~')
         self.ses_idx = int(pieces[1].split('=')[1])
 
     def export(self):
@@ -359,7 +359,7 @@ def build_ses_ruptures(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
                 seed = rnd.randint(0, MAX_INT)
-                tag = 'col=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
+                tag = 'col=%02d~ses=%04d~src=%s~rup=%03d-%02d' % (
                     col_id, ses_idx, src.source_id, rup.rup_no, occ_no)
                 sesruptures.append(
                     SESRupture(rup, indices, seed, tag, col_id))
