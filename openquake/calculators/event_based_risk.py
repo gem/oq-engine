@@ -21,15 +21,12 @@ import operator
 import collections
 
 import numpy
-import h5py.version
 
 from openquake.baselib.general import AccumDict, humansize
 from openquake.calculators import base
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import apply_reduce
-
-OLD_H5PY = h5py.version.version <= '2.0.1'
 
 OUTPUTS = ['agg_losses-rlzs', 'avg_losses-rlzs', 'specific-losses-rlzs',
            'rcurves-rlzs', 'icurves-rlzs']
@@ -40,7 +37,6 @@ elt_dt = numpy.dtype([('rup_id', numpy.uint32), ('loss', numpy.float32),
                       ('ins_loss',  numpy.float32)])
 ela_dt = numpy.dtype([('rup_id', numpy.uint32), ('ass_id', numpy.uint32),
                       ('loss', numpy.float32), ('ins_loss',  numpy.float32)])
-avg_dt = numpy.dtype((numpy.float32, 2))
 
 
 def cube(O, L, R, factory):
@@ -120,7 +116,7 @@ def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
             dic = {}
             for aid, avgloss, ins_avgloss in zip(
                     asset_ids, out.average_losses, out.average_insured_losses):
-                dic[aid] = numpy.array([avgloss, ins_avgloss])
+                dic[aid] = numpy.array([avgloss, ins_avgloss], numpy.float32)
             result[AVGLOSS, l, out.hid].append(dic)
 
     for idx, lst in numpy.ndenumerate(result):
@@ -214,7 +210,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     if o == AGGLOSS:  # loss tables
                         dset = self.datastore.create_dset(out + key, elt_dt)
                     elif o == AVGLOSS:  # average losses
-                        dset = self.datastore.create_dset(out + key, avg_dt, N)
+                        dset = self.datastore.create_dset(out + key, numpy.float32, (N, 2))
                     elif o == SPECLOSS:  # specific losses
                         dset = self.datastore.create_dset(out + key, ela_dt)
                     else:  # risk curves
@@ -263,7 +259,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         ses_ratio = self.oqparam.ses_ratio
         saved = {out: 0 for out in self.outs}
         N = len(self.assetcol)
-        zero2 = numpy.zeros(2)
+        zero2 = numpy.zeros(2, numpy.float32)
         with self.monitor('saving loss table',
                           autoflush=True, measuremem=True):
             for (o, l, r), data in numpy.ndenumerate(result):
@@ -277,14 +273,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 elif o == AVGLOSS:  # average losses
                     lt = self.riskmodel.loss_types[l]
                     avgloss_by_aid = sum(data, AccumDict())
-                    dset = self.datasets[o, l, r].dset
-                    for i, asset in enumerate(self.assetcol):
-                        avg = avgloss_by_aid.get(i, zero2) * asset[lt]
-                        if OLD_H5PY:  # workaround
-                            dset[i][:] = avg
-                        else:
-                            dset[i] = avg
-                    saved[self.outs[o]] += avg.nbytes * N
+                    pairs = [avgloss_by_aid.get(i, zero2) * asset[lt]
+                             for i, asset in enumerate(self.assetcol)]
+                    avglosses = numpy.array(pairs, numpy.float32)
+                    self.datasets[o, l, r].dset[:] = avglosses
+                    saved[self.outs[o]] += avglosses.nbytes
                 elif cb.user_provided:  # risk curves
                     # data is a list of dicts asset idx -> counts
                     poes = cb.build_poes(N, data, ses_ratio)
