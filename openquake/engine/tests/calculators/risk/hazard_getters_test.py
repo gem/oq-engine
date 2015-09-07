@@ -55,7 +55,8 @@ class HazardCurveGetterTestCase(unittest.TestCase):
         self.nbytes = self.builder.calc_nbytes()
         self.builder.init_epsilons()
         self.getter = self.getter_class(
-            self.imt, self.taxonomy, calc.get_hazard_outputs(), self.assets)
+            self.imt, self.taxonomy, calc.get_hazard_outputs(), self.assets,
+            epsilon_sampling=1000)
 
     def test_nbytes(self):
         self.assertEqual(self.nbytes, 0)
