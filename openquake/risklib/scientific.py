@@ -1217,7 +1217,7 @@ def average_loss(losses_poes):
 def quantile_matrix(values, quantiles, weights):
     """
     :param curves:
-        a matrix N x R, where N is the number of assets and R the number
+        a matrix R x N, where N is the number of assets and R the number
         of realizations
     :param quantile:
         a list of Q quantiles
@@ -1226,7 +1226,7 @@ def quantile_matrix(values, quantiles, weights):
     :returns:
         a matrix Q x N
     """
-    result = numpy.zeros((len(quantiles), len(values)))
+    result = numpy.zeros((len(quantiles), values.shape[1]))
     for i, q in enumerate(quantiles):
         result[i] = quantile_curve(values, q, weights)
     return result
@@ -1456,6 +1456,7 @@ class StatsBuilder(object):
             loss_curves.append(out.loss_curves)
             average_losses.append(out.average_losses)
             average_insured_losses.append(out.average_insured_losses)
+        average_losses = numpy.array(average_losses, F32)
         mean_average_losses = mean_curve(average_losses, weights)
         quantile_average_losses = quantile_matrix(
             average_losses, self.quantiles, weights)
@@ -1466,6 +1467,7 @@ class StatsBuilder(object):
                 weights, self.quantiles))
 
         if outputs[0].insured_curves is not None:
+            average_insured_losses = numpy.array(average_insured_losses, F32)
             mean_average_insured_losses = mean_curve(
                 average_insured_losses, weights)
             quantile_average_insured_losses = quantile_matrix(

@@ -372,6 +372,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             asset_values = self.assetcol[loss_type]
             data = []
             for rlz, dataset in zip(rlzs, group.values()):
+                dkey = 'avg_losses-rlzs/%s/%s' % (loss_type, rlz.uid)
+                average_losses = self.datastore[dkey].value
                 ratios = group.attrs['loss_ratios']
                 lcs = []
                 for avalue, poes in zip(asset_values, dataset['poes']):
@@ -379,7 +381,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 losses_poes = numpy.array(lcs)  # -> shape (N, 2, C)
                 out = scientific.Output(
                     assets, loss_type, rlz.ordinal, rlz.weight,
-                    loss_curves=losses_poes, insured_curves=None)
+                    loss_curves=losses_poes, insured_curves=None,
+                    average_losses=average_losses[:, 0],
+                    average_insured_losses=average_losses[:, 1])
                 data.append(out)
             stats.append(builder.build(data))
         return stats
@@ -393,19 +397,31 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         if not self.oqparam.specific_assets:
             return []
-        assets = self.assetcol['asset_ref']
+
+        specific_assets = set(self.oqparam.specific_assets)
+        assetcol = self.assetcol
+        specific_ids = []
+        for i, a in enumerate(self.assetcol):
+            if a['asset_ref'] in specific_assets:
+                specific_ids.append(i)
+
+        assets = assetcol['asset_ref']
         rlzs = self.rlzs_assoc.realizations
         stats = []
         for loss_type in self.riskmodel.loss_types:
             group = self.datastore['/specific-loss_curves-rlzs/%s' % loss_type]
             data = []
             for rlz, dataset in zip(rlzs, group.values()):
+                dkey = 'avg_losses-rlzs/%s/%s' % (loss_type, rlz.uid)
+                average_losses = self.datastore[dkey][specific_ids]
                 lcs = dataset.value
                 losses_poes = numpy.array(  # -> shape (N, 2, C)
                     [lcs['losses'], lcs['poes']]).transpose(1, 0, 2)
                 out = scientific.Output(
                     assets, loss_type, rlz.ordinal, rlz.weight,
-                    loss_curves=losses_poes, insured_curves=None)
+                    loss_curves=losses_poes, insured_curves=None,
+                    average_losses=average_losses[:, 0],
+                    average_insured_losses=average_losses[:, 1])
                 data.append(out)
             stats.append(builder.build(data, prefix='specific-'))
         return stats
