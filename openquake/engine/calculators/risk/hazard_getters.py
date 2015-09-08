@@ -443,7 +443,8 @@ SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.oqparam.id,
             'Building (%d, %d) epsilons for taxonomy %s',
             self.num_assets, samples, self.taxonomy)
         asset_sites = models.AssetSite.objects.filter(
-            job=self.calc.job, asset__taxonomy=self.taxonomy)
+            job=self.calc.job, asset__taxonomy=self.taxonomy
+        ).order_by('asset__asset_ref')  # epsilon association order
         eps = make_epsilons(
             self.num_assets, samples, oq.master_seed, oq.asset_correlation)
         models.Epsilon.saveall(asset_sites, eps)
