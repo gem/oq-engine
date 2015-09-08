@@ -742,8 +742,9 @@ class DiscreteDistribution(Distribution):
     def sample(self, loss_ratios, probs):
         ret = []
         r = numpy.arange(len(loss_ratios))
-        random.seed(self.seed)
         for i in range(probs.shape[1]):
+            random.seed(self.seed)
+            # the seed is set inside the loop to avoid block-size dependency
             pmf = stats.rv_discrete(name='pmf', values=(r, probs[:, i])).rvs()
             ret.append(loss_ratios[pmf])
         return ret
