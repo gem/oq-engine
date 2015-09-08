@@ -566,7 +566,7 @@ class ProbabilisticEventBased(Workflow):
             return scientific.Output(
                 assets, loss_type,
                 event_loss_per_asset=ela,
-                insured_loss_per_asset=ilm,
+                insured_loss_per_asset=ilm.T,
                 average_losses=average_losses,
                 average_insured_losses=average_insured_losses,
                 counts_matrix=cb.build_counts(loss_matrix),

@@ -210,7 +210,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     if o == AGGLOSS:  # loss tables
                         dset = self.datastore.create_dset(out + key, elt_dt)
                     elif o == AVGLOSS:  # average losses
-                        dset = self.datastore.create_dset(out + key, numpy.float32, (N, 2))
+                        dset = self.datastore.create_dset(
+                            out + key, numpy.float32, (N, 2))
                     elif o == SPECLOSS:  # specific losses
                         dset = self.datastore.create_dset(out + key, ela_dt)
                     else:  # risk curves

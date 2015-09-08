@@ -27,7 +27,7 @@ import bisect
 
 import numpy
 from numpy.testing import assert_equal
-from scipy import interpolate, stats
+from scipy import interpolate, stats, random
 
 from openquake.baselib.general import CallableDict
 from openquake.risklib import utils
@@ -352,13 +352,14 @@ class VulnerabilityFunctionWithPMF(object):
     :param ratios: mean ratios (M)
     :param probs: a matrix of probabilities of shape (M, L)
     """
-    def __init__(self, vf_id, imt, imls, loss_ratios, probs):
+    def __init__(self, vf_id, imt, imls, loss_ratios, probs, seed):
         self.id = vf_id
         self.imt = imt
         self._check_vulnerability_data(imls, loss_ratios, probs)
         self.imls = imls
         self.loss_ratios = loss_ratios
         self.probs = probs
+        self.seed = seed
         self.distribution_name = "PM"
 
         # to be set in .init(), called also by __setstate__
@@ -372,6 +373,7 @@ class VulnerabilityFunctionWithPMF(object):
     def set_distribution(self, epsilons=None):
         self.distribution = DISTRIBUTIONS[self.distribution_name]()
         self.distribution.epsilons = epsilons
+        self.distribution.seed = self.seed
 
     def apply_to(self, ground_motion_values, epsilons=None):
         """
@@ -383,12 +385,13 @@ class VulnerabilityFunctionWithPMF(object):
         """
         vulnerability_function = copy.copy(self)
         vulnerability_function.set_distribution(epsilons)
-        return utils.numpy_map(
+        mat = utils.numpy_map(
             vulnerability_function._apply, ground_motion_values)
+        return mat
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.loss_ratios,
-                self.probs, self.distribution_name)
+                self.probs, self.distribution_name, self.seed)
 
     def __setstate__(self, state):
         self.id = state[0]
@@ -397,6 +400,7 @@ class VulnerabilityFunctionWithPMF(object):
         self.loss_ratios = state[3]
         self.probs = state[4]
         self.distribution_name = state[5]
+        self.seed = state[6]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, probs):
@@ -733,12 +737,15 @@ class BetaDistribution(Distribution):
 
 @DISTRIBUTIONS.add('PM')
 class DiscreteDistribution(Distribution):
+    seed = None  # to be set
+
     def sample(self, loss_ratios, probs):
         ret = []
+        r = numpy.arange(len(loss_ratios))
+        random.seed(self.seed)
         for i in range(probs.shape[1]):
-            pmf = stats.rv_discrete(name='pmf', values=(
-                numpy.arange(len(loss_ratios)), probs[:, i]))
-            ret.append(loss_ratios[pmf.rvs()])
+            pmf = stats.rv_discrete(name='pmf', values=(r, probs[:, i])).rvs()
+            ret.append(loss_ratios[pmf])
         return ret
 
     def survival(self, loss_ratios, probs):
