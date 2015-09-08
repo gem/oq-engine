@@ -250,4 +250,4 @@ def view_mean_avg_losses(token, dstore):
             key = 'mean'
         for aid, pair in enumerate(group[lt][key]):
             losses[aid][lti + 1] = pair  # loss, ins_loss
-    return rst_table(sorted(losses), header=header)
+    return rst_table(sorted(losses), header=header, fmt='%8.6E')
