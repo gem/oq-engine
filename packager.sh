@@ -321,10 +321,10 @@ _devtest_innervm_run () {
 
     ssh $lxc_ip "sudo service postgresql restart"
     ssh $lxc_ip "set -e ; sudo su postgres -c \"cd oq-engine ; openquake/engine/bin/oq_create_db --yes --db-name=openquake2\""
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; bin/oq-engine --upgrade-db --yes"
+    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine ; bin/oq-engine --upgrade-db --yes"
 
     # run celeryd daemon
-    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
+    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         # wait for celeryd startup time
@@ -372,7 +372,7 @@ celeryd_wait $GEM_MAXLOOP"
                      export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
                      set -x
                  fi
-                 export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ;
                  cd oq-engine
                  nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
                  nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
