@@ -111,7 +111,7 @@ class MetaGSIM(abc.ABCMeta):
     deprecated = False
     non_verified = False
 
-    def __call__(cls, *args, **kw):
+    def __call__(cls, **kwargs):
         if not cls.instantiable:
             raise NonInstantiableError(
                 '%s cannot be directly instantiated in this context' % cls)
@@ -123,7 +123,9 @@ class MetaGSIM(abc.ABCMeta):
             msg = ('%s is not independently verified - the user is liable '
                    'for their application') % cls.__name__
             warnings.warn(msg, NotVerifiedWarning)
-        return super(MetaGSIM, cls).__call__(*args, **kw)
+        self = super(MetaGSIM, cls).__call__(**kwargs)
+        self.kwargs = kwargs
+        return self
 
     # NB: the idea is to use this context manager inside the oqtask
     # decorator in the engine, so that GSIM classes cannot be directly
@@ -633,11 +635,23 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         """
         return str(self) == str(other)
 
+    def __hash__(self):
+        return hash(str(self))
+
     def __str__(self):
         """
         To be overridden in subclasses if the GSIM takes parameters.
         """
-        return '%s' % self.__class__.__name__
+        return self.__class__.__name__
+
+    def __repr__(self):
+        """
+        Default string representation for GSIM instances. It contains
+        the name and values of the arguments, if any.
+        """
+        # NB: ast.literal_eval(repr(gsim)) must work
+        kwargs = ', '.join('%s=%r' % kv for kv in sorted(self.kwargs.items()))
+        return repr("%s(%s)" % (self.__class__.__name__, kwargs))
 
 
 def _truncnorm_sf(truncation_level, values):

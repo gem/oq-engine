@@ -37,6 +37,7 @@ if PY3:
     exec_ = eval('exec')
 
     range = range
+    unicode = str
 
     def round(x, d=0):
         p = 10 ** d
@@ -64,7 +65,8 @@ else:  # Python 2
 
     range = xrange
     round = round
-
+    unicode = unicode
+    
     # taken from six
     def exec_(_code_, _globs_=None, _locs_=None):
         """Execute code in a namespace."""

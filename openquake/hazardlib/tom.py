@@ -22,7 +22,7 @@ import math
 import numpy
 import scipy.stats
 
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots

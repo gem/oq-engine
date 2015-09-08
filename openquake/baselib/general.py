@@ -332,7 +332,9 @@ def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
             os.makedirs(dir)
     fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
     if content:
-        fh = os.fdopen(fh, "w")
+        fh = os.fdopen(fh, "wb")
+        if hasattr(content, 'encode'):
+            content = content.encode('utf8')
         fh.write(content)
         fh.close()
     return path
@@ -458,7 +460,7 @@ class CallableDict(collections.OrderedDict):
 
     >>> @format_attrs.add('csv')  # implementation for csv
     ... def format_attrs_csv(fmt, obj):
-    ...     items = sorted(vars(obj).iteritems())
+    ...     items = sorted(vars(obj).items())
     ...     return '\n'.join('%s,%s' % item for item in items)
 
     >>> @format_attrs.add('json')  # implementation for json
@@ -530,7 +532,7 @@ class AccumDict(dict):
     """
 
     def __iadd__(self, other):
-        if hasattr(other, 'iteritems'):
+        if hasattr(other, 'items'):
             for k, v in other.items():
                 try:
                     self[k] = self[k] + v
@@ -549,7 +551,7 @@ class AccumDict(dict):
     __radd__ = __add__
 
     def __isub__(self, other):
-        if hasattr(other, 'iteritems'):
+        if hasattr(other, 'items'):
             for k, v in other.items():
                 try:
                     self[k] = self[k] - v
@@ -572,7 +574,7 @@ class AccumDict(dict):
         return self.__class__({k: -v for k, v in self.items()})
 
     def __imul__(self, other):
-        if hasattr(other, 'iteritems'):
+        if hasattr(other, 'items'):
             for k, v in other.items():
                 try:
                     self[k] = self[k] * v
