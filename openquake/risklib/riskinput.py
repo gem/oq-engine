@@ -330,6 +330,8 @@ def make_eps_dict(assets_by_site, num_samples, seed, correlation):
     all_assets = (a for assets in assets_by_site for a in assets)
     assets_by_taxo = groupby(all_assets, operator.attrgetter('taxonomy'))
     for taxonomy, assets in assets_by_taxo.items():
+        # the association with the epsilons is done in order
+        assets.sort(key=operator.attrgetter('id'))
         shape = (len(assets), num_samples)
         logging.info('Building %s epsilons for taxonomy %s', shape, taxonomy)
         zeros = numpy.zeros(shape)
