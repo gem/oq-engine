@@ -49,23 +49,23 @@ class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
     # then you will see in /tmp a few files which you can diff
     # to see the problem
     expected_tags = [
-        'col=00|ses=0001|src=1-296|rup=002-01',
-        'col=00|ses=0001|src=2-231|rup=002-01',
-        'col=00|ses=0001|src=2-40|rup=001-01',
-        'col=00|ses=0001|src=24-72|rup=002-01']
+        'col=00~ses=0001~src=1-296~rup=002-01',
+        'col=00~ses=0001~src=2-231~rup=002-01',
+        'col=00~ses=0001~src=2-40~rup=001-01',
+        'col=00~ses=0001~src=24-72~rup=002-01']
 
     expected_gmfs = '''\
 GMFsPerSES(investigation_time=5.000000, stochastic_event_set_id=1,
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=1-296|rup=002-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00~ses=0001~src=1-296~rup=002-01
 <X=131.00000, Y= 40.00000, GMV=0.0152418>
 <X=131.00000, Y= 40.10000, GMV=0.0101317>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=2-231|rup=002-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00~ses=0001~src=2-231~rup=002-01
 <X=131.00000, Y= 40.00000, GMV=0.0017037>
 <X=131.00000, Y= 40.10000, GMV=0.0018199>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=2-40|rup=001-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00~ses=0001~src=2-40~rup=001-01
 <X=131.00000, Y= 40.00000, GMV=0.0004525>
 <X=131.00000, Y= 40.10000, GMV=0.0000602>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00|ses=0001|src=24-72|rup=002-01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00~ses=0001~src=24-72~rup=002-01
 <X=131.00000, Y= 40.00000, GMV=0.0011126>
 <X=131.00000, Y= 40.10000, GMV=0.0006756>))'''
 
