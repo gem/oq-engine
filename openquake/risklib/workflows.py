@@ -552,7 +552,7 @@ class ProbabilisticEventBased(Workflow):
         else:  # build a NaN matrix of size T x N
             ila = numpy.empty((len(ground_motion_values[0]), len(assets)))
             ila.fill(numpy.nan)
-        average_insured_losses = ila.sum(axis=0) * self.ses_ratio
+        average_insured_losses = ila.sum(axis=1) * self.ses_ratio
         if isinstance(assets[0].id, str):
             # in oq-lite return early, with just the losses per asset
             cb = self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
