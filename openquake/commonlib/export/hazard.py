@@ -153,12 +153,13 @@ class GmfSet(object):
                 self.stochastic_event_set_id, '\n'.join(
                     sorted(str(g) for g in self.gmfset))))
 
+
 def get_ses_idx(tag):
     """
-    >>> get_ses_idx("col=00|ses=0007|src=1-3|rup=018-01")
+    >>> get_ses_idx("col=00~ses=0007~src=1-3~rup=018-01")
     7
     """
-    return int(tag.split('|')[1][4:])
+    return int(tag.split('~')[1][4:])
 
     
 class GroundMotionField(object):
