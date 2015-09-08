@@ -538,6 +538,7 @@ class ProbabilisticEventBased(Workflow):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
+        oqlite = isinstance(assets[0].id, str)
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
         # sum on ruptures; compute the fractional losses
@@ -545,25 +546,31 @@ class ProbabilisticEventBased(Workflow):
         values = get_values(loss_type, assets)
         ela = loss_matrix.T * values  # matrix with T x N elements
         if self.insured_losses and loss_type != 'fatalities':
-            deductibles = [a.deductible(loss_type) for a in assets]
-            limits = [a.insurance_limit(loss_type) for a in assets]
-            ila = utils.numpy_map(
+            deductibles = numpy.array(
+                [a.deductible(loss_type) for a in assets])
+            limits = numpy.array(
+                [a.insurance_limit(loss_type) for a in assets])
+            if not oqlite:  # in the engine multiply by the values
+                deductibles *= values
+                limits *= values
+            ilm = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
-        else:  # build a NaN matrix of size T x N
-            ila = numpy.empty((len(ground_motion_values[0]), len(assets)))
-            ila.fill(numpy.nan)
-        average_insured_losses = ila.sum(axis=1) * self.ses_ratio
+        else:  # build a NaN matrix of size N x T
+            ilm = numpy.empty((len(assets), len(ground_motion_values[0])))
+            ilm.fill(numpy.nan)
+        average_insured_losses = ilm.sum(axis=1) * self.ses_ratio
+
         if isinstance(assets[0].id, str):
             # in oq-lite return early, with just the losses per asset
             cb = self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
             return scientific.Output(
                 assets, loss_type,
                 event_loss_per_asset=ela,
-                insured_loss_per_asset=ila,
+                insured_loss_per_asset=ilm,
                 average_losses=average_losses,
                 average_insured_losses=average_insured_losses,
                 counts_matrix=cb.build_counts(loss_matrix),
-                insured_counts_matrix=cb.build_counts(ila),
+                insured_counts_matrix=cb.build_counts(ilm),
                 tags=event_ids)
 
         # in the engine, compute more stuff on the workers
@@ -572,7 +579,7 @@ class ProbabilisticEventBased(Workflow):
         elt = self.event_loss(ela, event_ids)
 
         if self.insured_losses and loss_type != 'fatalities':
-            insured_curves = utils.numpy_map(self.curves, ila)
+            insured_curves = utils.numpy_map(self.curves, ilm)
         else:
             insured_curves = None
         n = len(assets)
