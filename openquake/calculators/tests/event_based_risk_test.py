@@ -8,9 +8,11 @@ from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a)
 
 
-def is_ok(fname):
-    return 'rlz-' not in fname and any(x in fname for x in (
-        'loss_curve', 'loss_map', 'event_loss', 'counts_per_rlz'))
+def is_stat(fname):
+    # True if the CSV file is related to a statistical output
+    # hack: this is determined by the absence of commas in the filename
+    return ',' not in fname and any(x in fname for x in (
+        'loss_curve', 'loss_map', 'agg_loss', 'avg_loss'))
 
 
 class EventBasedRiskTestCase(CalculatorTestCase):
@@ -22,7 +24,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         all_csv = []
         for fnames in out.values():
             for fname in fnames:
-                if fname.endswith('.csv') and is_ok(fname):
+                if fname.endswith('.csv') and is_stat(fname):
                     all_csv.append(fname)
         for fname in all_csv:
             self.assertEqualFiles(
@@ -34,49 +36,21 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
-        out = self.run_calc(case_2.__file__, 'job_haz.ini,job_risk.ini',
-                            concurrent_tasks=0, exports='csv')
-        [fname] = out['loss_curves-rlzs', 'csv']
-        self.assertEqualFiles(
-            'expected/rlz-000-structural-loss_curves.csv', fname)
-
-        [fname] = out['agg_loss_curve-rlzs', 'csv']
-        self.assertEqualFiles(
-            'expected/rlz-000-structural-agg_loss_curve.csv', fname)
-
-        [fname] = out['event_loss_asset', 'csv']
-        self.assertEqualFiles(
-            'expected/rlz-000-structural-event_loss_asset.csv', fname)
-
-        [fname] = out['event_loss', 'csv']
-        self.assertEqualFiles(
-            'expected/rlz-000-structural-event_loss.csv', fname)
+        self.assert_stats_ok(case_2)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         self.assert_stats_ok(case_3)
 
-
-class EBRTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'ebr')
-    def test_case_1(self):
-        # test for the fatalities
-        self.run_calc(case_1.__file__, 'job_ebr.ini')
-        ds = DataStore(self.calc.datastore.calc_id,
-                       export_dir=self.calc.datastore.export_dir)
-        fnames = export(('assetcol', 'csv'), ds) + export(
-            ('event_loss_table-rlzs', 'csv'), ds)
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + os.path.basename(fname), fname)
-
-    @attr('qa', 'risk', 'ebr')
-    def test_case_2(self):
+    def test_case_2bis(self):
+        # test for a single realization
         out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
                             concurrent_tasks=0)
         # this also tests that concurrent_tasks=0 does not give issues
-        [fname] = out['event_loss_table-rlzs', 'csv']
+        [fname] = out['agg_losses-rlzs', 'csv']
         self.assertEqualFiles(
-            'expected/event_loss_table-b1,b1-structural.csv', fname)
+            'expected/agg_losses-b1,b1-structural.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4_hazard(self):
@@ -91,7 +65,7 @@ class EBRTestCase(CalculatorTestCase):
         # Turkey with SHARE logic tree
         out = self.run_calc(case_4.__file__, 'job_ebr.ini',
                             exports='csv')
-        fnames = out['event_loss_table-rlzs', 'csv']
+        fnames = out['agg_losses-rlzs', 'csv']
         for fname in fnames:
             self.assertEqualFiles('expected/' + os.path.basename(fname), fname)
 

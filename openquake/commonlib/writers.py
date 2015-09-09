@@ -268,14 +268,17 @@ def write_csv(dest, data, sep=',', fmt='%12.8E', header=None):
         data.dtype.fields
     except AttributeError:
         # not a composite array
-        header = header or []
+        autoheader = []
     else:
-        header = header or build_header(data.dtype)
+        autoheader = build_header(data.dtype)
     with open(dest, 'w') as f:
-        if header:
-            f.write(sep.join(header) + '\n')
+        someheader = header or autoheader
+        if someheader:
+            f.write(sep.join(someheader) + '\n')
+
+        if autoheader:
             all_fields = [col.split(':', 1)[0].split('-')
-                          for col in header]
+                          for col in autoheader]
             for record in data:
                 row = []
                 for fields in all_fields:

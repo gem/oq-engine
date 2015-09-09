@@ -33,16 +33,30 @@ from openquake.commonlib.risk_writers import (
     ExposureData, Site)
 from openquake.risklib import scientific
 
+Output = collections.namedtuple('Output', 'ltype path array')
+
 
 # ########################## utility functions ############################## #
 
 def compose_arrays(a1, a2):
     """
     Compose composite arrays by generating an extended datatype containing
-    all the fields. The two arrays must have the same shape.
+    all the fields. The two arrays must have the same length.
     """
-    fields1 = [(f, dt[0]) for f, dt in a1.dtype.fields.items()]
-    fields2 = [(f, dt[0]) for f, dt in a2.dtype.fields.items()]
+    assert len(a1) == len(a2),  (len(a1), len(a2))
+    fields1 = [(f, a1.dtype.fields[f][0]) for f in a1.dtype.names]
+    if a2.dtype.names is None:  # the second array is not composite
+        assert len(a2.shape) == 2, a2.shape
+        width = a2.shape[1]
+        fields2 = [('value%d' % i, a2.dtype) for i in range(width)]
+        composite = numpy.zeros(a1.shape, numpy.dtype(fields1 + fields2))
+        for f1 in dict(fields1):
+            composite[f1] = a1[f1]
+        for i in range(width):
+            composite['value%d' % i] = a2[:, i]
+        return composite
+
+    fields2 = [(f, a2.dtype.fields[f][0]) for f in a2.dtype.names]
     composite = numpy.zeros(a1.shape, numpy.dtype(fields1 + fields2))
     for f1 in dict(fields1):
         composite[f1] = a1[f1]
@@ -66,6 +80,51 @@ def get_assets(dstore):
          for asset in assets], asset_dt)
     return asset_data
 
+
+def get_assets_sites(dstore):
+    """
+    :param dstore: a datastore with a key `specific_assets`
+    :returns: an ordered array of records (asset_ref, lon, lat)
+    """
+    assetcol = dstore['assetcol']
+    sitemesh = dstore['sitemesh']
+    rows = []
+    for asset in assetcol:
+        loc = sitemesh[asset['site_id']]
+        rows.append((asset['asset_ref'], loc[0], loc[1]))
+    return numpy.array(rows, asset_dt)
+
+
+def extract_outputs(dkey, dstore, root='', ext=''):
+    """
+    An utility to extract outputs ordered by loss types from a datastore
+    containing nested structures as follows:
+
+    >>> dstore = {
+    ...     'risk_output':
+    ...        {'structural':
+    ...            {'b1': numpy.array([[0.10, 0.20], [0.30, 0.40]]),
+    ...             'b2': numpy.array([[0.12, 0.22], [0.33, 0.44]]),
+    ...            }}}
+    >>> outputs = extract_outputs('risk_output', dstore)
+    >>> [o.path for o in outputs]
+    ['risk_output-structural-b1', 'risk_output-structural-b2']
+    >>> [o.ltype for o in outputs]
+    ['structural', 'structural']
+    """
+    group = dstore[dkey]
+    dashkey = dkey.replace('/', '-')
+    if root and not root.endswith('/'):
+        root += '/'
+    if ext and not ext.startswith('.'):
+        ext = '.' + ext
+    outputs = []
+    for ltype in sorted(group):
+        subgroup = group[ltype]
+        for key in subgroup:
+            path = '%s%s-%s-%s%s' % (root, dashkey, ltype, key, ext)
+            outputs.append(Output(ltype, path, subgroup[key][:]))
+    return outputs
 
 # ############################### exporters ############################## #
 
@@ -92,164 +151,72 @@ def export_avg_losses(ekey, dstore):
     return fnames
 
 
-# this is used by event_based_risk
-@export.add(('avglosses_rlzs', 'csv'))
+# alternative export format for the average losses, used by the platform
+@export.add(('avglosses-rlzs', 'csv'))
 def export_avglosses_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    data_by_rlz = dstore[ekey[0]]
-    rlzs = dstore['rlzs_assoc'].realizations
+    outs = extract_outputs(ekey[0], dstore, dstore.export_dir, ekey[1])
     sitemesh = dstore['sitemesh']
     assetcol = dstore['assetcol']
     header = ['lon', 'lat', 'asset_ref', 'asset_value', 'average_loss',
               'stddev_loss', 'loss_type']
-    fnames = []
-    for rlz, data in zip(rlzs, data_by_rlz):
-        fname = ekey[0].replace('rlzs', '%03d' % rlz.ordinal) + '.csv'
-        dest = os.path.join(dstore.export_dir, fname)
+    for out in outs:
         rows = []
-        for loss_type in data:
-            for asset, loss in zip(assetcol, data[loss_type]):
-                loc = sitemesh[asset['site_id']]
-                row = [loc['lon'], loc['lat'], asset['asset_ref'],
-                       asset[loss_type], loss, numpy.nan, loss_type]
-                rows.append(row)
-        fnames.append(writers.write_csv(dest, [header] + rows))
-    return fnames
+        for asset, loss in zip(assetcol, out.array):
+            loc = sitemesh[asset['site_id']]
+            row = [loc['lon'], loc['lat'], asset['asset_ref'],
+                   asset[out.ltype], loss, numpy.nan, out.ltype]
+            rows.append(row)
+        writers.write_csv(out.path, [header] + rows)
+    return [out.path for out in outs]
+
 
 # NB: agg_avgloss_rlzs is not exported on purpose, but it can be shown:
 # oq-lite show <calc_id> agg_avgloss_rlzs
 
 
-@export.add(('loss_curves-rlzs', 'csv'),
-            ('agg_loss_curve-rlzs', 'csv'),
-            ('loss_curves-rlzs_ins', 'csv'),
-            ('agg_loss_curve-rlzs_ins', 'csv'),
-            ('loss_curves-rlzs_maps', 'csv'),
-            ('agg_loss_curve-rlzs_maps', 'csv'))
-def export_loss_curves_rlzs(ekey, dstore):
-    name = ekey[0].replace('-rlzs', '')
-    if name in ('agg_loss_curve', 'agg_loss_curve_ins'):
-        assets = None
-        columns = 'losses poes avg'.split()
-    elif name == 'agg_loss_curve_maps':
-        assets = None
-        columns = None
-    elif name in ('loss_curves', 'loss_curves_ins'):
-        assets = get_assets(dstore)
-        columns = 'asset_ref lon lat losses poes avg'.split()
-    elif name == 'loss_curves_maps':
-        assets = get_assets(dstore)
-        columns = None
-    else:
-        raise ValueError(name)
-    rlzs = dstore['rlzs_assoc'].realizations
-    rlz_by_dset = {rlz.uid: rlz for rlz in rlzs}
-    fnames = []
-    for dset, curves in dstore.get(ekey[0], {}).items():
-        prefix = 'rlz-%03d' % rlz_by_dset[dset].ordinal
-        fnames.extend(
-            _export_curves_csv(name, assets, curves[:], dstore.export_dir,
-                               prefix, columns))
-    return fnames
+@export.add(
+    ('avg_losses-rlzs', 'csv'),
+    ('avg_losses-stats', 'csv'),
+    ('rcurves-rlzs', 'csv'),
+    ('icurves-rlzs', 'csv'),
+    ('rcurves-stats', 'csv'),
+    ('icurves-stats', 'csv'),
+    ('specific-loss_curves-rlzs', 'csv'),
+    ('specific-ins_curves-rlzs', 'csv'),
+    ('specific-loss_maps-rlzs', 'csv'),
+    ('specific-loss_curves-stats', 'csv'),
+    ('specific-ins_curves-stats', 'csv'),
+    ('specific-loss_maps-stats', 'csv'),
+)
+def export_ebr(ekey, dstore):
+    assets = get_assets_sites(dstore)
+    outs = extract_outputs(ekey[0], dstore, dstore.export_dir, ekey[1])
+    for out in outs:
+        writers.write_csv(
+            out.path, compose_arrays(assets, out.array), fmt='%9.7E')
+    return [out.path for out in outs]
 
 
-@export.add(('loss_curves-stats', 'csv'),
-            ('agg_loss_curve-stats', 'csv'),
-            ('loss_curves-stats_ins', 'csv'),
-            ('agg_loss_curve-stats_ins', 'csv'),
-            ('loss_curves-stats_maps', 'csv'),
-            ('agg_loss_curve-stats_maps', 'csv'))
-def export_loss_curves_stats(ekey, dstore):
-    name = ekey[0].replace('-stats', '')
-    if name in ('agg_loss_curve', 'agg_loss_curve_ins'):
-        assets = None
-        columns = 'losses poes avg'.split()
-    elif name == 'agg_loss_curve_maps':
-        assets = None
-        columns = None
-    elif name in ('loss_curves', 'loss_curves_ins'):
-        assets = get_assets(dstore)
-        columns = 'asset_ref lon lat losses poes avg'.split()
-    elif name == 'loss_curves_maps':
-        assets = get_assets(dstore)
-        columns = None
-    else:
-        raise ValueError(name)
-    fnames = []
-    for dset, curves in dstore.get(ekey[0], {}).items():
-        fnames.extend(
-            _export_curves_csv(name, assets, curves[:], dstore.export_dir,
-                               dset, columns))
-    return fnames
-
-
-def _export_curves_csv(name, assets, curves, export_dir, prefix, columns=None):
-    fnames = []
-    for loss_type in curves.dtype.fields:
-        if assets is None:
-            data = curves[loss_type]
-        else:
-            data = compose_arrays(assets, curves[loss_type])
-        dest = os.path.join(
-            export_dir, '%s-%s-%s.csv' % (prefix, loss_type, name))
-        writers.write_csv(dest, data, fmt='%10.6E', header=columns)
-        fnames.append(dest)
-    return fnames
-
-
-@export.add(('event_loss', 'csv'), ('event_loss_asset', 'csv'))
-def export_event_loss(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    name, fmt = ekey
-    fnames = []
-    header = ['rupture_tag', 'aggregate_loss', 'insured_loss']
-    for i, data in enumerate(dstore[ekey[0]]):
-        for loss_type in data:
-            dest = os.path.join(
-                dstore.export_dir, 'rlz-%03d-%s-%s.csv' % (i, loss_type, name))
-            writers.write_csv(
-                dest, [header] + sorted(data[loss_type]), fmt='%10.6E')
-            fnames.append(dest)
-    return fnames
-
-
-@export.add(('event_loss_table-rlzs', 'csv'))
-def export_event_loss_table(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    name, fmt = ekey
-    fnames = []
-    elt = dstore[name]
+@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'))
+def export_agg_losses(ekey, dstore):
     tags = dstore['tags']
-    for loss_type in elt:
-        for rlz_uid in elt[loss_type]:
-            data = [[tags[e['rup_id']], e['loss']]
-                    for e in elt[loss_type][rlz_uid]]
-            # the name is extracted from 'event_loss_table-rlzs' by removing
-            # the last 5 characters: 'event_loss_table'
-            fname = '%s-%s-%s.csv' % (name[:-5], rlz_uid, loss_type)
-            dest = os.path.join(dstore.export_dir, fname)
-            writers.write_csv(dest, sorted(data), fmt='%10.6E')
-            fnames.append(dest)
-    return fnames
+    outs = extract_outputs(ekey[0], dstore, dstore.export_dir, ekey[1])
+    header = ['rupture_tag', 'aggregate_loss', 'insured_loss']
+    for out in outs:
+        data = [[tags[rec['rup_id']], rec['loss'], rec['ins_loss']]
+                for rec in out.array]
+        writers.write_csv(out.path, sorted(data), fmt='%9.7E', header=header)
+    return [out.path for out in outs]
 
 
 # TODO: the export is doing too much; probably we should store
 # a better data structure
 @export.add(('damages_by_key', 'xml'))
 def export_damage(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
     oqparam = OqParam.from_(dstore.attrs)
     riskmodel = dstore['riskmodel']
     rlzs = dstore['rlzs_assoc'].realizations
@@ -327,10 +294,6 @@ def export_dmg_xml(key, export_dir, damage_states, dmg_data, suffix):
 
 @export.add(('damages_by_rlz', 'csv'))
 def export_classical_damage_csv(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
     damages_by_rlz = dstore['damages_by_rlz']
     rlzs = dstore['rlzs_assoc'].realizations
     damage_states = dstore['riskmodel'].damage_states
@@ -376,12 +339,6 @@ PerAssetLoss = collections.namedtuple(  # the loss map
 
 @export.add(('losses_by_key', 'csv'))
 def export_risk(ekey, dstore):
-    """
-    Export the loss curves of a given realization in CSV format.
-
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
     oqparam = OqParam.from_(dstore.attrs)
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                   for ct in dstore['cost_types']}
@@ -432,9 +389,6 @@ def export_loss_csv(key, export_dir, data, suffix):
 
 @export.add(('assetcol', 'csv'))
 def export_assetcol(ekey, dstore):
-    """
-    Export the asset collection in CSV.
-    """
     assetcol = dstore[ekey[0]].value
     sitemesh = dstore['sitemesh'].value
     taxonomies = dstore['taxonomies'].value

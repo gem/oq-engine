@@ -6,7 +6,7 @@ from __future__ import print_function
 import os
 
 from openquake.commonlib import readinput, datastore
-from openquake.calculators import base
+from openquake.calculators import base, views
 from openquake.commonlib.oqvalidation import OqParam
 
 
@@ -40,7 +40,10 @@ class ReportWriter(object):
         if obj:
             text = '\n::\n\n' + indent(str(obj))
         else:
+            orig = views.rst_table.__defaults__
+            views.rst_table.__defaults__ = (None, '%s')  # disable formatting
             text = datastore.view(name, self.dstore)
+            views.rst_table.__defaults__ = orig
         self.text += '\n'.join(['\n\n' + title, line, text])
 
     def save(self, fname):
@@ -62,6 +65,7 @@ def build_report(job_ini, output_dir=None):
     output_dir = output_dir or os.path.dirname(job_ini)
     calc = base.calculators(oq)
     calc.pre_execute()
+    calc.save_params()
     ds = datastore.DataStore(calc.datastore.calc_id)
     rw = ReportWriter(ds)
     report = os.path.join(output_dir, 'report.rst')

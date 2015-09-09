@@ -23,7 +23,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import groupby, split_in_blocks_2
+from openquake.baselib.general import groupby, split_in_blocks
 from openquake.baselib.performance import DummyMonitor
 from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific
@@ -126,11 +126,12 @@ class RiskModel(collections.Mapping):
         """
         for i, loss_type in enumerate(self.get_loss_types()):
             if not oqparam.loss_ratios:
-                loss_ratios = numpy.logspace(
-                    -10, 0, oqparam.loss_curve_resolution)
-            else:
+                loss_ratios = numpy.linspace(
+                    0, 1, oqparam.loss_curve_resolution + 1)[1:]
+                cb = scientific.CurveBuilder(loss_type, loss_ratios, False)
+            else:  # user-provided loss ratios
                 loss_ratios = oqparam.loss_ratios[loss_type]
-            cb = scientific.CurveBuilder(loss_type, loss_ratios)
+                cb = scientific.CurveBuilder(loss_type, loss_ratios, True)
             self.curve_builders.append(cb)
             self.loss_types.append(loss_type)
             self.lti[loss_type] = i
@@ -204,11 +205,12 @@ class RiskModel(collections.Mapping):
         Yield :class:`RiskInputFromRuptures` instances.
         """
         imt_taxonomies = list(self.get_imt_taxonomies())
-        num_epsilons = len(next(iter(eps_dict.values())))
         by_col = operator.attrgetter('col_id')
         rup_start = rup_stop = 0
-        for ses_ruptures, indices in split_in_blocks_2(
-                all_ruptures, range(num_epsilons), hint or 1, key=by_col):
+        num_epsilons = len(eps_dict[next(iter(eps_dict))])
+        for ses_ruptures in split_in_blocks(
+                all_ruptures, hint or 1, key=by_col):
+            indices = [sr.ordinal % num_epsilons for sr in ses_ruptures]
             rup_stop += len(ses_ruptures)
             gsims = gsims_by_col[ses_ruptures[0].col_id]
             edic = {asset: eps[indices] for asset, eps in eps_dict.items()}
@@ -328,6 +330,8 @@ def make_eps_dict(assets_by_site, num_samples, seed, correlation):
     all_assets = (a for assets in assets_by_site for a in assets)
     assets_by_taxo = groupby(all_assets, operator.attrgetter('taxonomy'))
     for taxonomy, assets in assets_by_taxo.items():
+        # the association with the epsilons is done in order
+        assets.sort(key=operator.attrgetter('id'))
         shape = (len(assets), num_samples)
         logging.info('Building %s epsilons for taxonomy %s', shape, taxonomy)
         zeros = numpy.zeros(shape)

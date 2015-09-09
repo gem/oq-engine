@@ -82,9 +82,9 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
 
 
 class WriteCsvTestCase(unittest.TestCase):
-    def assert_export(self, array, expected):
+    def assert_export(self, array, expected, header=None):
         with tempfile.NamedTemporaryFile(mode='r+') as f:
-            write_csv(f.name, array)
+            write_csv(f.name, array, header=header)
             f.seek(0)
             txt = f.read()
         self.assertEqual(txt, expected)
@@ -92,6 +92,10 @@ class WriteCsvTestCase(unittest.TestCase):
     def test_simple(self):
         a = numpy.array([[1, 2], [3, 4]])
         self.assert_export(a, '1,2\n3,4\n')
+
+    def test_header(self):
+        a = numpy.array([[1, 2], [3, 4]])
+        self.assert_export(a, 'a,b\n1,2\n3,4\n', header='ab')
 
     def test_flat(self):
         imt_dt = numpy.dtype([('PGA', int, 3), ('PGV', int, 4)])

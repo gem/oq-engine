@@ -204,8 +204,10 @@ class StatsTestCase(unittest.TestCase):
         baselosses = numpy.array([.10, .14, .17, .20, .21])
         for i, w in enumerate(weights):
             lc = loss_curves(assets, baselosses, i)
-            out = scientific.Output(asset_refs, 'structural', weight=w,
-                                    loss_curves=lc, insured_curves=None)
+            out = scientific.Output(
+                asset_refs, 'structural', weight=w,
+                loss_curves=lc, insured_curves=None,
+                average_losses=[.1, .12], average_insured_losses=None)
             outputs.append(out)
         cls.stats = scientific.StatsBuilder(
             quantiles=[0.1, 0.9],

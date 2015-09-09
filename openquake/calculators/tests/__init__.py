@@ -70,7 +70,8 @@ class CalculatorTestCase(unittest.TestCase):
         """
         inis = job_ini.split(',')
         assert len(inis) in (1, 2), inis
-        self.calc = self.get_calc(testfile, inis[0], **kw)
+        haz_kw = kw if len(inis) == 1 else {}
+        self.calc = self.get_calc(testfile, inis[0], **haz_kw)
         result = self.calc.run()
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
@@ -107,6 +108,8 @@ class CalculatorTestCase(unittest.TestCase):
         files can be equal only up to the ordering.
         """
         expected = os.path.join(self.testdir, fname1)
+        if not os.path.exists(expected) and self.OVERWRITE_EXPECTED:
+            open(expected, 'w').write('')
         actual = os.path.join(self.calc.oqparam.export_dir, fname2)
         expected_lines = make_comparable(open(expected).readlines())
         actual_lines = make_comparable(open(actual).readlines())

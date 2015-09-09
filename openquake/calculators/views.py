@@ -205,19 +205,19 @@ def data_transfer(token, dstore):
     return rst_table(tbl)
 
 
-# this is used by event_based_risk
-@view.add('mean_avg_losses')
-def view_mean_avg_losses(token, dstore):
-    try:
-        loss_curves = dstore['loss_curves-stats/mean'].value
-    except KeyError:  # there is a single realization
-        loss_curves = dstore['loss_curves-rlzs/b1,b1'].value
-    loss_types = list(loss_curves.dtype.fields)
+# this is used by the ebr calculator
+@view.add('old_avg_losses')
+def view_old_avg_losses(token, dstore):
+    stats = 'specific/loss_curves-stats' in dstore
+    group = (dstore['specific/loss_curves-stats'] if stats
+             else dstore['specific/loss_curves-rlzs'])
+    loss_types = group.dtype.names
     assets = dstore['assetcol']['asset_ref']
 
     data_by_lt = {}
     for lt in loss_types:
-        data = loss_curves[lt]['avg']
+        loss_curves = group[lt]['mean'] if stats else group[lt]['rlz-000']
+        data = loss_curves.value['avg']
         data_by_lt[lt] = dict(zip(assets, data))
     dt_list = [('asset_ref', '|S20')] + [(str(ltype), numpy.float32)
                                          for ltype in sorted(data_by_lt)]
@@ -231,18 +231,23 @@ def view_mean_avg_losses(token, dstore):
 
 
 # this is used by the ebr calculator
-@view.add('avg_losses')
-def view_avg_losses(token, dstore):
+@view.add('mean_avg_losses')
+def view_mean_avg_losses(token, dstore):
     assets = dstore['assetcol'].value['asset_ref']
-    group = dstore['avg_losses-rlzs']
+    try:
+        group = dstore['avg_losses-stats']
+        single_rlz = False
+    except KeyError:
+        group = dstore['avg_losses-rlzs']
+        single_rlz = True
     loss_types = sorted(group)
-    dt_list = [('asset_ref', '|S20')] + [(str(ltype), (numpy.float32, 2))
-                                         for ltype in loss_types]
-    losses = numpy.empty(len(assets), numpy.dtype(dt_list))
-    losses.fill(numpy.nan)
-    losses['asset_ref'] = assets
-    for lt in loss_types:
-        for asset, loss, pair in zip(
-                assets, losses, group[lt]['rlz-000'].value):
-            loss[lt] = pair
-    return rst_table(losses)
+    header = ['asset_ref'] + loss_types
+    losses = [[a] + [None] * len(loss_types) for a in assets]
+    for lti, lt in enumerate(loss_types):
+        if single_rlz:
+            [key] = list(group[lt])
+        else:
+            key = 'mean'
+        for aid, pair in enumerate(group[lt][key]):
+            losses[aid][lti + 1] = pair  # loss, ins_loss
+    return rst_table(sorted(losses), header=header, fmt='%8.6E')

@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
-
+from __future__ import division
 import sys
 import inspect
 import functools
@@ -485,21 +485,19 @@ class ProbabilisticEventBased(Workflow):
         of the input parameters.
         """
         time_span = risk_investigation_time or investigation_time
-        tses = (time_span * ses_per_logic_tree_path * (
-            number_of_logic_tree_samples or 1))
+        self.ses_ratio = time_span / (
+            investigation_time * ses_per_logic_tree_path)
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.loss_curve_resolution = loss_curve_resolution
         self.curves = functools.partial(
             scientific.event_based, curve_resolution=loss_curve_resolution,
-            time_span=time_span, tses=tses)
+            ses_ratio=self.ses_ratio)
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
         self.return_loss_matrix = True
         self.loss_ratios = loss_ratios
-        self.time_ratio = time_span / (
-            investigation_time * ses_per_logic_tree_path)
 
     def event_loss(self, loss_matrix, event_ids):
         """
@@ -540,32 +538,36 @@ class ProbabilisticEventBased(Workflow):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
+        oqlite = isinstance(assets[0].id, str)
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
         # sum on ruptures; compute the fractional losses
-        average_losses = loss_matrix.sum(axis=1) * self.time_ratio
+        average_losses = loss_matrix.sum(axis=1) * self.ses_ratio
         values = get_values(loss_type, assets)
         ela = loss_matrix.T * values  # matrix with T x N elements
         if self.insured_losses and loss_type != 'fatalities':
-            deductibles = [a.deductible(loss_type) for a in assets]
-            limits = [a.insurance_limit(loss_type) for a in assets]
-            ila = utils.numpy_map(
+            deductibles = numpy.array(
+                [a.deductible(loss_type) for a in assets])
+            limits = numpy.array(
+                [a.insurance_limit(loss_type) for a in assets])
+            ilm = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
-            average_insured_losses = ila.sum(axis=0) * self.time_ratio
-        else:  # build a zero matrix of size T x N
-            ila = numpy.zeros((len(ground_motion_values[0]), len(assets)))
-            average_insured_losses = [numpy.nan] * len(assets)
+        else:  # build a NaN matrix of size N x T
+            ilm = numpy.empty((len(assets), len(ground_motion_values[0])))
+            ilm.fill(numpy.nan)
+        average_insured_losses = ilm.sum(axis=1) * self.ses_ratio
+
         if isinstance(assets[0].id, str):
             # in oq-lite return early, with just the losses per asset
             cb = self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
             return scientific.Output(
                 assets, loss_type,
                 event_loss_per_asset=ela,
-                insured_loss_per_asset=ila,
+                insured_loss_per_asset=ilm.T,
                 average_losses=average_losses,
                 average_insured_losses=average_insured_losses,
                 counts_matrix=cb.build_counts(loss_matrix),
-                insured_counts_matrix=cb.build_counts(ila),
+                insured_counts_matrix=cb.build_counts(ilm),
                 tags=event_ids)
 
         # in the engine, compute more stuff on the workers
@@ -574,7 +576,7 @@ class ProbabilisticEventBased(Workflow):
         elt = self.event_loss(ela, event_ids)
 
         if self.insured_losses and loss_type != 'fatalities':
-            insured_curves = utils.numpy_map(self.curves, ila)
+            insured_curves = utils.numpy_map(self.curves, ilm)
         else:
             insured_curves = None
         n = len(assets)

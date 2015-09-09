@@ -158,7 +158,8 @@ def get_vulnerability_functions(fname):
                 assert probs.shape == (len(loss_ratios), len(imls))
                 vf_dict[imt, taxonomy] = (
                     scientific.VulnerabilityFunctionWithPMF(
-                        taxonomy, imt, imls, numpy.array(loss_ratios), probs))
+                        taxonomy, imt, imls, numpy.array(loss_ratios),
+                        probs, seed=42))  # it is fine to hard-code it
             else:
                 with context(fname, vfun):
                     loss_ratios = ~vfun.meanLRs

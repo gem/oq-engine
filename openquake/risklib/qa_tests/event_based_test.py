@@ -57,7 +57,7 @@ class EventBasedTestCase(unittest.TestCase):
         epsilons = scientific.make_epsilons(gmvs, seed=1, correlation=0)
         loss_matrix = vf.apply_to(gmvs, epsilons)
         losses_poes = scientific.event_based(
-            loss_matrix[0], 120, 30, curve_resolution=4)
+            loss_matrix[0], .25, curve_resolution=4)
 
         first_curve_integral = scientific.average_loss(losses_poes)
 
@@ -97,7 +97,7 @@ class EventBasedTestCase(unittest.TestCase):
         epsilons = scientific.make_epsilons(gmvs, seed=1, correlation=0.5)
         loss_matrix = vf.apply_to(gmvs, epsilons)
 
-        losses_poes = scientific.event_based(loss_matrix[0], 120, 30, 4)
+        losses_poes = scientific.event_based(loss_matrix[0], .25, 4)
         first_curve_integral = scientific.average_loss(losses_poes)
 
         self.assertAlmostEqual(0.48983614471, first_curve_integral)
@@ -137,7 +137,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         epsilons = scientific.make_epsilons(gmvs, seed=1, correlation=1)
         loss_matrix = vf.apply_to(gmvs, epsilons)
-        losses_poes = scientific.event_based(loss_matrix[0], 120, 30, 4)
+        losses_poes = scientific.event_based(loss_matrix[0], .25, 4)
 
         first_curve_integral = scientific.average_loss(losses_poes)
 
@@ -183,15 +183,15 @@ class EventBasedTestCase(unittest.TestCase):
         cr = 50  # curve resolution
         curve_rm_1 = scientific.event_based(
             vulnerability_function_rm.apply_to(
-                [gmf[0]], epsilons)[0], 50, 50, cr)
+                [gmf[0]], epsilons)[0], 1, cr)
 
         curve_rm_2 = scientific.event_based(
             vulnerability_function_rm.apply_to(
-                [gmf[1]], epsilons)[0], 50, 50, cr)
+                [gmf[1]], epsilons)[0], 1, cr)
 
         curve_rc = scientific.event_based(
             vulnerability_function_rc.apply_to(
-                [gmf[2]], epsilons)[0], 50, 50, cr)
+                [gmf[2]], epsilons)[0], 1, cr)
 
         for i, curve_rm in enumerate([curve_rm_1, curve_rm_2]):
 
@@ -229,7 +229,7 @@ class EventBasedTestCase(unittest.TestCase):
                 scientific.insured_losses(
                     lrs,
                     deductibles[i] / values[i], insured_limits[i] / values[i]),
-                50, 50, 20))
+                1, 20))
             for i, lrs in enumerate(loss_ratios)]
         numpy.testing.assert_allclose([0.05667045, 0.02542965],
                                       insured_average_losses)

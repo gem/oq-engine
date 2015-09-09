@@ -87,6 +87,15 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.oqparam = oqparam
         self.persistent = persistent
 
+    def save_params(self, **kw):
+        """
+        Update the current calculation parameters
+        """
+        vars(self.oqparam).update(kw)
+        for name, val in self.oqparam.to_params():
+            self.datastore.attrs[name] = val
+        self.datastore.hdf5.flush()
+
     def run(self, pre_execute=True, clean_up=True, concurrent_tasks=None,
             **kw):
         """
@@ -94,10 +103,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         if concurrent_tasks is not None:
             self.oqparam.concurrent_tasks = concurrent_tasks
-        vars(self.oqparam).update(kw)
-        for name, val in self.oqparam.to_params():
-            self.datastore.attrs[name] = val
-        self.datastore.hdf5.flush()
+        self.save_params(**kw)
         exported = {}
         try:
             if pre_execute:
@@ -162,7 +168,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         for fmt in fmts:
             if not fmt:
                 continue
-            for key in self.datastore:
+            for key in self.datastore:  # top level keys
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
                 ekey = (key, fmt)

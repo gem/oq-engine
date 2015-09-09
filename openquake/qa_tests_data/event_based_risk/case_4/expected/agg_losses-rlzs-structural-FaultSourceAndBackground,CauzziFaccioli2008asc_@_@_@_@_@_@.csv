@@ -1,0 +1,4 @@
+rupture_tag,aggregate_loss,insured_loss
+col=09~ses=0001~src=FSBG_TRBG103-25~rup=008-01,1.7672762E+05,      NAN
+col=09~ses=0001~src=FSBG_TRBG103-37~rup=005-01,2.9880638E+05,      NAN
+col=09~ses=0001~src=FSBG_TRCS322-4,39~rup=001-01,5.6838700E+06,      NAN

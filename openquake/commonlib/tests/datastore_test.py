@@ -52,6 +52,10 @@ class DataStoreTestCase(unittest.TestCase):
         # it is possible to store twice the same key (work around a bug)
         self.dstore['key1'] = 'value1'
 
+        # test `in` functionality with composite keys
+        self.dstore['a/b'] = 42
+        self.assertTrue('a/b' in self.dstore)
+
     def test_parent(self):
         # copy the attributes of the parent datastore on the child datastore,
         # without overriding the attributes with the same name

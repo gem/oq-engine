@@ -27,7 +27,7 @@ import bisect
 
 import numpy
 from numpy.testing import assert_equal
-from scipy import interpolate, stats
+from scipy import interpolate, stats, random
 
 from openquake.baselib.general import CallableDict
 from openquake.risklib import utils
@@ -352,13 +352,14 @@ class VulnerabilityFunctionWithPMF(object):
     :param ratios: mean ratios (M)
     :param probs: a matrix of probabilities of shape (M, L)
     """
-    def __init__(self, vf_id, imt, imls, loss_ratios, probs):
+    def __init__(self, vf_id, imt, imls, loss_ratios, probs, seed):
         self.id = vf_id
         self.imt = imt
         self._check_vulnerability_data(imls, loss_ratios, probs)
         self.imls = imls
         self.loss_ratios = loss_ratios
         self.probs = probs
+        self.seed = seed
         self.distribution_name = "PM"
 
         # to be set in .init(), called also by __setstate__
@@ -372,6 +373,7 @@ class VulnerabilityFunctionWithPMF(object):
     def set_distribution(self, epsilons=None):
         self.distribution = DISTRIBUTIONS[self.distribution_name]()
         self.distribution.epsilons = epsilons
+        self.distribution.seed = self.seed
 
     def apply_to(self, ground_motion_values, epsilons=None):
         """
@@ -383,12 +385,13 @@ class VulnerabilityFunctionWithPMF(object):
         """
         vulnerability_function = copy.copy(self)
         vulnerability_function.set_distribution(epsilons)
-        return utils.numpy_map(
+        mat = utils.numpy_map(
             vulnerability_function._apply, ground_motion_values)
+        return mat
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.loss_ratios,
-                self.probs, self.distribution_name)
+                self.probs, self.distribution_name, self.seed)
 
     def __setstate__(self, state):
         self.id = state[0]
@@ -397,6 +400,7 @@ class VulnerabilityFunctionWithPMF(object):
         self.loss_ratios = state[3]
         self.probs = state[4]
         self.distribution_name = state[5]
+        self.seed = state[6]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, probs):
@@ -733,12 +737,16 @@ class BetaDistribution(Distribution):
 
 @DISTRIBUTIONS.add('PM')
 class DiscreteDistribution(Distribution):
+    seed = None  # to be set
+
     def sample(self, loss_ratios, probs):
         ret = []
+        r = numpy.arange(len(loss_ratios))
         for i in range(probs.shape[1]):
-            pmf = stats.rv_discrete(name='pmf', values=(
-                numpy.arange(len(loss_ratios)), probs[:, i]))
-            ret.append(loss_ratios[pmf.rvs()])
+            random.seed(self.seed)
+            # the seed is set inside the loop to avoid block-size dependency
+            pmf = stats.rv_discrete(name='pmf', values=(r, probs[:, i])).rvs()
+            ret.append(loss_ratios[pmf])
         return ret
 
     def survival(self, loss_ratios, probs):
@@ -759,20 +767,22 @@ class DiscreteDistribution(Distribution):
 
 class CurveBuilder(object):
     """
-    Build loss ratio curves. The usage is something like this:
+    Build loss ratio curves. The loss ratios can be provided
+    by the user or automatically generated (user_provided=False).
+    The usage is something like this:
 
-      builder = CurveBuilder(loss_type, loss_ratios)
+      builder = CurveBuilder(loss_type, loss_ratios, user_provided=True)
       counts = builder.build_counts(loss_matrix)
-      curves = build_rcurves(counts, nses, assetcol)
     """
-    def __init__(self, loss_type, loss_ratios):
+    def __init__(self, loss_type, loss_ratios, user_provided):
         self.loss_type = loss_type
         self.ratios = numpy.array(loss_ratios, F32)
+        self.user_provided = user_provided
         self.curve_resolution = len(loss_ratios)
         R = self.curve_resolution or 1  # avoid bug in hdf5 2.0
         self.loss_curve_dt = numpy.dtype([
             ('losses', (F32, R)), ('poes', (F32, R)), ('avg', F32)])
-        self.poes_dt = numpy.dtype([('poes', (F32, R)), ('avg', F32)])
+        self.lr_dt = numpy.dtype([('poes', (F32, R))])
 
     def get_counts(self, N, count_dicts):
         """
@@ -780,9 +790,9 @@ class CurveBuilder(object):
         the indices given by the count_dicts
 
         :param N: the number of assets
-        :param counts_by_idx: a map asset_idx -> [C indices]
+        :param count_dicts: a list of maps asset_idx -> [C indices]
 
-        >>> cb = CurveBuilder('structural', [0.1, 0.2, 0.3, 0.9])
+        >>> cb = CurveBuilder('structural', [0.1, 0.2, 0.3, 0.9], True)
         >>> cb.get_counts(3, [{1: [4, 3, 2, 1]}, {2: [4, 0, 0, 0]},
         ...                   {1: [1, 0, 0, 0]}, {2: [2, 0, 0, 0]}])
         array([[0, 0, 0, 0],
@@ -802,50 +812,46 @@ class CurveBuilder(object):
         counts = self.get_counts(len(loss_matrix), {})
         for i, loss_ratios in enumerate(loss_matrix):
             # build the counts for each asset
-            counts[i, :] = numpy.array([(loss_ratios > ratio).sum()
+            counts[i, :] = numpy.array([(loss_ratios >= ratio).sum()
                                         for ratio in self.ratios])
         return counts
 
-    def build_rcurves(self, counts_matrix, nses, assetcol):
+    def build_poes(self, N, count_dicts, ses_ratio):
         """
-        :param counts_matrix: a matrix N x C
-        :param nses: the number of effective SES (SES x samples)
-        :param assetcol: asset collection array with N elements
-        :returns: a composite array of dtype poes_dt with N elements
+        :param N: the number of assets
+        :param count_dicts: a list of maps asset_idx -> [C indices]
+        :param ses_ratio: event based factor
         """
-        n = len(assetcol)
-        assert len(counts_matrix) == n, (len(counts_matrix), n)
-        avalues = assetcol[self.loss_type]
-        poe_matrix = build_poes(counts_matrix, nses)
-        ls = []
-        for i, poes, avalue in zip(range(n), poe_matrix, avalues):
-            losses = self.ratios * avalue
-            avg = average_loss((losses, poes))
-            ls.append((poes, avg))
-        return numpy.array(ls, self.poes_dt)
+        counts_matrix = self.get_counts(N, count_dicts)
+        poes = build_poes(counts_matrix, 1. / ses_ratio)
+        return poes.view(self.lr_dt)
 
-    def build_loss_curves(self, poe_matrix, asset_values, indices, N):
+    def build_loss_curves(self, assetcol, losses_by_aid, ses_ratio):
         """
-        :param poe_matrix: a matrix n x C, with n <= N
-        :param asset_values: n asset values for a given loss_type
-        :param indices: n asset indices in the range [0, .., N-1]
-        :param N: the total number of assets
+        :param assetcol: asset collection object
+        :param losses_by_aid: a dictionary asset_idx -> losses
+        :param ses_ratio: event based factor
         """
-        n = len(asset_values)
-        assert len(poe_matrix) == n, (len(poe_matrix), n)
-        assert n <= N, (n, N)
-        lcs = numpy.zeros(N, self.loss_curve_dt)
-        for i, poes, value in zip(indices, poe_matrix, asset_values):
-            losses = self.ratios * value
-            avg = average_loss((losses, poes))
-            lcs[i] = (losses, poes, avg)
+        lcs = numpy.zeros(len(assetcol), self.loss_curve_dt)
+        zeros = numpy.zeros(self.curve_resolution)
+        for i, value in enumerate(assetcol[self.loss_type]):
+            all_losses = losses_by_aid.get(i)
+            if all_losses is None:  # no losses for the given asset
+                lcs[i] = (self.ratios * value, zeros, 0)
+            else:  # build the loss curve
+                losses, poes = event_based(all_losses, ses_ratio,
+                                           self.curve_resolution)
+                avg = average_loss((losses, poes))
+                lcs[i] = (losses, poes, avg)
         return lcs
 
     def __repr__(self):
-        return '<%s %s=%s>' % (self.__class__.__name__, self.loss_type,
-                               self.loss_ratios)
+        return '<%s %s=%s user_provided=%s>' % (
+            self.__class__.__name__, self.loss_type,
+            self.loss_ratios, self.user_provided)
 
 
+# should I use the ses_ratio here?
 def build_poes(counts, nses):
     """
     :param counts: an array of counts of exceedence for the bins
@@ -855,16 +861,14 @@ def build_poes(counts, nses):
     return 1. - numpy.exp(- numpy.array(counts, F32) / nses)
 
 
-def event_based(loss_values, tses, time_span, curve_resolution):
+def event_based(loss_values, ses_ratio, curve_resolution):
     """
     Compute a loss (or loss ratio) curve.
 
     :param loss_values: The loss ratios (or the losses) computed by
                         applying the vulnerability function
 
-    :param tses: Time representative of the stochastic event set
-
-    :param time_span: Investigation Time spanned by the risk input
+    :param ses_ratio: Time representative of the stochastic event set
 
     :param curve_resolution: The number of points the output curve is
                              defined by
@@ -876,7 +880,7 @@ def event_based(loss_values, tses, time_span, curve_resolution):
     # NB: (loss_values > loss).sum() is MUCH more efficient than
     # sum(loss_values > loss). Incredibly more efficient in memory.
     return numpy.array(
-        [reference_losses, build_poes(counts, tses / time_span)])
+        [reference_losses, build_poes(counts, 1. / ses_ratio)])
 
 
 #
@@ -1096,20 +1100,6 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
 
 # ####################### statistics #################################### #
 
-def average_loss(losses_poes):
-    """
-    Given a loss curve with `poes` over `losses` defined on a given
-    time span it computes the average loss on this period of time.
-
-    :note: As the loss curve is supposed to be piecewise linear as it
-           is a result of a linear interpolation, we compute an exact
-           integral by using the trapeizodal rule with the width given by the
-           loss bin width.
-    """
-    losses, poes = losses_poes
-    return numpy.dot(-pairwise_diff(losses), pairwise_mean(poes))
-
-
 def pairwise_mean(values):
     "Averages between a value and the next value in a sequence"
     return numpy.array([numpy.mean(pair) for pair in utils.pairwise(values)])
@@ -1138,6 +1128,22 @@ def loss_map_matrix(poes, curves):
         [[conditional_loss_ratio(curve[0], curve[1], poe)
           for curve in curves] for poe in poes]
     ).reshape((len(poes), len(curves)))
+
+
+def calc_loss_maps(conditional_loss_poes, asset_values, ratios, poe_matrix):
+    """
+    Compute loss maps from the PoE matrix (i.e. the loss curves).
+
+    :param conditional_loss_poes: an array of P PoEs
+    :param asset_values: asset values for the current loss type
+    :param ratios: loss ratios for the current loss type
+    :poe_matrix: an N x C matrix of PoEs
+    :returns: a matrix N x P
+    """
+    curves = []
+    for avalue, poes in zip(asset_values, poe_matrix):
+        curves.append((ratios * avalue, poes))
+    return loss_map_matrix(conditional_loss_poes, curves).T
 
 
 def mean_curve(values, weights=None):
@@ -1201,6 +1207,39 @@ def quantile_curve(curves, quantile, weights=None):
     return numpy.array(result_curve)
 
 
+# TODO: remove this from openquake.risklib.qa_tests.bcr_test
+def average_loss(losses_poes):
+    """
+    Given a loss curve with `poes` over `losses` defined on a given
+    time span it computes the average loss on this period of time.
+
+    :note: As the loss curve is supposed to be piecewise linear as it
+           is a result of a linear interpolation, we compute an exact
+           integral by using the trapeizodal rule with the width given by the
+           loss bin width.
+    """
+    losses, poes = losses_poes
+    return numpy.dot(-pairwise_diff(losses), pairwise_mean(poes))
+
+
+def quantile_matrix(values, quantiles, weights):
+    """
+    :param curves:
+        a matrix R x N, where N is the number of assets and R the number
+        of realizations
+    :param quantile:
+        a list of Q quantiles
+    :param weights:
+        a list of R weights
+    :returns:
+        a matrix Q x N
+    """
+    result = numpy.zeros((len(quantiles), values.shape[1]))
+    for i, q in enumerate(quantiles):
+        result[i] = quantile_curve(values, q, weights)
+    return result
+
+
 def exposure_statistics(
         loss_curves, map_poes, weights, quantiles):
     """
@@ -1218,13 +1257,11 @@ def exposure_statistics(
         the quantile levels used to compute quantile results
 
     :returns:
-        a tuple with six elements:
+        a tuple with four elements:
             1. a numpy array with N mean loss curves
-            2. a numpy array with N mean average losses
-            3. a numpy array with P x N mean map values
-            4. a numpy array with Q x N quantile loss curves
-            5. a numpy array with Q x N quantile average loss values
-            6. a numpy array with Q x P quantile map values
+            2. a numpy array with P x N mean map values
+            3. a numpy array with Q x N quantile loss curves
+            4. a numpy array with Q x P quantile map values
     """
     curve_resolution = len(loss_curves[0][0])
     map_nr = len(map_poes)
@@ -1232,10 +1269,8 @@ def exposure_statistics(
     # Collect per-asset statistic along the last dimension of the
     # following arrays
     mean_curves = numpy.zeros((0, 2, curve_resolution))
-    mean_average_losses = numpy.array([])
     mean_maps = numpy.zeros((map_nr, 0))
     quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
-    quantile_average_losses = numpy.zeros((len(quantiles), 0,))
     quantile_maps = numpy.zeros((len(quantiles), map_nr, 0))
 
     for loss_ratios, curves_poes in loss_curves:
@@ -1245,23 +1280,14 @@ def exposure_statistics(
 
         mean_curves = numpy.vstack(
             (mean_curves, _mean_curve[numpy.newaxis, :]))
-        mean_average_losses = numpy.append(
-            mean_average_losses, average_loss(_mean_curve))
-
         mean_maps = numpy.hstack((mean_maps, _mean_maps[:, numpy.newaxis]))
+
         quantile_curves = numpy.hstack(
             (quantile_curves, _quantile_curves[:, numpy.newaxis]))
-
-        _quantile_average_losses = utils.numpy_map(
-            average_loss, _quantile_curves)
-        quantile_average_losses = numpy.hstack(
-            (quantile_average_losses,
-             _quantile_average_losses[:, numpy.newaxis]))
         quantile_maps = numpy.dstack(
             (quantile_maps, _quantile_maps[:, :, numpy.newaxis]))
 
-    return (mean_curves, mean_average_losses, mean_maps,
-            quantile_curves, quantile_average_losses, quantile_maps)
+    return (mean_curves, mean_maps, quantile_curves, quantile_maps)
 
 
 def asset_statistics(
@@ -1326,6 +1352,54 @@ def normalize_curves_eb(curves):
     return loss_ratios, curves_poes
 
 
+class SimpleStats(object):
+    """
+    A class to perform statistics on the average losses. The average losses
+    are stored as N x 2 arrays (non-insured and insured losses) where N is
+    the number of assets. Here is an example of usage:
+
+    >>> from collections import namedtuple
+    >>> Realization = namedtuple('Realization', 'ordinal uid weight')
+    >>> rlzs = [Realization(0, 'b1', 0.3), Realization(1, 'b2', 0.7)]
+    >>> dstore = {
+    ...     'avg_losses-rlzs':
+    ...        {'structural':
+    ...            {'b1': numpy.array([[0.10, 0.20], [0.30, 0.40]]),
+    ...             'b2': numpy.array([[0.12, 0.22], [0.33, 0.44]]),
+    ...            }}}
+    >>> stats = SimpleStats(rlzs, quantiles=[0.2])
+    >>> stats.compute_and_store('avg_losses', dstore)
+    >>> dstore['avg_losses-stats/structural/mean']
+    array([[ 0.114,  0.214],
+           [ 0.321,  0.428]])
+    >>> dstore['avg_losses-stats/structural/quantile-0.2']
+    array([[ 0.1,  0.2],
+           [ 0.3,  0.4]])
+    """
+    def __init__(self, rlzs, quantiles=()):
+        self.rlzs = rlzs
+        self.quantiles = quantiles
+
+    def compute_and_store(self, name, dstore):
+        """
+        Compute mean and quantiles from the data in the datastore
+        under the group `<name>-rlzs` and store them under the group
+        `<name>-stats`.
+        """
+        group = dstore[name + '-rlzs']
+        loss_types = sorted(group)
+        weights = [rlz.weight for rlz in self.rlzs]
+        for loss_type in loss_types:
+            data = [group[loss_type][rlz.uid][:] for rlz in self.rlzs]
+            dstore['%s-stats/%s/mean' % (name, loss_type)] = mean_curve(
+                data, weights)
+            for q in self.quantiles:
+                values = quantile_curve([d.T[0] for d in data], q, weights)
+                ins_values = quantile_curve([d.T[1] for d in data], q, weights)
+                path = '%s-stats/%s/quantile-%s' % (name, loss_type, q)
+                dstore[path] = numpy.array([values, ins_values]).T  # N x 2
+
+
 class StatsBuilder(object):
     """
     A class to build risk statistics
@@ -1337,6 +1411,9 @@ class StatsBuilder(object):
         self.conditional_loss_poes = conditional_loss_poes
         self.poes_disagg = poes_disagg
         self.normalize_curves = normalize_curves
+        self.mean_quantiles = ['mean']
+        for q in quantiles:
+            self.mean_quantiles.append('quantile-%s' % q)
 
     def normalize(self, loss_curves):
         """
@@ -1345,7 +1422,7 @@ class StatsBuilder(object):
         return list(map(self.normalize_curves,
                         numpy.array(loss_curves).transpose(1, 0, 2, 3)))
 
-    def build(self, all_outputs):
+    def build(self, all_outputs, prefix=''):
         """
         Build all statistics from a set of risk outputs.
 
@@ -1379,23 +1456,34 @@ class StatsBuilder(object):
         outputs = []
         weights = []
         loss_curves = []
+        average_losses = []
+        average_insured_losses = []
         for out in all_outputs:
             outputs.append(out)
             weights.append(out.weight)
             loss_curves.append(out.loss_curves)
-        (mean_curves, mean_average_losses, mean_maps,
-         quantile_curves, quantile_average_losses, quantile_maps) = (
-             exposure_statistics(
-                 self.normalize(loss_curves),
-                 self.conditional_loss_poes + self.poes_disagg,
-                 weights, self.quantiles))
+            average_losses.append(out.average_losses)
+            average_insured_losses.append(out.average_insured_losses)
+        average_losses = numpy.array(average_losses, F32)
+        mean_average_losses = mean_curve(average_losses, weights)
+        quantile_average_losses = quantile_matrix(
+            average_losses, self.quantiles, weights)
+        (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
+            exposure_statistics(
+                self.normalize(loss_curves),
+                self.conditional_loss_poes + self.poes_disagg,
+                weights, self.quantiles))
 
         if outputs[0].insured_curves is not None:
+            average_insured_losses = numpy.array(average_insured_losses, F32)
+            mean_average_insured_losses = mean_curve(
+                average_insured_losses, weights)
+            quantile_average_insured_losses = quantile_matrix(
+                average_insured_losses, self.quantiles, weights)
             loss_curves = [out.insured_curves for out in outputs]
-            (mean_insured_curves, mean_average_insured_losses, _,
-             quantile_insured_curves, quantile_average_insured_losses, _) = (
-                 exposure_statistics(
-                     self.normalize(loss_curves), [], weights, self.quantiles))
+            (mean_insured_curves, _, quantile_insured_curves, _) = (
+                exposure_statistics(
+                    self.normalize(loss_curves), [], weights, self.quantiles))
         else:
             mean_insured_curves = None
             mean_average_insured_losses = None
@@ -1403,9 +1491,17 @@ class StatsBuilder(object):
             quantile_average_insured_losses = None
 
         clp = len(self.conditional_loss_poes)
+        loss_type = outputs[0].loss_type
+        paths = ['/'.join([prefix + '%s-stats', loss_type, name])
+                 for name in self.mean_quantiles]
+        # generate paths like
+        # <prefix>%s-stats/structural/mean
+        # <prefix>%s-stats/structural/quantile-0.1
+        # <prefix>%s-stats/structural/quantile-0.2
+        # ...
         return Output(
             assets=outputs[0].assets,
-            loss_type=outputs[0].loss_type,
+            loss_type=loss_type,
             mean_curves=mean_curves,
             mean_average_losses=mean_average_losses,
             mean_maps=mean_maps[0:clp, :],  # P x N matrix
@@ -1419,7 +1515,8 @@ class StatsBuilder(object):
             quantile_insured_curves=quantile_insured_curves,
             quantile_average_insured_losses=quantile_average_insured_losses,
             quantiles=self.quantiles,
-            conditional_loss_poes=self.conditional_loss_poes)
+            conditional_loss_poes=self.conditional_loss_poes,
+            prefix=prefix, paths=paths)
 
 
 def _combine_mq(mean, quantile):

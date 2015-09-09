@@ -207,6 +207,16 @@ class OqParam(valid.ParamSet):
                 (self.number_of_logic_tree_samples or 1))
 
     @property
+    def ses_ratio(self):
+        """
+        The ratio
+
+        risk_investigation_time / investigation_time / ses_per_logic_tree_path
+        """
+        return (self.risk_investigation_time or self.investigation_time) / (
+            self.investigation_time * self.ses_per_logic_tree_path)
+
+    @property
     def imtls(self):
         """
         Returns an OrderedDict with the risk intensity measure types and
