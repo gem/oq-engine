@@ -73,8 +73,8 @@ Collections <-> realizations
 ----------------------------
 =========== ============
 Collections Realizations
-(5,)        [0, 1, 2, 3]
-(9,)        [4, 5, 6, 7]
+5           0 1 2 3     
+9           4 5 6 7     
 =========== ============
 
 Expected data transfer for the sources

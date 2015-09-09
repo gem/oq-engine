@@ -59,13 +59,13 @@ Collections <-> realizations
 ----------------------------
 =========== ============
 Collections Realizations
-(0,)        [0]         
+0           0           
 =========== ============
 
 Expected data transfer for the sources
 --------------------------------------
 ================================== =======
 Number of tasks to generate        1      
-Estimated sources to send          2.64 KB
+Estimated sources to send          2.66 KB
 Estimated hazard curves to receive 360 B  
 ================================== =======

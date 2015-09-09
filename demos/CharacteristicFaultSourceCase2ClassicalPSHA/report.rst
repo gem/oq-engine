@@ -50,6 +50,6 @@ Expected data transfer for the sources
 --------------------------------------
 ================================== =========
 Number of tasks to generate        1        
-Estimated sources to send          220.02 KB
+Estimated sources to send          220.03 KB
 Estimated hazard curves to receive 12 MB    
 ================================== =========

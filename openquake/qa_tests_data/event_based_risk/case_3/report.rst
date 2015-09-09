@@ -72,8 +72,8 @@ Collections <-> realizations
 ----------------------------
 =========== ============
 Collections Realizations
-(0, 1)      [0, 1, 2, 3]
-(2, 3)      [4, 5, 6, 7]
+0 1         0 1 2 3     
+2 3         4 5 6 7     
 =========== ============
 
 Expected data transfer for the sources

@@ -65,10 +65,10 @@ col smlt_path TRT                  num_ruptures
 
 Collections <-> realizations
 ----------------------------
-=========== ===============
-Collections Realizations   
-(4,)        [0, 1, 2, 3, 4]
-=========== ===============
+=========== ============
+Collections Realizations
+4           0 1 2 3 4   
+=========== ============
 
 Expected data transfer for the sources
 --------------------------------------
