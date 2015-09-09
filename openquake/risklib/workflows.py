@@ -550,9 +550,6 @@ class ProbabilisticEventBased(Workflow):
                 [a.deductible(loss_type) for a in assets])
             limits = numpy.array(
                 [a.insurance_limit(loss_type) for a in assets])
-            if not oqlite:  # in the engine multiply by the values
-                deductibles *= values
-                limits *= values
             ilm = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
         else:  # build a NaN matrix of size N x T
