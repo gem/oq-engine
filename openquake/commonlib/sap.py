@@ -49,9 +49,28 @@ Parsers can be composed too.
 """
 
 import sys
+import pdb
 import inspect
 import argparse
+import traceback
 from collections import OrderedDict
+from contextlib import contextmanager
+
+
+@contextmanager
+def pdb_enabled(flag):
+    """
+    Enable the post mortem debugger if the flag is set
+    """
+    if flag:
+        try:
+            yield
+        except:
+            tb = sys.exc_info()[2]
+            traceback.print_exc(tb)
+            pdb.post_mortem(tb)
+    else:
+        yield
 
 
 NODEFAULT = object()
@@ -164,7 +183,10 @@ class Parser(object):
             self.check_arguments()
             self.checked = True
         namespace = self.parentparser.parse_args(argv or sys.argv[1:])
-        return self.func(**vars(namespace))
+        kw = vars(namespace)
+        flag = kw.pop('pdb') if 'pdb' in kw else False
+        with pdb_enabled(flag):
+            return self.func(**kw)
 
     def help(self):
         """

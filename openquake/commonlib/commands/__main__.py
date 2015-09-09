@@ -31,6 +31,8 @@ def oq_lite():
     parser = sap.compose(parsers)
     parser.parentparser.version = __version__
     parser.parentparser.prog = 'oq-lite'
+    parser.parentparser.add_argument('--pdb', action='store_true',
+                                     help='enable post mortem debug')
     parser.callfunc()
 
 if __name__ == '__main__':
