@@ -70,4 +70,4 @@ def view_mean_avg_losses(key, job_id):
         row = [loss['asset_ref']] + [
             (loss[lt], iloss[lt]) for lt in names[1:]]
         rows.append(row)
-    return rst_table(rows, header=names)
+    return rst_table(rows, header=names, fmt='%8.6E')

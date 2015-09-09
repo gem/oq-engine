@@ -1,8 +1,15 @@
   [Michele Simionato]
+  * Fixed a distribution bug in the epsilons: it means that all event based
+    risk calculations with nonzero coefficients of variations will produce
+    slightly different numbers with respect to before
   * Removed excessive checking on the exposure attributes `deductible` and
     `insuredLimit` that made it impossible to run legitimate calculations
+  * Changed the meaning of `average_loss` for the aggregated curves: now it
+    is the sum of the aggregated losses in the event loss table,
+    before it was extracted from the aggregated loss curve
   * Changed the way the average losses (and insured average losses) are
-    computed by the event based risk calculator
+    computed by the event based risk calculator: now they are extracted
+    from the event loss table, before they were extracted from the loss curves
   * Set to NULL the stddev_losses and stddev_insured_losses for the event based
     risk calculator, since they were computed incorrectly
   * Introduced a new experimental command

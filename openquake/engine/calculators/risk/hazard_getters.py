@@ -91,7 +91,8 @@ class HazardGetter(object):
    :attr site_ids:
         The ids of the sites associated to the hazards
     """
-    def __init__(self, imt, taxonomy, hazard_outputs, assets):
+    def __init__(self, imt, taxonomy, hazard_outputs, assets,
+                 epsilon_sampling=None):
         self.imt = imt
         self.taxonomy = taxonomy
         self.hazard_outputs = hazard_outputs
@@ -205,7 +206,8 @@ class GroundMotionGetter(HazardGetter):
     Hazard getter for loading ground motion values.
     """ + HazardGetter.__doc__
 
-    def __init__(self, imt, taxonomy, hazard_outputs, assets):
+    def __init__(self, imt, taxonomy, hazard_outputs, assets,
+                 epsilon_sampling=None):
         """
         Perform the needed queries on the database to populate
         hazards and epsilons.
@@ -218,20 +220,17 @@ class GroundMotionGetter(HazardGetter):
             self.hazards[ho] = self._get_gmv_dict(ho)
             for sc in haz_out_to_ses_coll(ho):
                 sescolls.add(sc)
-        sescolls = sorted(sescolls)
-        for sc in sescolls:
-            self.rupture_ids.extend(
-                sc.get_ruptures().values_list('id', flat=True))
-        epsilon_rows = []  # ordered by asset_site_id
-        for asset_site_id in self.asset_site_ids:
-            row = []
-            for eps in models.Epsilon.objects.filter(
-                    ses_collection__in=sescolls,
-                    asset_site=asset_site_id):
-                row.extend(eps.epsilons)
-            epsilon_rows.append(row)
-        if epsilon_rows:
-            self.epsilons = numpy.array(epsilon_rows)
+        for sc in sorted(sescolls):
+            rids = sc.get_ruptures().values_list('id', flat=True)
+            self.rupture_ids.extend(rids)
+        num_ruptures = len(self.rupture_ids)
+        num_samples = min(epsilon_sampling, num_ruptures)
+        epsilons = numpy.zeros((len(assets), num_samples))
+        for i, asset_site_id in enumerate(self.asset_site_ids):
+            eps = models.Epsilon.objects.get(asset_site=asset_site_id)
+            epsilons[i] = eps.epsilons
+        if epsilons.sum():
+            self.epsilons = epsilons
 
     def get_epsilons(self):
         """
@@ -396,9 +395,8 @@ SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.oqparam.id,
                 ses_coll = models.SESCollection.objects.get(
                     trt_model=trt_model)
                 num_ruptures = ses_coll.get_ruptures().count()
-                samples = min(epsilon_sampling, num_ruptures) \
-                    if epsilon_sampling else num_ruptures
-                self.epsilons_shape[ses_coll.id] = (self.num_assets, samples)
+                self.epsilons_shape[ses_coll.id] = (
+                    self.num_assets, num_ruptures)
         elif self.calculation_mode.startswith('scenario'):
             [out] = self.oqparam.output_set.filter(output_type='ses')
             samples = self.number_of_ground_motion_fields
@@ -432,21 +430,21 @@ SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.oqparam.id,
             ses_collections = [out.ses]
         else:
             ses_collections = []
+        num_ruptures = 0
         for ses_coll in ses_collections:
             scid = ses_coll.id  # ses collection id
-            num_assets, num_samples = self.epsilons_shape[scid]
-            self._rupture_ids[scid] = ses_coll.get_ruptures(
+            self._rupture_ids[scid] = rupids = ses_coll.get_ruptures(
                 ).values_list('id', flat=True)
-            if not num_samples:  # empty SESCollection
-                continue
-            # build the epsilons, except for scenario_damage
-            if self.calculation_mode != 'scenario_damage':
-                logs.LOG.info(
-                    'Building (%d, %d) epsilons for taxonomy %s, ses_coll=%d',
-                    num_assets, num_samples, self.taxonomy, scid)
-                asset_sites = models.AssetSite.objects.filter(
-                    job=self.calc.job, asset__taxonomy=self.taxonomy)
-                eps = make_epsilons(
-                    num_assets, num_samples,
-                    oq.master_seed, oq.asset_correlation)
-                models.Epsilon.saveall(ses_coll, asset_sites, eps)
+            num_ruptures += len(rupids)
+        # build the epsilons
+        samples = (min(epsilon_sampling, num_ruptures)
+                   if epsilon_sampling else num_ruptures)
+        logs.LOG.info(
+            'Building (%d, %d) epsilons for taxonomy %s',
+            self.num_assets, samples, self.taxonomy)
+        asset_sites = models.AssetSite.objects.filter(
+            job=self.calc.job, asset__taxonomy=self.taxonomy
+        ).order_by('asset__asset_ref')  # epsilon association order
+        eps = make_epsilons(
+            self.num_assets, samples, oq.master_seed, oq.asset_correlation)
+        models.Epsilon.saveall(asset_sites, eps)
