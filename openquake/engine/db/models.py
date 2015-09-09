@@ -2975,28 +2975,22 @@ class Epsilon(djm.Model):
     computations.
     """
     asset_site = djm.ForeignKey('AssetSite', null=False)
-    ses_collection = djm.ForeignKey('SESCollection', null=False)
     epsilons = fields.FloatArrayField(null=False)
 
     @classmethod
-    def saveall(cls, ses_coll, asset_sites, epsilon_matrix):
+    def saveall(cls, asset_sites, epsilon_matrix):
         """
-        Insert the epsilon matrix associated to the given
-        SES collection for each asset_sites association.
+        Insert the epsilons for each asset_sites association.
 
-        :param ses_coll:
-            a :class:`openquake.engine.db.models.SESCollection` instance
         :param asset_sites:
             a list of :class:`openquake.engine.db.models.AssetSite` instances
         :param epsilon_matrix:
             a numpy matrix with NxE elements, where `N` is the number of assets
-            and `E` the number of events for the given SESCollection
+            and `E` the number of ruptures
         """
         assert len(asset_sites) == len(epsilon_matrix), (
             len(asset_sites), len(epsilon_matrix))
-        data = [cls(asset_site=asset_site,
-                    ses_collection=ses_coll,
-                    epsilons=list(epsilons))
+        data = [cls(asset_site=asset_site, epsilons=list(epsilons))
                 for asset_site, epsilons in zip(asset_sites, epsilon_matrix)]
         return writer.CacheInserter.saveall(data)
 
@@ -3005,5 +2999,4 @@ class Epsilon(djm.Model):
         ordering = ['asset_site']
 
     def __repr__(self):
-        return '<%s %r %r>' % (self.__class__.__name__, self.asset_site,
-                               self.ses_collection)
+        return '<%s %r>' % (self.__class__.__name__, self.asset_site)

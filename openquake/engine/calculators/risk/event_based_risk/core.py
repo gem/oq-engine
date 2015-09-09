@@ -24,10 +24,10 @@ import numpy
 from openquake.hazardlib.geo import mesh
 from openquake.risklib import scientific
 from openquake.risklib.utils import numpy_map
-from openquake.calculators import ebr
+from openquake.calculators import event_based_risk
 
 from openquake.engine.calculators.risk import (
-    base, hazard_getters, validation, writers)
+    base, hazard_getters, writers)
 from openquake.engine.db import models
 from openquake.engine import engine, writer, logs
 from openquake.engine.calculators import calculators
@@ -388,7 +388,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
           Compute aggregate loss curves and event loss tables
         """
         oq = self.oqparam
-        tses = oq.investigation_time * oq.ses_per_logic_tree_path
         with self.monitor('post processing', autoflush=True):
             inserter = writer.CacheInserter(models.EventLossData,
                                             max_cache_size=10000)
@@ -427,10 +426,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
                     if aggregate_losses:
                         aggregate_loss = scientific.event_based(
-                            aggregate_losses, tses=tses,
-                            time_span=oq.investigation_time,
+                            aggregate_losses, ses_ratio=oq.ses_ratio,
                             curve_resolution=oq.loss_curve_resolution)
-
                         models.AggregateLossCurveData.objects.create(
                             loss_curve=models.LossCurve.objects.create(
                                 aggregate=True, insured=False,
@@ -444,13 +441,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                                     "agg_loss_curve")),
                             losses=aggregate_loss[0],
                             poes=aggregate_loss[1],
-                            average_loss=scientific.average_loss(
-                                aggregate_loss),
-                            stddev_loss=numpy.std(aggregate_losses))
+                            average_loss=sum(aggregate_losses),
+                            stddev_loss=None)
 
 
 @calculators.add('ebr')
-class EBRCalculator(ebr.EventBasedRiskCalculator):
+class EBRCalculator(event_based_risk.EventBasedRiskCalculator):
     """
     Smaller Event Based risk calculator for the event loss table.
     """
