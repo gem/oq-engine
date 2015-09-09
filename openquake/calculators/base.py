@@ -122,6 +122,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 tb = sys.exc_info()[2]
                 traceback.print_exc(tb)
                 pdb.post_mortem(tb)
+            else:
+                raise
         finally:
             critical = sys.exc_info()[0]
             if critical:
