@@ -23,24 +23,24 @@ from openquake.commonlib import sap, readinput, valid, datastore
 from openquake.calculators import base
 
 
-def run2(job_haz, job_risk, concurrent_tasks, exports, monitor):
+def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, monitor):
     """
     Run both hazard and risk, one after the other
     """
     hcalc = base.calculators(readinput.get_oqparam(job_haz), monitor)
     with monitor:
         monitor.monitor_dir = hcalc.datastore.calc_dir
-        hcalc.run(concurrent_tasks=concurrent_tasks, exports=exports)
+        hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports)
         hc_id = hcalc.datastore.calc_id
         oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
         rcalc = base.calculators(oq, monitor)
         monitor.monitor_dir = rcalc.datastore.calc_dir
-        rcalc.run(concurrent_tasks=concurrent_tasks, exports=exports,
+        rcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports,
                   hazard_calculation_id=hc_id)
     return rcalc
 
 
-def run(job_ini, concurrent_tasks=None,
+def run(job_ini, concurrent_tasks=None, pdb=None,
         loglevel='info', hc=None, exports=''):
     """
     Run a calculation. Optionally, set the number of concurrent_tasks
@@ -63,11 +63,11 @@ def run(job_ini, concurrent_tasks=None,
         calc = base.calculators(oqparam, monitor)
         monitor.monitor_dir = calc.datastore.calc_dir
         with monitor:
-            calc.run(concurrent_tasks=concurrent_tasks, exports=exports,
-                     hazard_calculation_id=hc)
+            calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
+                     exports=exports, hazard_calculation_id=hc)
     else:  # run hazard + risk
         calc = run2(
-            job_inis[0], job_inis[1], concurrent_tasks, exports, monitor)
+            job_inis[0], job_inis[1], concurrent_tasks, pdb, exports, monitor)
 
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
@@ -81,6 +81,7 @@ parser.arg('job_ini', 'calculation configuration file '
            '(or files, comma-separated)')
 parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
            type=int)
+parser.flg('pdb', 'enable post mortem debugging')
 parser.opt('loglevel', 'logging level',
            choices='debug info warn error critical'.split())
 parser.opt('hc', 'previous calculation ID', type=int)
