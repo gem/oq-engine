@@ -19,8 +19,10 @@
 import os
 import sys
 import abc
+import pdb
 import logging
 import operator
+import traceback
 import collections
 
 import numpy
@@ -115,6 +117,13 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 self.post_execute(result)
             with self.monitor('export', autoflush=True):
                 exported = self.export()
+        except:
+            if kw.get('pdb'):  # post-mortem debug
+                tb = sys.exc_info()[2]
+                traceback.print_exc(tb)
+                pdb.post_mortem(tb)
+            else:
+                raise
         finally:
             critical = sys.exc_info()[0]
             if critical:
