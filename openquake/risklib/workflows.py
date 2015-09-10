@@ -45,13 +45,16 @@ class CostCalculator(object):
 
     The same "formula" applies to retrofitting cost.
     """
-    def __init__(self, cost_types, area_types):
+    def __init__(self, cost_types, area_types,
+                 deduct_abs=True, limit_abs=True):
         for ct in cost_types.values():
             assert ct in ('aggregated', 'per_asset', 'per_area'), ct
         for at in area_types.values():
             assert at in ('aggregated', 'per_asset'), at
         self.cost_types = cost_types
         self.area_types = area_types
+        self.deduct_abs = deduct_abs
+        self.limit_abs = limit_abs
 
     def __call__(self, loss_type, values, area, number):
         cost = values[loss_type]
@@ -134,6 +137,7 @@ class Asset(object):
         self.insurance_limits = insurance_limits
         self.calc = calc
         self.idx = idx
+        self._cost = {}  # cache for the costs
 
     def value(self, loss_type, time_event=None):
         """
@@ -141,22 +145,35 @@ class Asset(object):
         """
         if loss_type == 'fatalities':
             return self.values['fatalities_' + str(time_event)]
-        return self.calc(loss_type, self.values, self.area, self.number)
+        try:
+            val = self._cost[loss_type]
+        except KeyError:
+            val = self.calc(loss_type, self.values, self.area, self.number)
+            self._cost[loss_type] = val
+        return val
 
-    # this is valid for absolute losses
     def deductible(self, loss_type):
         """
-        :returns: the deductible of the asset for `loss_type`
+        :returns: the deductible fraction of the asset cost for `loss_type`
         """
-        return self.calc(loss_type, self.deductibles, self.area, self.number)
+        val = self.calc(loss_type, self.deductibles, self.area, self.number)
+        if self.calc.deduct_abs:  # convert to relative value
+            return val / self.calc(loss_type, self.values,
+                                   self.area, self.number)
+        else:
+            return val
 
-    # this is valid for absolute losses
     def insurance_limit(self, loss_type):
         """
-        :returns: the deductible of the asset for `loss_type`
+        :returns: the limit fraction of the asset cost for `loss_type`
         """
-        return self.calc(loss_type, self.insurance_limits, self.area,
-                         self.number)
+        val = self.calc(loss_type, self.insurance_limits, self.area,
+                        self.number)
+        if self.calc.limit_abs:  # convert to relative value
+            return val / self.calc(loss_type, self.values,
+                                   self.area, self.number)
+        else:
+            return val
 
     def retrofitted(self, loss_type, time_event=None):
         """
@@ -541,6 +558,7 @@ class ProbabilisticEventBased(Workflow):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
+        n = len(assets)
         oqlite = isinstance(assets[0].id, str)
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
@@ -550,13 +568,13 @@ class ProbabilisticEventBased(Workflow):
         ela = loss_matrix.T * values  # matrix with T x N elements
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = numpy.array(
-                [a.deductible(loss_type) for a in assets]) / values
+                [a.deductible(loss_type) for a in assets])
             limits = numpy.array(
-                [a.insurance_limit(loss_type) for a in assets]) / values
+                [a.insurance_limit(loss_type) for a in assets])
             ilm = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
         else:  # build a NaN matrix of size N x T
-            ilm = numpy.empty((len(assets), len(ground_motion_values[0])))
+            ilm = numpy.empty((n, len(ground_motion_values[0])))
             ilm.fill(numpy.nan)
         ila = ilm.T * values
         average_insured_losses = ilm.sum(axis=1) * self.ses_ratio
@@ -582,13 +600,12 @@ class ProbabilisticEventBased(Workflow):
             insured_curves = utils.numpy_map(self.curves, ilm)
         else:
             insured_curves = None
-        n = len(assets)
         return scientific.Output(
             assets, loss_type,
             loss_matrix=loss_matrix if self.return_loss_matrix else None,
             loss_curves=curves, average_losses=average_losses,
             insured_curves=insured_curves,
-            average_insured_losses=average_insured_losses * values,
+            average_insured_losses=[numpy.nan] * n,
             stddev_losses=[None] * n, stddev_insured_losses=[None] * n,
             loss_maps=maps, event_loss_table=elt)
 
