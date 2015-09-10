@@ -41,11 +41,11 @@ class BaseASR(with_metaclass(abc.ABCMeta)):
             from -180 to 180.
         """
 
-    def __str__(self):
+    def __repr__(self):
         """
         Returns the name of the class
         """
-        return self.__class__.__name__
+        return "<%s>" % self.__class__.__name__
 
 
 class BaseASRSigma(with_metaclass(abc.ABCMeta, BaseASR)):
@@ -84,11 +84,11 @@ class BaseMSR(with_metaclass(abc.ABCMeta)):
             from -180 to 180.
         """
 
-    def __str__(self):
+    def __repr__(self):
         """
         Returns the name of the class
         """
-        return self.__class__.__name__
+        return "<%s>" % self.__class__.__name__
 
 
 class BaseMSRSigma(with_metaclass(abc.ABCMeta, BaseMSR)):
