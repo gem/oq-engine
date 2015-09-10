@@ -150,6 +150,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     core_func = event_based_risk
 
     epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
+    spec_indices = datastore.persistent_attribute('spec_indices')
     is_stochastic = True
 
     def pre_execute(self):
@@ -170,6 +171,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # the following is needed to set the asset idx attribute
         self.assetcol = riskinput.build_asset_collection(
             assets_by_site, oq.time_event)
+        self.spec_indices = numpy.array([a['asset_ref'] in oq.specific_assets
+                                         for a in self.assetcol])
 
         logging.info('Populating the risk inputs')
         rup_by_tag = sum(self.datastore['sescollection'], AccumDict())
@@ -300,7 +303,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         rlzs = self.rlzs_assoc.realizations
         if len(rlzs) > 1:
-            self.compute_store_stats(rlzs)
+            self.compute_store_stats(rlzs, '')  # generic
+            self.compute_store_stats(rlzs, '_specific')
 
         # The following is commented on purpose:
         # if (self.oqparam.conditional_loss_poes and
@@ -321,13 +325,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     def build_specific_loss_curves(self, group, kind='loss'):
         ses_ratio = self.oqparam.ses_ratio
+        assetcol = self.assetcol[self.spec_indices]
         for loss_type, builder in zip(group, self.riskmodel.curve_builders):
             for rlz, dset in group[loss_type].items():
                 losses_by_aid = collections.defaultdict(list)
                 for ela in dset.value:
                     losses_by_aid[ela['ass_id']].append(ela[kind])
                 curves = builder.build_loss_curves(
-                    self.assetcol, losses_by_aid, ses_ratio)
+                    assetcol, losses_by_aid, ses_ratio)
                 key = 'specific-loss_curves-rlzs/%s/%s' % (loss_type, rlz)
                 self.datastore[key] = curves
 
@@ -420,12 +425,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             stats.append(builder.build(data, prefix='specific-'))
         return stats
 
-    def compute_store_stats(self, rlzs):
+    def compute_store_stats(self, rlzs, kind):
         """
         Compute and store the statistical outputs
         """
         oq = self.oqparam
-        N = len(self.assetcol)
+        N = (len(self.oqparam.specific_assets) if kind == '_specific'
+             else len(self.assetcol))
         Q = 1 + len(oq.quantile_loss_curves)
         C = oq.loss_curve_resolution  # TODO: could be loss_type-dependent
 
@@ -445,8 +451,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             oq.quantile_loss_curves, oq.conditional_loss_poes, [],
             scientific.normalize_curves_eb)
 
-        all_stats = (self.build_stats(builder) +
-                     self.build_specific_stats(builder))
+        build_stats = getattr(self, 'build%s_stats' % kind)
+        all_stats = build_stats(builder)
         for stat in all_stats:
             # there is one stat for each loss_type
             curves, ins_curves, maps = scientific.get_stat_curves(stat)
