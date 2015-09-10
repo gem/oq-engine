@@ -92,7 +92,7 @@ class EngineServerTestCase(unittest.TestCase):
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload'], env=env,
             stdout=subprocess.PIPE)
-        time.sleep(2)
+        time.sleep(5)
 
     @classmethod
     def tearDownClass(cls):
