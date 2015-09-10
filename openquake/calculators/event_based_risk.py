@@ -56,7 +56,7 @@ def cube(O, L, R, factory):
 
 
 @parallel.litetask
-def ebr(riskinputs, riskmodel, rlzs_assoc, monitor):
+def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     """
     :param riskinputs:
         a list of :class:`openquake.risklib.riskinput.RiskInput` objects
@@ -147,7 +147,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     fixed ratios loss curves.
     """
     pre_calculator = 'event_based_rupture'
-    core_func = ebr
+    core_func = event_based_risk
 
     epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
     is_stochastic = True
@@ -226,7 +226,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     def execute(self):
         """
-        Run the ebr calculator in parallel and aggregate the results
+        Run the event_based_risk calculator and aggregate the results
         """
         return apply_reduce(
             self.core_func.__func__,

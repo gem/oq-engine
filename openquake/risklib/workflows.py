@@ -143,17 +143,20 @@ class Asset(object):
             return self.values['fatalities_' + str(time_event)]
         return self.calc(loss_type, self.values, self.area, self.number)
 
+    # this is valid for absolute losses
     def deductible(self, loss_type):
         """
         :returns: the deductible of the asset for `loss_type`
         """
-        return self.deductibles[loss_type]
+        return self.calc(loss_type, self.deductibles, self.area, self.number)
 
+    # this is valid for absolute losses
     def insurance_limit(self, loss_type):
         """
         :returns: the deductible of the asset for `loss_type`
         """
-        return self.insurance_limits[loss_type]
+        return self.calc(loss_type, self.insurance_limits, self.area,
+                         self.number)
 
     def retrofitted(self, loss_type, time_event=None):
         """
@@ -547,23 +550,23 @@ class ProbabilisticEventBased(Workflow):
         ela = loss_matrix.T * values  # matrix with T x N elements
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = numpy.array(
-                [a.deductible(loss_type) for a in assets])
+                [a.deductible(loss_type) for a in assets]) / values
             limits = numpy.array(
-                [a.insurance_limit(loss_type) for a in assets])
+                [a.insurance_limit(loss_type) for a in assets]) / values
             ilm = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
         else:  # build a NaN matrix of size N x T
             ilm = numpy.empty((len(assets), len(ground_motion_values[0])))
             ilm.fill(numpy.nan)
+        ila = ilm.T * values
         average_insured_losses = ilm.sum(axis=1) * self.ses_ratio
 
-        if isinstance(assets[0].id, str):
-            # in oq-lite return early, with just the losses per asset
+        if oqlite:  # return early, with just the losses per asset
             cb = self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
             return scientific.Output(
                 assets, loss_type,
                 event_loss_per_asset=ela,
-                insured_loss_per_asset=ilm.T,
+                insured_loss_per_asset=ila,
                 average_losses=average_losses,
                 average_insured_losses=average_insured_losses,
                 counts_matrix=cb.build_counts(loss_matrix),
