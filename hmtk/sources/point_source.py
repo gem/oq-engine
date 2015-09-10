@@ -267,30 +267,6 @@ class mtkPointSource(object):
             warnings.warn('Source %s (%s) has fewer than 5 events'
                           % (self.id, self.name))
 
-    def create_oqnrml_source(self, use_defaults=False):
-        '''
-        Converts the source model into  an instance of the :class:
-        openquake.nrmllib.models.PointSource
-        :param bool use_defaults:
-            If set to true, will use put in default values for magitude
-            scaling relation, rupture aspect ratio, nodal plane distribution
-            or hypocentral depth distribution where missing. If set to False
-            then value errors will be raised when information is missing.
-        '''
-        point_geometry = models.PointGeometry(self.geometry.wkt2d,
-                                              self.upper_depth,
-                                              self.lower_depth)
-        return models.PointSource(
-            self.id,
-            self.name,
-            self.trt,
-            point_geometry,
-            conv.render_mag_scale_rel(self.mag_scale_rel, use_defaults),
-            conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
-            conv.render_mfd(self.mfd),
-            conv.render_npd(self.nodal_plane_dist, use_defaults),
-            conv.render_hdd(self.hypo_depth_dist, use_defaults))
-
     def create_oqhazardlib_source(self, tom, mesh_spacing, use_defaults=False):
         """
         Converts the point source model into an instance of the :class:
@@ -302,11 +278,13 @@ class mtkPointSource(object):
             or hypocentral depth distribution where missing. If set to False
             then value errors will be raised when information is missing.
         """
+        if not self.mfd:
+            raise ValueError("Cannot write to hazardlib without MFD")
         return PointSource(
             self.id,
             self.name,
             self.trt,
-            conv.mfd_to_hazardlib(self.mfd),
+            self.mfd,
             mesh_spacing,
             conv.mag_scale_rel_to_hazardlib(self.mag_scale_rel, use_defaults),
             conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),

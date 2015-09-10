@@ -51,12 +51,15 @@ Module implements :class: hmtk.sources.source_model.mtkSourceModel, the
 general class to describe a set of seismogenic sources
 '''
 
-from openquake.nrmllib import models
-from openquake.nrmllib.hazard.writers import SourceModelXMLWriter
+#from openquake.nrmllib import models
+#from openquake.nrmllib.hazard.writers import SourceModelXMLWriter
+from openquake.hazardlib.tom import PoissonTOM
+from openquake.commonlib.sourcewriter import write_source_model
 from hmtk.sources.point_source import mtkPointSource
 from hmtk.sources.area_source import mtkAreaSource
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from hmtk.sources.complex_fault_source import mtkComplexFaultSource
+
 
 class mtkSourceModel(object):
     '''
@@ -103,14 +106,12 @@ class mtkSourceModel(object):
             If set to False, ValueErrors will be raised when an essential
             attribute is missing.
         '''
-        output_model = models.SourceModel(name=self.name, sources=[])
-
-        for source in self.sources:
-            output_model.sources.append(
-                source.create_oqnrml_source(use_defaults))
-
-        writer = SourceModelXMLWriter(filename)
-        writer.serialize(output_model)
+        source_model = self.convert_to_oqhazardlib(PoissonTOM(1.0),
+                                                   2.0, # Default values 
+                                                   2.0,
+                                                   10.0,
+                                                   use_defaults=use_defaults)
+        write_source_model(filename, source_model, name=self.name)
 
     def convert_to_oqhazardlib(self, tom, simple_mesh_spacing=1.0,
             complex_mesh_spacing=2.0, area_discretisation=10.0,
@@ -145,5 +146,7 @@ class mtkSourceModel(object):
             else:
                 raise ValueError('Source type not recognised!')
         return oq_source_model
+        
+    
 
 
