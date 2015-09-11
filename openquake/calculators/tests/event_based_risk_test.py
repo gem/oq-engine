@@ -1,31 +1,27 @@
 import os
 from nose.plugins.attrib import attr
 
-from openquake.commonlib.export import export
-from openquake.commonlib.datastore import DataStore
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a)
 
 
-def is_stat(fname):
-    # True if the CSV file is related to a statistical output
-    # hack: this is determined by the absence of commas in the filename
-    return ',' not in fname and any(x in fname for x in (
-        'loss_curve', 'loss_map', 'agg_loss', 'avg_loss'))
-
-
 class EventBasedRiskTestCase(CalculatorTestCase):
 
-    def assert_stats_ok(self, pkg):
+    def assert_stats_ok(self, pkg, individual_curves='false'):
         out = self.run_calc(pkg.__file__, 'job_haz.ini,job_risk.ini',
-                            exports='csv', individual_curves='false',
-                            concurrent_tasks=0)
+                            exports='csv', individual_curves=individual_curves,
+                            concurrent_tasks=4)
+        # NB: it is important to use concurrent_tasks > 1 to test the
+        # complications of concurrency (for instance the noncommutativity of
+        # numpy.float32 addition when computing the average losses)
         all_csv = []
         for fnames in out.values():
             for fname in fnames:
-                if fname.endswith('.csv') and is_stat(fname):
+                if fname.endswith('.csv') and any(x in fname for x in (
+                        'loss_curve', 'loss_map', 'agg_loss', 'avg_loss')):
                     all_csv.append(fname)
+        assert all_csv, 'Could not find any CSV file??'
         for fname in all_csv:
             self.assertEqualFiles(
                 'expected/%s' % os.path.basename(fname), fname)
@@ -36,7 +32,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
-        self.assert_stats_ok(case_2)
+        self.assert_stats_ok(case_2, individual_curves='true')
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):

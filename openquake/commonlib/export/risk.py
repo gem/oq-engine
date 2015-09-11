@@ -185,12 +185,6 @@ def export_avglosses_csv(ekey, dstore):
     ('icurves-rlzs', 'csv'),
     ('rcurves-stats', 'csv'),
     ('icurves-stats', 'csv'),
-    ('specific-loss_curves-rlzs', 'csv'),
-    ('specific-ins_curves-rlzs', 'csv'),
-    ('specific-loss_maps-rlzs', 'csv'),
-    ('specific-loss_curves-stats', 'csv'),
-    ('specific-ins_curves-stats', 'csv'),
-    ('specific-loss_maps-stats', 'csv'),
 )
 def export_ebr(ekey, dstore):
     assets = get_assets_sites(dstore)
@@ -198,6 +192,24 @@ def export_ebr(ekey, dstore):
     for out in outs:
         writers.write_csv(
             out.path, compose_arrays(assets, out.array), fmt='%9.7E')
+    return [out.path for out in outs]
+
+
+@export.add(
+    ('specific-loss_curves-rlzs', 'csv'),
+    ('specific-ins_curves-rlzs', 'csv'),
+    ('specific-loss_maps-rlzs', 'csv'),
+    ('specific-loss_curves-stats', 'csv'),
+    ('specific-ins_curves-stats', 'csv'),
+    ('specific-loss_maps-stats', 'csv'),
+)
+def export_ebr_specific(ekey, dstore):
+    all_assets = get_assets_sites(dstore)
+    spec_assets = all_assets[dstore['spec_indices'].value]
+    outs = extract_outputs(ekey[0], dstore, dstore.export_dir, ekey[1])
+    for out in outs:
+        arr = compose_arrays(spec_assets, out.array)
+        writers.write_csv(out.path, arr, fmt='%9.7E')
     return [out.path for out in outs]
 
 

@@ -632,11 +632,11 @@ def get_exposure_lazy(fname):
     try:
         inslimit = conversions.insuranceLimit
     except NameError:
-        inslimit = LiteralNode('insuranceLimit')
+        inslimit = LiteralNode('insuranceLimit', text=True)
     try:
         deductible = conversions.deductible
     except NameError:
-        deductible = LiteralNode('deductible')
+        deductible = LiteralNode('deductible', text=True)
     try:
         area = conversions.area
     except NameError:
@@ -666,8 +666,9 @@ def get_exposure(oqparam):
         region = None
     fname = oqparam.inputs['exposure']
     exposure, assets_node = get_exposure_lazy(fname)
-
-    cc = workflows.CostCalculator({}, {})
+    cc = workflows.CostCalculator(
+        {}, {}, exposure.deductible_is_absolute,
+        exposure.insurance_limit_is_absolute)
     for ct in exposure.cost_types:
         name = ct['name']  # structural, nonstructural, ...
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area

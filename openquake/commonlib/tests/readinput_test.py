@@ -313,8 +313,8 @@ class ExposureTestCase(unittest.TestCase):
     def test_get_exposure_metadata(self):
         exp, _assets = readinput.get_exposure_lazy(self.exposure)
         self.assertEqual(exp.description, 'Exposure model for buildings')
-        self.assertEqual(exp.insurance_limit_is_absolute, None)
-        self.assertEqual(exp.deductible_is_absolute, None)
+        self.assertTrue(exp.insurance_limit_is_absolute)
+        self.assertTrue(exp.deductible_is_absolute)
         self.assertEqual(exp.cost_types, [
             {'type': 'per_asset', 'name': 'structural', 'unit': 'USD'}])
 

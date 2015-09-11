@@ -1048,6 +1048,9 @@ def insured_losses(losses, deductible, insured_limit):
     :param losses: an array of ground-up loss ratios
     :param float deductible: the deductible limit in fraction form
     :param float insured_limit: the insured limit in fraction form
+
+    >>> insured_losses(numpy.array([3, 20, 101]), 5, 100)
+    array([ 0, 15, 95])
     """
     return numpy.piecewise(
         losses,
