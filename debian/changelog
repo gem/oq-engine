@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Adds `__repr__` method to scalerel and MFD base classes
+
   [Michele Simionato]
   * Now hazardlib unofficially supports Python 3
   * Added support for python setup.py test

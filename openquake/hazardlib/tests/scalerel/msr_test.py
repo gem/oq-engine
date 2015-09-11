@@ -71,3 +71,6 @@ class WC1994MSRTestCase(BaseMSRTestCase):
         self.assertEqual(self.msr.get_std_dev_area(None, -136), 0.22)
         self.assertEqual(self.msr.get_std_dev_area(None, 50), 0.26)
         self.assertEqual(self.msr.get_std_dev_area(None, -130), 0.22)
+
+    def test_string(self):
+        self.assertEqual(str(self.msr), "<WC1994>")

@@ -60,3 +60,4 @@ class BaseMFDModificationsTestCase(BaseMFDTestCase):
         mfd.modify('foo', dict(a=1, b='2', c=True))
         self.assertEqual(mfd.foo_calls, [{'a': 1, 'b': '2', 'c': True}])
         self.assertEqual(mfd.check_constraints_call_count, 1)
+        self.assertEqual(str(mfd), "<TestMFD>")
