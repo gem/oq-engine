@@ -199,7 +199,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         performance = self.monitor.collect_performance()
         if performance is not None:
             self.performance = performance
-        self.datastore.close()
+        # the datastore must not be closed, it will be closed automatically
         self.datastore.symlink(os.path.dirname(self.oqparam.inputs['job_ini']))
 
 
