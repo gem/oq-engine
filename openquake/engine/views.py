@@ -68,7 +68,7 @@ def view_mean_avg_losses(key, job_id):
         ins_losses.fill(numpy.nan)
     for loss, iloss in zip(losses, ins_losses):
         row = [loss['asset_ref']] + [
-            (loss[lt], iloss[lt]) for lt in names[1:]]
+            numpy.array([loss[lt], iloss[lt]]) for lt in names[1:]]
         rows.append(row)
     if len(rows) > 1:
         rows.append(sum_table(rows))
