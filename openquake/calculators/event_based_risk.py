@@ -169,7 +169,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.post_execute = lambda result: None
             return
         oq = self.oqparam
-        epsilon_sampling = oq.epsilon_sampling
+        if self.riskmodel.covs:
+            epsilon_sampling = oq.epsilon_sampling
+        else:
+            epsilon_sampling = 1  # only one ignored epsilon
         correl_model = readinput.get_correl_model(oq)
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
         assets_by_site = self.assets_by_site

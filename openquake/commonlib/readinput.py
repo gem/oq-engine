@@ -603,7 +603,10 @@ def get_risk_model(oqparam):
     riskmodel.make_curve_builders(oqparam)
     for workflow in risk_models.values():
         workflow.riskmodel = riskmodel
-
+        # save the number of nonzero coefficients of variation
+        for vf in workflow.risk_functions.values():
+            if hasattr(vf, 'covs') and vf.covs.any():
+                riskmodel.covs += 1
     return riskmodel
 
 # ########################### exposure ############################ #
