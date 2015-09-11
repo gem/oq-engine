@@ -21,7 +21,7 @@ from openquake.engine.utils import tasks  # really UGLY hack:
 # we need to monkey patch commonlib.parallel *before* importing
 # calculators.views; the ugliness will disappear when the engine
 # calculators will disappear
-from openquake.calculators.views import rst_table
+from openquake.calculators.views import rst_table, sum_table
 from openquake.engine.db import models
 
 import numpy
@@ -70,4 +70,6 @@ def view_mean_avg_losses(key, job_id):
         row = [loss['asset_ref']] + [
             (loss[lt], iloss[lt]) for lt in names[1:]]
         rows.append(row)
+    if len(rows) > 1:
+        rows.append(sum_table(rows))
     return rst_table(rows, header=names, fmt='%8.6E')
