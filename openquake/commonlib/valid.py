@@ -238,8 +238,6 @@ def namelist(value):
     ValueError: List of names containing an invalid name: 1c
     """
     names = value.replace(',', ' ').split()
-    if not names:
-        raise ValueError('Got an empty name list')
     for n in names:
         try:
             name(n)
