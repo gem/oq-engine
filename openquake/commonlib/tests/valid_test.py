@@ -34,8 +34,7 @@ class ValidationTestCase(unittest.TestCase):
 
     def test_namelist(self):
         self.assertEqual(valid.namelist('x y'), ['x', 'y'])
-        with self.assertRaises(ValueError):
-            valid.namelist('')
+        self.assertEqual(valid.namelist(' '), [])
         with self.assertRaises(ValueError):
             valid.namelist('x 1')
 
