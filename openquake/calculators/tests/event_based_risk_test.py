@@ -12,6 +12,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         out = self.run_calc(pkg.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv', individual_curves=individual_curves,
                             concurrent_tasks=4)
+        # NB: it is important to use concurrent_tasks > 1 to test the
+        # complications of concurrency (for instance the noncommutativity of
+        # numpy.float32 addition when computing the average losses)
         all_csv = []
         for fnames in out.values():
             for fname in fnames:
