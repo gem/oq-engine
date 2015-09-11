@@ -18,7 +18,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def assert_stats_ok(self, pkg, individual_curves='false'):
         out = self.run_calc(pkg.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv', individual_curves=individual_curves,
-                            concurrent_tasks=0)
+                            concurrent_tasks=4)
         all_csv = []
         for fnames in out.values():
             for fname in fnames:

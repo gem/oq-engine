@@ -116,7 +116,12 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
             dic = {}
             for aid, avgloss, ins_avgloss in zip(
                     asset_ids, out.average_losses, out.average_insured_losses):
-                dic[aid] = numpy.array([avgloss, ins_avgloss], numpy.float32)
+                # NB: here I cannot use numpy.float32, because the sum of
+                # numpy.float32 numbers is noncommutative!
+                # the net effect is that the final loss is affected by
+                # the order in which the tasks are run, which is random
+                # i.e. at each run one may get different results!!
+                dic[aid] = numpy.array([avgloss, ins_avgloss])
             result[AVGLOSS, l, out.hid].append(dic)
 
     for idx, lst in numpy.ndenumerate(result):
