@@ -115,8 +115,8 @@ class TestSourceModel(unittest.TestCase):
             orig_source = source_model.sources[i]
             test_source = source_model_test.sources[i]
             self.assertEqual(orig_source.name, test_source.name)
-            self.assertEqual(orig_source.mag_scale_rel,
-                             test_source.mag_scale_rel)
+            self.assertEqual(orig_source.mag_scale_rel.__class__.__name__,
+                             test_source.mag_scale_rel.__class__.__name__)
             #print orig_source.__dict__, test_source.__dict__
             #self.assertDictEqual(orig_source.__dict__, test_source.__dict__)
         # Remove the test file

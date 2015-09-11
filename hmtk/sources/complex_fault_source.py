@@ -223,43 +223,18 @@ class mtkComplexFaultSource(object):
             warnings.warn('Source %s (%s) has fewer than 5 events'
                           % (self.id, self.name))
 
-    def create_oqnrml_source(self, use_defaults=False):
-        '''
-        Converts the complex source into an instance of the :class:
-        openquake.nrmllib.models.ComplexFaultSource
-
-        :param bool use_defaults:
-            If set to True, will input default values of rupture aspect
-            ratio and magnitude scaling relation where missing. If false,
-            value errors will be raised if information is missing.
-        '''
-        if not isinstance(self.rake, float):
-            raise ValueError('Cannot create complex source - rake is missing!')
-
-        # Render complex geometry to linestrings
-        complex_geometry = conv.complex_trace_to_wkt_linestring(
-            self.fault_edges)
-
-        return models.ComplexFaultSource(
-            self.id,
-            self.name,
-            self.trt,
-            complex_geometry,
-            conv.render_mag_scale_rel(self.mag_scale_rel, use_defaults),
-            conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
-            conv.render_mfd(self.mfd),
-            self.rake)
-
     def create_oqhazardlib_source(self, tom, mesh_spacing, use_defaults=False):
         """
         Creates an instance of the source model as :class:
         openquake.hazardlib.source.complex_fault.ComplexFaultSource
         """
+        if not self.mfd:
+            raise ValueError("Cannot write to hazardlib without MFD")
         return ComplexFaultSource(
             self.id,
             self.name,
             self.trt,
-            conv.mfd_to_hazardlib(self.mfd),
+            self.mfd,
             mesh_spacing,
             conv.mag_scale_rel_to_hazardlib(self.mag_scale_rel, use_defaults),
             conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),

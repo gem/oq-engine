@@ -1,19 +1,65 @@
 #!/usr/bin/env/python
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-"""Simple objects models to represent elements of NRML artifacts. These models
-are intended to be produced by NRML XML parsers and consumed by NRML XML
-serializers.
+#
+# LICENSE
+#
+# Copyright (c) 2015, GEM Foundation
+#
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
+#
+#DISCLAIMER
+#
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+# is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
+#
+# It is distributed for the purpose of open collaboration and in the
+# hope that it will be useful to the scientific, engineering, disaster
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM's OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM's OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
+
 """
+Parser for input in a NRML format, with partial validation
+"""
+import re
 import decimal
-
-from lxml import etree
-
-import openquake.nrmllib as nrml
-from openquake.nrmllib import models
+import numpy as np
+from copy import copy
+from openquake.commonlib.node import node_from_xml
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.polygon import Polygon
 from openquake.hazardlib.scalerel import get_available_scalerel
+from openquake.hazardlib import mfd
+from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.geo.nodalplane import NodalPlane
 from hmtk.sources.source_model import mtkSourceModel
 from hmtk.sources.point_source import mtkPointSource
 from hmtk.sources.area_source import mtkAreaSource
@@ -21,447 +67,397 @@ from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from hmtk.parsers.source_model.base import BaseSourceModelParser
 
-SCALE_REL_MAP = get_available_scalerel()
+SCALERELS = get_available_scalerel()
 
-TGR_MAP = {'aValue': 'a_val',
-           'bValue': 'b_val',
-           'minMag': 'min_mag',
-           'maxMag': 'max_mag'}
-
-
-def _xpath(elem, expr):
-    """Helper function for executing xpath queries on an XML element. This
-    function uses the default mapping of namespaces (which includes NRML and
-    GML).
-
-    :param str expr:
-        XPath expression.
-    :param elem:
-        A :class:`lxml.etree._Element` instance.
+def string_(string):
     """
-    return elem.xpath(expr, namespaces=nrml.PARSE_NS_MAP)
-
-
-class FaultGeometryParserMixin(object):
+    Returns string or None
     """
-    Mixin with methods _parse_simple_geometry and _parse_complex_geometry.
+    if string:
+        return string
+    else:
+        return None
+
+def float_(value):
     """
+    Returns float of a value, or None
+    """
+    if value:
+        return float(value)
+    else:
+        return None
 
-    @classmethod
-    def _parse_simple_geometry(cls, src_elem):
-        """
-        :param src_elem:
-        :class:`lxml.etree._Element` instance representing a geometry.
-        :returns:
-            Fully populated
-            :class:`openquake.nrmllib.models.SimpleFaultGeometry` object.
-        """
-        [gml_pos_list] = _xpath(src_elem, './/gml:posList')
-        trace = cls._parse_edge_to_line(gml_pos_list, dimension=2)
+def int_(value):
+    """
+    Returns int or None
+    """
+    if value:
+        return float(value)
+    else:
+        return None
 
-        dip = float(
-            _xpath(src_elem, './/nrml:dip')[0].text)
-        upper_seismo_depth = float(
-            _xpath(src_elem, './/nrml:upperSeismoDepth')[0].text)
-        lower_seismo_depth = float(
-            _xpath(src_elem, './/nrml:lowerSeismoDepth')[0].text)
+def get_taglist(node):
+    """
+    Return a list of tags (with NRML namespace removed) representing the
+    order of the nodes within a node
+    """
+    return [re.sub(r'\{[^}]*\}', "", copy(subnode.tag))
+            for subnode in node.nodes]
 
-        return trace, dip, upper_seismo_depth, lower_seismo_depth
+def linestring_node_to_line(node, with_depth=False):
+    """
+    Returns an instance of a Linestring node to :class:
+    openquake.hazardlib.geo.line.Line
+    """
+    assert "LineString" in node.tag
+    crds = map(float, node.nodes[0].text.split())
+    if with_depth:
+        return Line([Point(crds[iloc], crds[iloc + 1], crds[iloc + 2])
+                 for iloc in range(0, len(crds), 3)])
+    else:
+        return Line([Point(crds[iloc], crds[iloc + 1])
+                     for iloc in range(0, len(crds), 2)])  
 
-    @classmethod
-    def _parse_complex_geometry(cls, src_elem):
-        """
-        :param src_elem:
-            :class:`lxml.etree._Element` instance representing a geometry.
-        :returns:
-            Fully populated
-        :class:`openquake.nrmllib.models.ComplexFaultGeometry` object.
-        """
-        complex_edges = []
-        # Top edge
-        [top_edge] = _xpath(src_elem, './/nrml:faultTopEdge//gml:posList')
-        complex_edges.append(cls._parse_edge_to_line(top_edge, dimension=3))
 
-        # Optional itermediate edges:
-        int_edges = _xpath(src_elem, './/nrml:intermediateEdge//gml:posList')
-        for edge in int_edges:
-            complex_edges.append(cls._parse_edge_to_line(edge, dimension=3))
-
-        # Bottom edge
-        [bottom_edge] = _xpath(
-            src_elem, './/nrml:faultBottomEdge//gml:posList')
-        complex_edges.append(cls._parse_edge_to_line(bottom_edge, dimension=3))
-
-        return complex_edges
-
-    @classmethod
-    def _parse_edge_to_line(cls, edge_string, dimension=2):
-        '''
-        For a string returned from the _xpath function, convert to an
-        instance of a line class
-        :param edge_string:
-            List of nodes in format returned from _xpath
-        :param int dimension:
-            Number of dimenions - 2 (Long, Lat) or 3 (Long, Lat, Depth)
-
-        '''
-        coords = edge_string.text.split()
-
-        if dimension == 3:
-            # Long lat and depth
-            edge = [Point(float(coords[iloc]), float(coords[iloc + 1]),
-                    float(coords[iloc + 2])) for iloc in range(0, len(coords),
-                    dimension)]
+def node_to_point_geometry(node):
+    """
+    Reads the node and returns the point geometry, upper depth and lower depth
+    """
+    assert "pointGeometry" in node.tag
+    for subnode in node.nodes:
+        if "Point" in subnode.tag:
+            # Position
+            lon, lat = map(float, subnode.nodes[0].text.split())
+            point = Point(lon, lat)
+        elif "upperSeismoDepth" in subnode.tag:
+            upper_depth = float_(subnode.text)
+        elif "lowerSeismoDepth" in subnode.tag:
+            lower_depth = float_(subnode.text)
         else:
-            # Only long & lat
-            edge = [Point(float(coords[iloc]), float(coords[iloc + 1]))
-                    for iloc in range(0, len(coords), dimension)]
+            # Redundent
+            pass
+    assert lower_depth > upper_depth
+    return point, upper_depth, lower_depth
 
-        return Line(edge)
-
-
-class nrmlSourceModelParser(BaseSourceModelParser, FaultGeometryParserMixin):
-    """NRML source model parser. Reads point sources, area sources, simple
-    fault sources, and complex fault sources from a given source.
-
-    :param source:
-        Filename or file-like object containing the XML data.
-
-    :param float mesh_spacing:
-        Spacing (km) of the fault mesh, where applicable (default 1.0)
+def node_to_area_geometry(node):
     """
+    Reads an area geometry node and returns the polygon, upper depth and lower
+    depth    
+    """
+    assert "areaGeometry" in node.tag
+    for subnode in node.nodes:
+        if "Polygon" in subnode.tag:
+            crds = map(float,
+                subnode.nodes[0].nodes[0].nodes[0].text.split())
+            polygon = Polygon([Point(crds[iloc], crds[iloc + 1])
+                               for iloc in range(0, len(crds), 2)])
+        elif "upperSeismoDepth" in subnode.tag:
+            upper_depth = float_(subnode.text)
+        elif "lowerSeismoDepth" in subnode.tag:
+            lower_depth = float_(subnode.text)
+        else:
+            # Redundent
+            pass
+    assert lower_depth > upper_depth
+    return polygon, upper_depth, lower_depth
 
-    _SM_TAG = '{%s}sourceModel' % nrml.NAMESPACE
-    _PT_TAG = '{%s}pointSource' % nrml.NAMESPACE
-    _AREA_TAG = '{%s}areaSource' % nrml.NAMESPACE
-    _SIMPLE_TAG = '{%s}simpleFaultSource' % nrml.NAMESPACE
-    _COMPLEX_TAG = '{%s}complexFaultSource' % nrml.NAMESPACE
+def node_to_simple_fault_geometry(node):
+    """
+    Reads a simple fault geometry node and returns an OpenQuake representation
+    :returns:
+        trace - Trace of fault as instance
+    """
+    assert "simpleFaultGeometry" in node.tag
+    for subnode in node.nodes:
+        if "LineString" in subnode.tag:
+            trace = linestring_node_to_line(subnode, with_depth=False)
+        elif "dip" in subnode.tag:
+            dip = float(subnode.text)
+        elif "upperSeismoDepth" in subnode.tag:
+            upper_depth = float(subnode.text)
+        elif "lowerSeismoDepth" in subnode.tag:
+            lower_depth = float(subnode.text)
+        else:
+            # Redundent
+            pass
+    assert lower_depth > upper_depth
+    return trace, dip, upper_depth, lower_depth
 
-    def __init__(self, input_file):
-        self.source = input_file
-        self.mesh_spacing = None
-        self._parse_fn_map = {
-            self._PT_TAG: self._parse_point,
-            self._AREA_TAG: self._parse_area,
-            self._SIMPLE_TAG: self._parse_simple,
-            self._COMPLEX_TAG: self._parse_complex,
-        }
+def node_to_complex_fault_geometry(node):
+    """
+    Reads a complex fault geometry node and returns an
+    """
+    assert "complexFaultGeometry" in node.tag
+    intermediate_edges = []
+    for subnode in node.nodes:
+        if "faultTopEdge" in subnode.tag:
+            top_edge = linestring_node_to_line(subnode.nodes[0],
+                                               with_depth=True)
+        elif "intermediateEdge" in subnode.tag:
+            int_edge = linestring_node_to_line(subnode.nodes[0],
+                                               with_depth=True)
+            intermediate_edges.append(int_edge)
+        elif "faultBottomEdge" in subnode.tag:
+            bottom_edge = linestring_node_to_line(subnode.nodes[0],
+                                                  with_depth=True)
+        else:
+            # Redundent
+            pass
+    return [top_edge] + intermediate_edges + [bottom_edge]
 
-    def _source_gen(self, tree):
-        """Returns a generator which yields source model objects."""
-        for event, element in tree:
-            # We only want to parse data from the 'end' tag, otherwise there is
-            # no guarantee the data will actually be present. We've run into
-            # this issue in the past. See http://bit.ly/lxmlendevent for a
-            # detailed description of the issue.
-            if event == 'end':
-                parse_fn = self._parse_fn_map.get(element.tag, None)
+def node_to_scalerel(node):
+    """
+    Parses a node to an instance of a supported scaling relation class
+    """
+    if not node.text:
+        return None
+    return SCALERELS[node.text.strip()]()
 
-                if parse_fn is not None:
-                    if 'Fault' in element.tag:
-                        yield parse_fn(element, self.mesh_spacing)
-                    else:
-                        yield parse_fn(element)
-                    element.clear()
-                    while element.getprevious() is not None:
-                        # Delete previous sibling elements.
-                        # We need to loop here in case there are comments in
-                        # the input file which are considered siblings to
-                        # source elements.
-                        del element.getparent()[0]
+def node_to_truncated_gr(node, bin_width=0.1):
+    """
+    Parses truncated GR node to an instance of the
+    :class: openquake.hazardlib.mfd.truncated_gr.TruncatedGRMFD
+    """
+    # Parse to float dictionary
+    if not all([node.attrib[key]
+                for key in ["minMag", "maxMag", "aValue", "bValue"]]):
+        return None
+    tgr  = dict([(key, float_(node.attrib[key])) for key in node.attrib.keys()])
+    return mfd.truncated_gr.TruncatedGRMFD(min_mag=tgr["minMag"],
+                                           max_mag=tgr["maxMag"],
+                                           bin_width=bin_width,
+                                           a_val=tgr["aValue"],
+                                           b_val=tgr["bValue"])
 
-    @classmethod
-    def _set_common_attrs(cls, model, src_elem):
-        """Given a source object and a source XML element, set common
-        attributes on the model, such as id, name, trt, mag_scale_rel, and
-        rupt_aspect_ratio.
+def node_to_evenly_discretized(node):
+    """
+    Parses the evenly discretized mfd node to an instance of the
+    :class: openquake.hazardlib.mfd.evenly_discretized.EvenlyDiscretizedMFD,
+    or to None if not all parameters are available
+    """
+    if not all([node.attrib["minMag"], node.attrib["binWidth"],
+                node.nodes[0].text]):
+        return None
+    # Text to float
+    rates = map(float, node.nodes[0].text.split())
+    return mfd.evenly_discretized.EvenlyDiscretizedMFD(
+        float(node.attrib["minMag"]),
+        float(node.attrib["binWidth"]),
+        rates)
 
-        :param model:
-            Instance of a source class from :module:`openquake.nrmllib.models`.
-        :param src_elem:
-            :class:`lxml.etree._Element` instance representing a source.
+def node_to_mfd(node, taglist):
+    """
+    Reads the node to return a magnitude frequency distribution
+    """
+    if "incrementalMFD" in taglist:
+        mfd = node_to_evenly_discretized(
+            node.nodes[taglist.index("incrementalMFD")])
+    elif "truncGutenbergRichterMFD" in taglist:
+        mfd = node_to_truncated_gr(
+            node.nodes[taglist.index("truncGutenbergRichterMFD")])
+    else:
+        mfd = None
+    return mfd
+
+def node_to_nodal_planes(node):
+    """
+    Parses the nodal plane distribution to a PMF
+    """
+    if not len(node):
+        return None
+    npd_pmf = []
+    for plane in node.nodes:
+        if not all([plane.attrib[key] for key in plane.attrib.keys()]):
+            # One plane fails - return None
+            return None
+        npd = NodalPlane(float(plane.attrib["strike"]),
+                         float(plane.attrib["dip"]),
+                         float(plane.attrib["rake"]))
+        npd_pmf.append((float(plane.attrib["probability"]), npd))
+    return PMF(npd_pmf)
+ 
+def node_to_hdd(node):
+    """
+    Parses the node to a hpyocentral depth distribution PMF
+    """
+    if not len(node):
+        return None
+    hdds = []
+    for subnode in node.nodes:
+        if not all([subnode.attrib[key] for key in ["depth", "probability"]]):
+            return None
+        hdds.append((float(subnode.attrib["probability"]),
+                     float(subnode.attrib["depth"])))
+    return PMF(hdds)
+
+def parse_point_source_node(node, mfd_spacing=0.1):
+    """
+    Returns an "areaSource" node into an instance of the :class:
+    hmtk.sources.area.mtkAreaSource
+    """
+    assert "pointSource" in node.tag
+    pnt_taglist = get_taglist(node)
+    # Get metadata
+    point_id, name, trt = (node.attrib["id"],
+                          node.attrib["name"],
+                          node.attrib["tectonicRegion"])
+    assert point_id # Defensive validation!
+    # Process geometry
+    location, upper_depth, lower_depth = node_to_point_geometry(
+        node.nodes[pnt_taglist.index("pointGeometry")])
+    # Process scaling relation
+    msr = node_to_scalerel(node.nodes[pnt_taglist.index("magScaleRel")])
+    # Process aspect ratio
+    aspect = float_(node.nodes[pnt_taglist.index("ruptAspectRatio")].text)
+    # Process MFD
+    mfd = node_to_mfd(node, pnt_taglist)
+    # Process nodal planes
+    npds = node_to_nodal_planes(
+        node.nodes[pnt_taglist.index("nodalPlaneDist")])
+    # Process hypocentral depths
+    hdds = node_to_hdd(node.nodes[pnt_taglist.index("hypoDepthDist")])
+    return mtkPointSource(point_id, name, trt,
+                          geometry=location,
+                          upper_depth=upper_depth,
+                          lower_depth=lower_depth,
+                          mag_scale_rel=msr,
+                          rupt_aspect_ratio=aspect,
+                          mfd=mfd,
+                          nodal_plane_dist=npds,
+                          hypo_depth_dist=hdds)
+
+def parse_area_source_node(node, mfd_spacing=0.1):
+    """
+    Returns an "areaSource" node into an instance of the :class:
+    hmtk.sources.area.mtkAreaSource
+    """
+    assert "areaSource" in node.tag
+    area_taglist = get_taglist(node)
+    # Get metadata
+    area_id, name, trt = (node.attrib["id"],
+                          node.attrib["name"],
+                          node.attrib["tectonicRegion"])
+    assert area_id # Defensive validation!
+    # Process geometry
+    polygon, upper_depth, lower_depth = node_to_area_geometry(
+        node.nodes[area_taglist.index("areaGeometry")])
+    # Process scaling relation
+    msr = node_to_scalerel(node.nodes[area_taglist.index("magScaleRel")])
+    # Process aspect ratio
+    aspect = float_(node.nodes[area_taglist.index("ruptAspectRatio")].text)
+    # Process MFD
+    mfd = node_to_mfd(node, area_taglist)
+    # Process nodal planes
+    npds = node_to_nodal_planes(
+        node.nodes[area_taglist.index("nodalPlaneDist")])
+    # Process hypocentral depths
+    hdds = node_to_hdd(node.nodes[area_taglist.index("hypoDepthDist")])
+    return mtkAreaSource(area_id, name, trt,
+                         geometry=polygon,
+                         upper_depth=upper_depth,
+                         lower_depth=lower_depth,
+                         mag_scale_rel=msr,
+                         rupt_aspect_ratio=aspect,
+                         mfd=mfd,
+                         nodal_plane_dist=npds,
+                         hypo_depth_dist=hdds)
+
+
+def parse_simple_fault_node(node, mfd_spacing=0.1, mesh_spacing=1.0):
+    """
+    Parses a "simpleFaultSource" node and returns an instance of the :class:
+    hmtk.sources.simple_fault.mtkSimpleFaultSource
+    """
+    assert "simpleFaultSource" in node.tag
+    sf_taglist = get_taglist(node)
+    # Get metadata
+    sf_id, name, trt = (node.attrib["id"],
+                        node.attrib["name"],
+                        node.attrib["tectonicRegion"])
+    # Process geometry
+    trace, dip, upper_depth, lower_depth = node_to_simple_fault_geometry(
+        node.nodes[sf_taglist.index("simpleFaultGeometry")])
+    # Process scaling relation
+    msr = node_to_scalerel(node.nodes[sf_taglist.index("magScaleRel")])
+    # Process aspect ratio
+    aspect = float_(node.nodes[sf_taglist.index("ruptAspectRatio")].text)
+    # Process MFD
+    mfd = node_to_mfd(node, sf_taglist)
+    # Process rake
+    rake = float_(node.nodes[sf_taglist.index("rake")].text)
+    simple_fault = mtkSimpleFaultSource(sf_id, name, trt,
+                                        geometry=None,
+                                        dip=dip,
+                                        upper_depth=upper_depth,
+                                        lower_depth=lower_depth,
+                                        mag_scale_rel=msr,
+                                        rupt_aspect_ratio=aspect,
+                                        mfd=mfd,
+                                        rake=rake)
+    simple_fault.create_geometry(trace, dip, upper_depth, lower_depth,
+                                 mesh_spacing)
+    return simple_fault
+
+def parse_complex_fault_node(node, mfd_spacing=0.1, mesh_spacing=4.0):
+    """
+    Parses a "complexFaultSource" node and returns an instance of the :class:
+    hmtk.sources.complex_fault.mtkComplexFaultSource
+    """
+    assert "complexFaultSource" in node.tag
+    sf_taglist = get_taglist(node)
+    # Get metadata
+    sf_id, name, trt = (node.attrib["id"],
+                        node.attrib["name"],
+                        node.attrib["tectonicRegion"])
+    # Process geometry
+    edges = node_to_complex_fault_geometry(
+        node.nodes[sf_taglist.index("complexFaultGeometry")])
+    # Process scaling relation
+    msr = node_to_scalerel(node.nodes[sf_taglist.index("magScaleRel")])
+    # Process aspect ratio
+    aspect = float_(node.nodes[sf_taglist.index("ruptAspectRatio")].text)
+    # Process MFD
+    mfd = node_to_mfd(node, sf_taglist)
+    # Process rake
+    rake = float_(node.nodes[sf_taglist.index("rake")].text)
+    complex_fault = mtkComplexFaultSource(sf_id, name, trt,
+                                          geometry=None,
+                                          mag_scale_rel=msr,
+                                          rupt_aspect_ratio=aspect,
+                                          mfd=mfd,
+                                          rake=rake)
+    complex_fault.create_geometry(edges, mesh_spacing)
+    return complex_fault
+
+class nrmlSourceModelParser(BaseSourceModelParser):
+    """
+    Parser for a source model in NRML format, permitting partial validation
+    such that not all fields need to be specified for the file to be parsed
+    """
+    def read_file(self, identifier, mfd_spacing=0.1, simple_mesh_spacing=1.0,
+        complex_mesh_spacing=4.0, area_discretization=10.):
         """
-        if src_elem.get('tectonicRegion'):
-            model.trt = src_elem.get('tectonicRegion')
-
-        msr_elem = (_xpath(src_elem, './nrml:magScaleRel')[0].text).strip()
-        if msr_elem:
-            if msr_elem in SCALE_REL_MAP.keys():
-                model.mag_scale_rel = msr_elem
+        Reads in the source model in returns an instance of the :class:
+        hmtk.sourcs.source_model.mtkSourceModel
+        """
+        node_set = node_from_xml(self.input_file)[0]
+        source_model = mtkSourceModel(identifier,
+                                      name=node_set.attrib["name"])
+        for node in node_set:
+            if "pointSource" in node.tag:
+                source_model.sources.append(
+                    parse_point_source_node(node, mfd_spacing))
+            elif "areaSource" in node.tag:
+                source_model.sources.append(
+                    parse_area_source_node(node, mfd_spacing))
+            elif "simpleFaultSource" in node.tag:
+                source_model.sources.append(
+                    parse_simple_fault_node(node, mfd_spacing,
+                                            simple_mesh_spacing))
+            elif "complexFaultSource" in node.tag:
+                source_model.sources.append(
+                    parse_complex_fault_node(node, mfd_spacing,
+                                             complex_mesh_spacing))
             else:
-                raise ValueError('Magnitude Scaling Relation not currently '
-                                 'supported!')
-
-        rup_asp = _xpath(src_elem, './nrml:ruptAspectRatio')[0].text
-        if rup_asp:
-            model.rupt_aspect_ratio = float(rup_asp)
-
-    @classmethod
-    def _parse_mfd(cls, src_elem):
-        """
-        :param src_elem:
-        :class:`lxml.etree._Element` instance representing a source.
-        """
-        [mfd_elem] = _xpath(src_elem, ('.//nrml:truncGutenbergRichterMFD | '
-                                       './/nrml:incrementalMFD'))
-
-        value_set = False
-        if mfd_elem.tag == '{%s}truncGutenbergRichterMFD' % (nrml.NAMESPACE):
-            mfd = models.TGRMFD()
-            for key in TGR_MAP.keys():
-                key_string = mfd_elem.get(key)
-                if key_string:
-                    value_set = True
-                    setattr(mfd, TGR_MAP[key], float(key_string))
-
-        elif mfd_elem.tag == '{%s}incrementalMFD' % (nrml.NAMESPACE):
-            mfd = models.IncrementalMFD()
-            if mfd_elem.get('minMag'):
-                value_set = True
-                mfd.min_mag = float(mfd_elem.get('minMag'))
-            if mfd_elem.get('binWidth'):
-                value_set = True
-                mfd.bin_width = float(mfd_elem.get('binWidth'))
-
-            [occur_rates] = _xpath(mfd_elem, './nrml:occurRates')
-            if occur_rates.text:
-                value_set = True
-                mfd.occur_rates = [float(x) for x in occur_rates.text.split()]
-        if value_set:
-            return mfd
-        else:
-            return None
-
-    @classmethod
-    def _parse_nodal_plane_dist(cls, src_elem):
-        """
-        :param src_elem:
-        :class:`lxml.etree._Element` instance representing a source.
-        :returns:
-            `list` of :class:`openquake.nrmllib.models.NodalPlane` objects.
-        """
-        npd = []
-        value_set = False
-        for elem in _xpath(src_elem, './/nrml:nodalPlane'):
-            nplane = models.NodalPlane()
-            if elem.get('probability'):
-                nplane.probability = decimal.Decimal(elem.get('probability'))
-
-            for attribute in ['strike', 'dip', 'rake']:
-                if elem.get(attribute):
-                    setattr(nplane, attribute, float(elem.get(attribute)))
-                    value_set = True
-
-            npd.append(nplane)
-        if value_set:
-            return npd
-        else:
-            return None
-
-    @classmethod
-    def _parse_hypo_depth_dist(cls, src_elem):
-        """
-        :param src_elem:
-        :class:`lxml.etree._Element` instance representing a source.
-        :returns:
-            `list` of :class:`openquake.nrmllib.models.HypocentralDepth`
-            objects.
-        """
-        hdd = []
-        value_set = False
-        for elem in _xpath(src_elem, './/nrml:hypoDepth'):
-            hdepth = models.HypocentralDepth()
-            if elem.get('probability'):
-                hdepth.probability = decimal.Decimal(elem.get('probability'))
-            if elem.get('depth'):
-                hdepth.depth = float(elem.get('depth'))
-                value_set = True
-            hdd.append(hdepth)
-        if value_set:
-            return hdd
-        else:
-            return None
-
-    @classmethod
-    def _parse_point(cls, src_elem):
-        """
-        :param src_elem:
-        :class:`lxml.etree._Element` instance representing a source.
-        :returns:
-            Fully populated :class:`openquake.nrmllib.models.PointSource`
-            object.
-        """
-        # Instantiate mtkPointSource class with identifier and name
-        point = mtkPointSource(src_elem.get('id'), src_elem.get('name'))
-        print 'Point Source - ID: %s, name: %s' % (point.id, point.name)
-
-        # Set common attributes
-        cls._set_common_attrs(point, src_elem)
-
-        # Define the geometry
-        [gml_pos] = _xpath(src_elem, './/gml:pos')
-        coords = gml_pos.text.split()
-        input_point = Point(float(coords[0]), float(coords[1]))
-
-        if _xpath(src_elem, './/nrml:upperSeismoDepth')[0].text:
-            upper_seismo_depth = float(
-                _xpath(src_elem, './/nrml:upperSeismoDepth')[0].text)
-        else:
-            upper_seismo_depth = None
-
-        if _xpath(src_elem, './/nrml:lowerSeismoDepth')[0].text:
-            lower_seismo_depth = float(
-                _xpath(src_elem, './/nrml:lowerSeismoDepth')[0].text)
-        else:
-            lower_seismo_depth = None
-
-        point.create_geometry(input_point,
-                              upper_seismo_depth,
-                              lower_seismo_depth)
-
-        point.mfd = cls._parse_mfd(src_elem)
-        point.nodal_plane_dist = cls._parse_nodal_plane_dist(src_elem)
-        point.hypo_depth_dist = cls._parse_hypo_depth_dist(src_elem)
-
-        return point
-
-    @classmethod
-    def _parse_area(cls, src_elem):
-        """
-        :param src_elem:
-        :class:`lxml.etree._Element` instance representing a source.
-        :returns:
-            Fully populated :class:`openquake.nrmllib.models.AreaSource`
-            object.
-        """
-        # Instantiate with identifier and name
-        area = mtkAreaSource(src_elem.get('id'), src_elem.get('name'))
-        print 'Area source - ID: %s, name: %s' % (area.id, area.name)
-
-        # Set common attributes
-        cls._set_common_attrs(area, src_elem)
-
-        # Get geometry
-        [gml_pos_list] = _xpath(src_elem, './/gml:posList')
-        coords = gml_pos_list.text.split()
-        input_polygon = Polygon(
-            [Point(float(coords[iloc]), float(coords[iloc + 1]))
-             for iloc in range(0, len(coords), 2)])
-
-        # Area source polygon geometries are always 2-dimensional and on the
-        # Earth's surface (depth == 0.0).
-        if _xpath(src_elem, './/nrml:upperSeismoDepth')[0].text:
-            upper_seismo_depth = float(
-                _xpath(src_elem, './/nrml:upperSeismoDepth')[0].text)
-        else:
-            upper_seismo_depth = None
-
-        if _xpath(src_elem, './/nrml:lowerSeismoDepth')[0].text:
-            lower_seismo_depth = float(
-                _xpath(src_elem, './/nrml:lowerSeismoDepth')[0].text)
-        else:
-            lower_seismo_depth = None
-
-        area.create_geometry(input_polygon,
-                             upper_seismo_depth,
-                             lower_seismo_depth)
-
-        area.mfd = cls._parse_mfd(src_elem)
-        area.nodal_plane_dist = cls._parse_nodal_plane_dist(src_elem)
-        area.hypo_depth_dist = cls._parse_hypo_depth_dist(src_elem)
-
-        return area
-
-    @classmethod
-    def _parse_simple(cls, src_elem, mesh_spacing):
-        """
-        :param src_elem:
-            :class:`lxml.etree._Element` instance representing a source.
-        :returns:
-            Fully populated
-            :class:`openquake.nrmllib.models.SimpleFaultSource` object.
-        """
-        # Instantiate with identifier and name
-        simple = mtkSimpleFaultSource(src_elem.get('id'), src_elem.get('name'))
-        print 'Simple Fault source - ID: %s, name: %s' % (simple.id,
-                                                          simple.name)
-        # Set common attributes
-        cls._set_common_attrs(simple, src_elem)
-
-        # Create the simple geometry
-        trace, dip, upper_depth, lower_depth = \
-            cls._parse_simple_geometry(src_elem)
-        simple.create_geometry(trace, dip, upper_depth, lower_depth,
-                               mesh_spacing)
-        #simple.geometry = simple_geom
-        simple.mfd = cls._parse_mfd(src_elem)
-        if _xpath(src_elem, './/nrml:rake')[0].text:
-            simple.rake = float(_xpath(src_elem, './/nrml:rake')[0].text)
-
-        return simple
-
-    @classmethod
-    def _parse_complex(cls, src_elem, mesh_spacing):
-        """
-        :param src_elem:
-            :class:`lxml.etree._Element` instance representing a source.
-        :returns:
-            Fully populated
-            :class:`openquake.nrmllib.models.ComplexFaultSource` object.
-        """
-        # Instantiate with identifier and name
-        complx = mtkComplexFaultSource(
-            src_elem.get('id'), src_elem.get('name'))
-        print 'Complex Fault Source - ID: %s, name: %s' % (complx.id,
-                                                           complx.name)
-        # Set common attributes
-        cls._set_common_attrs(complx, src_elem)
-
-        # Create the complex geometry
-        complex_edges = cls._parse_complex_geometry(src_elem)
-        complx.create_geometry(complex_edges, mesh_spacing)
-        # Get mfd
-        complx.mfd = cls._parse_mfd(src_elem)
-        if _xpath(src_elem, './/nrml:rake')[0].text:
-            complx.rake = float(
-                _xpath(src_elem, './/nrml:rake')[0].text)
-        return complx
-
-    def read_file(self, fault_mesh_spacing=1.0, validation=False):
-        """
-        Parse the source XML content and generate a source model in object
-        form.
-        :param float fault_mesh_spacing:
-            Mesh spacing to use for fault sources (km)
-        :param bool validation:
-            Option to validate against nrml 0.4 schema - should only be set to
-            true when inputting a fully defined source model
-
-        :returns:
-            :class:`hmtk.sources.source_model.SourceModel` instance.
-        """
-        self.mesh_spacing = fault_mesh_spacing
-
-        src_model = mtkSourceModel()
-
-        if validation:
-            # Validate against nrml schema
-            schema = etree.XMLSchema(etree.parse(nrml.nrml_schema_file()))
-            tree = etree.iterparse(self.source, events=('start', 'end'),
-                                   schema=schema)
-        else:
-            tree = etree.iterparse(self.source, events=('start', 'end'))
-
-        for event, element in tree:
-            # Find the <sourceModel> element and get the 'name' attr.
-            if event == 'start':
-                if element.tag == self._SM_TAG:
-                    src_model.name = element.get('name')
-                    break
-            else:
-                # If we get to here, we didn't find the <sourceModel> element.
-                raise ValueError('<sourceModel> element not found.')
-
-        src_model.sources = self._source_gen(tree)
-        src_model.sources = list(src_model.sources)
-        return src_model
+                print "Source typology %s not recognised - skipping!" % node.tag
+        return source_model

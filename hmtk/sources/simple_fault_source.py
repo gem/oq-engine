@@ -239,33 +239,6 @@ class mtkSimpleFaultSource(object):
             warnings.warn('Source %s (%s) has fewer than 5 events'
                           % (self.id, self.name))
 
-    def create_oqnrml_source(self, use_defaults=False):
-        '''
-        Turns source into instance of the :class:
-        openquake.nrmllib.model.SimpleFaultSource
-        :param bool use_defaults:
-            If set to True, will use default values for rupture aspect ratio
-            and magnitude scaling relation. If False, will raise value error
-            if this information is missing
-        '''
-        if not isinstance(self.rake, float):
-            raise ValueError('Cannot render fault source - rake is missing!')
-        simple_geometry = models.SimpleFaultGeometry(
-            wkt=conv.simple_trace_to_wkt_linestring(self.fault_trace),
-            dip=self.dip,
-            upper_seismo_depth=self.upper_depth,
-            lower_seismo_depth=self.lower_depth)
-
-        return models.SimpleFaultSource(
-            self.id,
-            self.name,
-            self.trt,
-            simple_geometry,
-            conv.render_mag_scale_rel(self.mag_scale_rel, use_defaults),
-            conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
-            conv.render_mfd(self.mfd),
-            self.rake)
-
     def create_oqhazardlib_source(self, tom, mesh_spacing, use_defaults=False):
         """
         Returns an instance of the :class:
@@ -276,11 +249,13 @@ class mtkSimpleFaultSource(object):
              Mesh spacing
         
         """
+        if not self.mfd:
+            raise ValueError("Cannot write to hazardlib without MFD")
         return SimpleFaultSource(
             self.id,
             self.name,
             self.trt,
-            conv.mfd_to_hazardlib(self.mfd),
+            self.mfd,
             mesh_spacing,
             conv.mag_scale_rel_to_hazardlib(self.mag_scale_rel, use_defaults),
             conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
