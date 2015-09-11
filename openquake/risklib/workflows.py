@@ -23,7 +23,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import CallableDict
-from openquake.commonlib import valid
+from openquake.commonlib import valid, writers
 from openquake.risklib import utils, scientific
 
 registry = CallableDict()
@@ -564,6 +564,7 @@ class ProbabilisticEventBased(Workflow):
             ground_motion_values, epsilons)
         # sum on ruptures; compute the fractional losses
         average_losses = loss_matrix.sum(axis=1) * self.ses_ratio
+        print writers.scientificformat(average_losses)
         values = get_values(loss_type, assets)
         ela = loss_matrix.T * values  # matrix with T x N elements
         if self.insured_losses and loss_type != 'fatalities':
