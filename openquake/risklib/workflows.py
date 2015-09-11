@@ -605,7 +605,7 @@ class ProbabilisticEventBased(Workflow):
             loss_matrix=loss_matrix if self.return_loss_matrix else None,
             loss_curves=curves, average_losses=average_losses,
             insured_curves=insured_curves,
-            average_insured_losses=[numpy.nan] * n,
+            average_insured_losses=average_insured_losses,
             stddev_losses=[None] * n, stddev_insured_losses=[None] * n,
             loss_maps=maps, event_loss_table=elt)
 

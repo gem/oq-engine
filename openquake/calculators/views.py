@@ -230,6 +230,23 @@ def view_old_avg_losses(token, dstore):
     return rst_table(losses)
 
 
+def sum_table(records):
+    """
+    Used to compute summaries. The records are assumed to have numeric
+    fields, except the first field which is ignored, since it typically
+    contains a label. Here is an example:
+
+    >>> sum_table([('a', 1), ('b', 2)])
+    ['total', 3]
+    """
+    size = len(records[0])
+    result = [None] * size
+    result[0] = 'total'
+    for i in range(1, size):
+        result[i] = sum(rec[i] for rec in records)
+    return result
+
+
 # this is used by the ebr calculator
 @view.add('mean_avg_losses')
 def view_mean_avg_losses(token, dstore):
@@ -250,4 +267,7 @@ def view_mean_avg_losses(token, dstore):
             key = 'mean'
         for aid, pair in enumerate(group[lt][key]):
             losses[aid][lti + 1] = pair  # loss, ins_loss
-    return rst_table(sorted(losses), header=header, fmt='%8.6E')
+    losses.sort()
+    if len(losses) > 1:
+        losses.append(sum_table(losses))
+    return rst_table(losses, header=header, fmt='%8.6E')
