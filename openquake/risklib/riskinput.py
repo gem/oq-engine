@@ -437,7 +437,8 @@ class RiskInputFromRuptures(object):
             for gsim in gsims:
                 for imt in self.imts:
                     for rlz in rlzs_assoc[trt_id, gsim]:
-                        haz_by_imt_rlz[imt][rlz] = hazard[gsim][imt]
+                        if self.col_id in rlzs_assoc.get_col_ids(rlz):
+                            haz_by_imt_rlz[imt][rlz] = hazard[gsim][imt]
             for asset in assets_:
                 assets.append(asset)
                 hazards.append(haz_by_imt_rlz)
