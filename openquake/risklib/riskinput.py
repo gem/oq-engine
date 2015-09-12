@@ -265,8 +265,8 @@ class RiskModel(collections.Mapping):
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
-        return '<%s #covs=%d\n%s>' % (
-            self.__class__.__name__, self.covs, '\n'.join(lines))
+        return '<%s(%d, %d)\n%s>' % (
+            self.__class__.__name__, len(lines), self.covs, '\n'.join(lines))
 
 
 class RiskInput(object):
