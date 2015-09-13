@@ -130,7 +130,7 @@ def view_gmfs_total_size(name, dstore):
 @datastore.view.add('col_rlz_assocs')
 def view_col_rlz_assocs(name, dstore):
     """
-    :returns: an array with the association array rlz.ordinal -> col_id
+    :returns: an array with the association array col_ids -> rlz_ids
     """
     rlzs_assoc = dstore['rlzs_assoc']
     num_ruptures = dstore['num_ruptures']

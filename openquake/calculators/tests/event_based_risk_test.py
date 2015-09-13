@@ -62,6 +62,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_4.__file__, 'job_h.ini,job_r.ini',
                             exports='csv', individual_curves='true')
         fnames = out['agg_losses-rlzs', 'csv']
+        assert fnames, 'No agg_losses-rlzs exported??'
         for fname in fnames:
             self.assertEqualFiles('expected/' + os.path.basename(fname), fname)
 
