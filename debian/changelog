@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimization: we do not generate the full epsilon matrix if all
+    coefficients of variation are zero
   * Fixed two subtle bugs in the management of the epsilons: it means that
     all event based risk calculations with nonzero coefficients of variations
     will produce slightly different numbers with respect to before
