@@ -97,7 +97,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         vars(self.oqparam).update(kw)
         for name, val in self.oqparam.to_params():
             self.datastore.attrs[name] = val
-        self.datastore.attrs['oqlite_version'] = __version__
+        self.datastore.attrs['oqlite_version'] = repr(__version__)
         self.datastore.hdf5.flush()
 
     def run(self, pre_execute=True, clean_up=True, concurrent_tasks=None,
