@@ -32,7 +32,8 @@ from openquake.risklib import workflows, riskinput
 
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
-from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
+from openquake.commonlib import (
+    nrml, valid, logictree, InvalidFile, parallel, __version__)
 from openquake.commonlib.oqvalidation import vulnerability_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_vfs
@@ -174,6 +175,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None):
 
     oqparam = OqParam(**job_ini)
     oqparam.validate()
+    oqparam.oqlite_version = __version__
     return oqparam
 
 
