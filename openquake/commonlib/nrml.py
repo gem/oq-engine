@@ -325,7 +325,8 @@ def read(source, chatty=True):
     # extract the XML namespace URL ('http://openquake.org/xmlns/nrml/0.5')
     xmlns = nrml.tag.split('}')[0][1:]
     if xmlns != NRML05 and chatty:
-        logging.warn('%s is at an outdated version: %s', source, xmlns)
+        # for the moment NRML04 is still supported, so we hide the warning
+        logging.debug('%s is at an outdated version: %s', source, xmlns)
     subnodes = []
     for elem in nrml:
         nodecls = nodefactory[striptag(elem.tag)]
