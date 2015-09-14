@@ -33,6 +33,7 @@ For more information on computing ground motion fields, see
 
 import time
 import random
+import logging
 import operator
 import itertools
 import collections
@@ -404,6 +405,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         exposure files, generating the seeds for the sourcesand building
         SESCollection records for each TrtModel.
         """
+        logging.warn('This calculator is deprecated, use oq-engine --lite')
         weights = super(EventBasedHazardCalculator, self).pre_execute()
         hc = self.oqparam
         rnd = random.Random(hc.random_seed)
