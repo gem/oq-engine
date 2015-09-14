@@ -30,7 +30,8 @@ import numpy
 from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general
 from openquake.baselib.performance import DummyMonitor
-from openquake.commonlib import readinput, datastore, logictree, export, source
+from openquake.commonlib import (
+    readinput, datastore, logictree, export, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import apply_reduce
 from openquake.risklib import riskinput
@@ -96,6 +97,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         vars(self.oqparam).update(kw)
         for name, val in self.oqparam.to_params():
             self.datastore.attrs[name] = val
+        self.datastore.attrs['oqlite_version'] = __version__
         self.datastore.hdf5.flush()
 
     def run(self, pre_execute=True, clean_up=True, concurrent_tasks=None,
