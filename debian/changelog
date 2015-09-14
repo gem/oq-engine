@@ -1,7 +1,9 @@
   [Michele Simionato]
-  * Fixed a distribution bug in the epsilons: it means that all event based
-    risk calculations with nonzero coefficients of variations will produce
-    slightly different numbers with respect to before
+  * Optimization: we do not generate the full epsilon matrix if all
+    coefficients of variation are zero
+  * Fixed two subtle bugs in the management of the epsilons: it means that
+    all event based risk calculations with nonzero coefficients of variations
+    will produce slightly different numbers with respect to before
   * Removed excessive checking on the exposure attributes `deductible` and
     `insuredLimit` that made it impossible to run legitimate calculations
   * Changed the meaning of `average_loss` for the aggregated curves: now it

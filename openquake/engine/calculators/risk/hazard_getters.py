@@ -220,7 +220,7 @@ class GroundMotionGetter(HazardGetter):
             self.hazards[ho] = self._get_gmv_dict(ho)
             for sc in haz_out_to_ses_coll(ho):
                 sescolls.add(sc)
-        for sc in sorted(sescolls):
+        for sc in sorted(sescolls, key=operator.attrgetter('ordinal')):
             rids = sc.get_ruptures().values_list('id', flat=True)
             self.rupture_ids.extend(rids)
         num_ruptures = len(self.rupture_ids)
