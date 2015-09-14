@@ -19,6 +19,8 @@ Core functionality for the classical PSHA risk calculator.
 """
 import collections
 import itertools
+import logging
+
 import numpy
 
 from openquake.hazardlib.geo import mesh
@@ -337,6 +339,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     getter_class = hazard_getters.GroundMotionGetter
 
     def __init__(self, job):
+        logging.warn('This calculator is deprecated, use oq-engine --lite')
         super(EventBasedRiskCalculator, self).__init__(job)
         # accumulator for the event loss tables
         self.acc = collections.defaultdict(collections.Counter)
