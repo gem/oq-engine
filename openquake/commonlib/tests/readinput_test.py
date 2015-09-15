@@ -310,6 +310,27 @@ class ExposureTestCase(unittest.TestCase):
   </exposureModel>
 </nrml>''')
 
+    exposure1 = general.writetmp('''\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings">
+    <description>Exposure model for buildings</description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" unit="USD" type="per_asset"/>
+      </costTypes>
+    </conversions>
+    <assets>
+      <asset id="a 1" taxonomy="RM" number="3000">
+        <location lon="81.2985" lat="29.1098"/>
+        <costs>
+          <cost type="structural" value="1000"/>
+        </costs>
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>''')
+
     def test_get_exposure_metadata(self):
         exp, _assets = readinput.get_exposure_lazy(self.exposure)
         self.assertEqual(exp.description, 'Exposure model for buildings')
@@ -342,7 +363,22 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
-        self.assertIn("node assets: Could not convert number->compose(positivefloat,nonzero): '0' is zero, line 17", str(ctx.exception))
+        self.assertIn("node assets: Could not convert number->compose"
+                      "(positivefloat,nonzero): '0' is zero, line 17",
+                      str(ctx.exception))
+
+    def test_exposure_invalid_asset_id(self):
+        oqparam = mock.Mock()
+        oqparam.calculation_mode = 'scenario_damage'
+        oqparam.inputs = {'exposure': self.exposure1}
+        oqparam.region_constraint = '''\
+POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
+        oqparam.time_event = None
+        oqparam.ignore_missing_costs = []
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_exposure(oqparam)
+        self.assertIn("Invalid ID 'a 1': the only accepted chars are "
+                      "a-zA-Z0-9_-, line 11, line 10", str(ctx.exception))
 
 
 class ReadCsvTestCase(unittest.TestCase):

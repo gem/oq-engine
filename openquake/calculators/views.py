@@ -219,8 +219,8 @@ def view_old_avg_losses(token, dstore):
         loss_curves = group[lt]['mean'] if stats else group[lt]['rlz-000']
         data = loss_curves.value['avg']
         data_by_lt[lt] = dict(zip(assets, data))
-    dt_list = [('asset_ref', '|S20')] + [(str(ltype), numpy.float32)
-                                         for ltype in sorted(data_by_lt)]
+    dt_list = [('asset_ref', '|S100')] + [(str(ltype), numpy.float32)
+                                          for ltype in sorted(data_by_lt)]
     avg_loss_dt = numpy.dtype(dt_list)
     losses = numpy.zeros(len(data_by_lt[lt]), avg_loss_dt)
     for lt, loss_by_asset in data_by_lt.items():

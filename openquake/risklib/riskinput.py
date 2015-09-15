@@ -75,7 +75,7 @@ def build_asset_collection(assets_by_site, time_event=None):
             taxonomies.add(asset.taxonomy)
     sorted_taxonomies = sorted(taxonomies)
     asset_dt = numpy.dtype(
-        [('asset_ref', '|S20'), ('site_id', numpy.uint32),
+        [('asset_ref', '|S100'), ('site_id', numpy.uint32),
          ('taxonomy', numpy.uint32)] +
         [(name, float) for name in float_fields])
     num_assets = sum(len(assets) for assets in assets_by_site)
