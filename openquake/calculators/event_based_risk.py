@@ -256,9 +256,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param result: a numpy array of shape (O, L, R)
         """
         for idx, arrays in numpy.ndenumerate(result):
-            # TODO: special case for avg_losses, they can be summed
-            # instead of extending the list of arrays
-            acc[idx].extend(arrays)
+            # TODO: special case for avg_losses, they can be summed directly
+            if idx[0] == AVGLOSS:
+                acc[idx] = [sum(acc[idx] + arrays, AccumDict())]
+            else:
+                acc[idx].extend(arrays)
         return acc
 
     def post_execute(self, result):
@@ -284,7 +286,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     saved[self.outs[o]] += losses.nbytes
                 elif o == AVGLOSS:  # average losses
                     lt = self.riskmodel.loss_types[l]
-                    avgloss_by_aid = sum(data, AccumDict())
+                    [avgloss_by_aid] = data
                     pairs = [avgloss_by_aid.get(i, zero2) * asset[lt]
                              for i, asset in enumerate(self.assetcol)]
                     avglosses = numpy.array(pairs, numpy.float32)
