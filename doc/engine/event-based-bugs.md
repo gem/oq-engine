@@ -16,10 +16,11 @@ OpenQuake 1.4 and OpenQuake 1.5.
 destructive way and you will not be able to go back to OpenQuake
 1.4*. It will be impossible to run event based risk and scenario
 risk calculation with OpenQuake 1.4 once you have upgraded your
-database to OpenQuake 1.5.
+database to OpenQuake 1.5. Conversely, it is impossible to use
+OpenQuake 1.5 with a database with the schema of OpenQuake 1.4.
 
 If you want to compare the results of OpenQuake 1.4 and OpenQuake 1.5
-use two different machines (they can be even virtual machines). If you
+use two different machines (they can be virtual machines). If you
 need to keep your old calculations make a backup of the database
 before upgrading to OpenQuake 1.5. Usually one does not to keep old
 calculations, but only the results: then exporting everything from
