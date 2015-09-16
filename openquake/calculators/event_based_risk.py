@@ -285,13 +285,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     saved[self.outs[o]] += losses.nbytes
                 elif o == AVGLOSS:  # average losses
                     lt = self.riskmodel.loss_types[l]
-                    [avgloss_by_aid] = data
-                    try:
-                        pairs = [avgloss_by_aid[i] * asset[lt]
-                                 for i, asset in enumerate(self.assetcol)]
-                    except:
-                        import pdb; pdb.set_trace()
-                    avglosses = numpy.array(pairs, numpy.float32)
+                    [avgloss] = data
+                    avglosses = numpy.array(
+                        [avgloss[i] * asset[lt]
+                         for i, asset in enumerate(self.assetcol)],
+                        numpy.float32)
                     self.datasets[o, l, r].dset[:] = avglosses
                     saved[self.outs[o]] += avglosses.nbytes
                 elif cb.user_provided:  # risk curves
