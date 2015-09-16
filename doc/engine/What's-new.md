@@ -86,7 +86,7 @@ script to convert input files from NRML 0.4 to NRML 0.5 will be provided.
 
 7. For the first time, *hazardlib supports Python 3*.  The support is
 at the beginning and the C-level speedups do not compile yet. However,
-we already testing hazardlib with Python 3.4 by using the Travis
+we are already testing hazardlib with Python 3.4 by using the Travis
 continuous integration system and we are committed to keep it
 compatible both with Python 2.7 and Python 3.4 and higher for the
 foreseeable future. There is no plan to abandon Python 2.7 any time
