@@ -41,6 +41,12 @@ class BaseASR(with_metaclass(abc.ABCMeta)):
             from -180 to 180.
         """
 
+    def __repr__(self):
+        """
+        Returns the name of the class
+        """
+        return "<%s>" % self.__class__.__name__
+
 
 class BaseASRSigma(with_metaclass(abc.ABCMeta, BaseASR)):
     """
@@ -57,7 +63,6 @@ class BaseASRSigma(with_metaclass(abc.ABCMeta, BaseASR)):
             Rake angle (the rupture propagation direction) in degrees,
             from -180 to 180.
         """
-
 
 class BaseMSR(with_metaclass(abc.ABCMeta)):
     """
@@ -78,6 +83,12 @@ class BaseMSR(with_metaclass(abc.ABCMeta)):
             Rake angle (the rupture propagation direction) in degrees,
             from -180 to 180.
         """
+
+    def __repr__(self):
+        """
+        Returns the name of the class
+        """
+        return "<%s>" % self.__class__.__name__
 
 
 class BaseMSRSigma(with_metaclass(abc.ABCMeta, BaseMSR)):
@@ -100,3 +111,4 @@ class BaseMSRSigma(with_metaclass(abc.ABCMeta, BaseMSR)):
             Rake angle (the rupture propagation direction) in degrees,
             from -180 to 180.
         """
+

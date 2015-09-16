@@ -403,7 +403,7 @@ def import_all(module_or_package):
             if f.endswith('.py'):
                 # convert PKGPATH/subpackage/module.py -> subpackage.module
                 # works at any level of nesting
-                modname = (module_or_package + cwd[n:].replace('/', '.') +
+                modname = (module_or_package + cwd[n:].replace(os.sep, '.') +
                            '.' + os.path.basename(f[:-3]))
                 try:
                     importlib.import_module(modname)
