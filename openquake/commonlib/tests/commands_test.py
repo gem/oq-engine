@@ -101,9 +101,12 @@ class RunShowExportTestCase(unittest.TestCase):
         self.assertEqual(str(p), '[(0.0, 0.0)]')
 
     def test_export_calc(self):
+        tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            export(self.datastore.calc_id, 'sitemesh', export_dir='/tmp')
-        self.assertIn("['/tmp/sitemesh.csv']", str(p))
+            export(self.datastore.calc_id, 'sitemesh', export_dir=tempdir)
+        fnames = [os.path.join(tempdir, 'sitemesh.csv')]
+        self.assertIn(str(fnames), str(p))
+        shutil.rmtree(tempdir)
 
 
 class ReduceTestCase(unittest.TestCase):
