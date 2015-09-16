@@ -24,7 +24,7 @@ import abc
 import numpy
 import math
 from openquake.hazardlib.geo.nodalplane import NodalPlane
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.geodetic import geodetic_distance

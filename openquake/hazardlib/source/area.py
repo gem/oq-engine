@@ -20,7 +20,7 @@ from copy import deepcopy
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots

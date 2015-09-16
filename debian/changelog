@@ -1,6 +1,7 @@
   [Graeme Weatherill]
   * Adds support for GMPEs to be implemented in the form of HDF5 binary tables
-  
+  * Adds `__repr__` method to scalerel and MFD base classes
+
   [Michele Simionato]
   * Now hazardlib unofficially supports Python 3
   * Added support for python setup.py test

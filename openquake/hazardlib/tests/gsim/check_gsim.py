@@ -143,9 +143,12 @@ def _format_stats(time_spent, discrepancies, errors, ctxs):
                                                 for discrep in discrepancies))
 
     yes_no = {False: 'yes', True: 'no'}
+    # NB: on a windows virtual machine the clock can be buggy and
+    # the time spent can be zero: Daniele has seen that
+    checks_per_sec = (total_checks / time_spent) if time_spent else '?'
     stats = '''\
 total of %d checks done, %d were successful and %d failed.
-%.1f seconds spent, avg rate is %.1f checks per seconds.
+%.1f seconds spent, avg rate is %s checks per seconds.
 success rate = %.1f%%
 average discrepancy = %.4f%%
 maximum discrepancy = %.4f%%
@@ -153,7 +156,7 @@ standard deviation = %.4f%%
 context objects changed = %s'''
     successes = total_checks - errors
     stats %= (total_checks, successes, errors,
-              time_spent, total_checks / float(time_spent),
+              time_spent, checks_per_sec,
               success_rate,
               avg_discrep,
               max_discrep,

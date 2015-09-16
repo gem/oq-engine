@@ -17,7 +17,7 @@
 Module :mod:`openquake.hazardlib.pmf` implements :class:`PMF`.
 """
 import numpy as np
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots

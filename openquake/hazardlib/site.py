@@ -20,7 +20,7 @@ import numpy
 
 from openquake.baselib.python3compat import range
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots
