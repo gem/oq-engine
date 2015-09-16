@@ -1,5 +1,5 @@
-During the development of OpenQuake 1.5, a lot of effort went in checking
-the correctness of the event based calculation and a lots of bugs were
+During the development of OpenQuake 1.5, a lot of effort went into checking
+the correctness of the event based calculators and a lots of bugs were
 fixed. As a consequence, *you cannot expect the numbers produced by
 OpenQuake 1.5 to be the same as the numbers of OpenQuake 1.4 in all
 situations*. Here we will document all the differences and the reasons
@@ -14,11 +14,10 @@ OpenQuake 1.4 and OpenQuake 1.5.
 
 *If you install OpenQuake 1.5, your database will be updated in a
 destructive way and you will not be able to revert back to OpenQuake
-1.4*. In particular, it will not be possible to run event based risk 
-and scenario risk calculations with OpenQuake 1.4 once you have 
-upgraded your database to OpenQuake 1.5. Conversely, it won't be 
-possible to use OpenQuake 1.5 with a database using the older schema 
-of OpenQuake 1.4.
+1.4*. It will not be possible to run calculations with OpenQuake 1.4
+once you have upgraded your database to OpenQuake 1.5. Conversely, it
+won't be possible to use OpenQuake 1.5 with a database using the older
+schema of OpenQuake 1.4.
 
 If you wish to compare the results from OpenQuake 1.4 and OpenQuake 1.5, 
 we suggest using two different machines (they can be virtual machines). 
