@@ -84,14 +84,16 @@ other kinds of vulnerability and fragility functions in the new format
 NRML 0.5, and NRML 0.4 may be deprecated. In that case a conversion
 script to convert input files from NRML 0.4 to NRML 0.5 will be provided.
 
-7. For the first time, *hazardlib officially supports Python 3*.  We
-are testing it with Python 3.4 using the Travis continuous integration
-system and we are committed to keep it compatible both with Python 2.7
-and Python 3.4 and higher for the foreseeable future. There is no plan
-to abandon Python 2.7 any time soon, but there is a plan to extend
-the support for both Python 2.7 and Python 3.4+ to risklib and the
-engine. However, this will be a long term and low priority process: do not
-expect anything definitive before 2016.
+7. For the first time, *hazardlib supports Python 3*.  The support is
+at the beginning and the C-level speedups do not compile yet. However,
+we already testing hazardlib with Python 3.4 by using the Travis
+continuous integration system and we are committed to keep it
+compatible both with Python 2.7 and Python 3.4 and higher for the
+foreseeable future. There is no plan to abandon Python 2.7 any time
+soon, but there is a plan to extend the support for both Python 2.7
+and Python 3.4+ to risklib and the engine. However, this will be a
+long term and low priority process: do not expect anything definitive
+before 2016.
 
 8. It is now possible to pass string parameters to GSIM classes,
 directly from the XML representation of the logic tree. This is
