@@ -1,12 +1,12 @@
 OpenQuake 1.5 is a major release and a big improvement with respect
-to OpenQuake 1.4. Overall in this release more than 110 bugs/feature
-requests were fixed/implemented and everybody should upgrade.
+to OpenQuake 1.4. More than 110 bugs/feature
+requests were fixed/implemented and everybody is invited to upgrade.
 
-New features of the OpenQuake Engine, version 1.5.
+New features of the OpenQuake Engine, version 1.5
 --------------------------------------------------
 
 1. The most important new feature is the *support for the HDF5
-technology*. Starting from OpenQuake 1.5 the scientific calculators
+technology*. Starting from this release the scientific calculators
 are starting to save their inputs and outputs into a single HDF5 file,
 called the datastore. The HDF5 file format is a well known standard in
 the scientific community, can be read/written by a variety of
@@ -17,19 +17,16 @@ storing arrays in PostgreSQL, as we did until now.
 
 2. Related to the first point, in OpenQuake 1.5 *the event based
 calculators (both hazard and risk) are officially deprecated*. They
-are still there, but they will be replaced with new calculators based
-on the HDF5 technology in OpenQuake 1.6. The change will
-have no impact on regular users (they will just see better
-performances) but it will change things for power users doing queries
-on the OpenQuake database (there will be nothing in the database!).
+are still there, but they are being replaced with new calculators based
+on the HDF5 technology. The change will happen in OpenQuake 1.6. It  will
+have no impact on regular users, they will just see better
+performances, but it will change things for power users doing queries
+on the OpenQuake database, since there will be nothing in the database!
 
 3. In order to make the transition easier, OpenQuake 1.5 includes the
 new calculators, so that it is possible to use them right now.
 The new calculators can be run in OpenQuake 1.5 with the
-command
-
-  $ oq-engine --lite --run job.ini
-
+command ``$ oq-engine --lite --run job.ini``.
 If you do not pass the ``--lite`` flag the old calculators will be
 run. In future releases the old calculators will be progressively
 removed and at the end of the process (which will take several
@@ -49,7 +46,7 @@ new and not battle tested yet. The risk calculators are at different
 level of completion; the only one which is recommended is the
 event based one.
 
-5. Internally, the ``--lite`` calculators are totally different from
+5. Internally, the ``--lite`` calculators are very different from
 the old calculators based on Postgres , *however they produce
 identical results*.  They implement the same science and any
 difference should be reported as a bug. There could be minimal
@@ -90,7 +87,8 @@ https://github.com/gem/oq-risklib/pull/346
 9. The passing-parameters-to-GSIMs feature has been used to implement
 the Canada hazard model, which has GMPE based on a set of binary tables.
 Several other features have been implemented in hazard and you can
-see the full list in the changelog](https://raw.githubusercontent.com/gem/oq-hazardlib/engine-1.5/debian/changelog)
+see the full list in the [changelog](https://raw.githubusercontent.com/gem/oq-hazardlib/engine-1.5/debian/changelog)
+
 10. The oq-lite command-tool has been enhanced; it is possible to use
 it to execute the same calculations that you would run with the command
 ``oq-engine --lite``. The difference is that ``oq-lite`` only works
@@ -98,9 +96,7 @@ on a single machine, not on the cluster. On the plus side, it does
 not require having a celery instance up and running. ``oq-lite``
 is also especially useful to perform analysis before you run a large
 computation on the engine. It is recommended to run
-
-$ oq-lite info --report <my_job.ini>
-
+``$ oq-lite info --report <my_job.ini>``
 to generate a text file with a report on the expected size
 of your computation before you start anything large. Currently
 the functionality only works for hazard calculation
