@@ -30,7 +30,7 @@ database is a good migration strategy.
 
 Cases where you should expect different numbers
 -----------------------------------------------
-******************************************************************************
+
 1. Longitude and latitude coordinates are now rounded directly in Python to a 
 precision of 5 digits after the decimal point; in earlier versions, this 
 rounding was done inside PostGIS in an inaccessible manner. As a consequence, 
