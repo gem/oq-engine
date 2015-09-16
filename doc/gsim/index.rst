@@ -56,6 +56,7 @@ Built-in GSIMs
     garcia_2005
     geomatrix_1993
     ghofrani_atkinson_2014
+    gsim_table
     idriss_2014
     lin_lee_2008
     lin_2009
@@ -114,3 +115,4 @@ Calculation context
 .. autoclass:: RuptureContext
 
 .. autoclass:: DistancesContext
+
