@@ -113,7 +113,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                         zip(asset_ids, out.insured_counts_matrix)))
 
             # average losses
-            dic = {}
+            arr = numpy.zeros((monitor.num_assets, 2))
             for aid, avgloss, ins_avgloss in zip(
                     asset_ids, out.average_losses, out.average_insured_losses):
                 # NB: here I cannot use numpy.float32, because the sum of
@@ -121,8 +121,8 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                 # the net effect is that the final loss is affected by
                 # the order in which the tasks are run, which is random
                 # i.e. at each run one may get different results!!
-                dic[aid] = numpy.array([avgloss, ins_avgloss])
-            result[AVGLOSS, l, out.hid].append(dic)
+                arr[aid] = [avgloss, ins_avgloss]
+            result[AVGLOSS, l, out.hid].append(arr)
 
     for idx, lst in numpy.ndenumerate(result):
         o, l, r = idx
@@ -135,7 +135,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                                             for rup, loss in acc.items()],
                                            elt_dt)]
             elif o == AVGLOSS:
-                result[idx] = lst
+                result[idx] = [sum(lst)]
             elif o == SPECLOSS:
                 result[idx] = [numpy.array(lst, ela_dt)]
             else:  # risk curves
@@ -257,8 +257,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         for idx, arrays in numpy.ndenumerate(result):
             # TODO: special case for avg_losses, they can be summed directly
-            if idx[0] == AVGLOSS:
-                acc[idx] = [sum(acc[idx] + arrays, AccumDict())]
+            if idx[0] == AVGLOSS:  # arrays has only 1 element
+                acc[idx] = [sum(acc[idx] + arrays)]
             else:
                 acc[idx].extend(arrays)
         return acc
@@ -273,7 +273,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         ses_ratio = self.oqparam.ses_ratio
         saved = {out: 0 for out in self.outs}
         N = len(self.assetcol)
-        zero2 = numpy.zeros(2, numpy.float32)
         with self.monitor('saving loss table',
                           autoflush=True, measuremem=True):
             for (o, l, r), data in numpy.ndenumerate(result):
@@ -287,8 +286,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 elif o == AVGLOSS:  # average losses
                     lt = self.riskmodel.loss_types[l]
                     [avgloss_by_aid] = data
-                    pairs = [avgloss_by_aid.get(i, zero2) * asset[lt]
-                             for i, asset in enumerate(self.assetcol)]
+                    try:
+                        pairs = [avgloss_by_aid[i] * asset[lt]
+                                 for i, asset in enumerate(self.assetcol)]
+                    except:
+                        import pdb; pdb.set_trace()
                     avglosses = numpy.array(pairs, numpy.float32)
                     self.datasets[o, l, r].dset[:] = avglosses
                     saved[self.outs[o]] += avglosses.nbytes
