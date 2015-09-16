@@ -1,3 +1,6 @@
+  [Yen-Shin Chen]
+  * Surface: fix bug for dipping fault in get_fault_patch_vertices method
+
   [Graeme Weatherill]
   * Adds support for GMPEs to be implemented in the form of HDF5 binary tables
   * Adds `__repr__` method to scalerel and MFD base classes

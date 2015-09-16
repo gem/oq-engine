@@ -293,6 +293,26 @@ class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):
         self.assertAlmostEqual(p7.latitude, 45.2995, delta=0.1)
         self.assertAlmostEqual(p7.depth, 14., delta=0.1)
 
+    def test_get_fault_vertices_3d_upper_seismogenic_depth_with_depth(self):
+        p0, p1, p2, p3 = SimpleFaultSurface.get_fault_patch_vertices(
+            Line([Point(10., 45.0), Point(10., 45.5)]),
+            upper_seismogenic_depth=10., lower_seismogenic_depth=14.,
+            dip=90, index_patch=1.
+        )
+        # The value used for this test is by hand calculation
+        self.assertAlmostEqual(p0.longitude, 10., delta=0.1)
+        self.assertAlmostEqual(p0.latitude, 45.0, delta=0.1)
+        self.assertAlmostEqual(p0.depth, 10., delta=0.1)
+        self.assertAlmostEqual(p1.longitude, 10.0, delta=0.1)
+        self.assertAlmostEqual(p1.latitude, 45.5, delta=0.1)
+        self.assertAlmostEqual(p1.depth, 10., delta=0.1)
+        self.assertAlmostEqual(p2.longitude, 10.0, delta=0.1)
+        self.assertAlmostEqual(p2.latitude, 45.5, delta=0.1)
+        self.assertAlmostEqual(p2.depth, 14., delta=0.1)
+        self.assertAlmostEqual(p3.longitude, 10.0, delta=0.1)
+        self.assertAlmostEqual(p3.latitude, 45.0, delta=0.1)
+        self.assertAlmostEqual(p3.depth, 14., delta=0.1)
+
 
 class PatchIndexTest(unittest.TestCase):
 
@@ -339,6 +359,27 @@ class PatchIndexTest(unittest.TestCase):
             lower_seismogenic_depth, dip)
         # The value used for this test is by hand calculation
         self.assertEqual(index, 2)
+
+    def test_hypocentre_index_large_mesh_spacing(self):
+        hypocentre = Point(10.443522, 45.379006, 20.0)
+        upper_seismogenic_depth = 10.
+        lower_seismogenic_depth = 28.
+        dip = 30.
+
+        mesh_spacing = 10.
+        fault_trace = Line([Point(10., 45.2), Point(10., 45.487783)])
+
+        whole_fault_surface = SimpleFaultSurface.from_fault_data(
+            fault_trace, upper_seismogenic_depth,
+            lower_seismogenic_depth, dip, mesh_spacing
+        )
+
+        target_rupture_surface = whole_fault_surface.get_resampled_top_edge()
+        index = SimpleFaultSurface.hypocentre_patch_index(
+            hypocentre, target_rupture_surface, upper_seismogenic_depth,
+            lower_seismogenic_depth, dip)
+        # The value used for this test is by hand calculation
+        self.assertEqual(index, 1)
 
 
 class SimpleFaultSurfaceGetWidthTestCase(unittest.TestCase):
