@@ -24,10 +24,9 @@ from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.gsim_table import (
-    GMPE, SitesContext, RuptureContext, DistancesContext, GMPETable,
+    SitesContext, RuptureContext, DistancesContext, GMPETable,
     AmplificationTable, hdf_arrays_to_dict)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
 
 
@@ -305,7 +304,6 @@ class AmplificationTableRuptureTestCase(AmplificationTableSiteTestCase):
         sctx = SitesContext()
         stddevs = [const.StdDev.TOTAL]
         expected_mean = np.ones_like(dctx.rjb)
-        expected_sigma = np.ones_like(dctx.rjb)
         # Check PGA and PGV
         mean_amp, sigma_amp = self.amp_table.get_amplification_factors(
             imt_module.PGA(), sctx, rctx, dctx.rjb, stddevs)
@@ -359,9 +357,7 @@ class AmplificationTableBadTestCase(unittest.TestCase):
         Tests instantiation with a bad input
         """
         with self.assertRaises(ValueError) as ve:
-            _ = AmplificationTable(self.fle["Amplification"],
-                                   None,
-                                   None)
+            AmplificationTable(self.fle["Amplification"], None, None)
         self.assertEqual(str(ve.exception),
                          "Amplification parameter Bad Value not recognised!")
 
@@ -416,7 +412,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         is any provided - should raise an error
         """
         with self.assertRaises(IOError) as ioe:
-            gsim = GMPETable(gmpe_table=None)
+            GMPETable(gmpe_table=None)
         self.assertEqual(str(ioe.exception),
                          "GMPE Table Not Defined!")
 
