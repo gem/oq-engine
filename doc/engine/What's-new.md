@@ -1,6 +1,7 @@
 OpenQuake 1.5 is a major release and a big improvement with respect
 to OpenQuake 1.4. More than 110 bugs/feature
-requests were fixed/implemented and everybody is invited to upgrade.
+requests were fixed/implemented. Everybody is invited to upgrade,
+by following the [usual procedure](Installing-the-OpenQuake-Engine.md).
 
 New features of the OpenQuake Engine, version 1.5
 --------------------------------------------------
@@ -144,6 +145,9 @@ the next release, since for the moment this is not necessary.
 We have detailed instructions to install the engine on CentOS 7
 and Fedora and in general of [Red Hat Enterprise Linux clones]
 (Installing-the-OpenQuake-Engine-from-source-code-on-Fedora-and-RHEL.md)
+The engine works on a lot of Linux versions, even recent ones
+like Ubuntu 15.04, it has less dependencies that it had in
+the past and it is easier to install.
 
 While the engine is not supported on Windows and Mac OS, we are
 happy to report that the underlying libraries and the
@@ -153,6 +157,13 @@ a guide to help you to install the necessary dependencies
 
 Bug fixes and changes with respect to OpenQuake 1.5
 ----------------------------------------------------
+
+0. The database schema has changed in a destructive way, by removing
+a column in the ``hzrdi.hazard_site`` table and a column in the
+``riskr.epsilon`` table. If your database contains important
+data, export them or dump the database. You will not be able
+to user OpenQuake 1.5 with an OpenQuake 1.4 database. The
+upgrade procedure is the usual one ``oq-engine --upgrade-db``.
 
 1. Over 30 new tests have been added for the event based risk
 calculator, and a few new tests have been added also for the event
@@ -196,3 +207,31 @@ the tags do not contain pipes "|" anymore. This character caused problems
 on Windows, since one of the NRML converters was using the tag to
 generate a file with the same name containing the corresponding
 ground motion field.
+
+9. We changed the export order of the event loss table. Before the values
+were ordered by loss size, in decreasing order. Now they are first ordered
+by rupture tag, and then by increasing loss size. We feel that this ordering
+is more useful.
+
+9. We have added some checks on source IDs and asset IDs, to avoid
+having issues such as nonprintable characters or non-ASCII
+characters in there. Also, we have limited the maximum length of
+an identifier to 100 characters. Notice that descriptions are
+unconstrained, as before, so there are no problems if you
+want to name your sources in Chinese or in any other character set.
+The only restriction is that the XML file must be UTF8-encoded,
+according to the XML standard.
+
+10. If you don't have a site model file, you need to provide values in
+the job.ini file only for the site parameters that are actually used
+by your calculation.  Before you needed to specify even unneeded
+parameters.
+
+11. We fixed a bug with the ``oq-engine --load-curve`` command, such
+that is was impossible to load a hazard curve.
+
+12. We improved the error reporting on the engine; before an error in
+he cleanup phase could hide the real underlying error.
+
+13. We fixed an error for the degenerate case of hazard curves
+containing all zeros, reported by some users.
