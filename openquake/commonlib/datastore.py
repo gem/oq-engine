@@ -19,6 +19,7 @@
 import os
 import re
 import shutil
+import logging
 from openquake.baselib.python3compat import pickle
 import collections
 
@@ -254,9 +255,11 @@ class DataStore(collections.MutableMapping):
         if hasattr(os, 'symlink'):  # Unix, Max
             link_name = os.path.join(
                 self.datadir, name.strip('/').replace('/', '-')) + '.hdf5'
-            if os.path.exists(link_name):
-                os.remove(link_name)
-            os.symlink(self.hdf5path, link_name)
+            try:
+                os.symlink(self.hdf5path, link_name)
+            except OSError as err:
+                # this is not an issue
+                logging.info('Could not create symlink %s: %s', link_name, err)
 
     def clear(self):
         """Remove the datastore from the file system"""
