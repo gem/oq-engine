@@ -102,11 +102,21 @@ read the related pull request for the relevant details:
 https://github.com/gem/oq-risklib/pull/346
 
 9. The passing-parameters-to-GSIMs feature has been used to implement
-the Canada hazard model, which has GMPE based on a set of binary tables.
-Several other features have been implemented in hazard and you can
+support for the definition of ground motion prediction equations using
+interpolation ('look up') tables. These allow the user to input
+arbitrary GMPEs in the form of tables, rather than the parametric
+equations currently supported. The tables, in HDF5 format, provide the
+expected ground motion values for given magnitudes and distances, with
+the additional option of amplifying the ground motions based on source
+or site attributes. To use this option the user need only specify
+`GMPETable(gmpe_table=path/to/table.hdf5)' in place of the
+conventional GMPE. Further guidance regarding the construction of the
+HDF5 files will be provided in the documentation in due course.
+
+10. Several other features have been implemented in hazard and you can
 see the full list in the [changelog](https://raw.githubusercontent.com/gem/oq-hazardlib/engine-1.5/debian/changelog)
 
-10. The oq-lite command-tool has been enhanced; it is possible to use
+11. The oq-lite command-tool has been enhanced; it is possible to use
 it to execute the same calculations that you would run with the command
 ``oq-engine --lite``. The difference is that ``oq-lite`` only works
 on a single machine, not on the cluster. On the plus side, it does
@@ -119,16 +129,16 @@ of your computation before you start anything large. Currently
 the functionality only works for hazard calculations
 but it is expected to grow in the future.
 
-11. Several other improvements have been made to oq-lite, too many to list
+12. Several other improvements have been made to oq-lite, too many to list
 them all here; please see the [changelog](https://raw.githubusercontent.com/gem/oq-risklib/engine-1.5/debian/changelog) for the complete list.
 
-10. We added a functionality `write_source_model` to serialize sources in XML.
+13. We added a functionality `write_source_model` to serialize sources in XML.
 Also we improved the reading of XML files and the error message in case of
 invalid files. Finally, we have removed the dependency on lxml, thus making
 the OpenQuake suite more portable across different platforms and much easier
 to install.
 
-11. We added a check on the site parameters distance. If a site model
+14. We added a check on the site parameters distance. If a site model
 file is provided in a hazard calculation, and if no site parameters are
 available within a radius of 5 km for a particular site, a
 warning is raised. The goal is to signal the user if she used an
@@ -136,7 +146,7 @@ incorrect site model file with respect to the sites she is using. The
 calculation still runs and complete, since sometimes you may not have
 site parameters data close enough to the sites of interests.
 
-12. We have parallelized the source splitting procedure with a good
+15. We have parallelized the source splitting procedure with a good
 performance boost. There is also a flag
 `parallel_source_splitting` in openquake.cfg to disable this
 feature (default: true)
