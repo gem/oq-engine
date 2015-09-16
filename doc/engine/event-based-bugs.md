@@ -54,9 +54,10 @@ expect a minor seed dependency and some small changes in your numbers. Since
 the hazard is different, the risk numbers will also be slightly different.
 
 3. A very subtle bug in the vulnerability functions was fixed, potentially
-affecting calculations with nonzero coefficients of variation and
-nonzero minIML; the numbers produced by the engine were incorrect;
-see https://bugs.launchpad.net/oq-engine/+bug/1459926 for the details.
+affecting calculations using vulnerability functions with nonzero 
+coefficients of variation and nonzero minIML; the numbers produced by 
+previous versions of the engine were incorrect. See 
+https://bugs.launchpad.net/oq-engine/+bug/1459926 for the details.
 
 4. A bug in the epsilon sampling was found, so that in some situations
 the same epsilons were used more than once. This potentially
