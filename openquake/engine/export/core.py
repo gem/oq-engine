@@ -66,7 +66,7 @@ def export_from_datastore(output_key, output, target):
     elif len(exported) > 1:
         archname = output.ds_key.lstrip('/') + '-' + fmt + '.zip'
         zipfiles(exported, os.path.join(target, archname))
-        return archname
+        return os.path.join(target, archname)
     else:  # single file
         return exported[0]
 
