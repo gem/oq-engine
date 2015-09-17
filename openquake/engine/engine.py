@@ -152,7 +152,7 @@ def job_stats(job):
             logs.LOG.critical(tb)
 
 
-def create_job(user_name="openquake", log_level='progress'):
+def create_job(user_name="openquake", log_level='progress', hc_id=None):
     """
     Create job for the given user, return it.
 
@@ -163,18 +163,22 @@ def create_job(user_name="openquake", log_level='progress'):
         Defaults to 'progress'. Specify a logging level for this job. This
         level can be passed, for example, from the command line interface using
         the `--log-level` directive.
+    :param hc_id:
+        If not None, then the created job is a risk job
     :returns:
         :class:`openquake.engine.db.models.OqJob` instance.
     """
-    return models.OqJob.objects.create(
-        id=get_calc_id() + 1,
+    job = models.OqJob.objects.create(
+        id=get_calc_id(hc_id),
         user_name=user_name,
         log_level=log_level,
         oq_version=openquake.engine.__version__,
         hazardlib_version=hazardlib.__version__,
         risklib_version=risklib.__version__,
-        commonlib_version=commonlib.__version__,
-    )
+        commonlib_version=commonlib.__version__)
+    if hc_id:
+        job.hazard_calculation = models.OqJob.objects.get(pk=hc_id)
+    return job
 
 
 # used by bin/openquake and openquake.server.views
@@ -200,11 +204,6 @@ def run_calc(job, log_level, log_file, exports, lite=False):
     # does not need them and would raise strange errors during installation
     # time if the PYTHONPATH is not set and commonlib is not visible
     if lite:
-        calc_dir = os.path.join(
-            datastore.DATADIR, 'calc_%d' % get_calc_id(job.id))
-        if os.path.exists(calc_dir):
-            os.rename(calc_dir, calc_dir + '.bak')
-            print 'Generated %s.bak' % calc_dir
         from openquake.calculators import base
         calculator = base.calculators(job.get_oqparam(), calc_id=job.id)
         calculator.job = job
@@ -611,7 +610,8 @@ def job_from_file_lite(cfg_file, username, log_level='info', exports='',
     """
     from openquake.calculators import base
     # create the current job
-    job = create_job(user_name=username, log_level=log_level)
+    hc_id = extras.get('hazard_calculation_id')
+    job = create_job(username, log_level, hc_id)
     models.JobStats.objects.create(oq_job=job)
     with logs.handle(job, log_level):
         # read calculation params and create the calculation profile
