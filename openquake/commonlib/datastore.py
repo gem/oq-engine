@@ -18,6 +18,7 @@
 
 import os
 import re
+import ast
 import shutil
 import logging
 from openquake.baselib.python3compat import pickle
@@ -200,6 +201,10 @@ class DataStore(collections.MutableMapping):
         self.attrs = self.hdf5.attrs
         for name, value in params:
             self.attrs[name] = value
+        if not parent and 'hazard_calculation_id' in self.attrs:
+            parent_id = ast.literal_eval(self.attrs['hazard_calculation_id'])
+            if parent_id:
+                self.parent = self.__class__(parent_id)
 
     def set_parent(self, parent):
         """
@@ -294,9 +299,10 @@ class DataStore(collections.MutableMapping):
                 try:
                     val = self.parent.hdf5[key]
                 except KeyError:
-                    raise KeyError(key)
+                    raise KeyError(
+                        'No %r found in %s' % (key, [self, self.parent]))
             else:
-                raise KeyError(key)
+                raise KeyError('No %r found in %s' % (key, self))
         try:
             shape = val.shape
         except AttributeError:  # val is a group
