@@ -226,7 +226,7 @@ class FragilityNode(LiteralNode):
         description=valid.utf8,
         type=valid.ChoiceCI('lognormal'),
         poEs=valid.probabilities,
-        noDamageLimit=valid.positivefloat,
+        noDamageLimit=valid.NoneOr(valid.positivefloat),
     )
 
 valid_loss_types = valid.Choice('structural', 'nonstructural', 'contents',

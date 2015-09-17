@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.5">
-    <fragilityModel format="discrete">
+    <fragilityModel format="discrete" noDamageLimit="">
         <description>Fragility model for QA test</description>
         <limitStates>LS1 LS2</limitStates>
 
