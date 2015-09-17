@@ -118,8 +118,8 @@ class AmplificationTable(object):
         # Checks the first group in the amplification group and returns the
         # shape of the SA array - implicitly assumes the SA array in all
         # amplification groups is the same shape
-        items = list(amplification_group.items())
-        n_d, n_p, n_m = items[0][1]["IMLs/SA"].shape
+        level = next(iter(amplification_group))
+        n_d, n_p, n_m = amplification_group[level]["IMLs/SA"].shape
         assert n_d == len(self.distances), (n_d, len(self.distances))
         assert n_m == len(self.magnitudes), (n_m, len(self.magnitudes))
         # Instantiate the arrays with ones
