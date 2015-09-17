@@ -113,12 +113,12 @@ or site attributes. To use this option the user need only specify
 conventional GMPE. Further guidance regarding the construction of the
 HDF5 files will be provided in the documentation in due course.
 
-10. Near-fault directivity probabilistic seismic hazard analysis is
-now available in the OpenQuake Engine under classical PSHA with simple
-fault source typology. To perform the calculation, we implemented the
-most recent updated NGA-WEST2 directivity model, and the associated GMPE
-which is, up to date, the only GMPE model explicitly includes the effect.
-More details can be found in the manual.
+10. Added near-fault directivity probabilistic seismic hazard
+analysis for classical PSHA calculations with simple fault
+sources. We implemented the most recent NGA-WEST2
+directivity model and the associated GMPE which is, up to now,
+the only GMPE model explicitly including the effect. More details
+can be found in the manual.
 
 11. Several other features have been implemented in hazard and you can
 see the full list in the [changelog](https://raw.githubusercontent.com/gem/oq-hazardlib/engine-1.5/debian/changelog)
