@@ -263,3 +263,10 @@ the cleanup phase could hide the real underlying error.
 13. We fixed an error for the degenerate case of hazard curves
 containing all zeros, as this corner case was reported by some users 
 on the OpenQuake users group.
+
+14. Near-fault directivity probabilistic seismic hazard analysis is
+now available in the OpenQuake Engine under classical PSHA with simple
+fault source typology. To perform the calculation, we implemented the
+most recent updated NGA-WEST2 directivity model, and the associated GMPE
+which is, up to date, the only GMPE model explicitly includes the effect.
+More details can be found in the manual.
