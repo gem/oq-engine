@@ -23,16 +23,10 @@ the corresponding amplification of the IMLs
 
 from __future__ import division
 
-import abc
-import math
-import warnings
-import functools
-import contextlib
 from copy import deepcopy
 
 import h5py
-import scipy.stats
-from scipy.special import ndtr
+
 from scipy.interpolate import interp1d
 import numpy
 
@@ -40,7 +34,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim.base import (GMPE, RuptureContext, SitesContext,
                                            DistancesContext)
-from openquake.baselib.python3compat import with_metaclass
+from openquake.baselib.python3compat import round
 
 
 def hdf_arrays_to_dict(hdfgroup):
@@ -102,7 +96,7 @@ class AmplificationTable(object):
         self.sigma = None
         self.magnitudes = magnitudes
         self.distances = distances
-        self.parameter = amplification_group.attrs["apply_to"]
+        self.parameter = amplification_group.attrs["apply_to"].decode('utf8')
         self.values = numpy.array([float(key) for key in amplification_group])
         self.argidx = numpy.argsort(self.values)
         self.values = self.values[self.argidx]
@@ -124,7 +118,8 @@ class AmplificationTable(object):
         # Checks the first group in the amplification group and returns the
         # shape of the SA array - implicitly assumes the SA array in all
         # amplification groups is the same shape
-        n_d, n_p, n_m = amplification_group.items()[0][1]["IMLs/SA"].shape
+        level = next(iter(amplification_group))
+        n_d, n_p, n_m = amplification_group[level]["IMLs/SA"].shape
         assert n_d == len(self.distances), (n_d, len(self.distances))
         assert n_m == len(self.magnitudes), (n_m, len(self.magnitudes))
         # Instantiate the arrays with ones
@@ -134,7 +129,8 @@ class AmplificationTable(object):
         self.sigma = {}
         for stddev_type in [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
                             const.StdDev.INTRA_EVENT]:
-            if stddev_type in amplification_group.items()[0][1]:
+            level = next(iter(amplification_group))
+            if stddev_type in amplification_group[level]:
                 self.sigma[stddev_type] = deepcopy(self.mean)
 
         for iloc, (level, amp_model) in enumerate(amplification_group.items()):
@@ -340,7 +336,7 @@ class GMPETable(GMPE):
         the tables from hdf5 and hold them in memory.
         """
         fle = h5py.File(self.GMPE_TABLE, "r")
-        self.distance_type = fle["Distances"].attrs["metric"]
+        self.distance_type = fle["Distances"].attrs["metric"].decode('utf8')
         self.REQUIRES_DISTANCES.clear()
         self.REQUIRES_DISTANCES.add(self.distance_type)
         # Load in magnitude
@@ -350,7 +346,7 @@ class GMPETable(GMPE):
         # Load intensity measure types and levels
         self.imls = hdf_arrays_to_dict(fle["IMLs"])
         self._update_supported_imts()
-        if "SA" in self.imls.keys() and not "T" in self.imls:
+        if "SA" in self.imls.keys() and "T" not in self.imls:
             raise ValueError("Spectral Acceleration must be accompanied by "
                              "periods")
         # Get the standard deviations
@@ -480,7 +476,7 @@ class GMPETable(GMPE):
         """
         stddevs = []
         for stddev_type in stddev_types:
-            if not stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
+            if stddev_type not in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
                 raise ValueError("Standard Deviation type %s not supported"
                                  % stddev_type)
             sigma = self._return_tables(mag, imt, stddev_type)
@@ -540,7 +536,6 @@ class GMPETable(GMPE):
             Intensity measure level table
         """
         # Get magnitude values
-        m_idx = numpy.searchsorted(self.m_w, mag)
         if mag < self.m_w[0] or mag > self.m_w[-1]:
             raise ValueError("Magnitude %.2f outside of supported range "
                              "(%.2f to %.2f)" % (mag,
