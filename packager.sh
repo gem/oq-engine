@@ -520,6 +520,11 @@ _pkgtest_innervm_run () {
             export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
             set -x
         fi
+
+        echo \"Testing oq-engine --lite\"
+        cd /usr/lib/python2.7/dist-packages/openquake/qa_tests_data/event_based_risk/
+        oq-engine --lite --run job_haz.ini,job_risk.ini
+
         cd /usr/share/doc/python-oq-risklib/examples/demos
 
         ## comment this demo is you get a segmentation fault!        
