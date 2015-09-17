@@ -113,8 +113,8 @@ or site attributes. To use this option the user need only specify
 conventional GMPE. Further guidance regarding the construction of the
 HDF5 files will be provided in the documentation in due course.
 
-10. Several other features have been implemented in hazard and you can
-see the full list in the [changelog](https://raw.githubusercontent.com/gem/oq-hazardlib/engine-1.5/debian/changelog)
+10. Several other features have been implemented in hazardlib and you can
+see the full list in the [changelog](https://raw.githubusercontent.com/gem/oq-hazardlib/engine-1.5/debian/changelog).
 
 11. The oq-lite command-tool has been enhanced; it is possible to use
 it to execute the same calculations that you would run with the command
