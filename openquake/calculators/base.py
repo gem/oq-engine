@@ -266,6 +266,7 @@ class HazardCalculator(BaseCalculator):
                     self.csm = precalc.csm
             else:  # read previously computed data
                 self.datastore.set_parent(datastore.DataStore(precalc_id))
+                # update oqparam with the attributes saved in the datastore
                 self.oqparam = OqParam.from_(self.datastore.attrs)
                 self.read_exposure_sitecol()
 
