@@ -521,10 +521,6 @@ _pkgtest_innervm_run () {
             set -x
         fi
 
-        echo \"Testing oq-engine --lite\"
-        cd /usr/lib/python2.7/dist-packages/openquake/qa_tests_data/event_based_risk/
-        oq-engine --lite --run job_haz.ini,job_risk.ini
-
         cd /usr/share/doc/python-oq-risklib/examples/demos
 
         ## comment this demo is you get a segmentation fault!        
