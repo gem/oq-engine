@@ -256,6 +256,8 @@ class DataStore(collections.MutableMapping):
             link_name = os.path.join(
                 self.datadir, name.strip('/').replace('/', '-')) + '.hdf5'
             try:
+                if os.path.exists(link_name):
+                    os.remove(link_name)
                 os.symlink(self.hdf5path, link_name)
             except OSError as err:
                 # this is not an issue
