@@ -234,7 +234,7 @@ def get_imtls_from_vulnerabilities(inputs):
     return imtls
 
 
-############################ fragility ##################################
+# ########################### fragility ############################### #
 
 def get_fragility_functions(fname, continuous_fragility_discretization,
                             steps_per_interval=None):
