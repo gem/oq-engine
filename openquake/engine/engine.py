@@ -250,6 +250,8 @@ def _do_run_calc(calc, exports):
     job = calc.job
 
     log_status(job, "pre_executing")
+    if hasattr(calc, 'save_params'):
+        calc.save_params()
     calc.pre_execute()
 
     log_status(job, "executing")
