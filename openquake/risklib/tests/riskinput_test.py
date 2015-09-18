@@ -94,7 +94,8 @@ a4,3,0,50,500000,2.0,6.0
             self.sitecol, ses_ruptures, gsims_by_trt_id, oq.truncation_level,
             correl_model, eps_dict, 1)
 
-        assets, hazards, epsilons = ri.get_all(rlzs_assoc, self.assets_by_site)
+        assets, hazards, epsilons = ri.get_all(
+            rlzs_assoc, self.assets_by_site, eps_dict)
         self.assertEqual([a.id for a in assets],
                          [b'a0', b'a1', b'a2', b'a3', b'a4'])
         self.assertEqual(set(a.taxonomy for a in assets),

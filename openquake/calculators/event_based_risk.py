@@ -210,6 +210,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.monitor.num_outputs = len(self.outs)
         # attaching two other attributes used in riskinput.gen_outputs
         self.monitor.assets_by_site = self.assets_by_site
+        self.monitor.eps_dict = eps_dict
         self.monitor.num_assets = N = self.count_assets()
         for o, out in enumerate(self.outs):
             self.datastore.hdf5.create_group(out)
