@@ -169,7 +169,7 @@ def create_job(user_name="openquake", log_level='progress', hc_id=None):
         :class:`openquake.engine.db.models.OqJob` instance.
     """
     job = models.OqJob.objects.create(
-        id=get_calc_id(hc_id),
+        id=get_calc_id() + 1,
         user_name=user_name,
         log_level=log_level,
         oq_version=openquake.engine.__version__,
