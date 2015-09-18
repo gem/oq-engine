@@ -513,6 +513,10 @@ def main():
 
     run_job = engine.run_job_lite if args.lite else engine.run_job
 
+    if args.lite and args.hazard_output_id:
+        sys.exit('The --hazard-output-id option is not supported with the '
+                 '--lite option')
+
     if args.list_inputs:
         list_inputs(args.list_inputs)
 
