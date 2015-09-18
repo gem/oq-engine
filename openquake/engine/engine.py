@@ -326,7 +326,7 @@ def list_outputs(job_id, full=True):
     outputs = get_outputs(job_id)
     if models.oqparam(job_id).calculation_mode == 'scenario':
         # ignore SES output
-        outputs = outputs.filter(output_type='gmf_scenario')
+        outputs = [o for o in outputs if o.output_type != 'ses']
     print_outputs_summary(outputs, full)
 
 
