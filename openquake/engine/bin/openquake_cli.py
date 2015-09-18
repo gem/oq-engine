@@ -597,7 +597,7 @@ def main():
         export(int(output_id), expanduser(target_dir), exports)
 
     elif args.export_risk_output is not None:
-        deprecate('--export-hazard-output', '--export-output')
+        deprecate('--export-risk-output', '--export-output')
         output_id, target_dir = args.export_risk_output
         export(int(output_id), expanduser(target_dir), exports)
 
