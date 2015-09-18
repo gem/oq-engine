@@ -197,10 +197,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.sitecol.complete, all_ruptures, gsims_by_col,
             oq.truncation_level, correl_model, eps_dict,
             oq.concurrent_tasks or 1))
-        #from openquake.commonlib.parallel import Pickled
-        #n = len(Pickled(self.riskinputs))
-        #print n
-        #import pdb; pdb.set_trace()
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
         # preparing empty datasets
@@ -214,6 +210,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.monitor.num_outputs = len(self.outs)
         # attaching two other attributes used in riskinput.gen_outputs
         self.monitor.assets_by_site = self.assets_by_site
+        self.monitor.eps_dict = eps_dict
         self.monitor.num_assets = N = self.count_assets()
         for o, out in enumerate(self.outs):
             self.datastore.hdf5.create_group(out)

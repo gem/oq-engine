@@ -208,13 +208,14 @@ class RiskModel(collections.Mapping):
         imt_taxonomies = list(self.get_imt_taxonomies())
         by_col = operator.attrgetter('col_id')
         rup_start = rup_stop = 0
+        num_epsilons = len(eps_dict[next(iter(eps_dict))])
         for ses_ruptures in split_in_blocks(
                 all_ruptures, hint or 1, key=by_col):
             rup_stop += len(ses_ruptures)
             gsims = gsims_by_col[ses_ruptures[0].col_id]
             yield RiskInputFromRuptures(
                 imt_taxonomies, sitecol, ses_ruptures,
-                gsims, trunc_level, correl_model, eps_dict,
+                gsims, trunc_level, correl_model, num_epsilons,
                 slice(rup_start, rup_stop))
             rup_start = rup_stop
 
@@ -235,9 +236,14 @@ class RiskModel(collections.Mapping):
                 assets_by_site = riskinput.assets_by_site
             except AttributeError:  # for event_based_risk
                 assets_by_site = monitor.assets_by_site
+            try:
+                eps_dict = monitor.eps_dict
+            except AttributeError:
+                eps_dict = {}
             with mon_hazard:
                 # get assets, hazards, epsilons
-                a, h, e = riskinput.get_all(rlzs_assoc, assets_by_site)
+                a, h, e = riskinput.get_all(
+                    rlzs_assoc, assets_by_site, eps_dict)
             with mon_risk:
                 # compute the outputs by using the worklow
                 for imt, taxonomies in riskinput.imt_taxonomies:
@@ -296,7 +302,7 @@ class RiskInput(object):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def get_all(self, rlzs_assoc, assets_by_site=None):
+    def get_all(self, rlzs_assoc, assets_by_site=None, eps_dict=None):
         """
         :returns:
             lists of assets, hazards and epsilons
@@ -378,7 +384,7 @@ class RiskInputFromRuptures(object):
     :param rup_slice: a slice object specifying which ruptures are in
     """
     def __init__(self, imt_taxonomies, sitecol, ses_ruptures,
-                 gsims, trunc_level, correl_model, eps_dict, rup_slice):
+                 gsims, trunc_level, correl_model, num_epsilons, rup_slice):
         self.imt_taxonomies = imt_taxonomies
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
@@ -387,10 +393,9 @@ class RiskInputFromRuptures(object):
         self.trunc_level = trunc_level
         self.correl_model = correl_model
         self.weight = len(ses_ruptures)
-        self.eps_dict = eps_dict
         self.rup_slice = rup_slice
         self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
-        self.num_epsilons = len(eps_dict[next(iter(eps_dict))])
+        self.num_epsilons = num_epsilons
 
     @property
     def tags(self):
@@ -421,7 +426,7 @@ class RiskInputFromRuptures(object):
             gmfa[i] = expanded_gmf
         return gmfa  # array R x N
 
-    def get_all(self, rlzs_assoc, assets_by_site):
+    def get_all(self, rlzs_assoc, assets_by_site, eps_dict):
         """
         :returns:
             lists of assets, hazards and epsilons
@@ -440,7 +445,7 @@ class RiskInputFromRuptures(object):
             for asset in assets_:
                 assets.append(asset)
                 hazards.append(haz_by_imt_rlz)
-                eps = expand(self.eps_dict[asset.id][indices],
+                eps = expand(eps_dict[asset.id][indices],
                              len(self.ses_ruptures))
                 epsilons.append(eps)
         return assets, hazards, epsilons
