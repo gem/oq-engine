@@ -520,6 +520,7 @@ _pkgtest_innervm_run () {
             export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
             set -x
         fi
+
         cd /usr/share/doc/python-oq-risklib/examples/demos
 
         ## comment this demo is you get a segmentation fault!        
