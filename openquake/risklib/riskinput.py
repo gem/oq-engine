@@ -208,16 +208,13 @@ class RiskModel(collections.Mapping):
         imt_taxonomies = list(self.get_imt_taxonomies())
         by_col = operator.attrgetter('col_id')
         rup_start = rup_stop = 0
-        num_epsilons = len(eps_dict[next(iter(eps_dict))])
         for ses_ruptures in split_in_blocks(
                 all_ruptures, hint or 1, key=by_col):
-            indices = [sr.ordinal % num_epsilons for sr in ses_ruptures]
             rup_stop += len(ses_ruptures)
             gsims = gsims_by_col[ses_ruptures[0].col_id]
-            edic = {asset: eps[indices] for asset, eps in eps_dict.items()}
             yield RiskInputFromRuptures(
                 imt_taxonomies, sitecol, ses_ruptures,
-                gsims, trunc_level, correl_model, edic,
+                gsims, trunc_level, correl_model, eps_dict,
                 slice(rup_start, rup_stop))
             rup_start = rup_stop
 
@@ -393,6 +390,7 @@ class RiskInputFromRuptures(object):
         self.eps_dict = eps_dict
         self.rup_slice = rup_slice
         self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
+        self.num_epsilons = len(eps_dict[next(iter(eps_dict))])
 
     @property
     def tags(self):
@@ -428,6 +426,7 @@ class RiskInputFromRuptures(object):
         :returns:
             lists of assets, hazards and epsilons
         """
+        indices = [sr.ordinal % self.num_epsilons for sr in self.ses_ruptures]
         assets, hazards, epsilons = [], [], []
         gmfs = self.compute_expand_gmfs()
         gsims = list(map(str, self.gsims))
@@ -441,7 +440,8 @@ class RiskInputFromRuptures(object):
             for asset in assets_:
                 assets.append(asset)
                 hazards.append(haz_by_imt_rlz)
-                eps = expand(self.eps_dict[asset.id], len(self.ses_ruptures))
+                eps = expand(self.eps_dict[asset.id][indices],
+                             len(self.ses_ruptures))
                 epsilons.append(eps)
         return assets, hazards, epsilons
 

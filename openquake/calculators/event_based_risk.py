@@ -197,6 +197,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.sitecol.complete, all_ruptures, gsims_by_col,
             oq.truncation_level, correl_model, eps_dict,
             oq.concurrent_tasks or 1))
+        #from openquake.commonlib.parallel import Pickled
+        #n = len(Pickled(self.riskinputs))
+        #print n
+        #import pdb; pdb.set_trace()
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
         # preparing empty datasets
