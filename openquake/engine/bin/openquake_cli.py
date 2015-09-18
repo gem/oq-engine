@@ -364,9 +364,15 @@ def get_hc_id(hc_id):
 
 def export_outputs(hc_id, target_dir, export_type):
     # make it possible commands like `oq-engine --eos -1 /tmp`
-    for output in models.Output.objects.filter(oq_job=hc_id):
+    outputs = models.Output.objects.filter(oq_job=hc_id)
+    if not outputs:
+        sys.exit('Found nothing to export for job %s' % hc_id)
+    for output in outputs:
         print 'Exporting %s...' % output
-        export(output.id, target_dir, export_type)
+        try:
+            export(output.id, target_dir, export_type)
+        except Exception as exc:
+            print exc
 
 
 def export_stats(job_id, target_dir, output_type, export_type):
