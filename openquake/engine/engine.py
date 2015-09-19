@@ -55,13 +55,13 @@ def get_calc_id(job_id=None):
     and the database.
     """
     calcs = datastore.get_calc_ids(datastore.DATADIR)
-    calc_id = 0 if not calcs else calcs[-1]
+    calc_id = 1 if not calcs else calcs[-1]
     if job_id is None:
         try:
             job_id = models.OqJob.objects.latest('id').id
         except exceptions.ObjectDoesNotExist:
             job_id = 1
-    return max(calc_id + 1, job_id)
+    return max(calc_id, job_id)
 
 INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
 
