@@ -7,7 +7,7 @@ OQSERVER_ROOT = os.path.dirname(__file__)
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
-PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 TEMPLATE_CONTEXT_PROCESSORS += (
     'django.contrib.messages.context_processors.messages',
