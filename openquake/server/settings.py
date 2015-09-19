@@ -9,16 +9,10 @@ DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
-ADMINS = (
-    # ('Your Name', 'your_email@example.com'),
-)
-
 TEMPLATE_CONTEXT_PROCESSORS += (
     'django.contrib.messages.context_processors.messages',
     'openquake.server.utils.oq_server_context_processor',
 )
-
-MANAGERS = ADMINS
 
 STATIC_URL = '/static/'
 
@@ -53,8 +47,6 @@ TIME_ZONE = 'Europe/Zurich'
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
 LANGUAGE_CODE = 'en-us'
-
-SITE_ID = 1
 
 # If you set this to False, Django will make some optimizations so as not
 # to load the internationalization machinery.
