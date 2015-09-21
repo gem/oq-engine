@@ -481,9 +481,13 @@ class Log(djm.Model):
 
 def save_sites(job, coords):
     """
-    Save all the gives sites on the hzrdi.hazard_site table.
+    Save all the given sites on the hzrdi.hazard_site table.
+
     :param coords: a sequence of coordinates
     :returns: the ids of the inserted HazardSite instances
+
+    NB: the coordinate list can contain duplicates; in that
+    case the returned list of side its will contain duplicates.
     """
     groups = groupby(coords, lambda x: x)
     sites = [HazardSite(hazard_calculation=job,
