@@ -1,12 +1,22 @@
-# Running OpenQuake Engine from git repository on Ubuntu 14.04
-This page describes the additional steps necessary to run the current development version of the OpenQuake engine rather than the latest public package using Ubuntu Linux 14.04 LTS.
+# Running OpenQuake Engine from git repository
+This page describes the additional steps necessary to run the current development version of the OpenQuake engine rather than the latest public package using Ubuntu Linux 14.04 LTS or 12.04 LTS.
 
 ## Install primary dependencies
+The easiest way to install the primary dependencies for OQ Engine is to install the latest stable Ubuntu package and then remove it, leaving in the place all of its dependencies.
 
+Here's how:
 ```bash
+sudo apt-get install python-software-properties
+sudo add-apt-repository ppa:openquake-automatic-team/latest-master
 sudo apt-get update
-sudo apt-get install git python debconf python-amqp python-celery python-geohash python-numpy python-scipy python-shapely python-psycopg2 python-django python-setuptools python-psutil python-mock python-concurrent.futures python-h5py rabbitmq-server postgresql-9.3 postgresql-client postgresql-9.3-postgis-2.1
+sudo apt-get install python-oq-engine
+sudo apt-get remove --purge python-oq.*
+```
 
+## Install additional dependencies
+A few additional packages are necessary if using GIT:
+```bash
+sudo apt-get install python-mock python-psutil
 ```
 
 ## Get the source code from git
@@ -140,6 +150,14 @@ Some outputs where not shown. You can see the full list with the command
 ```
 
 ## Run OQ Engine, with calculation parallelization
+
+### Ubuntu 12.04 / Celery 2
+From the root of the `oq-engine` directory, launch celery worker processes like so:
+```bash
+celeryd --purge & #Run it in background
+```
+
+### Ubuntu 14.04 / Celery 3
 From the root of the `oq-engine` directory, launch celery worker processes like so:
 ```bash
 celery worker --purge -Ofair & #Run it in background
