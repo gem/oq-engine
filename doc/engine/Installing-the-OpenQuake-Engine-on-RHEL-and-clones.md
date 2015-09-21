@@ -1,7 +1,4 @@
-**DRAFT, internal use only**
-
-Supported releases: **RHEL/Scientific Linux/CentOS 7**.  
-**This setup is not tested by our CI, use at your own risk**.
+This documentation explains how to install the OpenQuake Engine on RHEL 7 and its clones (CentOS, Scientific Linux) via EPEL. GEM provides preliminary support and binary RPMs for unstable (nightly builds) and stable releases. An experimental support for unstable releases is available also for Fedora 21/22/23.
 
 ## Dependencies
 
@@ -16,10 +13,27 @@ sudo python-amqp python-celery numpy scipy python-shapely python-psycopg2 python
 
 ### Install the OpenQuake Engine
 
-Before installing the OpenQuake Engine you need to add the _OpenQuake Packages_ YUM repo:
+Before installing the OpenQuake Engine you need to add [EPEL](https://fedoraproject.org/wiki/EPEL) and the _OpenQuake Packages_ [COPR](https://copr.fedoraproject.org/coprs/gem/openquake/) YUM repo:
+
+#### Add EPEL repositories
 
 ```bash
-$ curl -s http://ftp.openquake.org/rhel/7/openquake.repo | sudo tee /etc/yum.repos.d/openquake.repo
+$ sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+```
+
+#### Unstable releases and nightly builds
+
+```bash
+$ curl -s https://copr.fedoraproject.org/coprs/gem/openquake/repo/epel-7/gem-openquake-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-epel-7.repo
+```
+
+The full list of supported repos (for EPEL 7 and Fedora) see: https://copr.fedoraproject.org/coprs/gem/openquake/
+
+#### Stable releases (starting from OpenQuke Engine 1.5, EPEL only)
+
+
+```bash
+$ curl -s https://copr.fedoraproject.org/coprs/gem/openquake-stable/repo/epel-7/gem-openquake-stable-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-stable-epel-7.repo
 ```
 
 Now it's possible to install the OpenQuake Engine using YUM:
