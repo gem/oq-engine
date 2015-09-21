@@ -137,7 +137,7 @@ the functionality only works for hazard calculations
 but it is expected to grow in the future.
 
 13. Several other improvements have been made to oq-lite, too many to list
-them all here; please see the [changelog](https://raw.githubusercontent.com/gem/oq-risklib/engine-1.5/debian/changelog) for the complete list.
+them all here; please see the [changelog](https://raw.githubusercontent.com/gem/oq-risklib/master/debian/changelog) for the complete list.
 
 14. We added a functionality `write_source_model` to serialize sources in XML.
 Also we improved the reading of XML files and the error message in case of
