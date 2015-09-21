@@ -1,5 +1,3 @@
-**DRAFT**
-
 Supported releases: **Fedora 21**/**Fedora 22**/**Fedora 23** and **RHEL/CentOS/SL 7** via EPEL.
 
 ## Dependencies

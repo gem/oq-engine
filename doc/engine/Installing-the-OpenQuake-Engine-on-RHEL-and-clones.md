@@ -81,7 +81,7 @@ sudo -u postgres dropdb openquake2
 
 ## Start celery
 ```bash
-$ cd /usr/share/openquake/engine && celery worker --purge
+$ cd /usr/share/openquake/engine && celery worker --purge -Ofair
 ```
 
 ## Run a demo
