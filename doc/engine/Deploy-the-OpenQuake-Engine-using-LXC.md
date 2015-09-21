@@ -7,11 +7,11 @@
 
 From http://en.wikipedia.org/wiki/LXC
 
-**GEM** provides a ready-to-use LXC container with Ubuntu 12.04 and the OpenQuake engine. The LXC is available with OpenQuake installed using Ubuntu packages (for users). If you need to work with GIT sources (for developers and advanced users) see [Deploy-the-OpenQuake-Engine-Nightly-using-LXC.md](Deploy-the-OpenQuake-Engine-Nightly-using-LXC.md).
+**GEM** provides a ready-to-use LXC container with Ubuntu 14.04 and the OpenQuake engine. The LXC is available with OpenQuake installed using Ubuntu packages (for users). If you need to work with GIT sources (for developers and advanced users) see [Deploy-the-OpenQuake-Engine-Nightly-using-LXC.md](Deploy-the-OpenQuake-Engine-Nightly-using-LXC.md).
 
 ### Host prerequisites
 * Ubuntu >= 12.04 64bit
-* Fedora >= 17 64bit
+* Fedora >= 21 64bit
 * RHEL/CentOS 7 (using the [EPEL](http://mirror.switch.ch/ftp/mirror/epel/7/x86_64/repoview/epel-release.html) repo)
 * [RHEL/CentOS 6](Installing-LXC-on-CentOS.md)
 * Should works with other distributions supporting LXC (Debian, ArchLinux, OpenSUSE, Gentoo...)
@@ -24,13 +24,13 @@ For RedHat based distros (RHEL, CentOS, Fedora) use ```yum``` instead of ```apt-
 ```bash
 $ sudo apt-get install lxc
 ```
-Download the OpenQuake LXC archive (current released version is [http://ftp.openquake.org/oq-1.2/lxc/Ubuntu_lxc_12.04_64_oq_1.2-2.tar.bz2])
+Download the OpenQuake LXC archive (current released version is [http://www.globalquakemodel.org/lxc/Ubuntu_lxc_14.04_64_oq_1.5-0.tar.bz2])
 ```bash
-$ cd ~ && wget http://ftp.openquake.org/oq-1.2/lxc/Ubuntu_lxc_12.04_64_oq_1.2-2.tar.bz2
+$ cd ~ && wget http://www.globalquakemodel.org/lxc/Ubuntu_lxc_14.04_64_oq_1.5-0.tar.bz2
 ```
 ### Extract the OpenQuake LXC archive
 ```bash
-$ sudo tar --numeric-owner -C /var/lib/lxc -xpsjf ~/Ubuntu_lxc_12.04_64_oq_1.2-2.tar.bz2
+$ sudo tar --numeric-owner -C /var/lib/lxc -xpsjf ~/Ubuntu_lxc_14.04_64_oq_1.5-0.tar.bz2
 ```
 
 ### Start the OpenQuake LXC container
@@ -64,4 +64,4 @@ $ sudo apt-get update && sudo apt-get upgrade
 Be careful: the upgrade will destroy all the data saved in the OpenQuake DB!
 
 ### Useful links
-* https://help.ubuntu.com/12.04/serverguide/lxc.html
+* https://help.ubuntu.com/14.04/serverguide/lxc.html
