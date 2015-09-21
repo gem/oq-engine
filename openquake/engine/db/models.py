@@ -42,6 +42,7 @@ from django.db import connections
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.gis.db import models as djm
 
+from openquake.baselib.general import groupby
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, correlation
 
@@ -484,10 +485,16 @@ def save_sites(job, coords):
     :param coords: a sequence of coordinates
     :returns: the ids of the inserted HazardSite instances
     """
+    groups = groupby(coords, lambda x: x)
     sites = [HazardSite(hazard_calculation=job,
                         lon=point[0], lat=point[1])
-             for point in coords]
-    return writer.CacheInserter.saveall(sites)
+             for point in groups]
+    site_ids = writer.CacheInserter.saveall(sites)
+    sids = []
+    for site_id, point in zip(site_ids, groups):
+        for p in groups[point]:
+            sids.append(site_id)
+    return sids
 
 
 def extract_from(objlist, attr):
