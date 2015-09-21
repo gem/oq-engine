@@ -27,7 +27,7 @@ $ sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.n
 $ curl -s https://copr.fedoraproject.org/coprs/gem/openquake/repo/epel-7/gem-openquake-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-epel-7.repo
 ```
 
-The full list of supported repos (for EPEL 7 and Fedora) see: https://copr.fedoraproject.org/coprs/gem/openquake/
+The full list of supported repos (including Fedora) is available on COPR: https://copr.fedoraproject.org/coprs/gem/openquake/
 
 #### Stable releases (starting from OpenQuke Engine 1.5, EPEL only)
 
