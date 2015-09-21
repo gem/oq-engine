@@ -1,5 +1,5 @@
 ## Initial install
-On all nodes, install Ubuntu and the python-oq package as described in [OpenQuake Engine installation](Installing-the-OpenQuake-Engine-1.4.md) or [OpenQuake Engine Master installation](Installing-the-OpenQuake-Engine-Nightly.md).
+On all nodes, install Ubuntu and the python-oq package as described in [OpenQuake Engine installation](Installing-the-OpenQuake-Engine.md) or [OpenQuake Engine Master installation](Installing-the-OpenQuake-Engine-Nightly.md).
 
 ## Overall architecture 
 The nodes must all be able to communicate with a single Redis Key-Value store (only for OpenQuake <= 1.0), a single PostresSQL database and a single RabbitMQ server.
