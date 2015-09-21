@@ -145,12 +145,12 @@ Some outputs where not shown. You can see the full list with the command
 
 ## Run OQ Engine, with calculation parallelization
 From the directory `/usr/openquake/engine`, launch celery worker processes like so:
-##### Ubuntu 12.04
+##### Ubuntu 12.04 / Celery 2
 <pre>
 celeryd --purge &
 </pre>
 
-##### Ubuntu 14.04
+##### Ubuntu 14.04 / Celery 3
 <pre>
 celery worker --purge -Ofair &
 </pre>
