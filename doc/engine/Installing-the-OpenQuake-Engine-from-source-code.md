@@ -1,5 +1,5 @@
-# Running OpenQuake Engine from git repository 
-This page describes the additional steps necessary to run the current development version of the OpenQuake engine rather than the latest public package.  We assume that you are running Ubuntu Linux 12.04 LTS and have already installed the <code>git</code> package.
+# Running OpenQuake Engine from git repository
+This page describes the additional steps necessary to run the current development version of the OpenQuake engine rather than the latest public package using Ubuntu Linux 14.04 LTS or 12.04 LTS.
 
 ## Install primary dependencies
 The easiest way to install the primary dependencies for OQ Engine is to install the latest stable Ubuntu package and then remove it, leaving in the place all of its dependencies.
@@ -12,12 +12,6 @@ sudo apt-get update
 sudo apt-get install python-oq-engine
 sudo apt-get remove --purge python-oq.*
 ```
-
-The complete list of dependencies is:
-```
-python python-celery python-geohash python-numpy python-paramiko python-scipy python-shapely python-psycopg2 python-setuptools python-psutil python-mock python-h5py python-concurrent.futures rabbitmq-server python-django16 postgresql-9.1 postgresql-9.1-postgis
-```
-
 
 ## Install additional dependencies
 A few additional packages are necessary if using GIT:
@@ -36,10 +30,11 @@ git clone https://github.com/gem/oq-risklib.git
 If you're planning on modifying your own copy of the code, you'll want to clone from your own fork instead.
 See [forking a repository](https://help.github.com/articles/fork-a-repo).
 
-## Set the PYTHONPATH
+## Set the PYTHONPATH and system PATH
 You'll need to add to your `PYTHONPATH` environment variable the path to each source repo clone. In this example, we've cloned the repos (see above) to `/home/yourname/`. You can set your `PYTHONPATH` like so:
 ```bash
-export PYTHONPATH=/home/yourname/oq-engine:/home/yourname/oq-hazardlib:/home/yourname/oq-risklib
+export PYTHONPATH=$HOME/oq-engine:$HOME/oq-hazardlib:$HOME/oq-risklib
+export PATH=$HOME/oq-engine/bin:$PATH
 ```
 
 To avoid having to do this in every session, it's a good idea to add this `export` statement to your `.profile`, located in your home directory.
@@ -47,14 +42,14 @@ To avoid having to do this in every session, it's a good idea to add this `expor
 ## Bootstrap the database
 Now you need to set up the OQ Engine database schema.
 
-But first, we need to change a postgres configuration to allow this action. Check that your `/etc/postgresql/9.1/main/pg_hba.conf` file contains these lines
+But first, we need to change a postgres configuration to allow this action. Edit your `/etc/postgresql/9.3/main/pg_hba.conf` file and add on top of the file these lines
 ```
 local   openquake2   oq_admin                   md5
 local   openquake2   oq_job_init                md5
 ```
 
-If not, add them and restart postgres for this change to take effect:
-```bash sudo service postgresql restart```
+You'll need to restart postgres for this change to take effect:
+```sudo service postgresql restart```
 
 Now set up the DB.
 ```bash
@@ -67,19 +62,6 @@ Finally upgrade the DB.
 ```bash
 ./bin/oq-engine --upgrade-db
 ```
-
-## Configure the database
-The official packaged version of Django for Ubuntu 12.04 has a [bug](https://code.djangoproject.com/ticket/16778) which requires a custom PostgreSQL setting:
-
-edit the ```/etc/postgresql/9.1/main/postgresql.conf``` file and set ```standard_conforming_strings``` to **off**:
-
-```standard_conforming_strings = off```
-
-Save and restart PostgreSQL
-
-```bash sudo service postgresql restart```
-
-For more information, see: https://bugs.launchpad.net/openquake-old/+bug/911714
 
 ## Hazardlib speedups
 
@@ -168,9 +150,17 @@ Some outputs where not shown. You can see the full list with the command
 ```
 
 ## Run OQ Engine, with calculation parallelization
+
+### Ubuntu 12.04 / Celery 2
 From the root of the `oq-engine` directory, launch celery worker processes like so:
 ```bash
 celeryd --purge & #Run it in background
+```
+
+### Ubuntu 14.04 / Celery 3
+From the root of the `oq-engine` directory, launch celery worker processes like so:
+```bash
+celery worker --purge -Ofair & #Run it in background
 ```
 
 Then run `bin/oq-engine` without the `--no-distribute` option:
