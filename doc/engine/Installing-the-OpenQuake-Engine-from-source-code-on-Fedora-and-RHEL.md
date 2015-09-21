@@ -1,17 +1,24 @@
 **DRAFT**
 
-Supported releases: **Fedora 20**/**Fedora 21** and **RHEL/CentOS 7**.  
-**This setup is not tested by our CI, use at your own risk**.
+Supported releases: **Fedora 21**/**Fedora 22**/**Fedora 23** and **RHEL/CentOS/SL 7** via EPEL.
 
 ## Dependencies
 
 ### RHEL/CentOS 7 only
 
-Before installing dependencies on RHEL/CentOS 7 you need to add the _OpenQuake Packages for Enterprise Linux 7_ YUM repo:
+Before installing the OpenQuake Engine you need to add [EPEL](https://fedoraproject.org/wiki/EPEL) and the _OpenQuake Packages_ [COPR](https://copr.fedoraproject.org/coprs/gem/openquake/    ) YUM repo:
+
+#### Add EPEL and GEM repositories
 
 ```bash
-$ curl -s http://ftp.openquake.org/rhel/7/openquake.repo | sudo tee /etc/yum.repos.d/openquake.repo
+$ sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 ```
+
+```bash
+$ curl -s https://copr.fedoraproject.org/coprs/gem/openquake/repo/epel-7/gem-openquake-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-epel-7.repo
+
+```
+This provides some dependencies which are missing in **EPEL**.
 
 ### Install the OpenQuake Engine dependencies
 
