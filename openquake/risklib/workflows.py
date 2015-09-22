@@ -560,7 +560,6 @@ class ProbabilisticEventBased(Workflow):
             instance.
         """
         n = len(assets)
-        oqlite = isinstance(assets[0].id, str)
         loss_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
         # sum on ruptures; compute the fractional losses
@@ -579,36 +578,16 @@ class ProbabilisticEventBased(Workflow):
             ilm.fill(numpy.nan)
         ila = ilm.T * values
         average_insured_losses = ilm.sum(axis=1) * self.ses_ratio
-
-        if oqlite:  # return early, with just the losses per asset
-            cb = self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
-            return scientific.Output(
-                assets, loss_type,
-                event_loss_per_asset=ela,
-                insured_loss_per_asset=ila,
-                average_losses=average_losses,
-                average_insured_losses=average_insured_losses,
-                counts_matrix=cb.build_counts(loss_matrix),
-                insured_counts_matrix=cb.build_counts(ilm),
-                tags=event_ids)
-
-        # in the engine, compute more stuff on the workers
-        curves = utils.numpy_map(self.curves, loss_matrix)
-        maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
-        elt = self.event_loss(ela, event_ids)
-
-        if self.insured_losses and loss_type != 'fatalities':
-            insured_curves = utils.numpy_map(self.curves, ilm)
-        else:
-            insured_curves = None
+        cb = self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
         return scientific.Output(
             assets, loss_type,
-            loss_matrix=loss_matrix if self.return_loss_matrix else None,
-            loss_curves=curves, average_losses=average_losses,
-            insured_curves=insured_curves,
+            event_loss_per_asset=ela,
+            insured_loss_per_asset=ila,
+            average_losses=average_losses,
             average_insured_losses=average_insured_losses,
-            stddev_losses=[None] * n, stddev_insured_losses=[None] * n,
-            loss_maps=maps, event_loss_table=elt)
+            counts_matrix=cb.build_counts(loss_matrix),
+            insured_counts_matrix=cb.build_counts(ilm),
+            tags=event_ids)
 
     def compute_all_outputs(self, getter, loss_type):
         """
