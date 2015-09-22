@@ -364,9 +364,15 @@ def get_hc_id(hc_id):
 
 def export_outputs(hc_id, target_dir, export_type):
     # make it possible commands like `oq-engine --eos -1 /tmp`
-    for output in models.Output.objects.filter(oq_job=hc_id):
+    outputs = models.Output.objects.filter(oq_job=hc_id)
+    if not outputs:
+        sys.exit('Found nothing to export for job %s' % hc_id)
+    for output in outputs:
         print 'Exporting %s...' % output
-        export(output.id, target_dir, export_type)
+        try:
+            export(output.id, target_dir, export_type)
+        except Exception as exc:
+            print exc
 
 
 def export_stats(job_id, target_dir, output_type, export_type):
@@ -513,6 +519,10 @@ def main():
 
     run_job = engine.run_job_lite if args.lite else engine.run_job
 
+    if args.lite and args.hazard_output_id:
+        sys.exit('The --hazard-output-id option is not supported with the '
+                 '--lite option')
+
     if args.list_inputs:
         list_inputs(args.list_inputs)
 
@@ -593,7 +603,7 @@ def main():
         export(int(output_id), expanduser(target_dir), exports)
 
     elif args.export_risk_output is not None:
-        deprecate('--export-hazard-output', '--export-output')
+        deprecate('--export-risk-output', '--export-output')
         output_id, target_dir = args.export_risk_output
         export(int(output_id), expanduser(target_dir), exports)
 

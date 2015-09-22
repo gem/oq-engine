@@ -1,6 +1,6 @@
-### Installing the OpenQuake Engine 1.4
+### Installing the OpenQuake Engine
 
-The OpenQuake Engine 1.4 supports **Ubuntu 14.04** LTS (Trusty) and **Ubuntu 12.04** LTS (Precise). 
+The OpenQuake Engine 1.5 supports **Ubuntu 14.04** LTS (Trusty). Support for **Ubuntu 12.04** LTS (Precise) is still available but has been deprecated; starting from OpenQuake 1.6 we will release packages only for Ubuntu 14.04. For more information see [What's new](What's-new.md).
 
 If you were previously using a nightly release first remove the old packages and the repository:
 <pre>
@@ -145,12 +145,12 @@ Some outputs where not shown. You can see the full list with the command
 
 ## Run OQ Engine, with calculation parallelization
 From the directory `/usr/openquake/engine`, launch celery worker processes like so:
-##### Ubuntu 12.04
+##### Ubuntu 12.04 / Celery 2
 <pre>
 celeryd --purge &
 </pre>
 
-##### Ubuntu 14.04
+##### Ubuntu 14.04 / Celery 3
 <pre>
 celery worker --purge -Ofair &
 </pre>
