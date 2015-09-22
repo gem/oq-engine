@@ -1,0 +1,114 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+<fragilityModel format="continuous">
+
+  <description>fragility model</description>
+  <limitStates>Slight Moderate Extensive Collapse</limitStates>
+
+  <ffs type="lognormal">
+    <taxonomy>MUR/LWAL/HEX:1</taxonomy>
+    <IML IMT="PGA" imlUnit="g" minIML="0.025" maxIML="3.0"/>
+    <ffc ls="Slight">
+      <params mean="1.303508" stddev="0.654248"/>
+    </ffc>
+    <ffc ls="Moderate">
+      <params mean="2.399490" stddev="1.655578"/>
+    </ffc>
+    <ffc ls="Extensive">
+      <params mean="2.981824" stddev="2.162123"/>
+    </ffc>
+    <ffc ls="Collapse">
+      <params mean="5.080900" stddev="4.737836"/>
+    </ffc>
+  </ffs>
+  
+  <ffs type="lognormal">
+    <taxonomy>MUR/LWAL/HEX:2</taxonomy>
+    <IML IMT="PGA" imlUnit="g" minIML="0.025" maxIML="3.0"/>
+    <ffc ls="Slight">
+      <params mean="0.454462" stddev="0.133647"/>
+    </ffc>
+    <ffc ls="Moderate">
+      <params mean="0.736286" stddev="0.290200"/>
+    </ffc>
+    <ffc ls="Extensive">
+      <params mean="1.008302" stddev="0.413199"/>
+    </ffc>
+    <ffc ls="Collapse">
+      <params mean="1.389906" stddev="0.647210"/>
+    </ffc>
+  </ffs>
+  
+  <ffs type="lognormal">
+    <taxonomy>MUR/LWAL/HEX:3</taxonomy>
+    <IML IMT="PGA" imlUnit="g" minIML="0.025" maxIML="3.0"/>
+    <ffc ls="Slight">
+      <params mean="0.324076" stddev="0.094958"/>
+    </ffc>
+    <ffc ls="Moderate">
+      <params mean="0.450157" stddev="0.150251"/>
+    </ffc>
+    <ffc ls="Extensive">
+      <params mean="0.594081" stddev="0.223610"/>
+    </ffc>
+    <ffc ls="Collapse">
+      <params mean="0.778375" stddev="0.243034"/>
+    </ffc>
+  </ffs>
+
+  <ffs type="lognormal">
+    <taxonomy>MUR/LWAL/HEX:4</taxonomy>
+    <IML IMT="SA(0.4)" imlUnit="g" minIML="0.025" maxIML="3.0"/>
+    <ffc ls="Slight">
+      <params mean="0.277988" stddev="0.080567"/>
+    </ffc>
+    <ffc ls="Moderate">
+      <params mean="0.330545" stddev="0.066776"/>
+    </ffc>
+    <ffc ls="Extensive">
+      <params mean="0.417851" stddev="0.133607"/>
+    </ffc>
+    <ffc ls="Collapse">
+      <params mean="0.562773" stddev="0.140563"/>
+    </ffc>
+  </ffs>
+
+  <ffs type="lognormal">
+    <taxonomy>MUR/LWAL/HEX:5</taxonomy>
+    <IML IMT="SA(0.4)" imlUnit="g" minIML="0.025" maxIML="3.0"/>
+    <ffc ls="Slight">
+      <params mean="0.215159" stddev="0.037283"/>
+    </ffc>
+    <ffc ls="Moderate">
+      <params mean="0.285767" stddev="0.084646"/>
+    </ffc>
+    <ffc ls="Extensive">
+      <params mean="0.346028" stddev="0.105449"/>
+    </ffc>
+    <ffc ls="Collapse">
+      <params mean="0.451456" stddev="0.112760"/>
+    </ffc>
+  </ffs>
+
+
+<ffs type="lognormal">
+    <taxonomy>MUR/LWAL/HEX:6</taxonomy>
+    <IML IMT="SA(0.4)" imlUnit="g" minIML="0.025" maxIML="3.0"/>
+    <ffc ls="Slight">
+        <params mean="0.204480" stddev="0.056879"/>
+    </ffc>
+    <ffc ls="Moderate">
+        <params mean="0.238863" stddev="0.066949"/>
+    </ffc>
+    <ffc ls="Extensive">
+        <params mean="0.280143" stddev="0.088973"/>
+    </ffc>
+    <ffc ls="Collapse">
+        <params mean="0.358994" stddev="0.103283"/>
+    </ffc>
+</ffs>
+
+</fragilityModel>
+
+</nrml>
