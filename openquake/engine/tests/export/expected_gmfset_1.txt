@@ -1,9 +1,9 @@
 GMFsPerSES(investigation_time=12.000000, stochastic_event_set_id=1,
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00~ses=0001~src=2-53~rup=001-01
-<X= -0.05033, Y=  0.41007, GMV=0.6121543>)
+<X=  0.39932, Y=  0.05034, GMV=0.6121543>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=col=00~ses=0001~src=2-74~rup=002-01
-<X=  0.12954, Y= -0.39932, GMV=0.1758538>)
+<X=  0.30939, Y= -0.12953, GMV=0.1758538>)
 GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=col=00~ses=0001~src=2-53~rup=001-01
-<X= -0.05033, Y=  0.41007, GMV=0.1741209>)
+<X=  0.39932, Y=  0.05034, GMV=0.1741209>)
 GMF(imt=SA sa_period=0.1 sa_damping=5.0 rupture_id=col=00~ses=0001~src=2-74~rup=002-01
-<X=  0.12954, Y= -0.39932, GMV=0.2523242>))
+<X=  0.30939, Y= -0.12953, GMV=0.2523242>))
