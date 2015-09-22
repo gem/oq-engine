@@ -247,6 +247,10 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
     @attr('slow')
     def test_event_based_risk_export(self):
+        # TODO: this has to be rewritten completely, or it can be removed
+        # completely if there is enough coverage on the oq-lite side
+        raise unittest.SkipTest
+
         target_dir = tempfile.mkdtemp()
         try:
             haz_cfg = helpers.get_data_path(
