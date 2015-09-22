@@ -113,10 +113,16 @@ or site attributes. To use this option the user need only specify
 conventional GMPE. Further guidance regarding the construction of the
 HDF5 files will be provided in the documentation in due course.
 
-10. Several other features have been implemented in hazardlib and you can
-see the full list in the [changelog](https://raw.githubusercontent.com/gem/oq-hazardlib/engine-1.5/debian/changelog).
+10. Added near-fault directivity probabilistic seismic hazard
+analysis for classical PSHA calculations with simple fault
+sources. We implemented the most recent NGA-WEST2
+directivity model and the associated GMPE which is, up to now,
+the only GMPE model explicitly including the effect. More details
+can be found in the manual.
 
-11. The oq-lite command-tool has been enhanced; it is possible to use
+11. Several other features have been implemented in hazard and you can
+
+12. The oq-lite command-tool has been enhanced; it is possible to use
 it to execute the same calculations that you would run with the command
 ``oq-engine --lite``. The difference is that ``oq-lite`` only works
 on a single machine, not on the cluster. On the plus side, it does
@@ -129,16 +135,16 @@ of your computation before you start anything large. Currently
 the functionality only works for hazard calculations
 but it is expected to grow in the future.
 
-12. Several other improvements have been made to oq-lite, too many to list
+13. Several other improvements have been made to oq-lite, too many to list
 them all here; please see the [changelog](https://raw.githubusercontent.com/gem/oq-risklib/engine-1.5/debian/changelog) for the complete list.
 
-13. We added a functionality `write_source_model` to serialize sources in XML.
+14. We added a functionality `write_source_model` to serialize sources in XML.
 Also we improved the reading of XML files and the error message in case of
 invalid files. Finally, we have removed the dependency on lxml, thus making
 the OpenQuake suite more portable across different platforms and much easier
 to install.
 
-14. We added a check on the site parameters distance. If a site model
+15. We added a check on the site parameters distance. If a site model
 file is provided in a hazard calculation, and if no site parameters are
 available within a radius of 5 km for a particular site, a
 warning is raised. The goal is to signal the user if she used an
@@ -146,7 +152,7 @@ incorrect site model file with respect to the sites she is using. The
 calculation still runs and complete, since sometimes you may not have
 site parameters data close enough to the sites of interests.
 
-15. We have parallelized the source splitting procedure with a good
+16. We have parallelized the source splitting procedure with a good
 performance boost. There is also a flag
 `parallel_source_splitting` in openquake.cfg to disable this
 feature (default: true)
@@ -263,3 +269,4 @@ the cleanup phase could hide the real underlying error.
 13. We fixed an error for the degenerate case of hazard curves
 containing all zeros, as this corner case was reported by some users 
 on the OpenQuake users group.
+
