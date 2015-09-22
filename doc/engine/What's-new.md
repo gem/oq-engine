@@ -1,5 +1,5 @@
 OpenQuake 1.5 is a major release and a big improvement with respect
-to OpenQuake 1.4. More than 110 bugs/feature
+to OpenQuake 1.4. More than 115 bugs/feature
 requests were fixed/implemented. Everybody is invited to upgrade,
 by following the [usual procedure](Installing-the-OpenQuake-Engine.md).
 
@@ -7,56 +7,57 @@ New features of the OpenQuake Engine, version 1.5
 --------------------------------------------------
 
 1. The most important new feature is the *support for the HDF5
-technology*. Starting from this release the scientific calculators
-are starting to save their inputs and outputs in a single HDF5 file,
-called the datastore. The HDF5 file format is a well known standard in
+technology*. Starting from this release some of the scientific
+calculators are saving their inputs and outputs in a single HDF5 file,
+called the datastore. The HDF5 format is a well known standard in
 the scientific community, can be read/written by a variety of
 programming languages and with different tools and it is a
 state-of-the-art technology when it comes to managing large numeric
-datasets. The change to HDF5 provides *huge* performance benefits 
-compared to the earlier approach used by the engine, which involved 
-storing arrays in PostgreSQL.
+datasets. The change to the HDF5 technology provides *huge*
+performance benefits compared to the earlier approach used by the
+engine, which involved storing arrays in PostgreSQL.
 
 2. Related to the first point, in OpenQuake 1.5 *the event based
-calculators (both hazard and risk) based on Postgres are officially 
+calculators based on Postgres (both hazard and risk) are officially 
 deprecated*. They are still present and work as before, but they are 
 being replaced with new versions of the calculators based on the 
-HDF5 technology.  The replacement of the old calculators with the 
-new ones will start from OpenQuake 1.6. This change will have no impact 
-on regular users, who will simply notice large improvements in performance 
-of the calculators. But this change will affect power users who are 
+HDF5 technology.  The actual removal of the old calculators
+is scheduled for OpenQuake 1.6. The change will have no impact 
+on regular users, who will simply notice a definite improvement in
+erformance. Nonetheless, the change will affect power users who are 
 performing queries on the OpenQuake database, since there will be nothing 
-in the database once we replace the old calculators based on Postgres 
-with the new versions based on HDF5.
+left in the database once we remove the old calculators.
 
 3. In order to make the transition easier, OpenQuake 1.5 already includes 
 the new versions of the event based calculators based on HDF5, so it 
 is possible to use them right now. The new calculators can be run in 
-OpenQuake 1.5 with the command ``$ oq-engine --lite --run job.ini``.
+OpenQuake 1.5 with the command
+``$ oq-engine --lite --run job_haz.ini,job_risk.ini``.
 If you do not pass the ``--lite`` flag the old calculators will be
-run by default. In future releases all of the old calculators will be 
+run by default. In future releases of the engine, the remaining
+calculators based on Postgres will be 
 progressively replaced by the new calculators based on HDF5. At the end of 
-this process, which will be spread over the upcoming releases, 
+this process, which will be spread over several upcoming releases, 
 the ``--lite`` flag will be removed. All of the old calculators 
 relying on the database will be replaced internally by the newer 
-"lite" versions based on HDF5 and the old calculators based on Postgres 
+"lite" versions based on HDF5 and the old calculators
 will not be available anymore. The OpenQuake database will only contain 
 accessory information (essentially a table with the users and references 
 to the outputs of each user) but nothing relevant for the scientific 
-computation will be stored in the database going forward.
+computation.
 
-4. The ``--lite`` versions of the calculators are not all fully 
-functional yet; for instance, among the hazard calculators, 
+4. At the moment, the ``--lite`` flag does not work for all calculators.
+For instance, among the hazard calculators, 
 the disaggregation ``--lite`` calculator is absent in OpenQuake 1.5. 
 Work on this calculator is in progress, and it will be added in a 
-future release; for the moment you will have 
+future release; for the the time being, you will have 
 to use the old calculator, which is not deprecated in OpenQuake 1.5.
 The ``--lite`` versions of the other hazard calculators 
 (scenario hazard, classical hazard, and event based hazard) are complete. 
 The ``--lite`` version of the classical_tiling calculator is also complete 
 but relatively new and has not been battle tested yet. The ``--lite`` 
 versions of the risk calculators are at different levels of completion; 
-the only ``--lite`` risk calculator we recommended using in this release 
+the only ``--lite`` risk calculator we recommend using in this release 
 is the event based risk calculator.
 
 5. Internally, the ``--lite`` calculators are implemented very 
@@ -68,7 +69,7 @@ changes in rounding, but nothing more than that. The
 event based ``--lite`` calculators are faster by orders of magnitudes,
 especially for large calculations, both because of the HDF5 technology
 and also because they compute the ground motion fields on the fly,
-thus avoiding the large amount of time wasted in saving/reading 
+thus avoiding the time wasted in saving/reading 
 large amounts of data, as the old calculators did. It is recommended 
 that you start using the ``--lite`` versions of the event based 
 calculators in preference to the engine ones.
@@ -85,13 +86,13 @@ NRML 0.5, and NRML 0.4 may be deprecated. In that case a conversion
 script to convert input files from NRML 0.4 to NRML 0.5 will be provided.
 
 7. For the first time, *hazardlib supports Python 3*.  The support is
-at the beginning and the C-level speedups do not compile yet. However,
+at the beginning and the C-level speedups do not work yet. However,
 we are already testing hazardlib with Python 3.4 by using the Travis
 continuous integration system and we are committed to keep it
-compatible both with Python 2.7 and Python 3.4 and higher for the
+compatible both with Python 2.7 and Python 3.4+ for the
 foreseeable future. There is no plan to abandon Python 2.7 any time
-soon, but there is a plan to extend the support for both Python 2.7
-and Python 3.4+ to risklib and the engine. However, this will be a
+soon, but there is a plan to extend the support for
+Python 3.4+ to risklib and the engine. However, this will be a
 long term and low priority process: do not expect anything definitive
 before 2016.
 
@@ -109,42 +110,45 @@ equations currently supported. The tables, in HDF5 format, provide the
 expected ground motion values for given magnitudes and distances, with
 the additional option of amplifying the ground motions based on source
 or site attributes. To use this option the user need only specify
-`GMPETable(gmpe_table=path/to/table.hdf5)' in place of the
+`GMPETable(gmpe_table=path/to/table.hdf5)` in place of the
 conventional GMPE. Further guidance regarding the construction of the
 HDF5 files will be provided in the documentation in due course.
 
-10. Added near-fault directivity probabilistic seismic hazard
+10. Near-fault directivity probabilistic seismic hazard
 analysis for classical PSHA calculations with simple fault
-sources. We implemented the most recent NGA-WEST2
+sources was added to hazardlib. We implemented the most recent NGA-WEST2
 directivity model and the associated GMPE which is, up to now,
 the only GMPE model explicitly including the effect. More details
 can be found in the manual.
 
 11. Several other features have been implemented in hazard and you can
+have a look at the [changelog](https://github.com/gem/oq-hazardlib/blob/engine-1.5/debian/changelog).
 
-12. The oq-lite command-tool has been enhanced; it is possible to use
+12. The ``oq-lite`` command-tool has been enhanced; it is possible to use
 it to execute the same calculations that you would run with the command
 ``oq-engine --lite``. The difference is that ``oq-lite`` only works
-on a single machine, not on the cluster. On the plus side, it does
-not require having a celery instance up and running. ``oq-lite``
-is also especially useful to perform some preliminary analysis before you 
-run a large computation on the engine. Running 
+on a single machine, not on a cluster. On the plus side, it does
+not require having a celery instance up and running.
+
+13.``oq-lite`` is especially useful to perform preliminary analysis before you 
+run a large computation on the engine. Running
 ``$ oq-lite info --report <my_job.ini>``
-will generate a text file with a report on the expected size
-of your computation before you start anything large. Currently
+will generate a text report on the expected size
+of the computation. It is recommended to generate such report
+before you start anything large. Currently
 the functionality only works for hazard calculations
 but it is expected to grow in the future.
 
-13. Several other improvements have been made to oq-lite, too many to list
-them all here; please see the [changelog](https://raw.githubusercontent.com/gem/oq-risklib/engine-1.5/debian/changelog) for the complete list.
+14. Several other improvements have been made to oq-lite, too many to list
+them all; please see the [changelog](https://raw.githubusercontent.com/gem/oq-risklib/engine-1.5/debian/changelog) for the complete list.
 
-14. We added a functionality `write_source_model` to serialize sources in XML.
+15. We added a functionality `write_source_model` to serialize sources in XML.
 Also we improved the reading of XML files and the error message in case of
 invalid files. Finally, we have removed the dependency on lxml, thus making
-the OpenQuake suite more portable across different platforms and much easier
+the OpenQuake suite more portable across different platforms and easier
 to install.
 
-15. We added a check on the site parameters distance. If a site model
+16. We added a check on the site parameters distance. If a site model
 file is provided in a hazard calculation, and if no site parameters are
 available within a radius of 5 km for a particular site, a
 warning is raised. The goal is to signal the user if she used an
@@ -152,21 +156,21 @@ incorrect site model file with respect to the sites she is using. The
 calculation still runs and complete, since sometimes you may not have
 site parameters data close enough to the sites of interests.
 
-16. We have parallelized the source splitting procedure with a good
+17. We have parallelized the source splitting procedure with a good
 performance boost. There is also a flag
 `parallel_source_splitting` in openquake.cfg to disable this
-feature (default: true)
+feature, should the need arise (default: true).
 
 Support for different platforms
 ----------------------------------------------------
 
 OpenQuake 1.5 fully supports both Ubuntu 12.04 and Ubuntu 14.04
-and we provide packages for both platforms. However
+and we provide packages for both platforms. However,
 starting from OpenQuake 1.6 *we will release packages only for Ubuntu 14.04*.
-Ubuntu 12.04 will still be supported but you will have to install some
+Ubuntu 12.04 will still be supported but you will have to install manually some
 dependencies which are not in the repositories of Ubuntu 12.04. The reason
 for the change is that the HDF5 libraries for Ubuntu 12.04 are
-too old (over 4 years old), buggy and less efficient compared to 
+too old (over 4 year old), buggy and less efficient compared to 
 the ones for Ubuntu 14.04, which is now our official development platform.
 It is too expensive for us to mantain compatibility with such ancient
 software, so users wishing to use OpenQuake 1.6 on Ubuntu 12.04
@@ -175,11 +179,12 @@ and its dependencies. We will provide instructions for that in
 the next release, since for the moment this is not necessary.
 
 We have detailed instructions for installing the engine on CentOS 7
-and Fedora and in general of [Red Hat Enterprise Linux clones]
+and Fedora and in general on [Red Hat Enterprise Linux clones]
 (Installing-the-OpenQuake-Engine-from-source-code-on-Fedora-and-RHEL.md)
 The engine works on several Linux distributions, even recent ones
-like Ubuntu 15.04, and it has less dependencies than it used to have in
-the past and it is easier to install.
+like Ubuntu 15.04. It has less dependencies than it used to have in
+the past and it is easier to install, so it should be relatively
+simple to install it on any modern Linux distribution.
 
 While the engine is not supported on Windows and Mac OS, we are
 happy to report that the underlying libraries and the
@@ -232,7 +237,7 @@ compared to previous versions.
 for ages, is now removed. Now only `bin/oq-engine` is available
 
 7. The parameter `concurrent_tasks` is read from the .ini file and
-honored; in earlier versions it was read from the openquake.cfg file, 
+honored; in earlier versions it was read from the *openquake.cfg* file, 
 but was being ignored by the risk calculators.
 
 8. We changed the convention used to generate the rupture tags; now
@@ -256,7 +261,7 @@ other character set. The only restriction is that the XML file
 must be UTF8-encoded, according to the XML standard.
 
 10. If you don't have a site model file, you need to provide values in
-the job.ini file only for those site parameters that are actually used
+the *job.ini* file only for those site parameters that are actually used
 by your calculation. In earlier versions, users were asked to specify 
 site parameters even if they weren't required for the calculation.
 
