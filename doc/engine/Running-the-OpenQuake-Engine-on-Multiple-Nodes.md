@@ -1,12 +1,12 @@
 ## Initial install
-On all nodes, install Ubuntu and the python-oq package as described in [OpenQuake Engine 1.4 installation](Installing-the-OpenQuake-Engine-1.4.md) or [OpenQuake Engine Master installation](Installing-the-OpenQuake-Engine-Nightly.md).
+On all nodes, install Ubuntu and the python-oq package as described in [OpenQuake Engine installation](Installing-the-OpenQuake-Engine.md) or [OpenQuake Engine Master installation](Installing-the-OpenQuake-Engine-Nightly.md).
 
 ## Overall architecture 
 The nodes must all be able to communicate with a single Redis Key-Value store (only for OpenQuake <= 1.0), a single PostresSQL database and a single RabbitMQ server.
 One common configuration is to install and deploy all three services on a single "control node" server, but other configurations are possible.  It is not necessary and not normally recommended to install redis, postres or RabbitMQ on the worker nodes.
 
 ## Postgres configuration
-The default Postgres configuration does not permit access from other machines: the file /etc/postgresql/9.1/main/pg_hba.conf should be modified to allow access to the "openquake" database from the worker nodes, an example excerpt follows:  
+The default Postgres configuration does not permit access from other machines: the file /etc/postgresql/9.3/main/pg_hba.conf should be modified to allow access to the "openquake" database from the worker nodes, an example excerpt follows:
 
 ### OpenQuake 1.0
 <pre>
@@ -29,7 +29,7 @@ The Postgres manual describes a number of runtime configuration parameters that 
 
 By default Postres, on Ubuntu, allows connections only from localhost. Since celery workers need to push data back to Postgres, it should be exposed to the cluster network:
 
-/etc/postgresql/9.1/main/postgresql.conf
+/etc/postgresql/9.3/main/postgresql.conf
 <pre>
 # This value should be at least the number of worker cores
 listen_addresses = '*'
@@ -38,11 +38,11 @@ listen_addresses = '*'
 ### max_connections 
 * See [http://www.postgresql.org/docs/current/static/runtime-config-connection.html#GUC-MAX-CONNECTIONS](http://www.postgresql.org/docs/current/static/runtime-config-connection.html#GUC-MAX-CONNECTIONS)
 
-By default Postres allows a maximum of 100 simultaneous connections. By default celery will create a worker process for each available core and the OpenQuake Engine uses two connection per worker, so max_connections should be at least twice number of available worker cores (2 * CPU in the cluster).  
+By default Postres allows a maximum of 100 simultaneous connections. By default celery will create a worker process for each available core and the OpenQuake Engine uses two connection per worker, so max_connections should be at least twice number of available worker cores (2 * CPU in the cluster).
 
 Note that changing max_connections may also imply operating-system level changes, please see [http://www.postgresql.org/docs/current/static/kernel-resources.html](http://www.postgresql.org/docs/current/static/kernel-resources.html) for details.
 
-/etc/postgresql/9.1/main/postgresql.conf
+/etc/postgresql/9.3/main/postgresql.conf
 <pre>
 # This value should be at least the number of worker cores
 max_connections = 100
