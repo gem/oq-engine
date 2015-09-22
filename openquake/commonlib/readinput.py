@@ -200,7 +200,9 @@ def get_mesh(oqparam):
         firstpoint = geo.Point(*oqparam.region[0])
         points = [geo.Point(*xy) for xy in oqparam.region] + [firstpoint]
         try:
-            return geo.Polygon(points).discretize(oqparam.region_grid_spacing)
+            mesh = geo.Polygon(points).discretize(oqparam.region_grid_spacing)
+            lons, lats = zip(*sorted(zip(mesh.lons, mesh.lats)))
+            return geo.Mesh(numpy.array(lons), numpy.array(lats))
         except:
             raise ValueError(
                 'Could not discretize region %(region)s with grid spacing '

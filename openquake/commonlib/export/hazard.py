@@ -225,7 +225,7 @@ class GmfCollection(object):
     def __init__(self, sitecol, ruptures, gmfs, investigation_time):
         self.sitecol = sitecol
         self.ruptures = ruptures
-        self.imts = list(gmfs[0].dtype.fields)
+        self.imts = sorted(gmfs[0].dtype.fields)
         self.gmfs_by_imt = {imt: [gmf[imt] for gmf in gmfs]
                             for imt in self.imts}
         self.investigation_time = investigation_time
