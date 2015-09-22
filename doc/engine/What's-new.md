@@ -275,3 +275,5 @@ the cleanup phase could hide the real underlying error.
 containing all zeros, as this corner case was reported by some users 
 on the OpenQuake users group.
 
+14. Now the sites are ordered by longitude, latitude even when they
+are extracted from a region, consistently with all other cases.
