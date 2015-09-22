@@ -1,7 +1,5 @@
 We are often asked to recommend hardware configurations for servers and clusters to run the OpenQuake engine.  Obviously this depends very much on the calculations one wishes to perform and the available budget, but here we attempt to provide some general advice, please remember "your milage may vary".
 
-Please note that currently **Ubuntu 12.04 LTS** (Precise Pangolin), both 32 and 64 bit, is the only operating system officially supported. Support for **Ubuntu 14.04 LTS** is scheduled for release 1.4. If you are familiar with Python code you can already install the OpenQuake Engine on Ubuntu 14.04 using the [following instructions](Installing-the-OpenQuake-Engine-from-source-code-on-14.04.md).
- 
 **All product and company names are trademarks™ or registered trademarks© of their respective holders. GEM is is not affiliated with and does not endorse any of the products or companies mentioned on this page.**
 
 ### Single node configuration
