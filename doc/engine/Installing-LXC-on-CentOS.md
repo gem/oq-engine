@@ -5,7 +5,7 @@ As root user:
 ```bash
 $ rpm -ivh http://mirror.nl.leaseweb.net/epel/6/i386/epel-release-6-8.noarch.rpm
 ```
-### 2) Install LXC 1.0.6 from epel and some other stuff needed
+### 2) Install LXC 1.0.7 from epel and some other stuff needed
 ```bash
 $ yum install lxc lxc-libs lxc-templates bridge-utils libcgroup
 ```
@@ -75,12 +75,12 @@ $ sysctl –p
 
 ### 7) Download OpenQuake LXC
 ```bash
-$ cd /tmp && wget http://ftp.openquake.org/oq-master/lxc/Ubuntu_lxc_12.04_64_oq_master_nightly-141020.tar.bz2
+$ cd /tmp && wget http://www.globalquakemodel.org/lxc/Ubuntu_lxc_14.04_64_oq_1.5-0.tar.bz2
 ```
 
 ### 8) Extract the OpenQuake LXC
 ```bash
-$ tar --numeric-owner -C /var/lib/lxc -xpsjf /tmp/Ubuntu_lxc_12.04_64_oq_master_nightly-141020.tar.bz2
+$ tar --numeric-owner -C /var/lib/lxc -xpsjf /tmp/Ubuntu_lxc_14.04_64_oq_1.5-0.tar.bz2
 ```
 
 ### 9) Check if the LXC is installed and ready
