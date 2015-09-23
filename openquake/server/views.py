@@ -403,11 +403,11 @@ def calc_results(request, calc_id):
 
     response_data = []
     for result in results:
-        try:
+        try:  # output from the old calculators
             rtype = result.output_type
             outtypes = output_types[rtype]
         except KeyError:
-            try:
+            try:  # output from the datastore
                 rtype = result.ds_key
                 outtypes = output_types[rtype]
             except KeyError:
