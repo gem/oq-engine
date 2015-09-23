@@ -1,3 +1,5 @@
+python-oq-risklib (0.8.0-0~precise01) precise; urgency=low
+
   [Michele Simionato]
   * Added a --pdb flag
   * Added validation to the source IDs
@@ -5,15 +7,17 @@
   * Added data transfer information to the CSV reports
   * Fixed several bugs in the ebr calculator
   * The composite source model is saved in the HDF5 file
-  * Added a command `oq-lite info --report job.ini` to produce a report
+  * Added a command 'oq-lite info --report job.ini' to produce a report
     on a calculation without running it
   * Negative calculations IDs are recognized in the oq-lite commands
   * The GMFs are saved in the HDF5 file
   * Added vulnerability functions with Probability Mass Function
-  * oq-lite has now a `reduce` command to reduce large computations
+  * oq-lite has now a 'reduce' command to reduce large computations
   * The epsilon_matrix is now saved in HDF5 format
   * Fixed a bug in apply_reduce when the first argument is a numpy array
-  * Added a functionality `write_source_model` to serialize sources in XML
+  * Added a functionality 'write_source_model' to serialize sources in XML
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 23 Sep 2015 15:17:28 +0200
 
 python-oq-risklib (0.7.2-0~precise01) precise; urgency=low
 
@@ -55,10 +59,10 @@ python-oq-risklib (0.7.0-0~precise01) precise; urgency=low
   * Introduced a DataStore class to save either generic pickled objects or
     numpy arrays; if installed, it can use the h5py library
   * Added defaults to the parameters in job.ini
-  * Extended the `oq-lite info` command to plot some useful informations
+  * Extended the 'oq-lite info' command to plot some useful informations
     about the source model
   * Ported the classical_risk calculator to oq-lite
-  * Added an `oq-lite pick_rlzs` command to display the distance of the
+  * Added an 'oq-lite pick_rlzs' command to display the distance of the
     hazard curves from the mean, by using the RMSEP distance
   * Ported the scenario_risk calculator to oq-lite
   * Added a check to forbid exposures with an asset number=0
@@ -73,7 +77,7 @@ python-oq-risklib (0.7.0-0~precise01) precise; urgency=low
     based calculator when the number of samples is high
   * Added a script to reduce large source models and large exposure models
   * Fixed a bug in the NRML writer for nodes with value=0
-  * Added a `plot` command to oq-lite
+  * Added a 'plot' command to oq-lite
 
  -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 07 May 2015 10:51:21 +0200
 
