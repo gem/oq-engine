@@ -261,6 +261,7 @@ def write_csv(dest, data, sep=',', fmt='%12.8E', header=None):
        optional list with the names of the columns to display
     """
     if not hasattr(dest, 'getvalue'):
+        # not a StringIO, assume dest is a filename
         dest = open(dest, 'w')
     if len(data) == 0:
         logging.warn('Not generating %s, it would be empty', dest)
