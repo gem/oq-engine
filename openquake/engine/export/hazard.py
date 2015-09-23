@@ -26,7 +26,8 @@ from collections import namedtuple, defaultdict
 from openquake.baselib.general import groupby
 from openquake.hazardlib.calc import disagg
 from openquake.commonlib import hazard_writers
-from openquake.commonlib.writers import floatformat, scientificformat, write_csv
+from openquake.commonlib.writers import (
+    floatformat, scientificformat, write_csv)
 
 from openquake.engine.db import models
 from openquake.engine.export import core

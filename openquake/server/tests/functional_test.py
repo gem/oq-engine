@@ -119,7 +119,6 @@ class EngineServerTestCase(unittest.TestCase):
         self.wait()
         results = self.get('%s/results' % job_id)
         for res in results:
-            import pdb; pdb.set_trace()
             text = self.get_text('result/%s' % res['id'])
             self.assertGreater(len(text), 0)
         self.assertGreater(len(results), 0)
