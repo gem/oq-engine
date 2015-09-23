@@ -167,7 +167,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             outputs = core.get_outputs(job.id)
 
             # SESs
-            ses_outputs = outputs.filter(display_name='sescollection')
+            ses_outputs = outputs.filter(ds_key='sescollection')
             self.assertEqual(1, len(ses_outputs))
 
             exported_files = []
@@ -181,7 +181,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
                 self._test_exported_file(f)
 
             # GMFs
-            gmf_outputs = outputs.filter(display_name='gmfs')
+            gmf_outputs = outputs.filter(ds_key='gmfs')
             self.assertEqual(1, len(gmf_outputs))
 
             exported_files = []
@@ -204,14 +204,14 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # TODO: add XML exporters in oq-lite and uncomment
 
             # Hazard curves
-            #haz_curves = outputs.filter(display_name='hcurves')
+            #haz_curves = outputs.filter(ds_key='hcurves')
             #self.assertEqual(1, haz_curves.count())
             #for curve in haz_curves:
             #    exported_file = check_export(curve.id, target_dir)
             #    self._test_exported_file(exported_file)
 
             # Hazard maps
-            #haz_maps = outputs.filter(display_name='hmaps')
+            #haz_maps = outputs.filter(ds_key='hmaps')
             #self.assertEqual(1, haz_maps.count())
             #for hmap in haz_maps:
             #    exported_file = check_export(hmap.id, target_dir)
