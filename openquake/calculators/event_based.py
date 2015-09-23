@@ -218,6 +218,8 @@ def get_geom(surface, is_from_fault_source, is_multi_surface):
     return lons, lats, depths
 
 
+# this is very ugly for compatibility with the Django API in the engine
+# TODO: simplify this, now that the old calculators have been removed
 class SESRupture(object):
     def __init__(self, rupture, indices, seed, tag, col_id):
         self.rupture = rupture
@@ -477,6 +479,7 @@ def make_gmfs(ses_ruptures, sitecol, imts, gsims,
         with gmf_mon:
             for sr in sesruptures:
                 gmf = computer.compute([sr.seed])[0]
+                # TODO: change idx to rup_idx, also in hazardlib
                 gmf['idx'] = sr.ordinal
                 gmfs.append(gmf)
     ctx_mon.flush()
