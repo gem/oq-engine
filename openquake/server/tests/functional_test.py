@@ -90,8 +90,8 @@ class EngineServerTestCase(unittest.TestCase):
         env['OQ_NO_DISTRIBUTE'] = '1'
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
-             cls.hostport, '--noreload', '--nothreading'],
-            env=env, stdout=subprocess.PIPE)
+             cls.hostport, '--noreload', '--nothreading'], env=env,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         time.sleep(5)
 
     @classmethod
@@ -119,7 +119,8 @@ class EngineServerTestCase(unittest.TestCase):
         self.wait()
         results = self.get('%s/results' % job_id)
         for res in results:
-            text = self.get_text('result/%s' % res['id'])
+            etype = res['outtypes'][0]  # get the first export type
+            text = self.get_text('result/%s' % res['id'], export_type=etype)
             self.assertGreater(len(text), 0)
         self.assertGreater(len(results), 0)
 
