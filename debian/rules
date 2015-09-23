@@ -16,17 +16,13 @@ export DH_OPTIONS
 
 bd=openquake/bin
 
-TRUSTY_DEP = python-amqp, python-django
-TRUSTY_REC = postgresql-9.3, postgresql-9.3-postgis-2.1
-PRECISE_DEP = python-django16
-PRECISE_REC = postgresql-9.1, postgresql-9.1-postgis
+TRUSTY_DEP = python-amqp, python-django, postgresql-9.3, postgresql-9.3-postgis-2.1
+PRECISE_DEP = python-django16, postgresql-9.1, postgresql-9.1-postgis
 
 ifeq ($(shell lsb_release --codename --short),trusty)
 	DEPENDS = -Vdist:Depends="$(TRUSTY_DEP)"
-	RECOMMENDS = -Vdist:Recommends="$(TRUSTY_REC)"
 else
 	DEPENDS = -Vdist:Depends="$(PRECISE_DEP)"
-	RECOMMENDS = -Vdist:Recommends="$(PRECISE_REC)"
 endif
 
 %:
@@ -38,4 +34,4 @@ override_dh_quilt_patch:
 	cat /tmp/__init__.py | sed -e "s/0)  #.*$$/`date +'%s'`)/" > openquake/__init__.py
 
 override_dh_gencontrol:
-	dh_gencontrol -- $(DEPENDS) $(RECOMMENDS)
+	dh_gencontrol -- $(DEPENDS)
