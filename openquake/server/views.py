@@ -408,7 +408,7 @@ def calc_results(request, calc_id):
             outtypes = output_types[rtype]
         except KeyError:
             try:
-                rtype = result.display_name
+                rtype = result.ds_key
                 outtypes = output_types[rtype]
             except KeyError:
                 continue  # non-exportable outputs should not be shown
@@ -495,7 +495,7 @@ def get_result(request, result_id):
         # Throw back a 404 if the exact export parameters are not supported
         return HttpResponseNotFound(
             'export_type=%s is not supported for %s' %
-            (export_type, output.display_name))
+            (export_type, output.ds_key))
 
     content_type = EXPORT_CONTENT_TYPE_MAP.get(
         export_type, DEFAULT_CONTENT_TYPE)

@@ -48,7 +48,7 @@ def zipfiles(fnames, archive):
 
 def export_from_datastore(output_key, output, target):
     """
-    :param output_key: a pair (display_name, fmt)
+    :param output_key: a pair (ds_key, fmt)
     :param output: an Output instance
     :param target: a directory, temporary when called from the engine server
     """
@@ -87,7 +87,7 @@ def export(output_id, target, export_type='xml,geojson,csv'):
     for exptype in export_type.split(','):
         rtype = output.output_type
         if rtype == 'datastore':
-            rtype = output.display_name
+            rtype = output.ds_key
         key = (rtype, exptype)
         if key in export_output:
             return export_output(key, output, target)
