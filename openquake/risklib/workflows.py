@@ -445,7 +445,7 @@ class Classical(Workflow):
         return all_outputs
 
 
-@registry.add('event_based_risk', 'ebr')
+@registry.add('event_based_risk')
 class ProbabilisticEventBased(Workflow):
     """
     Implements the Probabilistic Event Based workflow
