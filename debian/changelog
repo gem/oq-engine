@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Improved the error message for invalid exposures
   * Added a --pdb flag
   * Added validation to the source IDs
   * It is now possible to pass arguments to the GSIMs in the logic tree file
