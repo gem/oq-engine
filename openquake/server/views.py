@@ -397,19 +397,21 @@ def calc_results(request, calc_id):
     # OrderedDict([('agg_loss_curve', ['xml', 'csv']), ...])
     output_types = groupby(export_output, lambda oe: oe[0],
                            lambda oes: [e for o, e in oes])
-
     results = oq_engine.get_outputs(calc_id)
     if not results:
         return HttpResponseNotFound()
 
     response_data = []
     for result in results:
+        outtypes = output_types[result.output_type]
+        if outtypes == [u'']:  # for datastore
+            continue
         url = urlparse.urljoin(base_url, 'v1/calc/result/%d' % result.id)
         datum = dict(
             id=result.id,
             name=result.display_name,
             type=result.output_type,
-            outtypes=output_types[result.output_type],
+            outtypes=outtypes,
             url=url,
         )
         response_data.append(datum)

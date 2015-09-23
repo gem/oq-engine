@@ -46,7 +46,7 @@ def zipfiles(fnames, archive):
     z.close()
 
 
-@export_output.add(('datastore', 'csv'), ('datastore', 'xml'))
+@export_output.add(('datastore', ''))
 def export_from_datastore(output_key, output, target):
     """
     :param output_key: a pair ('datastore', fmt)
