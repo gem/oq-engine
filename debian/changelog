@@ -1,3 +1,5 @@
+python-oq-engine (1.5.0-0~precise01) precise; urgency=low
+
   [Michele Simionato]
   * The event based calculators in the engine are now officially deprecated
     and they raise a warning when used
@@ -53,6 +55,8 @@
 
   [Matteo Nastasi]
   * Packaging system improvement
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 23 Sep 2015 15:48:01 +0200
 
 python-oq-engine (1.4.1-0~precise01) precise; urgency=low
 
