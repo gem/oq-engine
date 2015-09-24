@@ -1,3 +1,5 @@
+python-oq-engine (1.5.0-0~precise01) precise; urgency=low
+
   [Michele Simionato]
   * The event based calculators in the engine are now officially deprecated
     and they raise a warning when used
@@ -6,9 +8,9 @@
   * Fixed two subtle bugs in the management of the epsilons: it means that
     all event based risk calculations with nonzero coefficients of variations
     will produce slightly different numbers with respect to before
-  * Removed excessive checking on the exposure attributes `deductible` and
-    `insuredLimit` that made it impossible to run legitimate calculations
-  * Changed the meaning of `average_loss` for the aggregated curves: now it
+  * Removed excessive checking on the exposure attributes 'deductible' and
+    'insuredLimit' that made it impossible to run legitimate calculations
+  * Changed the meaning of 'average_loss' for the aggregated curves: now it
     is the sum of the aggregated losses in the event loss table,
     before it was extracted from the aggregated loss curve
   * Changed the way the average losses (and insured average losses) are
@@ -17,8 +19,8 @@
   * Set to NULL the stddev_losses and stddev_insured_losses for the event based
     risk calculator, since they were computed incorrectly
   * Introduced a new experimental command
-    `oq-engine --show-view CALCULATION_ID VIEW_NAME`; the only view available
-    for the moment is `mean_avg_losses`
+    'oq-engine --show-view CALCULATION_ID VIEW_NAME'; the only view available
+    for the moment is 'mean_avg_losses'
   * Negative calculation IDs are interpreted in a Pythonic way, i.e. -1
     means the last calculation, -2 the calculation before the last one, etc.
   * If a site parameter is more distant than 5 kilometers from its closest
@@ -34,7 +36,7 @@
     affecting calculations with nonzero coefficients of variation and nonzero
     minIML; the numbers produced by the engine were incorrect; see
     https://bugs.launchpad.net/oq-engine/+bug/1459926
-  * `investigation_time` has been replaced by `risk_investigation_time` in
+  * 'investigation_time' has been replaced by 'risk_investigation_time' in
     risk configuration files
   * Initial support for Django 1.7
 
@@ -54,10 +56,12 @@
   [Matteo Nastasi]
   * Packaging system improvement
 
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 23 Sep 2015 15:48:01 +0200
+
 python-oq-engine (1.4.1-0~precise01) precise; urgency=low
 
   [Michele Simionato]
-  * Added a new `ebr` hazard/risk calculator
+  * Added a new 'ebr' hazard/risk calculator
   * Fixed the engine core export: now it can export datastore outputs as
     zip files
   * Now the parameter concurrent_tasks is read from the .ini file
