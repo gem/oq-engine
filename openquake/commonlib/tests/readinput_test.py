@@ -368,7 +368,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
-        self.assertIn("node assets: Could not convert number->compose"
+        self.assertIn("Could not convert number->compose"
                       "(positivefloat,nonzero): '0' is zero, line 17",
                       str(ctx.exception))
 
@@ -384,7 +384,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("Invalid ID 'a 1': the only accepted chars are "
-                      "a-zA-Z0-9_-, line 11, line 10", str(ctx.exception))
+                      "a-zA-Z0-9_-, line 11", str(ctx.exception))
 
 
 class ReadCsvTestCase(unittest.TestCase):
