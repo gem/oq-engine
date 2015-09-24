@@ -17,6 +17,7 @@
 
 import os
 import unittest
+import mock
 
 import numpy
 
@@ -27,6 +28,7 @@ THISDIR = os.path.dirname(__file__)
 
 gmf = vectors_from_csv('gmf', THISDIR)
 
+# two identical assets
 assets = [workflows.Asset(
           1, 'SOME-TAXONOMY', 1, (0, 0),
           dict(structural=10),
@@ -37,11 +39,6 @@ assets = [workflows.Asset(
 
 class EventBasedTestCase(unittest.TestCase):
     loss_type = 'structural'
-
-    def assert_similar(self, a, b):
-        assert list(a) == list(b), (list(a), list(b))
-        for k in a:
-            self.assertAlmostEqual(a[k], b[k])
 
     def test_mean_based_with_no_correlation(self):
         # This is a regression test. Data has not been checked
@@ -74,15 +71,12 @@ class EventBasedTestCase(unittest.TestCase):
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
             )
+        wf.riskmodel = mock.MagicMock()
+        # NB: we need a MagicMock since the workflow instance makes a call
+        # self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
         out = wf(self.loss_type, assets, gmvs, epsilons, [1, 2, 3, 4, 5])
-        self.assert_similar(
-            out.event_loss_table,
-            {1: 16.246646231503398,
-             2: 15.613885199116158,
-             3: 15.669704465134854,
-             4: 16.241922530992454,
-             5: 16.010104452203464,
-             })
+        numpy.testing.assert_almost_equal(
+            out.average_losses, [0.02048617, 0.01940496])
 
     def test_mean_based_with_partial_correlation(self):
         # This is a regression test. Data has not been checked
@@ -113,15 +107,10 @@ class EventBasedTestCase(unittest.TestCase):
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
             )
+        wf.riskmodel = mock.MagicMock()
         out = wf(self.loss_type, assets, gmvs, epsilons, [1, 2, 3, 4, 5])
-        self.assert_similar(
-            out.event_loss_table,
-            {1: 15.332714802464356,
-             2: 16.21582466071975,
-             3: 15.646630129345354,
-             4: 15.285164778325353,
-             5: 15.860930792931873,
-             })
+        numpy.testing.assert_almost_equal(
+            out.average_losses, [0.01987912, 0.01929152])
 
     def test_mean_based_with_perfect_correlation(self):
         # This is a regression test. Data has not been checked
@@ -154,15 +143,10 @@ class EventBasedTestCase(unittest.TestCase):
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
             )
+        wf.riskmodel = mock.MagicMock()
         out = wf(self.loss_type, assets, gmvs, epsilons, [1, 2, 3, 4, 5])
-        self.assert_similar(
-            out.event_loss_table,
-            {1: 15.232320555463319,
-             2: 16.248173683693864,
-             3: 15.583030510462981,
-             4: 15.177382760499968,
-             5: 15.840499250058254,
-             })
+        numpy.testing.assert_almost_equal(
+            out.average_losses, [0.01952035, 0.01952035])
 
     def test_mean_based(self):
         epsilons = scientific.make_epsilons([gmf[0]], seed=1, correlation=0)
@@ -245,12 +229,9 @@ class EventBasedTestCase(unittest.TestCase):
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=True
             )
+        wf.riskmodel = mock.MagicMock()
         out = wf(self.loss_type, assets, gmf[0:2], epsilons, [1, 2, 3, 4, 5])
-        self.assert_similar(
-            out.event_loss_table,
-            {1: 0.20314761658291458,
-             2: 0,
-             3: 0,
-             4: 0,
-             5: 0,
-             })
+        numpy.testing.assert_almost_equal(
+            out.average_losses, [0.00473820568, 0.0047437959417])
+        numpy.testing.assert_almost_equal(
+            out.average_insured_losses, [0, 0])
