@@ -100,7 +100,7 @@ def run_calc(job_id, calc_dir,
     progress_handler = ProgressHandler(callback_url, job)
     logging.root.addHandler(progress_handler)
     try:
-        engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, 'xml,geojson,csv')
+        engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports='')
     except:  # catch the errors before task spawning
         # do not log the errors, since the engine already does that
         exctype, exc, tb = sys.exc_info()
