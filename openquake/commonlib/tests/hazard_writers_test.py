@@ -36,7 +36,7 @@ path = None
 
 def setUpModule():
     global path
-    path = os.path.join(tempfile.gettempdir(), 'x.xml')
+    path = tempfile.NamedTemporaryFile().name
 
 
 def tearDownModule():
