@@ -194,6 +194,7 @@ investigation_time = 50.
     </logicTree>
 </nrml>""")
         oqparam = mock.Mock()
+	oqparam.base_path = '/'
         oqparam.inputs = dict(gsim_logic_tree=two_trts)
         with self.assertRaises(readinput.InvalidFile) as ctx:
             readinput.get_rlzs_assoc(oqparam)
@@ -218,6 +219,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
 
     def test_get_site_model(self):
         oqparam = mock.Mock()
+	oqparam.base_path = '/'
         oqparam.inputs = dict(site_model=sitemodel())
         expected = [
             valid.SiteParam(z1pt0=100.0, z2pt5=2.0, measured=False,
@@ -230,6 +232,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
 
     def test_get_far_away_parameter(self):
         oqparam = mock.Mock()
+	oqparam.base_path = '/'
         oqparam.maximum_distance = 100
         oqparam.sites = [(1.0, 0)]
         oqparam.inputs = dict(site_model=sitemodel())
@@ -341,6 +344,7 @@ class ExposureTestCase(unittest.TestCase):
 
     def test_exposure_missing_number(self):
         oqparam = mock.Mock()
+	oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.inputs = {'exposure': self.exposure}
         oqparam.region_constraint = '''\
@@ -354,6 +358,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
     def test_exposure_zero_number(self):
         oqparam = mock.Mock()
+	oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.inputs = {'exposure': self.exposure0}
         oqparam.region_constraint = '''\
@@ -369,6 +374,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
     def test_exposure_invalid_asset_id(self):
         oqparam = mock.Mock()
+	oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.inputs = {'exposure': self.exposure1}
         oqparam.region_constraint = '''\
@@ -500,6 +506,7 @@ PGA 12.0 42.2 0.64 0.65
 0 5, 0.42 0.24 0.04, 0.55 0.51 0.50
 """)
         oqparam = mock.Mock()
+	oqparam.base_path = '/'
         oqparam.inputs = dict(hazard_curves=fakecsv)
         oqparam.imtls = collections.OrderedDict([
             ('PGA', [0.1, 0.2, 0.3]),
@@ -524,6 +531,7 @@ PGA 12.0 42.2 0.64 0.65
 class TestReadGmfTestCase(unittest.TestCase):
     def setUp(self):
         self.oqparam = mock.Mock()
+	self.oqparam.base_path = '/'
         self.oqparam.inputs = {}
         self.oqparam.sites = [(0, 0), (0, 1)]
         self.oqparam.imtls = {'PGA': None}
