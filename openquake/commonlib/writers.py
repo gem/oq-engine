@@ -253,13 +253,16 @@ def extract_from(data, fields):
 
 def write_csv(dest, data, sep=',', fmt='%12.8E', header=None):
     """
-    :param dest: destination filename
+    :param dest: destination filename or io.StringIO instance
     :param data: array to save
     :param sep: separator to use (default comma)
     :param fmt: formatting string (default '%12.8E')
     :param header:
        optional list with the names of the columns to display
     """
+    if not hasattr(dest, 'getvalue'):
+        # not a StringIO, assume dest is a filename
+        dest = open(dest, 'w')
     if len(data) == 0:
         logging.warn('Not generating %s, it would be empty', dest)
         return dest
@@ -271,25 +274,29 @@ def write_csv(dest, data, sep=',', fmt='%12.8E', header=None):
         autoheader = []
     else:
         autoheader = build_header(data.dtype)
-    with open(dest, 'w') as f:
-        someheader = header or autoheader
-        if someheader:
-            f.write(sep.join(someheader) + '\n')
 
-        if autoheader:
-            all_fields = [col.split(':', 1)[0].split('-')
-                          for col in autoheader]
-            for record in data:
-                row = []
-                for fields in all_fields:
-                    row.append(extract_from(record, fields))
-                f.write(sep.join(scientificformat(col, fmt)
-                                 for col in row) + '\n')
-        else:
-            for row in data:
-                f.write(sep.join(scientificformat(col, fmt)
-                                 for col in row) + '\n')
-    return dest
+    someheader = header or autoheader
+    if someheader:
+        dest.write(sep.join(someheader) + u'\n')
+
+    if autoheader:
+        all_fields = [col.split(':', 1)[0].split('-')
+                      for col in autoheader]
+        for record in data:
+            row = []
+            for fields in all_fields:
+                row.append(extract_from(record, fields))
+            dest.write(sep.join(scientificformat(col, fmt)
+                                for col in row) + u'\n')
+    else:
+        for row in data:
+            dest.write(sep.join(scientificformat(col, fmt)
+                                for col in row) + u'\n')
+    if hasattr(dest, 'getvalue'):
+        return dest.getvalue()[:-1]  # a newline is strangely added
+    else:
+        dest.close()
+    return dest.name
 
 if __name__ == '__main__':  # pretty print of NRML files
     import sys

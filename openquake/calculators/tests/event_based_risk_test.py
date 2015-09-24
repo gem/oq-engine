@@ -38,7 +38,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_3(self):
         self.assert_stats_ok(case_3)
 
-    @attr('qa', 'risk', 'ebr')
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_2bis(self):
         # test for a single realization
         out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
@@ -56,7 +56,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles('expected/hazard_curve-mean.csv', fname)
 
-    @attr('qa', 'risk', 'ebr')
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_4(self):
         # Turkey with SHARE logic tree
         out = self.run_calc(case_4.__file__, 'job_h.ini,job_r.ini',

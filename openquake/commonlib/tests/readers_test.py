@@ -36,9 +36,9 @@ class ReadCompositeArrayTestCase(unittest.TestCase):
     def test_read_written(self):
         dtype = numpy.dtype([('a', float), ('b', float, 2)])
         written = numpy.array([(.1, [.2, .3]), (.3, [.4, .5])], dtype)
-        with tempfile.NamedTemporaryFile() as dest:
-            write_csv(dest.name, written)
-            read = read_composite_array(dest.name)
+        dest = tempfile.NamedTemporaryFile().name
+        write_csv(dest, written)
+        read = read_composite_array(dest)
         numpy.testing.assert_equal(read, written)
 
     def test_read_ok(self):

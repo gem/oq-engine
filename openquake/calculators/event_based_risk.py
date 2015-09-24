@@ -145,7 +145,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     return result
 
 
-@base.calculators.add('event_based_risk', 'ebr')
+@base.calculators.add('event_based_risk')
 class EventBasedRiskCalculator(base.RiskCalculator):
     """
     Event based PSHA calculator generating the event loss table and
