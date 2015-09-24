@@ -46,17 +46,18 @@ def zipfiles(fnames, archive):
     z.close()
 
 
-@export_output.add(('datastore', 'csv'), ('datastore', 'xml'))
 def export_from_datastore(output_key, output, target):
     """
-    :param output_key: a pair ('datastore', fmt)
+    :param output_key: a pair (ds_key, fmt)
     :param output: an Output instance
     :param target: a directory, temporary when called from the engine server
     """
-    fmt = output_key[1]
+    ds_key, fmt = output_key
+    assert ds_key == output.ds_key, (ds_key, output.ds_key)
     dstore = DataStore(output.oq_job.id)
     try:
-        exported = ds_export((output.ds_key, fmt), dstore)
+        exported = map(
+            os.path.abspath, ds_export((output.ds_key, fmt), dstore))
     except KeyError:
         raise DataStoreExportError(
             'Could not export %s in %s' % (output.ds_key, fmt))
@@ -70,6 +71,10 @@ def export_from_datastore(output_key, output, target):
     else:  # single file
         return exported[0]
 
+# update export_output with ds_export
+for ekey in ds_export:
+    export_output.add(ekey)(export_from_datastore)
+
 
 def export(output_id, target, export_type='xml,geojson,csv'):
     """
@@ -80,12 +85,15 @@ def export(output_id, target, export_type='xml,geojson,csv'):
     if isinstance(target, basestring):  # create target directory
         makedirs(target)
     for exptype in export_type.split(','):
-        key = (output.output_type, exptype)
+        rtype = output.output_type
+        if rtype == 'datastore':
+            rtype = output.ds_key
+        key = (rtype, exptype)
         if key in export_output:
             return export_output(key, output, target)
     LOG.warn(
-        'No "%(fmt)s" exporter is available for "%(output_type)s"'
-        ' outputs' % dict(fmt=export_type, output_type=output.output_type))
+        'No "%(fmt)s" exporter is available for "%(rtype)s"'
+        ' outputs' % dict(fmt=export_type, rtype=rtype))
 
 #: Used to separate node labels in a logic tree path
 LT_PATH_JOIN_TOKEN = '_'
