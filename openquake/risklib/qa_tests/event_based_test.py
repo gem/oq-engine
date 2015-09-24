@@ -72,6 +72,8 @@ class EventBasedTestCase(unittest.TestCase):
             insured_losses=False
             )
         wf.riskmodel = mock.MagicMock()
+        # NB: we need a MagicMock since the workflow instance makes a call
+        # self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
         out = wf(self.loss_type, assets, gmvs, epsilons, [1, 2, 3, 4, 5])
         numpy.testing.assert_almost_equal(
             out.average_losses, [0.02048617, 0.01940496])
