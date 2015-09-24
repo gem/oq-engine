@@ -397,21 +397,25 @@ def calc_results(request, calc_id):
     # OrderedDict([('agg_loss_curve', ['xml', 'csv']), ...])
     output_types = groupby(export_output, lambda oe: oe[0],
                            lambda oes: [e for o, e in oes])
-
     results = oq_engine.get_outputs(calc_id)
     if not results:
         return HttpResponseNotFound()
 
     response_data = []
     for result in results:
+        try:  # output from the old calculators
+            rtype = result.output_type
+            outtypes = output_types[rtype]
+        except KeyError:
+            try:  # output from the datastore
+                rtype = result.ds_key
+                outtypes = output_types[rtype]
+            except KeyError:
+                continue  # non-exportable outputs should not be shown
         url = urlparse.urljoin(base_url, 'v1/calc/result/%d' % result.id)
         datum = dict(
-            id=result.id,
-            name=result.display_name,
-            type=result.output_type,
-            outtypes=output_types[result.output_type],
-            url=url,
-        )
+            id=result.id, name=result.display_name, type=rtype,
+            outtypes=outtypes, url=url)
         response_data.append(datum)
 
     return HttpResponse(content=json.dumps(response_data))
@@ -490,8 +494,8 @@ def get_result(request, result_id):
     if exported is None:
         # Throw back a 404 if the exact export parameters are not supported
         return HttpResponseNotFound(
-            'export_type=%s is not supported for output_type=%s' %
-            (export_type, output.output_type))
+            'export_type=%s is not supported for %s' %
+            (export_type, output.ds_key))
 
     content_type = EXPORT_CONTENT_TYPE_MAP.get(
         export_type, DEFAULT_CONTENT_TYPE)
