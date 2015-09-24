@@ -36,7 +36,7 @@ the `--depth` flag will make a 'shallow clone', reducing the size of the downloa
 
 ### Compile the Hazardlib speedups
 
-For more details see: 
+For more details see: https://github.com/gem/oq-hazardlib/wiki/Installing-C-extensions-from-git-repository
 ```bash
 $ cd oq-hazardlib
 $ python setup.py build_ext
