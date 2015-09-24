@@ -140,7 +140,6 @@ class EventBasedExportTestCase(BaseExportTestCase):
         # remove the .actual file if the test pass
         os.remove(fullname + '.actual')
 
-    @attr('slow')
     def test_export_for_event_based(self):
         # Run an event-based hazard calculation to compute SESs and GMFs
         # Call the exporters for both SES and GMF results  and verify that
