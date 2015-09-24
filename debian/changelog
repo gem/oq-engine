@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed a few tests on Windows
+
+
 python-oq-risklib (0.8.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
