@@ -80,12 +80,14 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
 </zero>
 ''')
 
+I32 = numpy.int32
+
 
 class WriteCsvTestCase(unittest.TestCase):
     def assert_export(self, array, expected, header=None):
-        with tempfile.NamedTemporaryFile(mode='r+') as f:
-            write_csv(f.name, array, header=header)
-            f.seek(0)
+        fname = tempfile.NamedTemporaryFile().name
+        write_csv(fname, array, header=header)
+        with open(fname) as f:
             txt = f.read()
         self.assertEqual(txt, expected)
 
@@ -98,16 +100,16 @@ class WriteCsvTestCase(unittest.TestCase):
         self.assert_export(a, 'a,b\n1,2\n3,4\n', header='ab')
 
     def test_flat(self):
-        imt_dt = numpy.dtype([('PGA', int, 3), ('PGV', int, 4)])
+        imt_dt = numpy.dtype([('PGA', I32, 3), ('PGV', I32, 4)])
         a = numpy.array([([1, 2, 3], [4, 5, 6, 7])], imt_dt)
-        self.assert_export(a, 'PGA:int64:3,PGV:int64:4\n1 2 3,4 5 6 7\n')
+        self.assert_export(a, 'PGA:int32:3,PGV:int32:4\n1 2 3,4 5 6 7\n')
 
     def test_nested(self):
-        imt_dt = numpy.dtype([('PGA', int, 3), ('PGV', int, 4)])
+        imt_dt = numpy.dtype([('PGA', I32, 3), ('PGV', I32, 4)])
         gmf_dt = numpy.dtype([('A', imt_dt), ('B', imt_dt),
-                              ('idx', numpy.uint32)])
+                              ('idx', I32)])
         a = numpy.array([(([1, 2, 3], [4, 5, 6, 7]),
                           ([1, 2, 4], [3, 5, 6, 7]), 8)], gmf_dt)
         self.assert_export(
-            a, 'A-PGA:int64:3,A-PGV:int64:4,B-PGA:int64:3,B-PGV:int64:4,'
-            'idx:uint32:\n1 2 3,4 5 6 7,1 2 4,3 5 6 7,8\n')
+            a, 'A-PGA:int32:3,A-PGV:int32:4,B-PGA:int32:3,B-PGV:int32:4,'
+            'idx:int32:\n1 2 3,4 5 6 7,1 2 4,3 5 6 7,8\n')

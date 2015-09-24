@@ -1860,4 +1860,4 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
         msg = str(ctx.exception)
         self.assertIn('ParseError:', msg)
         # make sure the file name is in the error message
-        self.assertIn('tests/data/source_model_logic_tree.xml', msg)
+        self.assertIn('source_model_logic_tree.xml', msg)
