@@ -18,6 +18,8 @@
 :func:`stochastic_event_set`.
 """
 import sys
+from openquake.baselib.python3compat import range
+from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.calc import filters
 
 
@@ -59,13 +61,13 @@ def stochastic_event_set(
         for source in sources:
             try:
                 for rupture in source.iter_ruptures():
-                    for i in xrange(rupture.sample_number_of_occurrences()):
+                    for i in range(rupture.sample_number_of_occurrences()):
                         yield rupture
-            except Exception, err:
+            except Exception as err:
                 etype, err, tb = sys.exc_info()
                 msg = 'An error occurred with source id=%s. Error: %s'
-                msg %= (source.source_id, err.message)
-                raise etype, msg, tb
+                msg %= (source.source_id, str(err))
+                raise_(etype, msg, tb)
         return
     # else apply filtering
     sources_sites = source_site_filter((source, sites) for source in sources)
@@ -74,10 +76,10 @@ def stochastic_event_set(
             ruptures_sites = rupture_site_filter(
                 (rupture, r_sites) for rupture in source.iter_ruptures())
             for rupture, _sites in ruptures_sites:
-                for i in xrange(rupture.sample_number_of_occurrences()):
+                for i in range(rupture.sample_number_of_occurrences()):
                     yield rupture
-        except Exception, err:
+        except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
-            msg %= (source.source_id, err.message)
-            raise etype, msg, tb
+            msg %= (source.source_id, str(err))
+            raise_(etype, msg, tb)

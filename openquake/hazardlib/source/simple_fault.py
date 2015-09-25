@@ -17,12 +17,14 @@
 Module :mod:`openquake.hazardlib.source.simple_fault` defines
 :class:`SimpleFaultSource`.
 """
+from __future__ import division
 import math
+from openquake.baselib.python3compat import range
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots
@@ -174,8 +176,8 @@ class SimpleFaultSource(ParametricSeismicSource):
 
             occurrence_rate = mag_occ_rate / float(num_rup)
 
-            for first_row in xrange(num_rup_along_width):
-                for first_col in xrange(num_rup_along_length):
+            for first_row in range(num_rup_along_width):
+                for first_col in range(num_rup_along_length):
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
                                             first_col: first_col + rup_cols]
 
@@ -209,6 +211,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                                     rupture_slip_direction
                                 )
 
+    # TODO: fix the count in the case of hypo_list and slip_list
     def count_ruptures(self):
         """
         See :meth:
@@ -225,8 +228,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         counts = 0
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             rup_cols, rup_rows = self._get_rupture_dimensions(
-                fault_length, fault_width, mag
-            )
+                fault_length, fault_width, mag)
             num_rup_along_length = mesh_cols - rup_cols + 1
             num_rup_along_width = mesh_rows - rup_rows + 1
             counts += num_rup_along_length * num_rup_along_width
@@ -251,8 +253,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         is considered to cover the whole fault.
         """
         area = self.magnitude_scaling_relationship.get_median_area(
-            mag, self.rake
-        )
+            mag, self.rake)
         rup_length = math.sqrt(area * self.rupture_aspect_ratio)
         rup_width = area / rup_length
 

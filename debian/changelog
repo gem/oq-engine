@@ -1,9 +1,27 @@
+python-oq-hazardlib (0.15.0-0~precise01) precise; urgency=low
+
+  [Yen-Shin Chen]
+  * Surface: fix bug for dipping fault in get_fault_patch_vertices method
+
+  [Graeme Weatherill]
+  * Adds support for GMPEs to be implemented in the form of HDF5 binary tables
+  * Adds '__repr__' method to scalerel and MFD base classes
+
   [Michele Simionato]
+  * Now hazardlib unofficially supports Python 3
+  * Added support for python setup.py test
+
+  [Graeme Weatherill]
+  * Adds the 'upper' and 'lower' epistemic uncertainty corrections for the
+    NGA West 2 GMPEs used in the 2014 US National Seismic Hazard Map
+  
+  [Michele Simionato]
+  * Fixed the filtering of site IDs
   * hazardlib now requires h5py
 
   [Graeme Weatherill]
   * Adds Atkinson & Macias (2009) Subduction Interface GMPE
-  
+
   [Yen-Shin Chen]
   * Rupture: fix bug in get_dppvalue
 
@@ -19,6 +37,8 @@
   * Adds 'rcdpp' slot to DistanceContext object
   * ParametricProbabilisticRupture: adds 'rupture_slip_direction' slot and get_dppvalue, get_cdppvalue method
   * Implements near fault effect- directivity adaptation of Chiou & Youngs 2014
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 23 Sep 2015 14:28:50 +0200
 
 python-oq-hazardlib (0.14.0-0~precise01) precise; urgency=low
 
@@ -261,12 +281,12 @@ python-oq-hazardlib (0.11.0-0) precise; urgency=low
     (LP: #1174692)
   * included amplification factor in Si&Midorikawa 1999 GMPE
   * Si and Midorikawa 1999
-  * Add `type` attr to MFD and source classes (LP: #1045711)
+  * Add 'type' attr to MFD and source classes (LP: #1045711)
   * Restrict ComplexFaultSourceSurface to not pathological cases (LP: #1154024)
   * Rename CharacteristicSource to CharacteristicFaultSource
   * Characteristic source
   * Multi Surface
-  * Fix for an obscure `cascading union` use case in RectangularMesh
+  * Fix for an obscure 'cascading union' use case in RectangularMesh
     (LP: #1133447)
   * Rect mesh enclosing poly bug
   * fixed unstable behaviour of method geodetic.intervals_between

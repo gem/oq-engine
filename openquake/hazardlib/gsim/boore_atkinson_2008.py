@@ -241,7 +241,7 @@ class BooreAtkinson2008(GMPE):
         equation (8a) to (8c), pag 108.
         """
 
-        fnl = np.zeros(len(pga4nl))
+        fnl = np.zeros(pga4nl.shape)
         a1 = 0.03
         a2 = 0.09
         pga_low = 0.06

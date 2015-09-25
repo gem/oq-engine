@@ -267,7 +267,7 @@ class GMFCalcNoCorrelationTestCase(BaseGMFCalcTestCase):
         self.assertLess(intensity[4].std(), self.stddev45)
         self.assertLess(intensity[5].std(), self.stddev67)
         self.assertLess(intensity[6].std(), self.stddev67)
-        for i in xrange(7):
+        for i in range(7):
             self.assertGreater(intensity[i].std(), 0)
 
     def test_no_filtering_zero_truncation(self):
@@ -278,7 +278,7 @@ class GMFCalcNoCorrelationTestCase(BaseGMFCalcTestCase):
                                     realizations=100,
                                     truncation_level=truncation_level)
         for intensity in gmfs[self.imt1], gmfs[self.imt2]:
-            for i in xrange(7):
+            for i in range(7):
                 self.assertEqual(intensity[i].std(), 0)
             self.assertEqual(intensity[0].mean(), self.mean1)
             self.assertEqual(intensity[1].mean(), self.mean2)
@@ -318,7 +318,7 @@ class GMFCalcNoCorrelationTestCase(BaseGMFCalcTestCase):
             realizations=100
         )
         for intensity in gmfs[self.imt1], gmfs[self.imt2]:
-            for i in xrange(7):
+            for i in range(7):
                 self.assertEqual(intensity[i].std(), 0)
 
             self.assertEqual(intensity[0].mean(), 0)

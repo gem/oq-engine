@@ -17,10 +17,12 @@
 Module :mod:`openquake.hazardlib.mfd.truncated_gr` defines a Truncated
 Gutenberg-Richter MFD.
 """
+from __future__ import division
 import math
 
+from openquake.baselib.python3compat import range, round
 from openquake.hazardlib.mfd.base import BaseMFD
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots
@@ -158,7 +160,7 @@ class TruncatedGRMFD(BaseMFD):
         """
         mag, num_bins = self._get_min_mag_and_num_bins()
         rates = []
-        for i in xrange(num_bins):
+        for i in range(num_bins):
             rate = self._get_rate(mag)
             rates.append((mag, rate))
             mag += self.bin_width

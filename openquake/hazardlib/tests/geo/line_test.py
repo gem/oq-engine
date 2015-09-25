@@ -109,7 +109,7 @@ class LineResampleToNumPointsTestCase(unittest.TestCase):
         self.assertEqual(line.points, expected_points)
 
     def test_fewer_points(self):
-        points = [geo.Point(i / 10., 0) for i in xrange(13)]
+        points = [geo.Point(i / 10., 0) for i in range(13)]
 
         line = geo.Line(points).resample_to_num_points(2)
         expected_points = [points[0], points[-1]]

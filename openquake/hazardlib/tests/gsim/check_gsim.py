@@ -18,6 +18,8 @@
 Check GMPE/IPE class versus data file in CSV format by calculating standard
 deviation and/or mean value and comparing the result to the expected value.
 """
+from __future__ import print_function
+from __future__ import division
 import csv
 import math
 import sys
@@ -84,7 +86,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
                 msg = 'file %r line %r imt %r. Context object ' \
                       'has changed after get_mean_and_stddevs has been ' \
                       'called' % (datafile.name, linenum, imt)
-                print >> sys.stderr, msg
+                print(msg, file=sys.stderr)
                 break
 
             if result_type == 'MEAN':
@@ -104,7 +106,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
                           datafile.name, linenum, imt, result_type.lower(),
                           expected_result[0], result[0], discrep_percentage[0]
                       )
-                print >> sys.stderr, msg
+                print(msg, file=sys.stderr)
                 break
 
         if debug and (errors or not numpy.all(ctxs)):
@@ -141,9 +143,12 @@ def _format_stats(time_spent, discrepancies, errors, ctxs):
                                                 for discrep in discrepancies))
 
     yes_no = {False: 'yes', True: 'no'}
+    # NB: on a windows virtual machine the clock can be buggy and
+    # the time spent can be zero: Daniele has seen that
+    checks_per_sec = (total_checks / time_spent) if time_spent else '?'
     stats = '''\
 total of %d checks done, %d were successful and %d failed.
-%.1f seconds spent, avg rate is %.1f checks per seconds.
+%.1f seconds spent, avg rate is %s checks per seconds.
 success rate = %.1f%%
 average discrepancy = %.4f%%
 maximum discrepancy = %.4f%%
@@ -151,7 +156,7 @@ standard deviation = %.4f%%
 context objects changed = %s'''
     successes = total_checks - errors
     stats %= (total_checks, successes, errors,
-              time_spent, total_checks / float(time_spent),
+              time_spent, checks_per_sec,
               success_rate,
               avg_discrep,
               max_discrep,
@@ -359,6 +364,6 @@ if __name__ == '__main__':
         debug=args.debug
     )
     if not args.quiet:
-        print >> sys.stderr, stats
+        print(stats, file=sys.stderr)
     if errors:
         exit(127)

@@ -26,7 +26,7 @@ from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo import utils as geo_utils
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots
@@ -256,7 +256,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
             self.mesh_spacing
         )
         mlons, mlats, mdepths = [], [], []
-        for i in xrange(len(llons)):
+        for i in range(len(llons)):
             lons, lats, depths = geodetic.intervals_between(
                 llons[i], llats[i], ldepths[i], rlons[i], rlats[i], rdepths[i],
                 self.mesh_spacing

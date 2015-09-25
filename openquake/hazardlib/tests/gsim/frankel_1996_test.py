@@ -73,7 +73,7 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
             sctx, rctx, dctx, SA(0.1, 5), [StdDev.TOTAL]
         )
 
-        self.assertAlmostEqual(mean_mw3_d1, mean_mw4pt4_d10)
+        self.assertAlmostEqual(float(mean_mw3_d1), float(mean_mw4pt4_d10))
 
         # rupture with Mw = 9 (Mblg = 8.2093636421088814) at rhypo = 1500 km
         # must give same mean as rupture with Mw = 8.2

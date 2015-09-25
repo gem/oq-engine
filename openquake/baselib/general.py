@@ -20,7 +20,7 @@
 """
 Utility functions of general interest.
 """
-from __future__ import division
+from __future__ import division, print_function
 import os
 import sys
 import imp
@@ -95,10 +95,11 @@ class WeightedSequence(collections.MutableSequence):
         new.weight = self.weight + other.weight
         return new
 
-    def insert(self, i, (item, weight)):
+    def insert(self, i, item_weight):
         """
         Insert an item with the given weight in the sequence
         """
+        item, weight = item_weight
         self._seq.insert(i, item)
         self.weight += weight
 
@@ -212,8 +213,9 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
      [<WeightedSequence ['A', 'B'], weight=2>, <WeightedSequence ['C', 'D'], weight=2>, <WeightedSequence ['E'], weight=1>]
 
     """
-    assert hint > 0, hint
     items = list(sequence)
+    assert hint > 0, hint
+    assert len(items) > 0, len(items)
     total_weight = float(sum(weight(item) for item in items))
     return block_splitter(items, math.ceil(total_weight / hint), weight, key)
 
@@ -234,13 +236,13 @@ def split_in_blocks_2(long_sequence, short_sequence, hint,
     A few examples will explain how it works:
 
     >>> for b1, b2 in split_in_blocks_2(range(10), 'ABC', 3):
-    ...      print b1, b2
+    ...      print(b1, b2)
     [0, 1, 2, 3] ['A']
     [4, 5, 6, 7] ['B']
     [8, 9] ['C']
 
     >>> for b1, b2 in split_in_blocks_2(range(10), 'ABC', 2):
-    ...      print b1, b2
+    ...      print(b1, b2)
     [0, 1, 2, 3, 4] ['A', 'B']
     [5, 6, 7, 8, 9] ['C']
 
@@ -249,7 +251,7 @@ def split_in_blocks_2(long_sequence, short_sequence, hint,
     number of blocks equal to the number of blocks of the first sequence:
 
     >>> for b1, b2 in split_in_blocks_2(range(10), 'ABC', 4):
-    ...      print b1, b2
+    ...      print(b1, b2)
     [0, 1, 2] ['A']
     [3, 4, 5] ['B']
     [6, 7, 8] ['C']
@@ -330,7 +332,9 @@ def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
             os.makedirs(dir)
     fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
     if content:
-        fh = os.fdopen(fh, "w")
+        fh = os.fdopen(fh, "wb")
+        if hasattr(content, 'encode'):
+            content = content.encode('utf8')
         fh.write(content)
         fh.close()
     return path
@@ -367,7 +371,7 @@ def run_in_process(code, *args):
     try:
         out = subprocess.check_output([sys.executable, '-c', code])
     except subprocess.CalledProcessError as exc:
-        print >> sys.stderr, exc.cmd[-1]
+        print(exc.cmd[-1], file=sys.stderr)
         raise
     if out:
         return eval(out, {}, {})
@@ -399,13 +403,13 @@ def import_all(module_or_package):
             if f.endswith('.py'):
                 # convert PKGPATH/subpackage/module.py -> subpackage.module
                 # works at any level of nesting
-                modname = (module_or_package + cwd[n:].replace('/', '.') +
+                modname = (module_or_package + cwd[n:].replace(os.sep, '.') +
                            '.' + os.path.basename(f[:-3]))
                 try:
                     importlib.import_module(modname)
                 except Exception as exc:
-                    print >> sys.stderr, 'Could not import %s: %s: %s' % (
-                        modname, exc.__class__.__name__, exc)
+                    print('Could not import %s: %s: %s' % (
+                        modname, exc.__class__.__name__, exc), file=sys.stderr)
     return set(sys.modules) - already_imported
 
 
@@ -418,7 +422,7 @@ def assert_independent(package, *packages):
     """
     assert packages, 'At least one package must be specified'
     import_package = 'from openquake.baselib.general import import_all\n' \
-                     'print import_all("%s")' % package
+                     'print(import_all("%s"))' % package
     imported_modules = run_in_process(import_package)
     for mod in imported_modules:
         for pkg in packages:
@@ -456,7 +460,7 @@ class CallableDict(collections.OrderedDict):
 
     >>> @format_attrs.add('csv')  # implementation for csv
     ... def format_attrs_csv(fmt, obj):
-    ...     items = sorted(vars(obj).iteritems())
+    ...     items = sorted(vars(obj).items())
     ...     return '\n'.join('%s,%s' % item for item in items)
 
     >>> @format_attrs.add('json')  # implementation for json
@@ -528,8 +532,8 @@ class AccumDict(dict):
     """
 
     def __iadd__(self, other):
-        if hasattr(other, 'iteritems'):
-            for k, v in other.iteritems():
+        if hasattr(other, 'items'):
+            for k, v in other.items():
                 try:
                     self[k] = self[k] + v
                 except KeyError:
@@ -547,8 +551,8 @@ class AccumDict(dict):
     __radd__ = __add__
 
     def __isub__(self, other):
-        if hasattr(other, 'iteritems'):
-            for k, v in other.iteritems():
+        if hasattr(other, 'items'):
+            for k, v in other.items():
                 try:
                     self[k] = self[k] - v
                 except KeyError:
@@ -567,11 +571,11 @@ class AccumDict(dict):
         return - self.__sub__(other)
 
     def __neg__(self):
-        return self.__class__({k: -v for k, v in self.iteritems()})
+        return self.__class__({k: -v for k, v in self.items()})
 
     def __imul__(self, other):
-        if hasattr(other, 'iteritems'):
-            for k, v in other.iteritems():
+        if hasattr(other, 'items'):
+            for k, v in other.items():
                 try:
                     self[k] = self[k] * v
                 except KeyError:
@@ -598,7 +602,7 @@ class AccumDict(dict):
         {'a': 3, 'b': 5}
         """
         return self.__class__({key: func(value, *extras)
-                               for key, value in self.iteritems()})
+                               for key, value in self.items()})
 
 
 def groupby(objects, key, reducegroup=list):

@@ -52,7 +52,7 @@ class PoissonTOMTestCase(unittest.TestCase):
         tom = PoissonTOM(time_span)
         numpy.random.seed(31)
         mean = sum(tom.sample_number_of_occurrences(rate)
-                   for i in xrange(num_samples)) / float(num_samples)
+                   for i in range(num_samples)) / float(num_samples)
         self.assertAlmostEqual(mean, rate * time_span, delta=1e-3)
 
     def test_get_probability_no_exceedance(self):

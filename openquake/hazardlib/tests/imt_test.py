@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
-import cPickle
+import pickle
 from openquake.hazardlib import imt as imt_module
 
 
@@ -70,8 +70,8 @@ class BaseIMTTestCase(unittest.TestCase):
 
     def test_pickeable(self):
         for imt in (imt_module.PGA(), imt_module.SA(0.2)):
-            imt_pik = cPickle.dumps(imt, cPickle.HIGHEST_PROTOCOL)
-            self.assertEqual(cPickle.loads(imt_pik), imt)
+            imt_pik = pickle.dumps(imt, pickle.HIGHEST_PROTOCOL)
+            self.assertEqual(pickle.loads(imt_pik), imt)
 
     def test_equivalent(self):
         sa1 = imt_module.from_string('SA(0.1)')

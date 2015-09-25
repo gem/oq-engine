@@ -137,7 +137,7 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
             submesh = mesh[0:0]
 
     def test_2d(self):
-        lons = lats = numpy.array(range(100)).reshape((10, 10))
+        lons = lats = numpy.arange(100).reshape((10, 10))
         mesh = self._make_mesh(lons, lats)
         submesh = mesh[:3, 5:7]
         self.assertEqual(submesh.lons.shape, (3, 2))
@@ -155,7 +155,7 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
                                             [35.1, 36.1, 37.1, 38.1]]).all())
 
     def test_wrong_indexing(self):
-        coords = numpy.array(range(16))
+        coords = numpy.arange(16)
         mesh = self._make_mesh(coords, coords, coords)
         with self.assertRaises(AssertionError):
             mesh[1]
@@ -167,7 +167,7 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
             mesh[1:, 5]
 
     def test_preserving_the_type(self):
-        lons = lats = numpy.array(range(100)).reshape((10, 10))
+        lons = lats = numpy.arange(100).reshape((10, 10))
         mesh = RectangularMesh(lons, lats, depths=None)
         submesh = mesh[1:2, 3:4]
         self.assertIsInstance(submesh, RectangularMesh)
@@ -248,8 +248,8 @@ class MeshGetDistanceMatrixTestCase(unittest.TestCase):
         aaae(matrix[1], [[111.2, 0, 111.2, 222.4]], decimal=1)
         aaae(matrix[2], [[222.4, 111.2, 0, 111.2]], decimal=1)
         aaae(matrix[3], [[333.6, 222.4, 111.2, 0]], decimal=1)
-        for i in xrange(4):
-            for j in xrange(i, 4):
+        for i in range(4):
+            for j in range(i, 4):
                 self.assertEqual(matrix[i, j], matrix[j, i])
 
 
@@ -298,8 +298,8 @@ class RectangularMeshCreationTestCase(unittest.TestCase):
         depths = [[11.1, 11.2], [11.3, 11.4], [11.5, 11.6]]
         points = [
             [Point(lons[i][j], lats[i][j], depths[i][j])
-             for j in xrange(len(lons[i]))]
-            for i in xrange(len(lons))
+             for j in range(len(lons[i]))]
+            for i in range(len(lons))
         ]
         mesh = RectangularMesh.from_points_list(points)
         self.assertTrue((mesh.lons == lons).all())
@@ -308,8 +308,8 @@ class RectangularMeshCreationTestCase(unittest.TestCase):
 
         points = [
             [Point(lons[i][j], lats[i][j], depth=0)
-             for j in xrange(len(lons[i]))]
-            for i in xrange(len(lons))
+             for j in range(len(lons[i]))]
+            for i in range(len(lons))
         ]
         mesh = RectangularMesh.from_points_list(points)
         self.assertTrue((mesh.lons == lons).all())

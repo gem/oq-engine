@@ -100,7 +100,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         expected_error = (
             'An error occurred with source id=2. Error: Something bad happened'
         )
-        self.assertEqual(expected_error, ae.exception.message)
+        self.assertEqual(expected_error, str(ae.exception))
 
     def test_source_errors_with_sites(self):
         # exercise the case where an error occurs while computing on a given
@@ -115,4 +115,4 @@ class StochasticEventSetTestCase(unittest.TestCase):
         expected_error = (
             'An error occurred with source id=2. Error: Something bad happened'
         )
-        self.assertEqual(expected_error, ae.exception.message)
+        self.assertEqual(expected_error, str(ae.exception))

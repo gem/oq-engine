@@ -19,11 +19,12 @@ defines :class:`ComplexFaultSource`.
 """
 import numpy
 
+from openquake.baselib.python3compat import range
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots
@@ -182,8 +183,8 @@ def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
     rupture_slices = []
 
     dead_ends = set()
-    for row in xrange(nrows):
-        for col in xrange(ncols):
+    for row in range(nrows):
+        for col in range(ncols):
             if col in dead_ends:
                 continue
             # find the lengths of all possible subsurfaces containing

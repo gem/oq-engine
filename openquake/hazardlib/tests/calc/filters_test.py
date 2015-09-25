@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import mock
 import unittest
-from itertools import izip
+
 from types import GeneratorType
 
 from openquake.hazardlib.calc import filters
@@ -40,7 +40,7 @@ class SourceSiteDistanceFilterTestCase(unittest.TestCase):
                    FakeSource(123, {sites1: sites1})]  # nothing filtered out
         sites = [sites1, sites2, sites1]
         filter_func = filters.source_site_distance_filter(123)
-        filtered = filter_func(izip(sources, sites))
+        filtered = filter_func(zip(sources, sites))
         self.assertIsInstance(filtered, GeneratorType)
 
         source, sites = next(filtered)
@@ -72,7 +72,7 @@ class RuptureSiteDistanceFilterTestCase(unittest.TestCase):
         with mock.patch('openquake.hazardlib.calc.filters.'
                         'filter_sites_by_distance_to_rupture', fake_filter):
             filter_func = filters.rupture_site_distance_filter(13)
-            filtered = filter_func(izip(ruptures, sites))
+            filtered = filter_func(zip(ruptures, sites))
             self.assertIsInstance(filtered, GeneratorType)
 
             rupt, sites = next(filtered)

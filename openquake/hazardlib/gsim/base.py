@@ -32,6 +32,7 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
+from openquake.baselib.python3compat import with_metaclass
 
 
 class NonInstantiableError(Exception):
@@ -110,7 +111,7 @@ class MetaGSIM(abc.ABCMeta):
     deprecated = False
     non_verified = False
 
-    def __call__(cls, *args, **kw):
+    def __call__(cls, **kwargs):
         if not cls.instantiable:
             raise NonInstantiableError(
                 '%s cannot be directly instantiated in this context' % cls)
@@ -122,7 +123,9 @@ class MetaGSIM(abc.ABCMeta):
             msg = ('%s is not independently verified - the user is liable '
                    'for their application') % cls.__name__
             warnings.warn(msg, NotVerifiedWarning)
-        return super(MetaGSIM, cls).__call__(*args, **kw)
+        self = super(MetaGSIM, cls).__call__(**kwargs)
+        self.kwargs = kwargs
+        return self
 
     # NB: the idea is to use this context manager inside the oqtask
     # decorator in the engine, so that GSIM classes cannot be directly
@@ -141,7 +144,7 @@ class MetaGSIM(abc.ABCMeta):
 
 
 @functools.total_ordering
-class GroundShakingIntensityModel(object):
+class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     """
     Base class for all the ground shaking intensity models.
 
@@ -157,7 +160,6 @@ class GroundShakingIntensityModel(object):
     and all the class attributes with names starting from ``DEFINED_FOR``
     and ``REQUIRES``.
     """
-    __metaclass__ = MetaGSIM
 
     #: Reference to a
     #: :class:`tectonic region type <openquake.hazardlib.const.TRT>` this GSIM
@@ -633,11 +635,23 @@ class GroundShakingIntensityModel(object):
         """
         return str(self) == str(other)
 
+    def __hash__(self):
+        return hash(str(self))
+
     def __str__(self):
         """
         To be overridden in subclasses if the GSIM takes parameters.
         """
-        return '%s' % self.__class__.__name__
+        return self.__class__.__name__
+
+    def __repr__(self):
+        """
+        Default string representation for GSIM instances. It contains
+        the name and values of the arguments, if any.
+        """
+        # NB: ast.literal_eval(repr(gsim)) must work
+        kwargs = ', '.join('%s=%r' % kv for kv in sorted(self.kwargs.items()))
+        return repr("%s(%s)" % (self.__class__.__name__, kwargs))
 
 
 def _truncnorm_sf(truncation_level, values):
@@ -752,11 +766,10 @@ class IPE(GroundShakingIntensityModel):
         return numpy.array(values, dtype=float)
 
 
-class BaseContext(object):
+class BaseContext(with_metaclass(abc.ABCMeta)):
     """
     Base class for context object.
     """
-    __metaclass__ = abc.ABCMeta
 
     def __eq__(self, other):
         """
@@ -803,7 +816,8 @@ class DistancesContext(BaseContext):
     does it need. Only those required values are calculated and made available
     in a result context object.
     """
-    __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp')
+    __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
+        'azimuth', 'hanging_wall')
 
 
 class RuptureContext(BaseContext):
@@ -984,7 +998,7 @@ class CoeffsTable(object):
             pass
 
         max_below = min_above = None
-        for unscaled_imt in self.sa_coeffs.keys():
+        for unscaled_imt in list(self.sa_coeffs):
             if unscaled_imt.damping != imt.damping:
                 continue
             if unscaled_imt.period > imt.period:
@@ -1005,5 +1019,5 @@ class CoeffsTable(object):
         min_above = self.sa_coeffs[min_above]
         return dict(
             (co, (min_above[co] - max_below[co]) * ratio + max_below[co])
-            for co in max_below.keys()
+            for co in max_below
         )

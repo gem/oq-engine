@@ -18,11 +18,12 @@ Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
 import abc
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
+from openquake.baselib.python3compat import with_metaclass
 
 
 @with_slots
-class BaseSeismicSource(object):
+class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
     """
     Base class representing a seismic source, that is a structure generating
     earthquake ruptures.
@@ -35,10 +36,9 @@ class BaseSeismicSource(object):
     :param tectonic_region_type:
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
-    __metaclass__ = abc.ABCMeta
 
     __slots__ = ['source_id', 'name', 'tectonic_region_type',
-                 'trt_model_id', 'weight', 'seed']
+                 'trt_model_id', 'weight', 'seed', 'id']
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id
@@ -47,6 +47,7 @@ class BaseSeismicSource(object):
         self.trt_model_id = None  # set by the engine
         self.weight = 1  # set by the engine
         self.seed = None  # set by the engine
+        self.id = None  # set by the engine
 
     @abc.abstractmethod
     def iter_ruptures(self):
@@ -134,7 +135,7 @@ class BaseSeismicSource(object):
 
 
 @with_slots
-class ParametricSeismicSource(BaseSeismicSource):
+class ParametricSeismicSource(with_metaclass(abc.ABCMeta, BaseSeismicSource)):
     """
     Parametric Seismic Source generates earthquake ruptures from source
     parameters, and associated probabilities of occurrence are defined through
@@ -168,7 +169,6 @@ class ParametricSeismicSource(BaseSeismicSource):
         If either rupture aspect ratio or rupture mesh spacing is not positive
         (if not None).
     """
-    __metaclass__ = abc.ABCMeta
 
     __slots__ = BaseSeismicSource.__slots__ + '''mfd rupture_mesh_spacing
     magnitude_scaling_relationship rupture_aspect_ratio

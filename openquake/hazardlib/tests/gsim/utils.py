@@ -1,3 +1,4 @@
+from __future__ import print_function
 # The Hazard Library
 # Copyright (C) 2012-2014, GEM Foundation
 #
@@ -54,5 +55,5 @@ class BaseGSIMTestCase(unittest.TestCase):
         )
         if errors:
             raise AssertionError(stats)
-        print
-        print stats
+        print()
+        print(stats)

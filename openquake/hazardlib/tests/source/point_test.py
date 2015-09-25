@@ -1,3 +1,4 @@
+from __future__ import division
 # The Hazard Library
 # Copyright (C) 2012-2014, GEM Foundation
 #
@@ -68,7 +69,7 @@ class PointSourceCreationTestCase(unittest.TestCase):
     def assert_failed_creation(self, exc, msg, **kwargs):
         with self.assertRaises(exc) as ae:
             self.make_point_source(**kwargs)
-        self.assertEqual(ae.exception.message, msg)
+        self.assertEqual(str(ae.exception), msg)
 
     def test_negative_upper_seismogenic_depth(self):
         self.assert_failed_creation(

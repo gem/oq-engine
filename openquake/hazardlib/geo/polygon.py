@@ -22,7 +22,7 @@ import shapely.geometry
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 #: Polygon upsampling step for long edges, in kilometers.
 #: See :func:`get_resampled_coordinates`.
@@ -134,7 +134,7 @@ class Polygon(object):
             # project polygon vertices to the Cartesian space and create
             # a shapely polygon object:
             xx, yy = self._projection(lons, lats)
-            self._polygon2d = shapely.geometry.Polygon(zip(xx, yy))
+            self._polygon2d = shapely.geometry.Polygon(list(zip(xx, yy)))
 
     def dilate(self, dilation):
         """
@@ -247,7 +247,7 @@ def get_resampled_coordinates(lons, lats):
 
     resampled_lons = [lons[0]]
     resampled_lats = [lats[0]]
-    for i in xrange(num_coords):
+    for i in range(num_coords):
         next_point = (i + 1) % num_coords
         lon1, lat1 = lons[i], lats[i]
         lon2, lat2 = lons[next_point], lats[next_point]

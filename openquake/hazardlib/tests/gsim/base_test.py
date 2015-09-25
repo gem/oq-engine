@@ -128,7 +128,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         self.assertIsInstance(iml_poes, numpy.ndarray)
         [poe] = iml_poes
         expected_poe = 0.006516701082128207
-        self.assertAlmostEqual(poe, expected_poe, places=6)
+        self.assertAlmostEqual(float(poe), expected_poe, places=6)
         self.assertEqual(get_mean_and_stddevs.call_count, 1)
 
     def test_zero_truncation(self):
@@ -630,9 +630,9 @@ class DeprecatedTestCase(unittest.TestCase):
             dummy()
         warning_msg, warning_type = warn.call_args[0]
         self.assertIs(warning_type, DeprecationWarning)
-        self.assertEqual(
-            warning_msg, 'openquake.hazardlib.tests.gsim.base_test.dummy '
-            'has been deprecated. Use dummy_new instead.')
+        self.assertIn(
+            'gsim.base_test.dummy has been deprecated. Use dummy_new instead.',
+            warning_msg)
 
         # check that at the second call the warning is not printed
         with mock.patch('warnings.warn') as warn:

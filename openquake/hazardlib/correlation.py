@@ -21,14 +21,14 @@ import abc
 import numpy
 
 from openquake.hazardlib.imt import SA, PGA
+from openquake.baselib.python3compat import with_metaclass
 
 
-class BaseCorrelationModel(object):
+class BaseCorrelationModel(with_metaclass(abc.ABCMeta)):
     """
     Base class for correlation models for spatially-distributed ground-shaking
     intensities.
     """
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def get_lower_triangle_correlation_matrix(self, sites, imt):

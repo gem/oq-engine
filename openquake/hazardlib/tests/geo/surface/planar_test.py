@@ -31,7 +31,7 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
                                exc, msg):
         with self.assertRaises(exc) as ae:
             PlanarSurface(mesh_spacing, strike, dip, *corners)
-        self.assertEqual(ae.exception.message, msg)
+        self.assertEqual(str(ae.exception), msg)
 
     def test_top_edge_depth_differs(self):
         corners = [Point(0, -1, 0.3), Point(0, 1, 0.30001),

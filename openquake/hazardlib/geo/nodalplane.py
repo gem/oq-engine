@@ -17,7 +17,7 @@
 Module :mod:`openquake.hazardlib.geo.nodalplane` implements
 :class:`NodalPlane`.
 """
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots

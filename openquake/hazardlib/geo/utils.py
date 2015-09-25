@@ -22,7 +22,7 @@ import shapely.geometry
 
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.geodetic import EARTH_RADIUS
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 def clean_points(points):
@@ -68,12 +68,12 @@ def line_intersects_itself(lons, lats, closed_shape=False):
     proj = get_orthographic_projection(west, east, north, south)
 
     xx, yy = proj(lons, lats)
-    if not shapely.geometry.LineString(zip(xx, yy)).is_simple:
+    if not shapely.geometry.LineString(list(zip(xx, yy))).is_simple:
         return True
 
     if closed_shape:
         xx, yy = proj(numpy.roll(lons, 1), numpy.roll(lats, 1))
-        if not shapely.geometry.LineString(zip(xx, yy)).is_simple:
+        if not shapely.geometry.LineString(list(zip(xx, yy))).is_simple:
             return True
 
     return False
@@ -369,7 +369,7 @@ def point_to_polygon_distance(polygon, pxx, pyy):
         pyy = pyy.reshape((1, ))
     result = numpy.array([
         polygon.distance(shapely.geometry.Point(pxx.item(i), pyy.item(i)))
-        for i in xrange(pxx.size)
+        for i in range(pxx.size)
     ])
     return result.reshape(pxx.shape)
 

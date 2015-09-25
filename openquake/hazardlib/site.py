@@ -18,8 +18,9 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
 
+from openquake.baselib.python3compat import range
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots
@@ -172,7 +173,7 @@ class SiteCollection(object):
         self._z2pt5 = numpy.zeros(n, dtype=float)
         self._backarc = numpy.zeros(n, dtype=bool)
 
-        for i in xrange(n):
+        for i in range(n):
             self.sids[i] = sites[i].id
             self.lons[i] = sites[i].location.longitude
             self.lats[i] = sites[i].location.latitude
@@ -404,7 +405,7 @@ class FilteredSiteCollection(object):
         num_values = data.shape[1]
         result = numpy.empty((self.total_sites, num_values))
         result.fill(placeholder)
-        for i in xrange(num_values):
+        for i in range(num_values):
             result[:, i].put(self.indices, data[:, i])
         return result
 
@@ -415,8 +416,8 @@ class FilteredSiteCollection(object):
         """
         for i, location in enumerate(self.mesh):
             yield Site(location, self.vs30[i], self.vs30measured[i],
-                       self.z1pt0[i], self.z2pt5[i], self.sids[i],
-                       self.backarc[i])
+                       self.z1pt0[i], self.z2pt5[i],
+                       self.backarc[i], self.sids[i])
 
     def __len__(self):
         """Return the number of filtered sites"""

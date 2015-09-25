@@ -27,7 +27,7 @@ class PolygonCreationTestCase(unittest.TestCase):
     def assert_failed_creation(self, points, exc, msg):
         with self.assertRaises(exc) as ae:
             geo.Polygon(points)
-        self.assertEqual(ae.exception.message, msg)
+        self.assertEqual(str(ae.exception), msg)
 
     def test_less_than_three_points(self):
         msg = 'polygon must have at least 3 unique vertices'
@@ -103,7 +103,7 @@ class PolygonDiscretizeTestCase(unittest.TestCase):
         MESH_SPACING = 10
         tl = geo.Point(60, 60)
         tr = geo.Point(70, 60)
-        bottom_line = [geo.Point(lon, 58) for lon in xrange(70, 59, -1)]
+        bottom_line = [geo.Point(lon, 58) for lon in range(70, 59, -1)]
         poly = geo.Polygon([tl, tr] + bottom_line)
         mesh = poly.discretize(mesh_spacing=MESH_SPACING)
         self.assertIsInstance(mesh, geo.Mesh)

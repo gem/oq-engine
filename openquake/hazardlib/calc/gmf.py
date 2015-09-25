@@ -82,7 +82,7 @@ class GmfComputer(object):
         assert sites and imts, (sites, imts)
         self.rupture = rupture
         self.sites = sites
-        self.imts = map(from_string, imts)
+        self.imts = list(map(from_string, imts))
         self.gsims = gsims
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
@@ -179,9 +179,9 @@ class GmfComputer(object):
             for gsim in self.gsims:
                 gs = str(gsim)
                 for imt, value in self._compute(
-                        seed, gsim, realizations=1).iteritems():
+                        seed, gsim, realizations=1).items():
                     # 1 realization, get the 0-th colum of the v-array
-                    array = map(float, value[:, 0])
+                    array = list(map(float, value[:, 0]))
                     # NB: with correlation, the value is a numpy.matrix
                     # not an array, flatten does not work and the only
                     # way to extract the numbers is the map before!
@@ -252,10 +252,10 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
                     for imt in imts)
     [(rupture, sites)] = ruptures_sites
 
-    gc = GmfComputer(rupture, sites, map(str, imts), [gsim], truncation_level,
-                     correlation_model)
+    gc = GmfComputer(rupture, sites, list(map(str, imts)), [gsim],
+                     truncation_level, correlation_model)
     result = gc._compute(seed, gsim, realizations)
-    for imt, gmf in result.iteritems():
+    for imt, gmf in result.items():
         # makes sure the lenght of the arrays in output is the same as sites
         if rupture_site_filter is not filters.rupture_site_noop_filter:
             result[imt] = sites.expand(gmf, placeholder=0)

@@ -13,9 +13,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import unittest
 import functools
-import cPickle
+import pickle
 
 from openquake.hazardlib import speedups
 
@@ -27,37 +26,32 @@ def assert_angles_equal(testcase, angle1, angle2, delta):
 
 
 def assert_pickleable(obj):
-    cPickle.loads(cPickle.dumps(obj)).assert_equal(obj)
+    pickle.loads(pickle.dumps(obj)).assert_equal(obj)
 
 
-class SpeedupsTestCase(unittest.TestCase):
+def speedups_on_off(cls):
     """
-    Base test case class for functions with alternative implementations.
-
     For all the test case methods in the class creates a copy with
     "_no_speedups" suffix in the name, where runs the same test case
     but with speedups disabled.
     """
-    class __metaclass__(type):
-        def __new__(mcs, name, bases, dct):
-            cls = type.__new__(mcs, name, bases, dct)
 
-            def make_no_speedups_testcase(method):
-                @functools.wraps(method)
-                def method2(*args, **kwargs):
-                    speedups.disable()
-                    try:
-                        method(*args, **kwargs)
-                    finally:
-                        speedups.enable()
-                return method2
+    def make_no_speedups_on_off(method):
+        @functools.wraps(method)
+        def method2(*args, **kwargs):
+            speedups.disable()
+            try:
+                method(*args, **kwargs)
+            finally:
+                speedups.enable()
+        return method2
 
-            for name, member in vars(cls).items():
-                if not name.startswith('test_'):
-                    continue
-                if not callable(member):
-                    continue
-                name = '%s_no_speedups' % name
-                setattr(cls, name, make_no_speedups_testcase(member))
+    for name, member in list(vars(cls).items()):
+        if not name.startswith('test_'):
+            continue
+        if not callable(member):
+            continue
+        name = '%s_no_speedups' % name
+        setattr(cls, name, make_no_speedups_on_off(member))
 
-            return cls
+    return cls

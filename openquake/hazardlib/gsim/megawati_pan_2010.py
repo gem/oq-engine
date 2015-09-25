@@ -17,6 +17,7 @@
 Module exports :class:`megawatipan2010`.
 """
 from __future__ import division
+from __future__ import print_function
 
 import numpy as np
 from scipy.constants import g
@@ -84,7 +85,7 @@ class MegawatiPan2010(GMPE):
         mean = (self._get_magnitude_scaling(C, rup.mag) +
                 self._get_distance_scaling(C, rup.mag, dists.rhypo))
         if isinstance(imt, (PGA, SA)):
-            print imt, rup.mag
+            print(imt, rup.mag)
             mean = np.log(np.exp(mean) / (100.0 * g))
         stddevs = self._compute_std(C, stddev_types, len(dists.rhypo))
         return mean, stddevs

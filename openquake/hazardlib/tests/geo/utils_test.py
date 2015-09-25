@@ -21,7 +21,7 @@ import shapely.geometry
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo import utils
 
-from openquake.hazardlib.tests import SpeedupsTestCase
+from openquake.hazardlib.tests import speedups_on_off
 
 
 class CleanPointTestCase(unittest.TestCase):
@@ -122,7 +122,7 @@ class GetSphericalBoundingBox(unittest.TestCase):
                            ([0, 10, -175], [0] * 4)]:
             with self.assertRaises(ValueError) as ae:
                 self.func(lons, lats)
-                self.assertEqual(ae.exception.message,
+                self.assertEqual(str(ae.exception),
                                  'points collection has longitudinal '
                                  'extent wider than 180 deg')
 
@@ -155,7 +155,7 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         proj = utils.get_orthographic_projection(180, 180, 45, 45)
         with self.assertRaises(ValueError) as ar:
             proj(90, -45)
-        self.assertEqual(ar.exception.message,
+        self.assertEqual(str(ar.exception),
                          'some points are too far from the projection '
                          'center lon=180.0 lat=45.0')
 
@@ -224,7 +224,8 @@ class GetMiddlePointTestCase(unittest.TestCase):
 
 
 class SphericalToCartesianAndBackTestCase(unittest.TestCase):
-    def _test(self, (lons, lats, depths), vectors):
+    def _test(self, lons_lats_depths, vectors):
+        (lons, lats, depths) = lons_lats_depths
         res_cart = utils.spherical_to_cartesian(lons, lats, depths)
         self.assertIsInstance(res_cart, numpy.ndarray)
         self.assertTrue(numpy.allclose(vectors, res_cart), str(res_cart))
@@ -330,7 +331,8 @@ class NormalizedTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
 
 
-class ConvexToPointDistanceTestCase(SpeedupsTestCase):
+@speedups_on_off
+class ConvexToPointDistanceTestCase(unittest.TestCase):
     polygon = shapely.geometry.Polygon([
         (0, 0), (1, 0), (1, 1), (0, 1)
     ])

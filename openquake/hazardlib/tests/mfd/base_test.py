@@ -44,8 +44,8 @@ class BaseMFDModificationsTestCase(BaseMFDTestCase):
             MODIFICATIONS = ('foo', 'bar')
         mfd = TestMFD()
         exc = self.assert_mfd_error(mfd.modify, 'baz', {})
-        self.assertEqual(exc.message,
-                         'Modification baz is not supported by TestMFD')
+        self.assertEqual(
+            str(exc), 'Modification baz is not supported by TestMFD')
 
     def test_modify(self):
         class TestMFD(self.BaseTestMFD):
@@ -60,3 +60,4 @@ class BaseMFDModificationsTestCase(BaseMFDTestCase):
         mfd.modify('foo', dict(a=1, b='2', c=True))
         self.assertEqual(mfd.foo_calls, [{'a': 1, 'b': '2', 'c': True}])
         self.assertEqual(mfd.check_constraints_call_count, 1)
+        self.assertEqual(str(mfd), "<TestMFD>")

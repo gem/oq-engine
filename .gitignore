@@ -3,6 +3,8 @@
 *.*.swp
 doc/build
 build
+build-deb
+build-rpm
 *.so
 .coverage
 .DS_Store

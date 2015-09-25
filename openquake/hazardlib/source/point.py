@@ -22,7 +22,7 @@ from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots
@@ -274,7 +274,7 @@ class PointSource(ParametricSeismicSource):
         # half height of the vertical component of rupture width
         # is the vertical distance between the rupture geometrical
         # center and it's upper and lower borders:
-        hheight = rup_proj_height / 2
+        hheight = rup_proj_height / 2.
         # calculate how much shallower the upper border of the rupture
         # is than the upper seismogenic depth:
         vshift = self.upper_seismogenic_depth - hypocenter.depth + hheight
@@ -322,22 +322,22 @@ class PointSource(ParametricSeismicSource):
 
         left_top = rupture_center.point_at(
             horizontal_distance=hor_dist,
-            vertical_increment=-rup_proj_height / 2,
+            vertical_increment=-rup_proj_height / 2.,
             azimuth=(nodal_plane.strike + 180 + theta) % 360
         )
         right_top = rupture_center.point_at(
             horizontal_distance=hor_dist,
-            vertical_increment=-rup_proj_height / 2,
+            vertical_increment=-rup_proj_height / 2.,
             azimuth=(nodal_plane.strike - theta) % 360
         )
         left_bottom = rupture_center.point_at(
             horizontal_distance=hor_dist,
-            vertical_increment=rup_proj_height / 2,
+            vertical_increment=rup_proj_height / 2.,
             azimuth=(nodal_plane.strike + 180 - theta) % 360
         )
         right_bottom = rupture_center.point_at(
             horizontal_distance=hor_dist,
-            vertical_increment=rup_proj_height / 2,
+            vertical_increment=rup_proj_height / 2.,
             azimuth=(nodal_plane.strike + theta) % 360
         )
 

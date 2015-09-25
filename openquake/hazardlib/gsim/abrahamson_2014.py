@@ -20,6 +20,7 @@ Module exports :class:`AbrahamsonEtAl2014`
                :class:`AbrahamsonEtAl2014RegTWN`
 """
 from __future__ import division
+from __future__ import print_function
 
 import copy
 import numpy as np
@@ -352,8 +353,8 @@ class AbrahamsonEtAl2014(GMPE):
         derAmp = self._get_derivative(C, sa1180, vs30)
         phi_amp = 0.4
         if any(phi_al**2 < phi_amp**2):
-            print 'phi_al:' % (phi_al)
-            print 'magnitude: %.2f' % (mag)
+            print('phi_al:' % (phi_al))
+            print('magnitude: %.2f' % (mag))
             raise ValueError('sqrt argument < 0')
         phi_b = np.sqrt(phi_al**2 - phi_amp**2)
         phi = np.sqrt(phi_b**2 * (1 + derAmp)**2 + phi_amp**2)

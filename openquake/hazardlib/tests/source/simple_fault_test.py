@@ -17,6 +17,7 @@ import unittest
 
 import numpy
 
+from openquake.baselib.python3compat import range
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.source.simple_fault import SimpleFaultSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -73,7 +74,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
             self.assertIs(rupture.tectonic_region_type, self.TRT)
             self.assertEqual(rupture.rake, self.RAKE)
         self.assertEqual(len(expected_ruptures), source.count_ruptures())
-        for i in xrange(len(expected_ruptures)):
+        for i in range(len(expected_ruptures)):
             expected_rupture, rupture = expected_ruptures[i], ruptures[i]
             self.assertAlmostEqual(rupture.mag, expected_rupture['mag'])
             self.assertAlmostEqual(rupture.rake, expected_rupture['rake'])
