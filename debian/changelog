@@ -2,6 +2,13 @@
   * Replaced the event based calculators based on Postgres with the new ones
     based on the HDF5 technology
 
+python-oq-engine (1.5.1-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * Fixed a bug affecting exposures with multiple assets on the same site
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 25 Sep 2015 14:22:08 +0200
+
 python-oq-engine (1.5.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
