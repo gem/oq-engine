@@ -130,7 +130,7 @@ it to execute the same calculations that you would run with the command
 on a single machine, not on a cluster. On the plus side, it does
 not require having a celery instance up and running.
 
-13.``oq-lite`` is especially useful to perform preliminary analysis before you 
+13. ``oq-lite`` is especially useful to perform preliminary analysis before you 
 run a large computation on the engine. Running
 ``$ oq-lite info --report <my_job.ini>``
 will generate a text report on the expected size
