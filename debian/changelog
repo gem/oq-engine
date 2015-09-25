@@ -1,6 +1,7 @@
 python-oq-engine (1.5.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
+  * Fixed a bug affecting exposures with multiple assets on the same site
   * The event based calculators in the engine are now officially deprecated
     and they raise a warning when used
   * Optimization: we do not generate the full epsilon matrix if all
