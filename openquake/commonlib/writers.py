@@ -157,6 +157,8 @@ class StreamingXMLWriter(object):
         with warnings.catch_warnings():  # unwanted ElementTree warning
             warnings.simplefilter('ignore')
             leafnode = not node
+        # NB: we cannot use len(node) to identify leafs since nodes containing
+        # an iterator have no length. They are always True, even if empty :-(
         if leafnode and node.text is None:
             self.emptyElement(tag, node.attrib)
             return
