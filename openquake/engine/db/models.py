@@ -42,7 +42,6 @@ from django.db import connections
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.gis.db import models as djm
 
-from openquake.baselib.general import groupby
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo, correlation
 
@@ -382,13 +381,11 @@ class OqJob(djm.Model):
             # ordering no ruptures are generated and the test
             # qa_tests/hazard/disagg/case_1/test.py fails with a bad
             # error message
-            coords = sorted((asset.site.x, asset.site.y) for asset in assets)
-            lons, lats = zip(*coords)
-            mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
+            coords = ((asset.site.x, asset.site.y) for asset in assets)
         else:
             mesh = get_mesh(oqparam)
-        sids = save_sites(self, ((p.longitude, p.latitude) for p in mesh))
-        return mesh, sids
+            coords = zip(mesh.lons, mesh.lats)
+        return save_sites(self, coords)
 
     def __repr__(self):
         return '<%s %d, %s>' % (self.__class__.__name__,
@@ -481,24 +478,20 @@ class Log(djm.Model):
 
 def save_sites(job, coords):
     """
-    Save all the given sites on the hzrdi.hazard_site table.
+    Save all the given sites on the hzrdi.hazard_site table, in lon-lat order
 
     :param coords: a sequence of coordinates
-    :returns: the ids of the inserted HazardSite instances
+    :returns: a mesh and the ids of the inserted HazardSite instances
 
-    NB: the coordinate list can contain duplicates; in that
-    case the returned list of side its will contain duplicates.
+    NB: the coordinate list can contain duplicates; they will be removed
     """
-    groups = groupby(coords, lambda x: x)
-    sites = [HazardSite(hazard_calculation=job,
-                        lon=point[0], lat=point[1])
-             for point in groups]
+    sorted_coords = sorted(set(coords))
+    sites = [HazardSite(hazard_calculation=job, lon=lon, lat=lat)
+             for lon, lat in sorted_coords]
+    lons, lats = zip(*sorted_coords)
+    mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
     site_ids = writer.CacheInserter.saveall(sites)
-    sids = []
-    for site_id, point in zip(site_ids, groups):
-        for p in groups[point]:
-            sids.append(site_id)
-    return sids
+    return mesh, site_ids
 
 
 def extract_from(objlist, attr):
