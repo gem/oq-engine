@@ -460,7 +460,7 @@ class RiskCalculator(HazardCalculator):
         res = apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks or 1,
+            concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=get_weight, key=self.riskinput_key)
         return res
 
