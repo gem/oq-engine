@@ -25,10 +25,10 @@ calculators Package
     :undoc-members:
     :show-inheritance:
 
-:mod:`ebr` Module
+:mod:`event_based_risk` Module
 ------------------
 
-.. automodule:: openquake.calculators.ebr
+.. automodule:: openquake.calculators.event_based_risk
     :members:
     :undoc-members:
     :show-inheritance:

@@ -684,13 +684,7 @@ def get_exposure(oqparam):
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
 
-    def asset_gen():
-        # wrap the asset generation to get a nice error message
-        with context(fname, assets_node):
-            for asset in assets_node:
-                yield asset
-
-    for asset in asset_gen():
+    for asset in assets_node:
         values = {}
         deductibles = {}
         insurance_limits = {}
