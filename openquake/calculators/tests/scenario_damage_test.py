@@ -58,5 +58,5 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_6(self):
-        # this is a case with two gsims
+        # this is a case with 5 assets on the same point
         self.assert_ok(case_6, 'job_h.ini,job_r.ini')
