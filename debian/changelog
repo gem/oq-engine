@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Silenced an ElementTree warning
   * Improved the error message for invalid exposures
   * Fixed a few tests on Windows
 

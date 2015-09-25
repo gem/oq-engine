@@ -16,6 +16,7 @@
 import io
 import types
 import logging
+import warnings
 from contextlib import contextmanager
 from xml.sax.saxutils import escape, quoteattr
 
@@ -153,7 +154,12 @@ class StreamingXMLWriter(object):
             tag = self.shorten(node.tag)
         else:
             tag = node.tag
-        if not node and node.text is None:
+        with warnings.catch_warnings():  # unwanted ElementTree warning
+            warnings.simplefilter('ignore')
+            leafnode = not node
+        # NB: we cannot use len(node) to identify leafs since nodes containing
+        # an iterator have no length. They are always True, even if empty :-(
+        if leafnode and node.text is None:
             self.emptyElement(tag, node.attrib)
             return
         self.start_tag(tag, node.attrib)
