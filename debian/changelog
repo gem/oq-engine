@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Silenced an ElementTree warning
+  * Added a test with multiple assets on the same site
   * Improved the error message for invalid exposures
   * Fixed a few tests on Windows
 
