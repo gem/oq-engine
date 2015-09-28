@@ -1,4 +1,5 @@
-# Copyright (C) 2012-2014, GEM Foundation
+# The Hazard Library
+# Copyright (C) 2015 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -12,8 +13,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
 """
 Module exports :class:`TusaLanger2015RepiBA08SE`,
 	       :class:`TusaLanger2015RepiBA08DE`,
@@ -206,7 +205,7 @@ class TusaLanger2015RepiBA08SE(GMPE):
 
 class TusaLanger2015RepiBA08DE(TusaLanger2015RepiBA08SE):
     """
-    Implements Tusa and Langer (2015) for the case where DE are considered
+    Implements Tusa and Langer (2015) using the BA08 model and DE.
 
     Extends
     :class:`openquake.hazardlib.gsim.tusa_langer_2015.TusaLanger2015RepiBA08SE`
@@ -244,7 +243,7 @@ class TusaLanger2015RepiBA08DE(TusaLanger2015RepiBA08SE):
 
 class TusaLanger2015RepiSP87SE(TusaLanger2015RepiBA08SE):
     """
-    Implements Tusa and Langer (2015) for the case where SE are considered
+    Implements Tusa and Langer (2015) using the SP87 model and SE.
 
     Extends
     :class:`openquake.hazardlib.gsim.tusa_langer_2015.TusaLanger2015RepiBA08SE`
@@ -298,7 +297,7 @@ class TusaLanger2015RepiSP87SE(TusaLanger2015RepiBA08SE):
 
 class TusaLanger2015RepiSP87DE(TusaLanger2015RepiSP87SE):
     """
-    Implements Tusa and Langer (2015) for the case where DE are considered
+    Implements Tusa and Langer (2015) using the SP87 model and DE.
 
     Extends
     :class:`openquake.hazardlib.gsim.tusa_langer_2015.TusaLanger2015RepiSP87SE`
@@ -336,10 +335,10 @@ class TusaLanger2015RepiSP87DE(TusaLanger2015RepiSP87SE):
 
 class TusaLanger2015Rhypo(TusaLanger2015RepiBA08SE):
     """
-    Implements the GMPE for the case in which hypocentral distance is used (not described in 
-    Tusa and Langer, 2015). This version has been developed in the frame of V3-2012 INGV-DPC 
-    Project in order to perform PSHA calculations when topography is taken into consideration 
-    (e.g. Mt Etna), hence dependence on vertical distance is required.
+    Implements the GMPE using the BA08 model and hypocentral distance (not described in Tusa 
+    and Langer, 2015). This version has been developed in the frame of V3-2012 INGV-DPC Project 
+    in order to perform PSHA calculations when topography is taken into consideration (e.g. the 
+    flanks of Mt Etna), hence dependence on vertical distance is required.
 
     Extends
     :class:`openquake.hazardlib.gsim.tusa_langer_2015.TusaLanger2015RepiBA08SE`
@@ -361,7 +360,7 @@ class TusaLanger2015Rhypo(TusaLanger2015RepiBA08SE):
             np.log10(rval / rref) + C['c3'] * (rval - rref)
 
     # coefficients provided by Giuseppina Tusa in excel file "SpectralAccXLaura.xlsx" (email dated May 29, 2015) 
-    # with modification to pga coefficients in Catania July, 2015 (personal communication); sigma values in log 
+    # with modification to pga coefficients in Catania (personal communication, July, 2015); sigma values in log 
     COEFFS = CoeffsTable(sa_damping=5, table="""
 	IMT	a	b1	b2	c1	c2	h	c3		sA	sB	sD	SigmaTot
 	pga	0.329	0.105	0.076	-2.111	0.039	1.553	0.006		0	0.45	0.457	0.394
