@@ -28,6 +28,7 @@ import numpy
 from shapely import wkt, geometry
 
 from openquake.hazardlib import geo, site, correlation, imt
+from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import workflows, riskinput
 
 from openquake.commonlib.oqvalidation import OqParam
@@ -922,6 +923,50 @@ def get_gmfs(oqparam, sitecol):
     return gmf_by_imt.T
 
 
+def get_scenario_from_nrml(oqparam, fname):
+    """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param fname:
+        the NRML files containing the GMFs
+    :returns:
+        (rupture_tags, gmf array)
+    """
+    gmf_dt = gsim_imt_dt(['FromCsv'], oqparam.imtls)
+    sitecol = get_site_collection(oqparam)
+    n = len(sitecol)
+    e = oqparam.number_of_ground_motion_fields
+    gmfs_per_imt = n * e
+    m = len(oqparam.imtls)
+    tags = collections.defaultdict(set)
+    gmfa = numpy.zeros(gmfs_per_imt, gmf_dt)
+    gmfset = nrml.read(fname).gmfCollection.gmfSet
+    tags = sorted(set(gmf['ruptureId'] for gmf in gmfset))
+    tag2idx = dict((tag, i) for i, tag in enumerate(tags))
+    counts = numpy.zeros(len(tags), numpy.uint32)
+    for i, gmf in enumerate(gmfset):
+        rup_idx = tag2idx[gmf['ruptureId']]
+        counts[rup_idx] += 1
+        imt = gmf['IMT']
+        if imt == 'SA':
+            imt = 'SA(%s)' % gmf['saPeriod']
+        assert len(gmf) == n, (len(gmf), n)
+        for j, lon, lat, node in zip(
+                sitecol.sids, sitecol.lons, sitecol.lats, gmf):
+            if (node['lon'], node['lat']) != (lon, lat):
+                raise ValueError('The points %(lon)s %(lat)s is not in the '
+                                 'site mesh' % node)
+            k = (i * n + j) % gmfs_per_imt
+            gmfa[k]['idx'] = rup_idx
+            gmfa[k]['FromCsv'][imt] = node['gmv']
+    for idx, count in enumerate(counts):
+        if count < m:
+            raise InvalidFile('Found a missing tag %r' % tags[idx])
+        elif count > m:
+            raise InvalidFile('Found a duplicated tag %r' % tags[idx])
+    return numpy.array(tags, '|S100'), gmfa
+
+
 def get_mesh_hcurves(oqparam):
     """
     Read CSV data in the format `lon lat, v1-vN, w1-wN, ...`.
@@ -947,12 +992,12 @@ def get_mesh_hcurves(oqparam):
             if lon_lat in lon_lats:
                 raise DuplicatedPoint(lon_lat)
             lon_lats.add(lon_lat)
-            for i, imt in enumerate(imtls, 1):
+            for i, imt_ in enumerate(imtls, 1):
                 values = valid.decreasing_probabilities(row[i])
-                if len(values) != len(imtls[imt]):
+                if len(values) != len(imtls[imt_]):
                     raise ValueError('Found %d values, expected %d' %
-                                     (len(values), len(imtls([imt]))))
-                data += {imt: [numpy.array(values)]}
+                                     (len(values), len(imtls([imt_]))))
+                data += {imt_: [numpy.array(values)]}
         except (ValueError, DuplicatedPoint) as err:
             raise err.__class__('%s: file %s, line %d' % (err, csvfile, line))
     lons, lats = zip(*sorted(lon_lats))

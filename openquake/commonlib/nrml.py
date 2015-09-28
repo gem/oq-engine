@@ -297,12 +297,29 @@ class DamageNode(LiteralNode):
     )
 
 
+@nodefactory.add('gmfCollection')
+class GmfNode(LiteralNode):
+    """
+    Class used to convert nodes such as
+
+    <gmf IMT="PGA" ruptureId="scenario-0000000001" >
+       <node gmv="0.365662734506" lat="0.0" lon="0.0"/>
+       <node gmv="0.256181251586" lat="0.1" lon="0.0"/>
+       <node gmv="0.110685275111" lat="0.2" lon="0.0"/>
+    </gmf>
+
+    into LiteralNode objects.
+    """
+    validators = dict(
+        ruptureId=valid.simple_id,
+        gmv=valid.positivefloat,
+        lon=valid.longitude,
+        lat=valid.latitude)
+
 # TODO: extend the validation to the following nodes
 # see https://bugs.launchpad.net/oq-engine/+bug/1381066
 nodefactory.add(
     'disaggMatrices',
-    'gmfCollection',
-    'gmfSet',
     'logicTree',
     'lossCurves',
     'lossFraction',

@@ -26,10 +26,11 @@ from io import BytesIO, StringIO
 
 from numpy.testing import assert_allclose
 
-from openquake.commonlib import readinput, valid
+from openquake.commonlib import readinput, valid, writers
 from openquake.baselib import general
 
 TMP = tempfile.gettempdir()
+DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
 class ParseConfigTestCase(unittest.TestCase):
@@ -603,3 +604,46 @@ col=00|ses=0001|src=test|rup=001-02,X,2.67031000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
             readinput.get_gmfs(self.oqparam, self.sitecol)
+
+
+class TestLoadGmfTestCase(unittest.TestCase):
+    """
+    Read the GMF from a NRML file
+    """
+    def setUp(self):
+        self.oqparam = mock.Mock()
+        self.oqparam.base_path = '/'
+        self.oqparam.inputs = {}
+        self.oqparam.sites = sorted([(0.0, 0.0), (0.0, 0.1), (0.0, 0.2)])
+        self.oqparam.imtls = {'PGA': None, 'PGV': None}
+        self.oqparam.number_of_ground_motion_fields = 5
+
+    def test_ok(self):
+        fname = os.path.join(DATADIR,  'gmfdata.xml')
+        tags, gmfa = readinput.get_scenario_from_nrml(self.oqparam, fname)
+        self.assertEqual(
+            writers.write_csv(StringIO(), gmfa), '''\
+idx:uint32:,FromCsv-PGV:float64:,FromCsv-PGA:float64:
+0,6.82495715E-01,6.82495715E-01
+0,1.27089832E-01,1.27089832E-01
+0,1.60309678E-01,1.60309678E-01
+1,3.65662735E-01,3.65662735E-01
+1,2.56181252E-01,2.56181252E-01
+1,1.10685275E-01,1.10685275E-01
+2,8.70083359E-01,8.70083359E-01
+2,2.10638411E-01,2.10638411E-01
+2,2.23217460E-01,2.23217460E-01
+3,3.27929201E-01,3.27929201E-01
+3,2.35755152E-01,2.35755152E-01
+3,1.78114255E-01,1.78114255E-01
+4,6.96868642E-01,6.96868642E-01
+4,2.58140526E-01,2.58140526E-01
+4,1.35164914E-01,1.35164914E-01''')
+
+    def test_err(self):
+        # duplicated ruptureId
+        fname = os.path.join(DATADIR,  'gmfdata_err.xml')
+        with self.assertRaises(readinput.InvalidFile) as ctx:
+            readinput.get_scenario_from_nrml(self.oqparam, fname)
+        self.assertEqual(str(ctx.exception),
+                         "Found a missing tag 'scenario-0000000001'")
