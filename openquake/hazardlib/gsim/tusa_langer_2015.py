@@ -38,9 +38,9 @@ class TusaLanger2015RepiBA08SE(GMPE):
     Journal of Seismology, DOI 10.1007/s10950-015-9508-x.
 
     GMPE derives from earthquakes in the volcanic area of Mt. Etna in the magnitude 
-    range 3<ML<4.8 for epicentral distances < 100 km (for implementation using hypocentral 
+    range 3<ML<4.8 for epicentral distances <100 km (for implementation using hypocentral 
     distance see :class:`TusaLanger2015Rhypo`), and for soil classes A, B, and D. 
-    Soil class C is NOT included.
+    Authors do NOT derive coefficients for site class C due to limited data.
 
     Two functional forms were considered by the authors: Sabetta and Pugliese, 1987 (SP87) 
     and a simplified version of Boore and Atkinson, 2008 (BA08). The GMPE distinguishes 
