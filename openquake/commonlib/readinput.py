@@ -923,6 +923,17 @@ def get_gmfs(oqparam, sitecol):
     return gmf_by_imt.T
 
 
+# used in get_scenario_from_nrml
+def _extract_tags_sites(gmfset):
+    tags = set()
+    mesh = set()
+    for gmf in gmfset:
+        tags.add(gmf['ruptureId'])
+        for node in gmf:
+            mesh.add((node['lon'], node['lat']))
+    return numpy.array(sorted(tags), '|S100'), sorted(mesh)
+
+
 def get_scenario_from_nrml(oqparam, fname):
     """
     :param oqparam:
@@ -930,18 +941,17 @@ def get_scenario_from_nrml(oqparam, fname):
     :param fname:
         the NRML files containing the GMFs
     :returns:
-        (rupture_tags, gmf array)
+        a triple (sitecol, rupture_tags, gmf array)
     """
     gmf_dt = gsim_imt_dt(['FromFile'], oqparam.imtls)
-    sitecol = get_site_collection(oqparam)
-    n = len(sitecol)
     e = oqparam.number_of_ground_motion_fields
+    gmfset = nrml.read(fname).gmfCollection.gmfSet
+    tags, oqparam.sites = _extract_tags_sites(gmfset)
+    sitecol = get_site_collection(oqparam)
+    n = len(oqparam.sites)
     gmfs_per_imt = n * e
     m = len(oqparam.imtls)
-    tags = collections.defaultdict(set)
     gmfa = numpy.zeros(gmfs_per_imt, gmf_dt)
-    gmfset = nrml.read(fname).gmfCollection.gmfSet
-    tags = sorted(set(gmf['ruptureId'] for gmf in gmfset))
     tag2idx = dict((tag, i) for i, tag in enumerate(tags))
     counts = numpy.zeros(len(tags), numpy.uint32)
     for i, gmf in enumerate(gmfset):
@@ -950,21 +960,25 @@ def get_scenario_from_nrml(oqparam, fname):
         imt = gmf['IMT']
         if imt == 'SA':
             imt = 'SA(%s)' % gmf['saPeriod']
-        assert len(gmf) == n, (len(gmf), n)
+        if len(gmf) != n:
+            raise InvalidFile('Expected %d sites, got %d in %s, line %d' % (
+                n, len(gmf), fname, gmf.lineno))
         for j, lon, lat, node in zip(
-                sitecol.sids, sitecol.lons, sitecol.lats, gmf):
+                range(n), sitecol.lons, sitecol.lats, gmf):
             if (node['lon'], node['lat']) != (lon, lat):
-                raise ValueError('The points %(lon)s %(lat)s is not in the '
-                                 'site mesh' % node)
+                raise InvalidFile('The site mesh is not ordered in %s, line %d'
+                                  % (fname, node.lineno))
             k = (i * n + j) % gmfs_per_imt
             gmfa[k]['idx'] = rup_idx
             gmfa[k]['FromFile'][imt] = node['gmv']
     for idx, count in enumerate(counts):
         if count < m:
-            raise InvalidFile('Found a missing tag %r' % tags[idx])
+            raise InvalidFile('Found a missing tag %r in %s' %
+                              (tags[idx], fname))
         elif count > m:
-            raise InvalidFile('Found a duplicated tag %r' % tags[idx])
-    return numpy.array(tags, '|S100'), gmfa
+            raise InvalidFile('Found a duplicated tag %r in %s' %
+                              (tags[idx], fname))
+    return sitecol, tags, gmfa
 
 
 def get_mesh_hcurves(oqparam):

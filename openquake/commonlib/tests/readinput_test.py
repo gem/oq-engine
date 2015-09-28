@@ -614,13 +614,24 @@ class TestLoadGmfTestCase(unittest.TestCase):
         self.oqparam = mock.Mock()
         self.oqparam.base_path = '/'
         self.oqparam.inputs = {}
-        self.oqparam.sites = sorted([(0.0, 0.0), (0.0, 0.1), (0.0, 0.2)])
         self.oqparam.imtls = {'PGA': None, 'PGV': None}
         self.oqparam.number_of_ground_motion_fields = 5
 
     def test_ok(self):
         fname = os.path.join(DATADIR,  'gmfdata.xml')
-        tags, gmfa = readinput.get_scenario_from_nrml(self.oqparam, fname)
+        sitecol, tags, gmfa = readinput.get_scenario_from_nrml(
+            self.oqparam, fname)
+        coords = zip(sitecol.mesh.lons, sitecol.mesh.lats)
+        self.assertEqual(writers.write_csv(StringIO(), coords), '''\
+0.00000000E+00,0.00000000E+00
+0.00000000E+00,1.00000000E-01
+0.00000000E+00,2.00000000E-01''')
+        self.assertEqual('\n'.join(tags), '''\
+scenario-0000000000
+scenario-0000000001
+scenario-0000000002
+scenario-0000000003
+scenario-0000000004''')
         self.assertEqual(
             writers.write_csv(StringIO(), gmfa), '''\
 idx:uint32:,FromFile-PGV:float64:,FromFile-PGA:float64:
@@ -641,9 +652,16 @@ idx:uint32:,FromFile-PGV:float64:,FromFile-PGA:float64:
 4,1.35164914E-01,1.35164914E-01''')
 
     def test_err(self):
-        # duplicated ruptureId
+        # missing ruptureId
         fname = os.path.join(DATADIR,  'gmfdata_err.xml')
         with self.assertRaises(readinput.InvalidFile) as ctx:
             readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertEqual(str(ctx.exception),
-                         "Found a missing tag 'scenario-0000000001'")
+        self.assertIn("Found a missing tag 'scenario-0000000001'",
+                      str(ctx.exception))
+
+    def test_err2(self):
+        # wrong mesh
+        fname = os.path.join(DATADIR,  'gmfdata_err2.xml')
+        with self.assertRaises(readinput.InvalidFile) as ctx:
+            readinput.get_scenario_from_nrml(self.oqparam, fname)
+        self.assertIn("Expected 4 sites, got 3 in", str(ctx.exception))
