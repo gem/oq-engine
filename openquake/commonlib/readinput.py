@@ -939,7 +939,7 @@ def get_gmfs_from_csv(oqparam, sitecol, fname):
             fname, lineno, num_gmfs))
     if tags != sorted(tags):
         raise InvalidFile('The tags in %s are not ordered: %s' % (fname, tags))
-    return sitecol, tags, gmf_by_imt.T
+    return sitecol, numpy.array(tags, '|S100'), gmf_by_imt.T
 
 
 # used in get_scenario_from_nrml
