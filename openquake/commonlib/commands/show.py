@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
+import io
 import os
 import shutil
 import logging
@@ -24,6 +25,7 @@ from openquake.commonlib import sap, datastore
 from openquake.baselib.general import humansize
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.commands.plot import combined_curves
+from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
 
 
@@ -58,8 +60,8 @@ def show(calc_id, key=None, rlzs=None):
             print(datastore.view(key, ds))
             return
         obj = ds[key]
-        if hasattr(obj, 'value'):
-            print(obj.value)
+        if hasattr(obj, 'value'):  # an array
+            print(write_csv(io.StringIO(), obj.value))
         else:
             print(obj)
         return
