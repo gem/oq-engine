@@ -877,12 +877,32 @@ def get_sitecol_hcurves(oqparam):
     return sitecol, hcurves_by_imt
 
 
-def get_gmfs(oqparam, sitecol):
+def get_gmfs(oqparam, sitecol=None):
+    """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param sitecol:
+        a SiteCollection instance with sites consistent with the data file
+    :returns:
+        sitecol, tags, gmf array
+    """
+    fname = oqparam.inputs['gmfs']
+    if fname.endswith('.csv'):
+        return get_gmfs_from_csv(oqparam, sitecol, fname)
+    elif fname.endswith('.xml'):
+        return get_scenario_from_nrml(oqparam)
+    else:
+        raise InvalidFile(fname)
+
+
+def get_gmfs_from_csv(oqparam, sitecol, fname):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param sitecol:
         a SiteCollection instance with sites consistent with the CSV file
+    :param fname:
+        the full path of the CSV file
     :returns:
         a composite array of shape (N, R) read from a CSV file with format
         `tag indices [gmv1 ... gmvN] * num_imts`
@@ -892,7 +912,6 @@ def get_gmfs(oqparam, sitecol):
     num_gmfs = oqparam.number_of_ground_motion_fields
     gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
     tags = []
-    fname = oqparam.inputs['gmfs']
     with open(fname) as csvfile:
         for lineno, line in enumerate(csvfile, 1):
             row = line.split(',')
@@ -920,7 +939,7 @@ def get_gmfs(oqparam, sitecol):
             fname, lineno, num_gmfs))
     if tags != sorted(tags):
         raise InvalidFile('The tags in %s are not ordered: %s' % (fname, tags))
-    return gmf_by_imt.T
+    return sitecol, tags, gmf_by_imt.T
 
 
 # used in get_scenario_from_nrml

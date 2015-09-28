@@ -506,7 +506,7 @@ def read_gmfs_from_csv(calc):
     :returns: riskinputs
     """
     logging.info('Reading hazard curves from CSV')
-    gmfs_by_imt = readinput.get_gmfs(calc.oqparam, calc.sitecol.complete)
+    _, _, gmfs_by_imt = readinput.get_gmfs(calc.oqparam, calc.sitecol.complete)
 
     # reduce the gmfs matrices to the filtered sites
     for imt in calc.oqparam.imtls:
