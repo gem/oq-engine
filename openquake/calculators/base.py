@@ -518,7 +518,7 @@ def read_gmfs_from_csv(calc):
 
     logging.info('Preparing the risk input')
     fake_rlz = logictree.Realization(
-        value=('FromCsv',), weight=1, lt_path=('',),
+        value=('FromFile',), weight=1, lt_path=('',),
         ordinal=0, lt_uid=('*',))
     calc.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
-    return {(0, 'FromCsv'): gmfs_by_imt}
+    return {(0, 'FromFile'): gmfs_by_imt}

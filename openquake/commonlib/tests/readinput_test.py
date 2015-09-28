@@ -623,7 +623,7 @@ class TestLoadGmfTestCase(unittest.TestCase):
         tags, gmfa = readinput.get_scenario_from_nrml(self.oqparam, fname)
         self.assertEqual(
             writers.write_csv(StringIO(), gmfa), '''\
-idx:uint32:,FromCsv-PGV:float64:,FromCsv-PGA:float64:
+idx:uint32:,FromFile-PGV:float64:,FromFile-PGA:float64:
 0,6.82495715E-01,6.82495715E-01
 0,1.27089832E-01,1.27089832E-01
 0,1.60309678E-01,1.60309678E-01

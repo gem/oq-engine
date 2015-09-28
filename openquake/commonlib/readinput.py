@@ -932,7 +932,7 @@ def get_scenario_from_nrml(oqparam, fname):
     :returns:
         (rupture_tags, gmf array)
     """
-    gmf_dt = gsim_imt_dt(['FromCsv'], oqparam.imtls)
+    gmf_dt = gsim_imt_dt(['FromFile'], oqparam.imtls)
     sitecol = get_site_collection(oqparam)
     n = len(sitecol)
     e = oqparam.number_of_ground_motion_fields
@@ -958,7 +958,7 @@ def get_scenario_from_nrml(oqparam, fname):
                                  'site mesh' % node)
             k = (i * n + j) % gmfs_per_imt
             gmfa[k]['idx'] = rup_idx
-            gmfa[k]['FromCsv'][imt] = node['gmv']
+            gmfa[k]['FromFile'][imt] = node['gmv']
     for idx, count in enumerate(counts):
         if count < m:
             raise InvalidFile('Found a missing tag %r' % tags[idx])
