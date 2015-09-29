@@ -281,7 +281,11 @@ class HazardCalculator(BaseCalculator):
         extracted from the exposure.
         """
         inputs = self.oqparam.inputs
-        if 'gmfs' in inputs:
+
+        if 'gmfs' in inputs and self.oqparam.sites:
+            haz_sitecol = self.sitecol = readinput.get_site_collection(
+                self.oqparam)
+        if 'scenario_' in self.oqparam.calculation_mode:
             self.gmfs = get_gmfs(self)
             haz_sitecol = self.sitecol
         if 'exposure' in inputs:
