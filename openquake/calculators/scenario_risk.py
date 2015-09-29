@@ -92,13 +92,13 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-
+        gmfs = base.get_gmfs(self)
         logging.info('Building the epsilons')
         eps_dict = self.make_eps_dict(
             self.oqparam.number_of_ground_motion_fields)
         self.epsilon_matrix = numpy.array(
             [eps_dict[a['asset_ref']] for a in self.assetcol])
-        self.riskinputs = self.build_riskinputs(base.get_gmfs(self), eps_dict)
+        self.riskinputs = self.build_riskinputs(gmfs, eps_dict)
 
     def post_execute(self, result):
         """

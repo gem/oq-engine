@@ -505,16 +505,17 @@ def read_gmfs_from_csv(calc):
     :param calc: a ScenarioDamage or ScenarioRisk calculator
     :returns: riskinputs
     """
-    logging.info('Reading hazard curves from CSV')
-    _, _, gmfs_by_imt = readinput.get_gmfs(calc.oqparam, calc.sitecol.complete)
+    logging.info('Reading gmfs from file')
+    try:
+        sitecol = calc.sitecol.complete
+    except KeyError:
+        sitecol = readinput.get_site_collection(calc.oqparam).complete
 
+    calc.sitecol, calc.tags, gmfs_by_imt = readinput.get_gmfs(
+        calc.oqparam, sitecol)
     # reduce the gmfs matrices to the filtered sites
     for imt in calc.oqparam.imtls:
         gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]
-
-    num_assets = calc.count_assets()
-    num_sites = len(calc.sitecol)
-    logging.info('Associated %d assets to %d sites', num_assets, num_sites)
 
     logging.info('Preparing the risk input')
     fake_rlz = logictree.Realization(

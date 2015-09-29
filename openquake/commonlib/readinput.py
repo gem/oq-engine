@@ -890,7 +890,7 @@ def get_gmfs(oqparam, sitecol=None):
     if fname.endswith('.csv'):
         return get_gmfs_from_csv(oqparam, sitecol, fname)
     elif fname.endswith('.xml'):
-        return get_scenario_from_nrml(oqparam)
+        return get_scenario_from_nrml(oqparam, fname)
     else:
         raise InvalidFile(fname)
 
@@ -932,7 +932,7 @@ def get_gmfs_from_csv(oqparam, sitecol, fname):
                     raise InvalidFile(
                         'The column #%d in %s is expected to contain positive '
                         'floats, got %s instead' % (i + 3, fname, row[i + 2]))
-                gmf_by_imt[imts[i]][lineno - 1, :] = r_sites.expand(array, 0)
+                gmf_by_imt[imts[i]][lineno - 1] = r_sites.expand(array, 0)
             tags.append(row[0])
     if lineno < num_gmfs:
         raise InvalidFile('%s contains %d rows, expected %d' % (
@@ -962,20 +962,18 @@ def get_scenario_from_nrml(oqparam, fname):
     :returns:
         a triple (sitecol, rupture_tags, gmf array)
     """
-    gmf_dt = gsim_imt_dt(['FromFile'], oqparam.imtls)
-    e = oqparam.number_of_ground_motion_fields
+    imts = list(oqparam.imtls)
+    imt_dt = numpy.dtype([(imt, float) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet
     tags, oqparam.sites = _extract_tags_sites(gmfset)
+    oqparam.number_of_ground_motion_fields = e = len(tags)
     sitecol = get_site_collection(oqparam)
     n = len(oqparam.sites)
-    gmfs_per_imt = n * e
-    m = len(oqparam.imtls)
-    gmfa = numpy.zeros(gmfs_per_imt, gmf_dt)
-    tag2idx = dict((tag, i) for i, tag in enumerate(tags))
-    counts = numpy.zeros(len(tags), numpy.uint32)
+    gmf_by_imt = numpy.zeros((e, n), imt_dt)
+    m = len(imts)
+    counts = collections.Counter()
     for i, gmf in enumerate(gmfset):
-        rup_idx = tag2idx[gmf['ruptureId']]
-        counts[rup_idx] += 1
+        counts[gmf['ruptureId']] += 1
         imt = gmf['IMT']
         if imt == 'SA':
             imt = 'SA(%s)' % gmf['saPeriod']
@@ -987,17 +985,15 @@ def get_scenario_from_nrml(oqparam, fname):
             if (node['lon'], node['lat']) != (lon, lat):
                 raise InvalidFile('The site mesh is not ordered in %s, line %d'
                                   % (fname, node.lineno))
-            k = (i * n + j) % gmfs_per_imt
-            gmfa[k]['idx'] = rup_idx
-            gmfa[k]['FromFile'][imt] = node['gmv']
-    for idx, count in enumerate(counts):
+            gmf_by_imt[imt][i, j] = node['gmv']
+    for tag, count in counts.items():
         if count < m:
             raise InvalidFile('Found a missing tag %r in %s' %
-                              (tags[idx], fname))
+                              (tag, fname))
         elif count > m:
             raise InvalidFile('Found a duplicated tag %r in %s' %
-                              (tags[idx], fname))
-    return sitecol, tags, gmfa
+                              (tag, fname))
+    return sitecol, tags, gmf_by_imt.T
 
 
 def get_mesh_hcurves(oqparam):
