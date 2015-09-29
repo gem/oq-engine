@@ -281,6 +281,9 @@ class HazardCalculator(BaseCalculator):
         extracted from the exposure.
         """
         inputs = self.oqparam.inputs
+        if 'gmfs' in inputs:
+            self.gmfs = get_gmfs(self)
+            haz_sitecol = self.sitecol
         if 'exposure' in inputs:
             logging.info('Reading the exposure')
             with self.monitor('reading exposure', autoflush=True):
@@ -294,7 +297,7 @@ class HazardCalculator(BaseCalculator):
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
             elif 'gmfs' in inputs:
-                haz_sitecol = readinput.get_site_collection(self.oqparam)
+                pass  # haz_sitecol is already defined
             # TODO: think about the case hazard_curves in inputs
             else:
                 haz_sitecol = None
@@ -506,9 +509,14 @@ def read_gmfs_from_csv(calc):
     :returns: riskinputs
     """
     logging.info('Reading gmfs from file')
-    sitecol = calc.sitecol.complete
+    try:
+        sitecol = calc.sitecol.complete
+    except KeyError:
+        sitecol = None
     calc.sitecol, calc.tags, gmfs_by_imt = readinput.get_gmfs(
         calc.oqparam, sitecol)
+    calc.save_params()  # save number_of_ground_motion_fields and sites
+
     # reduce the gmfs matrices to the filtered sites
     for imt in calc.oqparam.imtls:
         gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]

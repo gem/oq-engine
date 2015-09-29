@@ -74,7 +74,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        self.riskinputs = self.build_riskinputs(base.get_gmfs(self))
+        self.riskinputs = self.build_riskinputs(self.gmfs)
 
     def post_execute(self, result):
         self.damages_by_key = result
