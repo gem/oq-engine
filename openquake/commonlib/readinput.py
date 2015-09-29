@@ -973,19 +973,23 @@ def get_scenario_from_nrml(oqparam, fname):
     m = len(imts)
     counts = collections.Counter()
     for i, gmf in enumerate(gmfset):
+        if len(gmf) != n:  # there must be one node per site
+            raise InvalidFile('Expected %d sites, got %d in %s, line %d' % (
+                n, len(gmf), fname, gmf.lineno))
         counts[gmf['ruptureId']] += 1
         imt = gmf['IMT']
         if imt == 'SA':
             imt = 'SA(%s)' % gmf['saPeriod']
-        if len(gmf) != n:
-            raise InvalidFile('Expected %d sites, got %d in %s, line %d' % (
-                n, len(gmf), fname, gmf.lineno))
         for j, lon, lat, node in zip(
                 range(n), sitecol.lons, sitecol.lats, gmf):
             if (node['lon'], node['lat']) != (lon, lat):
                 raise InvalidFile('The site mesh is not ordered in %s, line %d'
                                   % (fname, node.lineno))
-            gmf_by_imt[imt][i, j] = node['gmv']
+            try:
+                gmf_by_imt[imt][i % e, j] = node['gmv']
+            except IndexError:
+                raise InvalidFile('Something wrong in %s, line %d' %
+                                  (fname, node.lineno))
     for tag, count in counts.items():
         if count < m:
             raise InvalidFile('Found a missing tag %r in %s' %

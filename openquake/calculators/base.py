@@ -506,11 +506,7 @@ def read_gmfs_from_csv(calc):
     :returns: riskinputs
     """
     logging.info('Reading gmfs from file')
-    try:
-        sitecol = calc.sitecol.complete
-    except KeyError:
-        sitecol = readinput.get_site_collection(calc.oqparam).complete
-
+    sitecol = calc.sitecol.complete
     calc.sitecol, calc.tags, gmfs_by_imt = readinput.get_gmfs(
         calc.oqparam, sitecol)
     # reduce the gmfs matrices to the filtered sites
