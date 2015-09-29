@@ -37,19 +37,19 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @calculators.add('event_based')
-class EBRCalculator(event_based.EventBasedCalculator):
+class EBCalculator(event_based.EventBasedCalculator):
     """
-    Smaller Event Based risk calculator for the event loss table.
+    Event Based hazard calculator.
     """
     def __init__(self, job):
         self.job = job
         oq = job.get_oqparam()
-        monitor = EnginePerformanceMonitor('ebr', job.id)
+        monitor = EnginePerformanceMonitor('event_based', job.id)
         calc_id = engine.get_calc_id(job.id)
-        super(EBRCalculator, self).__init__(oq, monitor, calc_id)
+        super(EBCalculator, self).__init__(oq, monitor, calc_id)
         job.ds_calc_dir = self.datastore.calc_dir
         job.save()
 
     def clean_up(self):
         engine.expose_outputs(self.datastore, self.job)
-        super(EBRCalculator, self).clean_up()
+        super(EBCalculator, self).clean_up()
