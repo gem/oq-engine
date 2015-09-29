@@ -120,6 +120,7 @@ class RiskModel(collections.Mapping):
         self.curve_builders = []
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
+        self.taxonomies = []  # populated in get_risk_model
 
     def make_curve_builders(self, oqparam):
         """

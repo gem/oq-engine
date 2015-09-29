@@ -604,12 +604,15 @@ def get_risk_model(oqparam):
                 vulnerability_functions=vfs)
 
     riskmodel.make_curve_builders(oqparam)
-    for workflow in risk_models.values():
+    taxonomies = set()
+    for imt_taxo, workflow in risk_models.items():
+        taxonomies.add(imt_taxo[1])
         workflow.riskmodel = riskmodel
         # save the number of nonzero coefficients of variation
         for vf in workflow.risk_functions.values():
             if hasattr(vf, 'covs') and vf.covs.any():
                 riskmodel.covs += 1
+    riskmodel.taxonomies = sorted(taxonomies)
     return riskmodel
 
 # ########################### exposure ############################ #

@@ -19,6 +19,7 @@
 import os
 import csv
 import operator
+import itertools
 import collections
 
 import numpy
@@ -227,47 +228,60 @@ def export_agg_losses(ekey, dstore):
 
 # TODO: the export is doing too much; probably we should store
 # a better data structure
-@export.add(('damages_by_key', 'xml'))
+@export.add(('dmg_by_asset', 'xml'),
+            ('dmg_by_taxon', 'xml'),
+            ('dmg_total', 'xml'))
 def export_damage(ekey, dstore):
     oqparam = OqParam.from_(dstore.attrs)
     riskmodel = dstore['riskmodel']
     rlzs = dstore['rlzs_assoc'].realizations
-    damages_by_key = dstore['damages_by_key']
+    dmg_by_asset = dstore['avg_damage']  # shape (N, L, R)
+    dmg_by_taxon = dstore['dmg_by_taxon']  # shape (T, L, R)
+    dmg_total = dstore['dmg_total']  # shape (L, R)
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
-    assetno = dict((ref, i) for i, ref in enumerate(assetcol['asset_ref']))
+    taxonomies = dstore['taxonomies']
     dmg_states = [DmgState(s, i)
                   for i, s in enumerate(riskmodel.damage_states)]
+    N, L, R = dmg_by_asset.shape
+    T, L, R = dmg_by_taxon.shape
     fnames = []
-    for i in sorted(damages_by_key):
-        rlz = rlzs[i]
-        result = damages_by_key[i]
-        dd_taxo = []
-        dd_asset = []
-        shape = oqparam.number_of_ground_motion_fields, len(dmg_states)
-        totals = numpy.zeros(shape)  # R x D matrix
-        for (key_type, key), values in result.items():
-            if key_type == 'taxonomy':
-                # values are fractions, R x D matrix
-                totals += values
-                means, stds = scientific.mean_std(values)
-                for dmg_state, mean, std in zip(dmg_states, means, stds):
-                    dd_taxo.append(
-                        DmgDistPerTaxonomy(key, dmg_state, mean, std))
-            elif key_type == 'asset':
-                means, stddevs = values
-                point = sitemesh[assetcol[assetno[key]]['site_id']]
-                site = Site(point['lon'], point['lat'])
-                for dmg_state, mean, std in zip(dmg_states, means, stddevs):
-                    dd_asset.append(
-                        DmgDistPerAsset(
-                            ExposureData(key, site), dmg_state, mean, std))
-        dd_total = []
-        for dmg_state, total in zip(dmg_states, totals.T):
-            mean, std = scientific.mean_std(total)
-            dd_total.append(DmgDistTotal(dmg_state, mean, std))
 
-        suffix = '' if rlz.uid == '*' else '-gsimltp_%s' % rlz.uid
+    for l, r in itertools.product(range(L), range(R)):
+        lt = riskmodel.loss_types[l]
+        rlz = rlzs[r]
+        suffix = '-gsimltp_%s_%s' % (rlz.uid, lt)
+
+        dd_taxo = []
+        for t in range(T):
+            dist = dmg_by_taxon[t, l, r]
+            for dmg_state in dmg_states:
+                ds = dmg_state.dmg_state
+                dd_taxo.append(
+                    DmgDistPerTaxonomy(
+                        taxonomies[t], dmg_state,
+                        dist['mean'][ds], dist['stddev'][ds]))
+
+        dd_asset = []
+        for n in range(N):
+            aref = assetcol[n]['asset_ref']
+            dist = dmg_by_asset[n, l, r]
+            point = sitemesh[assetcol[n]['site_id']]
+            site = Site(point['lon'], point['lat'])
+            for dmg_state in dmg_states:
+                ds = dmg_state.dmg_state
+                dd_asset.append(
+                    DmgDistPerAsset(
+                        ExposureData(aref, site), dmg_state, 
+                        dist['mean'][ds], dist['stddev'][ds]))
+
+        dd_total = []
+        for dmg_state in dmg_states:
+            dist = dmg_total[l, r]
+            ds = dmg_state.dmg_state
+            dd_total.append(DmgDistTotal(
+                dmg_state, dist['mean'][ds], dist['stddev'][ds]))
+
         f1 = export_dmg_xml(('dmg_dist_per_asset', 'xml'), oqparam.export_dir,
                             dmg_states, dd_asset, suffix)
         f2 = export_dmg_xml(('dmg_dist_per_taxonomy', 'xml'),
