@@ -28,7 +28,41 @@ from openquake.calculators import base
 
 
 def build_dict(shape, factory):
+    """
+    Build a dictionary key -> factory(), where the key is a multi-index
+    obtained from indices of the given shape. For instance
+
+    >>> sorted(build_dict((2, 2), list).items())
+    [((0, 0), []), ((0, 1), []), ((1, 0), []), ((1, 1), [])]
+    """
     return {k: factory() for k in itertools.product(*map(range, shape))}
+
+
+def dmg_by_taxon(agg_damage, stat_dt):
+    """
+    :param agg_damage: array of shape (T, L, R, E, D)
+    :param stat_dt: numpy dtype for statistical outputs
+    :returns: array of shape (T, L, R) with records of type stat_dt
+    """
+    T, L, R, E, D = agg_damage.shape
+    out = numpy.zeros((T, L, R), stat_dt)
+    for t, l, r in itertools.product(range(T), range(L), range(R)):
+        out[t, l, r] = scientific.mean_std(agg_damage[t, l, r])
+    return out
+
+
+def dmg_total(agg_damage, stat_dt):
+    """
+    :param agg_damage: array of shape (T, L, R, E, D)
+    :param stat_dt: numpy dtype for statistical outputs
+    :returns: array of shape (L, R) with records of type stat_dt
+    """
+    T, L, R, E, D = agg_damage.shape
+    total = agg_damage.sum(axis=0)
+    out = numpy.zeros((L, R), stat_dt)
+    for l, r in itertools.product(range(L), range(R)):
+        out[l, r] = scientific.mean_std(total[l, r])
+    return out
 
 
 @parallel.litetask
@@ -70,23 +104,6 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     return result
 
 
-def dmg_by_taxon(agg_damage, stat_dt):
-    T, L, R, E, D = agg_damage.shape
-    out = numpy.zeros((T, L, R), stat_dt)
-    for t, l, r in itertools.product(range(T), range(L), range(R)):
-        out[t, l, r] = scientific.mean_std(agg_damage[t, l, r])
-    return out
-
-
-def dmg_total(agg_damage, stat_dt):
-    T, L, R, E, D = agg_damage.shape
-    total = agg_damage.sum(axis=0)
-    out = numpy.zeros((L, R), stat_dt)
-    for l, r in itertools.product(range(L), range(R)):
-        out[l, r] = scientific.mean_std(total[l, r])
-    return out
-
-
 @base.calculators.add('scenario_damage')
 class ScenarioDamageCalculator(base.RiskCalculator):
     """
@@ -104,6 +121,10 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.monitor.taxonomies = sorted(self.taxonomies)
 
     def post_execute(self, result):
+        """
+        Compute stats for the aggregated distributions and save
+        the results on the datastore.
+        """
         dstates = self.riskmodel.damage_states
         L = len(self.riskmodel.loss_types)
         R = len(self.rlzs_assoc.realizations)

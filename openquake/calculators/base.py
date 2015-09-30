@@ -479,7 +479,7 @@ def get_gmfs(calc):
     :returns: a dictionary of gmfs
     """
     if 'gmfs' in calc.oqparam.inputs:  # from file
-        return read_gmfs_from_csv(calc)
+        return read_gmfs_from_file(calc)
     # else from rupture
     gmf = calc.datastore['gmfs/col00'].value
     # NB: if the hazard site collection has N sites, the hazard
@@ -506,7 +506,7 @@ def get_gmfs(calc):
     return gmfs
 
 
-def read_gmfs_from_csv(calc):
+def read_gmfs_from_file(calc):
     """
     :param calc: a ScenarioDamage or ScenarioRisk calculator
     :returns: riskinputs

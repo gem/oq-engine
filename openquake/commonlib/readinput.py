@@ -968,35 +968,35 @@ def get_scenario_from_nrml(oqparam, fname):
     imt_dt = numpy.dtype([(imt, float) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet
     tags, oqparam.sites = _extract_tags_sites(gmfset)
-    oqparam.number_of_ground_motion_fields = e = len(tags)
+    oqparam.number_of_ground_motion_fields = num_events = len(tags)
     sitecol = get_site_collection(oqparam)
-    n = len(oqparam.sites)
-    gmf_by_imt = numpy.zeros((e, n), imt_dt)
-    m = len(imts)
+    num_sites = len(oqparam.sites)
+    gmf_by_imt = numpy.zeros((num_events, num_sites), imt_dt)
+    num_imts = len(imts)
     counts = collections.Counter()
     for i, gmf in enumerate(gmfset):
-        if len(gmf) != n:  # there must be one node per site
+        if len(gmf) != num_sites:  # there must be one node per site
             raise InvalidFile('Expected %d sites, got %d in %s, line %d' % (
-                n, len(gmf), fname, gmf.lineno))
+                num_sites, len(gmf), fname, gmf.lineno))
         counts[gmf['ruptureId']] += 1
         imt = gmf['IMT']
         if imt == 'SA':
             imt = 'SA(%s)' % gmf['saPeriod']
-        for j, lon, lat, node in zip(
-                range(n), sitecol.lons, sitecol.lats, gmf):
+        for site_idx, lon, lat, node in zip(
+                range(num_sites), sitecol.lons, sitecol.lats, gmf):
             if (node['lon'], node['lat']) != (lon, lat):
                 raise InvalidFile('The site mesh is not ordered in %s, line %d'
                                   % (fname, node.lineno))
             try:
-                gmf_by_imt[imt][i % e, j] = node['gmv']
+                gmf_by_imt[imt][i % num_events, site_idx] = node['gmv']
             except IndexError:
                 raise InvalidFile('Something wrong in %s, line %d' %
                                   (fname, node.lineno))
     for tag, count in counts.items():
-        if count < m:
+        if count < num_imts:
             raise InvalidFile('Found a missing tag %r in %s' %
                               (tag, fname))
-        elif count > m:
+        elif count > num_imts:
             raise InvalidFile('Found a duplicated tag %r in %s' %
                               (tag, fname))
     return sitecol, tags, gmf_by_imt.T
