@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Introduced HDF5 outputs for the scenario_damage calculator
   * Added the ability to read scenario NRML files
   * Silenced an ElementTree warning
   * Added a test with multiple assets on the same site
