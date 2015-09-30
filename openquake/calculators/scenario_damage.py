@@ -21,7 +21,7 @@ import logging
 import itertools
 import numpy
 
-from openquake.commonlib import parallel, datastore
+from openquake.commonlib import parallel
 from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
 from openquake.calculators import base
@@ -54,7 +54,7 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     L = 1
     R = len(rlzs_assoc.realizations)
     # D = len(riskmodel.damage_states)
-    taxo2idx = {taxo: i for i, taxo in enumerate(riskmodel.taxonomies)}
+    taxo2idx = {taxo: i for i, taxo in enumerate(monitor.taxonomies)}
     lt2idx = {lt: i for i, lt in enumerate(riskmodel.loss_types)}
     result = build_dict((L, R), AccumDict)
     for out_by_rlz in riskmodel.gen_outputs(
@@ -101,6 +101,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
         self.riskinputs = self.build_riskinputs(self.gmfs)
+        self.monitor.taxonomies = sorted(self.taxonomies)
 
     def post_execute(self, result):
         dstates = self.riskmodel.damage_states
@@ -109,7 +110,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         D = len(dstates)
         E = self.oqparam.number_of_ground_motion_fields
         N = len(self.assetcol)
-        T = len(self.riskmodel.taxonomies)
+        T = len(self.monitor.taxonomies)
 
         dt = numpy.dtype([(ds, numpy.float64) for ds in dstates])
         stat_dt = numpy.dtype([('mean', dt), ('stddev', dt)])
