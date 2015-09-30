@@ -28,13 +28,12 @@ import numpy
 from shapely import wkt, geometry
 
 from openquake.hazardlib import geo, site, correlation, imt
-from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import workflows, riskinput
 
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
-from openquake.commonlib.oqvalidation import vulnerability_files
+from openquake.commonlib.oqvalidation import get_risk_files
 from openquake.commonlib.riskmodels import \
     get_fragility_functions, get_vfs
 from openquake.baselib.general import groupby, AccumDict, writetmp
@@ -683,7 +682,7 @@ def get_exposure(oqparam):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = exposure.area['type']
 
-    all_cost_types = set(vulnerability_files(oqparam.inputs))
+    all_cost_types = set(get_risk_files(oqparam.inputs))
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
