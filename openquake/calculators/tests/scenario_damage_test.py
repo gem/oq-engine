@@ -11,7 +11,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def assert_ok(self, pkg, job_ini):
         test_dir = os.path.dirname(pkg.__file__)
         out = self.run_calc(test_dir, job_ini, exports='xml')
-        got = out['damages_by_key', 'xml']
+        got = (out['dmg_by_asset', 'xml'] +
+               out['dmg_by_taxon', 'xml'] +
+               out['dmg_total', 'xml'])
         expected_dir = os.path.join(test_dir, 'expected')
         expected = sorted(f for f in os.listdir(expected_dir)
                           if f.endswith('.xml'))
@@ -29,7 +31,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         test_dir = os.path.dirname(case_1c.__file__)
         out = self.run_calc(
             test_dir, 'job_haz.ini,job_risk.ini', exports='xml')
-        total = out['damages_by_key', 'xml'][3]
+        [total] = out['dmg_total', 'xml']
         self.assertEqualFiles('expected/dmg_dist_total.xml', total)
 
     @attr('qa', 'risk', 'scenario_damage')

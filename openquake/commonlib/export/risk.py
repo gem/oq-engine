@@ -231,7 +231,7 @@ def export_damage(ekey, dstore):
     oqparam = OqParam.from_(dstore.attrs)
     riskmodel = dstore['riskmodel']
     rlzs = dstore['rlzs_assoc'].realizations
-    dmg_by_asset = dstore['avg_damage']  # shape (N, L, R)
+    dmg_by_asset = dstore['dmg_by_asset']  # shape (N, L, R)
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
     dmg_states = [DmgState(s, i)

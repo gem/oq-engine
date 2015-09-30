@@ -119,6 +119,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         for (l, r), res in result.items():
             for keytype, key in res:
                 arr[keytype][key, l, r] = res[keytype, key]
-        self.datastore['avg_damage'] = arr['asset']
+        self.datastore['dmg_by_asset'] = arr['asset']
         self.datastore['dmg_by_taxon'] = dmg_by_taxon(arr['taxon'], stat_dt)
         self.datastore['dmg_total'] = dmg_total(arr['taxon'], stat_dt)
