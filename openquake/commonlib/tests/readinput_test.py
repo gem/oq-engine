@@ -26,10 +26,11 @@ from io import BytesIO, StringIO
 
 from numpy.testing import assert_allclose
 
-from openquake.commonlib import readinput, valid
+from openquake.commonlib import readinput, valid, writers
 from openquake.baselib import general
 
 TMP = tempfile.gettempdir()
+DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
 class ParseConfigTestCase(unittest.TestCase):
@@ -539,67 +540,118 @@ class TestReadGmfTestCase(unittest.TestCase):
         self.sitecol = readinput.get_site_collection(self.oqparam)
 
     def test_gmf_ok(self):
-        self.oqparam.inputs['gmfs'] = general.writetmp('''\
+        fname = general.writetmp('''\
 col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
 col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 3.92602000E-01
 ''')
-        gmfs = readinput.get_gmfs(self.oqparam, self.sitecol)
+        _, _, gmfs = readinput.get_gmfs_from_csv(
+            self.oqparam, self.sitecol, fname)
         gmvs1, gmvs2 = gmfs['PGA']
         assert_allclose(gmvs1, [0.305128, 0.267031, 0.159434])
         assert_allclose(gmvs2, [0.604032, 0.334878, 0.392602])
 
     def test_missing_indices_are_ok(self):
-        self.oqparam.inputs['gmfs'] = general.writetmp('''\
+        fname = general.writetmp('''\
 col=00|ses=0001|src=test|rup=001-00,,1.59434000E-01 3.92602000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-02,0,2.67031000E-01
 ''')
-        gmfs = readinput.get_gmfs(self.oqparam, self.sitecol)
+        _, _, gmfs = readinput.get_gmfs_from_csv(
+            self.oqparam, self.sitecol, fname)
         gmvs1, gmvs2 = gmfs['PGA']
         assert_allclose(gmvs1, [0.159434, 0.305128, 0.267031])
         assert_allclose(gmvs2, [0.392602, 0.604032, 0.])
 
     def test_negative_gmf(self):
-        self.oqparam.inputs['gmfs'] = general.writetmp('''\
+        fname = general.writetmp('''\
 col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
 col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 -3.92602000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs(self.oqparam, self.sitecol)
+            readinput.get_gmfs_from_csv(self.oqparam, self.sitecol, fname)
 
     def test_missing_line(self):
-        self.oqparam.inputs['gmfs'] = general.writetmp('''\
+        fname = general.writetmp('''\
 col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs(self.oqparam, self.sitecol)
+            readinput.get_gmfs_from_csv(self.oqparam, self.sitecol, fname)
 
     def test_not_ordered_tags(self):
-        self.oqparam.inputs['gmfs'] = general.writetmp('''\
+        fname = general.writetmp('''\
 col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 3.92602000E-01
 col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs(self.oqparam, self.sitecol)
+            readinput.get_gmfs_from_csv(self.oqparam, self.sitecol, fname)
 
     def test_negative_indices(self):
-        self.oqparam.inputs['gmfs'] = general.writetmp('''\
+        fname = general.writetmp('''\
 col=00|ses=0001|src=test|rup=001-00,0 -1,1.59434000E-01 3.92602000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-02,0 1,2.67031000E-01 3.34878000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs(self.oqparam, self.sitecol)
+            readinput.get_gmfs_from_csv(self.oqparam, self.sitecol, fname)
 
     def test_missing_bad_indices(self):
-        self.oqparam.inputs['gmfs'] = general.writetmp('''\
+        fname = general.writetmp('''\
 col=00|ses=0001|src=test|rup=001-00,,1.59434000E-01 3.92602000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-02,X,2.67031000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs(self.oqparam, self.sitecol)
+            readinput.get_gmfs_from_csv(self.oqparam, self.sitecol, fname)
+
+
+class TestLoadGmfTestCase(unittest.TestCase):
+    """
+    Read the GMF from a NRML file
+    """
+    def setUp(self):
+        self.oqparam = mock.Mock()
+        self.oqparam.base_path = '/'
+        self.oqparam.inputs = {}
+        self.oqparam.imtls = {'PGA': None, 'PGV': None}
+        self.oqparam.number_of_ground_motion_fields = 5
+
+    def test_ok(self):
+        fname = os.path.join(DATADIR,  'gmfdata.xml')
+        sitecol, tags, gmfa = readinput.get_scenario_from_nrml(
+            self.oqparam, fname)
+        coords = zip(sitecol.mesh.lons, sitecol.mesh.lats)
+        self.assertEqual(writers.write_csv(StringIO(), coords), '''\
+0.00000000E+00,0.00000000E+00
+0.00000000E+00,1.00000000E-01
+0.00000000E+00,2.00000000E-01''')
+        self.assertEqual('\n'.join(tags), '''\
+scenario-0000000000
+scenario-0000000001
+scenario-0000000002
+scenario-0000000003
+scenario-0000000004''')
+        self.assertEqual(
+            writers.write_csv(StringIO(), gmfa), '''\
+PGV:float64:,PGA:float64:
+6.82495715E-01 3.65662735E-01 8.70083359E-01 3.27929201E-01 6.96868642E-01,6.82495715E-01 3.65662735E-01 8.70083359E-01 3.27929201E-01 6.96868642E-01
+1.27089832E-01 2.56181252E-01 2.10638411E-01 2.35755152E-01 2.58140526E-01,1.27089832E-01 2.56181252E-01 2.10638411E-01 2.35755152E-01 2.58140526E-01
+1.60309678E-01 1.10685275E-01 2.23217460E-01 1.78114255E-01 1.35164914E-01,1.60309678E-01 1.10685275E-01 2.23217460E-01 1.78114255E-01 1.35164914E-01''')
+
+    def test_err(self):
+        # missing ruptureId
+        fname = os.path.join(DATADIR,  'gmfdata_err.xml')
+        with self.assertRaises(readinput.InvalidFile) as ctx:
+            readinput.get_scenario_from_nrml(self.oqparam, fname)
+        self.assertIn("Found a missing tag 'scenario-0000000001'",
+                      str(ctx.exception))
+
+    def test_err2(self):
+        # wrong mesh
+        fname = os.path.join(DATADIR,  'gmfdata_err2.xml')
+        with self.assertRaises(readinput.InvalidFile) as ctx:
+            readinput.get_scenario_from_nrml(self.oqparam, fname)
+        self.assertIn("Expected 4 sites, got 3 in", str(ctx.exception))

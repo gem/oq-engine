@@ -281,6 +281,13 @@ class HazardCalculator(BaseCalculator):
         extracted from the exposure.
         """
         inputs = self.oqparam.inputs
+
+        if 'gmfs' in inputs and self.oqparam.sites:
+            haz_sitecol = self.sitecol = readinput.get_site_collection(
+                self.oqparam)
+        if 'scenario_' in self.oqparam.calculation_mode:
+            self.gmfs = get_gmfs(self)
+            haz_sitecol = self.sitecol
         if 'exposure' in inputs:
             logging.info('Reading the exposure')
             with self.monitor('reading exposure', autoflush=True):
@@ -294,7 +301,7 @@ class HazardCalculator(BaseCalculator):
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
             elif 'gmfs' in inputs:
-                haz_sitecol = readinput.get_site_collection(self.oqparam)
+                pass  # haz_sitecol is already defined
             # TODO: think about the case hazard_curves in inputs
             else:
                 haz_sitecol = None
@@ -473,7 +480,7 @@ def get_gmfs(calc):
     :returns: a dictionary of gmfs
     """
     if 'gmfs' in calc.oqparam.inputs:  # from file
-        return read_gmfs_from_csv(calc)
+        return read_gmfs_from_file(calc)
     # else from rupture
     gmf = calc.datastore['gmfs/col00'].value
     # NB: if the hazard site collection has N sites, the hazard
@@ -500,25 +507,27 @@ def get_gmfs(calc):
     return gmfs
 
 
-def read_gmfs_from_csv(calc):
+def read_gmfs_from_file(calc):
     """
     :param calc: a ScenarioDamage or ScenarioRisk calculator
     :returns: riskinputs
     """
-    logging.info('Reading hazard curves from CSV')
-    gmfs_by_imt = readinput.get_gmfs(calc.oqparam, calc.sitecol.complete)
+    logging.info('Reading gmfs from file')
+    try:
+        sitecol = calc.sitecol.complete
+    except KeyError:
+        sitecol = None
+    calc.sitecol, calc.tags, gmfs_by_imt = readinput.get_gmfs(
+        calc.oqparam, sitecol)
+    calc.save_params()  # save number_of_ground_motion_fields and sites
 
     # reduce the gmfs matrices to the filtered sites
     for imt in calc.oqparam.imtls:
         gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]
 
-    num_assets = calc.count_assets()
-    num_sites = len(calc.sitecol)
-    logging.info('Associated %d assets to %d sites', num_assets, num_sites)
-
     logging.info('Preparing the risk input')
     fake_rlz = logictree.Realization(
-        value=('FromCsv',), weight=1, lt_path=('',),
+        value=('FromFile',), weight=1, lt_path=('',),
         ordinal=0, lt_uid=('*',))
     calc.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
-    return {(0, 'FromCsv'): gmfs_by_imt}
+    return {(0, 'FromFile'): gmfs_by_imt}

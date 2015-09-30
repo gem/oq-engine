@@ -77,9 +77,9 @@ class ClassicalDamageCalculator(base.RiskCalculator):
 
         logging.info('Preparing the risk input')
         self.riskinputs = self.build_riskinputs(
-            {(0, 'FromCsv'): hcurves_by_imt}, eps_dict={})
+            {(0, 'FromFile'): hcurves_by_imt}, eps_dict={})
         fake_rlz = logictree.Realization(
-            value=('FromCsv',), weight=1, lt_path=('',),
+            value=('FromFile',), weight=1, lt_path=('',),
             ordinal=0, lt_uid=('*',))
         self.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
 

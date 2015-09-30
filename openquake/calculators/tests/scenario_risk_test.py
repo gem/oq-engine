@@ -3,7 +3,7 @@ import unittest
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario_risk import (
-    case_1g, case_3, occupants, case_6a)
+    case_1, case_2, case_1g, case_3, occupants, case_6a)
 
 from openquake.calculators.tests import CalculatorTestCase
 
@@ -12,11 +12,13 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_1(self):
-        raise unittest.SkipTest
+        self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
+        # TODO: add some check
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_2(self):
-        raise unittest.SkipTest
+        self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')
+        # TODO: add some check
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_3(self):
