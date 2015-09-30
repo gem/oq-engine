@@ -42,15 +42,6 @@ $ cd oq-risklib
 $ python setup.py install
 ```
 
-### Set the PYTHONPATH and the PATH
-
-The PYTHONPATH must be set; also the system PATH must be fix to include the oq-lite entry point
-```bash
-$ echo 'export PYTHONPATH="$HOME/GEM/oq-hazardlib:$HOME/GEM/oq-risklib:$PYTHONPATH"' >> $HOME/.profile
-$ echo 'export PATH="$HOME/GEM/oq-risklib/bin:$PATH"' >> $HOME/.profile
-$ source $HOME/.profile
-```
-
 ### Notes
 
 Using Hazardlib and Risklib (and oq-lite) from sources is not supported yet. It can be possible if you don't expect to use `oq-lite` and you don't need the speedups.
