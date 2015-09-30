@@ -1,5 +1,5 @@
 # Running OpenQuake Engine Lite on Mac OS X
-This page describes the steps necessary to run the development version of the OpenQuake Engine Lite (**oq-lite**), **oq-hazardlib** and **oq-risklib** on MacOS X. The recommended method is using [MacPorts](https://www.macports.org/) on MacOS X 10.10 Yosemite. 
+This page describes the steps necessary to run the development version of the OpenQuake Engine Lite (**oq-lite**), **oq-hazardlib** and **oq-risklib** on MacOS X. The recommended way is using [MacPorts](https://www.macports.org/) on MacOS X 10.10 Yosemite. Installation on Mac OS X is still experimental and provided 'as it is' with no warranty. 
 
 ## Install primary dependencies
 First of all you need to have Xcode installed. It can be downloaded from the [AppStore](https://itunes.apple.com/us/app/xcode/id497799835?ls=1&mt=12). [MacPorts](https://www.macports.org/) needs also to be installed; you can follow the instructions on their website: https://www.macports.org/install.php.
