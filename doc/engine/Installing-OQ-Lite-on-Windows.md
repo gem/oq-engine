@@ -1,7 +1,7 @@
 # Running OpenQuake Engine Lite on Windows
 This page describes the steps necessary to run the development version of the OpenQuake Engine Lite (**oq-lite**), **oq-hazardlib** and **oq-risklib** on Windows. Installation on Windows is still experimental and provided 'as it is' with no warranty.
 
-The supported way is using MiniGW and [Python(X,Y)](https://python-xy.github.io/) 2.7.9 on Windows 7 to 10. Python(X,Y) 2.7.10 is currently unsupported since it's unable to compile the hazardlib speedups. 
+The supported way is using MiniGW and [Python(X,Y)](https://python-xy.github.io/) 2.7.9 on Windows 7 to 10. Python(X,Y) 2.7.10 is currently unsupported since it's unable to compile the Hazardlib speedups. 
 
 ## Install primary dependencies
 First of all you need to have GIT installed. It can be downloaded from the [official GIT website](https://git-scm.com/download).
@@ -14,7 +14,7 @@ During the setup make sure you have selected also **Cython** and **GDAL** packag
 Shapely isn't provided by the main Python(X,Y) installer and needs to be downloaded and installed separately from http://sourceforge.net/projects/python-xy/files/plugins/shapely-1.5.9-7_py27.exe/download.
 
 ### Hazardlib speedups
-To be able to compile the hazardlib speedup (and then to install the Hazardlib) you'll need a **GCC** compiler. GCC is provided by the Python(X,Y) MinGW package. Download and install it from here http://sourceforge.net/projects/python-xy/files/plugins/mingw-4.8.1-3.exe/download.
+To be able to compile the Hazardlib speedup (and then to install the Hazardlib) you'll need a **GCC** compiler. GCC is provided by the Python(X,Y) MinGW package. Download and install it from here http://sourceforge.net/projects/python-xy/files/plugins/mingw-4.8.1-3.exe/download.
 
 
 ## Clone the OpenQuake repos and install them
