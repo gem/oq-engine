@@ -186,11 +186,13 @@ like Ubuntu 15.04. It has less dependencies than it used to have in
 the past and it is easier to install, so it should be relatively
 simple to install it on any modern Linux distribution.
 
-While the engine is not supported on Windows and Mac OS, we are
+While the engine is not supported on Windows and Mac OS X, we are
 happy to report that the underlying libraries and the
 `oq-lite` command-line tool run just fine. We do not offer
 any automatic tool to perform the installation, but there is
-a guide to help you to install the necessary dependencies.
+a [guide for Windows](Installing-OQ-Lite-on-Windows.md) and
+a [guide for Mac OS X](Installing-OQ-Lite-on-MacOS.md) to help you
+to install the necessary dependencies.
 
 Bug fixes and changes with respect to OpenQuake 1.4
 ----------------------------------------------------
