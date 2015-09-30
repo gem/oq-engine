@@ -26,7 +26,7 @@ $ mkdir $HOME/GEM && cd $HOME/GEM
 $ git clone --depth=1 https://github.com/gem/oq-hazardlib.git
 $ git clone --depth=1 https://github.com/gem/oq-risklib.git
 ```
-this example uses the Bash console provided by MinGW and the GIT windows packages. `cmd` can also be used (some commands may differ). The `--depth` flag will make a 'shallow clone', reducing the size of the downloaded files.
+this example uses the Bash console provided by MinGW and the GIT Windows packages. `cmd` can also be used (some commands may differ). The `--depth` flag will make a 'shallow clone', reducing the size of the downloaded files.
 
 ### Install Hazardlib
 
