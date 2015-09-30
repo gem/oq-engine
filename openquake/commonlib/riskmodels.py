@@ -231,7 +231,8 @@ def get_imtls_from_vulnerabilities(inputs):
     # NB: different loss types may have different IMLs for the same IMT
     # in that case we merge the IMLs
     imtls = {}
-    for loss_type, fname in get_risk_files(inputs).items():
+    file_type, file_by_ct = get_risk_files(inputs)
+    for loss_type, fname in file_by_ct.items():
         for (imt, taxonomy), vf in get_vulnerability_functions(fname).items():
             imls = list(vf.imls)
             if imt in imtls and imtls[imt] != imls:
@@ -241,6 +242,26 @@ def get_imtls_from_vulnerabilities(inputs):
                 imtls[imt] = sorted(set(imls + imtls[imt]))
             else:
                 imtls[imt] = imls
+    return imtls
+
+
+def get_imtls_from_fragilities(ffs):
+    """
+    :param inputs:
+        a dictionary {losstype_vulnerability: fname}
+    :returns:
+        a dictionary imt_str -> imls
+    """
+    # NB: different loss types may have different IMLs for the same IMT
+    # in that case we merge the IMLs
+    imtls = {}
+    import pdb; pdb.set_trace()
+    for (imt, taxonomy), ff in ffs.items():
+        imls = list(ff.imls)
+        if imt in imtls and imtls[imt] != imls:
+            imtls[imt] = sorted(set(imls + imtls[imt]))
+        else:
+            imtls[imt] = imls
     return imtls
 
 
