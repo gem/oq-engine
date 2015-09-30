@@ -94,4 +94,4 @@ See the output with hdfview /Users/user/oqdata/calc_1/output.hdf5
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
   * Subscribe to the developer mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-dev
-  *   * Contact us on IRC: irc.freenode.net, channel #openquake
+  * Contact us on IRC: irc.freenode.net, channel #openquake
