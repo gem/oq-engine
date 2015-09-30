@@ -7,7 +7,8 @@ The supported way is using MiniGW and [Python(X,Y)](https://python-xy.github.io/
 First of all you need to have GIT installed. It can be downloaded from the [official GIT website](https://git-scm.com/download).
 
 ### Python(X,Y)
-Download Python(X,Y) 2.7.9 from the University of Kent mirror and install it: http://www.mirrorservice.org/sites/pythonxy.com/Python(x,y)-2.7.9.0.exe
+Download Python(X,Y) 2.7.9 from the University of Kent mirror and install it: http://www.mirrorservice.org/sites/pythonxy.com/Python(x,y)-2.7.9.0.exe.
+
 During the setup make sure you have selected also **Cython** and **GDAL** packages.
 
 ### Shapely
