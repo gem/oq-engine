@@ -18,10 +18,9 @@ Michele Simionato       December 2012
 Luigi Panzeri           February 2013
 Marco Pagani            July 2013
 Graeme Weatherill       September 2013
-Yenshin Chen            November 2013
+Yen-Shin Chen           November 2013
 Daniele Vigano          March 2014
 Julio Garcia            March 2014
-Yen-Shin Chen           March 2015
 Robin Gee               September 2015
 
 Research
