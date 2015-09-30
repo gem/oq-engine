@@ -445,8 +445,7 @@ class RiskCalculator(HazardCalculator):
         HazardCalculator.pre_execute(self)
         self.riskmodel = readinput.get_risk_model(self.oqparam)
         if hasattr(self, 'exposure'):
-            missing = self.exposure.taxonomies - set(
-                self.riskmodel.get_taxonomies())
+            missing = self.exposure.taxonomies - set(self.riskmodel.taxonomies)
             if missing:
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
