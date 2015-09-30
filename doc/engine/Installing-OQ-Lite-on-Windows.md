@@ -1,5 +1,5 @@
 # Running OpenQuake Engine Lite on Windows
-This page describes the steps necessary to run the development version of the OpenQuake Engine Lite (**oq-lite**), **oq-hazardlib** and **oq-risklib** on Windows. Installation on Windows is still experimental and provided 'as it is' with no warranty.
+This page describes the steps necessary to run the development version of the OpenQuake Engine Lite (**oq-lite**), **oq-hazardlib** and **oq-risklib** on Windows. Installation on Windows is still experimental and provided 'as is' with no warranty.
 
 The recommended way is using MiniGW and [Python(X,Y)](https://python-xy.github.io/) 2.7.9 on Windows 7 to 10. Python(X,Y) 2.7.10 is currently unsupported since it's unable to compile the Hazardlib speedups. 
 
