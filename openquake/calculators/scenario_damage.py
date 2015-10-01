@@ -24,18 +24,7 @@ import numpy
 from openquake.commonlib import parallel
 from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
-from openquake.calculators import base
-
-
-def build_dict(shape, factory):
-    """
-    Build a dictionary key -> factory(), where the key is a multi-index
-    obtained from indices of the given shape. For instance
-
-    >>> sorted(build_dict((2, 2), list).items())
-    [((0, 0), []), ((0, 1), []), ((1, 0), []), ((1, 1), [])]
-    """
-    return {k: factory() for k in itertools.product(*map(range, shape))}
+from openquake.calculators import base, calc
 
 
 def dmg_by_taxon(agg_damage, stat_dt):
@@ -85,12 +74,12 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
-    L = 1
+    L = len(riskmodel.loss_types)
     R = len(rlzs_assoc.realizations)
     # D = len(riskmodel.damage_states)
     taxo2idx = {taxo: i for i, taxo in enumerate(monitor.taxonomies)}
     lt2idx = {lt: i for i, lt in enumerate(riskmodel.loss_types)}
-    result = build_dict((L, R), AccumDict)
+    result = calc.build_dict((L, R), AccumDict)
     for out_by_rlz in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:

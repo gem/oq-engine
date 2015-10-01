@@ -395,34 +395,52 @@ PerAssetLoss = collections.namedtuple(  # the loss map
     'PerAssetLoss', 'loss_type unit asset_ref mean stddev')
 
 
-@export.add(('losses_by_key', 'csv'))
-def export_risk(ekey, dstore):
+@export.add(('avglosses', 'csv'))
+def export_avglosses(ekey, dstore):
     oqparam = OqParam.from_(dstore.attrs)
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                   for ct in dstore['cost_types']}
     unit_by_lt['fatalities'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
-    losses_by_key = dstore['losses_by_key']
+    avglosses = dstore['avglosses']
+    riskmodel = dstore['riskmodel']
+    assets = dstore['assetcol']['asset_ref']
+    N, L, R = avglosses.shape
     fnames = []
-    for i in sorted(losses_by_key):
-        rlz = rlzs[i]
-        result = losses_by_key[i]
-        suffix = '' if rlz.uid == '*' else '-gsimltp_%s' % rlz.uid
-        losses = AccumDict()
-        for key, values in result.items():
-            key_type, loss_type = key
-            unit = unit_by_lt[loss_type]
-            if key_type in ('agg', 'ins'):
-                mean, std = scientific.mean_std(values)
-                losses += {key_type: [
-                    AggLoss(loss_type, unit, mean, std)]}
-            else:
-                losses += {key_type: [
-                    PerAssetLoss(loss_type, unit, *vals) for vals in values]}
-        for key_type in losses:
-            out = export_loss_csv((key_type, 'csv'),
-                                  oqparam.export_dir, losses[key_type], suffix)
-            fnames.append(out)
+    for l, r in itertools.product(range(L), range(R)):
+        rlz = rlzs[r]
+        lt = riskmodel.loss_types[l]
+        unit = unit_by_lt[lt]
+        suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
+        losses = [PerAssetLoss(lt, unit, ass, stat['mean'], stat['stddev'])
+                  for ass, stat in zip(assets, avglosses[:, l, r])]
+        out = export_loss_csv(
+            ('avg', 'csv'), oqparam.export_dir, losses, suffix)
+        fnames.append(out)
+    return sorted(fnames)
+
+
+@export.add(('agglosses', 'csv'))
+def export_agglosses(ekey, dstore):
+    oqparam = OqParam.from_(dstore.attrs)
+    unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
+                  for ct in dstore['cost_types']}
+    unit_by_lt['fatalities'] = 'people'
+    rlzs = dstore['rlzs_assoc'].realizations
+    agglosses = dstore['agglosses']
+    riskmodel = dstore['riskmodel']
+    L, R = agglosses.shape
+    fnames = []
+    for l, r in itertools.product(range(L), range(R)):
+        rlz = rlzs[r]
+        lt = riskmodel.loss_types[l]
+        unit = unit_by_lt[lt]
+        suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
+        loss = agglosses[l, r]
+        losses = [AggLoss(lt, unit, loss['mean'], loss['stddev'])]
+        out = export_loss_csv(
+            ('agg', 'csv'), oqparam.export_dir, losses, suffix)
+        fnames.append(out)
     return sorted(fnames)
 
 
