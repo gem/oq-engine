@@ -45,7 +45,6 @@ from openquake.engine import __version__
 from openquake.engine import engine, logs, views
 from openquake.engine.db import models, upgrade_manager
 from openquake.engine.export import core
-from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
 from openquake.engine.tools.import_hazard_curves import import_hazard_curves
 from openquake.engine.tools import save_hazards, load_hazards
 from openquake.engine.tools.make_html_report import make_report
@@ -263,12 +262,6 @@ def set_up_arg_parser():
         metavar=('DUMP_DIR'))
 
     import_grp = parser.add_argument_group('Import')
-    import_grp.add_argument(
-        '--load-gmf',
-        help=('Load gmf from a file. Only single-source gmf are supported '
-              'currently. The file can be xml or tab-separated.'),
-        metavar='GMF_FILE',
-    )
     import_grp.add_argument(
         '--load-curve',
         help=('Load hazard curves from an XML file.'),
@@ -626,11 +619,6 @@ def main():
         job_id, target_dir = args.export_risk_outputs
         export_outputs(get_hc_id(job_id), expanduser(target_dir), exports)
     # import
-    elif args.load_gmf is not None:
-        with open(args.load_gmf) as f:
-            out = import_gmf_scenario(f)
-            print 'Added output id=%d of type %s; hazard_calculation_id=%d'\
-                % (out.id, out.output_type, out.oq_job.id)
     elif args.load_curve is not None:
         with open(args.load_curve) as f:
             out = import_hazard_curves(f)
