@@ -32,7 +32,6 @@ from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
-from openquake.risklib import scientific
 
 Output = collections.namedtuple('Output', 'ltype path array')
 
