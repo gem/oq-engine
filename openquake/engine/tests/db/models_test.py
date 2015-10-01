@@ -30,7 +30,7 @@ from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 
 from openquake.engine.calculators.hazard.classical import core as cls_core
-from openquake.engine.calculators.hazard.scenario import core as scen_core
+
 from openquake.engine.db import models
 
 from openquake.engine.tests.utils import helpers
@@ -121,47 +121,6 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         self.assertEqual(expected_len, len(site_coll.vs30measured))
         self.assertEqual(expected_len, len(site_coll.z1pt0))
         self.assertEqual(expected_len, len(site_coll.z2pt5))
-
-    def test_site_collection_and_ses_collection(self):
-        cfg = helpers.get_data_path('scenario_hazard/job.ini')
-        job = helpers.get_job(cfg, username=getpass.getuser())
-        models.JobStats.objects.create(oq_job=job)
-
-        calc = scen_core.ScenarioHazardCalculator(job)
-        calc.initialize_site_collection()
-        site_coll = calc.site_collection
-
-        # all of the parameters should be the same:
-        self.assertTrue((site_coll.vs30 == 760).all())
-        self.assertTrue((site_coll.vs30measured).all())
-        self.assertTrue((site_coll.z1pt0 == 100).all())
-        self.assertTrue((site_coll.z2pt5 == 5).all())
-
-        # test SESCollection
-        calc.create_ruptures()
-        ses_coll = models.SESCollection.objects.get(
-            output__oq_job=job, output__output_type='ses')
-        expected_tags = [
-            'scenario-0000000000',
-            'scenario-0000000001',
-            'scenario-0000000002',
-            'scenario-0000000003',
-            'scenario-0000000004',
-            'scenario-0000000005',
-            'scenario-0000000006',
-            'scenario-0000000007',
-            'scenario-0000000008',
-            'scenario-0000000009',
-        ]
-        expected_seeds = [
-            511025145, 1168723362, 794472670, 1296908407, 1343724121,
-            140722153, 28278046, 1798451159, 556958504, 503221907]
-        for ses in ses_coll:  # there is a single ses
-            self.assertEqual(ses.ordinal, 1)
-            for ses_rup, tag, seed in zip(ses, expected_tags, expected_seeds):
-                self.assertEqual(ses_rup.ses_id, 1)
-                self.assertEqual(ses_rup.tag, tag)
-                self.assertEqual(ses_rup.seed, seed)
 
 
 class LossFractionTestCase(unittest.TestCase):
