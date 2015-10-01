@@ -20,7 +20,7 @@ sudo apt-get install python-oq-engine
 If you are upgrading from OpenQuake Engine release 1.0, before you can process you have to run this command:
 ```
 sudo apt-get remove --purge python-oq.* redis-server
-sudo rm -Rf /usr/share/openquake
+sudo rm -Rf /usr/openquake
 ```
 
 ### Upgrading the OpenQuake Engine
