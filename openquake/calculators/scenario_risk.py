@@ -62,6 +62,12 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         for out in out_by_rlz:
             lti = lt2idx[out.loss_type]
             stats = numpy.zeros((len(out.assets), 4), F64)
+            # this is ugly but using a composite array (i.e.
+            # stats['mean'], stats['stddev'], ...) may return
+            # bogus numbers! even with the SAME version of numpy,
+            # hdf5 and h5py!! the numbers are around 1E-300 and
+            # different on different systems; we found issues
+            # with Ubuntu 12.04 and Red Hat 7 (MS and DV)
             stats[:, 0] = out.loss_matrix.mean(axis=1)
             stats[:, 1] = out.loss_matrix.std(ddof=1, axis=1)
             stats[:, 2] = out.insured_loss_matrix.mean(axis=1)
