@@ -61,11 +61,11 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
             riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:
             lti = lt2idx[out.loss_type]
-            stats = numpy.zeros(len(out.assets), stat_dt)
-            stats['mean'] = out.loss_matrix.mean(axis=1)
-            stats['stddev'] = out.loss_matrix.std(ddof=1, axis=1)
-            stats['mean_ins'] = out.insured_loss_matrix.mean(axis=1)
-            stats['stddev_ins'] = out.insured_loss_matrix.std(ddof=1, axis=1)
+            stats = numpy.zeros((len(out.assets), 4), F64)
+            stats[:, 0] = out.loss_matrix.mean(axis=1)
+            stats[:, 1] = out.loss_matrix.std(ddof=1, axis=1)
+            stats[:, 2] = out.insured_loss_matrix.mean(axis=1)
+            stats[:, 3] = out.insured_loss_matrix.std(ddof=1, axis=1)
             avg = result[lti, out.hid]
             for asset, stat in zip(out.assets, stats):
                 avg['avg', asset.idx] = stat
