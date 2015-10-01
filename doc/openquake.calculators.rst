@@ -26,7 +26,7 @@ calculators Package
     :show-inheritance:
 
 :mod:`event_based_risk` Module
-------------------
+----------------------------------
 
 .. automodule:: openquake.calculators.event_based_risk
     :members:
