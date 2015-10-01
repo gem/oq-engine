@@ -20,7 +20,7 @@ sudo apt-get install python-oq-engine
 If you are upgrading from OpenQuake Engine release 1.0, before you can process you have to run this command:
 ```
 sudo apt-get remove --purge python-oq.* redis-server
-sudo rm -Rf /usr/openquake
+sudo rm -Rf /usr/share/openquake
 ```
 
 ### Upgrading the OpenQuake Engine
@@ -43,7 +43,7 @@ sudo diff -urN /etc/openquake/openquake.cfg /etc/openquake/openquake.cfg.new_in_
 ```
 See an [example](openquake.cfg-diff-example.md).
 
-Same must be done with ```/usr/openquake/engine/celeryconfig.py``` and ```/usr/openquake/engine/celeryconfig.py.new_in_this_release```. Usually you can replace ```celeryconfig.py``` with ```celeryconfig.py.new_in_this_release```.
+Same must be done with ```/usr/share/openquake/engine/celeryconfig.py``` and ```/usr/share/openquake/engine/celeryconfig.py.new_in_this_release```. Usually you can replace ```celeryconfig.py``` with ```celeryconfig.py.new_in_this_release```.
 
 Finally upgrade your database:
 
@@ -62,9 +62,9 @@ sudo service rabbitmq-server stop
 ```
 
 ## Run OQ Engine, without calculation parallelization
-You are now ready to run the OQ Engine. First, try running one of the demos included with the package. There are several demo calculations located in `/usr/openquake/engine/demos`. Example:
+You are now ready to run the OQ Engine. First, try running one of the demos included with the package. There are several demo calculations located in `/usr/share/openquake/engine/demos`. Example:
 ```
-oq-engine --run-hazard=/usr/openquake/engine/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini --no-distribute
+oq-engine --run-hazard=/usr/share/openquake/engine/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini --no-distribute
 ```
 
 The output should look something like this:
@@ -144,7 +144,7 @@ Some outputs where not shown. You can see the full list with the command
 ```
 
 ## Run OQ Engine, with calculation parallelization
-From the directory `/usr/openquake/engine`, launch celery worker processes like so:
+From the directory `/usr/share/openquake/engine`, launch celery worker processes like so:
 ##### Ubuntu 12.04 / Celery 2
 <pre>
 celeryd --purge &
@@ -157,7 +157,7 @@ celery worker --purge -Ofair &
 
 Then run `openquake` without the `--no-distribute` option:
 <pre>
-oq-engine --run-hazard=/usr/openquake/engine/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
+oq-engine --run-hazard=/usr/share/doc/python-oq-risklib/examples/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
 </pre>
 
 ## More commands
