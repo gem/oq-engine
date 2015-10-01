@@ -88,6 +88,10 @@ setup(
         "openquake.cfg", "openquake_worker.cfg",
         "README.md", "LICENSE", "CONTRIBUTORS.txt"]},
     namespace_packages=['openquake'],
+    install_requires=[
+        'openquake.hazardlib',
+        'openquake.risklib',
+    ],
     scripts=["openquake/engine/bin/oq_create_db"],
     zip_safe=False,
     )
