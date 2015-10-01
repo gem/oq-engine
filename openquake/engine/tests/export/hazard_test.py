@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2014, GEM Foundation.
+# Copyright (c) 2010-2015, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -235,9 +235,7 @@ class ScenarioExportTestCase(BaseExportTestCase):
 
             outputs = core.get_outputs(job.id)
 
-            self.assertEqual(2, len(outputs))  # 1 GMF, 1 SES
-
-            gmf_outputs = outputs.filter(output_type='gmf_scenario')
+            gmf_outputs = outputs.filter(ds_key='gmfs')
             self.assertEqual(1, len(gmf_outputs))
 
             exported_file = check_export(gmf_outputs[0].id, target_dir)
