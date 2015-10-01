@@ -21,7 +21,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @calculators.add('scenario')
-class ScenarioCalculator(scenario.EventBasedCalculator):
+class ScenarioCalculator(scenario.ScenarioCalculator):
     """
     Scenario hazard calculator. Computes ground motion fields.
     """
