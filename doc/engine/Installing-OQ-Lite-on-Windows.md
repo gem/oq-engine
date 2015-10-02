@@ -83,7 +83,6 @@ INFO:root:classical 100%
 INFO:root:Received 28.61 MB of data
 INFO:root:Total time spent: 65.810972929 s
 INFO:root:Memory allocated: 44.86 MB
-See the output with hdfview /Users/user/oqdata/calc_1/output.hdf5
 ```
 
 ## Getting help
