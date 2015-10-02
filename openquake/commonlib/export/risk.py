@@ -227,7 +227,6 @@ def export_agg_losses(ekey, dstore):
 
 @export.add(('dmg_by_asset', 'xml'))
 def export_damage(ekey, dstore):
-    oqparam = OqParam.from_(dstore.attrs)
     riskmodel = dstore['riskmodel']
     rlzs = dstore['rlzs_assoc'].realizations
     dmg_by_asset = dstore['dmg_by_asset']  # shape (N, L, R)
@@ -256,13 +255,13 @@ def export_damage(ekey, dstore):
                         ExposureData(aref, site), dmg_state,
                         dist['mean'][ds], dist['stddev'][ds]))
 
-        f1 = export_dmg_xml(('dmg_dist_per_asset', 'xml'), oqparam.export_dir,
+        f1 = export_dmg_xml(('dmg_dist_per_asset', 'xml'), dstore.export_dir,
                             dmg_states, dd_asset, suffix)
         max_damage = dmg_states[-1]
         # the collapse map is extracted from the damage distribution per asset
         # (dda) by taking the value corresponding to the maximum damage
         collapse_map = [dda for dda in dd_asset if dda.dmg_state == max_damage]
-        f2 = export_dmg_xml(('collapse_map', 'xml'), oqparam.export_dir,
+        f2 = export_dmg_xml(('collapse_map', 'xml'), dstore.export_dir,
                             dmg_states, collapse_map, suffix)
         fnames.extend(sum((f1 + f2).values(), []))
     return sorted(fnames)
@@ -270,7 +269,6 @@ def export_damage(ekey, dstore):
 
 @export.add(('dmg_by_taxon', 'xml'))
 def export_damage_taxon(ekey, dstore):
-    oqparam = OqParam.from_(dstore.attrs)
     riskmodel = dstore['riskmodel']
     rlzs = dstore['rlzs_assoc'].realizations
     dmg_by_taxon = dstore['dmg_by_taxon']  # shape (T, L, R)
@@ -296,14 +294,13 @@ def export_damage_taxon(ekey, dstore):
                         dist['mean'][ds], dist['stddev'][ds]))
 
         f = export_dmg_xml(('dmg_dist_per_taxonomy', 'xml'),
-                           oqparam.export_dir, dmg_states, dd_taxo, suffix)
+                           dstore.export_dir, dmg_states, dd_taxo, suffix)
         fnames.extend(sum(f.values(), []))
     return sorted(fnames)
 
 
 @export.add(('dmg_total', 'xml'))
 def export_damage_total(ekey, dstore):
-    oqparam = OqParam.from_(dstore.attrs)
     riskmodel = dstore['riskmodel']
     rlzs = dstore['rlzs_assoc'].realizations
     dmg_total = dstore['dmg_total']
@@ -323,7 +320,7 @@ def export_damage_total(ekey, dstore):
             dd_total.append(DmgDistTotal(
                 dmg_state, dist['mean'][ds], dist['stddev'][ds]))
 
-        f = export_dmg_xml(('dmg_dist_total', 'xml'), oqparam.export_dir,
+        f = export_dmg_xml(('dmg_dist_total', 'xml'), dstore.export_dir,
                            dmg_states, dd_total, suffix)
         fnames.extend(sum(f.values(), []))
     return sorted(fnames)
@@ -396,7 +393,6 @@ PerAssetLoss = collections.namedtuple(  # the loss map
 
 @export.add(('avglosses', 'csv'))
 def export_avglosses(ekey, dstore):
-    oqparam = OqParam.from_(dstore.attrs)
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                   for ct in dstore['cost_types']}
     unit_by_lt['fatalities'] = 'people'
@@ -414,14 +410,13 @@ def export_avglosses(ekey, dstore):
         losses = [PerAssetLoss(lt, unit, ass, stat['mean'], stat['stddev'])
                   for ass, stat in zip(assets, avglosses[:, l, r])]
         out = export_loss_csv(
-            ('avg', 'csv'), oqparam.export_dir, losses, suffix)
+            ('avg', 'csv'), dstore.export_dir, losses, suffix)
         fnames.append(out)
     return sorted(fnames)
 
 
 @export.add(('agglosses', 'csv'))
 def export_agglosses(ekey, dstore):
-    oqparam = OqParam.from_(dstore.attrs)
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                   for ct in dstore['cost_types']}
     unit_by_lt['fatalities'] = 'people'
@@ -438,7 +433,7 @@ def export_agglosses(ekey, dstore):
         loss = agglosses[l, r]
         losses = [AggLoss(lt, unit, loss['mean'], loss['stddev'])]
         out = export_loss_csv(
-            ('agg', 'csv'), oqparam.export_dir, losses, suffix)
+            ('agg', 'csv'), dstore.export_dir, losses, suffix)
         fnames.append(out)
     return sorted(fnames)
 
