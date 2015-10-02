@@ -110,23 +110,24 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         Compute stats for the aggregated distributions and save
         the results on the datastore.
         """
-        L = len(self.riskmodel.loss_types)
-        R = len(self.rlzs_assoc.realizations)
-        N = len(self.assetcol)
-        arr = dict(avg=numpy.zeros((N, L, R), stat_dt),
-                   agg=numpy.zeros((L, R), stat_dt))
-        for (l, r), res in result.items():
-            for keytype, key in res:
-                if keytype == 'agg':
-                    agg_losses = arr[keytype][l, r]
-                    mean, std = scientific.mean_std(res[keytype, key])
-                    if key == 0:
-                        agg_losses['mean'] = mean
-                        agg_losses['stddev'] = std
+        with self.monitor('saving outputs', autoflush=True):
+            L = len(self.riskmodel.loss_types)
+            R = len(self.rlzs_assoc.realizations)
+            N = len(self.assetcol)
+            arr = dict(avg=numpy.zeros((N, L, R), stat_dt),
+                       agg=numpy.zeros((L, R), stat_dt))
+            for (l, r), res in result.items():
+                for keytype, key in res:
+                    if keytype == 'agg':
+                        agg_losses = arr[keytype][l, r]
+                        mean, std = scientific.mean_std(res[keytype, key])
+                        if key == 0:
+                            agg_losses['mean'] = mean
+                            agg_losses['stddev'] = std
+                        else:
+                            agg_losses['mean_ins'] = mean
+                            agg_losses['stddev_ins'] = std
                     else:
-                        agg_losses['mean_ins'] = mean
-                        agg_losses['stddev_ins'] = std
-                else:
-                    arr[keytype][key, l, r] = res[keytype, key]
-        self.datastore['avglosses'] = arr['avg']
-        self.datastore['agglosses'] = arr['agg']
+                        arr[keytype][key, l, r] = res[keytype, key]
+            self.datastore['avglosses'] = arr['avg']
+            self.datastore['agglosses'] = arr['agg']
