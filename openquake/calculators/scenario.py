@@ -71,7 +71,7 @@ class ScenarioCalculator(base.HazardCalculator):
         self.gsims = readinput.get_gsims(self.oqparam)
         self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
 
-        with self.monitor('filtering sites'):
+        with self.monitor('filtering sites', autoflush=True):
             self.sitecol = filters.filter_sites_by_distance_to_rupture(
                 rupture, self.oqparam.maximum_distance, self.sitecol)
         if self.sitecol is None:
@@ -94,7 +94,7 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         Compute the GMFs in parallel and return a dictionary gmf_by_tag
         """
-        with self.monitor('computing gmfs'):
+        with self.monitor('computing gmfs', autoflush=True):
             args = (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs'))
             gmf_by_tag = parallel.apply_reduce(
                 self.core_func.__func__, args,
@@ -105,7 +105,7 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         :param gmf_by_tag: a dictionary tag -> gmf
         """
-        with self.monitor('saving gmfs'):
+        with self.monitor('saving gmfs', autoflush=True):
             data = []
             for ordinal, tag in enumerate(sorted(gmf_by_tag)):
                 gmf = gmf_by_tag[tag]
