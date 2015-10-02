@@ -71,9 +71,9 @@ class ScenarioCalculator(base.HazardCalculator):
         self.gsims = readinput.get_gsims(self.oqparam)
         self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
 
-        # filter the sites
-        self.sitecol = filters.filter_sites_by_distance_to_rupture(
-            rupture, self.oqparam.maximum_distance, self.sitecol)
+        with self.monitor('filtering sites'):
+            self.sitecol = filters.filter_sites_by_distance_to_rupture(
+                rupture, self.oqparam.maximum_distance, self.sitecol)
         if self.sitecol is None:
             raise RuntimeError(
                 'All sites were filtered out! '
@@ -94,22 +94,23 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         Compute the GMFs in parallel and return a dictionary gmf_by_tag
         """
-        logging.info('Computing the GMFs')
-        args = (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs'))
-        gmf_by_tag = parallel.apply_reduce(
-            self.core_func.__func__, args,
-            concurrent_tasks=self.oqparam.concurrent_tasks)
-        return gmf_by_tag
-
+        with self.monitor('computing gmfs'):
+            args = (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs'))
+            gmf_by_tag = parallel.apply_reduce(
+                self.core_func.__func__, args,
+                concurrent_tasks=self.oqparam.concurrent_tasks)
+            return gmf_by_tag
+    
     def post_execute(self, gmf_by_tag):
         """
         :param gmf_by_tag: a dictionary tag -> gmf
         """
-        data = []
-        for ordinal, tag in enumerate(sorted(gmf_by_tag)):
-            gmf = gmf_by_tag[tag]
-            gmf['idx'] = ordinal
-            data.append(gmf)
-        gmfa = numpy.concatenate(data)
-        self.datastore['gmfs/col00'] = gmfa
-        self.datastore['gmfs'].attrs['nbytes'] = gmfa.nbytes
+        with self.monitor('saving gmfs'):
+            data = []
+            for ordinal, tag in enumerate(sorted(gmf_by_tag)):
+                gmf = gmf_by_tag[tag]
+                gmf['idx'] = ordinal
+                data.append(gmf)
+            gmfa = numpy.concatenate(data)
+            self.datastore['gmfs/col00'] = gmfa
+            self.datastore['gmfs'].attrs['nbytes'] = gmfa.nbytes
