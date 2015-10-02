@@ -34,7 +34,7 @@ sudo diff -urN /etc/openquake/openquake.cfg /etc/openquake/openquake.cfg.new_in_
 ```
 See an [example](openquake.cfg-diff-example.md).
 
-Same must be done with ```/usr/openquake/engine/celeryconfig.py``` and ```/usr/openquake/engine/celeryconfig.py.new_in_this_release```. Usually you can replace ```celeryconfig.py``` with ```celeryconfig.py.new_in_this_release```.
+Same must be done with ```/usr/share/openquake/engine/celeryconfig.py``` and ```/usr/share/openquake/engine/celeryconfig.py.new_in_this_release```. Usually you can replace ```celeryconfig.py``` with ```celeryconfig.py.new_in_this_release```.
 
 Finally upgrade your database:
 
@@ -135,7 +135,7 @@ Some outputs where not shown. You can see the full list with the command
 ```
 
 ## Run OQ Engine, with calculation parallelization
-From the directory `/usr/openquake/engine`, launch celery worker processes like so:
+From the directory `/usr/share/openquake/engine`, launch celery worker processes like so:
 ##### Ubuntu 12.04
 <pre>
 celeryd --purge &
