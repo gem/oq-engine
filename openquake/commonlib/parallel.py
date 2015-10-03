@@ -103,14 +103,16 @@ def safely_call(func, args, pickle=False):
         if set, the input arguments are unpickled and the return value
         is pickled; otherwise they are left unchanged
     """
+    mon = args and isinstance(args[-1], PerformanceMonitor)
     try:
         if pickle:
             args = [a.unpickle() for a in args]
-        res = func(*args), None
+        res = func(*args), None, args[-1] if mon else DummyMonitor()
     except:
         etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
-        res = '\n%s%s: %s' % (tb_str, etype.__name__, exc), etype
+        res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype,
+               args[-1] if mon else DummyMonitor())
     if pickle:
         return Pickled(res)
     return res
@@ -360,12 +362,13 @@ class TaskManager(object):
             self.name, len(self.results), self.progress)
         next(log_percent)
 
-        def agg_and_percent(acc, val_exc):
-            (val, exc) = val_exc
+        def agg_and_percent(acc, triple):
+            (val, exc, mon) = triple
             if exc:
                 raise RuntimeError(val)
             res = agg(acc, val)
             next(log_percent)
+            mon.flush()
             return res
 
         if self.no_distribute:
