@@ -264,8 +264,6 @@ class RiskModel(collections.Mapping):
                             if hasattr(riskinput, 'rup_slice'):
                                 out_by_rlz.rup_slice = riskinput.rup_slice
                             yield out_by_rlz
-        mon_hazard.flush()
-        mon_risk.flush()
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
