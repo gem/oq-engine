@@ -114,7 +114,7 @@ def run_calc(job_id, calc_dir,
 
     # If requested to, signal job completion and trigger a migration of
     # results.
-    if not None in (callback_url, foreign_calc_id):
+    if None not in (callback_url, foreign_calc_id):
         _trigger_migration(job, callback_url, foreign_calc_id, dbname)
 
 
