@@ -86,18 +86,20 @@ class EnginePerformanceMonitor(PerformanceMonitor):
             self.flush()
 
     def flush(self):
-        """Save a row in the performance table"""
-        models.Performance.objects.create(
-            oq_job_id=self.job_id,
-            task_id=self.task_id,
-            task=getattr(self.task, '__name__', None),
-            operation=self.operation,
-            start_time=self.start_time,
-            duration=self.duration,
-            pymemory=self.mem if self.measuremem else None,
-            pgmemory=None)
-        self.mem = 0
-        self.duration = 0
+        """Save a row in the performance table for each child"""
+        monitors = [self] + self.children
+        for mon in monitors:
+            models.Performance.objects.create(
+                oq_job_id=mon.job_id,
+                task_id=mon.task_id,
+                task=getattr(mon.task, '__name__', None),
+                operation=mon.operation,
+                start_time=mon.start_time,
+                duration=mon.duration,
+                pymemory=mon.mem if mon.measuremem else None,
+                pgmemory=None)
+            mon.mem = 0
+            mon.duration = 0
 
     def collect_performance(self):
         """For compatibility with oq-lite"""
