@@ -22,11 +22,12 @@ TODO: write documentation.
 
 import os
 import sys
+import uuid
 import logging
 import operator
-import functools
 import traceback
 from concurrent.futures import as_completed, ProcessPoolExecutor
+from decorator import FunctionMaker
 import psutil
 
 from openquake.baselib.python3compat import pickle
@@ -416,10 +417,12 @@ def litetask(func):
     Add monitoring support to the decorated function. The last argument
     must be a monitor object.
     """
-    def w(*args):  # the last argument is assumed to be a monitor
-        with args[-1]('total ' + func.__name__,
-                      autoflush=True, measuremem=True):
-            return func(*args)
-    wrapped = functools.wraps(func)(lambda *a: safely_call(w, a, pickle=True))
-    wrapped.task_func = func
-    return wrapped
+    def wrapper(*args):
+        os.environ['OQ_TASK_ID'] = str(uuid.uuid1())
+        with args[-1]('total ' + func.__name__, measuremem=True):
+            result = func(*args)
+        del os.environ['OQ_TASK_ID']
+        return result
+    return FunctionMaker.create(
+        func, 'return _s_(_w_, (%(shortsignature)s,), pickle=True)',
+        dict(_s_=safely_call, _w_=wrapper), task_func=func)
