@@ -482,8 +482,6 @@ def make_gmfs(ses_ruptures, sitecol, imts, gsims,
                 # TODO: change idx to rup_idx, also in hazardlib
                 gmf['idx'] = sr.ordinal
                 gmfs.append(gmf)
-    ctx_mon.flush()
-    gmf_mon.flush()
     return gmfs
 
 
@@ -517,7 +515,7 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     result = {(trt_id, col_id): numpy.concatenate(gmfs)
               if oq.ground_motion_fields else None}
     if oq.hazard_curves_from_gmfs:
-        with monitor('bulding hazard curves', measuremem=False) as mon:
+        with monitor('bulding hazard curves', measuremem=False):
             duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
                 oq.number_of_logic_tree_samples or 1)
             # collect the gmvs by site
@@ -532,7 +530,6 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
                 result[trt_id, gs] = to_haz_curves(
                     tot_sites, gmvs_by_sid, gs, oq.imtls,
                     oq.investigation_time, duration)
-        mon.flush()
     return result
 
 
