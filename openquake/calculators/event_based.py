@@ -170,7 +170,6 @@ def get_geom(surface, is_from_fault_source, is_multi_surface):
 
     :param rupture: an instance of :class:
     `openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
-
     :param is_from_fault_source: a boolean
     :param is_multi_surface: a boolean
     """
