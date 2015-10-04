@@ -133,7 +133,7 @@ def _trigger_migration(job, callback_url, foreign_calc_id, dbname="platform"):
         a key to extract database connection settings from settings.DATABASES
         in order to get a cursor from the platform database
     """
-    if not dbname in DATABASES:
+    if dbname not in DATABASES:
         logger.error('Unknow key %s in PLATFORM_DATABASES; '
                      'you forgot to set local_settings.py' % dbname)
         return
