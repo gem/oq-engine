@@ -1,6 +1,6 @@
 import os
 
-from openquake.commonlib.parallel import PerformanceMonitor
+from openquake.baselib.performance import PerformanceMonitor
 from openquake.engine import logs
 from openquake.engine.db import models
 
