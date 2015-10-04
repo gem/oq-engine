@@ -26,12 +26,11 @@ import logging
 import operator
 import functools
 import traceback
-import time
-from datetime import datetime
 from concurrent.futures import as_completed, ProcessPoolExecutor
-from openquake.baselib.python3compat import pickle
-
 import psutil
+
+from openquake.baselib.python3compat import pickle
+from openquake.baselib.performance import PerformanceMonitor, DummyMonitor
 
 
 if psutil.__version__ > '2.0.0':  # Ubuntu 14.10
@@ -424,134 +423,3 @@ def litetask(func):
     wrapped = functools.wraps(func)(lambda *a: safely_call(w, a, pickle=True))
     wrapped.task_func = func
     return wrapped
-
-
-# this is not thread-safe
-class PerformanceMonitor(object):
-    """
-    Measure the resident memory occupied by a list of processes during
-    the execution of a block of code. Should be used as a context manager,
-    as follows::
-
-     with PerformanceMonitor('do_something') as mon:
-         do_something()
-     print mon.mem
-
-    At the end of the block the PerformanceMonitor object will have the
-    following 5 public attributes:
-
-    .start_time: when the monitor started (a datetime object)
-    .duration: time elapsed between start and stop (in seconds)
-    .exc: None unless an exception happened inside the block of code
-    .mem: the memory delta in bytes
-
-    The behaviour of the PerformanceMonitor can be customized by subclassing it
-    and by overriding the method on_exit(), called at end and used to display
-    or store the results of the analysis.
-    """
-    def __init__(self, operation, pid=None, monitor_csv=None,
-                 autoflush=False):
-        self.operation = operation
-        self.pid = pid
-        self.monitor_csv = monitor_csv
-        self.autoflush = autoflush
-        if pid:
-            self._proc = psutil.Process(pid)
-        else:
-            self._proc = None
-        self.mem = 0
-        self.duration = 0
-        self._start_time = time.time()
-        self.write('operation pid time_sec memory_mb'.split())
-
-    def write(self, row):
-        """Write a row on the performance file"""
-        if self.monitor_csv:
-            open(self.monitor_csv, 'a').write('\t'.join(row) + '\n')
-
-    def measure_mem(self):
-        """A memory measurement (in bytes)"""
-        try:
-            if self._proc:
-                return memory_info(self._proc).rss
-        except psutil.AccessDenied:
-            # no access to information about this process
-            # don't not try to check it anymore
-            self._proc = None
-
-    @property
-    def start_time(self):
-        """
-        Datetime instance recording when the monitoring started
-        """
-        return datetime.fromtimestamp(self._start_time)
-
-    def __enter__(self):
-        """Call .start"""
-        if self._proc is None:
-            pid = os.getpid()
-            self.pid = pid
-            self._proc = psutil.Process(pid)
-        self.exc = None  # exception
-        self._start_time = time.time()
-        self.start_mem = self.measure_mem()
-        return self
-
-    def __exit__(self, etype, exc, tb):
-        "Call .stop"
-        self.exc = exc
-        self.stop_mem = self.measure_mem()
-        self.mem = max(self.mem, self.stop_mem - self.start_mem)
-        self.duration += time.time() - self._start_time
-        self.on_exit()
-
-    def on_exit(self):
-        "To be overridden in subclasses"
-        if self.autoflush:
-            self.flush()
-
-    def flush(self):
-        """
-        Save the measurements on the performance file
-        """
-        time_sec = str(self.duration)
-        memory_mb = str(self.mem / 1024. / 1024.)
-        self.write([self.operation, str(self.pid), time_sec, memory_mb])
-
-    def __call__(self, operation, **kw):
-        """
-        Return a copy of the monitor usable for a different operation.
-        """
-        self_vars = vars(self).copy()
-        del self_vars['operation']
-        new = self.__class__(operation)
-        vars(new).update(self_vars)
-        vars(new).update(kw)
-        return new
-
-    def __repr__(self):
-        return '<%s duration=%s>' % (self.__class__.__name__, self.duration)
-
-
-class DummyMonitor(PerformanceMonitor):
-    """
-    This class makes it easy to disable the monitoring in client code.
-    Disabling the monitor can improve the performance.
-    """
-    def __init__(self, operation='', *args, **kw):
-        self.operation = operation
-
-    def write(self, row):
-        """Do nothing"""
-
-    def __call__(self, operation, **kw):
-        return self.__class__(operation)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, etype, exc, tb):
-        pass
-
-    def flush(self):
-        pass
