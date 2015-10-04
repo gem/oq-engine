@@ -21,6 +21,7 @@ import re
 import time
 import operator
 import datetime
+import itertools
 import collections
 
 import numpy
@@ -48,6 +49,13 @@ else:  # Ubuntu 12.04
         return proc.get_memory_info()
 
 from openquake.baselib.general import humansize
+
+
+def get_data(monitor):
+    """Return a tabbed string with the measured operation, time and memory"""
+    time_sec = str(monitor.duration)
+    memory_mb = str(monitor.mem / 1024. / 1024.) if monitor.measuremem else '0'
+    return '\t'.join([monitor.operation, time_sec, memory_mb]) + '\n'
 
 
 # this is not thread-safe
@@ -84,12 +92,7 @@ class Monitor(object):
         self.mem = 0
         self.duration = 0
         self._start_time = time.time()
-
-    def write(self, row):
-        """Write a row in the performance file, if any"""
-        csv = self.monitor_csv
-        if csv:
-            open(csv, 'a').write('\t'.join(row) + '\n')
+        self.children = []
 
     def measure_mem(self):
         """A memory measurement (in bytes)"""
@@ -144,22 +147,27 @@ class Monitor(object):
         """
         Save the measurements on the performance file
         """
-        time_sec = str(self.duration)
-        memory_mb = str(self.mem / 1024. / 1024.) if self.measuremem else '0'
-        self.write([self.operation, time_sec, memory_mb])
-        self.duration = 0
-        self.mem = 0
+        monitors = [self] + self.children
+        if self.monitor_csv:
+            with open(self.monitor_csv, 'a') as f:
+                for line in itertools.imap(get_data, monitors):
+                    f.write(line)
+        for mon in monitors:
+            mon.duration = 0
+            mon.mem = 0
 
     def __call__(self, operation, **kw):
         """
-        Return a copy of the monitor usable for a different operation.
+        Return a child of the monitor usable for a different operation.
         """
         self_vars = vars(self).copy()
         del self_vars['operation']
+        del self_vars['children']
+        del self_vars['pid']
         new = self.__class__(operation)
         vars(new).update(self_vars)
         vars(new).update(kw)
-        new.pid = None
+        self.children.append(new)
         return new
 
     def __repr__(self):
