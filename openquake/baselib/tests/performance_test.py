@@ -2,14 +2,14 @@ import time
 import unittest
 import tempfile
 import shutil
-from openquake.baselib.performance import Monitor
+from openquake.baselib.performance import PerformanceMonitor
 
 
 class MonitorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         tmpdir = tempfile.mkdtemp()
-        cls.mon = Monitor('test', tmpdir)
+        cls.mon = PerformanceMonitor('test', tmpdir)
 
     def test_no_mem(self):
         mon = self.mon('test_no_mem')

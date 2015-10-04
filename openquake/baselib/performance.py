@@ -21,7 +21,6 @@ import re
 import time
 import operator
 import datetime
-import itertools
 import collections
 
 import numpy
@@ -51,15 +50,15 @@ else:  # Ubuntu 12.04
 from openquake.baselib.general import humansize
 
 
-def get_data(monitor):
-    """Return a tabbed string with the measured operation, time and memory"""
+def _get_data(monitor):
+    """Return a list of strings with the measured operation, time and memory"""
     time_sec = str(monitor.duration)
     memory_mb = str(monitor.mem / 1024. / 1024.) if monitor.measuremem else '0'
-    return '\t'.join([monitor.operation, time_sec, memory_mb]) + '\n'
+    return [monitor.operation, time_sec, memory_mb]
 
 
 # this is not thread-safe
-class Monitor(object):
+class PerformanceMonitor(object):
     """
     Measure the resident memory occupied by a list of processes during
     the execution of a block of code. Should be used as a context manager,
@@ -120,6 +119,13 @@ class Monitor(object):
             return os.path.join(
                 self.monitor_dir, 'performance-%d.csv' % self.pid)
 
+    # this is used by readinput.get_composite_source_model
+    def write(self, row):
+        """Write a row in the performance file, if any"""
+        csv = self.monitor_csv
+        if csv:
+            open(csv, 'a').write('\t'.join(row) + '\n')
+
     def __enter__(self):
         if not self.pid:
             self.pid = os.getpid()
@@ -148,10 +154,8 @@ class Monitor(object):
         Save the measurements on the performance file
         """
         monitors = [self] + self.children
-        if self.monitor_csv:
-            with open(self.monitor_csv, 'a') as f:
-                for line in itertools.imap(get_data, monitors):
-                    f.write(line)
+        for row in map(_get_data, monitors):
+            self.write(row)
         for mon in monitors:
             mon.duration = 0
             mon.mem = 0
@@ -202,7 +206,7 @@ class Monitor(object):
         return numpy.array(rows, perf_dt)
 
 
-class DummyMonitor(Monitor):
+class DummyMonitor(PerformanceMonitor):
     """
     This class makes it easy to disable the monitoring in client code.
     Disabling the monitor can improve the performance.
