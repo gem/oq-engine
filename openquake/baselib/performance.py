@@ -50,13 +50,6 @@ else:  # Ubuntu 12.04
 from openquake.baselib.general import humansize
 
 
-def _get_data(monitor):
-    """Return a list of strings with the measured operation, time and memory"""
-    time_sec = str(monitor.duration)
-    memory_mb = str(monitor.mem / 1024. / 1024.) if monitor.measuremem else '0'
-    return [monitor.operation, time_sec, memory_mb]
-
-
 # this is not thread-safe
 class PerformanceMonitor(object):
     """
@@ -115,9 +108,8 @@ class PerformanceMonitor(object):
         """
         The path to the .csv where the monitor will write, or None.
         """
-        if self.monitor_dir and self.pid:
-            return os.path.join(
-                self.monitor_dir, 'performance-%d.csv' % self.pid)
+        if self.monitor_dir:
+            return os.path.join(self.monitor_dir, 'performance.csv')
 
     # this is used by readinput.get_composite_source_model
     def write(self, row):
@@ -125,6 +117,15 @@ class PerformanceMonitor(object):
         csv = self.monitor_csv
         if csv:
             open(csv, 'a').write('\t'.join(row) + '\n')
+
+    def get_data(self):
+        """
+        Return a list of strings with the measured operation, time and memory
+        """
+        time_sec = str(self.duration)
+        memory_mb = (str(self.mem / 1024. / 1024.)
+                     if self.measuremem else '0')
+        return [self.operation, time_sec, memory_mb]
 
     def __enter__(self):
         if not self.pid:
@@ -158,8 +159,8 @@ class PerformanceMonitor(object):
             raise RuntimeError('PerformanceMonitor.flush() must not be called '
                                'by a worker!')
         monitors = [self] + self.children
-        for row in map(_get_data, monitors):
-            self.write(row)
+        for mon in monitors:
+            self.write(mon.get_data())
         for mon in monitors:
             mon.duration = 0
             mon.mem = 0
@@ -194,7 +195,7 @@ class PerformanceMonitor(object):
             return
         data = collections.defaultdict(lambda: numpy.zeros(3))
         for f in os.listdir(self.monitor_dir):
-            mo = re.match(r'performance-(\d+)\.csv', f)
+            mo = re.match(r'performance.csv', f)
             if mo:
                 fname = os.path.join(self.monitor_dir, f)
                 for line in open(fname):
