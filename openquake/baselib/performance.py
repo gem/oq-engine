@@ -20,7 +20,7 @@ import os
 import re
 import time
 import operator
-import datetime
+from datetime import datetime
 import collections
 
 import numpy
