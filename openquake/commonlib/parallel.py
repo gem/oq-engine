@@ -103,10 +103,10 @@ def safely_call(func, args, pickle=False):
         if set, the input arguments are unpickled and the return value
         is pickled; otherwise they are left unchanged
     """
+    if pickle:
+        args = [a.unpickle() for a in args]
     mon = args and isinstance(args[-1], PerformanceMonitor)
     try:
-        if pickle:
-            args = [a.unpickle() for a in args]
         res = func(*args), None, args[-1] if mon else DummyMonitor()
     except:
         etype, exc, tb = sys.exc_info()
