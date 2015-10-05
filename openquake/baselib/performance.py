@@ -154,10 +154,6 @@ class PerformanceMonitor(object):
         """
         Save the measurements on the performance file
         """
-        if os.environ.get('OQ_TASK_ID'):
-            # this is set by the litetask decorator
-            raise RuntimeError('PerformanceMonitor.flush() must not be called '
-                               'by a worker!')
         monitors = [self] + self.children
         for mon in monitors:
             self.write(mon.get_data())
