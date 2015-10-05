@@ -32,8 +32,9 @@ from openquake.baselib.general import AccumDict
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.sourcewriter import obj_to_node
 
-LOSS_TYPE_KEY = re.compile('(structural|nonstructural|contents|'
-                           'business_interruption|occupants)_([\w_]+)')
+LOSS_TYPE_KEY = re.compile(
+    '(structural|nonstructural|contents|business_interruption|'
+    'occupants|fragility)_([\w_]+)')
 
 
 def get_risk_files(inputs):
@@ -44,6 +45,10 @@ def get_risk_files(inputs):
     vfs = {}
     names = set()
     for key in inputs:
+        if key == 'fragility':
+            vfs['structural'] = inputs[key]
+            names.add('fragility_file')
+            continue
         match = LOSS_TYPE_KEY.match(key)
         if match:
             vfs[match.group(1)] = inputs[key]

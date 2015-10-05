@@ -23,7 +23,7 @@ import numpy
 
 from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import (
-    get_imtls, get_risk_files, get_ffs)
+    get_imtls, get_risk_files, get_vfs, get_ffs)
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
@@ -146,11 +146,10 @@ class OqParam(valid.ParamSet):
             delattr(self, 'intensity_measure_types')
         file_type, file_by_ct = get_risk_files(self.inputs)
         if file_type == 'vulnerability_file':
-            self.risk_imtls = get_imtls(self.inputs)
+            self.risk_imtls = get_imtls(get_vfs(self.inputs))
         elif file_type == 'fragility_file':
             ffs = get_ffs(file_by_ct, self.continuous_fragility_discretization)
-            self.risk_imtls = {fset.imt: fset.imls
-                               for fset in ffs.values()}
+            self.risk_imtls = get_imtls(ffs)
 
         # check the IMTs vs the GSIMs
         if 'gsim_logic_tree' in self.inputs:
