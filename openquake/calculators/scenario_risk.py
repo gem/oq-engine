@@ -43,7 +43,7 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     :param rlzs_assoc:
         a class:`openquake.commonlib.source.RlzsAssoc` instance
     :param monitor:
-        :class:`openquake.cobaselib.performance.PerformanceMonitor` instance
+        :class:`openquake.baselib.performance.PerformanceMonitor` instance
     :returns:
         a dictionary (key_type, loss_type) -> losses where the `key_type` can
         be "agg" (for the aggregate losses) or "ins" (for the insured losses).
