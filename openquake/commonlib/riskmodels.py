@@ -96,7 +96,7 @@ def get_vfs(inputs, retrofitted=False):
     """
     retro = '_retrofitted' if retrofitted else ''
     vulnerability_functions = collections.defaultdict(dict)
-    for cost_type in get_risk_files(inputs):
+    for cost_type in get_risk_files(inputs)[1]:
         key = '%s_vulnerability%s' % (cost_type, retro)
         if key not in inputs:
             continue
