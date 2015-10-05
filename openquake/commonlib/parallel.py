@@ -430,6 +430,8 @@ def litetask(func):
             result = func(*args)
         delattr(monitor, 'flush')
         return result
+    # NB: we need pickle=True because celery is using the worst possible
+    # protocol; once we remove celery we can try to remove pickle=True
     return FunctionMaker.create(
         func, 'return _s_(_w_, (%(shortsignature)s,), pickle=True)',
         dict(_s_=safely_call, _w_=wrapper), task_func=func)
