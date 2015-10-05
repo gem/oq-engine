@@ -278,7 +278,7 @@ def run_calc(request):
         candidates = ("job_risk.ini", "job.ini")
     else:
         candidates = ("job_hazard.ini", "job.ini")
-    einfo, exctype = safely_call(
+    einfo, exctype, monitor = safely_call(
         _prepare_job, (request, hazard_output_id, hazard_job_id, candidates))
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
@@ -321,7 +321,7 @@ def submit_job(job_file, temp_dir, dbname, user_name,
     and submit it to the job queue.
     """
     ini = os.path.join(temp_dir, job_file)
-    job, exctype = safely_call(
+    job, exctype, monitor = safely_call(
         oq_engine.job_from_file, (ini, user_name, DEFAULT_LOG_LEVEL, '',
                                   hazard_output_id, hazard_job_id))
     if exctype:
