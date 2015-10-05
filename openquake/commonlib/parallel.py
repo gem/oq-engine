@@ -22,7 +22,6 @@ TODO: write documentation.
 
 import os
 import sys
-import uuid
 import logging
 import operator
 import traceback
