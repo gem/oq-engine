@@ -148,7 +148,9 @@ class OqParam(valid.ParamSet):
         if file_type == 'vulnerability':
             self.risk_imtls = get_imtls(get_vfs(self.inputs))
         elif file_type == 'fragility':
-            ffs = get_ffs(file_by_ct, self.continuous_fragility_discretization)
+            ffs, _ = get_ffs(
+                file_by_ct, self.continuous_fragility_discretization,
+                self.steps_per_interval)
             self.risk_imtls = get_imtls(ffs)
 
         # check the IMTs vs the GSIMs

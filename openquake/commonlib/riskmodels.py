@@ -46,8 +46,11 @@ def get_risk_files(inputs):
     names = set()
     for key in inputs:
         if key == 'fragility':
-            vfs['structural'] = inputs[key]
+            # backward compatibily for .ini files with key fragility_file
+            # instead of structural_fragility_file
+            vfs['structural'] = inputs['structural_fragility'] = inputs[key]
             names.add('fragility')
+            del inputs[key]
             continue
         match = LOSS_TYPE_KEY.match(key)
         if match:
@@ -104,7 +107,8 @@ def get_vfs(inputs, retrofitted=False):
     return vulnerability_functions
 
 
-def get_ffs(file_by_ct, continuous_fragility_discretization):
+def get_ffs(file_by_ct, continuous_fragility_discretization,
+            steps_per_interval=None):
     """
     Given a dictionary {key: pathname}, look for keys with name
     <cost_type>__vulnerability, parse them and returns a dictionary
@@ -112,14 +116,16 @@ def get_ffs(file_by_ct, continuous_fragility_discretization):
 
     :param file_by_ct: a dictionary cost_type -> pathname
     :param continuous_fragility_discretization: parameter from the .ini file
+    :param steps_per_interval: steps_per_interval parameter
     """
     ffs = collections.defaultdict(dict)
     for cost_type in file_by_ct:
         ff_dict = get_fragility_functions(
-            file_by_ct[cost_type], continuous_fragility_discretization)
+            file_by_ct[cost_type], continuous_fragility_discretization,
+            steps_per_interval)
         for tax, ff in ff_dict.items():
             ffs[ff.imt, tax][cost_type_to_loss_type(cost_type)] = ff
-    return ffs
+    return ffs, ff_dict.damage_states
 
 
 # ########################### vulnerability ############################## #
@@ -254,7 +260,7 @@ def get_imtls(ddict):
 # ########################### fragility ############################### #
 
 def get_fragility_functions(fname, continuous_fragility_discretization,
-                            steps_per_interval=None):
+                            steps_per_interval):
     """
     :param fname:
         path of the fragility file
