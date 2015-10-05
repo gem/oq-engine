@@ -2,14 +2,14 @@ import time
 import unittest
 import tempfile
 import shutil
-from openquake.baselib.performance import Monitor
+from openquake.baselib.performance import PerformanceMonitor
 
 
 class MonitorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         tmpdir = tempfile.mkdtemp()
-        cls.mon = Monitor('test', tmpdir)
+        cls.mon = PerformanceMonitor('test', tmpdir)
 
     def test_no_mem(self):
         mon = self.mon('test_no_mem')
@@ -28,6 +28,20 @@ class MonitorTestCase(unittest.TestCase):
                 time.sleep(0.1)
         self.assertGreaterEqual(mon.mem, 0)
         mon.flush()
+
+    def test_children(self):
+        mon = PerformanceMonitor('test', tempfile.mkdtemp())
+        mon1 = mon('child1')
+        mon2 = mon('child2')
+        with mon1:
+            time.sleep(0.1)
+        with mon2:
+            time.sleep(0.1)
+        mon.flush()
+        data = mon.collect_performance()
+        total_time = data['time_sec'].sum()
+        self.assertGreaterEqual(total_time, 0.2)
+        shutil.rmtree(mon.monitor_dir)
 
     @classmethod
     def tearDownClass(cls):

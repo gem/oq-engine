@@ -217,7 +217,4 @@ def hazard_curves_per_trt(
     for i in range(len(gnames)):
         for imt in imtls:
             curves[i][imt] = 1. - curves[i][imt]
-    ctx_mon.flush()
-    rup_mon.flush()
-    pne_mon.flush()
     return curves

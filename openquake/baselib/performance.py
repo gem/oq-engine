@@ -20,7 +20,7 @@ import os
 import re
 import time
 import operator
-import datetime
+from datetime import datetime
 import collections
 
 import numpy
@@ -51,7 +51,7 @@ from openquake.baselib.general import humansize
 
 
 # this is not thread-safe
-class Monitor(object):
+class PerformanceMonitor(object):
     """
     Measure the resident memory occupied by a list of processes during
     the execution of a block of code. Should be used as a context manager,
@@ -84,12 +84,7 @@ class Monitor(object):
         self.mem = 0
         self.duration = 0
         self._start_time = time.time()
-
-    def write(self, row):
-        """Write a row in the performance file, if any"""
-        csv = self.monitor_csv
-        if csv:
-            open(csv, 'a').write('\t'.join(row) + '\n')
+        self.children = []
 
     def measure_mem(self):
         """A memory measurement (in bytes)"""
@@ -113,9 +108,24 @@ class Monitor(object):
         """
         The path to the .csv where the monitor will write, or None.
         """
-        if self.monitor_dir and self.pid:
-            return os.path.join(
-                self.monitor_dir, 'performance-%d.csv' % self.pid)
+        if self.monitor_dir:
+            return os.path.join(self.monitor_dir, 'performance.csv')
+
+    # this is used by readinput.get_composite_source_model
+    def write(self, row):
+        """Write a row in the performance file, if any"""
+        csv = self.monitor_csv
+        if csv:
+            open(csv, 'a').write('\t'.join(row) + '\n')
+
+    def get_data(self):
+        """
+        Return a list of strings with the measured operation, time and memory
+        """
+        time_sec = str(self.duration)
+        memory_mb = (str(self.mem / 1024. / 1024.)
+                     if self.measuremem else '0')
+        return [self.operation, time_sec, memory_mb]
 
     def __enter__(self):
         if not self.pid:
@@ -144,22 +154,25 @@ class Monitor(object):
         """
         Save the measurements on the performance file
         """
-        time_sec = str(self.duration)
-        memory_mb = str(self.mem / 1024. / 1024.) if self.measuremem else '0'
-        self.write([self.operation, time_sec, memory_mb])
-        self.duration = 0
-        self.mem = 0
+        monitors = [self] + self.children
+        for mon in monitors:
+            self.write(mon.get_data())
+        for mon in monitors:
+            mon.duration = 0
+            mon.mem = 0
 
     def __call__(self, operation, **kw):
         """
-        Return a copy of the monitor usable for a different operation.
+        Return a child of the monitor usable for a different operation.
         """
         self_vars = vars(self).copy()
         del self_vars['operation']
+        del self_vars['children']
+        del self_vars['pid']
         new = self.__class__(operation)
         vars(new).update(self_vars)
         vars(new).update(kw)
-        new.pid = None
+        self.children.append(new)
         return new
 
     def __repr__(self):
@@ -178,7 +191,7 @@ class Monitor(object):
             return
         data = collections.defaultdict(lambda: numpy.zeros(3))
         for f in os.listdir(self.monitor_dir):
-            mo = re.match(r'performance-(\d+)\.csv', f)
+            mo = re.match(r'performance.csv', f)
             if mo:
                 fname = os.path.join(self.monitor_dir, f)
                 for line in open(fname):
@@ -194,7 +207,7 @@ class Monitor(object):
         return numpy.array(rows, perf_dt)
 
 
-class DummyMonitor(Monitor):
+class DummyMonitor(PerformanceMonitor):
     """
     This class makes it easy to disable the monitoring in client code.
     Disabling the monitor can improve the performance.
