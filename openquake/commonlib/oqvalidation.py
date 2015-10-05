@@ -23,8 +23,7 @@ import numpy
 
 from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import (
-    get_imtls_from_vulnerabilities, get_imtls_from_fragilities,
-    get_risk_files, get_ffs)
+    get_imtls, get_risk_files, get_vfs, get_ffs)
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
@@ -147,10 +146,10 @@ class OqParam(valid.ParamSet):
             delattr(self, 'intensity_measure_types')
         file_type, file_by_ct = get_risk_files(self.inputs)
         if file_type == 'vulnerability':
-            self.risk_imtls = get_imtls_from_vulnerabilities(self.inputs)
+            self.risk_imtls = get_imtls(get_vfs(self.inputs))
         elif file_type == 'fragility':
             ffs = get_ffs(file_by_ct, self.continuous_fragility_discretization)
-            self.risk_imtls = get_imtls_from_fragilities(ffs)
+            self.risk_imtls = get_imtls(ffs)
 
         # check the IMTs vs the GSIMs
         if 'gsim_logic_tree' in self.inputs:
@@ -288,7 +287,8 @@ class OqParam(valid.ParamSet):
                     raise ValueError(
                         'Correlation model %s does not accept IMT=%s' % (
                             self.ground_motion_correlation_model, imt))
-        if fragility_files(self.inputs) or get_risk_files(self.inputs):
+        _, risk_files = get_risk_files(self.inputs)
+        if risk_files:  # IMTLs extracted from the risk files
             return (self.intensity_measure_types is None
                     and self.intensity_measure_types_and_levels is None)
         elif not hasattr(self, 'hazard_imtls') and not hasattr(
@@ -362,7 +362,7 @@ class OqParam(valid.ParamSet):
         fragility_file/vulnerability_file in the .ini file.
         """
         if 'damage' in self.calculation_mode:
-            return 'fragility' in self.inputs
+            return any(key.endswith('_fragility') for key in self.inputs)
         elif 'risk' in self.calculation_mode:
             return any(key.endswith('_vulnerability') for key in self.inputs)
         return True

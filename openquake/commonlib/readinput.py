@@ -34,8 +34,7 @@ from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
 from openquake.commonlib.oqvalidation import get_risk_files
-from openquake.commonlib.riskmodels import \
-    get_fragility_functions, get_vfs
+from openquake.commonlib.riskmodels import get_vfs, get_ffs
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.performance import DummyMonitor
 from openquake.baselib.python3compat import configparser
@@ -682,7 +681,7 @@ def get_exposure(oqparam):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = exposure.area['type']
 
-    all_cost_types = set(get_risk_files(oqparam.inputs))
+    all_cost_types = set(get_risk_files(oqparam.inputs)[1])
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)

@@ -32,8 +32,9 @@ from openquake.baselib.general import AccumDict
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.sourcewriter import obj_to_node
 
-LOSS_TYPE_KEY = re.compile('(structural|nonstructural|contents|'
-                           'business_interruption|occupants)_([\w_]+)')
+LOSS_TYPE_KEY = re.compile(
+    '(structural|nonstructural|contents|business_interruption|'
+    'occupants|fragility)_([\w_]+)')
 
 
 def get_risk_files(inputs):
@@ -44,11 +45,17 @@ def get_risk_files(inputs):
     vfs = {}
     names = set()
     for key in inputs:
+        if key == 'fragility':
+            vfs['structural'] = inputs[key]
+            names.add('fragility')
+            continue
         match = LOSS_TYPE_KEY.match(key)
         if match:
             vfs[match.group(1)] = inputs[key]
             names.add(match.group(2))
-    if len(names) > 1:
+    if not names:
+        return None, {}
+    elif len(names) > 1:
         raise ValueError('Found inconsistent keys %s in the .ini file'
                          % ', '.join(names))
     return names.pop(), vfs
@@ -110,8 +117,8 @@ def get_ffs(file_by_ct, continuous_fragility_discretization):
     for cost_type in file_by_ct:
         ff_dict = get_fragility_functions(
             file_by_ct[cost_type], continuous_fragility_discretization)
-        for (imt, tax), ff in ff_dict.items():
-            ffs[imt, tax][cost_type_to_loss_type(cost_type)] = ff
+        for tax, ff in ff_dict.items():
+            ffs[ff.imt, tax][cost_type_to_loss_type(cost_type)] = ff
     return ffs
 
 
@@ -221,47 +228,26 @@ def get_vulnerability_functions(fname):
     return vf_dict
 
 
-def get_imtls_from_vulnerabilities(inputs):
+def get_imtls(ddict):
     """
-    :param inputs:
-        a dictionary {losstype_vulnerability: fname}
+    :param ddict:
+        a dictionary (imt, taxo) -> loss_type -> risk_function
     :returns:
         a dictionary imt_str -> imls
     """
     # NB: different loss types may have different IMLs for the same IMT
     # in that case we merge the IMLs
     imtls = {}
-    file_type, file_by_ct = get_risk_files(inputs)
-    for loss_type, fname in file_by_ct.items():
-        for (imt, taxonomy), vf in get_vulnerability_functions(fname).items():
-            imls = list(vf.imls)
+    for (imt, taxonomy), dic in ddict.items():
+        for loss_type, rf in dic.items():
+            imls = list(rf.imls)
             if imt in imtls and imtls[imt] != imls:
                 logging.info(
-                    'Different levels for IMT %s: got %s, expected %s '
-                    'in %s', imt, vf.imls, imtls[imt], fname)
+                    'Different levels for IMT %s: got %s, expected %s',
+                    imt, rf.imls, imtls[imt])
                 imtls[imt] = sorted(set(imls + imtls[imt]))
             else:
                 imtls[imt] = imls
-    return imtls
-
-
-def get_imtls_from_fragilities(ffs):
-    """
-    :param inputs:
-        a dictionary {losstype_vulnerability: fname}
-    :returns:
-        a dictionary imt_str -> imls
-    """
-    # NB: different loss types may have different IMLs for the same IMT
-    # in that case we merge the IMLs
-    imtls = {}
-    import pdb; pdb.set_trace()
-    for (imt, taxonomy), ff in ffs.items():
-        imls = list(ff.imls)
-        if imt in imtls and imtls[imt] != imls:
-            imtls[imt] = sorted(set(imls + imtls[imt]))
-        else:
-            imtls[imt] = imls
     return imtls
 
 
