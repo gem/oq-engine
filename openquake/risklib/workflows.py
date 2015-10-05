@@ -806,6 +806,18 @@ class Damage(Workflow):
              for gmvs in gmfs])
         return scientific.Output(assets, loss_type, damages=damages)
 
+    def gen_out_by_rlz(self, assets, hazards, epsilons, tags):
+        """
+        :param assets: an array of assets of homogeneous taxonomy
+        :param hazards: an array of dictionaries per each asset
+        :param epsilons: an array of epsilons per each asset
+        :param tags: rupture tags
+
+        Yield a single list of outputs
+        """
+        for loss_type in self.loss_types:
+            yield out_by_rlz(self, assets, hazards, epsilons, tags, loss_type)
+
 
 @registry.add('classical_damage')
 class ClassicalDamage(Damage):
@@ -818,7 +830,7 @@ class ClassicalDamage(Damage):
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
-        self.imls = hazard_imtls[imt]
+        self.hazard_imls = hazard_imtls[imt]
         self.investigation_time = investigation_time
         self.risk_investigation_time = risk_investigation_time
 
@@ -832,12 +844,12 @@ class ClassicalDamage(Damage):
 
         where N is the number of points and D the number of damage states.
         """
-        fractions = scientific.classical_damage(
-            self.risk_functions[loss_type], self.imls,
-            investigation_time=self.investigation_time,
-            risk_investigation_time=self.risk_investigation_time)
-        damages = [asset.number * fraction
-                   for asset, fraction in zip(assets, fractions)]
+        damages = [
+            asset.number * scientific.classical_damage(
+                self.risk_functions[loss_type], self.hazard_imls, curve,
+                investigation_time=self.investigation_time,
+                risk_investigation_time=self.risk_investigation_time)
+            for asset, curve in zip(assets, hazard_curves)]
         return scientific.Output(assets, loss_type, damages=damages)
 
     compute_all_outputs = (
