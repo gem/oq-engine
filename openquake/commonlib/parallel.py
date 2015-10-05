@@ -412,16 +412,23 @@ def do_not_aggregate(acc, value):
     return acc
 
 
+def noflush():
+    # this is set by the litetask decorator
+    raise RuntimeError('PerformanceMonitor.flush() must not be called '
+                       'by a worker!')
+
+
 def litetask(func):
     """
     Add monitoring support to the decorated function. The last argument
     must be a monitor object.
     """
     def wrapper(*args):
-        os.environ['OQ_TASK_ID'] = str(uuid.uuid1())
-        with args[-1]('total ' + func.__name__, measuremem=True):
+        monitor = args[-1]
+        monitor.flush = noflush
+        with monitor('total ' + func.__name__, measuremem=True):
             result = func(*args)
-        del os.environ['OQ_TASK_ID']
+        delattr(monitor, 'flush')
         return result
     return FunctionMaker.create(
         func, 'return _s_(_w_, (%(shortsignature)s,), pickle=True)',
