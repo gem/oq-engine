@@ -260,7 +260,7 @@ def get_imtls(ddict):
 # ########################### fragility ############################### #
 
 def get_fragility_functions(fname, continuous_fragility_discretization,
-                            steps_per_interval):
+                            steps_per_interval=None):
     """
     :param fname:
         path of the fragility file
