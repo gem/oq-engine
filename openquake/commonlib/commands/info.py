@@ -21,7 +21,7 @@ import textwrap
 import operator
 import logging
 import tempfile
-from openquake.baselib.performance import Monitor
+from openquake.baselib.performance import PerformanceMonitor
 from openquake.baselib.general import humansize, groupby
 from openquake.commonlib import (
     sap, readinput, nrml, source, datastore, reportwriter)
@@ -107,7 +107,7 @@ def info(name, filtersources=False, weightsources=False, report=False):
     a job.ini file, or a zip archive with the input files.
     """
     logging.basicConfig(level=logging.INFO)
-    with Monitor('info', measuremem=True) as mon:
+    with PerformanceMonitor('info', measuremem=True) as mon:
         if report:
             tmp = tempfile.gettempdir()
             print('Generated', reportwriter.build_report(name, tmp))

@@ -39,7 +39,7 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     :param rlzs_assoc:
         associations (trt_id, gsim) -> realizations
     :param monitor:
-        :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
+        :class:`openquake.baselib.performance.PerformanceMonitor` instance
     """
     result = general.AccumDict({rlz.ordinal: general.AccumDict()
                                 for rlz in rlzs_assoc.realizations})

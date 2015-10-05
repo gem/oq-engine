@@ -230,8 +230,8 @@ class RiskModel(collections.Mapping):
         :param rlzs_assoc: a RlzsAssoc instance
         :param monitor: a monitor object used to measure the performance
         """
-        mon_hazard = monitor('getting hazard', autoflush=False)
-        mon_risk = monitor('computing individual risk', autoflush=False)
+        mon_hazard = monitor('getting hazard')
+        mon_risk = monitor('computing individual risk')
         for riskinput in riskinputs:
             try:
                 assets_by_site = riskinput.assets_by_site
@@ -264,8 +264,6 @@ class RiskModel(collections.Mapping):
                             if hasattr(riskinput, 'rup_slice'):
                                 out_by_rlz.rup_slice = riskinput.rup_slice
                             yield out_by_rlz
-        mon_hazard.flush()
-        mon_risk.flush()
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
