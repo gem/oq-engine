@@ -26,7 +26,7 @@ calculators Package
     :show-inheritance:
 
 :mod:`event_based_risk` Module
-------------------
+-------------------------------
 
 .. automodule:: openquake.calculators.event_based_risk
     :members:
@@ -52,18 +52,11 @@ calculators Package
 :mod:`scenario_risk` Module
 -----------------------------
 
-.. automodule:: openquake.calculators.scenario
+.. automodule:: openquake.calculators.scenario_risk
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`scenario_risk` Module
------------------------------
-
-.. automodule:: openquake.calculators.scenario
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 :mod:`classical` Module
 --------------------------
