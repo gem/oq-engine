@@ -46,6 +46,14 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(1)
   0,BooreAtkinson2008: ['<0,b1,b1,w=1.0>']>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+================ ====== ==================== =========== ============
+source_model     trt_id trt                  num_sources num_ruptures
+================ ====== ==================== =========== ============
+source_model.xml 0      Active Shallow Crust 1           1           
+================ ====== ==================== =========== ============
+
 Expected data transfer for the sources
 --------------------------------------
 ================================== =========
