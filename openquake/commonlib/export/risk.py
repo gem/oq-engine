@@ -417,6 +417,7 @@ def export_avglosses(ekey, dstore):
 LossMap = collections.namedtuple('LossMap', 'location asset_ref value std_dev')
 
 
+# emulate a Django point
 class Location(object):
     def __init__(self, xy):
         self.x, self.y = xy
@@ -450,7 +451,7 @@ def export_lossmaps_xml(ekey, dstore):
             data.append(lm)
         writer = risk_writers.LossMapXMLWriter(
             fname, oq.investigation_time, poe=None, loss_type=lt,
-            gsim_tree_path=str(rlz), unit=unit, loss_category=None)
+            gsim_tree_path=None, unit=unit, loss_category=None)
         # TODO: replace the category with the exposure category
         writer.serialize(data)
         fnames.append(fname)
