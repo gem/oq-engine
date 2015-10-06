@@ -387,7 +387,7 @@ def _export_classical_damage_csv(export_dir, fname, damage_states,
 AggLoss = collections.namedtuple(
     'AggLoss', 'loss_type unit mean stddev')
 
-PerAssetLoss = collections.namedtuple(  # the loss map
+PerAssetLoss = collections.namedtuple(
     'PerAssetLoss', 'loss_type unit asset_ref mean stddev')
 
 
@@ -412,6 +412,48 @@ def export_avglosses(ekey, dstore):
         out = export_loss_csv(
             ('avg', 'csv'), dstore.export_dir, losses, suffix)
         fnames.append(out)
+    return sorted(fnames)
+
+LossMap = collections.namedtuple('LossMap', 'location asset_ref value std_dev')
+
+
+class Location(object):
+    def __init__(self, xy):
+        self.x, self.y = xy
+        self.wkt = 'POINT(%s %s)' % tuple(xy)
+
+
+@export.add(('avglosses', 'xml'))
+def export_lossmaps_xml(ekey, dstore):
+    oq = OqParam.from_(dstore.attrs)
+    unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
+                  for ct in dstore['cost_types']}
+    unit_by_lt['fatalities'] = 'people'
+    rlzs = dstore['rlzs_assoc'].realizations
+    avglosses = dstore['avglosses']
+    riskmodel = dstore['riskmodel']
+    assetcol = dstore['assetcol']
+    sitemesh = dstore['sitemesh']
+    N, L, R = avglosses.shape
+    fnames = []
+    for l, r in itertools.product(range(L), range(R)):
+        rlz = rlzs[r]
+        lt = riskmodel.loss_types[l]
+        unit = unit_by_lt[lt]
+        suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
+        fname = os.path.join(
+            dstore.export_dir, '%s%s.%s' % (ekey[0], suffix, ekey[1]))
+        data = []
+        for ass, stat in zip(assetcol, avglosses[:, l, r]):
+            loc = Location(sitemesh[ass['site_id']])
+            lm = LossMap(loc, ass['asset_ref'], stat['mean'], stat['stddev'])
+            data.append(lm)
+        writer = risk_writers.LossMapXMLWriter(
+            fname, oq.investigation_time, poe=None, loss_type=lt,
+            gsim_tree_path=str(rlz), unit=unit, loss_category=None)
+        # TODO: replace the category with the exposure category
+        writer.serialize(data)
+        fnames.append(fname)
     return sorted(fnames)
 
 
