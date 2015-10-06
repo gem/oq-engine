@@ -78,7 +78,7 @@ def build_report(job_ini, output_dir=None):
     if 'num_ruptures' in ds:
         rw.add('rupture_collections')
         rw.add('col_rlz_assocs')
-    else:
+    elif 'scenario' not in oq.calculation_mode:
         rw.add('ruptures_by_trt')
     if oq.calculation_mode in ('classical', 'event_based', 'event_based_risk'):
         rw.add('data_transfer')
