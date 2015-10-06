@@ -124,6 +124,17 @@ def view_rupture_collections(token, dstore):
     return rst_table(rows, ['col', 'smlt_path', 'TRT', 'num_ruptures'])
 
 
+@view.add('ruptures_by_trt')
+def view_ruptures_by_trt(token, dstore):
+    tbl = []
+    header = 'source_model trt_id trt num_sources num_ruptures'.split()
+    for sm in dstore['composite_source_model']:
+        for trt_model in sm.trt_models:
+            tbl.append((sm.name, trt_model.id, trt_model.trt,
+                        len(trt_model.sources), trt_model.num_ruptures))
+    return rst_table(tbl, header=header)
+
+
 @view.add('params')
 def view_params(token, dstore):
     oq = OqParam.from_(dstore.attrs)
