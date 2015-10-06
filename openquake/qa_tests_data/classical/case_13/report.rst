@@ -52,6 +52,21 @@ Realizations per (TRT, GSIM)
   1,BooreAtkinson2008: ['<2,bFault_stitched_D2.1_Char,BooreAtkinson2008,w=0.25>']
   1,ChiouYoungs2008: ['<3,bFault_stitched_D2.1_Char,ChiouYoungs2008,w=0.25>']>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+=========== ====
+#TRT models 2   
+#sources    354 
+#ruptures   3894
+=========== ====
+
+============================= ====== ==================== =========== ============
+source_model                  trt_id trt                  num_sources num_ruptures
+============================= ====== ==================== =========== ============
+aFault_aPriori_D2.1.xml       0      Active Shallow Crust 168         1848        
+bFault_stitched_D2.1_Char.xml 1      Active Shallow Crust 186         2046        
+============================= ====== ==================== =========== ============
+
 Expected data transfer for the sources
 --------------------------------------
 ================================== =======

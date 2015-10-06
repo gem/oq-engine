@@ -49,6 +49,24 @@ Realizations per (TRT, GSIM)
   4,YoungsEtAl1997SSlab: ['<2,b1,@_@_@_@_b53_@_@,w=0.2>']
   4,ZhaoEtAl2006SSlab: ['<3,b1,@_@_@_@_b54_@_@,w=0.4>']>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+=========== ====
+#TRT models 5   
+#sources    370 
+#ruptures   7770
+=========== ====
+
+============================ ====== ==================== =========== ============
+source_model                 trt_id trt                  num_sources num_ruptures
+============================ ====== ==================== =========== ============
+simple_area_source_model.xml 0      Subduction Interface 0           0           
+simple_area_source_model.xml 1      Volcanic             0           0           
+simple_area_source_model.xml 2      Shield               0           0           
+simple_area_source_model.xml 3      Stable Shallow Crust 0           0           
+simple_area_source_model.xml 4      Subduction Inslab    370         7770        
+============================ ====== ==================== =========== ============
+
 Expected data transfer for the sources
 --------------------------------------
 ================================== =========

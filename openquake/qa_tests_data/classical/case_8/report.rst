@@ -50,6 +50,22 @@ Realizations per (TRT, GSIM)
   1,SadighEtAl1997: ['<1,b1_b3,b1,w=0.3>']
   2,SadighEtAl1997: ['<2,b1_b4,b1,w=0.4>']>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+=========== ====
+#TRT models 3   
+#sources    3   
+#ruptures   9000
+=========== ====
+
+================ ====== ==================== =========== ============
+source_model     trt_id trt                  num_sources num_ruptures
+================ ====== ==================== =========== ============
+source_model.xml 0      active shallow crust 1           3000        
+source_model.xml 1      active shallow crust 1           3000        
+source_model.xml 2      active shallow crust 1           3000        
+================ ====== ==================== =========== ============
+
 Expected data transfer for the sources
 --------------------------------------
 ================================== =======

@@ -48,6 +48,20 @@ Realizations per (TRT, GSIM)
   0,AbrahamsonSilva2008: ['<0,simple_fault,AbrahamsonSilva2008,w=0.5>']
   0,CampbellBozorgnia2008: ['<1,simple_fault,CampbellBozorgnia2008,w=0.5>']>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+=========== ===
+#TRT models 1  
+#sources    15 
+#ruptures   447
+=========== ===
+
+================ ====== ==================== =========== ============
+source_model     trt_id trt                  num_sources num_ruptures
+================ ====== ==================== =========== ============
+simple_fault.xml 0      Active Shallow Crust 15          447         
+================ ====== ==================== =========== ============
+
 Expected data transfer for the sources
 --------------------------------------
 ================================== ========

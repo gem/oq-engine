@@ -56,6 +56,23 @@ Realizations per (TRT, GSIM)
   3,BooreAtkinson2008: ['<6,SM2_a3pt2b0pt8,BA2008_@,w=0.125>']
   3,CampbellBozorgnia2008: ['<7,SM2_a3pt2b0pt8,CB2008_@,w=0.125>']>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+=========== ===
+#TRT models 4  
+#sources    34 
+#ruptures   510
+=========== ===
+
+================== ====== ======================== =========== ============
+source_model       trt_id trt                      num_sources num_ruptures
+================== ====== ======================== =========== ============
+source_model_1.xml 0      Active Shallow Crust     1           15          
+source_model_1.xml 1      Stable Continental Crust 1           15          
+source_model_2.xml 2      Active Shallow Crust     16          240         
+source_model_2.xml 3      Active Shallow Crust     16          240         
+================== ====== ======================== =========== ============
+
 Expected data transfer for the sources
 --------------------------------------
 ================================== ========
