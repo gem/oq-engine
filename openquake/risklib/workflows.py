@@ -20,6 +20,7 @@ import sys
 import inspect
 import functools
 import collections
+import mock
 import numpy
 
 from openquake.baselib.general import CallableDict
@@ -566,6 +567,10 @@ class ProbabilisticEventBased(Workflow):
         average_losses = loss_matrix.sum(axis=1) * self.ses_ratio
         values = get_values(loss_type, assets)
         ela = loss_matrix.T * values  # matrix with T x N elements
+        cb = self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
+        # FIXME: ugly workaround for qa_tests.event_based_test; in Ubuntu 12.04
+        # MagicMock does not work well, so len(cb.ratios) gives an error
+        nratios = 1 if isinstance(cb, mock.Mock) else len(cb.ratios)
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = numpy.array(
                 [a.deductible(loss_type) for a in assets])
@@ -573,12 +578,15 @@ class ProbabilisticEventBased(Workflow):
                 [a.insurance_limit(loss_type) for a in assets])
             ilm = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
+            icounts = cb.build_counts(ilm)
         else:  # build a NaN matrix of size N x T
-            ilm = numpy.empty((n, len(ground_motion_values[0])))
+            T = len(ground_motion_values[0])
+            ilm = numpy.empty((n, T))
             ilm.fill(numpy.nan)
+            icounts = numpy.empty((n, nratios))
+            icounts.fill(numpy.nan)
         ila = ilm.T * values
         average_insured_losses = ilm.sum(axis=1) * self.ses_ratio
-        cb = self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
         return scientific.Output(
             assets, loss_type,
             event_loss_per_asset=ela,
@@ -586,7 +594,7 @@ class ProbabilisticEventBased(Workflow):
             average_losses=average_losses,
             average_insured_losses=average_insured_losses,
             counts_matrix=cb.build_counts(loss_matrix),
-            insured_counts_matrix=cb.build_counts(ilm),
+            insured_counts_matrix=icounts,
             tags=event_ids)
 
     def compute_all_outputs(self, getter, loss_type):

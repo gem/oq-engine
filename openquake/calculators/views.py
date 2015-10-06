@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os.path
+import numbers
 import operator
 import numpy
 
@@ -122,6 +123,29 @@ def view_rupture_collections(token, dstore):
                     rows.append((col_id, '_'.join(sm.path), tm.trt, nr))
                 col_id += 1
     return rst_table(rows, ['col', 'smlt_path', 'TRT', 'num_ruptures'])
+
+
+@view.add('ruptures_by_trt')
+def view_ruptures_by_trt(token, dstore):
+    tbl = []
+    header = 'source_model trt_id trt num_sources num_ruptures'.split()
+    num_trts = 0
+    num_sources = 0
+    num_ruptures = 0
+    for sm in dstore['composite_source_model']:
+        for trt_model in sm.trt_models:
+            num_trts += 1
+            num_sources += len(trt_model.sources)
+            num_ruptures += trt_model.num_ruptures
+            tbl.append((sm.name, trt_model.id, trt_model.trt,
+                        len(trt_model.sources), trt_model.num_ruptures))
+    rows = [('#TRT models', num_trts), ('#sources', num_sources),
+            ('#ruptures', num_ruptures)]
+    if len(rows) > 1:
+        summary = rst_table(rows) + '\n\n'
+    else:
+        summary = ''
+    return summary + rst_table(tbl, header=header)
 
 
 @view.add('params')
@@ -242,9 +266,12 @@ def sum_table(records):
     """
     size = len(records[0])
     result = [None] * size
-    result[0] = 'total'
-    for i in range(1, size):
-        result[i] = sum(rec[i] for rec in records)
+    firstrec = records[0]
+    for i in range(size):
+        if isinstance(firstrec[i], numbers.Number):
+            result[i] = sum(rec[i] for rec in records)
+        else:
+            result[i] = 'total'
     return result
 
 
