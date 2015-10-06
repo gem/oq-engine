@@ -272,3 +272,22 @@ def view_mean_avg_losses(token, dstore):
     if len(losses) > 1:
         losses.append(sum_table(losses))
     return rst_table(losses, header=header, fmt='%8.6E')
+
+
+@view.add('exposure_info')
+def exposure_info(token, dstore):
+    """
+    Display info about the exposure model
+    """
+    assetcol = dstore['assetcol'][:]
+    taxonomies = dstore['taxonomies'][:]
+    counts = numpy.zeros(len(taxonomies), numpy.uint32)
+    for ass in assetcol:
+        tax_idx = ass['taxonomy']
+        counts[tax_idx] += 1
+    tbl = zip(taxonomies, counts)
+    data = [('#assets', len(assetcol)),
+            ('#sites', len(set(assetcol['site_id']))),
+            ('#taxonomies', len(taxonomies))]
+    return rst_table(data) + '\n\n' + rst_table(
+        tbl, header=['Taxonomy', '#Assets'])

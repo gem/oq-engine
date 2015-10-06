@@ -16,7 +16,7 @@ width_of_mfd_bin             0.5
 area_source_discretization   20.0     
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             32       
+concurrent_tasks             64       
 ============================ =========
 
 Input files
@@ -51,8 +51,26 @@ Realizations per (TRT, GSIM)
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ======
-Number of tasks to generate        30    
-Estimated sources to send          1.9 MB
-Estimated hazard curves to receive 15 MB 
-================================== ======
+================================== =======
+Number of tasks to generate        59     
+Estimated sources to send          3.45 MB
+Estimated hazard curves to receive 30 MB  
+================================== =======
+
+Exposure model
+--------------
+=========== ====
+#assets     9144
+#sites      2273
+#taxonomies 5   
+=========== ====
+
+======== =======
+Taxonomy #Assets
+======== =======
+A        2273   
+DS       2273   
+RC       52     
+UFB      2273   
+W        2273   
+======== =======
