@@ -568,7 +568,8 @@ class ProbabilisticEventBased(Workflow):
         values = get_values(loss_type, assets)
         ela = loss_matrix.T * values  # matrix with T x N elements
         cb = self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
-        # ugly workaround for qa_tests.event_based_test in Ubuntu 12.04
+        # FIXME: ugly workaround for qa_tests.event_based_test; in Ubuntu 12.04
+        # MagicMock does not work well, so len(cb.ratios) gives an error
         nratios = 1 if isinstance(cb, mock.Mock) else len(cb.ratios)
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = numpy.array(
