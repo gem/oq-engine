@@ -49,11 +49,11 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-============= =
-#TRTs         2
-#sources      2
-#num_ruptures 2
-============= =
+=========== =
+#TRT models 2
+#sources    2
+#ruptures   2
+=========== =
 
 ================ ====== ==================== =========== ============
 source_model     trt_id trt                  num_sources num_ruptures

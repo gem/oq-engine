@@ -139,8 +139,8 @@ def view_ruptures_by_trt(token, dstore):
             num_ruptures += trt_model.num_ruptures
             tbl.append((sm.name, trt_model.id, trt_model.trt,
                         len(trt_model.sources), trt_model.num_ruptures))
-    rows = [('#TRTs', num_trts), ('#sources', num_sources),
-            ('#num_ruptures', num_ruptures)]
+    rows = [('#TRT models', num_trts), ('#sources', num_sources),
+            ('#ruptures', num_ruptures)]
     if len(rows) > 1:
         summary = rst_table(rows) + '\n\n'
     else:
