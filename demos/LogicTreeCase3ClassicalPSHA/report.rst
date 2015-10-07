@@ -16,7 +16,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0      
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             32       
+concurrent_tasks             64       
 ============================ =========
 
 Input files
@@ -89,10 +89,41 @@ Realizations per (TRT, GSIM)
   17,Campbell2003: ['<33,b11_b23_b33,b11_b22,w=0.027889>', '<35,b11_b23_b33,b12_b22,w=0.027889>']
   17,ToroEtAl2002: ['<32,b11_b23_b33,b11_b21,w=0.027889>', '<34,b11_b23_b33,b12_b21,w=0.027889>']>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+=========== =====
+#TRT models 18   
+#sources    13896
+#ruptures   58176
+=========== =====
+
+================ ====== ======================== =========== ============
+source_model     trt_id trt                      num_sources num_ruptures
+================ ====== ======================== =========== ============
+source_model.xml 0      Active Shallow Crust     1334        1334        
+source_model.xml 1      Stable Continental Crust 205         4100        
+source_model.xml 2      Active Shallow Crust     1339        1339        
+source_model.xml 3      Stable Continental Crust 205         5125        
+source_model.xml 4      Active Shallow Crust     1344        1344        
+source_model.xml 5      Stable Continental Crust 205         6150        
+source_model.xml 6      Active Shallow Crust     1334        1334        
+source_model.xml 7      Stable Continental Crust 205         4100        
+source_model.xml 8      Active Shallow Crust     1339        1339        
+source_model.xml 9      Stable Continental Crust 205         5125        
+source_model.xml 10     Active Shallow Crust     1344        1344        
+source_model.xml 11     Stable Continental Crust 205         6150        
+source_model.xml 12     Active Shallow Crust     1334        1334        
+source_model.xml 13     Stable Continental Crust 205         4100        
+source_model.xml 14     Active Shallow Crust     1339        1339        
+source_model.xml 15     Stable Continental Crust 205         5125        
+source_model.xml 16     Active Shallow Crust     1344        1344        
+source_model.xml 17     Stable Continental Crust 205         6150        
+================ ====== ======================== =========== ============
+
 Expected data transfer for the sources
 --------------------------------------
 ================================== ========
-Number of tasks to generate        45      
-Estimated sources to send          46.92 MB
-Estimated hazard curves to receive 13 KB   
+Number of tasks to generate        72      
+Estimated sources to send          46.97 MB
+Estimated hazard curves to receive 21 KB   
 ================================== ========

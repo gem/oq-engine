@@ -141,7 +141,7 @@ def view_ruptures_by_trt(token, dstore):
                         len(trt_model.sources), trt_model.num_ruptures))
     rows = [('#TRT models', num_trts), ('#sources', num_sources),
             ('#ruptures', num_ruptures)]
-    if len(rows) > 1:
+    if len(tbl) > 1:
         summary = rst_table(rows) + '\n\n'
     else:
         summary = ''
@@ -299,3 +299,22 @@ def view_mean_avg_losses(token, dstore):
     if len(losses) > 1:
         losses.append(sum_table(losses))
     return rst_table(losses, header=header, fmt='%8.6E')
+
+
+@view.add('exposure_info')
+def exposure_info(token, dstore):
+    """
+    Display info about the exposure model
+    """
+    assetcol = dstore['assetcol'][:]
+    taxonomies = dstore['taxonomies'][:]
+    counts = numpy.zeros(len(taxonomies), numpy.uint32)
+    for ass in assetcol:
+        tax_idx = ass['taxonomy']
+        counts[tax_idx] += 1
+    tbl = zip(taxonomies, counts)
+    data = [('#assets', len(assetcol)),
+            ('#sites', len(set(assetcol['site_id']))),
+            ('#taxonomies', len(taxonomies))]
+    return rst_table(data) + '\n\n' + rst_table(
+        tbl, header=['Taxonomy', '#Assets'])
