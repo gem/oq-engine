@@ -26,7 +26,7 @@ Name                     File
 ======================== ==========================================================================
 exposure                 `exposure.xml <exposure.xml>`_                                            
 gsim_logic_tree          `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                              
-job_ini                  `job_hazard.ini <job_hazard.ini>`_                                        
+job_ini                  `job_h.ini <job_h.ini>`_                                                  
 site_model               `site_model.xml <site_model.xml>`_                                        
 source                   `as_model.xml <as_model.xml>`_                                            
 source                   `fsbg_model.xml <fsbg_model.xml>`_                                        
@@ -84,3 +84,25 @@ Number of tasks to generate        22
 Estimated sources to send          30.56 MB
 Estimated hazard curves to receive 866 KB  
 ================================== ========
+
+Exposure model
+--------------
+=========== ==
+#assets     14
+#sites      14
+#taxonomies 9 
+=========== ==
+
+======== =======
+Taxonomy #Assets
+======== =======
+RC_HR    1      
+RC_LR    3      
+RC_MR    1      
+SAM_1S   1      
+SAM_2S   2      
+SAM_3S   1      
+SAM_4S   1      
+URM_1S   2      
+URM_2S   2      
+======== =======

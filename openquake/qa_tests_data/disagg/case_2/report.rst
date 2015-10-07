@@ -16,7 +16,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0          
 random_seed                  23            
 master_seed                  0             
-concurrent_tasks             32            
+concurrent_tasks             64            
 ============================ ==============
 
 Input files
@@ -51,3 +51,19 @@ Realizations per (TRT, GSIM)
   1,ChiouYoungs2008: ['<1,source_model_1,ChiouYoungs2008_YoungsEtAl1997SSlab,w=0.25>']
   2,BooreAtkinson2008: ['<2,source_model_2,BooreAtkinson2008_@,w=0.25>']
   2,ChiouYoungs2008: ['<3,source_model_2,ChiouYoungs2008_@,w=0.25>']>
+
+Number of ruptures per tectonic region type
+-------------------------------------------
+=========== ====
+#TRT models 3   
+#sources    378 
+#ruptures   6865
+=========== ====
+
+================== ====== ==================== =========== ============
+source_model       trt_id trt                  num_sources num_ruptures
+================== ====== ==================== =========== ============
+source_model_1.xml 0      Subduction IntraSlab 121         1815        
+source_model_1.xml 1      Active Shallow Crust 242         3630        
+source_model_2.xml 2      Active Shallow Crust 15          1420        
+================== ====== ==================== =========== ============
