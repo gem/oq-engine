@@ -757,14 +757,16 @@ class Scenario(Workflow):
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
                  _tags=None):
+        # FIXME: remove this when the engine calculator will be removed
+        engine = hasattr(assets[0], 'asset_ref')
         values = get_values(loss_type, assets, self.time_event)
 
-        # a matrix of N x R elements
+        # a matrix of N x E elements
         loss_ratio_matrix = self.risk_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
-        # another matrix of N x R elements
+        # another matrix of N x E elements
         loss_matrix = (loss_ratio_matrix.T * values).T
-        # an array of R elements
+        # an array of E elements
         aggregate_losses = loss_matrix.sum(axis=0)
 
         if self.insured_losses and loss_type != "fatalities":
@@ -774,18 +776,25 @@ class Scenario(Workflow):
                 scientific.insured_losses,
                 loss_ratio_matrix, deductibles, limits)
             insured_loss_matrix = (insured_loss_ratio_matrix.T * values).T
-
-            # aggregating per asset, getting a vector of R elements
-            insured_losses = insured_loss_matrix.sum(axis=0)
         else:
-            insured_loss_matrix = None
-            insured_losses = None
+            insured_loss_matrix = numpy.empty_like(loss_ratio_matrix)
+            insured_loss_matrix.fill(numpy.nan)
+
+        # aggregating per asset, getting a vector of E elements
+        insured_losses = insured_loss_matrix.sum(axis=0)
         return scientific.Output(
             assets, loss_type, loss_matrix=loss_matrix,
             loss_ratio_matrix=loss_ratio_matrix,
             aggregate_losses=aggregate_losses,
-            insured_loss_matrix=insured_loss_matrix,
-            insured_losses=insured_losses)
+            insured_loss_matrix=NoneOr(engine, insured_loss_matrix),
+            insured_losses=NoneOr(engine, insured_losses))
+
+
+# FIXME: remove this when the engine calculator will be removed
+def NoneOr(engine, array):
+    if engine:
+        return None if numpy.isnan(array).all() else array
+    return array
 
 
 @registry.add('scenario_damage')
@@ -802,10 +811,10 @@ class Damage(Workflow):
         """
         :param loss_type: the string 'damage'
         :param assets: a list of N assets of the same taxonomy
-        :param gmfs: an array of N x R elements
-        :returns: an array of N assets and an array of N x R x D elements
+        :param gmfs: an array of N x E elements
+        :returns: an array of N assets and an array of N x E x D elements
 
-        where N is the number of points, R the number of realizations
+        where N is the number of points, E the number of events
         and D the number of damage states.
         """
         ffs = self.risk_functions['damage']
@@ -848,7 +857,7 @@ class ClassicalDamage(Damage):
         """
         :param loss_type: the string 'damage'
         :param assets: a list of N assets of the same taxonomy
-        :param hazard_curves: an array of N x R elements
+        :param hazard_curves: an array of N x E elements
         :returns: an array of N assets and an array of N x D elements
 
         where N is the number of points and D the number of damage states.

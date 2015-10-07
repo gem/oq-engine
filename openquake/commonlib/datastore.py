@@ -221,7 +221,7 @@ class DataStore(collections.MutableMapping):
         """
         Create a one-dimensional HDF5 dataset.
 
-        :param key: a string starting with '/'
+        :param key: name of the dataset
         :param dtype: dtype of the dataset (usually composite)
         :param size: size of the dataset (if None, the dataset is extendable)
         """
@@ -234,8 +234,6 @@ class DataStore(collections.MutableMapping):
         :param key: the datastore key
         :param fmt: the export format extension
         """
-        if key.startswith('/'):
-            key = key[1:]
         return os.path.join(self.export_dir, key + '.' + fmt)
 
     def export_csv(self, key):

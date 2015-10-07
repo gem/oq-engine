@@ -113,19 +113,21 @@ def _export_ses_csv(dest, ses_coll):
     write_csv(dest, sorted(rows, key=operator.itemgetter(0)))
 
 
-@export.add(('sitecol', 'csv'))
-def export_sitecol_csv(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    dest = dstore.export_path(*ekey)
-    rows = []
-    for site in dstore['sitecol']:
-        rows.append([site.id, site.location.x, site.location.y, site.vs30,
-                     site.vs30measured, site.z1pt0, site.z2pt5, site.backarc])
-    write_csv(dest, sorted(rows, key=operator.itemgetter(0)))
-    return [dest]
+# this is commented out; we cannot export the sitecol if the site parameters
+# are not set
+# @export.add(('sitecol', 'csv'))
+# def export_sitecol_csv(ekey, dstore):
+#    """
+#    :param ekey: export key, i.e. a pair (datastore key, fmt)
+#    :param dstore: datastore object
+#    """
+#    dest = dstore.export_path(*ekey)
+#    rows = []
+#    for site in dstore['sitecol']:
+#        rows.append([site.id, site.location.x, site.location.y, site.vs30,
+#                     site.vs30measured, site.z1pt0, site.z2pt5, site.backarc])
+#    write_csv(dest, sorted(rows, key=operator.itemgetter(0)))
+#    return [dest]
 
 
 # #################### export Ground Motion fields ########################## #

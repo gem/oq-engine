@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2014-2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -23,12 +23,14 @@ import numpy
 
 from openquake.baselib import general
 from openquake.commonlib import parallel, datastore
-from openquake.calculators import base
+from openquake.risklib import scientific
+from openquake.calculators import base, calc
 
 
-def lpa(assets, means, stddevs):
-    """Losses per asset"""
-    return [(a.id, m, s) for a, m, s in zip(assets, means, stddevs)]
+F64 = numpy.float64
+
+stat_dt = numpy.dtype([('mean', F64), ('stddev', F64),
+                       ('mean_ins', F64), ('stddev_ins', F64)])
 
 
 @parallel.litetask
@@ -51,24 +53,30 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
-    result = general.AccumDict({rlz.ordinal: general.AccumDict()
-                                for rlz in rlzs_assoc.realizations})
-    # ordinal -> agg_type, loss_type -> losses
+    L = len(riskmodel.loss_types)
+    R = len(rlzs_assoc.realizations)
+    result = calc.build_dict((L, R), general.AccumDict)
+    lt2idx = {lt: i for i, lt in enumerate(riskmodel.loss_types)}
     for out_by_rlz in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:
-            assets = out.assets
-            means = out.loss_matrix.mean(axis=1),
-            stddevs = out.loss_matrix.std(ddof=1, axis=1)
-            result[out.hid] += {
-                ('asset-loss', out.loss_type): lpa(assets, means, stddevs)}
-            result[out.hid] += {('agg', out.loss_type): out.aggregate_losses}
-            if out.insured_loss_matrix is not None:
-                means = out.insured_loss_matrix.mean(axis=1),
-                stddevs = out.insured_loss_matrix.std(ddof=1, axis=1)
-                result[out.hid] += {
-                    ('asset-ins', out.loss_type): lpa(assets, means, stddevs)}
-                result[out.hid] += {('ins', out.loss_type): out.insured_losses}
+            lti = lt2idx[out.loss_type]
+            stats = numpy.zeros((len(out.assets), 4), F64)
+            # this is ugly but using a composite array (i.e.
+            # stats['mean'], stats['stddev'], ...) may return
+            # bogus numbers! even with the SAME version of numpy,
+            # hdf5 and h5py!! the numbers are around 1E-300 and
+            # different on different systems; we found issues
+            # with Ubuntu 12.04 and Red Hat 7 (MS and DV)
+            stats[:, 0] = out.loss_matrix.mean(axis=1)
+            stats[:, 1] = out.loss_matrix.std(ddof=1, axis=1)
+            stats[:, 2] = out.insured_loss_matrix.mean(axis=1)
+            stats[:, 3] = out.insured_loss_matrix.std(ddof=1, axis=1)
+            avg = result[lti, out.hid]
+            for asset, stat in zip(out.assets, stats):
+                avg['avg', asset.idx] = stat
+            result[lti, out.hid]['agg', 0] = out.aggregate_losses
+            result[lti, out.hid]['agg', 1] = out.insured_losses
     return result
 
 
@@ -79,8 +87,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     """
     core_func = scenario_risk
     epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
-    losses_by_key = datastore.persistent_attribute('losses_by_key')
-    gmf_by_trt_gsim = datastore.persistent_attribute('gmf_by_trt_gsim')
     pre_calculator = 'scenario'
     is_stochastic = True
 
@@ -101,6 +107,27 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
     def post_execute(self, result):
         """
-        Export the loss curves and the aggregated losses in CSV format
+        Compute stats for the aggregated distributions and save
+        the results on the datastore.
         """
-        self.losses_by_key = result
+        with self.monitor('saving outputs', autoflush=True):
+            L = len(self.riskmodel.loss_types)
+            R = len(self.rlzs_assoc.realizations)
+            N = len(self.assetcol)
+            arr = dict(avg=numpy.zeros((N, L, R), stat_dt),
+                       agg=numpy.zeros((L, R), stat_dt))
+            for (l, r), res in result.items():
+                for keytype, key in res:
+                    if keytype == 'agg':
+                        agg_losses = arr[keytype][l, r]
+                        mean, std = scientific.mean_std(res[keytype, key])
+                        if key == 0:
+                            agg_losses['mean'] = mean
+                            agg_losses['stddev'] = std
+                        else:
+                            agg_losses['mean_ins'] = mean
+                            agg_losses['stddev_ins'] = std
+                    else:
+                        arr[keytype][key, l, r] = res[keytype, key]
+            self.datastore['avglosses'] = arr['avg']
+            self.datastore['agglosses'] = arr['agg']
