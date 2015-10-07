@@ -69,8 +69,8 @@ class ScenarioTestCase(unittest.TestCase):
 
         self.assertEqual((4, 2), out.loss_matrix.shape)
         self.assertEqual((2,), out.aggregate_losses.shape)
-        self.assertIsNone(out.insured_loss_matrix)
-        self.assertIsNone(out.insured_losses)
+        numpy.testing.assert_equal(numpy.isnan(out.insured_loss_matrix), True)
+        numpy.testing.assert_equal(numpy.isnan(out.insured_losses), True)
 
 
 class DamageTest(unittest.TestCase):
