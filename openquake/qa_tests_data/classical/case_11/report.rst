@@ -16,7 +16,7 @@ width_of_mfd_bin             0.001
 area_source_discretization   10.0     
 random_seed                  1066     
 master_seed                  0        
-concurrent_tasks             32       
+concurrent_tasks             64       
 ============================ =========
 
 Input files
@@ -50,10 +50,26 @@ Realizations per (TRT, GSIM)
   1,SadighEtAl1997: ['<1,b1_b3,b1,w=0.6>']
   2,SadighEtAl1997: ['<2,b1_b4,b1,w=0.2>']>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+=========== ====
+#TRT models 3   
+#sources    3   
+#ruptures   9000
+=========== ====
+
+================ ====== ==================== =========== ============
+source_model     trt_id trt                  num_sources num_ruptures
+================ ====== ==================== =========== ============
+source_model.xml 0      active shallow crust 1           3500        
+source_model.xml 1      active shallow crust 1           3000        
+source_model.xml 2      active shallow crust 1           2500        
+================ ====== ==================== =========== ============
+
 Expected data transfer for the sources
 --------------------------------------
 ================================== =======
 Number of tasks to generate        3      
-Estimated sources to send          5.65 KB
+Estimated sources to send          5.79 KB
 Estimated hazard curves to receive 96 B   
 ================================== =======

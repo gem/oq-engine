@@ -16,7 +16,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0           
 random_seed                  23            
 master_seed                  0             
-concurrent_tasks             32            
+concurrent_tasks             64            
 ============================ ==============
 
 Input files
@@ -46,3 +46,18 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(2)
   0,ChiouYoungs2008: ['<0,b11,b11_b21,w=1.0>']
   1,ToroEtAl2002: ['<0,b11,b11_b21,w=1.0>']>
+
+Number of ruptures per tectonic region type
+-------------------------------------------
+=========== ====
+#TRT models 2   
+#sources    1539
+#ruptures   5434
+=========== ====
+
+================ ====== ======================== =========== ============
+source_model     trt_id trt                      num_sources num_ruptures
+================ ====== ======================== =========== ============
+source_model.xml 0      Active Shallow Crust     1334        1334        
+source_model.xml 1      Stable Continental Crust 205         4100        
+================ ====== ======================== =========== ============
