@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the epsilon sampling "feature" from the scenario_risk calculator
   * Replaced the event based calculators based on Postgres with the new ones
     based on the HDF5 technology
 
