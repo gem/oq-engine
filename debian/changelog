@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a test for a bug of h5py version 2.0.1
   * Added a check for specific_assets not in the exposure
   * Introduced HDF5 outputs for the scenario_damage calculator
   * Added the ability to read scenario NRML files
