@@ -125,6 +125,20 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
+def get_consequence_models(inputs):
+    """
+    :param inputs: a dictionary key -> path name
+    :returns: a dictionary loss_type -> ConsequenceModel instance
+    """
+    cmodels = {}
+    for key in inputs:
+        if key.match:
+            [node] = nrml.read(inputs[key])
+            cmodels[node['lossCategory']] = (
+                scientific.ConsequenceModel.from_node(node))
+    return cmodels
+
+
 def get_vulnerability_functions(fname):
     """
     :param fname:
@@ -296,7 +310,8 @@ def get_fragility_functions(fname, continuous_fragility_discretization,
             lstates.append(ls)
             if tag == 'ffc':
                 with context(fname, ff):
-                    mean_stddev = ~ff.params
+                    par = ff.params
+                    mean_stddev = par['mean'], par['stddev']
                 fragility_functions[taxonomy].append(
                     scientific.FragilityFunctionContinuous(ls, *mean_stddev))
             else:  # discrete

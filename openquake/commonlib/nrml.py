@@ -212,16 +212,21 @@ class VulnerabilityNode(LiteralNode):
     )
 
 
-@nodefactory.add('fragilityModel')
+@nodefactory.add('fragilityModel', 'consequenceModel')
 class FragilityNode(LiteralNode):
     """
-    Literal Node class used to validate fragility functions
+    Literal Node class used to validate fragility functions and consequence
+    functions.
     """
     validators = dict(
+        id=valid.simple_id,
         format=valid.ChoiceCI('discrete', 'continuous'),
+        assetCategory=valid.utf8,
+        dist=valid.Choice('LN'),
+        mean=valid.positivefloat,
+        stddev=valid.positivefloat,
         lossCategory=valid.name,
         IML=valid.IML,
-        params=valid.fragilityparams,
         limitStates=valid.namelist,
         description=valid.utf8,
         type=valid.ChoiceCI('lognormal'),
