@@ -4,10 +4,12 @@ import mock
 import signal
 import unittest
 from openquake.engine.celery_node_monitor import CeleryNodeMonitor
+from openquake.engine.utils.config import cfg
 
 
 class CeleryNodeMonitorTestCase(unittest.TestCase):
     def setUp(self):
+        cfg.get('celery')['terminate_job_when_celery_is_down'] = 'true'
         self.patch = mock.patch('celery.task.control.inspect')
         self.inspect = self.patch.start()
 
