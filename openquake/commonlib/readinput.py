@@ -33,9 +33,8 @@ from openquake.risklib import workflows, riskinput
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
-from openquake.commonlib.oqvalidation import vulnerability_files
-from openquake.commonlib.riskmodels import \
-    get_fragility_functions, get_vfs
+from openquake.commonlib.oqvalidation import get_risk_files
+from openquake.commonlib.riskmodels import get_vfs, get_ffs
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.performance import DummyMonitor
 from openquake.baselib.python3compat import configparser
@@ -574,16 +573,16 @@ def get_risk_model(oqparam):
 
     if oqparam.calculation_mode.endswith('_damage'):
         # scenario damage calculator
-        fragility_functions = get_fragility_functions(
-            oqparam.inputs['fragility'],
+        fragility_functions, damage_states = get_ffs(
+            get_risk_files(oqparam.inputs)[1],
             oqparam.continuous_fragility_discretization,
             oqparam.steps_per_interval,
         )
-        riskmodel.damage_states = fragility_functions.damage_states
-        for taxonomy, ffs in fragility_functions.items():
-            imt = ffs.imt
-            risk_models[imt, taxonomy] = workflows.get_workflow(
-                imt, taxonomy, oqparam, fragility_functions=dict(damage=ffs))
+        riskmodel.damage_states = damage_states
+        for imt_taxo, ffs_by_lt in fragility_functions.items():
+            risk_models[imt_taxo] = workflows.get_workflow(
+                imt_taxo[0], imt_taxo[1], oqparam,
+                fragility_functions=ffs_by_lt)
     elif oqparam.calculation_mode.endswith('_bcr'):
         # bcr calculators
         vfs_orig = list(get_vfs(oqparam.inputs, retrofitted=False).items())
@@ -682,7 +681,8 @@ def get_exposure(oqparam):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = exposure.area['type']
 
-    all_cost_types = set(vulnerability_files(oqparam.inputs))
+    file_type, risk_files = get_risk_files(oqparam.inputs)
+    all_cost_types = set(risk_files) if file_type == 'vulnerability' else set()
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)

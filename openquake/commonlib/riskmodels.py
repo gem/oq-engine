@@ -32,34 +32,36 @@ from openquake.baselib.general import AccumDict
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.sourcewriter import obj_to_node
 
-VULNERABILITY_KEY = re.compile('(structural|nonstructural|contents|'
-                               'business_interruption|occupants)_([\w_]+)')
+LOSS_TYPE_KEY = re.compile(
+    '(structural|nonstructural|contents|business_interruption|'
+    'occupants|fragility)_([\w_]+)')
 
 
-def vulnerability_files(inputs):
+def get_risk_files(inputs):
     """
-    Return a dict cost_type -> path for the known vulnerability keys
-
     :param inputs: a dictionary key -> path name
+    :returns: a pair (file_type, {cost_type: path})
     """
     vfs = {}
+    names = set()
     for key in inputs:
-        match = VULNERABILITY_KEY.match(key)
+        if key == 'fragility':
+            # backward compatibily for .ini files with key fragility_file
+            # instead of structural_fragility_file
+            vfs['structural'] = inputs['structural_fragility'] = inputs[key]
+            names.add('fragility')
+            del inputs[key]
+            continue
+        match = LOSS_TYPE_KEY.match(key)
         if match:
             vfs[match.group(1)] = inputs[key]
-    return vfs
-
-
-def fragility_files(inputs):
-    """
-    Return a dict of the form {} or {'damage': path}.
-
-    :param inputs: a dictionary key -> path name
-
-    NB: at the moment there is a single fragility key, so the output
-    contains at most one element.
-    """
-    return {'damage': inputs[key] for key in inputs if key == 'fragility'}
+            names.add(match.group(2))
+    if not names:
+        return None, {}
+    elif len(names) > 1:
+        raise ValueError('Found inconsistent keys %s in the .ini file'
+                         % ', '.join(names))
+    return names.pop(), vfs
 
 
 # loss types (in the risk models) and cost types (in the exposure)
@@ -94,7 +96,7 @@ def get_vfs(inputs, retrofitted=False):
     """
     retro = '_retrofitted' if retrofitted else ''
     vulnerability_functions = collections.defaultdict(dict)
-    for cost_type in vulnerability_files(inputs):
+    for cost_type in get_risk_files(inputs)[1]:
         key = '%s_vulnerability%s' % (cost_type, retro)
         if key not in inputs:
             continue
@@ -103,6 +105,27 @@ def get_vfs(inputs, retrofitted=False):
             vulnerability_functions[imt, tax][
                 cost_type_to_loss_type(cost_type)] = vf
     return vulnerability_functions
+
+
+def get_ffs(file_by_ct, continuous_fragility_discretization,
+            steps_per_interval=None):
+    """
+    Given a dictionary {key: pathname}, look for keys with name
+    <cost_type>__vulnerability, parse them and returns a dictionary
+    imt, taxonomy -> vf_by_loss_type.
+
+    :param file_by_ct: a dictionary cost_type -> pathname
+    :param continuous_fragility_discretization: parameter from the .ini file
+    :param steps_per_interval: steps_per_interval parameter
+    """
+    ffs = collections.defaultdict(dict)
+    for cost_type in file_by_ct:
+        ff_dict = get_fragility_functions(
+            file_by_ct[cost_type], continuous_fragility_discretization,
+            steps_per_interval)
+        for tax, ff in ff_dict.items():
+            ffs[ff.imt, tax][cost_type_to_loss_type(cost_type)] = ff
+    return ffs, ff_dict.damage_states
 
 
 # ########################### vulnerability ############################## #
@@ -225,23 +248,23 @@ def get_vulnerability_functions(fname):
     return vf_dict
 
 
-def get_imtls_from_vulnerabilities(inputs):
+def get_imtls(ddict):
     """
-    :param inputs:
-        a dictionary {losstype_vulnerability: fname}
+    :param ddict:
+        a dictionary (imt, taxo) -> loss_type -> risk_function
     :returns:
         a dictionary imt_str -> imls
     """
     # NB: different loss types may have different IMLs for the same IMT
     # in that case we merge the IMLs
     imtls = {}
-    for loss_type, fname in vulnerability_files(inputs).items():
-        for (imt, taxonomy), vf in get_vulnerability_functions(fname).items():
-            imls = list(vf.imls)
+    for (imt, taxonomy), dic in ddict.items():
+        for loss_type, rf in dic.items():
+            imls = list(rf.imls)
             if imt in imtls and imtls[imt] != imls:
                 logging.info(
-                    'Different levels for IMT %s: got %s, expected %s '
-                    'in %s', imt, vf.imls, imtls[imt], fname)
+                    'Different levels for IMT %s: got %s, expected %s',
+                    imt, rf.imls, imtls[imt])
                 imtls[imt] = sorted(set(imls + imtls[imt]))
             else:
                 imtls[imt] = imls
