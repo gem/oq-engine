@@ -425,7 +425,7 @@ class Location(object):
 
 
 @export.add(('avglosses', 'xml'), ('avglosses', 'geojson'))
-def export_lossmaps_xml(ekey, dstore):
+def export_lossmaps_xml_geojson(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                   for ct in dstore['cost_types']}
