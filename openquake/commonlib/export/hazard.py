@@ -413,6 +413,46 @@ def export_hcurves_csv(ekey, dstore):
     return fnames
 
 
+# emulate a Django point
+class Location(object):
+    def __init__(self, xy):
+        self.x, self.y = xy
+        self.wkt = 'POINT(%s %s)' % tuple(xy)
+
+HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
+
+
+@export.add(('hcurves', 'xml'), ('hcurves', 'geojson'),
+            ('hmaps', 'xml'), ('hmaps', 'geojson'))
+def export_hcurves_xml_json(ekey, dstore):
+    export_type = ekey[1]
+    len_ext = len(export_type) + 1
+    oq = OqParam.from_(dstore.attrs)
+    sitemesh = dstore['sitemesh'].value
+    rlzs_assoc = dstore['rlzs_assoc']
+    fnames = []
+    writercls = (hazard_writers.HazardCurveGeoJSONWriter
+                 if export_type == 'geojson' else
+                 hazard_writers.HazardCurveXMLWriter)
+    rlzs = iter(rlzs_assoc.realizations)
+    for kind, curves in dstore[ekey[0]].items():
+        rlz = next(rlzs)
+        name = hazard_curve_name(
+            ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
+        for imt in oq.imtls:
+            name_imt = name[:-len_ext] + '-' + imt + '.' + export_type
+            fname = os.path.join(dstore.export_dir, name_imt)
+            data = [HazardCurve(Location(site), poes[imt])
+                    for site, poes in zip(sitemesh, curves)]
+            writer = writercls(fname, investigation_time=oq.investigation_time,
+                               imls=oq.imtls[imt],
+                               smlt_path='_'.join(rlz.sm_lt_path),
+                               gsimlt_path=rlz.gsim_rlz.uid)
+            writer.serialize(data)
+            fnames.append(fname)
+    return sorted(fnames)
+
+
 @export.add(('gmfs', 'xml'), ('gmfs', 'csv'))
 def export_gmf(ekey, dstore):
     """

@@ -424,8 +424,8 @@ class Location(object):
         self.wkt = 'POINT(%s %s)' % tuple(xy)
 
 
-@export.add(('avglosses', 'xml'))
-def export_lossmaps_xml(ekey, dstore):
+@export.add(('avglosses', 'xml'), ('avglosses', 'geojson'))
+def export_lossmaps_xml_geojson(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                   for ct in dstore['cost_types']}
@@ -437,6 +437,10 @@ def export_lossmaps_xml(ekey, dstore):
     sitemesh = dstore['sitemesh']
     N, L, R = avglosses.shape
     fnames = []
+    export_type = ekey[1]
+    writercls = (risk_writers.LossMapGeoJSONWriter
+                 if export_type == 'geojson' else
+                 risk_writers.LossMapXMLWriter)
     for l, r in itertools.product(range(L), range(R)):
         rlz = rlzs[r]
         lt = riskmodel.loss_types[l]
@@ -449,7 +453,7 @@ def export_lossmaps_xml(ekey, dstore):
             loc = Location(sitemesh[ass['site_id']])
             lm = LossMap(loc, ass['asset_ref'], stat['mean'], stat['stddev'])
             data.append(lm)
-        writer = risk_writers.LossMapXMLWriter(
+        writer = writercls(
             fname, oq.investigation_time, poe=None, loss_type=lt,
             gsim_tree_path=None, unit=unit, loss_category=None)
         # TODO: replace the category with the exposure category
