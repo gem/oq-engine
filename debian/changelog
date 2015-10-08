@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Added XML exports for the hazard curves
+  * Enhanced the .rst report with info about the exposure and the source model
+  * Changed the PerformanceMonitor to write only on the controller
+  * Introduced HDF5 outputs for the scenario_risk calculator
   * Introduced HDF5 outputs for the scenario_damage calculator
   * Added the ability to read scenario NRML files
   * Silenced an ElementTree warning

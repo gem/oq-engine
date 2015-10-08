@@ -16,7 +16,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0       
 random_seed                  24         
 master_seed                  0          
-concurrent_tasks             32         
+concurrent_tasks             64         
 ============================ ===========
 
 Input files
@@ -68,6 +68,20 @@ Expected data transfer for the sources
 --------------------------------------
 ================================== ========
 Number of tasks to generate        15      
-Estimated sources to send          38.55 KB
+Estimated sources to send          38.98 KB
 Estimated hazard curves to receive 1 KB    
 ================================== ========
+
+Exposure model
+--------------
+=========== =
+#assets     1
+#sites      1
+#taxonomies 1
+=========== =
+
+======== =======
+Taxonomy #Assets
+======== =======
+Wood     1      
+======== =======

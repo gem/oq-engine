@@ -24,8 +24,10 @@ class ReportWriter(object):
         csm_info='Composite source model',
         rupture_collections='Non-empty rupture collections',
         col_rlz_assocs='Collections <-> realizations',
+        ruptures_by_trt='Number of ruptures per tectonic region type',
         rlzs_assoc='Realizations per (TRT, GSIM)',
-        data_transfer='Expected data transfer for the sources'
+        data_transfer='Expected data transfer for the sources',
+        exposure_info='Exposure model',
     )
 
     def __init__(self, dstore):
@@ -77,8 +79,12 @@ def build_report(job_ini, output_dir=None):
     if 'num_ruptures' in ds:
         rw.add('rupture_collections')
         rw.add('col_rlz_assocs')
+    elif 'scenario' not in oq.calculation_mode:
+        rw.add('ruptures_by_trt')
     if oq.calculation_mode in ('classical', 'event_based', 'event_based_risk'):
         rw.add('data_transfer')
+    if 'exposure' in oq.inputs:
+        rw.add('exposure_info')
     rw.save(report)
     return report
 
