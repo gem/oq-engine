@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Disabled the self-termination feature `terminate_job_when_celery_is_down`
   * Removed the epsilon sampling "feature" from the scenario_risk calculator
   * Replaced the event based calculators based on Postgres with the new ones
     based on the HDF5 technology
