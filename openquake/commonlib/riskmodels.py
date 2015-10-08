@@ -53,7 +53,7 @@ def get_risk_files(inputs):
             del inputs[key]
             continue
         match = LOSS_TYPE_KEY.match(key)
-        if match:
+        if match and 'retrofitted' not in key:  # hack for the BCR calculator
             vfs[match.group(1)] = inputs[key]
             names.add(match.group(2))
     if not names:
