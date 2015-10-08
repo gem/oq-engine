@@ -17,10 +17,12 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os.path
+import numbers
 import operator
 import numpy
 
 from openquake.baselib.general import groupby, split_in_blocks, humansize
+from openquake.baselib.performance import PerformanceMonitor
 from openquake.commonlib import parallel
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.datastore import view
@@ -123,6 +125,29 @@ def view_rupture_collections(token, dstore):
     return rst_table(rows, ['col', 'smlt_path', 'TRT', 'num_ruptures'])
 
 
+@view.add('ruptures_by_trt')
+def view_ruptures_by_trt(token, dstore):
+    tbl = []
+    header = 'source_model trt_id trt num_sources num_ruptures'.split()
+    num_trts = 0
+    num_sources = 0
+    num_ruptures = 0
+    for sm in dstore['composite_source_model']:
+        for trt_model in sm.trt_models:
+            num_trts += 1
+            num_sources += len(trt_model.sources)
+            num_ruptures += trt_model.num_ruptures
+            tbl.append((sm.name, trt_model.id, trt_model.trt,
+                        len(trt_model.sources), trt_model.num_ruptures))
+    rows = [('#TRT models', num_trts), ('#sources', num_sources),
+            ('#ruptures', num_ruptures)]
+    if len(tbl) > 1:
+        summary = rst_table(rows) + '\n\n'
+    else:
+        summary = ''
+    return summary + rst_table(tbl, header=header)
+
+
 @view.add('params')
 def view_params(token, dstore):
     oq = OqParam.from_(dstore.attrs)
@@ -185,7 +210,7 @@ def get_data_transfer(dstore):
         num_gsims = num_gsims_by_trt.get(block[0].trt_model_id, 0)
         back = info['n_sites'] * info['n_levels'] * info['n_imts'] * num_gsims
         to_send_back += back * 8  # 8 bytes per float
-        args = (block, sitecol, gsims_assoc, parallel.PerformanceMonitor(''))
+        args = (block, sitecol, gsims_assoc, PerformanceMonitor(''))
         to_send_forward += sum(len(p) for p in parallel.pickle_sequence(args))
         block_info.append((len(block), block.weight))
     return numpy.array(block_info, block_dt), to_send_forward, to_send_back
@@ -241,9 +266,12 @@ def sum_table(records):
     """
     size = len(records[0])
     result = [None] * size
-    result[0] = 'total'
-    for i in range(1, size):
-        result[i] = sum(rec[i] for rec in records)
+    firstrec = records[0]
+    for i in range(size):
+        if isinstance(firstrec[i], numbers.Number):
+            result[i] = sum(rec[i] for rec in records)
+        else:
+            result[i] = 'total'
     return result
 
 
@@ -271,3 +299,22 @@ def view_mean_avg_losses(token, dstore):
     if len(losses) > 1:
         losses.append(sum_table(losses))
     return rst_table(losses, header=header, fmt='%8.6E')
+
+
+@view.add('exposure_info')
+def exposure_info(token, dstore):
+    """
+    Display info about the exposure model
+    """
+    assetcol = dstore['assetcol'][:]
+    taxonomies = dstore['taxonomies'][:]
+    counts = numpy.zeros(len(taxonomies), numpy.uint32)
+    for ass in assetcol:
+        tax_idx = ass['taxonomy']
+        counts[tax_idx] += 1
+    tbl = zip(taxonomies, counts)
+    data = [('#assets', len(assetcol)),
+            ('#sites', len(set(assetcol['site_id']))),
+            ('#taxonomies', len(taxonomies))]
+    return rst_table(data) + '\n\n' + rst_table(
+        tbl, header=['Taxonomy', '#Assets'])

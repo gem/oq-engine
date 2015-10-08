@@ -36,7 +36,7 @@ def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     :param rlzs_assoc:
         associations (trt_id, gsim) -> realizations
     :param monitor:
-        :class:`openquake.commonlib.parallel.PerformanceMonitor` instance
+        :class:`openquake.baselib.performance.PerformanceMonitor` instance
     :returns:
         a nested dictionary rlz_idx -> asset -> <damage array>
     """

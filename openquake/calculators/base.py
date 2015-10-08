@@ -196,8 +196,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         Collect the realizations and the monitoring information,
         then close the datastore.
         """
-        self.realizations = numpy.array(
-            [(r.uid, r.weight) for r in self.rlzs_assoc.realizations], rlz_dt)
+        if 'rlzs_assoc' in self.datastore:
+            self.realizations = numpy.array(
+                [(r.uid, r.weight) for r in self.rlzs_assoc.realizations],
+                rlz_dt)
         performance = self.monitor.collect_performance()
         if performance is not None:
             self.performance = performance

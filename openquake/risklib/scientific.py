@@ -750,11 +750,12 @@ class DiscreteDistribution(Distribution):
         return ret
 
     def survival(self, loss_ratios, probs):
-        """Required for the Classical Risk and BCR Calculators.
+        """
+        Required for the Classical Risk and BCR Calculators.
         Currently left unimplemented as the PMF format is used only for the
-        Scenario and Event Based Risk Calculators
-        :param int steps:
-            Number of steps between loss ratios.
+        Scenario and Event Based Risk Calculators.
+
+        :param int steps: number of steps between loss ratios.
         """
         # TODO: to be implemented if the classical risk calculator
         # needs to support the pmf vulnerability format

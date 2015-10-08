@@ -246,7 +246,6 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
     Tests for the `serialize` method of the hazard curve writers.
     """
 
-
     def setUp(self):
         self.data = [
             HazardCurveData(location=Location(38.0, -20.1),

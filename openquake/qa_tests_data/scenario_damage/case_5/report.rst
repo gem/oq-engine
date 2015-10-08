@@ -16,7 +16,7 @@ width_of_mfd_bin             None
 area_source_discretization   None    
 random_seed                  3       
 master_seed                  0       
-concurrent_tasks             32      
+concurrent_tasks             64      
 ============================ ========
 
 Input files
@@ -36,3 +36,20 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(1)
   0,ChiouYoungs2008: ['ChiouYoungs2008']>
+
+Exposure model
+--------------
+=========== ==
+#assets     11
+#sites      11
+#taxonomies 4 
+=========== ==
+
+======== =======
+Taxonomy #Assets
+======== =======
+A        5      
+DS       2      
+UFB      2      
+W        2      
+======== =======

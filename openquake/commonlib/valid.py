@@ -164,7 +164,7 @@ MAX_ID_LENGTH = 100
 
 def simple_id(value):
     """
-    Check the source id; the only accepted chars are a-zA-Z0-9_-
+    Check the source id; the only accepted chars are `a-zA-Z0-9_-`
     """
     if len(value) > MAX_ID_LENGTH:
         raise ValueError('The ID %r is longer than %d character' %
