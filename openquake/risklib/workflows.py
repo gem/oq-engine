@@ -809,7 +809,7 @@ class Damage(Workflow):
 
     def __call__(self, loss_type, assets, gmfs, _epsilons=None, _tags=None):
         """
-        :param loss_type: the string 'damage'
+        :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
         :param gmfs: an array of N x E elements
         :returns: an array of N assets and an array of N x E x D elements
@@ -817,11 +817,11 @@ class Damage(Workflow):
         where N is the number of points, E the number of events
         and D the number of damage states.
         """
-        ffs = self.risk_functions['damage']
+        ffs = self.risk_functions[loss_type]
         damages = numpy.array(
             [[scientific.scenario_damage(ffs, gmv) for gmv in gmvs]
              for gmvs in gmfs])
-        return scientific.Output(assets, 'damage', damages=damages)
+        return scientific.Output(assets, loss_type, damages=damages)
 
     def gen_out_by_rlz(self, assets, hazards, epsilons, tags):
         """
@@ -832,7 +832,8 @@ class Damage(Workflow):
 
         Yield a single list of outputs
         """
-        yield out_by_rlz(self, assets, hazards, epsilons, tags, 'damage')
+        for loss_type in self.loss_types:
+            yield out_by_rlz(self, assets, hazards, epsilons, tags, loss_type)
 
 
 @registry.add('classical_damage')
@@ -846,26 +847,27 @@ class ClassicalDamage(Damage):
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
-        self.curves = functools.partial(
-            scientific.classical_damage,
-            fragility_functions['damage'], hazard_imtls[imt],
-            investigation_time=investigation_time,
-            risk_investigation_time=risk_investigation_time)
+        self.hazard_imls = hazard_imtls[imt]
+        self.investigation_time = investigation_time
+        self.risk_investigation_time = risk_investigation_time
 
     def __call__(self, loss_type, assets, hazard_curves, _epsilons=None,
                  _tags=None):
         """
-        :param loss_type: the string 'damage'
+        :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
         :param hazard_curves: an array of N x E elements
         :returns: an array of N assets and an array of N x D elements
 
         where N is the number of points and D the number of damage states.
         """
-        fractions = utils.numpy_map(self.curves, hazard_curves)
-        damages = [asset.number * fraction
-                   for asset, fraction in zip(assets, fractions)]
-        return scientific.Output(assets, 'damage', damages=damages)
+        damages = [
+            asset.number * scientific.classical_damage(
+                self.risk_functions[loss_type], self.hazard_imls, curve,
+                investigation_time=self.investigation_time,
+                risk_investigation_time=self.risk_investigation_time)
+            for asset, curve in zip(assets, hazard_curves)]
+        return scientific.Output(assets, loss_type, damages=damages)
 
     compute_all_outputs = (
         Classical.compute_all_outputs if sys.version > '3' else
