@@ -56,7 +56,7 @@ def scenario_damage(workflow, getter, outputdict, params, monitor):
     assert len(outputdict) == 0, outputdict
     with monitor('computing risk', autoflush=True):
         out = workflow(
-            'damage', getter.assets, getter.get_data(), None)
+            'structural', getter.assets, getter.get_data(), None)
         aggfractions = sum(out.damages[i] * asset.number_of_units
                            for i, asset in enumerate(out.assets))
 
@@ -160,5 +160,5 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
             risk_calculation=self.job).order_by('lsi')]
         self.oqparam.damage_state_ids = damage_state_ids
 
-        self.loss_types.add('damage')  # single loss_type
+        self.loss_types.add('structural')  # single loss_type
         return risk_model

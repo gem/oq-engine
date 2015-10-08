@@ -2506,7 +2506,7 @@ class Damage(djm.Model):
 
     @property
     def loss_type(self):
-        return 'damage'
+        return 'structural'
 
     class Meta:
         db_table = 'riskr\".\"damage'
