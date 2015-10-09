@@ -29,46 +29,46 @@ from openquake.calculators import base, calc
 F64 = numpy.float64
 
 
-def dmg_by_asset(avg_damage, stat_dt):
+def dmg_by_asset(avg_damage, multi_stat_dt):
     """
     :param avg_damage: array of shape (N, L, R, 2, D)
-    :param stat_dt: numpy dtype for statistical outputs
-    :returns: array of shape (N, R) with records of type stat_dt
+    :param multi_stat_dt: numpy dtype for statistical outputs
+    :returns: array of shape (N, R) with records of type multi_stat_dt
     """
     N, L, R = avg_damage.shape[:3]
-    out = numpy.zeros((N, R), stat_dt)
-    for l, lt in enumerate(stat_dt.names):
+    out = numpy.zeros((N, R), multi_stat_dt)
+    for l, lt in enumerate(multi_stat_dt.names):
         data = out[lt]
         for n, r in itertools.product(range(N), range(R)):
             data[n, r] = avg_damage[n, l, r]
     return out
 
 
-def dmg_by_taxon(agg_damage, stat_dt):
+def dmg_by_taxon(agg_damage, multi_stat_dt):
     """
     :param agg_damage: array of shape (T, L, R, E, D)
-    :param stat_dt: numpy dtype for statistical outputs
-    :returns: array of shape (T, R) with records of type stat_dt
+    :param multi_stat_dt: numpy dtype for statistical outputs
+    :returns: array of shape (T, R) with records of type multi_stat_dt
     """
     T, L, R, E, D = agg_damage.shape
-    out = numpy.zeros((T, R), stat_dt)
-    for l, lt in enumerate(stat_dt.names):
+    out = numpy.zeros((T, R), multi_stat_dt)
+    for l, lt in enumerate(multi_stat_dt.names):
         data = out[lt]
         for t, r in itertools.product(range(T), range(R)):
             data[t, r] = scientific.mean_std(agg_damage[t, l, r])
     return out
 
 
-def dmg_total(agg_damage, stat_dt):
+def dmg_total(agg_damage, multi_stat_dt):
     """
     :param agg_damage: array of shape (T, L, R, E, D)
-    :param stat_dt: numpy dtype for statistical outputs
-    :returns: array of shape (R,) with records of type stat_dt
+    :param multi_stat_dt: numpy dtype for statistical outputs
+    :returns: array of shape (R,) with records of type multi_stat_dt
     """
     T, L, R, E, D = agg_damage.shape
     total = agg_damage.sum(axis=0)
-    out = numpy.zeros(R, stat_dt)
-    for l, lt in enumerate(stat_dt.names):
+    out = numpy.zeros(R, multi_stat_dt)
+    for l, lt in enumerate(multi_stat_dt.names):
         data = out[lt]
         for r in range(R):
             data[r] = scientific.mean_std(total[l, r])
@@ -148,13 +148,16 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         for ltype in ltypes:
             dt_list.append((ltype, numpy.dtype([('mean', (F64, D)),
                                                 ('stddev', (F64, D))])))
-        stat_dt = numpy.dtype(dt_list)
+        multi_stat_dt = numpy.dtype(dt_list)
 
         arr = dict(asset=numpy.zeros((N, L, R, 2, D), F64),
                    taxon=numpy.zeros((T, L, R, E, D), F64))
         for (l, r), res in result.items():
             for keytype, key in res:
                 arr[keytype][key, l, r] = res[keytype, key]
-        self.datastore['dmg_by_asset'] = dmg_by_asset(arr['asset'], stat_dt)
-        self.datastore['dmg_by_taxon'] = dmg_by_taxon(arr['taxon'], stat_dt)
-        self.datastore['dmg_total'] = dmg_total(arr['taxon'], stat_dt)
+        self.datastore['dmg_by_asset'] = dmg_by_asset(
+            arr['asset'], multi_stat_dt)
+        self.datastore['dmg_by_taxon'] = dmg_by_taxon(
+            arr['taxon'], multi_stat_dt)
+        self.datastore['dmg_total'] = dmg_total(
+            arr['taxon'], multi_stat_dt)
