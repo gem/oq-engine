@@ -16,11 +16,6 @@ $ diff -urN /etc/openquake/openquake.cfg /etc/openquake/openquake.cfg.new_in_thi
  # this is good for a single user situation, but turn this off on a cluster
  # otherwise a CTRL-C will kill the computations of other users
  
-+terminate_job_when_celery_is_down = true
-+# this is good generally, but it may be necessary to turn it off in
-+# heavy computations (i.e. celery could not respond to pings and still
-+# not be really down).
-+
  [amqp]
  host = localhost
  port = 5672
