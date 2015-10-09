@@ -235,7 +235,8 @@ def export_damage(ekey, dstore):
     dmg_states = [DmgState(s, i)
                   for i, s in enumerate(riskmodel.damage_states)]
     D = len(dmg_states)
-    N, L, R = dmg_by_asset.shape
+    N, R = dmg_by_asset.shape
+    L = len(riskmodel.loss_types)
     fnames = []
 
     for l, r in itertools.product(range(L), range(R)):
@@ -246,7 +247,7 @@ def export_damage(ekey, dstore):
         dd_asset = []
         for n in range(N):
             aref = assetcol[n]['asset_ref']
-            dist = dmg_by_asset[n, l, r]
+            dist = dmg_by_asset[n, r][lt]
             point = sitemesh[assetcol[n]['site_id']]
             site = Site(point['lon'], point['lat'])
             for ds in range(D):
@@ -276,7 +277,8 @@ def export_damage_taxon(ekey, dstore):
     dmg_states = [DmgState(s, i)
                   for i, s in enumerate(riskmodel.damage_states)]
     D = len(dmg_states)
-    T, L, R = dmg_by_taxon.shape
+    T, R = dmg_by_taxon.shape
+    L = len(riskmodel.loss_types)
     fnames = []
 
     for l, r in itertools.product(range(L), range(R)):
@@ -286,7 +288,7 @@ def export_damage_taxon(ekey, dstore):
 
         dd_taxo = []
         for t in range(T):
-            dist = dmg_by_taxon[t, l, r]
+            dist = dmg_by_taxon[t, r][lt]
             for ds in range(D):
                 dd_taxo.append(
                     DmgDistPerTaxonomy(
@@ -304,7 +306,8 @@ def export_damage_total(ekey, dstore):
     riskmodel = dstore['riskmodel']
     rlzs = dstore['rlzs_assoc'].realizations
     dmg_total = dstore['dmg_total']
-    L, R = dmg_total.shape
+    R, = dmg_total.shape
+    L = len(riskmodel.loss_types)
     dmg_states = [DmgState(s, i)
                   for i, s in enumerate(riskmodel.damage_states)]
     D = len(dmg_states)
@@ -316,7 +319,7 @@ def export_damage_total(ekey, dstore):
 
         dd_total = []
         for ds in range(D):
-            dist = dmg_total[l, r]
+            dist = dmg_total[r][lt]
             dd_total.append(DmgDistTotal(
                 dmg_states[ds], dist['mean'][ds], dist['stddev'][ds]))
 

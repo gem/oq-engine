@@ -30,10 +30,17 @@ F64 = numpy.float64
 
 
 def dmg_by_asset(avg_damage, stat_dt):
+    """
+    :param avg_damage: array of shape (N, L, R, 2, D)
+    :param stat_dt: numpy dtype for statistical outputs
+    :returns: array of shape (N, L, R) with records of type stat_dt
+    """
     N, L, R = avg_damage.shape[:3]
-    out = numpy.zeros((N, L, R), stat_dt)
-    for n, l, r in itertools.product(range(N), range(L), range(R)):
-        out[n, l, r] = avg_damage[n, l, r]
+    out = numpy.zeros((N, R), stat_dt)
+    for l, lt in enumerate(stat_dt.names):
+        data = out[lt]
+        for n, r in itertools.product(range(N), range(R)):
+            data[n, r] = avg_damage[n, l, r]
     return out
 
 
@@ -44,9 +51,11 @@ def dmg_by_taxon(agg_damage, stat_dt):
     :returns: array of shape (T, L, R) with records of type stat_dt
     """
     T, L, R, E, D = agg_damage.shape
-    out = numpy.zeros((T, L, R), stat_dt)
-    for t, l, r in itertools.product(range(T), range(L), range(R)):
-        out[t, l, r] = scientific.mean_std(agg_damage[t, l, r])
+    out = numpy.zeros((T, R), stat_dt)
+    for l, lt in enumerate(stat_dt.names):
+        data = out[lt]
+        for t, r in itertools.product(range(T), range(R)):
+            data[t, r] = scientific.mean_std(agg_damage[t, l, r])
     return out
 
 
@@ -58,9 +67,11 @@ def dmg_total(agg_damage, stat_dt):
     """
     T, L, R, E, D = agg_damage.shape
     total = agg_damage.sum(axis=0)
-    out = numpy.zeros((L, R), stat_dt)
-    for l, r in itertools.product(range(L), range(R)):
-        out[l, r] = scientific.mean_std(total[l, r])
+    out = numpy.zeros(R, stat_dt)
+    for l, lt in enumerate(stat_dt.names):
+        data = out[lt]
+        for r in range(R):
+            data[r] = scientific.mean_std(total[l, r])
     return out
 
 
@@ -125,15 +136,19 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         the results on the datastore.
         """
         dstates = self.riskmodel.damage_states
-        L = len(self.riskmodel.loss_types)
+        ltypes = self.riskmodel.loss_types
+        L = len(ltypes)
         R = len(self.rlzs_assoc.realizations)
         D = len(dstates)
         E = self.oqparam.number_of_ground_motion_fields
         N = len(self.assetcol)
         T = len(self.monitor.taxonomies)
 
-        dt = numpy.dtype((F64, D))
-        stat_dt = numpy.dtype([('mean', dt), ('stddev', dt)])
+        dt_list = []
+        for ltype in ltypes:
+            dt_list.append((ltype, numpy.dtype([('mean', (F64, D)),
+                                                ('stddev', (F64, D))])))
+        stat_dt = numpy.dtype(dt_list)
 
         arr = dict(asset=numpy.zeros((N, L, R, 2, D), F64),
                    taxon=numpy.zeros((T, L, R, E, D), F64))
