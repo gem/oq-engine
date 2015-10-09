@@ -33,7 +33,7 @@ def dmg_by_asset(avg_damage, stat_dt):
     """
     :param avg_damage: array of shape (N, L, R, 2, D)
     :param stat_dt: numpy dtype for statistical outputs
-    :returns: array of shape (N, L, R) with records of type stat_dt
+    :returns: array of shape (N, R) with records of type stat_dt
     """
     N, L, R = avg_damage.shape[:3]
     out = numpy.zeros((N, R), stat_dt)
@@ -48,7 +48,7 @@ def dmg_by_taxon(agg_damage, stat_dt):
     """
     :param agg_damage: array of shape (T, L, R, E, D)
     :param stat_dt: numpy dtype for statistical outputs
-    :returns: array of shape (T, L, R) with records of type stat_dt
+    :returns: array of shape (T, R) with records of type stat_dt
     """
     T, L, R, E, D = agg_damage.shape
     out = numpy.zeros((T, R), stat_dt)
@@ -63,7 +63,7 @@ def dmg_total(agg_damage, stat_dt):
     """
     :param agg_damage: array of shape (T, L, R, E, D)
     :param stat_dt: numpy dtype for statistical outputs
-    :returns: array of shape (L, R) with records of type stat_dt
+    :returns: array of shape (R,) with records of type stat_dt
     """
     T, L, R, E, D = agg_damage.shape
     total = agg_damage.sum(axis=0)
