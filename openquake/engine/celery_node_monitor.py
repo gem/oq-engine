@@ -124,13 +124,11 @@ class CeleryNodeMonitor(object):
             live_nodes = self.ping(timeout=self.interval)
             if live_nodes < self.live_nodes:
                 dead_nodes = list(self.live_nodes - live_nodes)
-                logs.LOG.critical(
-                    'Cluster nodes not accessible: %s', dead_nodes)
-                terminate = boolean(
-                    config.get('celery', 'terminate_job_when_celery_is_down')
-                    or 'false')
-                if terminate:
-                    os.kill(os.getpid(), signal.SIGABRT)  # commit suicide
+                logs.LOG.warn(
+                    'Workers not accessible: %s', dead_nodes)
+                logs.LOG.warn(
+                    'If celery died, please stop the calculation '
+                    'with CTRL-C or kill %s', os.getpid())
 
     def job_is_running(self, sleep):
         """
