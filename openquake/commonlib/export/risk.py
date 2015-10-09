@@ -234,7 +234,9 @@ def export_damage(ekey, dstore):
     sitemesh = dstore['sitemesh']
     dmg_states = [DmgState(s, i)
                   for i, s in enumerate(riskmodel.damage_states)]
-    N, L, R = dmg_by_asset.shape
+    D = len(dmg_states)
+    N, R = dmg_by_asset.shape
+    L = len(riskmodel.loss_types)
     fnames = []
 
     for l, r in itertools.product(range(L), range(R)):
@@ -245,14 +247,13 @@ def export_damage(ekey, dstore):
         dd_asset = []
         for n in range(N):
             aref = assetcol[n]['asset_ref']
-            dist = dmg_by_asset[n, l, r]
+            dist = dmg_by_asset[n, r][lt]
             point = sitemesh[assetcol[n]['site_id']]
             site = Site(point['lon'], point['lat'])
-            for dmg_state in dmg_states:
-                ds = dmg_state.dmg_state
+            for ds in range(D):
                 dd_asset.append(
                     DmgDistPerAsset(
-                        ExposureData(aref, site), dmg_state,
+                        ExposureData(aref, site), dmg_states[ds],
                         dist['mean'][ds], dist['stddev'][ds]))
 
         f1 = export_dmg_xml(('dmg_dist_per_asset', 'xml'), dstore.export_dir,
@@ -275,7 +276,9 @@ def export_damage_taxon(ekey, dstore):
     taxonomies = dstore['taxonomies']
     dmg_states = [DmgState(s, i)
                   for i, s in enumerate(riskmodel.damage_states)]
-    T, L, R = dmg_by_taxon.shape
+    D = len(dmg_states)
+    T, R = dmg_by_taxon.shape
+    L = len(riskmodel.loss_types)
     fnames = []
 
     for l, r in itertools.product(range(L), range(R)):
@@ -285,12 +288,11 @@ def export_damage_taxon(ekey, dstore):
 
         dd_taxo = []
         for t in range(T):
-            dist = dmg_by_taxon[t, l, r]
-            for dmg_state in dmg_states:
-                ds = dmg_state.dmg_state
+            dist = dmg_by_taxon[t, r][lt]
+            for ds in range(D):
                 dd_taxo.append(
                     DmgDistPerTaxonomy(
-                        taxonomies[t], dmg_state,
+                        taxonomies[t], dmg_states[ds],
                         dist['mean'][ds], dist['stddev'][ds]))
 
         f = export_dmg_xml(('dmg_dist_per_taxonomy', 'xml'),
@@ -304,9 +306,11 @@ def export_damage_total(ekey, dstore):
     riskmodel = dstore['riskmodel']
     rlzs = dstore['rlzs_assoc'].realizations
     dmg_total = dstore['dmg_total']
-    L, R = dmg_total.shape
+    R, = dmg_total.shape
+    L = len(riskmodel.loss_types)
     dmg_states = [DmgState(s, i)
                   for i, s in enumerate(riskmodel.damage_states)]
+    D = len(dmg_states)
     fnames = []
     for l, r in itertools.product(range(L), range(R)):
         lt = riskmodel.loss_types[l]
@@ -314,11 +318,10 @@ def export_damage_total(ekey, dstore):
         suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
 
         dd_total = []
-        for dmg_state in dmg_states:
-            dist = dmg_total[l, r]
-            ds = dmg_state.dmg_state
+        for ds in range(D):
+            dist = dmg_total[r][lt]
             dd_total.append(DmgDistTotal(
-                dmg_state, dist['mean'][ds], dist['stddev'][ds]))
+                dmg_states[ds], dist['mean'][ds], dist['stddev'][ds]))
 
         f = export_dmg_xml(('dmg_dist_total', 'xml'), dstore.export_dir,
                            dmg_states, dd_total, suffix)
