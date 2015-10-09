@@ -403,18 +403,22 @@ def export_avglosses(ekey, dstore):
     avglosses = dstore['avglosses']
     riskmodel = dstore['riskmodel']
     assets = dstore['assetcol']['asset_ref']
-    N, L, R = avglosses.shape
+    N, R = avglosses.shape
+    L = len(riskmodel.loss_types)
     fnames = []
-    for l, r in itertools.product(range(L), range(R)):
-        rlz = rlzs[r]
-        lt = riskmodel.loss_types[l]
-        unit = unit_by_lt[lt]
-        suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
-        losses = [PerAssetLoss(lt, unit, ass, stat['mean'], stat['stddev'])
-                  for ass, stat in zip(assets, avglosses[:, l, r])]
-        out = export_loss_csv(
-            ('avg', 'csv'), dstore.export_dir, losses, suffix)
-        fnames.append(out)
+    for l, lt in enumerate(riskmodel.loss_types):
+        alosses = avglosses[lt]
+        for r in range(R):
+            rlz = rlzs[r]
+            lt = riskmodel.loss_types[l]
+            unit = unit_by_lt[lt]
+            suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
+                rlz.uid, lt)
+            losses = [PerAssetLoss(lt, unit, ass, stat['mean'], stat['stddev'])
+                      for ass, stat in zip(assets, alosses[:, r])]
+            out = export_loss_csv(
+                ('avg', 'csv'), dstore.export_dir, losses, suffix)
+            fnames.append(out)
     return sorted(fnames)
 
 LossMap = collections.namedtuple('LossMap', 'location asset_ref value std_dev')
@@ -438,30 +442,34 @@ def export_lossmaps_xml_geojson(ekey, dstore):
     riskmodel = dstore['riskmodel']
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
-    N, L, R = avglosses.shape
+    L = len(riskmodel.loss_types)
+    N, R = avglosses.shape
     fnames = []
     export_type = ekey[1]
     writercls = (risk_writers.LossMapGeoJSONWriter
                  if export_type == 'geojson' else
                  risk_writers.LossMapXMLWriter)
-    for l, r in itertools.product(range(L), range(R)):
-        rlz = rlzs[r]
-        lt = riskmodel.loss_types[l]
-        unit = unit_by_lt[lt]
-        suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
-        fname = os.path.join(
-            dstore.export_dir, '%s%s.%s' % (ekey[0], suffix, ekey[1]))
-        data = []
-        for ass, stat in zip(assetcol, avglosses[:, l, r]):
-            loc = Location(sitemesh[ass['site_id']])
-            lm = LossMap(loc, ass['asset_ref'], stat['mean'], stat['stddev'])
-            data.append(lm)
-        writer = writercls(
-            fname, oq.investigation_time, poe=None, loss_type=lt,
-            gsim_tree_path=None, unit=unit, loss_category=None)
-        # TODO: replace the category with the exposure category
-        writer.serialize(data)
-        fnames.append(fname)
+    for l, lt in riskmodel.loss_types:
+        alosses = avglosses[lt]
+        for r in range(R):
+            rlz = rlzs[r]
+            unit = unit_by_lt[lt]
+            suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
+                rlz.uid, lt)
+            fname = os.path.join(
+                dstore.export_dir, '%s%s.%s' % (ekey[0], suffix, ekey[1]))
+            data = []
+            for ass, stat in zip(assetcol, alosses[:, r]):
+                loc = Location(sitemesh[ass['site_id']])
+                lm = LossMap(loc, ass['asset_ref'],
+                             stat['mean'], stat['stddev'])
+                data.append(lm)
+            writer = writercls(
+                fname, oq.investigation_time, poe=None, loss_type=lt,
+                gsim_tree_path=None, unit=unit, loss_category=None)
+            # TODO: replace the category with the exposure category
+            writer.serialize(data)
+            fnames.append(fname)
     return sorted(fnames)
 
 
@@ -473,18 +481,20 @@ def export_agglosses(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     agglosses = dstore['agglosses']
     riskmodel = dstore['riskmodel']
-    L, R = agglosses.shape
+    L = len(riskmodel.loss_types)
+    R, = agglosses.shape
     fnames = []
-    for l, r in itertools.product(range(L), range(R)):
-        rlz = rlzs[r]
-        lt = riskmodel.loss_types[l]
-        unit = unit_by_lt[lt]
-        suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
-        loss = agglosses[l, r]
-        losses = [AggLoss(lt, unit, loss['mean'], loss['stddev'])]
-        out = export_loss_csv(
-            ('agg', 'csv'), dstore.export_dir, losses, suffix)
-        fnames.append(out)
+    for lt in riskmodel.loss_types:
+        for r in range(R):
+            rlz = rlzs[r]
+            unit = unit_by_lt[lt]
+            suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
+                rlz.uid, lt)
+            loss = agglosses[r][lt]
+            losses = [AggLoss(lt, unit, loss['mean'], loss['stddev'])]
+            out = export_loss_csv(
+                ('agg', 'csv'), dstore.export_dir, losses, suffix)
+            fnames.append(out)
     return sorted(fnames)
 
 

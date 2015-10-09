@@ -55,28 +55,29 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                  sum(ri.weight for ri in riskinputs))
     L = len(riskmodel.loss_types)
     R = len(rlzs_assoc.realizations)
-    result = calc.build_dict((L, R), general.AccumDict)
+    result = calc.build_dict((L,), general.AccumDict)
     lt2idx = {lt: i for i, lt in enumerate(riskmodel.loss_types)}
     for out_by_rlz in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:
-            lti = lt2idx[out.loss_type]
-            stats = numpy.zeros((len(out.assets), 4), F64)
+            lti = lt2idx[out.loss_type],
+            r = out.hid  # realization index
+            stats = numpy.zeros((len(out.assets), R, 4), F64)
             # this is ugly but using a composite array (i.e.
             # stats['mean'], stats['stddev'], ...) may return
             # bogus numbers! even with the SAME version of numpy,
             # hdf5 and h5py!! the numbers are around 1E-300 and
             # different on different systems; we found issues
             # with Ubuntu 12.04 and Red Hat 7 (MS and DV)
-            stats[:, 0] = out.loss_matrix.mean(axis=1)
-            stats[:, 1] = out.loss_matrix.std(ddof=1, axis=1)
-            stats[:, 2] = out.insured_loss_matrix.mean(axis=1)
-            stats[:, 3] = out.insured_loss_matrix.std(ddof=1, axis=1)
-            avg = result[lti, out.hid]
+            stats[:, r, 0] = out.loss_matrix.mean(axis=1)
+            stats[:, r, 1] = out.loss_matrix.std(ddof=1, axis=1)
+            stats[:, r, 2] = out.insured_loss_matrix.mean(axis=1)
+            stats[:, r, 3] = out.insured_loss_matrix.std(ddof=1, axis=1)
+            avg = result[lti]
             for asset, stat in zip(out.assets, stats):
-                avg['avg', asset.idx] = stat
-            result[lti, out.hid]['agg', 0] = out.aggregate_losses
-            result[lti, out.hid]['agg', 1] = out.insured_losses
+                avg['avg', r, asset.idx] = stat
+            result[lti]['agg', r, 0] = out.aggregate_losses
+            result[lti]['agg', r, 1] = out.insured_losses
     return result
 
 
@@ -110,24 +111,28 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         Compute stats for the aggregated distributions and save
         the results on the datastore.
         """
+        ltypes = self.riskmodel.loss_types
+        multi_stat_dt = numpy.dtype([(lt, stat_dt) for lt in ltypes])
         with self.monitor('saving outputs', autoflush=True):
-            L = len(self.riskmodel.loss_types)
             R = len(self.rlzs_assoc.realizations)
             N = len(self.assetcol)
-            arr = dict(avg=numpy.zeros((N, L, R), stat_dt),
-                       agg=numpy.zeros((L, R), stat_dt))
-            for (l, r), res in result.items():
-                for keytype, key in res:
+            avglosses = numpy.zeros((N, R), multi_stat_dt)
+            agglosses = numpy.zeros(R, multi_stat_dt)
+            for [l], res in result.items():
+                lt = ltypes[l]
+                avg = avglosses[lt]
+                agg = agglosses[lt]
+                for keytype, r, k in res:
+                    val = res[keytype, r, k]
                     if keytype == 'agg':
-                        agg_losses = arr[keytype][l, r]
-                        mean, std = scientific.mean_std(res[keytype, key])
-                        if key == 0:
-                            agg_losses['mean'] = mean
-                            agg_losses['stddev'] = std
+                        mean, std = scientific.mean_std(val)
+                        if k == 0:
+                            agg[r]['mean'] = mean
+                            agg[r]['stddev'] = std
                         else:
-                            agg_losses['mean_ins'] = mean
-                            agg_losses['stddev_ins'] = std
-                    else:
-                        arr[keytype][key, l, r] = res[keytype, key]
-            self.datastore['avglosses'] = arr['avg']
-            self.datastore['agglosses'] = arr['agg']
+                            agg[r]['mean_ins'] = mean
+                            agg[r]['stddev_ins'] = std
+                    else:  # avg
+                        avg[k, r] = val
+            self.datastore['avglosses'] = avglosses
+            self.datastore['agglosses'] = agglosses
