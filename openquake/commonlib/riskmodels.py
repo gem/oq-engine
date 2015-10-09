@@ -50,10 +50,10 @@ def get_risk_files(inputs):
             # instead of structural_fragility_file
             vfs['structural'] = inputs['structural_fragility'] = inputs[key]
             names.add('fragility')
-            del inputs[key]
+            del inputs['fragility']
             continue
         match = LOSS_TYPE_KEY.match(key)
-        if match and 'retrofitted' not in key:  # hack for the BCR calculator
+        if match and 'retrofitted' not in key and 'consequence' not in key:
             vfs[match.group(1)] = inputs[key]
             names.add(match.group(2))
     if not names:
@@ -155,7 +155,8 @@ def get_consequence_models(inputs):
     """
     cmodels = {}
     for key in inputs:
-        if key.match:
+        mo = LOSS_TYPE_KEY.match(key)
+        if mo:
             [node] = nrml.read(inputs[key])
             cmodels[node['lossCategory']] = (
                 scientific.ConsequenceModel.from_node(node))

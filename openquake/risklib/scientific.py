@@ -548,8 +548,46 @@ class FragilityFunctionList(list):
         return '<FragilityFunctionList %s>' % ', '.join(kvs)
 
 
+# TODO: the fragilityModel must have an attribute lossCategory
+# which is the loss type
+class FragilityModel(object):
+    """
+    Container for a set of fragility functions. You can access each
+    function given its name with the square bracket notation.
+    """
+    @classmethod
+    def from_node(cls, node):
+        limitStates = ~node.limitStates
+        Params = collections.namedtuple('Params', limitStates)
+        functions = {}
+        for ff in node[2:]:
+            if format == 'continuous':
+                params = Params(*map(mean_stddev, ff))
+                functions[ff['id']] = FragilityFunctionContinuous(
+                    ff['id'], ff['dist'], params)
+            else:
+                functions[ff['id']] = FragilityFunctionDiscrete(
+                    ff['id'], ff['dist'], params)
+        attrs = node.attrib.copy()
+        attrs.update(description=~node.description,
+                     limitStates=limitStates,
+                     fragility_functions=functions)
+        return cls(**attrs)
+
+    def __init__(self, format, description, limitStates, fragility_functions):
+        self.format = format
+        self.description = description
+        self.limitStates = limitStates
+        self.fragility_functions = fragility_functions
+
+
 ConsequenceFunction = collections.namedtuple(
     'ConsequenceFunction', 'id dist params')
+
+
+def mean_stddev(node):
+    """Extracts mean and stddev from a dict-like object"""
+    return node['mean'], node['stddev']
 
 
 class ConsequenceModel(object):
@@ -566,14 +604,11 @@ class ConsequenceModel(object):
     """
     @classmethod
     def from_node(cls, node):
-        def stats(node):
-            return node['mean'], node['stddev']
-
         limitStates = ~node.limitStates
         Params = collections.namedtuple('Params', limitStates)
         functions = {}
         for cf in node[2:]:
-            params = Params(*map(stats, cf))
+            params = Params(*map(mean_stddev, cf))
             functions[cf['id']] = ConsequenceFunction(
                 cf['id'], cf['dist'], params)
         attrs = node.attrib.copy()

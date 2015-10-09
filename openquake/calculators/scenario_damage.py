@@ -21,7 +21,7 @@ import logging
 import itertools
 import numpy
 
-from openquake.commonlib import parallel
+from openquake.commonlib import parallel, riskmodels
 from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
 from openquake.calculators import base, calc
@@ -106,6 +106,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
+        self.consequence_models = riskmodels.get_consequence_models(
+            self.oqparam.inputs)
         self.riskinputs = self.build_riskinputs(self.gmfs)
         self.monitor.taxonomies = sorted(self.taxonomies)
 
