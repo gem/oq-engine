@@ -122,7 +122,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         N = len(self.assetcol)
         T = len(self.monitor.taxonomies)
 
-        dt = numpy.dtype([(ds, numpy.float64) for ds in dstates])
+        dt = numpy.dtype((numpy.float64, D))
         stat_dt = numpy.dtype([('mean', dt), ('stddev', dt)])
 
         arr = dict(asset=numpy.zeros((N, L, R), stat_dt),
