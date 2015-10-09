@@ -67,13 +67,6 @@ In the master node, the following file should be modified to refer to the Postre
 
 /etc/openquake/openquake.cfg:
 
-```
-terminate_job_when_celery_is_down = false
-# this is good generally, but it may be necessary to turn it off in
-# heavy computations (i.e. celery could not respond to pings and still
-# not be really down).
-
-```
 
 ```
 # maximum number of tasks to spawn concurrently
