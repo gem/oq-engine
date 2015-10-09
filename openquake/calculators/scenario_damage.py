@@ -26,6 +26,16 @@ from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
 from openquake.calculators import base, calc
 
+F64 = numpy.float64
+
+
+def dmg_by_asset(avg_damage, stat_dt):
+    N, L, R = avg_damage.shape[:3]
+    out = numpy.zeros((N, L, R), stat_dt)
+    for n, l, r in itertools.product(range(N), range(L), range(R)):
+        out[n, l, r] = avg_damage[n, l, r]
+    return out
+
 
 def dmg_by_taxon(agg_damage, stat_dt):
     """
@@ -122,14 +132,14 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         N = len(self.assetcol)
         T = len(self.monitor.taxonomies)
 
-        dt = numpy.dtype((numpy.float64, D))
+        dt = numpy.dtype((F64, D))
         stat_dt = numpy.dtype([('mean', dt), ('stddev', dt)])
 
-        arr = dict(asset=numpy.zeros((N, L, R), stat_dt),
-                   taxon=numpy.zeros((T, L, R, E, D), numpy.float64))
+        arr = dict(asset=numpy.zeros((N, L, R, 2, D), F64),
+                   taxon=numpy.zeros((T, L, R, E, D), F64))
         for (l, r), res in result.items():
             for keytype, key in res:
                 arr[keytype][key, l, r] = res[keytype, key]
-        self.datastore['dmg_by_asset'] = arr['asset']
+        self.datastore['dmg_by_asset'] = dmg_by_asset(arr['asset'], stat_dt)
         self.datastore['dmg_by_taxon'] = dmg_by_taxon(arr['taxon'], stat_dt)
         self.datastore['dmg_total'] = dmg_total(arr['taxon'], stat_dt)
