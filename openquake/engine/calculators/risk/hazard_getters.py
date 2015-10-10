@@ -326,35 +326,35 @@ class RiskInitializer(object):
 WITH assocs AS (
   SELECT %s, exp.id, hsite.id
   FROM riski.exposure_data AS exp
-  JOIN hzrdi.hazard_site AS hsite
+  JOIN (SELECT id, lon, lat FROM hzrdi.hazard_site
+  WHERE hazard_calculation_id = %s
+  AND ST_Covers(ST_GeometryFromText(%s), ST_MakePoint(lon, lat))) AS hsite
   ON ST_X(exp.site::GEOMETRY) = hsite.lon
   AND ST_Y(exp.site::GEOMETRY) = hsite.lat
-  WHERE hsite.hazard_calculation_id = %s
-  AND exposure_model_id = %s AND taxonomy=%s
-  AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
+  WHERE exposure_model_id = %s AND taxonomy=%s
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
 SELECT * FROM assocs""", (self.calc.job.id, self.oqparam.id,
-                          self.exposure_model.id, taxonomy,
-                          self.calc.oqparam.region_constraint))
+                          self.calc.oqparam.region_constraint,
+                          self.exposure_model.id, taxonomy))
         else:
             # associate each asset to the closest hazard site
             self.assoc_query = self.cursor.mogrify("""\
 WITH assocs AS (
   SELECT DISTINCT ON (exp.id) %s, exp.id, hsite.id
   FROM riski.exposure_data AS exp
-  JOIN hzrdi.hazard_site AS hsite
+  JOIN (SELECT id, lon, lat FROM hzrdi.hazard_site
+  WHERE hazard_calculation_id = %s
+  AND ST_Covers(ST_GeometryFromText(%s), ST_MakePoint(lon, lat))) AS hsite
   ON ST_DWithin(exp.site, ST_MakePoint(hsite.lon, hsite.lat)::geography, %s)
-  WHERE hsite.hazard_calculation_id = %s
-  AND exposure_model_id = %s AND taxonomy=%s
-  AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
+  WHERE exposure_model_id = %s AND taxonomy=%s
   ORDER BY exp.id, ST_Distance(
   exp.site, ST_MakePoint(hsite.lon, hsite.lat)::geography, false)
 )
 INSERT INTO riskr.asset_site (job_id, asset_id, site_id)
-SELECT * FROM assocs""", (self.calc.job.id, max_dist, self.oqparam.id,
-                          self.exposure_model.id, taxonomy,
-                          self.calc.oqparam.region_constraint))
+SELECT * FROM assocs""", (self.calc.job.id, self.oqparam.id,
+                          self.calc.oqparam.region_constraint, max_dist,
+                          self.exposure_model.id, taxonomy))
         self.num_assets = 0
         self._rupture_ids = {}
         self.epsilons_shape = {}
