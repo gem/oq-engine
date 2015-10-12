@@ -20,4 +20,4 @@ install:
   - python setup.py install
 
 script:
-  - nosetests --with-doctest -v -a'!slow'
+  - cd ..; nosetests --with-doctest -v -a'!slow' oq-risklib
