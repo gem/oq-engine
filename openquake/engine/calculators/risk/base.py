@@ -86,7 +86,7 @@ def prepare_risk(counts_taxonomy, calc, monitor):
 
         # initializing epsilons
         with init_mon:
-            initializer.init_epsilons(eps_sampling)
+            initializer.init_epsilons(calc.epsilon_sampling)
 
 
 @tasks.oqtask
@@ -127,7 +127,8 @@ def run_risk(sorted_assocs, calc, monitor):
             imt = it.imt.imt_str
             with get_haz_mon:
                 getter = calc.getter_class(
-                    imt, taxonomy, hazard_outputs, assets, eps_sampling)
+                    imt, taxonomy, hazard_outputs, assets,
+                    calc.epsilon_sampling)
             logs.LOG.info(
                 'Read %d data for %d assets of taxonomy %s, imt=%s',
                 len(set(getter.site_ids)), len(assets), taxonomy, imt)
@@ -175,6 +176,12 @@ class RiskCalculator(base.Calculator):
         self.best_maximum_distance = dist
         self.time_event = self.oqparam.time_event
         self.taxonomies_from_model = self.oqparam.taxonomies_from_model
+        if hasattr(self.oqparam, 'number_of_ground_motion_fields'):
+            # scenario_risk
+            self.epsilon_sampling = self.oqparam.number_of_ground_motion_fields
+        else:
+            # event_based_risk
+            self.epsilon_sampling = eps_sampling
 
     def get_hazard_outputs(self):
         """

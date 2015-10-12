@@ -4,6 +4,7 @@ import mock
 import signal
 import unittest
 from openquake.engine.celery_node_monitor import CeleryNodeMonitor
+from openquake.engine.utils.config import cfg
 
 
 class CeleryNodeMonitorTestCase(unittest.TestCase):
@@ -33,19 +34,15 @@ class CeleryNodeMonitorTestCase(unittest.TestCase):
         ping = self.inspect().ping
         ping.return_value = {'node1': []}
         mon = CeleryNodeMonitor(no_distribute=False, interval=1)
-        with mon, mock.patch('os.kill') as kill, \
-                mock.patch('openquake.engine.logs.LOG') as log:
+        with mon, mock.patch('openquake.engine.logs.LOG') as log:
             time.sleep(1.1)
             ping.return_value = {}
             time.sleep(1)
             # two pings was done in the thread, plus 1 at the beginning
             self.assertEqual(ping.call_count, 3)
 
-            # check that kill was called with a SIGABRT
-            pid, signum = kill.call_args[0]
-            self.assertEqual(pid, os.getpid())
-            self.assertEqual(signum, signal.SIGABRT)
-            self.assertTrue(log.critical.called)
+            # check that LOG.warn was called
+            self.assertTrue(log.warn.called)
 
     def test_AMQPException(self):
         ping = self.inspect().ping
