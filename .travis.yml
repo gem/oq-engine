@@ -18,4 +18,4 @@ install:
   - python setup.py develop
 
 script:
-  - find . -name \*_test.py | parallel "nosetests -v -a'!slow'"
+  - nosetests --with-doctest -v -a'!slow'

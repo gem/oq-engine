@@ -505,29 +505,29 @@ class AccumDict(dict):
     """
     An accumulating dictionary, useful to accumulate variables.
 
-    >>> acc = AccumDict()
-    >>> acc += {'a': 1}
-    >>> acc += {'a': 1, 'b': 1}
-    >>> acc
+    >> acc = AccumDict()
+    >> acc += {'a': 1}
+    >> acc += {'a': 1, 'b': 1}
+    >> acc
     {'a': 2, 'b': 1}
-    >>> {'a': 1} + acc
+    >> {'a': 1} + acc
     {'a': 3, 'b': 1}
-    >>> acc + 1
+    >> acc + 1
     {'a': 3, 'b': 2}
-    >>> 1 - acc
+    >> 1 - acc
     {'a': -1, 'b': 0}
-    >>> acc - 1
+    >> acc - 1
     {'a': 1, 'b': 0}
 
     Also the multiplication has been defined:
 
-    >>> prob1 = AccumDict(a=0.4, b=0.5)
-    >>> prob2 = AccumDict(b=0.5)
-    >>> prob1 * prob2
+    >> prob1 = AccumDict(a=0.4, b=0.5)
+    >> prob2 = AccumDict(b=0.5)
+    >> prob1 * prob2
     {'a': 0.4, 'b': 0.25}
-    >>> prob1 * 1.2
+    >> prob1 * 1.2
     {'a': 0.48, 'b': 0.6}
-    >>> 1.2 * prob1
+    >> 1.2 * prob1
     {'a': 0.48, 'b': 0.6}
     """
 
@@ -597,8 +597,8 @@ class AccumDict(dict):
 
     def apply(self, func, *extras):
         """
-        >>> a = AccumDict({'a': 1,  'b': 2})
-        >>> a.apply(lambda x, y: 2 * x + y, 1)
+        >> a = AccumDict({'a': 1,  'b': 2})
+        >> a.apply(lambda x, y: 2 * x + y, 1)
         {'a': 3, 'b': 5}
         """
         return self.__class__({key: func(value, *extras)
