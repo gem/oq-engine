@@ -104,7 +104,25 @@ class GroundMotionGetterTestCase(HazardCurveGetterTestCase):
 
 
 class ScenarioTestCase(GroundMotionGetterTestCase):
+    """
+    Here is some info about this test. Here are the assets::
+   
+      asset_ref | taxonomy | st_x  | st_y  
+     -----------+----------+-------+-------
+      a1        | RM       | 15.48 | 38.09
+      a2        | RC       | 15.56 | 38.17
+      a3        | RM       | 15.48 | 38.25
 
+    Here are the sites::
+
+       lon   |    lat     
+     --------+------------
+      15.565 |      38.17
+      15.481 |      38.25
+       15.48 | 38.0900001
+   
+    The maximum_distance is 200 km.
+    """
     hazard_demo = get_data_path('scenario_hazard/job.ini')
     risk_demo = get_data_path('scenario_risk/job.ini')
     hazard_output_type = 'gmf_scenario'
@@ -113,14 +131,13 @@ class ScenarioTestCase(GroundMotionGetterTestCase):
     def test_nbytes(self):
         # I am not populating the table ses_rupture
         self.assertEqual(len(self.getter.rupture_ids), 0)
-        self.assertEqual(self.nbytes, 80)
+        self.assertEqual(self.nbytes, 160)
 
     def test_call(self):
         # the exposure model in this example has two assets of taxonomy RM
-        # (a1 and a3) but the asset a3 has no hazard data within the
-        # maximum distance; there are 10 realizations
-        a1, = self.assets
-        self.assertEqual(self.getter.assets, [a1])
+        # (a1 and a3) within the maximum distance; there are 10 realizations
+        a1, a3 = self.assets
+        self.assertEqual(self.getter.assets, [a1, a3])
         [hazard] = self.getter.hazards.values()
         self.assertEqual(hazard.values()[0], {0: 0.1, 1: 0.2, 2: 0.3})
 

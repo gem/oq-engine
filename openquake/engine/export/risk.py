@@ -238,8 +238,7 @@ def export_loss_map_csv(key, output, target):
     """
     dest = _get_result_export_dest(target, output, file_ext=key[1])
     data = []
-    for row in models.order_by_location(
-            output.loss_map.lossmapdata_set.all().order_by('asset_ref')):
+    for row in output.loss_map.lossmapdata_set.order_by('asset_ref'):
         data.append(LossMapPerAsset(row.asset_ref, row.value))
     header = [data[0]._fields]
     writers.write_csv(dest, header + data, fmt='%10.6E')
