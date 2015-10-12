@@ -51,6 +51,7 @@ setup(
         'numpy',
         'scipy',
         'futures',
+        'decorator',
     ],
     author='GEM Foundation',
     author_email='devops@openquake.org',
