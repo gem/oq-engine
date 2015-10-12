@@ -52,6 +52,7 @@ setup(
         'scipy',
         'futures',
         'decorator',
+        'psutil==1.2.1',
     ],
     author='GEM Foundation',
     author_email='devops@openquake.org',
