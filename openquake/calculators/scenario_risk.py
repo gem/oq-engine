@@ -50,12 +50,16 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         a dictionary (key_type, loss_type) -> losses where the `key_type` can
         be "agg" (for the aggregate losses) or "ins" (for the insured losses).
     """
+    E = monitor.oqparam.number_of_ground_motion_fields
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
     L = len(riskmodel.loss_types)
     R = len(rlzs_assoc.realizations)
     result = calc.build_dict((L,), general.AccumDict)
+    for l in range(L):
+        result[l, ]['agg'] = numpy.zeros((E, R, 2), F64)
+        result[l, ]['avg'] = []
     lt2idx = {lt: i for i, lt in enumerate(riskmodel.loss_types)}
     for out_by_rlz in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor):
@@ -73,11 +77,11 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
             stats[:, r, 1] = out.loss_matrix.std(ddof=1, axis=1)
             stats[:, r, 2] = out.insured_loss_matrix.mean(axis=1)
             stats[:, r, 3] = out.insured_loss_matrix.std(ddof=1, axis=1)
-            avg = result[lti]
+            res = result[lti]
             for asset, stat in zip(out.assets, stats):
-                avg['avg', r, asset.idx] = stat
-            result[lti]['agg', r, 0] = out.aggregate_losses
-            result[lti]['agg', r, 1] = out.insured_losses
+                res['avg'].append((r, asset.idx, stat))
+            res['agg'][:, r, 0] += out.aggregate_losses
+            res['agg'][:, r, 1] += out.insured_losses
     return result
 
 
@@ -120,19 +124,18 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             agglosses = numpy.zeros(R, multi_stat_dt)
             for [l], res in result.items():
                 lt = ltypes[l]
-                avg = avglosses[lt]
+
+                # agg losses
                 agg = agglosses[lt]
-                for keytype, r, k in res:
-                    val = res[keytype, r, k]
-                    if keytype == 'agg':
-                        mean, std = scientific.mean_std(val)
-                        if k == 0:
-                            agg[r]['mean'] = mean
-                            agg[r]['stddev'] = std
-                        else:
-                            agg[r]['mean_ins'] = mean
-                            agg[r]['stddev_ins'] = std
-                    else:  # avg
-                        avg[k, r] = val
+                mean, std = scientific.mean_std(res['agg'])
+                agg['mean'] = mean[:, 0]
+                agg['stddev'] = std[:, 0]
+                agg['mean_ins'] = mean[:, 1]
+                agg['stddev_ins'] = std[:, 1]
+
+                # average losses
+                avg = avglosses[lt]
+                for (r, aid, stat) in res['avg']:
+                    avg[aid, r] = stat
             self.datastore['avglosses'] = avglosses
             self.datastore['agglosses'] = agglosses
