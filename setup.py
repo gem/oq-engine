@@ -50,7 +50,7 @@ setup(
     install_requires=[
         'numpy',
         'scipy',
-        'concurrent.futures',
+        'futures',
     ],
     author='GEM Foundation',
     author_email='devops@openquake.org',
