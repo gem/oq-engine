@@ -37,7 +37,8 @@ def check_export(output_id, target):
     Call export by checking that the exported file is valid
     """
     out_file = core.export(output_id, target, 'xml')
-    nrml.read(out_file)
+    if out_file.endswith('.xml'):
+        nrml.read(out_file)
     return out_file
 
 
@@ -199,22 +200,19 @@ class EventBasedExportTestCase(BaseExportTestCase):
                 io.StringIO(), dstore['gmfs']['col00'].value).encode('utf8')
             self.check_file_content('expected_gmfset_1.txt', gmfs)
 
-
-            # TODO: add XML exporters in oq-lite and uncomment
-
             # Hazard curves
-            #haz_curves = outputs.filter(ds_key='hcurves')
-            #self.assertEqual(1, haz_curves.count())
-            #for curve in haz_curves:
-            #    exported_file = check_export(curve.id, target_dir)
-            #    self._test_exported_file(exported_file)
+            haz_curves = outputs.filter(ds_key='hcurves')
+            self.assertEqual(1, haz_curves.count())
+            for curve in haz_curves:
+                exported_file = check_export(curve.id, target_dir)
+                self._test_exported_file(exported_file)
 
             # Hazard maps
-            #haz_maps = outputs.filter(ds_key='hmaps')
-            #self.assertEqual(1, haz_maps.count())
-            #for hmap in haz_maps:
-            #    exported_file = check_export(hmap.id, target_dir)
-            #    self._test_exported_file(exported_file)
+            haz_maps = outputs.filter(ds_key='hmaps')
+            self.assertEqual(1, haz_maps.count())
+            for hmap in haz_maps:
+                exported_file = check_export(hmap.id, target_dir)
+                self._test_exported_file(exported_file)
         finally:
             shutil.rmtree(target_dir)
 
