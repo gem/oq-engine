@@ -89,28 +89,31 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.PerformanceMonitor` instance
     :returns:
-        a dictionary {('asset', asset): <mean stddev>,
-                      ('taxonomy', asset.taxonomy): <damage array>}
+        a dictionary {'asset': [(l, r, a, mean-stddev), ...],
+                      'taxonomy': damage array of size T, L, R, E, D}
     """
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
     L = len(riskmodel.loss_types)
     R = len(rlzs_assoc.realizations)
-    # D = len(riskmodel.damage_states)
+    D = len(riskmodel.damage_states)
+    E = monitor.oqparam.number_of_ground_motion_fields
+    T = len(monitor.taxonomies)
     taxo2idx = {taxo: i for i, taxo in enumerate(monitor.taxonomies)}
     lt2idx = {lt: i for i, lt in enumerate(riskmodel.loss_types)}
-    result = calc.build_dict((L, R), AccumDict)
+    result = dict(asset=[], taxon=numpy.zeros((T, L, R, E, D), F64))
     for out_by_rlz in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:
-            lti = lt2idx[out.loss_type]
+            l = lt2idx[out.loss_type]
+            r = out.hid
             for asset, fraction in zip(out.assets, out.damages):
+                t = taxo2idx[asset.taxonomy]
                 damages = fraction * asset.number
-                result[lti, out.hid] += {
-                    ('asset', asset.idx): scientific.mean_std(damages)}
-                result[lti, out.hid] += {
-                    ('taxon', taxo2idx[asset.taxonomy]): damages}
+                result['asset'].append(
+                    (l, r, asset.idx, scientific.mean_std(damages)))
+                result['taxon'][t, l, r, :] += damages
     return result
 
 
@@ -140,24 +143,19 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         L = len(ltypes)
         R = len(self.rlzs_assoc.realizations)
         D = len(dstates)
-        E = self.oqparam.number_of_ground_motion_fields
         N = len(self.assetcol)
-        T = len(self.monitor.taxonomies)
 
         dt_list = []
         for ltype in ltypes:
             dt_list.append((ltype, numpy.dtype([('mean', (F64, D)),
                                                 ('stddev', (F64, D))])))
         multi_stat_dt = numpy.dtype(dt_list)
-
-        arr = dict(asset=numpy.zeros((N, L, R, 2, D), F64),
-                   taxon=numpy.zeros((T, L, R, E, D), F64))
-        for (l, r), res in result.items():
-            for keytype, key in res:
-                arr[keytype][key, l, r] = res[keytype, key]
+        asset = numpy.zeros((N, L, R, 2, D), F64)
+        for (l, r, a, stat) in result['asset']:
+            asset[a, l, r] = stat
         self.datastore['dmg_by_asset'] = dmg_by_asset(
-            arr['asset'], multi_stat_dt)
+            asset, multi_stat_dt)
         self.datastore['dmg_by_taxon'] = dmg_by_taxon(
-            arr['taxon'], multi_stat_dt)
+            result['taxon'], multi_stat_dt)
         self.datastore['dmg_total'] = dmg_total(
-            arr['taxon'], multi_stat_dt)
+            result['taxon'], multi_stat_dt)
