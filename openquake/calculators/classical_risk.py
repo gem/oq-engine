@@ -41,10 +41,15 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.PerformanceMonitor` instance
     """
+    L = len(riskmodel.loss_types)
+    R = len(rlzs_assoc.realizations)
+    lt2idx = {lt: i for i, lt in enumerate(riskmodel.loss_types)}
     result = general.AccumDict({rlz.ordinal: general.AccumDict()
                                 for rlz in rlzs_assoc.realizations})
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:
+            r = out.hid
+            l = lt2idx[out.loss_type]
             values = workflows.get_values(out.loss_type, out.assets)
             for i, asset in enumerate(out.assets):
                 if out.average_insured_losses is not None:
