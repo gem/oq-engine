@@ -21,10 +21,9 @@ import logging
 
 import numpy
 
-from openquake.baselib import general
 from openquake.commonlib import parallel, datastore
 from openquake.risklib import scientific
-from openquake.calculators import base, calc
+from openquake.calculators import base
 
 
 F64 = numpy.float64
