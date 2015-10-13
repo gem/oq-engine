@@ -47,20 +47,26 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.PerformanceMonitor` instance
     :returns:
-        a dictionary (key_type, loss_type) -> losses where the `key_type` can
-        be "agg" (for the aggregate losses) or "ins" (for the insured losses).
+        a dictionary {
+        'agg': array of shape (E, L, R, 2),
+        'avg': list of tuples (lt_idx, rlz_idx, asset_idx, statistics)
+        }
+        where E is the number of simulated events, L the number of loss types,
+        R the number of realizations  and statistics is an array of shape
+        (n, R, 4), with n the number of assets in the current riskinput object
     """
+    E = monitor.oqparam.number_of_ground_motion_fields
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
                  sum(ri.weight for ri in riskinputs))
     L = len(riskmodel.loss_types)
     R = len(rlzs_assoc.realizations)
-    result = calc.build_dict((L,), general.AccumDict)
+    result = dict(agg=numpy.zeros((E, L, R, 2), F64), avg=[])
     lt2idx = {lt: i for i, lt in enumerate(riskmodel.loss_types)}
     for out_by_rlz in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:
-            lti = lt2idx[out.loss_type],
+            l = lt2idx[out.loss_type]
             r = out.hid  # realization index
             stats = numpy.zeros((len(out.assets), R, 4), F64)
             # this is ugly but using a composite array (i.e.
@@ -73,11 +79,10 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
             stats[:, r, 1] = out.loss_matrix.std(ddof=1, axis=1)
             stats[:, r, 2] = out.insured_loss_matrix.mean(axis=1)
             stats[:, r, 3] = out.insured_loss_matrix.std(ddof=1, axis=1)
-            avg = result[lti]
             for asset, stat in zip(out.assets, stats):
-                avg['avg', r, asset.idx] = stat
-            result[lti]['agg', r, 0] = out.aggregate_losses
-            result[lti]['agg', r, 1] = out.insured_losses
+                result['avg'].append((l, r, asset.idx, stat))
+            result['agg'][:, l, r, 0] += out.aggregate_losses
+            result['agg'][:, l, r, 1] += out.insured_losses
     return result
 
 
@@ -116,23 +121,20 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         with self.monitor('saving outputs', autoflush=True):
             R = len(self.rlzs_assoc.realizations)
             N = len(self.assetcol)
-            avglosses = numpy.zeros((N, R), multi_stat_dt)
+
+            # agg losses
             agglosses = numpy.zeros(R, multi_stat_dt)
-            for [l], res in result.items():
-                lt = ltypes[l]
-                avg = avglosses[lt]
+            mean, std = scientific.mean_std(result['agg'])
+            for l, lt in enumerate(ltypes):
                 agg = agglosses[lt]
-                for keytype, r, k in res:
-                    val = res[keytype, r, k]
-                    if keytype == 'agg':
-                        mean, std = scientific.mean_std(val)
-                        if k == 0:
-                            agg[r]['mean'] = mean
-                            agg[r]['stddev'] = std
-                        else:
-                            agg[r]['mean_ins'] = mean
-                            agg[r]['stddev_ins'] = std
-                    else:  # avg
-                        avg[k, r] = val
+                agg['mean'] = mean[l, :, 0]
+                agg['stddev'] = std[l, :, 0]
+                agg['mean_ins'] = mean[l, :, 1]
+                agg['stddev_ins'] = std[l, :, 1]
+
+            # average losses
+            avglosses = numpy.zeros((N, R), multi_stat_dt)
+            for (l, r, aid, stat) in result['avg']:
+                avglosses[lt][aid, r] = stat
             self.datastore['avglosses'] = avglosses
             self.datastore['agglosses'] = agglosses

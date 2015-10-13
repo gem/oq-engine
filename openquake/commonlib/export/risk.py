@@ -449,7 +449,7 @@ def export_lossmaps_xml_geojson(ekey, dstore):
     writercls = (risk_writers.LossMapGeoJSONWriter
                  if export_type == 'geojson' else
                  risk_writers.LossMapXMLWriter)
-    for l, lt in riskmodel.loss_types:
+    for l, lt in enumerate(riskmodel.loss_types):
         alosses = avglosses[lt]
         for r in range(R):
             rlz = rlzs[r]
