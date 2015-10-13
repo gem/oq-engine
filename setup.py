@@ -49,7 +49,10 @@ setup(
     packages=find_packages(),
     install_requires=[
         'numpy',
-        'scipy'
+        'scipy',
+        'futures',
+        'decorator',
+        'psutil==1.2.1',
     ],
     author='GEM Foundation',
     author_email='devops@openquake.org',
