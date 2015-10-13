@@ -96,7 +96,7 @@ def export_ses_xml(ekey, dstore):
             fname = 'ses-%d-smltp_%s.%s' % (trt_model.id, smpath, fmt)
             dest = os.path.join(dstore.export_dir, fname)
             globals()['_export_ses_' + fmt](dest, ses_coll)
-            fnames.append(fname)
+            fnames.append(os.path.join(dstore.export_dir, fname))
     return fnames
 
 
