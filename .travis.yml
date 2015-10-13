@@ -17,7 +17,7 @@ install:
   - pip install http://ftp.openquake.org/python-wheels/Shapely-1.5.9-py2-none-any.whl
   - pip install http://ftp.openquake.org/python-wheels/h5py-2.5.0-cp27-none-linux_x86_64.whl
   - pip install https://github.com/gem/oq-hazardlib/archive/master.zip
-  - python setup.py install
+  - python setup.py develop
 
 script:
-  - cd ..; PYTHONPATH=~/gem/oq-hazardlib nosetests --with-doctest -xv -a'!slow' oq-risklib/openquake/commonlib
+  - PYTHONPATH="" nosetests --with-doctest -xv -a'!slow' oq-risklib/openquake/commonlib
