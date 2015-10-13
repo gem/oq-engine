@@ -90,7 +90,7 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
         :class:`openquake.baselib.performance.PerformanceMonitor` instance
     :returns:
         a dictionary {'asset': [(l, r, a, mean-stddev), ...],
-                      'taxonomy': damage array of size T, L, R, E, D}
+                      'taxonomy': damage array of shape T, L, R, E, D}
     """
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
