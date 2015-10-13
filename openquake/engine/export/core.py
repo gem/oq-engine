@@ -57,8 +57,7 @@ def export_from_datastore(output_key, output, target):
     dstore = DataStore(output.oq_job.id)
     dstore.export_dir = target
     try:
-        exported = map(
-            os.path.abspath, ds_export((output.ds_key, fmt), dstore))
+        exported = ds_export((output.ds_key, fmt), dstore)
     except KeyError:
         raise DataStoreExportError(
             'Could not export %s in %s' % (output.ds_key, fmt))
