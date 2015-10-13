@@ -437,8 +437,8 @@ _pkgtest_innervm_run () {
         oq-lite export -1 dmg_by_asset xml /tmp
         echo 'running ScenarioRisk...'
         oq-lite run ScenarioRisk/job_hazard.ini,ScenarioRisk/job_risk.ini
-        oq-lite show -1 agglosses > ScenarioRisk/agglosses.csv
-        cmp ScenarioRisk/agglosses.csv ScenarioRisk/expected_agg_losses.csv
+        oq-lite show -1 agglosses > /tmp/agglosses.csv
+        cmp /tmp/agglosses.csv ScenarioRisk/expected_agglosses.csv
 
         echo 'running ProbabilisticEventBased...'
         oq-lite run ProbabilisticEventBased/job_risk.ini
