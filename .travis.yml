@@ -20,4 +20,4 @@ install:
   - python setup.py develop
 
 script:
-  - PYTHONPATH=~/gem/oq-hazardlib nosetests --with-doctest -v -a'!slow'
+  - PYTHONPATH=~/gem/oq-hazardlib:~/gem/oq-risklib nosetests --with-doctest -v -a'!slow'
