@@ -50,7 +50,6 @@ setup(
     install_requires=[
         'numpy',
         'scipy',
-        'futures',
         'decorator',
         'psutil >= 0.4.1, <= 1.2.1',
     ],
