@@ -61,15 +61,12 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                  sum(ri.weight for ri in riskinputs))
     L = len(riskmodel.loss_types)
     R = len(rlzs_assoc.realizations)
-    result = calc.build_dict((L,), general.AccumDict)
-    for l in range(L):
-        result[l, ]['agg'] = numpy.zeros((E, R, 2), F64)
-        result[l, ]['avg'] = []
+    result = dict(agg=numpy.zeros((E, L, R, 2), F64), avg=[])
     lt2idx = {lt: i for i, lt in enumerate(riskmodel.loss_types)}
     for out_by_rlz in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:
-            lti = lt2idx[out.loss_type],
+            l = lt2idx[out.loss_type]
             r = out.hid  # realization index
             stats = numpy.zeros((len(out.assets), R, 4), F64)
             # this is ugly but using a composite array (i.e.
@@ -82,11 +79,10 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
             stats[:, r, 1] = out.loss_matrix.std(ddof=1, axis=1)
             stats[:, r, 2] = out.insured_loss_matrix.mean(axis=1)
             stats[:, r, 3] = out.insured_loss_matrix.std(ddof=1, axis=1)
-            res = result[lti]
             for asset, stat in zip(out.assets, stats):
-                res['avg'].append((r, asset.idx, stat))
-            res['agg'][:, r, 0] += out.aggregate_losses
-            res['agg'][:, r, 1] += out.insured_losses
+                result['avg'].append((l, r, asset.idx, stat))
+            result['agg'][:, l, r, 0] += out.aggregate_losses
+            result['agg'][:, l, r, 1] += out.insured_losses
     return result
 
 
@@ -125,22 +121,20 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         with self.monitor('saving outputs', autoflush=True):
             R = len(self.rlzs_assoc.realizations)
             N = len(self.assetcol)
-            avglosses = numpy.zeros((N, R), multi_stat_dt)
+
+            # agg losses
             agglosses = numpy.zeros(R, multi_stat_dt)
-            for [l], res in result.items():
-                lt = ltypes[l]
-
-                # agg losses
+            mean, std = scientific.mean_std(result['agg'])
+            for l, lt in enumerate(ltypes):
                 agg = agglosses[lt]
-                mean, std = scientific.mean_std(res['agg'])
-                agg['mean'] = mean[:, 0]
-                agg['stddev'] = std[:, 0]
-                agg['mean_ins'] = mean[:, 1]
-                agg['stddev_ins'] = std[:, 1]
+                agg['mean'] = mean[l, :, 0]
+                agg['stddev'] = std[l, :, 0]
+                agg['mean_ins'] = mean[l, :, 1]
+                agg['stddev_ins'] = std[l, :, 1]
 
-                # average losses
-                avg = avglosses[lt]
-                for (r, aid, stat) in res['avg']:
-                    avg[aid, r] = stat
+            # average losses
+            avglosses = numpy.zeros((N, R), multi_stat_dt)
+            for (l, r, aid, stat) in result['avg']:
+                avglosses[lt][aid, r] = stat
             self.datastore['avglosses'] = avglosses
             self.datastore['agglosses'] = agglosses
