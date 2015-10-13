@@ -20,4 +20,4 @@ install:
   - python setup.py develop
 
 script:
-  - PYTHONPATH="" nosetests --with-doctest -xv -a'!slow' oq-risklib/openquake/commonlib
+  - nosetests --with-doctest -xv -a'!slow'
