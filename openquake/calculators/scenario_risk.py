@@ -48,12 +48,12 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         :class:`openquake.baselib.performance.PerformanceMonitor` instance
     :returns:
         a dictionary {
-        'agg': array of shape (E, R, 2),
-        'avg': list of tuples (rlz_ids, asset_idx, statistics)
+        'agg': array of shape (E, L, R, 2),
+        'avg': list of tuples (lt_idx, rlz_idx, asset_idx, statistics)
         }
-        where E is the number of simulated events, R the number of realizations
-        and statistics is an array of shape (n, R, 4), being n the number of
-        assets in the current riskinput object.
+        where E is the number of simulated events, L the number of loss types,
+        R the number of realizations  and statistics is an array of shape
+        (n, R, 4), with n the number of assets in the current riskinput object
     """
     E = monitor.oqparam.number_of_ground_motion_fields
     logging.info('Process %d, considering %d risk input(s) of weight %d',
