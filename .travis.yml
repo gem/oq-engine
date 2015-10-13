@@ -20,4 +20,4 @@ install:
   - python setup.py install
 
 script:
-  - cd ..; nosetests --with-doctest -xv -a'!slow' oq-risklib/openquake/commonlib
+  - cd ..; PYTHONPATH=~/gem/oq-hazardlib nosetests --with-doctest -xv -a'!slow' oq-risklib/openquake/commonlib
