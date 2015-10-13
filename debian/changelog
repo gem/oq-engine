@@ -1,3 +1,7 @@
+  [Matteo Nastasi]
+  * Imposed version for python-h5py dependency, Ubuntu 12.04 will use
+    backported version from GEM repository
+
   [Michele Simionato]
   * Added a test for a bug of h5py version 2.0.1
   * Added a check for specific_assets not in the exposure
@@ -11,7 +15,6 @@
   * Added a test with multiple assets on the same site
   * Improved the error message for invalid exposures
   * Fixed a few tests on Windows
-
 
 python-oq-risklib (0.8.0-0~precise01) precise; urgency=low
 
