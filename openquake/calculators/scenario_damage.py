@@ -28,7 +28,7 @@ from openquake.calculators import base
 F64 = numpy.float64
 
 
-def convert_by_asset(data, multi_stat_dt):
+def dist_by_asset(data, multi_stat_dt):
     """
     :param data: array of shape (N, L, R, 2, ...)
     :param multi_stat_dt: numpy dtype for statistical outputs
@@ -43,7 +43,7 @@ def convert_by_asset(data, multi_stat_dt):
     return out
 
 
-def convert_by_taxon(data, multi_stat_dt):
+def dist_by_taxon(data, multi_stat_dt):
     """
     :param data: array of shape (T, L, R, ...)
     :param multi_stat_dt: numpy dtype for statistical outputs
@@ -58,7 +58,7 @@ def convert_by_taxon(data, multi_stat_dt):
     return out
 
 
-def convert_total(data, multi_stat_dt):
+def dist_total(data, multi_stat_dt):
     """
     :param data: array of shape (T, L, R, ...)
     :param multi_stat_dt: numpy dtype for statistical outputs
@@ -167,11 +167,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         d_asset = numpy.zeros((N, L, R, 2, D), F64)
         for (l, r, a, stat) in result['d_asset']:
             d_asset[a, l, r] = stat
-        self.datastore['dmg_by_asset'] = convert_by_asset(
+        self.datastore['dmg_by_asset'] = dist_by_asset(
             d_asset, multi_stat_dt)
-        self.datastore['dmg_by_taxon'] = convert_by_taxon(
+        self.datastore['dmg_by_taxon'] = dist_by_taxon(
             result['d_taxon'], multi_stat_dt)
-        self.datastore['dmg_total'] = convert_total(
+        self.datastore['dmg_total'] = dist_total(
             result['d_taxon'], multi_stat_dt)
 
         # consequence distributions
@@ -180,9 +180,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             c_asset[a, l, r] = stat
         multi_stat_dt = numpy.dtype(
             [(lt, [('mean', F64), ('stddev', F64)]) for lt in ltypes])
-        self.datastore['csq_by_asset'] = convert_by_asset(
+        self.datastore['csq_by_asset'] = dist_by_asset(
             c_asset, multi_stat_dt)
-        self.datastore['csq_by_taxon'] = convert_by_taxon(
+        self.datastore['csq_by_taxon'] = dist_by_taxon(
             result['c_taxon'], multi_stat_dt)
-        self.datastore['csq_total'] = convert_total(
+        self.datastore['csq_total'] = dist_total(
             result['c_taxon'], multi_stat_dt)
