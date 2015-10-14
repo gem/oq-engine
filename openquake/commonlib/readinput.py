@@ -33,8 +33,8 @@ from openquake.risklib import workflows, riskinput
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
-from openquake.commonlib.oqvalidation import get_risk_files
-from openquake.commonlib.riskmodels import get_vfs, get_ffs
+from openquake.commonlib.riskmodels import (
+    get_vfs, get_ffs, get_risk_files)
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.performance import DummyMonitor
 from openquake.baselib.python3compat import configparser

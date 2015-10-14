@@ -32,6 +32,8 @@ from openquake.baselib.general import AccumDict
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.sourcewriter import obj_to_node
 
+F64 = numpy.float64
+
 LOSS_TYPE_KEY = re.compile(
     '(structural|nonstructural|contents|business_interruption|'
     'occupants|fragility)_([\w_]+)')
@@ -112,7 +114,7 @@ def get_ffs(file_by_ct, continuous_fragility_discretization,
     """
     Given a dictionary {key: pathname}, look for keys with name
     <cost_type>__vulnerability, parse them and returns a dictionary
-    imt, taxonomy -> vf_by_loss_type.
+    imt, taxonomy -> ff_by_loss_type.
 
     :param file_by_ct: a dictionary cost_type -> pathname
     :param continuous_fragility_discretization: parameter from the .ini file
