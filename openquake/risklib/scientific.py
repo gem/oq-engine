@@ -575,7 +575,6 @@ class ConsequenceModel(object):
         Params = collections.namedtuple('Params', limitStates)
         functions = {}
         for cf in node[2:]:
-            import pdb; pdb.set_trace()
             params = Params(*map(mean_stddev, cf))
             functions[cf['id']] = ConsequenceFunction(
                 cf['id'], cf['dist'], params)
