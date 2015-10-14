@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import pickle
 import unittest
 import numpy
 from numpy.testing import assert_almost_equal
@@ -195,3 +196,6 @@ class ParseConsequenceModelTestCase(unittest.TestCase):
             repr(cmodel),
             "<ConsequenceModel structural "
             "['ds1', 'ds2', 'ds3', 'ds4'] ['tax1']>")
+
+        # test pickleability
+        pickle.loads(pickle.dumps(cmodel))
