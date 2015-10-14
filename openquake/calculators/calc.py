@@ -240,14 +240,3 @@ def make_uhs(maps):
         if imt.startswith('SA') or imt == 'PGA')))
     hmaps = numpy.array([maps[imt] for imt in sorted_imts])  # I * N * P
     return hmaps.transpose(1, 0, 2)  # N * I * P
-
-
-def build_dict(shape, factory):
-    """
-    Build a dictionary key -> factory(), where the key is a multi-index
-    obtained from indices of the given shape. For instance
-
-    >>> sorted(build_dict((2, 2), list).items())
-    [((0, 0), []), ((0, 1), []), ((1, 0), []), ((1, 1), [])]
-    """
-    return {k: factory() for k in itertools.product(*map(range, shape))}

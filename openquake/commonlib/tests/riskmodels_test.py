@@ -1,4 +1,4 @@
-# Copyright (c) 2014, GEM Foundation.
+# Copyright (c) 2014-2015, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -13,13 +13,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 import numpy
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import writetmp
 from openquake.commonlib.riskmodels import (
     get_vulnerability_functions, get_fragility_functions)
-from openquake.commonlib import InvalidFile
+from openquake.risklib import scientific
+from openquake.commonlib import InvalidFile, nrml, nrml_examples
+
+EXAMPLES_DIR = os.path.dirname(nrml_examples.__file__)
 
 
 class ParseVulnerabilityModelTestCase(unittest.TestCase):
@@ -180,3 +184,14 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
             get_fragility_functions(vuln_content, 20)
         self.assertEqual('Missing attribute maxIML, line 9',
                          ar.exception.message)
+
+
+class ParseConsequenceModelTestCase(unittest.TestCase):
+    def test_ok(self):
+        fname = os.path.join(EXAMPLES_DIR, 'consequence-model.xml')
+        [cmodel] = nrml.read(fname)
+        cmodel = scientific.ConsequenceModel.from_node(cmodel)
+        self.assertEqual(
+            repr(cmodel),
+            "<ConsequenceModel structural "
+            "['ds1', 'ds2', 'ds3', 'ds4'] ['tax1']>")

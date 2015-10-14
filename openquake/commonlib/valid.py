@@ -497,14 +497,6 @@ def IML(value, IMT, minIML=None, maxIML=None, imlUnit=None):
     return (imt_str, imls, min_iml, max_iml, imlUnit)
 
 
-def fragilityparams(value, mean, stddev):
-    """
-    Convert a node of the form <params mean="0.30" stddev="0.16" /> into
-    a pair (0.30, 0.16)
-    """
-    return positivefloat(mean), positivefloat(stddev)
-
-
 def intensity_measure_types(value):
     """
     :param value: input string

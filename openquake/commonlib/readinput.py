@@ -33,8 +33,8 @@ from openquake.risklib import workflows, riskinput
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
-from openquake.commonlib.oqvalidation import get_risk_files
-from openquake.commonlib.riskmodels import get_vfs, get_ffs
+from openquake.commonlib.riskmodels import (
+    get_vfs, get_ffs, get_risk_files)
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.performance import DummyMonitor
 from openquake.baselib.python3compat import configparser
@@ -682,7 +682,7 @@ def get_exposure(oqparam):
         cc.area_types[name] = exposure.area['type']
 
     file_type, risk_files = get_risk_files(oqparam.inputs)
-    all_cost_types = set(risk_files) if file_type == 'vulnerability' else set()
+    all_cost_types = set(risk_files)
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
@@ -746,7 +746,9 @@ def get_exposure(oqparam):
                     asset_id, ', '.join(missing))
                 for cost_type in missing:
                     values[cost_type] = None
-            elif missing:
+            elif missing and oqparam.calculation_mode != 'classical_damage':
+                # TODO: rewrite the classical_damage to work with multiple
+                # loss types, then the special case will disappear
                 raise ValueError("Invalid Exposure. "
                                  "Missing cost %s for asset %s" % (
                                      missing, asset_id))

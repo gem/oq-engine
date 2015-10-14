@@ -32,6 +32,8 @@ from openquake.baselib.general import AccumDict
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.sourcewriter import obj_to_node
 
+F64 = numpy.float64
+
 LOSS_TYPE_KEY = re.compile(
     '(structural|nonstructural|contents|business_interruption|'
     'occupants|fragility)_([\w_]+)')
@@ -50,10 +52,10 @@ def get_risk_files(inputs):
             # instead of structural_fragility_file
             vfs['structural'] = inputs['structural_fragility'] = inputs[key]
             names.add('fragility')
-            del inputs[key]
+            del inputs['fragility']
             continue
         match = LOSS_TYPE_KEY.match(key)
-        if match and 'retrofitted' not in key:  # hack for the BCR calculator
+        if match and 'retrofitted' not in key and 'consequence' not in key:
             vfs[match.group(1)] = inputs[key]
             names.add(match.group(2))
     if not names:
@@ -111,8 +113,8 @@ def get_ffs(file_by_ct, continuous_fragility_discretization,
             steps_per_interval=None):
     """
     Given a dictionary {key: pathname}, look for keys with name
-    <cost_type>__vulnerability, parse them and returns a dictionary
-    imt, taxonomy -> vf_by_loss_type.
+    <cost_type>__fragility, parse them and returns a dictionary
+    imt, taxonomy -> ff_by_loss_type.
 
     :param file_by_ct: a dictionary cost_type -> pathname
     :param continuous_fragility_discretization: parameter from the .ini file
@@ -146,6 +148,23 @@ def build_vf_node(vf):
     return LiteralNode(
         'vulnerabilityFunction',
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
+
+
+def get_consequence_models(inputs):
+    """
+    :param inputs: a dictionary key -> path name
+    :returns: a dictionary loss_type -> ConsequenceModel instance
+    """
+    cmodels = {}
+    for key in inputs:
+        mo = re.match(
+            '(structural|nonstructural|contents|business_interruption)'
+            '_consequence', key)
+        if mo:
+            [node] = nrml.read(inputs[key])
+            cmodels[node['lossCategory']] = (
+                scientific.ConsequenceModel.from_node(node))
+    return cmodels
 
 
 def get_vulnerability_functions(fname):
@@ -319,7 +338,8 @@ def get_fragility_functions(fname, continuous_fragility_discretization,
             lstates.append(ls)
             if tag == 'ffc':
                 with context(fname, ff):
-                    mean_stddev = ~ff.params
+                    par = ff.params
+                    mean_stddev = par['mean'], par['stddev']
                 fragility_functions[taxonomy].append(
                     scientific.FragilityFunctionContinuous(ls, *mean_stddev))
             else:  # discrete

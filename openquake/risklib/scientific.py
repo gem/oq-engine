@@ -24,6 +24,7 @@ from __future__ import division
 import abc
 import copy
 import bisect
+import collections
 
 import numpy
 from numpy.testing import assert_equal
@@ -545,6 +546,60 @@ class FragilityFunctionList(list):
     def __repr__(self):
         kvs = ['%s=%s' % item for item in vars(self).items()]
         return '<FragilityFunctionList %s>' % ', '.join(kvs)
+
+
+ConsequenceFunction = collections.namedtuple(
+    'ConsequenceFunction', 'id dist params')
+
+
+def mean_stddev(node):
+    """Extracts mean and stddev from a dict-like object"""
+    return node['mean'], node['stddev']
+
+
+class ConsequenceModel(object):
+    """
+    Container for a set of consequence functions. You can access each
+    function given its name with the square bracket notation.
+
+    :param str id: ID of the model
+    :param str assetCategory: asset category (i.e. buildings, population)
+    :param str lossCategory: loss type
+    :param str description: description of the model
+    :param limitStates: a list of limit state strings
+    :param consequence_functions: a dictionary name -> ConsequenceFunction
+    """
+    @classmethod
+    def from_node(cls, node):
+        limitStates = ~node.limitStates
+        Params = collections.namedtuple('Params', limitStates)
+        functions = {}
+        for cf in node[2:]:
+            params = Params(*map(mean_stddev, cf))
+            functions[cf['id']] = ConsequenceFunction(
+                cf['id'], cf['dist'], params)
+        attrs = node.attrib.copy()
+        attrs.update(description=~node.description,
+                     limitStates=limitStates,
+                     consequence_functions=functions)
+        return cls(**attrs)
+
+    def __init__(self, id, assetCategory, lossCategory, description,
+                 limitStates, consequence_functions):
+        self.id = id
+        self.assetCategory = assetCategory
+        self.lossCategory = lossCategory
+        self.description = description
+        self.limitStates = limitStates
+        self.consequence_functions = consequence_functions
+
+    def __getitem__(self, name):
+        return self.consequence_functions[name]
+
+    def __repr__(self):
+        return '<%s %s %s %s>' % (
+            self.__class__.__name__, self.lossCategory,
+            self.limitStates, sorted(self.consequence_functions))
 
 #
 # Distribution & Sampling
