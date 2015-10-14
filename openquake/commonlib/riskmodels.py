@@ -155,7 +155,9 @@ def get_consequence_models(inputs):
     """
     cmodels = {}
     for key in inputs:
-        mo = LOSS_TYPE_KEY.match(key)
+        mo = re.match(
+            '(structural|nonstructural|contents|business_interruption)'
+            '_consequence', key)
         if mo:
             [node] = nrml.read(inputs[key])
             cmodels[node['lossCategory']] = (

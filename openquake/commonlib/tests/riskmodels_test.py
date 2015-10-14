@@ -1,4 +1,4 @@
-# Copyright (c) 2014, GEM Foundation.
+# Copyright (c) 2014-2015, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,8 +19,7 @@ import numpy
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import writetmp
 from openquake.commonlib.riskmodels import (
-    get_vulnerability_functions, get_fragility_functions,
-    get_consequence_functions)
+    get_vulnerability_functions, get_fragility_functions)
 from openquake.risklib import scientific
 from openquake.commonlib import InvalidFile, nrml, nrml_examples
 
