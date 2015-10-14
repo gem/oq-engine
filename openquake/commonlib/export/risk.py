@@ -329,6 +329,14 @@ def export_damage_total(ekey, dstore):
     return sorted(fnames)
 
 
+@export.add(('csq_by_asset', 'csv'), ('csq_by_taxon', 'csv'),
+            ('csq_total', 'csv'))
+def export_csv(ekey, dstore):
+    fname = os.path.join(dstore.export_dir, '.'.join(ekey))
+    writers.write_csv(fname, dstore[ekey[0]])
+    return [fname]
+
+
 def export_dmg_xml(key, export_dir, damage_states, dmg_data, suffix):
     """
     Export damage outputs in XML format.

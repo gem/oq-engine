@@ -2,18 +2,19 @@ import os
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario_damage import (
-    case_1, case_1c, case_2, case_3, case_4, case_5, case_5a, case_6, case_7)
+    case_1, case_1c, case_1h, case_2, case_3, case_4, case_5, case_5a,
+    case_6, case_7)
 
 from openquake.calculators.tests import CalculatorTestCase
 
 
 class ScenarioDamageTestCase(CalculatorTestCase):
-    def assert_ok(self, pkg, job_ini, exports='xml'):
+    def assert_ok(self, pkg, job_ini, exports='xml', kind='dmg'):
         test_dir = os.path.dirname(pkg.__file__)
         out = self.run_calc(test_dir, job_ini, exports=exports)
-        got = (out['dmg_by_asset', exports] +
-               out['dmg_by_taxon', exports] +
-               out['dmg_total', exports])
+        got = (out[kind + '_by_asset', exports] +
+               out[kind + '_by_taxon', exports] +
+               out[kind + '_total', exports])
         expected_dir = os.path.join(test_dir, 'expected')
         expected = sorted(f for f in os.listdir(expected_dir)
                           if f.endswith(exports))
@@ -33,6 +34,11 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             test_dir, 'job_haz.ini,job_risk.ini', exports='xml')
         [total] = out['dmg_total', 'xml']
         self.assertEqualFiles('expected/dmg_dist_total.xml', total)
+
+    @attr('qa', 'risk', 'scenario_damage')
+    def test_case_1h(self):
+        # test for consequences with a single asset
+        self.assert_ok(case_1h, 'job_risk.ini', exports='csv', kind='csq')
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_2(self):
