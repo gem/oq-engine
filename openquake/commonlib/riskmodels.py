@@ -113,7 +113,7 @@ def get_ffs(file_by_ct, continuous_fragility_discretization,
             steps_per_interval=None):
     """
     Given a dictionary {key: pathname}, look for keys with name
-    <cost_type>__vulnerability, parse them and returns a dictionary
+    <cost_type>__fragility, parse them and returns a dictionary
     imt, taxonomy -> ff_by_loss_type.
 
     :param file_by_ct: a dictionary cost_type -> pathname

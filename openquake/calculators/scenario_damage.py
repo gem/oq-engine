@@ -122,12 +122,13 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
                 damages = fraction * asset.number
                 if c_model:  # compute consequences
                     means = [par[0] for par in c_model[asset.taxonomy].params]
-                    # NB: below we add a 0 in from for no damage state
+                    # NB: below we add a 0 in front for no damage state
                     c_ratio = numpy.dot(fraction, [0] + means)
                     consequences = c_ratio * asset.value(out.loss_type)
                     result['c_asset'].append(
                         (l, r, asset.idx, scientific.mean_std(consequences)))
                     result['c_taxon'][t, l, r, :] += consequences
+                    # TODO: consequences for the occupants
                 result['d_asset'].append(
                     (l, r, asset.idx, scientific.mean_std(damages)))
                 result['d_taxon'][t, l, r, :] += damages
