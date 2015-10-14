@@ -682,7 +682,7 @@ def get_exposure(oqparam):
         cc.area_types[name] = exposure.area['type']
 
     file_type, risk_files = get_risk_files(oqparam.inputs)
-    all_cost_types = set(risk_files) if file_type == 'vulnerability' else set()
+    all_cost_types = set(risk_files)
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
