@@ -328,6 +328,11 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.build_asset_collection(
                 self.assets_by_site, self.oqparam.time_event)
+            spec = set(self.oqparam.specific_assets)
+            unknown = spec - set(self.assetcol['asset_ref'])
+            if unknown:
+                raise ValueError('The specific asset(s) %s are not in the '
+                                 'exposure' % ', '.join(unknown))
 
     def save_mesh(self):
         """
