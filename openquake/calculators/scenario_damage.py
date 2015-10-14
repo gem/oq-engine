@@ -88,8 +88,15 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.PerformanceMonitor` instance
     :returns:
-        a dictionary {'asset': [(l, r, a, mean-stddev), ...],
-                      'taxonomy': damage array of shape T, L, R, E, D}
+        a dictionary {'d_asset': [(l, r, a, mean-stddev), ...],
+                      'd_taxonomy': damage array of shape T, L, R, E, D,
+                      'c_asset': [(l, r, a, mean-stddev), ...],
+                      'c_taxonomy': damage array of shape T, L, R, E}
+
+    `d_asset` and `d_taxonomy` are related to the damage distributions
+    whereas `c_asset` and `c_taxonomy` are the consequence distributions.
+    If there is no consequence model `c_asset` is an empty list and
+    `c_taxonomy` is a zero-value array.
     """
     logging.info('Process %d, considering %d risk input(s) of weight %d',
                  os.getpid(), len(riskinputs),
