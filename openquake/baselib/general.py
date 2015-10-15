@@ -25,6 +25,7 @@ import os
 import sys
 import imp
 import math
+import warnings
 import tempfile
 import importlib
 import itertools
@@ -32,6 +33,7 @@ import subprocess
 import collections
 
 import numpy
+from decorator import decorator
 
 
 class WeightedSequence(collections.MutableSequence):
@@ -633,3 +635,31 @@ def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
         i += 1
     f = ('%.2f' % nbytes).rstrip('0').rstrip('.')
     return '%s %s' % (f, suffixes[i])
+
+
+def deprecated(message):
+    """
+    Return a decorator to make deprecated functions.
+
+    :param message:
+        the message to print the first time the
+        deprecated function is used.
+
+    Here is an example of usage:
+
+    >>> @deprecated('Use new_function instead')
+    ... def old_function():
+    ...     'Do something'
+
+    Notice that if the function is called several time, the deprecation
+    warning will be displayed only the first time.
+    """
+    def _deprecated(func, *args, **kw):
+        msg = '%s.%s has been deprecated. %s' % (
+            func.__module__, func.__name__, message)
+        if not hasattr(func, 'called'):
+            warnings.warn(msg, DeprecationWarning, stacklevel=2)
+            func.called = 0
+        func.called += 1
+        return func(*args, **kw)
+    return decorator(_deprecated)

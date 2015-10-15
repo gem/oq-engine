@@ -29,7 +29,7 @@ import numpy
 from openquake.baselib.performance import DummyMonitor
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.gsim.base import deprecated
+from openquake.baselib.general import deprecated
 
 
 def zero_curves(num_sites, imtls):

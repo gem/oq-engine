@@ -54,35 +54,6 @@ class DeprecationWarning(UserWarning):
     """
 
 
-def deprecated(message):
-    """
-    Return a decorator to make deprecated functions.
-
-    :param message:
-        the message to print the first time the
-        deprecated function is used.
-
-    Here is an example of usage:
-
-    >>> @deprecated('Use new_function instead')
-    ... def old_function():
-    ...     'Do something'
-    """
-    def _deprecated(func):
-        func.called = False
-        msg = '%s.%s has been deprecated. %s' % (
-            func.__module__, func.__name__, message)
-
-        @functools.wraps(func)
-        def wrapper(*args, **kw):
-            if not func.called:
-                warnings.warn(msg, DeprecationWarning, stacklevel=2)
-                func.called = True
-            return func(*args, **kw)
-        return wrapper
-    return _deprecated
-
-
 def gsim_imt_dt(sorted_gsims, sorted_imts):
     """
     Build a numpy dtype as a nested record with keys 'idx' and nested
