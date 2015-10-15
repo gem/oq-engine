@@ -204,7 +204,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         if performance is not None:
             self.performance = performance
         # the datastore must not be closed, it will be closed automatically
-        self.datastore.symlink(os.path.dirname(self.oqparam.inputs['job_ini']))
 
 
 class HazardCalculator(BaseCalculator):

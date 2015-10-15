@@ -246,26 +246,6 @@ class DataStore(collections.MutableMapping):
         """Close the underlying hdf5 file"""
         self.hdf5.close()
 
-    def symlink(self, name):
-        """
-        Make a symlink to the hdf5 file (except on Windows)
-
-        :param name:
-            a file or directory name without extensions; the name of
-            the link will be extracted from it by replacing the slashes
-            with dashes; the symlink will be created in the .datadir
-        """
-        if hasattr(os, 'symlink'):  # Unix, Max
-            link_name = os.path.join(
-                self.datadir, name.strip('/').replace('/', '-')) + '.hdf5'
-            try:
-                if os.path.exists(link_name):
-                    os.remove(link_name)
-                os.symlink(self.hdf5path, link_name)
-            except OSError as err:
-                # this is not an issue
-                logging.info('Could not create symlink %s: %s', link_name, err)
-
     def clear(self):
         """Remove the datastore from the file system"""
         self.close()
