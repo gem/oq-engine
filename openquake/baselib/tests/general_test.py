@@ -26,7 +26,8 @@ from operator import attrgetter
 from collections import namedtuple
 
 from openquake.baselib.general import (
-    block_splitter, split_in_blocks, search_module, assert_close, deprecated)
+    block_splitter, split_in_blocks, search_module, assert_close,
+    deprecated, DeprecationWarning)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
