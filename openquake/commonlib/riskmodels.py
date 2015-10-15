@@ -102,7 +102,8 @@ def get_vfs(inputs, retrofitted=False):
         key = '%s_vulnerability%s' % (cost_type, retro)
         if key not in inputs:
             continue
-        vf_dict = get_vulnerability_functions(inputs[key])
+        [node] = nrml.read(inputs[key])
+        vf_dict = nrml.build(node, inputs[key])
         for (imt, tax), vf in vf_dict.items():
             vulnerability_functions[imt, tax][
                 cost_type_to_loss_type(cost_type)] = vf
@@ -123,9 +124,9 @@ def get_ffs(file_by_ct, continuous_fragility_discretization,
     ffs = collections.defaultdict(dict)
     for cost_type in file_by_ct:
         [node] = nrml.read(file_by_ct[cost_type])
-        ff_dict = get_fragility_functions(
-            node, file_by_ct[cost_type], continuous_fragility_discretization,
-            steps_per_interval)
+        ff_dict = nrml.build(
+            node, file_by_ct[cost_type],
+            continuous_fragility_discretization, steps_per_interval)
         for tax, ff in ff_dict.items():
             ffs[ff.imt, tax][cost_type_to_loss_type(cost_type)] = ff
     return ffs, ff_dict.damage_states
@@ -168,10 +169,13 @@ def get_consequence_models(inputs):
     return cmodels
 
 
-def get_vulnerability_functions(fname):
+@nrml.build.add(('vulnerabilityModel', 'nrml/0.4'))
+def get_vulnerability_functions_04(node, fname):
     """
+    :param node:
+        a vulnerabilityModel node
     :param fname:
-        path of the vulnerability filter
+        path to the vulnerability file
     :returns:
         a dictionary imt, taxonomy -> vulnerability function
     """
@@ -180,51 +184,7 @@ def get_vulnerability_functions(fname):
     imts = set()
     taxonomies = set()
     vf_dict = {}  # imt, taxonomy -> vulnerability function
-    node = nrml.read(fname)
-    if node['xmlns'] == nrml.NRML05:
-        vmodel = node[0]
-        for vfun in vmodel.getnodes('vulnerabilityFunction'):
-            with context(fname, vfun):
-                imt = vfun.imls['imt']
-                imls = numpy.array(~vfun.imls)
-                taxonomy = vfun['id']
-            if taxonomy in taxonomies:
-                raise InvalidFile(
-                    'Duplicated vulnerabilityFunctionID: %s: %s, line %d' %
-                    (taxonomy, fname, vfun.lineno))
-            if vfun['dist'] == 'PM':
-                loss_ratios, probs = [], []
-                for probabilities in vfun[1:]:
-                    loss_ratios.append(probabilities['lr'])
-                    probs.append(valid.probabilities(~probabilities))
-                probs = numpy.array(probs)
-                assert probs.shape == (len(loss_ratios), len(imls))
-                vf_dict[imt, taxonomy] = (
-                    scientific.VulnerabilityFunctionWithPMF(
-                        taxonomy, imt, imls, numpy.array(loss_ratios),
-                        probs, seed=42))  # it is fine to hard-code it
-            else:
-                with context(fname, vfun):
-                    loss_ratios = ~vfun.meanLRs
-                    coefficients = ~vfun.covLRs
-                if len(loss_ratios) != len(imls):
-                    raise InvalidFile(
-                        'There are %d loss ratios, but %d imls: %s, line %d' %
-                        (len(loss_ratios), len(imls), fname,
-                         vfun.meanLRs.lineno))
-                if len(coefficients) != len(imls):
-                    raise InvalidFile(
-                        'There are %d coefficients, but %d imls: %s, '
-                        'line %d' % (len(coefficients), len(imls), fname,
-                                     vfun.covLRs.lineno))
-                with context(fname, vfun):
-                    vf_dict[imt, taxonomy] = scientific.VulnerabilityFunction(
-                        taxonomy, imt, imls, loss_ratios, coefficients,
-                        vfun['dist'])
-        return vf_dict
-    # otherwise, read the old format (NRML 0.4)
-    for vset in read_nodes(fname, filter_vset,
-                           nodefactory['vulnerabilityModel']):
+    for vset in node:
         imt_str, imls, min_iml, max_iml, imlUnit = ~vset.IML
         imts.add(imt_str)
         for vfun in vset.getnodes('discreteVulnerability'):
@@ -254,6 +214,61 @@ def get_vulnerability_functions(fname):
     return vf_dict
 
 
+@nrml.build.add(('vulnerabilityModel', 'nrml/0.5'))
+def get_vulnerability_functions_05(node, fname):
+    """
+    :param node:
+        a vulnerabilityModel node
+    :param fname:
+        path of the vulnerability filter
+    :returns:
+        a dictionary imt, taxonomy -> vulnerability function
+    """
+    # NB: the IMTs can be duplicated and with different levels, each
+    # vulnerability function in a set will get its own levels
+    taxonomies = set()
+    vf_dict = {}  # imt, taxonomy -> vulnerability function
+    for vfun in node.getnodes('vulnerabilityFunction'):
+        with context(fname, vfun):
+            imt = vfun.imls['imt']
+            imls = numpy.array(~vfun.imls)
+            taxonomy = vfun['id']
+        if taxonomy in taxonomies:
+            raise InvalidFile(
+                'Duplicated vulnerabilityFunctionID: %s: %s, line %d' %
+                (taxonomy, fname, vfun.lineno))
+        if vfun['dist'] == 'PM':
+            loss_ratios, probs = [], []
+            for probabilities in vfun[1:]:
+                loss_ratios.append(probabilities['lr'])
+                probs.append(valid.probabilities(~probabilities))
+            probs = numpy.array(probs)
+            assert probs.shape == (len(loss_ratios), len(imls))
+            vf_dict[imt, taxonomy] = (
+                scientific.VulnerabilityFunctionWithPMF(
+                    taxonomy, imt, imls, numpy.array(loss_ratios),
+                    probs, seed=42))  # it is fine to hard-code it
+        else:
+            with context(fname, vfun):
+                loss_ratios = ~vfun.meanLRs
+                coefficients = ~vfun.covLRs
+            if len(loss_ratios) != len(imls):
+                raise InvalidFile(
+                    'There are %d loss ratios, but %d imls: %s, line %d' %
+                    (len(loss_ratios), len(imls), fname,
+                     vfun.meanLRs.lineno))
+            if len(coefficients) != len(imls):
+                raise InvalidFile(
+                    'There are %d coefficients, but %d imls: %s, '
+                    'line %d' % (len(coefficients), len(imls), fname,
+                                 vfun.covLRs.lineno))
+            with context(fname, vfun):
+                vf_dict[imt, taxonomy] = scientific.VulnerabilityFunction(
+                    taxonomy, imt, imls, loss_ratios, coefficients,
+                    vfun['dist'])
+    return vf_dict
+
+
 def get_imtls(ddict):
     """
     :param ddict:
@@ -279,9 +294,12 @@ def get_imtls(ddict):
 
 # ########################### fragility ############################### #
 
+@nrml.build.add(('fragilityModel', 'nrml/0.4'))
 def get_fragility_functions(fmodel, fname, continuous_fragility_discretization,
                             steps_per_interval=None):
     """
+    :param fmodel:
+        a fragilityModel node
     :param fname:
         path of the fragility file
     :param continuous_fragility_discretization:

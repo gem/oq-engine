@@ -127,8 +127,8 @@ def get_tag_version(nrml_node):
 
 nodefactory = CallableDict(keyfunc=striptag)
 
-buildmodel = CallableDict(keyfunc=get_tag_version)
-# dictionary of functions with two arguments, node and fname
+build = CallableDict(keyfunc=get_tag_version)
+# dictionary of functions with at least two arguments, node and fname
 
 
 @nodefactory.add('sourceModel', 'simpleFaultRupture', 'complexFaultRupture',
