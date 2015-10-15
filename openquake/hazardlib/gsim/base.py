@@ -32,6 +32,7 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
+from openquake.baselib.general import DeprecationWarning
 from openquake.baselib.python3compat import with_metaclass
 
 
@@ -44,13 +45,6 @@ class NonInstantiableError(Exception):
 class NotVerifiedWarning(UserWarning):
     """
     Raised when a non verified GSIM is instantiated
-    """
-
-
-# the builtin DeprecationWarning has been silenced in Python 2.7
-class DeprecationWarning(UserWarning):
-    """
-    Raised the first time a deprecated function is called
     """
 
 

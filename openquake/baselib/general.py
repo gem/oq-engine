@@ -637,6 +637,13 @@ def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
     return '%s %s' % (f, suffixes[i])
 
 
+# the builtin DeprecationWarning has been silenced in Python 2.7
+class DeprecationWarning(UserWarning):
+    """
+    Raised the first time a deprecated function is called
+    """
+
+
 def deprecated(message):
     """
     Return a decorator to make deprecated functions.
