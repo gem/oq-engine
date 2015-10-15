@@ -122,8 +122,9 @@ def get_ffs(file_by_ct, continuous_fragility_discretization,
     """
     ffs = collections.defaultdict(dict)
     for cost_type in file_by_ct:
+        [node] = nrml.read(file_by_ct[cost_type])
         ff_dict = get_fragility_functions(
-            file_by_ct[cost_type], continuous_fragility_discretization,
+            node, file_by_ct[cost_type], continuous_fragility_discretization,
             steps_per_interval)
         for tax, ff in ff_dict.items():
             ffs[ff.imt, tax][cost_type_to_loss_type(cost_type)] = ff
@@ -278,7 +279,7 @@ def get_imtls(ddict):
 
 # ########################### fragility ############################### #
 
-def get_fragility_functions(fname, continuous_fragility_discretization,
+def get_fragility_functions(fmodel, fname, continuous_fragility_discretization,
                             steps_per_interval=None):
     """
     :param fname:
@@ -290,9 +291,6 @@ def get_fragility_functions(fname, continuous_fragility_discretization,
     :returns:
         damage_states list and dictionary taxonomy -> functions
     """
-    [fmodel] = read_nodes(
-        fname, lambda el: el.tag.endswith('fragilityModel'),
-        nodefactory['fragilityModel'])
     # ~fmodel.description is ignored
     limit_states = ~fmodel.limitStates
     tag = 'ffc' if fmodel['format'] == 'continuous' else 'ffd'

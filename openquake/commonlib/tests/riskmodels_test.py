@@ -157,7 +157,8 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
     </fragilityModel>
 </nrml>""")
         with self.assertRaises(InvalidFile) as ar:
-            get_fragility_functions(vuln_content, 20)
+            node = nrml.read(vuln_content)[0]
+            get_fragility_functions(node, vuln_content, 20)
         self.assertEqual('Missing attribute minIML, line 9',
                          ar.exception.message)
 
@@ -182,7 +183,8 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
     </fragilityModel>
 </nrml>""")
         with self.assertRaises(InvalidFile) as ar:
-            get_fragility_functions(vuln_content, 20)
+            node = nrml.read(vuln_content)[0]
+            get_fragility_functions(node, vuln_content, 20)
         self.assertEqual('Missing attribute maxIML, line 9',
                          ar.exception.message)
 
