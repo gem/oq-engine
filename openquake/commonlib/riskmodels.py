@@ -176,6 +176,7 @@ def get_vulnerability_functions_04(node, fname):
     :returns:
         a dictionary imt, taxonomy -> vulnerability function
     """
+    logging.warn('Please upgrade %s to NRML 0.5', fname)
     # NB: the IMTs can be duplicated and with different levels, each
     # vulnerability function in a set will get its own levels
     imts = set()
@@ -292,8 +293,9 @@ def get_imtls(ddict):
 # ########################### fragility ############################### #
 
 @nrml.build.add(('fragilityModel', 'nrml/0.4'))
-def get_fragility_functions(fmodel, fname, continuous_fragility_discretization,
-                            steps_per_interval=None):
+def get_fragility_functions_04(
+        fmodel, fname, continuous_fragility_discretization,
+        steps_per_interval=None):
     """
     :param fmodel:
         a fragilityModel node
@@ -306,6 +308,7 @@ def get_fragility_functions(fmodel, fname, continuous_fragility_discretization,
     :returns:
         damage_states list and dictionary taxonomy -> functions
     """
+    logging.warn('Please upgrade %s to NRML 0.5', fname)
     # ~fmodel.description is ignored
     limit_states = ~fmodel.limitStates
     tag = 'ffc' if fmodel['format'] == 'continuous' else 'ffd'
