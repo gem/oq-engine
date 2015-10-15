@@ -572,10 +572,9 @@ class ConsequenceModel(object):
     @classmethod
     def from_node(cls, node):
         limitStates = ~node.limitStates
-        Params = collections.namedtuple('Params', limitStates)
         functions = {}
         for cf in node[2:]:
-            params = Params(*map(mean_stddev, cf))
+            params = map(mean_stddev, cf)
             functions[cf['id']] = ConsequenceFunction(
                 cf['id'], cf['dist'], params)
         attrs = node.attrib.copy()

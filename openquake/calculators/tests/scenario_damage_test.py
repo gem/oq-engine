@@ -2,7 +2,7 @@ import os
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario_damage import (
-    case_1, case_1c, case_1h, case_2, case_3, case_4, case_5, case_5a,
+    case_1, case_1c, case_1h, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7)
 
 from openquake.calculators.tests import CalculatorTestCase
@@ -51,6 +51,11 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_4(self):
         self.assert_ok(case_4, 'job_haz.ini,job_risk.ini')
+
+    @attr('qa', 'risk', 'scenario_damage')
+    def test_case_4b(self):
+        self.assert_ok(case_4b, 'job_haz.ini,job_risk.ini', exports='csv',
+                       kind='csq')
 
     @attr('qa', 'risk', 'scenario_damage')
     def test_case_5(self):

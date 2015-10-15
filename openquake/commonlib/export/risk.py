@@ -329,12 +329,32 @@ def export_damage_total(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('csq_by_asset', 'csv'), ('csq_by_taxon', 'csv'),
-            ('csq_total', 'csv'))
-def export_csv(ekey, dstore):
-    fname = os.path.join(dstore.export_dir, '.'.join(ekey))
-    writers.write_csv(fname, dstore[ekey[0]])
-    return [fname]
+@export.add(('csq_by_asset', 'csv'), ('csq_by_taxon', 'csv'))
+def export_csq_csv(ekey, dstore):
+    rlzs = dstore['rlzs_assoc'].realizations
+    R = len(rlzs)
+    value = dstore[ekey[0]].value  # matrix N x R or T x R
+    fnames = []
+    for rlz, values in zip(rlzs, value.T):
+        suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
+        fname = os.path.join(dstore.export_dir, ekey[0] + suffix)
+        writers.write_csv(fname, values)
+        fnames.append(fname)
+    return fnames
+
+
+@export.add(('csq_total', 'csv'))
+def export_csq_total_csv(ekey, dstore):
+    rlzs = dstore['rlzs_assoc'].realizations
+    R = len(rlzs)
+    value = dstore[ekey[0]].value
+    fnames = []
+    for rlz, values in zip(rlzs, value):
+        suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
+        fname = os.path.join(dstore.export_dir, ekey[0] + suffix)
+        writers.write_csv(fname, numpy.array([values], value.dtype))
+        fnames.append(fname)
+    return fnames
 
 
 def export_dmg_xml(key, export_dir, damage_states, dmg_data, suffix):
