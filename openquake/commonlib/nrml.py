@@ -75,13 +75,14 @@ this is a job for the LiteralNode class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 from __future__ import print_function
+import re
 import sys
 import logging
 from openquake.baselib.general import CallableDict
 from openquake.baselib.python3compat import unicode, raise_
 from openquake.commonlib import valid, writers
 from openquake.commonlib.node import node_to_xml, \
-    Node, LiteralNode, node_from_elem, striptag, parse, iterparse
+    Node, LiteralNode, node_from_elem, striptag, parse as xmlparse, iterparse
 
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
 NRML05 = 'http://openquake.org/xmlns/nrml/0.5'
@@ -115,7 +116,29 @@ class NRMLFile(object):
         self._file.close()
 
 
+def get_tag_version(nrml_node):
+    """
+    Extract from a node of kind NRML the tag and the version. For instance
+    from '{http://openquake.org/xmlns/nrml/0.4}fragilityModel' one gets
+    the pair ('fragilityModel', 'nrml/0.4').
+    """
+    version, tag = re.search(r'(nrml/[\d\.]+)\}(\w+)', nrml_node.tag).groups()
+    return tag, version
+
+
 nodefactory = CallableDict(keyfunc=striptag)
+
+build = CallableDict(keyfunc=get_tag_version)
+# dictionary of functions with at least two arguments, node and fname
+
+
+def parse(fname, *args):
+    """
+    Parse a NRML file and return an associated Python object. It works by
+    calling nrml.read() and nrml.build() in sequence.
+    """
+    [node] = read(fname)
+    return build(node, fname, *args)
 
 
 @nodefactory.add('sourceModel', 'simpleFaultRupture', 'complexFaultRupture',
@@ -346,7 +369,7 @@ def read(source, chatty=True):
     :param source:
         a file name or file object open for reading
     """
-    nrml = parse(source).getroot()
+    nrml = xmlparse(source).getroot()
     assert striptag(nrml.tag) == 'nrml', nrml.tag
     # extract the XML namespace URL ('http://openquake.org/xmlns/nrml/0.5')
     xmlns = nrml.tag.split('}')[0][1:]

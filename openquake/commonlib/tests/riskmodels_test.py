@@ -19,8 +19,6 @@ import unittest
 import numpy
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import writetmp
-from openquake.commonlib.riskmodels import (
-    get_vulnerability_functions, get_fragility_functions)
 from openquake.risklib import scientific
 from openquake.commonlib import InvalidFile, nrml, nrml_examples
 
@@ -62,7 +60,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
     </vulnerabilityModel>
 </nrml>
 """)
-        vfs = get_vulnerability_functions(vuln_content)
+        vfs = nrml.parse(vuln_content)
         assert_almost_equal(vfs['PGA', 'RC/A'].imls,
                             numpy.array([0.005, 0.007, 0.0098, 0.0137]))
         assert_almost_equal(vfs['PGA', 'RC/B'].imls,
@@ -104,7 +102,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
 </nrml>
 """)
         with self.assertRaises(InvalidFile) as ar:
-            get_vulnerability_functions(vuln_content)
+            nrml.parse(vuln_content)
         self.assertIn('Duplicated vulnerabilityFunctionID: A',
                       ar.exception.message)
 
@@ -131,7 +129,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
 </nrml>
 """)
         with self.assertRaises(ValueError) as ar:
-            get_vulnerability_functions(vuln_content)
+            nrml.parse(vuln_content)
         self.assertIn('It is not valid to define a loss ratio = 0.0 with a '
                       'corresponding coeff. of variation > 0.0',
                       ar.exception.message)
@@ -157,7 +155,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
     </fragilityModel>
 </nrml>""")
         with self.assertRaises(InvalidFile) as ar:
-            get_fragility_functions(vuln_content, 20)
+            nrml.parse(vuln_content, 20)
         self.assertEqual('Missing attribute minIML, line 9',
                          ar.exception.message)
 
@@ -182,7 +180,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
     </fragilityModel>
 </nrml>""")
         with self.assertRaises(InvalidFile) as ar:
-            get_fragility_functions(vuln_content, 20)
+            nrml.parse(vuln_content, 20)
         self.assertEqual('Missing attribute maxIML, line 9',
                          ar.exception.message)
 

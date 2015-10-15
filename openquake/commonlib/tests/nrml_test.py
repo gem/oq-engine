@@ -1,6 +1,6 @@
 import unittest
 import io
-from openquake.commonlib.nrml import read, node_to_xml
+from openquake.commonlib.nrml import read, node_to_xml, get_tag_version
 
 
 class NrmlTestCase(unittest.TestCase):
@@ -33,6 +33,11 @@ class NrmlTestCase(unittest.TestCase):
 </nrml>
 """)
         root = read(xmlfile)
+
+        tag, version = get_tag_version(root[0])
+        self.assertEqual(tag, 'exposureModel')
+        self.assertEqual(version, 'nrml/0.4')
+
         outfile = io.BytesIO()
         node_to_xml(root, outfile, {})
         self.assertEqual(outfile.getvalue(), """\
