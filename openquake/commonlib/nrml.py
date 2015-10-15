@@ -75,6 +75,7 @@ this is a job for the LiteralNode class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 from __future__ import print_function
+import re
 import sys
 import logging
 from openquake.baselib.general import CallableDict
@@ -115,7 +116,19 @@ class NRMLFile(object):
         self._file.close()
 
 
+def get_tag_version(nrml_node):
+    """
+    Extract from a node of kind `nrml` the tag and the version of the NRML
+    format.
+    """
+    version, tag = re.search(r'(nrml/[\d\.]+)\}(\w+)', nrml_node.tag).groups()
+    return tag, version
+
+
 nodefactory = CallableDict(keyfunc=striptag)
+
+buildmodel = CallableDict(keyfunc=get_tag_version)
+# dictionary of functions with two arguments, node and fname
 
 
 @nodefactory.add('sourceModel', 'simpleFaultRupture', 'complexFaultRupture',
