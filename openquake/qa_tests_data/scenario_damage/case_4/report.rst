@@ -21,14 +21,14 @@ concurrent_tasks             64
 
 Input files
 -----------
-============= ============================================
-Name          File                                        
-============= ============================================
-exposure      `exposure_model.xml <exposure_model.xml>`_  
-fragility     `fragility_model.xml <fragility_model.xml>`_
-job_ini       `job_haz.ini <job_haz.ini>`_                
-rupture_model `fault_rupture.xml <fault_rupture.xml>`_    
-============= ============================================
+==================== ============================================
+Name                 File                                        
+==================== ============================================
+exposure             `exposure_model.xml <exposure_model.xml>`_  
+job_ini              `job_haz.ini <job_haz.ini>`_                
+rupture_model        `fault_rupture.xml <fault_rupture.xml>`_    
+structural_fragility `fragility_model.xml <fragility_model.xml>`_
+==================== ============================================
 
 Realizations per (TRT, GSIM)
 ----------------------------

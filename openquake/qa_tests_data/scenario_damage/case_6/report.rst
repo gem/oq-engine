@@ -21,14 +21,14 @@ concurrent_tasks             64
 
 Input files
 -----------
-============= ============================================================================
-Name          File                                                                        
-============= ============================================================================
-exposure      `exposure_model_Antioquia_test03.xml <exposure_model_Antioquia_test03.xml>`_
-fragility     `fragility_model_test03.xml <fragility_model_test03.xml>`_                  
-job_ini       `job_h.ini <job_h.ini>`_                                                    
-rupture_model `rupture_Romeral_15km.xml <rupture_Romeral_15km.xml>`_                      
-============= ============================================================================
+==================== ============================================================================
+Name                 File                                                                        
+==================== ============================================================================
+exposure             `exposure_model_Antioquia_test03.xml <exposure_model_Antioquia_test03.xml>`_
+job_ini              `job_h.ini <job_h.ini>`_                                                    
+rupture_model        `rupture_Romeral_15km.xml <rupture_Romeral_15km.xml>`_                      
+structural_fragility `fragility_model_test03.xml <fragility_model_test03.xml>`_                  
+==================== ============================================================================
 
 Realizations per (TRT, GSIM)
 ----------------------------
