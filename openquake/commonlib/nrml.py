@@ -118,8 +118,9 @@ class NRMLFile(object):
 
 def get_tag_version(nrml_node):
     """
-    Extract from a node of kind `nrml` the tag and the version of the NRML
-    format.
+    Extract from a node of kind NRML the tag and the version. For instance
+    from '{http://openquake.org/xmlns/nrml/0.4}fragilityModel' one gets
+    the pair ('fragilityModel', 'nrml/0.4').
     """
     version, tag = re.search(r'(nrml/[\d\.]+)\}(\w+)', nrml_node.tag).groups()
     return tag, version
@@ -133,7 +134,8 @@ build = CallableDict(keyfunc=get_tag_version)
 
 def parse(fname, *args):
     """
-    Parse a NRML film and return the associated Python model.
+    Parse a NRML file and return an associated Python object. It works by
+    calling nrml.read() and nrml.build() in sequence.
     """
     [node] = read(fname)
     return build(node, fname, *args)
