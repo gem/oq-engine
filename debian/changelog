@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added support for multiple versions of NRML for fragility and
+    vulnerability functions
   * Added a ConsequenceModel parser and implemented the calculation of
     consequences in the scenario_damage calculator
 
