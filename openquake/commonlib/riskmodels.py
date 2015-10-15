@@ -25,11 +25,10 @@ import collections
 
 import numpy
 
-from openquake.commonlib.node import read_nodes, context, LiteralNode
+from openquake.commonlib.node import context, LiteralNode
 from openquake.commonlib import InvalidFile, nrml, valid
 from openquake.risklib import scientific
 from openquake.baselib.general import AccumDict
-from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.sourcewriter import obj_to_node
 
 F64 = numpy.float64
@@ -102,8 +101,7 @@ def get_vfs(inputs, retrofitted=False):
         key = '%s_vulnerability%s' % (cost_type, retro)
         if key not in inputs:
             continue
-        [node] = nrml.read(inputs[key])
-        vf_dict = nrml.build(node, inputs[key])
+        vf_dict = nrml.parse(inputs[key])
         for (imt, tax), vf in vf_dict.items():
             vulnerability_functions[imt, tax][
                 cost_type_to_loss_type(cost_type)] = vf
@@ -123,9 +121,8 @@ def get_ffs(file_by_ct, continuous_fragility_discretization,
     """
     ffs = collections.defaultdict(dict)
     for cost_type in file_by_ct:
-        [node] = nrml.read(file_by_ct[cost_type])
-        ff_dict = nrml.build(
-            node, file_by_ct[cost_type],
+        ff_dict = nrml.parse(
+            file_by_ct[cost_type],
             continuous_fragility_discretization, steps_per_interval)
         for tax, ff in ff_dict.items():
             ffs[ff.imt, tax][cost_type_to_loss_type(cost_type)] = ff

@@ -82,7 +82,7 @@ from openquake.baselib.general import CallableDict
 from openquake.baselib.python3compat import unicode, raise_
 from openquake.commonlib import valid, writers
 from openquake.commonlib.node import node_to_xml, \
-    Node, LiteralNode, node_from_elem, striptag, parse, iterparse
+    Node, LiteralNode, node_from_elem, striptag, parse as xmlparse, iterparse
 
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
 NRML05 = 'http://openquake.org/xmlns/nrml/0.5'
@@ -129,6 +129,14 @@ nodefactory = CallableDict(keyfunc=striptag)
 
 build = CallableDict(keyfunc=get_tag_version)
 # dictionary of functions with at least two arguments, node and fname
+
+
+def parse(fname, *args):
+    """
+    Parse a NRML film and return the associated Python model.
+    """
+    [node] = read(fname)
+    return build(node, fname, *args)
 
 
 @nodefactory.add('sourceModel', 'simpleFaultRupture', 'complexFaultRupture',
@@ -359,7 +367,7 @@ def read(source, chatty=True):
     :param source:
         a file name or file object open for reading
     """
-    nrml = parse(source).getroot()
+    nrml = xmlparse(source).getroot()
     assert striptag(nrml.tag) == 'nrml', nrml.tag
     # extract the XML namespace URL ('http://openquake.org/xmlns/nrml/0.5')
     xmlns = nrml.tag.split('}')[0][1:]
