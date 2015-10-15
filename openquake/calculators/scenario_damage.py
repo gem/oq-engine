@@ -122,7 +122,7 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
                 damages = fraction * asset.number
                 if c_model:  # compute consequences
                     means = [par[0] for par in c_model[asset.taxonomy].params]
-                    # NB: below we add a 0 in front for no damage state
+                    # NB: we add a 0 in front for nodamage state
                     c_ratio = numpy.dot(fraction, [0] + means)
                     consequences = c_ratio * asset.value(out.loss_type)
                     result['c_asset'].append(
@@ -183,14 +183,15 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             result['d_taxon'], multi_stat_dt)
 
         # consequence distributions
-        c_asset = numpy.zeros((N, L, R, 2), F64)
-        for (l, r, a, stat) in result['c_asset']:
-            c_asset[a, l, r] = stat
-        multi_stat_dt = numpy.dtype(
-            [(lt, [('mean', F64), ('stddev', F64)]) for lt in ltypes])
-        self.datastore['csq_by_asset'] = dist_by_asset(
-            c_asset, multi_stat_dt)
-        self.datastore['csq_by_taxon'] = dist_by_taxon(
-            result['c_taxon'], multi_stat_dt)
-        self.datastore['csq_total'] = dist_total(
-            result['c_taxon'], multi_stat_dt)
+        if result['c_asset']:
+            c_asset = numpy.zeros((N, L, R, 2), F64)
+            for (l, r, a, stat) in result['c_asset']:
+                c_asset[a, l, r] = stat
+            multi_stat_dt = numpy.dtype(
+                [(lt, [('mean', F64), ('stddev', F64)]) for lt in ltypes])
+            self.datastore['csq_by_asset'] = dist_by_asset(
+                c_asset, multi_stat_dt)
+            self.datastore['csq_by_taxon'] = dist_by_taxon(
+                result['c_taxon'], multi_stat_dt)
+            self.datastore['csq_total'] = dist_total(
+                result['c_taxon'], multi_stat_dt)
