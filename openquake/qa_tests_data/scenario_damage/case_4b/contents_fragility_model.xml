@@ -1,0 +1,60 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" 
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+<fragilityModel format="continuous">
+  <description>cont ff | tax3 | zero miniml</description>
+  <limitStates>ds1 ds2 ds3 ds4</limitStates>
+  <ffs type="lognormal">
+    <taxonomy>tax1</taxonomy>
+    <IML IMT="PGA" imlUnit="g" minIML="0.0" maxIML="5.0"/>
+    <ffc ls="ds1">
+      <params mean="0.25" stddev="0.50"/>
+    </ffc>
+    <ffc ls="ds2">
+      <params mean="0.50" stddev="0.90"/>
+    </ffc>
+    <ffc ls="ds3">
+      <params mean="1.00" stddev="1.80"/>
+    </ffc>
+    <ffc ls="ds4">
+      <params mean="2.00" stddev="3.10"/>
+    </ffc>
+  </ffs>
+
+  <ffs type="lognormal">
+    <taxonomy>tax2</taxonomy>
+    <IML IMT="PGA" imlUnit="g" minIML="0.0" maxIML="5.0"/>
+    <ffc ls="ds1">
+      <params mean="0.50" stddev="0.40"/>
+    </ffc>
+    <ffc ls="ds2">
+      <params mean="0.75" stddev="0.60"/>
+    </ffc>
+    <ffc ls="ds3">
+      <params mean="1.25" stddev="1.00"/>
+    </ffc>
+    <ffc ls="ds4">
+      <params mean="2.00" stddev="1.60"/>
+    </ffc>
+  </ffs>
+
+  <ffs type="lognormal">
+    <taxonomy>tax3</taxonomy>
+    <IML IMT="PGA" imlUnit="g" minIML="0.0" maxIML="5.0"/>
+    <ffc ls="ds1">
+      <params mean="0.60" stddev="0.45"/>
+    </ffc>
+    <ffc ls="ds2">
+      <params mean="0.90" stddev="0.75"/>
+    </ffc>
+    <ffc ls="ds3">
+      <params mean="1.50" stddev="1.00"/>
+    </ffc>
+    <ffc ls="ds4">
+      <params mean="2.50" stddev="1.75"/>
+    </ffc>
+  </ffs>
+</fragilityModel>
+
+</nrml>

@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+<consequenceModel id="example" assetCategory="buildings" lossCategory="structural">
+
+  <description>ln cf | tax3 | zcov</description>
+  <limitStates>ds1 ds2 ds3 ds4</limitStates>
+
+  <consequenceFunction id="tax1" dist="LN">
+    <params ls="ds1" mean="0.04" stddev="0.00"/>
+    <params ls="ds2" mean="0.16" stddev="0.00"/>
+    <params ls="ds3" mean="0.32" stddev="0.00"/>
+    <params ls="ds4" mean="0.64" stddev="0.00"/>
+  </consequenceFunction>
+
+  <consequenceFunction id="tax2" dist="LN">
+    <params ls="ds1" mean="0.04" stddev="0.00"/>
+    <params ls="ds2" mean="0.16" stddev="0.00"/>
+    <params ls="ds3" mean="0.32" stddev="0.00"/>
+    <params ls="ds4" mean="0.64" stddev="0.00"/>
+  </consequenceFunction>
+
+  <consequenceFunction id="tax3" dist="LN">
+    <params ls="ds1" mean="0.04" stddev="0.00"/>
+    <params ls="ds2" mean="0.16" stddev="0.00"/>
+    <params ls="ds3" mean="0.32" stddev="0.00"/>
+    <params ls="ds4" mean="0.64" stddev="0.00"/>
+  </consequenceFunction>
+
+</consequenceModel>
+
+</nrml>
