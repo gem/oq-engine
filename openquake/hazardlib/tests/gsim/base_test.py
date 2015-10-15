@@ -22,7 +22,7 @@ import numpy
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import (
     GMPE, IPE, SitesContext, RuptureContext, DistancesContext,
-    NonInstantiableError, NotVerifiedWarning, DeprecationWarning, deprecated)
+    NonInstantiableError, NotVerifiedWarning, DeprecationWarning)
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA, PGV
@@ -617,24 +617,3 @@ class GsimOrderingTestCase(unittest.TestCase):
         self.assertEqual(a, a1)
         self.assertEqual(b, b1)
         self.assertNotEqual(a, b1)
-
-
-class DeprecatedTestCase(unittest.TestCase):
-    def test(self):
-        @deprecated('Use dummy_new instead.')
-        def dummy():
-            pass
-
-        # check that a DeprecationWarning is printed
-        with mock.patch('warnings.warn') as warn:
-            dummy()
-        warning_msg, warning_type = warn.call_args[0]
-        self.assertIs(warning_type, DeprecationWarning)
-        self.assertIn(
-            'gsim.base_test.dummy has been deprecated. Use dummy_new instead.',
-            warning_msg)
-
-        # check that at the second call the warning is not printed
-        with mock.patch('warnings.warn') as warn:
-            dummy()
-        self.assertIsNone(warn.call_args)

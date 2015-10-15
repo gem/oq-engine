@@ -32,6 +32,7 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
+from openquake.baselib.general import DeprecationWarning
 from openquake.baselib.python3compat import with_metaclass
 
 
@@ -45,42 +46,6 @@ class NotVerifiedWarning(UserWarning):
     """
     Raised when a non verified GSIM is instantiated
     """
-
-
-# the builtin DeprecationWarning has been silenced in Python 2.7
-class DeprecationWarning(UserWarning):
-    """
-    Raised the first time a deprecated function is called
-    """
-
-
-def deprecated(message):
-    """
-    Return a decorator to make deprecated functions.
-
-    :param message:
-        the message to print the first time the
-        deprecated function is used.
-
-    Here is an example of usage:
-
-    >>> @deprecated('Use new_function instead')
-    ... def old_function():
-    ...     'Do something'
-    """
-    def _deprecated(func):
-        func.called = False
-        msg = '%s.%s has been deprecated. %s' % (
-            func.__module__, func.__name__, message)
-
-        @functools.wraps(func)
-        def wrapper(*args, **kw):
-            if not func.called:
-                warnings.warn(msg, DeprecationWarning, stacklevel=2)
-                func.called = True
-            return func(*args, **kw)
-        return wrapper
-    return _deprecated
 
 
 def gsim_imt_dt(sorted_gsims, sorted_imts):
