@@ -22,6 +22,16 @@ if __name__ == "__main__":
     # the issue is that importing openquake.engine sets a wrong
     # DJANGO_SETTINGS_MODULE environment variable, causing the irritating
     # CommandError: You must set settings.ALLOWED_HOSTS if DEBUG is False.
+
+    # Please note: the /usr/bin/oq-engine script requires a celeryconfig.py
+    # file in the PYTHONPATH; when using binary packages, if a celeryconfig.py
+    # is not available the OpenQuake Engine default celeryconfig.py, located
+    # in /usr/share/openquake/engine, is used.
+    try:
+        import celeryconfig
+    except ImportError:
+        sys.path.append('/usr/share/openquake/engine')
+
     from openquake.engine.db import models
     models.getcursor('job_init').execute(
         # cleanup of the flag oq_job.is_running
