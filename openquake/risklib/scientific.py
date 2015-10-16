@@ -512,7 +512,7 @@ class FragilityFunctionDiscrete(object):
         """
         highest_iml = self.imls[-1]
 
-        if self.no_damage_limit is not None and iml < self.no_damage_limit:
+        if self.no_damage_limit and iml < self.no_damage_limit:
             return 0.
         # when the intensity measure level is above
         # the range, we use the highest one
@@ -584,7 +584,7 @@ def build_imls(ff, continuous_fragility_discretization,
                steps_per_interval=None):
     if ff.format == 'discrete':
         imls = ff.imls
-        if ff.nodamage is not None and ff.nodamage < imls[0]:
+        if ff.nodamage and ff.nodamage < imls[0]:
             imls = [ff.nodamage] + imls
         if steps_per_interval:
             gen_imls = fine_graining(imls, steps_per_interval)

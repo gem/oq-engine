@@ -37,6 +37,8 @@ RISK_CALCULATORS = [
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 
+rmdict = collections.defaultdict(dict)
+
 
 class OqParam(valid.ParamSet):
     siteparam = dict(
@@ -149,15 +151,16 @@ class OqParam(valid.ParamSet):
             self.risk_imtls = get_imtls(get_vfs(self.inputs))
         elif file_type == 'fragility':
             fmodels = get_risk_models('fragility', self.inputs)
-            self.ddic = collections.defaultdict(dict)
-            self.limit_states = set()
+            rmdict.clear()
+            limit_states = set()
             for loss_type, fm in sorted(fmodels.items()):
                 newfm = fm.build(self.continuous_fragility_discretization,
                                  self.steps_per_interval)
                 for imt_taxo, ff in newfm.items():
-                    self.limit_states.update(fm.limitStates)
-                    self.ddic[imt_taxo][loss_type] = ff
-            self.risk_imtls = get_imtls(self.ddic)
+                    limit_states.update(fm.limitStates)
+                    rmdict[imt_taxo][loss_type] = ff
+            self.limit_states = sorted(limit_states)
+            self.risk_imtls = get_imtls(rmdict)
 
         # check the IMTs vs the GSIMs
         if 'gsim_logic_tree' in self.inputs:

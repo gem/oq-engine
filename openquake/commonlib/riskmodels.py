@@ -315,7 +315,7 @@ def ffconvert(fname, limit_states, ff):
     with context(fname, imls):
         attrs = dict(format=ff['format'],
                      imt=imls['imt'],
-                     nodamage=imls['noDamageLimit'])
+                     nodamage=imls.attrib.get('noDamageLimit'))
 
     LS = len(limit_states)
     if LS != len(ffs):
@@ -334,7 +334,8 @@ def ffconvert(fname, limit_states, ff):
             array['mean'][i] = node['mean']
             array['stddev'][i] = node['stddev']
     elif ff['format'] == 'discrete':
-        attrs['imls'] = ~imls
+        attrs['imls'] = valid.positivefloats(~imls)
+        valid.check_levels(attrs['imls'], attrs['imt'])
         num_poes = len(attrs['imls'])
         array = numpy.zeros((LS, num_poes))
         for i, ls, node in zip(range(LS), limit_states, ff[1:]):
