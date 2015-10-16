@@ -193,11 +193,12 @@ def get_consequence_models(inputs):
             '_consequence', key)
         if mo:
             cmodel = nrml.parse(inputs[key])
-            if cmodel.lossCategory != mo.group(1):
+            expected_loss_type = mo.group(1)  # the loss type in the key
+            if cmodel.lossCategory != expected_loss_type:
                 raise ValueError(
-                    'Error in the .ini file: "%s_file=%s" is associated to a '
-                    'consequence model of type "%s"' %
-                    (key, inputs[key], cmodel.lossCategory))
+                    'Error in the .ini file: "%s_file=%s" is of type "%s", '
+                    'expected "%s"' % (key, inputs[key], cmodel.lossCategory,
+                                       expected_loss_type))
             cmodels[cmodel.lossCategory] = cmodel
     return cmodels
 

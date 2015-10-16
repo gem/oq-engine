@@ -259,8 +259,8 @@ lossCategory="contents">
         inputs = dict(structural_consequence=ccm, contents_consequence=scm)
         with self.assertRaises(ValueError) as ctx:
             riskmodels.get_consequence_models(inputs)
-        self.assertIn('structural_consequence_model.xml" is associated to '
-                      'a consequence model of type "structural"',
+        self.assertIn('structural_consequence_model.xml" is of type '
+                      '"structural", expected "contents"',
                       str(ctx.exception))
 
     def test_wrong_files(self):
