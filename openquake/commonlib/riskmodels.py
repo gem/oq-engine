@@ -171,7 +171,7 @@ def get_consequence_model(node, fname):
                     if param['ls'] != ls:
                         raise ValueError('Expected %r, got %r' %
                                          (ls, param['ls']))
-                        params.append((param['mean'], param['stddev']))
+                    params.append((param['mean'], param['stddev']))
             functions[cf['id']] = scientific.ConsequenceFunction(
                 cf['id'], cf['dist'], params)
     attrs = node.attrib.copy()
