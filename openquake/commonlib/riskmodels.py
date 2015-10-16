@@ -149,11 +149,6 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def mean_stddev(node):
-    """Extracts mean and stddev from a dict-like object"""
-    return node['mean'], node['stddev']
-
-
 @nrml.build.add(('consequenceModel', 'nrml/0.5'))
 def get_consequence_model(node, fname):
     with context(fname, node):
