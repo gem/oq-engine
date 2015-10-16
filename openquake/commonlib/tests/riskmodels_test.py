@@ -20,9 +20,11 @@ import numpy
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import writetmp
 from openquake.risklib import scientific
-from openquake.commonlib import InvalidFile, nrml, nrml_examples
+from openquake.commonlib import InvalidFile, nrml, nrml_examples, riskmodels
+from openquake.qa_tests_data.scenario_damage import case_4b
 
 EXAMPLES_DIR = os.path.dirname(nrml_examples.__file__)
+FF_DIR = os.path.dirname(case_4b.__file__)
 
 
 class ParseVulnerabilityModelTestCase(unittest.TestCase):
@@ -186,10 +188,62 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
 
 
 class ParseConsequenceModelTestCase(unittest.TestCase):
+    wrong_csq_model_1 = writetmp(u"""<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+<consequenceModel id="example" assetCategory="buildings">
+
+  <description>ln cf | tax3 | zcov</description>
+  <limitStates>ds1 ds2 ds3 ds4</limitStates>
+
+  <consequenceFunction id="tax1" dist="LN">
+    <params ls="ds1" mean="0.10" stddev="0.00"/>
+    <params ls="ds2" mean="0.30" stddev="0.00"/>
+    <params ls="ds3" mean="0.60" stddev="0.00"/>
+    <params ls="ds4" mean="0.90" stddev="0.00"/>
+  </consequenceFunction>
+
+</consequenceModel>
+</nrml>
+""")
+    wrong_csq_model_2 = writetmp(u"""<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+<consequenceModel id="example" assetCategory="buildings"
+lossCategory="contents">
+
+  <description>ln cf | tax3 | zcov</description>
+  <limitStates>ds1 ds2 ds3 ds4</limitStates>
+
+  <consequenceFunction id="tax1" dist="LN">
+    <params ls="ds1" mean="0.10" stddev="0.00"/>
+    <params ls="ds2" mean="0.30" stddev="0.00"/>
+    <params ls="ds3" mean="0.60" stddev="0.00"/>
+  </consequenceFunction>
+
+</consequenceModel>
+</nrml>
+""")
+    wrong_csq_model_3 = writetmp(u"""<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+<consequenceModel id="example" assetCategory="buildings"
+lossCategory="contents">
+
+  <description>ln cf | tax3 | zcov</description>
+  <limitStates>ds1 ds2 ds3 ds4</limitStates>
+
+  <consequenceFunction id="tax1" dist="LN">
+    <params ls="ds1" mean="0.10" stddev="0.00"/>
+    <params ls="ds2" mean="0.30" stddev="0.00"/>
+    <params ls="ds4" mean="0.90" stddev="0.00"/>
+    <params ls="ds3" mean="0.60" stddev="0.00"/>
+  </consequenceFunction>
+
+</consequenceModel>
+</nrml>
+""")
+
     def test_ok(self):
         fname = os.path.join(EXAMPLES_DIR, 'consequence-model.xml')
-        [cmodel] = nrml.read(fname)
-        cmodel = scientific.ConsequenceModel.from_node(cmodel)
+        cmodel = nrml.parse(fname)
         self.assertEqual(
             repr(cmodel),
             "<ConsequenceModel structural "
@@ -197,3 +251,33 @@ class ParseConsequenceModelTestCase(unittest.TestCase):
 
         # test pickleability
         pickle.loads(pickle.dumps(cmodel))
+
+    def test_wrong_association(self):
+        scm = os.path.join(FF_DIR, 'structural_consequence_model.xml')
+        ccm = os.path.join(FF_DIR, 'contents_consequence_model.xml')
+        # exchanging the associations on purpose
+        inputs = dict(structural_consequence=ccm, contents_consequence=scm)
+        with self.assertRaises(ValueError) as ctx:
+            riskmodels.get_consequence_models(inputs)
+        self.assertIn('structural_consequence_model.xml" is of type '
+                      '"structural", expected "contents"',
+                      str(ctx.exception))
+
+    def test_wrong_files(self):
+        # missing lossCategory
+        with self.assertRaises(KeyError) as ctx:
+            nrml.parse(self.wrong_csq_model_1)
+        self.assertIn("node consequenceModel: 'lossCategory', line 3",
+                      str(ctx.exception))
+
+        # missing loss state
+        with self.assertRaises(ValueError) as ctx:
+            nrml.parse(self.wrong_csq_model_2)
+        self.assertIn("node consequenceFunction: Expected 4 limit"
+                      " states, got 3, line 9", str(ctx.exception))
+
+        # inverted loss states
+        with self.assertRaises(ValueError) as ctx:
+            nrml.parse(self.wrong_csq_model_3)
+        self.assertIn("node params: Expected 'ds3', got 'ds4', line 12",
+                      str(ctx.exception))

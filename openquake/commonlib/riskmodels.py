@@ -149,6 +149,38 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
+@nrml.build.add(('consequenceModel', 'nrml/0.5'))
+def get_consequence_model(node, fname):
+    with context(fname, node):
+        description = ~node.description  # make sure it is there
+        limitStates = ~node.limitStates  # make sure it is there
+        # ASK: is the 'id' mandatory?
+        node['assetCategory']  # make sure it is there
+        node['lossCategory']  # make sure it is there
+        cfs = node[2:]
+    functions = {}
+    for cf in cfs:
+        with context(fname, cf):
+            params = []
+            if len(limitStates) != len(cf):
+                raise ValueError(
+                    'Expected %d limit states, got %d' %
+                    (len(limitStates), len(cf)))
+            for ls, param in zip(limitStates, cf):
+                with context(fname, param):
+                    if param['ls'] != ls:
+                        raise ValueError('Expected %r, got %r' %
+                                         (ls, param['ls']))
+                    params.append((param['mean'], param['stddev']))
+            functions[cf['id']] = scientific.ConsequenceFunction(
+                cf['id'], cf['dist'], params)
+    attrs = node.attrib.copy()
+    attrs.update(description=description,
+                 limitStates=limitStates,
+                 consequence_functions=functions)
+    return scientific.ConsequenceModel(**attrs)
+
+
 def get_consequence_models(inputs):
     """
     :param inputs: a dictionary key -> path name
@@ -160,9 +192,14 @@ def get_consequence_models(inputs):
             '(structural|nonstructural|contents|business_interruption)'
             '_consequence', key)
         if mo:
-            [node] = nrml.read(inputs[key])
-            cmodels[node['lossCategory']] = (
-                scientific.ConsequenceModel.from_node(node))
+            cmodel = nrml.parse(inputs[key])
+            expected_loss_type = mo.group(1)  # the loss type in the key
+            if cmodel.lossCategory != expected_loss_type:
+                raise ValueError(
+                    'Error in the .ini file: "%s_file=%s" is of type "%s", '
+                    'expected "%s"' % (key, inputs[key], cmodel.lossCategory,
+                                       expected_loss_type))
+            cmodels[cmodel.lossCategory] = cmodel
     return cmodels
 
 
