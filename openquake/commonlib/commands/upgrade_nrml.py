@@ -19,6 +19,7 @@ from __future__ import print_function
 
 import os
 import shutil
+import itertools
 from xml.etree.ElementTree import iterparse
 
 from openquake.commonlib.nrml import NRML05
@@ -83,7 +84,7 @@ def get_vulnerability_functions_04(fname):
     return vf_dict, categories
 
 
-def convert_fragility_model_04(fname):
+def convert_fragility_model_04(fname, fmcounter=itertools.count(1)):
     """
     Parse the fragility model in NRML 0.4 format and return a node
     suitable for conversion in NRML 0.5
@@ -97,7 +98,8 @@ def convert_fragility_model_04(fname):
     new = LiteralNode('fragilityModel',
                       dict(assetCategory='building',
                            lossCategory='structural',
-                           id='converted_from_NRML_04'))
+                           id='fm_%d_converted_from_NRML_04' %
+                           next(fmcounter)))
     [node] = nrml.read(fname)
     fmt = node['format']
     descr = ~node.description
@@ -140,6 +142,7 @@ def upgrade_file(path):
     tag = striptag(node0.tag)
     if tag == 'vulnerabilityModel':
         vf_dict, cat_dict = get_vulnerability_functions_04(path)
+        # below I am converting into a NRML 0.5 vulnerabilityModel
         node0 = LiteralNode(
             'vulnerabilityModel', cat_dict,
             nodes=list(map(riskmodels.obj_to_node, list(vf_dict.values()))))
