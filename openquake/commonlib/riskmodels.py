@@ -380,6 +380,40 @@ def get_fragility_model(node, fname):
     return fmodel
 
 
+# ################################## consequences ########################## #
+
+@nrml.build.add(('consequenceModel', 'nrml/0.5'))
+def get_consequence_model(node, fname):
+    with context(fname, node):
+        description = ~node.description  # make sure it is there
+        limitStates = ~node.limitStates  # make sure it is there
+        # ASK: is the 'id' mandatory?
+        node['assetCategory']  # make sure it is there
+        node['lossCategory']  # make sure it is there
+        cfs = node[2:]
+    functions = {}
+    for cf in cfs:
+        with context(fname, cf):
+            params = []
+            if len(limitStates) != len(cf):
+                raise ValueError(
+                    'Expected %d limit states, got %d' %
+                    (len(limitStates), len(cf)))
+            for ls, param in zip(limitStates, cf):
+                with context(fname, param):
+                    if param['ls'] != ls:
+                        raise ValueError('Expected %r, got %r' %
+                                         (ls, param['ls']))
+                    params.append((param['mean'], param['stddev']))
+            functions[cf['id']] = scientific.ConsequenceFunction(
+                cf['id'], cf['dist'], params)
+    attrs = node.attrib.copy()
+    attrs.update(description=description, limitStates=limitStates)
+    cmodel = scientific.ConsequenceModel(**attrs)
+    cmodel.update(functions)
+    return cmodel
+
+
 # deprecated
 @nrml.build.add(('fragilityModel', 'nrml/0.4'))
 def get_fragility_functions_04(
