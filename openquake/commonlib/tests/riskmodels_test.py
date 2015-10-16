@@ -19,7 +19,6 @@ import unittest
 import numpy
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import writetmp
-from openquake.risklib import scientific
 from openquake.commonlib import InvalidFile, nrml, nrml_examples, riskmodels
 from openquake.qa_tests_data.scenario_damage import case_4b
 
@@ -258,7 +257,7 @@ lossCategory="contents">
         # exchanging the associations on purpose
         inputs = dict(structural_consequence=ccm, contents_consequence=scm)
         with self.assertRaises(ValueError) as ctx:
-            riskmodels.get_consequence_models(inputs)
+            riskmodels.get_risk_models('consequence', inputs)
         self.assertIn('structural_consequence_model.xml" is associated to '
                       'a consequence model of type "structural"',
                       str(ctx.exception))

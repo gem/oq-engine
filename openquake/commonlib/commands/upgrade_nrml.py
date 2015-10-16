@@ -97,7 +97,7 @@ def convert_fragility_model_04(fname):
     new = LiteralNode('fragilityModel',
                       dict(assetCategory='building',
                            lossCategory='structural',
-                           id='converted-from-NRML-0.4'))
+                           id='converted_from_NRML_04'))
     [node] = nrml.read(fname)
     fmt = node['format']
     descr = ~node.description

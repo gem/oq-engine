@@ -537,7 +537,8 @@ class FragilityFunctionDiscrete(object):
 
 class FragilityFunctionList(list):
     """
-    A list of fragility functions with common attributes
+    A list of fragility functions with common attributes; there is a
+    function for each limit state.
     """
     def __init__(self, elements, **attrs):
         list.__init__(self, elements)
@@ -552,35 +553,94 @@ ConsequenceFunction = collections.namedtuple(
     'ConsequenceFunction', 'id dist params')
 
 
-class ConsequenceModel(object):
+class ConsequenceModel(dict):
     """
     Container for a set of consequence functions. You can access each
     function given its name with the square bracket notation.
 
     :param str id: ID of the model
     :param str assetCategory: asset category (i.e. buildings, population)
-    :param str lossCategory: loss type
+    :param str lossCategory: loss type (i.e. structural, contents, ...)
     :param str description: description of the model
     :param limitStates: a list of limit state strings
     :param consequence_functions: a dictionary name -> ConsequenceFunction
     """
 
     def __init__(self, id, assetCategory, lossCategory, description,
-                 limitStates, consequence_functions):
+                 limitStates):
         self.id = id
         self.assetCategory = assetCategory
         self.lossCategory = lossCategory
         self.description = description
         self.limitStates = limitStates
-        self.consequence_functions = consequence_functions
-
-    def __getitem__(self, name):
-        return self.consequence_functions[name]
 
     def __repr__(self):
         return '<%s %s %s %s>' % (
             self.__class__.__name__, self.lossCategory,
-            self.limitStates, sorted(self.consequence_functions))
+            self.limitStates, sorted(self))
+
+
+def build_imls(ff, continuous_fragility_discretization,
+               steps_per_interval=None):
+    if ff.format == 'discrete':
+        imls = ff.imls
+        if ff.nodamage is not None and ff.nodamage < imls[0]:
+            imls = [ff.nodamage] + imls
+        if steps_per_interval:
+            gen_imls = fine_graining(imls, steps_per_interval)
+        else:
+            gen_imls = imls
+    else:  # continuous
+        gen_imls = numpy.linspace(ff.minIML, ff.maxIML,
+                                  continuous_fragility_discretization)
+    return gen_imls
+
+
+# this is meant to be instantiated by riskmodels.get_fragility_model
+class FragilityModel(dict):
+    """
+    Container for a set of fragility functions. You can access each
+    function given the IMT and taxonomy with the square bracket notation.
+
+    :param str id: ID of the model
+    :param str assetCategory: asset category (i.e. buildings, population)
+    :param str lossCategory: loss type (i.e. structural, contents, ...)
+    :param str description: description of the model
+    :param limitStates: a list of limit state strings
+    :param fragility_functions:
+        a dictionary imt, taxonomy -> FragilityFunctionList
+    """
+
+    def __init__(self, id, assetCategory, lossCategory, description,
+                 limitStates):
+        self.id = id
+        self.assetCategory = assetCategory
+        self.lossCategory = lossCategory
+        self.description = description
+        self.limitStates = limitStates
+
+    def __repr__(self):
+        return '<%s %s %s %s>' % (
+            self.__class__.__name__, self.lossCategory,
+            self.limitStates, sorted(self))
+
+    def build(self, continuous_fragility_discretization, steps_per_interval):
+        newfm = copy.copy(self)
+        for imt_taxo, ff in self.items():
+            newfm[imt_taxo] = new = copy.copy(ff)
+            new.imls = build_imls(new, continuous_fragility_discretization)
+            # steps_per_interval should be added and
+            # ClassicalDamageCase1TestCase.test_interpolation fixed
+            range_ls = range(len(ff))
+            for i, ls, data in zip(range_ls, self.limitStates, ff):
+                if ff.format == 'discrete':
+                    new[i] = FragilityFunctionDiscrete(
+                        ls, new.imls, data, ff.nodamage)
+                else:  # continuous
+                    new[i] = FragilityFunctionContinuous(
+                        ls, data['mean'], data['stddev'])
+        return newfm
+
 
 #
 # Distribution & Sampling

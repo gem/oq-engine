@@ -573,13 +573,9 @@ def get_risk_model(oqparam):
 
     if oqparam.calculation_mode.endswith('_damage'):
         # scenario damage calculator
-        fragility_functions, damage_states = get_ffs(
-            get_risk_files(oqparam.inputs)[1],
-            oqparam.continuous_fragility_discretization,
-            oqparam.steps_per_interval,
-        )
-        riskmodel.damage_states = damage_states
-        for imt_taxo, ffs_by_lt in fragility_functions.items():
+        riskmodel.damage_states = ['no_damage'] + sorted(oqparam.limit_states)
+        delattr(oqparam, 'limit_states')
+        for imt_taxo, ffs_by_lt in oqparam.ddic.items():
             risk_models[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 fragility_functions=ffs_by_lt)
