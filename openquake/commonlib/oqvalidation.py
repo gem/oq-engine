@@ -152,14 +152,17 @@ class OqParam(valid.ParamSet):
         elif file_type == 'fragility':
             fmodels = get_risk_models('fragility', self.inputs)
             rmdict.clear()
-            limit_states = set()
+            limit_states = []
             for loss_type, fm in sorted(fmodels.items()):
                 newfm = fm.build(self.continuous_fragility_discretization,
                                  self.steps_per_interval)
                 for imt_taxo, ff in newfm.items():
-                    limit_states.update(fm.limitStates)
+                    if not limit_states:
+                        limit_states.extend(fm.limitStates)
+                    assert limit_states == fm.limitStates, (
+                        limit_states, fm.limitStates)
                     rmdict[imt_taxo][loss_type] = ff
-            self.limit_states = sorted(limit_states)
+            self.limit_states = limit_states
             self.risk_imtls = get_imtls(rmdict)
 
         # check the IMTs vs the GSIMs
