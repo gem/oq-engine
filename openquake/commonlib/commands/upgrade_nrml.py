@@ -83,15 +83,68 @@ def get_vulnerability_functions_04(fname):
     return vf_dict, categories
 
 
+def convert_fragility_model_04(fname):
+    """
+    Parse the fragility model in NRML 0.4 format and return a node
+    suitable for conversion in NRML 0.5
+
+    :param fname:
+        path of the fragility file
+    :returns:
+        an :class:`openquake.commonib.node.LiteralNode` instance
+    """
+    convert_type = {"lognormal": "logncdf"}
+    new = LiteralNode('fragilityModel',
+                      dict(assetCategory='building',
+                           lossCategory='structural',
+                           id='converted-from-NRML-0.4'))
+    [node] = nrml.read(fname)
+    fmt = node['format']
+    descr = ~node.description
+    limit_states = ~node.limitStates
+    new.append(LiteralNode('description', {}, descr))
+    new.append((LiteralNode('limitStates', {}, ' '.join(limit_states))))
+    for ffs in node[2:]:
+        IML = ffs.IML
+        nodamage = ffs.attrib.get('noDamageLimit', 0)
+        ff = LiteralNode('fragilityFunction', {'format': fmt})
+        ff['id'] = ~ffs.taxonomy
+        ff['shape'] = convert_type[ffs.attrib.get('type', 'lognormal')]
+        if fmt == 'continuous':
+            ff.append(LiteralNode('imls', dict(imt=IML['IMT'],
+                                               minIML=IML['minIML'],
+                                               maxIML=IML['maxIML'],
+                                               noDamageLimit=nodamage)))
+            for ffc in ffs[2:]:
+                ls = ffc['ls']
+                param = ffc.params
+                ff.append(LiteralNode('params', dict(ls=ls,
+                                                     mean=param['mean'],
+                                                     stddev=param['stddev'])))
+        else:  # discrete
+            imls = ' '.join(map(str, (~IML)[1]))
+            attr = dict(imt=IML['IMT'], noDamageLimit=nodamage)
+            ff.append(LiteralNode('imls', attr, imls))
+            for ffd in ffs[2:]:
+                ls = ffd['ls']
+                poes = ' '.join(map(str, ~ffd.poEs))
+                ff.append(LiteralNode('poes', dict(ls=ls), poes))
+        new.append(ff)
+    return new
+
+
 def upgrade_file(path):
     """Upgrade to the latest NRML version"""
     node0 = nrml.read(path, chatty=False)[0]
     shutil.copy(path, path + '.bak')  # make a backup of the original file
-    if striptag(node0.tag) == 'vulnerabilityModel':
+    tag = striptag(node0.tag)
+    if tag == 'vulnerabilityModel':
         vf_dict, cat_dict = get_vulnerability_functions_04(path)
         node0 = LiteralNode(
             'vulnerabilityModel', cat_dict,
             nodes=list(map(riskmodels.obj_to_node, list(vf_dict.values()))))
+    elif tag == 'fragilityModel':
+        node0 = convert_fragility_model_04(path)
     with open(path, 'w') as f:
         nrml.write([node0], f)
 
@@ -109,20 +162,23 @@ def upgrade_nrml(directory, dry_run):
         for f in files:
             path = os.path.join(cwd, f)
             if f.endswith('.xml'):
-                ip = iterparse(path)
+                ip = iterparse(path, events=('start',))
+                next(ip)  # read node zero
                 try:
-                    fulltag = ip.next()[1].tag
+                    fulltag = next(ip)[1].tag  # tag of the first node
                     xmlns, tag = fulltag.split('}')
                 except:  # not a NRML file
-                    pass
+                    xmlns, tag = '', ''
                 if xmlns[1:] == NRML05:  # already upgraded
                     pass
-                elif 'nrml/0.4' in xmlns and 'vulnerability' in f:
+                elif 'nrml/0.4' in xmlns and (
+                        'vulnerability' in tag or 'fragility' in tag):
                     if not dry_run:
                         print('Upgrading', path)
                         try:
                             upgrade_file(path)
                         except Exception as exc:
+                            raise
                             print(exc)
                     else:
                         print('Not upgrading', path)
