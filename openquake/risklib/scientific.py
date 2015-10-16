@@ -552,11 +552,6 @@ ConsequenceFunction = collections.namedtuple(
     'ConsequenceFunction', 'id dist params')
 
 
-def mean_stddev(node):
-    """Extracts mean and stddev from a dict-like object"""
-    return node['mean'], node['stddev']
-
-
 class ConsequenceModel(object):
     """
     Container for a set of consequence functions. You can access each
@@ -569,19 +564,6 @@ class ConsequenceModel(object):
     :param limitStates: a list of limit state strings
     :param consequence_functions: a dictionary name -> ConsequenceFunction
     """
-    @classmethod
-    def from_node(cls, node):
-        limitStates = ~node.limitStates
-        functions = {}
-        for cf in node[2:]:
-            params = map(mean_stddev, cf)
-            functions[cf['id']] = ConsequenceFunction(
-                cf['id'], cf['dist'], params)
-        attrs = node.attrib.copy()
-        attrs.update(description=~node.description,
-                     limitStates=limitStates,
-                     consequence_functions=functions)
-        return cls(**attrs)
 
     def __init__(self, id, assetCategory, lossCategory, description,
                  limitStates, consequence_functions):
