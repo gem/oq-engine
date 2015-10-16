@@ -133,7 +133,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
             # average losses
             avglosses = numpy.zeros((N, R), multi_stat_dt)
+            # hack: doing avglosses[lt][aid, r] = stat directly
+            # only set the structural type, not the others!
             for (l, r, aid, stat) in result['avg']:
-                avglosses[lt][aid, r] = stat
+                avglosses[ltypes[l]][aid, r] = stat
             self.datastore['avglosses'] = avglosses
             self.datastore['agglosses'] = agglosses

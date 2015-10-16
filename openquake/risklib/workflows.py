@@ -757,8 +757,6 @@ class Scenario(Workflow):
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
                  _tags=None):
-        # FIXME: remove this when the engine calculator will be removed
-        engine = hasattr(assets[0], 'asset_ref')
         values = get_values(loss_type, assets, self.time_event)
 
         # a matrix of N x E elements
@@ -786,15 +784,8 @@ class Scenario(Workflow):
             assets, loss_type, loss_matrix=loss_matrix,
             loss_ratio_matrix=loss_ratio_matrix,
             aggregate_losses=aggregate_losses,
-            insured_loss_matrix=NoneOr(engine, insured_loss_matrix),
-            insured_losses=NoneOr(engine, insured_losses))
-
-
-# FIXME: remove this when the engine calculator will be removed
-def NoneOr(engine, array):
-    if engine:
-        return None if numpy.isnan(array).all() else array
-    return array
+            insured_loss_matrix=insured_loss_matrix,
+            insured_losses=insured_losses)
 
 
 @registry.add('scenario_damage')
