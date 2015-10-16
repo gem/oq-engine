@@ -427,3 +427,24 @@ class CatalogueSelector(object):
             cluster_cat.select_catalogue_events(idx)
             cluster_set.append((clid, cluster_cat))
         return OrderedDict(cluster_set)
+
+    def within_bounding_box(self, limits):
+        """
+        Selects the earthquakes within a bounding box.
+        
+        :parameter limits:
+            A list or a numpy array with four elements in the following order:
+                - min x (longitude)
+                - min y (latitude)
+                - max x (longitude)
+                - max y (latitude)
+        : returns: 
+            Returns a :class:htmk.seismicity.catalogue.Catalogue` instance
+        """
+
+        is_valid = np.logical_and(
+            self.catalogue.data['longitude'] >= limits[0],
+            np.logical_and(self.catalogue.data['longitude'] <= limits[2],
+            np.logical_and(self.catalogue.data['latitude'] >= limits[1],
+                           self.catalogue.data['latitude'] <= limits[3])))
+        return self.select_catalogue(is_valid)
