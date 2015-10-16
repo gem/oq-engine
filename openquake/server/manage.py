@@ -23,7 +23,7 @@ if __name__ == "__main__":
     # DJANGO_SETTINGS_MODULE environment variable, causing the irritating
     # CommandError: You must set settings.ALLOWED_HOSTS if DEBUG is False.
 
-    # Please note: the /usr/bin/oq-engine script requires a celeryconfig.py
+    # Please note: the OpenQuake Engine server requires a celeryconfig.py
     # file in the PYTHONPATH; when using binary packages, if a celeryconfig.py
     # is not available the OpenQuake Engine default celeryconfig.py, located
     # in /usr/share/openquake/engine, is used.
