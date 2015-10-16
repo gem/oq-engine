@@ -82,8 +82,7 @@ class CsvCatalogueParser(BaseCatalogueParser):
                             catalogue.data[key], row[key], irow, key)
                     elif key in catalogue.INT_ATTRIBUTE_LIST:
                         catalogue.data[key] = self._int_check(
-                            catalogue.data[key],
-                            row[key])
+                            catalogue.data[key], row[key], irow, key)
                     else:
                         catalogue.data[key].append(row[key])
         if start_year:
@@ -128,14 +127,19 @@ class CsvCatalogueParser(BaseCatalogueParser):
             raise ValueError(msg)
         return attribute_array
 
-    def _int_check(self, attribute_array, value):
+    def _int_check(self, attribute_array, value, irow, key):
         '''Checks if value is valid integer, appends to array if valid, appends
         nan if not'''
         value = value.strip(' ')
-        if value:
-            attribute_array = np.hstack([attribute_array, int(value)])
-        else:
-            attribute_array = np.hstack([attribute_array, np.nan])
+        try:
+            if value:
+                attribute_array = np.hstack([attribute_array, int(value)])
+            else:
+                attribute_array = np.hstack([attribute_array, np.nan])
+        except:
+            msg = 'Input file format error at line: %s' % irow+2
+            msg += ' key %s' % (key)
+            raise ValueError(msg)
         return attribute_array
 
 
