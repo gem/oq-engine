@@ -42,6 +42,16 @@ DEFAULT_LOG_LEVEL = 'debug' if DEBUG else 'progress'
 logger = logging.getLogger(__name__)
 
 
+# Please note: the OpenQuake Engine server requires a celeryconfig.py
+# file in the PYTHONPATH; when using binary packages, if a celeryconfig.py
+# is not available the OpenQuake Engine default celeryconfig.py, located
+# in /usr/share/openquake/engine, is used.
+try:
+    import celeryconfig
+except ImportError:
+    sys.path.append('/usr/share/openquake/engine')
+
+
 class ProgressHandler(logging.Handler):
     """
     A logging handler to update the status of the job as seen
