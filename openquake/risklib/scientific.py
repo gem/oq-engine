@@ -632,8 +632,6 @@ class FragilityModel(dict):
             newfm[imt_taxo] = new = copy.copy(ff)
             new.imls, add_zero = build_imls(
                 new, continuous_fragility_discretization, steps_per_interval)
-            # steps_per_interval should be added and
-            # ClassicalDamageCase1TestCase.test_interpolation fixed
             range_ls = range(len(ff))
             for i, ls, data in zip(range_ls, self.limitStates, ff):
                 if ff.format == 'discrete':
@@ -641,6 +639,7 @@ class FragilityModel(dict):
                         ls, new.imls,
                         numpy.concatenate([[0.], data]) if add_zero else data,
                         ff.nodamage)
+                    new.orig_imls = ff.imls
                 else:  # continuous
                     new[i] = FragilityFunctionContinuous(
                         ls, data['mean'], data['stddev'])

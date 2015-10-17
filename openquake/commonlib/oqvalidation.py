@@ -162,8 +162,8 @@ class OqParam(valid.ParamSet):
                     assert limit_states == fm.limitStates, (
                         limit_states, fm.limitStates)
                     rmdict[imt_taxo][loss_type] = ff
-                    # TODO: see if it is possible to remove this attribute;
-                    # it is used in classical_damage_
+                    # TODO: see if it is possible to remove the attribute
+                    # below, used in classical_damage
                     ff.steps_per_interval = self.steps_per_interval
             self.limit_states = limit_states
             self.risk_imtls = get_imtls(rmdict)
