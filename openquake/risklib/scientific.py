@@ -631,7 +631,7 @@ class FragilityModel(dict):
         for imt_taxo, ff in self.items():
             newfm[imt_taxo] = new = copy.copy(ff)
             new.imls, add_zero = build_imls(
-                new, continuous_fragility_discretization)
+                new, continuous_fragility_discretization, steps_per_interval)
             # steps_per_interval should be added and
             # ClassicalDamageCase1TestCase.test_interpolation fixed
             range_ls = range(len(ff))
