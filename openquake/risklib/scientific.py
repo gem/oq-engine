@@ -582,10 +582,12 @@ class ConsequenceModel(dict):
 
 def build_imls(ff, continuous_fragility_discretization,
                steps_per_interval=None):
+    add_zero = False
     if ff.format == 'discrete':
         imls = ff.imls
-        if ff.nodamage and ff.nodamage < imls[0]:
+        if ff.nodamage is not None and ff.nodamage < imls[0]:
             imls = [ff.nodamage] + imls
+            add_zero = True
         if steps_per_interval:
             gen_imls = fine_graining(imls, steps_per_interval)
         else:
@@ -593,7 +595,7 @@ def build_imls(ff, continuous_fragility_discretization,
     else:  # continuous
         gen_imls = numpy.linspace(ff.minIML, ff.maxIML,
                                   continuous_fragility_discretization)
-    return gen_imls
+    return gen_imls, add_zero
 
 
 # this is meant to be instantiated by riskmodels.get_fragility_model
@@ -628,14 +630,17 @@ class FragilityModel(dict):
         newfm = copy.copy(self)
         for imt_taxo, ff in self.items():
             newfm[imt_taxo] = new = copy.copy(ff)
-            new.imls = build_imls(new, continuous_fragility_discretization)
+            new.imls, add_zero = build_imls(
+                new, continuous_fragility_discretization)
             # steps_per_interval should be added and
             # ClassicalDamageCase1TestCase.test_interpolation fixed
             range_ls = range(len(ff))
             for i, ls, data in zip(range_ls, self.limitStates, ff):
                 if ff.format == 'discrete':
                     new[i] = FragilityFunctionDiscrete(
-                        ls, new.imls, data, ff.nodamage)
+                        ls, new.imls,
+                        numpy.concatenate([[0.], data]) if add_zero else data,
+                        ff.nodamage)
                 else:  # continuous
                     new[i] = FragilityFunctionContinuous(
                         ls, data['mean'], data['stddev'])
