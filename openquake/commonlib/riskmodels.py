@@ -108,27 +108,6 @@ def get_vfs(inputs, retrofitted=False):
     return vulnerability_functions
 
 
-def get_ffs(file_by_ct, continuous_fragility_discretization,
-            steps_per_interval=None):
-    """
-    Given a dictionary {key: pathname}, look for keys with name
-    <cost_type>__fragility, parse them and returns a dictionary
-    imt, taxonomy -> ff_by_loss_type.
-
-    :param file_by_ct: a dictionary cost_type -> pathname
-    :param continuous_fragility_discretization: parameter from the .ini file
-    :param steps_per_interval: steps_per_interval parameter
-    """
-    ffs = collections.defaultdict(dict)
-    for cost_type in file_by_ct:
-        ff_dict = nrml.parse(
-            file_by_ct[cost_type],
-            continuous_fragility_discretization, steps_per_interval)
-        for tax, ff in ff_dict.items():
-            ffs[ff.imt, tax][cost_type_to_loss_type(cost_type)] = ff
-    return ffs, ff_dict.damage_states
-
-
 # ########################### vulnerability ############################## #
 
 def filter_vset(elem):
