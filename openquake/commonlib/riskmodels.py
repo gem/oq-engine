@@ -394,8 +394,7 @@ def get_consequence_model(node, fname):
     return cmodel
 
 
-# deprecated
-
+# utility to convert the old, deprecated format
 def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
     """
     :param node:
