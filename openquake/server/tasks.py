@@ -187,9 +187,8 @@ def update_calculation(callback_url=None, **query):
     url.close()
 
 
-#: Simple structure that holds all the query components needed to
-#transfer calculation outputs from the engine database to the platform
-#one
+# Simple structure that holds all the query components needed to
+# transfer calculation outputs from the engine database to the platform
 DbInterface = collections.namedtuple(
     'DbInterface',
     'export_query target_table fields import_query')
