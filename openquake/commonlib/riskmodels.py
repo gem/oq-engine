@@ -417,10 +417,12 @@ def get_consequence_model(node, fname):
 
 # deprecated
 
-def convert_fragility_model_04(node, fmcounter=itertools.count(1)):
+def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
     """
     :param node:
         an :class:`openquake.commonib.node.LiteralNode` in NRML 0.4
+    :param fname:
+        path of the fragility file
     :returns:
         an :class:`openquake.commonib.node.LiteralNode` in NRML 0.5
     """
@@ -430,9 +432,10 @@ def convert_fragility_model_04(node, fmcounter=itertools.count(1)):
                            lossCategory='structural',
                            id='fm_%d_converted_from_NRML_04' %
                            next(fmcounter)))
-    fmt = node['format']
-    descr = ~node.description
-    limit_states = ~node.limitStates
+    with context(fname, node):
+        fmt = node['format']
+        descr = ~node.description
+        limit_states = ~node.limitStates
     new.append(LiteralNode('description', {}, descr))
     new.append((LiteralNode('limitStates', {}, ' '.join(limit_states))))
     for ffs in node[2:]:
@@ -443,25 +446,29 @@ def convert_fragility_model_04(node, fmcounter=itertools.count(1)):
         ff['id'] = ~ffs.taxonomy
         ff['shape'] = convert_type[ffs.attrib.get('type', 'lognormal')]
         if fmt == 'continuous':
-            ff.append(LiteralNode('imls', dict(imt=IML['IMT'],
-                                               minIML=IML['minIML'],
-                                               maxIML=IML['maxIML'],
-                                               noDamageLimit=nodamage)))
+            with context(fname, IML):
+                ff.append(LiteralNode('imls', dict(imt=IML['IMT'],
+                                                   minIML=IML['minIML'],
+                                                   maxIML=IML['maxIML'],
+                                                   noDamageLimit=nodamage)))
             for ffc in ffs[2:]:
-                ls = ffc['ls']
-                param = ffc.params
-                ff.append(LiteralNode('params', dict(ls=ls,
-                                                     mean=param['mean'],
-                                                     stddev=param['stddev'])))
+                with context(fname, ffc):
+                    ls = ffc['ls']
+                    param = ffc.params
+                with context(fname, param):
+                    m, s = param['mean'], param['stddev']
+                ff.append(LiteralNode('params', dict(ls=ls, mean=m, stddev=s)))
         else:  # discrete
-            imls = ' '.join(map(str, (~IML)[1]))
-            attr = dict(imt=IML['IMT'])
+            with context(fname, IML):
+                imls = ' '.join(map(str, (~IML)[1]))
+                attr = dict(imt=IML['IMT'])
             if nodamage is not None:
                 attr['noDamageLimit'] = nodamage
             ff.append(LiteralNode('imls', attr, imls))
             for ffd in ffs[2:]:
                 ls = ffd['ls']
-                poes = ' '.join(map(str, ~ffd.poEs))
+                with context(fname, ffd):
+                    poes = ' '.join(map(str, ~ffd.poEs))
                 ff.append(LiteralNode('poes', dict(ls=ls), poes))
         new.append(ff)
     return new
@@ -478,6 +485,6 @@ def get_fragility_model_04(fmodel, fname):
         an :class:`openquake.risklib.scientific.FragilityModel` instance
     """
     logging.warn('Please upgrade %s to NRML 0.5', fname)
-    node05 = convert_fragility_model_04(fmodel)
+    node05 = convert_fragility_model_04(fmodel, fname)
     node05.limitStates.text = node05.limitStates.text.split()
     return get_fragility_model(node05, fname)

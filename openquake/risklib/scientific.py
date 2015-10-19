@@ -577,7 +577,7 @@ class ConsequenceModel(dict):
     def __repr__(self):
         return '<%s %s %s %s>' % (
             self.__class__.__name__, self.lossCategory,
-            self.limitStates, sorted(self))
+            self.limitStates, ' '.join(sorted(self)))
 
 
 def build_imls(ff, continuous_fragility_discretization,
