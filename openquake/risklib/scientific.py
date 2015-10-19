@@ -582,6 +582,20 @@ class ConsequenceModel(dict):
 
 def build_imls(ff, continuous_fragility_discretization,
                steps_per_interval=None):
+    """
+    Build intensity measure levels from a fragility function. If the function
+    is continuous, they are produced simply as a linear space between minIML
+    and maxIML. If the function is discrete, they are generated with a
+    complex logic depending on the noDamageLimit and the parameter
+    steps per interval. A flag `add_zero` is also returned, which is
+    True only if the fragility function is discrete and there is a
+    sensible noDamageLimit value.
+
+    :param ff: a fragility function object
+    :param continuous_fragility_discretization: .ini file parameter
+    :param steps_per_interval:  .ini file parameter
+    :returns: a pair (generated imls, add_zero flag)
+    """
     add_zero = False
     if ff.format == 'discrete':
         imls = ff.imls
@@ -627,6 +641,15 @@ class FragilityModel(dict):
             self.limitStates, sorted(self))
 
     def build(self, continuous_fragility_discretization, steps_per_interval):
+        """
+        Return a new FragilityModel instance, in which the values have been
+        replaced with FragilityFunctionList instances.
+
+        :param continuous_fragility_discretization:
+            configuration parameter
+        :param steps_per_interval:
+            configuration parameter
+        """
         newfm = copy.copy(self)
         for imt_taxo, ff in self.items():
             newfm[imt_taxo] = new = copy.copy(ff)
@@ -636,6 +659,9 @@ class FragilityModel(dict):
             for i, ls, data in zip(range_ls, self.limitStates, ff):
                 if ff.format == 'discrete':
                     if add_zero:
+                        # TODO: this works when steps_per_interval=0; it is not
+                        # clear if it is correct when steps_per_interval > 0;
+                        # check with the risk team
                         new[i] = FragilityFunctionDiscrete(
                             ls, new.imls, numpy.concatenate([[0.], data]),
                             ff.nodamage)

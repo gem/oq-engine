@@ -37,6 +37,11 @@ RISK_CALCULATORS = [
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 
+# this global dictionary is populated with the risk model every time
+# an OqParam instance is created (i.e. once per calculation);
+# this is a suboptimal design but it is the best we can do without
+# being forced to rethink a lot of code; it has the advantage that
+# the risk model files are read only once per calculation
 rmdict = collections.defaultdict(dict)
 
 
@@ -154,11 +159,14 @@ class OqParam(valid.ParamSet):
             rmdict.clear()
             limit_states = []
             for loss_type, fm in sorted(fmodels.items()):
+                # build a copy of the FragilityModel with different IM levels
                 newfm = fm.build(self.continuous_fragility_discretization,
                                  self.steps_per_interval)
                 for imt_taxo, ff in newfm.items():
                     if not limit_states:
                         limit_states.extend(fm.limitStates)
+                    # we are rejecting the case of loss types with different
+                    # limit states; this may change in the future
                     assert limit_states == fm.limitStates, (
                         limit_states, fm.limitStates)
                     rmdict[imt_taxo][loss_type] = ff
