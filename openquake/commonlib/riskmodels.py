@@ -285,10 +285,7 @@ def get_imtls(ddict):
     imtls = {}
     for (imt, taxonomy), dic in ddict.items():
         for loss_type, rf in dic.items():
-            if hasattr(rf, 'orig_imls'):
-                imls = list(rf.orig_imls)
-            else:
-                imls = list(rf.imls)
+            imls = list(rf.imls)
             if imt in imtls and imtls[imt] != imls:
                 logging.info(
                     'Different levels for IMT %s: got %s, expected %s',

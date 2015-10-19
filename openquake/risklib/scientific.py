@@ -635,11 +635,13 @@ class FragilityModel(dict):
             range_ls = range(len(ff))
             for i, ls, data in zip(range_ls, self.limitStates, ff):
                 if ff.format == 'discrete':
-                    new[i] = FragilityFunctionDiscrete(
-                        ls, new.imls,
-                        numpy.concatenate([[0.], data]) if add_zero else data,
-                        ff.nodamage)
-                    new.orig_imls = ff.imls
+                    if add_zero:
+                        new[i] = FragilityFunctionDiscrete(
+                            ls, new.imls, numpy.concatenate([[0.], data]),
+                            ff.nodamage)
+                    else:
+                        new[i] = FragilityFunctionDiscrete(
+                            ls, ff.imls, data, ff.nodamage)
                 else:  # continuous
                     new[i] = FragilityFunctionContinuous(
                         ls, data['mean'], data['stddev'])
