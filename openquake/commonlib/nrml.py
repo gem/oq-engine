@@ -242,14 +242,13 @@ class FragilityNode(LiteralNode):
     functions.
     """
     validators = dict(
-        id=valid.simple_id,
+        id=valid.utf8,  # no constraints on the taxonomy
         format=valid.ChoiceCI('discrete', 'continuous'),
         assetCategory=valid.utf8,
         dist=valid.Choice('LN'),
         mean=valid.positivefloat,
         stddev=valid.positivefloat,
         lossCategory=valid.name,
-        imls=lambda text, **kw: valid.positivefloats(text) if text else '',
         poes=lambda text, **kw: valid.positivefloats(text),
         IML=valid.IML,
         minIML=valid.positivefloat,

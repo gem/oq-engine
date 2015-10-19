@@ -19,7 +19,6 @@ import unittest
 import numpy
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import writetmp
-from openquake.risklib import scientific
 from openquake.commonlib import InvalidFile, nrml, nrml_examples, riskmodels
 from openquake.qa_tests_data.scenario_damage import case_4b
 
@@ -27,7 +26,7 @@ EXAMPLES_DIR = os.path.dirname(nrml_examples.__file__)
 FF_DIR = os.path.dirname(case_4b.__file__)
 
 
-class ParseVulnerabilityModelTestCase(unittest.TestCase):
+class ParseRiskModelTestCase(unittest.TestCase):
 
     def test_different_levels_ok(self):
         # the same IMT can appear with different levels in different
@@ -156,10 +155,9 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
         </ffs>
     </fragilityModel>
 </nrml>""")
-        with self.assertRaises(InvalidFile) as ar:
-            nrml.parse(vuln_content, 20)
-        self.assertEqual('Missing attribute minIML, line 9',
-                         ar.exception.message)
+        with self.assertRaises(KeyError) as ar:
+            nrml.parse(vuln_content)
+        self.assertIn("node IML: 'minIML', line 9", str(ar.exception))
 
     def test_missing_maxIML(self):
         vuln_content = writetmp(u"""\
@@ -181,10 +179,9 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
         </ffs>
     </fragilityModel>
 </nrml>""")
-        with self.assertRaises(InvalidFile) as ar:
-            nrml.parse(vuln_content, 20)
-        self.assertEqual('Missing attribute maxIML, line 9',
-                         ar.exception.message)
+        with self.assertRaises(KeyError) as ar:
+            nrml.parse(vuln_content)
+        self.assertIn("node IML: 'maxIML', line 9", str(ar.exception))
 
 
 class ParseConsequenceModelTestCase(unittest.TestCase):
@@ -247,7 +244,7 @@ lossCategory="contents">
         self.assertEqual(
             repr(cmodel),
             "<ConsequenceModel structural "
-            "['ds1', 'ds2', 'ds3', 'ds4'] ['tax1']>")
+            "['ds1', 'ds2', 'ds3', 'ds4'] tax1>")
 
         # test pickleability
         pickle.loads(pickle.dumps(cmodel))
@@ -258,7 +255,7 @@ lossCategory="contents">
         # exchanging the associations on purpose
         inputs = dict(structural_consequence=ccm, contents_consequence=scm)
         with self.assertRaises(ValueError) as ctx:
-            riskmodels.get_consequence_models(inputs)
+            riskmodels.get_risk_models('consequence', inputs)
         self.assertIn('structural_consequence_model.xml" is of type '
                       '"structural", expected "contents"',
                       str(ctx.exception))

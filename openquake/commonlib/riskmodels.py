@@ -21,6 +21,7 @@ Reading risk models for risk calculators
 """
 import re
 import logging
+import itertools
 import collections
 
 import numpy
@@ -28,7 +29,6 @@ import numpy
 from openquake.commonlib.node import context, LiteralNode
 from openquake.commonlib import InvalidFile, nrml, valid
 from openquake.risklib import scientific
-from openquake.baselib.general import AccumDict
 from openquake.commonlib.sourcewriter import obj_to_node
 
 F64 = numpy.float64
@@ -108,27 +108,6 @@ def get_vfs(inputs, retrofitted=False):
     return vulnerability_functions
 
 
-def get_ffs(file_by_ct, continuous_fragility_discretization,
-            steps_per_interval=None):
-    """
-    Given a dictionary {key: pathname}, look for keys with name
-    <cost_type>__fragility, parse them and returns a dictionary
-    imt, taxonomy -> ff_by_loss_type.
-
-    :param file_by_ct: a dictionary cost_type -> pathname
-    :param continuous_fragility_discretization: parameter from the .ini file
-    :param steps_per_interval: steps_per_interval parameter
-    """
-    ffs = collections.defaultdict(dict)
-    for cost_type in file_by_ct:
-        ff_dict = nrml.parse(
-            file_by_ct[cost_type],
-            continuous_fragility_discretization, steps_per_interval)
-        for tax, ff in ff_dict.items():
-            ffs[ff.imt, tax][cost_type_to_loss_type(cost_type)] = ff
-    return ffs, ff_dict.damage_states
-
-
 # ########################### vulnerability ############################## #
 
 def filter_vset(elem):
@@ -149,58 +128,27 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-@nrml.build.add(('consequenceModel', 'nrml/0.5'))
-def get_consequence_model(node, fname):
-    with context(fname, node):
-        description = ~node.description  # make sure it is there
-        limitStates = ~node.limitStates  # make sure it is there
-        # ASK: is the 'id' mandatory?
-        node['assetCategory']  # make sure it is there
-        node['lossCategory']  # make sure it is there
-        cfs = node[2:]
-    functions = {}
-    for cf in cfs:
-        with context(fname, cf):
-            params = []
-            if len(limitStates) != len(cf):
-                raise ValueError(
-                    'Expected %d limit states, got %d' %
-                    (len(limitStates), len(cf)))
-            for ls, param in zip(limitStates, cf):
-                with context(fname, param):
-                    if param['ls'] != ls:
-                        raise ValueError('Expected %r, got %r' %
-                                         (ls, param['ls']))
-                    params.append((param['mean'], param['stddev']))
-            functions[cf['id']] = scientific.ConsequenceFunction(
-                cf['id'], cf['dist'], params)
-    attrs = node.attrib.copy()
-    attrs.update(description=description,
-                 limitStates=limitStates,
-                 consequence_functions=functions)
-    return scientific.ConsequenceModel(**attrs)
-
-
-def get_consequence_models(inputs):
+def get_risk_models(kind, inputs):
     """
+    :param kind: the string 'fragility', 'consequence'
     :param inputs: a dictionary key -> path name
     :returns: a dictionary loss_type -> ConsequenceModel instance
     """
-    cmodels = {}
+    rmodels = {}
     for key in inputs:
         mo = re.match(
             '(structural|nonstructural|contents|business_interruption)'
-            '_consequence', key)
+            '_' + kind, key)
         if mo:
-            cmodel = nrml.parse(inputs[key])
+            rmodel = nrml.parse(inputs[key])
             expected_loss_type = mo.group(1)  # the loss type in the key
-            if cmodel.lossCategory != expected_loss_type:
+            if rmodel.lossCategory != expected_loss_type:
                 raise ValueError(
                     'Error in the .ini file: "%s_file=%s" is of type "%s", '
-                    'expected "%s"' % (key, inputs[key], cmodel.lossCategory,
+                    'expected "%s"' % (key, inputs[key], rmodel.lossCategory,
                                        expected_loss_type))
-            cmodels[cmodel.lossCategory] = cmodel
-    return cmodels
+            rmodels[rmodel.lossCategory] = rmodel
+    return rmodels
 
 
 @nrml.build.add(('vulnerabilityModel', 'nrml/0.4'))
@@ -320,7 +268,7 @@ def get_imtls(ddict):
             if imt in imtls and imtls[imt] != imls:
                 logging.info(
                     'Different levels for IMT %s: got %s, expected %s',
-                    imt, rf.imls, imtls[imt])
+                    imt, imls, imtls[imt])
                 imtls[imt] = sorted(set(imls + imtls[imt]))
             else:
                 imtls[imt] = imls
@@ -329,85 +277,192 @@ def get_imtls(ddict):
 
 # ########################### fragility ############################### #
 
+def ffconvert(fname, limit_states, ff):
+    """
+    Convert a fragility function into a numpy array plus a bunch
+    of attributes.
+
+    :param fname: path to the fragility model file
+    :param limit_states: expected limit states
+    :param ff: fragility function node
+    :returns: a pair (array, dictionary)
+    """
+    with context(fname, ff):
+        ffs = ff[1:]
+        imls = ff.imls
+    with context(fname, imls):
+        attrs = dict(format=ff['format'],
+                     imt=imls['imt'],
+                     nodamage=imls.attrib.get('noDamageLimit'))
+
+    LS = len(limit_states)
+    if LS != len(ffs):
+        with context(fname, ff):
+            raise InvalidFile('expected %d limit states, found %d' %
+                              (LS, len(ffs)))
+    if ff['format'] == 'continuous':
+        attrs['minIML'] = float(imls['minIML'])
+        attrs['maxIML'] = float(imls['maxIML'])
+        array = numpy.zeros(LS, [('mean', F64), ('stddev', F64)])
+        for i, ls, node in zip(range(LS), limit_states, ff[1:]):
+            if ls != node['ls']:
+                with context(fname, node):
+                    raise InvalidFile('expected %s, found' %
+                                      (ls, node['ls']))
+            array['mean'][i] = node['mean']
+            array['stddev'][i] = node['stddev']
+    elif ff['format'] == 'discrete':
+        attrs['imls'] = valid.positivefloats(~imls)
+        valid.check_levels(attrs['imls'], attrs['imt'])
+        num_poes = len(attrs['imls'])
+        array = numpy.zeros((LS, num_poes))
+        for i, ls, node in zip(range(LS), limit_states, ff[1:]):
+            with context(fname, node):
+                if ls != node['ls']:
+                    raise InvalidFile('expected %s, found' %
+                                      (ls, node['ls']))
+                poes = (~node if isinstance(~node, list)
+                        else valid.probabilities(~node))
+                if len(poes) != num_poes:
+                    raise InvalidFile('expected %s, found' %
+                                      (num_poes, len(poes)))
+                array[i, :] = poes
+    # NB: the format is constrained in nrml.FragilityNode to be either
+    # discrete or continuous, there is no third option
+    return array, attrs
+
+
+@nrml.build.add(('fragilityModel', 'nrml/0.5'))
+def get_fragility_model(node, fname):
+    """
+    :param node:
+        a vulnerabilityModel node
+    :param fname:
+        path to the vulnerability file
+    :returns:
+        a dictionary imt, taxonomy -> fragility function list
+    """
+    with context(fname, node):
+        fid = node['id']
+        asset_category = node['assetCategory']
+        loss_type = node['lossCategory']
+        description = ~node.description
+        limit_states = ~node.limitStates
+        ffs = node[2:]
+    fmodel = scientific.FragilityModel(
+        fid, asset_category, loss_type, description, limit_states)
+    for ff in ffs:
+        imt_taxo = ff.imls['imt'], ff['id']
+        array, attrs = ffconvert(fname, limit_states, ff)
+        ffl = scientific.FragilityFunctionList(array)
+        vars(ffl).update(attrs)
+        fmodel[imt_taxo] = ffl
+    return fmodel
+
+
+# ################################## consequences ########################## #
+
+@nrml.build.add(('consequenceModel', 'nrml/0.5'))
+def get_consequence_model(node, fname):
+    with context(fname, node):
+        description = ~node.description  # make sure it is there
+        limitStates = ~node.limitStates  # make sure it is there
+        # ASK: is the 'id' mandatory?
+        node['assetCategory']  # make sure it is there
+        node['lossCategory']  # make sure it is there
+        cfs = node[2:]
+    functions = {}
+    for cf in cfs:
+        with context(fname, cf):
+            params = []
+            if len(limitStates) != len(cf):
+                raise ValueError(
+                    'Expected %d limit states, got %d' %
+                    (len(limitStates), len(cf)))
+            for ls, param in zip(limitStates, cf):
+                with context(fname, param):
+                    if param['ls'] != ls:
+                        raise ValueError('Expected %r, got %r' %
+                                         (ls, param['ls']))
+                    params.append((param['mean'], param['stddev']))
+            functions[cf['id']] = scientific.ConsequenceFunction(
+                cf['id'], cf['dist'], params)
+    attrs = node.attrib.copy()
+    attrs.update(description=description, limitStates=limitStates)
+    cmodel = scientific.ConsequenceModel(**attrs)
+    cmodel.update(functions)
+    return cmodel
+
+
+# utility to convert the old, deprecated format
+def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
+    """
+    :param node:
+        an :class:`openquake.commonib.node.LiteralNode` in NRML 0.4
+    :param fname:
+        path of the fragility file
+    :returns:
+        an :class:`openquake.commonib.node.LiteralNode` in NRML 0.5
+    """
+    convert_type = {"lognormal": "logncdf"}
+    new = LiteralNode('fragilityModel',
+                      dict(assetCategory='building',
+                           lossCategory='structural',
+                           id='fm_%d_converted_from_NRML_04' %
+                           next(fmcounter)))
+    with context(fname, node):
+        fmt = node['format']
+        descr = ~node.description
+        limit_states = ~node.limitStates
+    new.append(LiteralNode('description', {}, descr))
+    new.append((LiteralNode('limitStates', {}, ' '.join(limit_states))))
+    for ffs in node[2:]:
+        IML = ffs.IML
+        # NB: noDamageLimit = None is different than zero
+        nodamage = ffs.attrib.get('noDamageLimit')
+        ff = LiteralNode('fragilityFunction', {'format': fmt})
+        ff['id'] = ~ffs.taxonomy
+        ff['shape'] = convert_type[ffs.attrib.get('type', 'lognormal')]
+        if fmt == 'continuous':
+            with context(fname, IML):
+                ff.append(LiteralNode('imls', dict(imt=IML['IMT'],
+                                                   minIML=IML['minIML'],
+                                                   maxIML=IML['maxIML'],
+                                                   noDamageLimit=nodamage)))
+            for ffc in ffs[2:]:
+                with context(fname, ffc):
+                    ls = ffc['ls']
+                    param = ffc.params
+                with context(fname, param):
+                    m, s = param['mean'], param['stddev']
+                ff.append(LiteralNode('params', dict(ls=ls, mean=m, stddev=s)))
+        else:  # discrete
+            with context(fname, IML):
+                imls = ' '.join(map(str, (~IML)[1]))
+                attr = dict(imt=IML['IMT'])
+            if nodamage is not None:
+                attr['noDamageLimit'] = nodamage
+            ff.append(LiteralNode('imls', attr, imls))
+            for ffd in ffs[2:]:
+                ls = ffd['ls']
+                with context(fname, ffd):
+                    poes = ' '.join(map(str, ~ffd.poEs))
+                ff.append(LiteralNode('poes', dict(ls=ls), poes))
+        new.append(ff)
+    return new
+
+
 @nrml.build.add(('fragilityModel', 'nrml/0.4'))
-def get_fragility_functions_04(
-        fmodel, fname, continuous_fragility_discretization,
-        steps_per_interval=None):
+def get_fragility_model_04(fmodel, fname):
     """
     :param fmodel:
         a fragilityModel node
     :param fname:
         path of the fragility file
-    :param continuous_fragility_discretization:
-        continuous_fragility_discretization parameter
-    :param steps_per_interval:
-        steps_per_interval parameter
     :returns:
-        damage_states list and dictionary taxonomy -> functions
+        an :class:`openquake.risklib.scientific.FragilityModel` instance
     """
     logging.warn('Please upgrade %s to NRML 0.5', fname)
-    # ~fmodel.description is ignored
-    limit_states = ~fmodel.limitStates
-    tag = 'ffc' if fmodel['format'] == 'continuous' else 'ffd'
-    fragility_functions = AccumDict()  # taxonomy -> functions
-    for ffs in fmodel.getnodes('ffs'):
-        add_zero_value = False
-        # NB: the noDamageLimit is only defined for discrete fragility
-        # functions. It is a way to set the starting point of the functions:
-        # if noDamageLimit is at the left of each IMLs, it means that the
-        # function starts at zero at the given point, so we need to add
-        # noDamageLimit to the list of IMLs and zero to the list of poes
-        nodamage = ffs.attrib.get('noDamageLimit')
-        taxonomy = ~ffs.taxonomy
-        imt_str, imls, min_iml, max_iml, imlUnit = ~ffs.IML
-
-        if fmodel['format'] == 'discrete':
-            if nodamage is not None and nodamage < imls[0]:
-                # discrete fragility
-                imls = [nodamage] + imls
-                add_zero_value = True
-            if steps_per_interval:
-                gen_imls = scientific.fine_graining(imls, steps_per_interval)
-            else:
-                gen_imls = imls
-        else:  # continuous:
-            if min_iml is None:
-                raise InvalidFile(
-                    'Missing attribute minIML, line %d' % ffs.IML.lineno)
-            elif max_iml is None:
-                raise InvalidFile(
-                    'Missing attribute maxIML, line %d' % ffs.IML.lineno)
-            gen_imls = numpy.linspace(min_iml, max_iml,
-                                      continuous_fragility_discretization)
-        fragility_functions[taxonomy] = scientific.FragilityFunctionList(
-            [], imt=imt_str, imls=list(gen_imls),
-            no_damage_limit=nodamage,
-            continuous_fragility_discretization=
-            continuous_fragility_discretization,
-            steps_per_interval=steps_per_interval)
-        lstates = []
-        for ff in ffs.getnodes(tag):
-            ls = ff['ls']  # limit state
-            lstates.append(ls)
-            if tag == 'ffc':
-                with context(fname, ff):
-                    par = ff.params
-                    mean_stddev = par['mean'], par['stddev']
-                fragility_functions[taxonomy].append(
-                    scientific.FragilityFunctionContinuous(ls, *mean_stddev))
-            else:  # discrete
-                with context(fname, ff):
-                    poes = ~ff.poEs
-                if add_zero_value:
-                    poes = [0.] + poes
-
-                fragility_functions[taxonomy].append(
-                    scientific.FragilityFunctionDiscrete(
-                        ls, imls, poes, nodamage))
-
-        if lstates != limit_states:
-            raise InvalidFile("Expected limit states %s, got %s in %s" %
-                              (limit_states, lstates, fname))
-
-    fragility_functions.damage_states = ['no_damage'] + limit_states
-    return fragility_functions
+    node05 = convert_fragility_model_04(fmodel, fname)
+    node05.limitStates.text = node05.limitStates.text.split()
+    return get_fragility_model(node05, fname)

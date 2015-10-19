@@ -23,7 +23,7 @@ import numpy
 
 from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import (
-    get_imtls, get_risk_files, get_vfs, get_ffs)
+    get_imtls, get_risk_files, get_vfs, get_risk_models)
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
@@ -36,6 +36,13 @@ RISK_CALCULATORS = [
     'classical_bcr', 'scenario_damage', 'classical_damage']
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
+
+# this global dictionary is populated with the risk model every time
+# an OqParam instance is created (i.e. once per calculation);
+# this is a suboptimal design but it is the best we can do without
+# being forced to rethink a lot of code; it has the advantage that
+# the risk model files are read only once per calculation
+rmdict = collections.defaultdict(dict)
 
 
 class OqParam(valid.ParamSet):
@@ -148,11 +155,26 @@ class OqParam(valid.ParamSet):
         if file_type == 'vulnerability':
             self.risk_imtls = get_imtls(get_vfs(self.inputs))
         elif file_type == 'fragility':
-            # TODO: should I pass steps_per_interval?
-            # then ClassicalDamageCase1TestCase.test_interpolation will fail
-            ffs, _ = get_ffs(
-                file_by_ct, self.continuous_fragility_discretization)
-            self.risk_imtls = get_imtls(ffs)
+            fmodels = get_risk_models('fragility', self.inputs)
+            rmdict.clear()
+            limit_states = []
+            for loss_type, fm in sorted(fmodels.items()):
+                # build a copy of the FragilityModel with different IM levels
+                newfm = fm.build(self.continuous_fragility_discretization,
+                                 self.steps_per_interval)
+                for imt_taxo, ff in newfm.items():
+                    if not limit_states:
+                        limit_states.extend(fm.limitStates)
+                    # we are rejecting the case of loss types with different
+                    # limit states; this may change in the future
+                    assert limit_states == fm.limitStates, (
+                        limit_states, fm.limitStates)
+                    rmdict[imt_taxo][loss_type] = ff
+                    # TODO: see if it is possible to remove the attribute
+                    # below, used in classical_damage
+                    ff.steps_per_interval = self.steps_per_interval
+            self.limit_states = limit_states
+            self.risk_imtls = get_imtls(rmdict)
 
         # check the IMTs vs the GSIMs
         if 'gsim_logic_tree' in self.inputs:

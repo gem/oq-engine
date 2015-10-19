@@ -30,11 +30,10 @@ from shapely import wkt, geometry
 from openquake.hazardlib import geo, site, correlation, imt
 from openquake.risklib import workflows, riskinput
 
-from openquake.commonlib.oqvalidation import OqParam
+from openquake.commonlib.oqvalidation import OqParam, rmdict
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
-from openquake.commonlib.riskmodels import (
-    get_vfs, get_ffs, get_risk_files)
+from openquake.commonlib.riskmodels import get_vfs, get_risk_files
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.performance import DummyMonitor
 from openquake.baselib.python3compat import configparser
@@ -573,13 +572,9 @@ def get_risk_model(oqparam):
 
     if oqparam.calculation_mode.endswith('_damage'):
         # scenario damage calculator
-        fragility_functions, damage_states = get_ffs(
-            get_risk_files(oqparam.inputs)[1],
-            oqparam.continuous_fragility_discretization,
-            oqparam.steps_per_interval,
-        )
-        riskmodel.damage_states = damage_states
-        for imt_taxo, ffs_by_lt in fragility_functions.items():
+        riskmodel.damage_states = ['no_damage'] + oqparam.limit_states
+        delattr(oqparam, 'limit_states')
+        for imt_taxo, ffs_by_lt in rmdict.items():
             risk_models[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 fragility_functions=ffs_by_lt)

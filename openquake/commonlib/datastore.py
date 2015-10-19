@@ -20,7 +20,6 @@ import os
 import re
 import ast
 import shutil
-import logging
 from openquake.baselib.python3compat import pickle
 import collections
 

@@ -19,7 +19,6 @@ from __future__ import print_function
 
 import os
 import shutil
-import itertools
 from xml.etree.ElementTree import iterparse
 
 from openquake.commonlib.nrml import NRML05
@@ -84,57 +83,6 @@ def get_vulnerability_functions_04(fname):
     return vf_dict, categories
 
 
-def convert_fragility_model_04(fname, fmcounter=itertools.count(1)):
-    """
-    Parse the fragility model in NRML 0.4 format and return a node
-    suitable for conversion in NRML 0.5
-
-    :param fname:
-        path of the fragility file
-    :returns:
-        an :class:`openquake.commonib.node.LiteralNode` instance
-    """
-    convert_type = {"lognormal": "logncdf"}
-    new = LiteralNode('fragilityModel',
-                      dict(assetCategory='building',
-                           lossCategory='structural',
-                           id='fm_%d_converted_from_NRML_04' %
-                           next(fmcounter)))
-    [node] = nrml.read(fname)
-    fmt = node['format']
-    descr = ~node.description
-    limit_states = ~node.limitStates
-    new.append(LiteralNode('description', {}, descr))
-    new.append((LiteralNode('limitStates', {}, ' '.join(limit_states))))
-    for ffs in node[2:]:
-        IML = ffs.IML
-        nodamage = ffs.attrib.get('noDamageLimit', 0)
-        ff = LiteralNode('fragilityFunction', {'format': fmt})
-        ff['id'] = ~ffs.taxonomy
-        ff['shape'] = convert_type[ffs.attrib.get('type', 'lognormal')]
-        if fmt == 'continuous':
-            ff.append(LiteralNode('imls', dict(imt=IML['IMT'],
-                                               minIML=IML['minIML'],
-                                               maxIML=IML['maxIML'],
-                                               noDamageLimit=nodamage)))
-            for ffc in ffs[2:]:
-                ls = ffc['ls']
-                param = ffc.params
-                ff.append(LiteralNode('params', dict(ls=ls,
-                                                     mean=param['mean'],
-                                                     stddev=param['stddev'])))
-        else:  # discrete
-            imls = ' '.join(map(str, (~IML)[1]))
-            attr = dict(imt=IML['IMT'], noDamageLimit=nodamage)
-            ff.append(LiteralNode('imls', attr, imls))
-            for ffd in ffs[2:]:
-                ls = ffd['ls']
-                poes = ' '.join(map(str, ~ffd.poEs))
-                ff.append(LiteralNode('poes', dict(ls=ls), poes))
-        new.append(ff)
-    return new
-
-
 def upgrade_file(path):
     """Upgrade to the latest NRML version"""
     node0 = nrml.read(path, chatty=False)[0]
@@ -147,7 +95,8 @@ def upgrade_file(path):
             'vulnerabilityModel', cat_dict,
             nodes=list(map(riskmodels.obj_to_node, list(vf_dict.values()))))
     elif tag == 'fragilityModel':
-        node0 = convert_fragility_model_04(path)
+        node0 = riskmodels.convert_fragility_model_04(
+            nrml.parse(path)[0], path)
     with open(path, 'w') as f:
         nrml.write([node0], f)
 

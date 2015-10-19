@@ -1,60 +1,50 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" 
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
-
-<fragilityModel format="continuous">
-  <description>cont ff | tax3 | zero miniml</description>
-  <limitStates>ds1 ds2 ds3 ds4</limitStates>
-  <ffs type="lognormal">
-    <taxonomy>tax1</taxonomy>
-    <IML IMT="PGA" imlUnit="g" minIML="0.0" maxIML="5.0"/>
-    <ffc ls="ds1">
-      <params mean="0.50" stddev="0.40"/>
-    </ffc>
-    <ffc ls="ds2">
-      <params mean="1.00" stddev="0.80"/>
-    </ffc>
-    <ffc ls="ds3">
-      <params mean="1.50" stddev="1.20"/>
-    </ffc>
-    <ffc ls="ds4">
-      <params mean="2.00" stddev="1.60"/>
-    </ffc>
-  </ffs>
-  
-  <ffs type="lognormal">
-    <taxonomy>tax2</taxonomy>
-    <IML IMT="PGA" imlUnit="g" minIML="0.0" maxIML="5.0"/>
-    <ffc ls="ds1">
-      <params mean="1.00" stddev="0.80"/>
-    </ffc>
-    <ffc ls="ds2">
-      <params mean="1.50" stddev="1.20"/>
-    </ffc>
-    <ffc ls="ds3">
-      <params mean="2.50" stddev="2.00"/>
-    </ffc>
-    <ffc ls="ds4">
-      <params mean="4.00" stddev="3.20"/>
-    </ffc>
-  </ffs>
-  
-  <ffs type="lognormal">
-    <taxonomy>tax3</taxonomy>
-    <IML IMT="PGA" imlUnit="g" minIML="0.0" maxIML="5.0"/>
-    <ffc ls="ds1">
-      <params mean="1.20" stddev="0.90"/>
-    </ffc>
-    <ffc ls="ds2">
-      <params mean="1.80" stddev="1.50"/>
-    </ffc>
-    <ffc ls="ds3">
-      <params mean="3.00" stddev="2.00"/>
-    </ffc>
-    <ffc ls="ds4">
-      <params mean="5.00" stddev="3.50"/>
-    </ffc>
-  </ffs>
-</fragilityModel>
-
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+>
+    <fragilityModel
+    assetCategory="building"
+    id="fm_8_converted_from_NRML_04"
+    lossCategory="structural"
+    >
+        <description>
+            cont ff | tax3 | zero miniml
+        </description>
+        <limitStates>
+            ds1 ds2 ds3 ds4
+        </limitStates>
+        <fragilityFunction
+        format="continuous"
+        id="tax1"
+        shape="logncdf"
+        >
+            <imls imt="PGA" maxIML="5.0" minIML="0.0" noDamageLimit="0"/>
+            <params ls="ds1" mean="5.0000000E-01" stddev="4.0000000E-01"/>
+            <params ls="ds2" mean="1.0000000E+00" stddev="8.0000000E-01"/>
+            <params ls="ds3" mean="1.5000000E+00" stddev="1.2000000E+00"/>
+            <params ls="ds4" mean="2.0000000E+00" stddev="1.6000000E+00"/>
+        </fragilityFunction>
+        <fragilityFunction
+        format="continuous"
+        id="tax2"
+        shape="logncdf"
+        >
+            <imls imt="PGA" maxIML="5.0" minIML="0.0" noDamageLimit="0"/>
+            <params ls="ds1" mean="1.0000000E+00" stddev="8.0000000E-01"/>
+            <params ls="ds2" mean="1.5000000E+00" stddev="1.2000000E+00"/>
+            <params ls="ds3" mean="2.5000000E+00" stddev="2.0000000E+00"/>
+            <params ls="ds4" mean="4.0000000E+00" stddev="3.2000000E+00"/>
+        </fragilityFunction>
+        <fragilityFunction
+        format="continuous"
+        id="tax3"
+        shape="logncdf"
+        >
+            <imls imt="PGA" maxIML="5.0" minIML="0.0" noDamageLimit="0"/>
+            <params ls="ds1" mean="1.2000000E+00" stddev="9.0000000E-01"/>
+            <params ls="ds2" mean="1.8000000E+00" stddev="1.5000000E+00"/>
+            <params ls="ds3" mean="3.0000000E+00" stddev="2.0000000E+00"/>
+            <params ls="ds4" mean="5.0000000E+00" stddev="3.5000000E+00"/>
+        </fragilityFunction>
+    </fragilityModel>
 </nrml>
