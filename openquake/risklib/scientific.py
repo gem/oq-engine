@@ -623,8 +623,6 @@ class FragilityModel(dict):
     :param str lossCategory: loss type (i.e. structural, contents, ...)
     :param str description: description of the model
     :param limitStates: a list of limit state strings
-    :param fragility_functions:
-        a dictionary imt, taxonomy -> FragilityFunctionList
     """
 
     def __init__(self, id, assetCategory, lossCategory, description,
