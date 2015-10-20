@@ -427,10 +427,8 @@ _pkgtest_innervm_run () {
         echo 'running SimpleFaultSourceClassicalPSHA...'
         oq-lite run SimpleFaultSourceClassicalPSHA/job.ini
 
-        echo 'running ClassicalPSHA hazard...'
-        oq-lite run ClassicalPSHA/job_hazard.ini
-        echo 'running ClassicalPSHA risk...'
-        oq-lite run ClassicalPSHA/job_risk.ini --hc -1
+        echo 'running ClassicalRisk...'
+        oq-lite run ClassicalPSHA/job_hazard.ini,ClassicalPSHA/job_risk.ini
 
         echo 'running ScenarioDamage...'
         oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini
