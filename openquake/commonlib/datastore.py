@@ -243,7 +243,10 @@ class DataStore(collections.MutableMapping):
 
     def close(self):
         """Close the underlying hdf5 file"""
-        self.hdf5.close()
+        if self.parent:
+            self.parent.close()
+        if self.hdf5:  # is open
+            self.hdf5.close()
 
     def clear(self):
         """Remove the datastore from the file system"""
