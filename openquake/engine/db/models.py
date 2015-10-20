@@ -300,8 +300,10 @@ class OqJob(djm.Model):
         """
         'hazard' or 'risk'
         """
-        cmode = self.get_param('calculation_mode')
-        return 'risk' if cmode in RISK_CALCULATORS else 'hazard'
+        calcmode = self.get_param('calculation_mode', 'unknown')
+        # the calculation mode can be unknown if the job parameters
+        # have not been written on the database yet
+        return 'risk' if calcmode in RISK_CALCULATORS else 'hazard'
 
     def get_or_create_output(self, display_name, output_type):
         """
@@ -367,7 +369,6 @@ class OqJob(djm.Model):
         Populate the table HazardSite by inferring the points from
         the sites, region, or exposure.
         """
-        assert self.job_type == 'hazard', self.job_type
         oqparam = self.get_oqparam()
         if 'exposure' in oqparam.inputs:
             assets = self.exposuremodel.exposuredata_set.all()
