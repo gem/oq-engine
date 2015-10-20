@@ -46,7 +46,7 @@ from openquake.engine.db.schema.upgrades import upgrader
 
 from openquake import hazardlib, risklib, commonlib
 
-from openquake.commonlib import readinput, valid, datastore
+from openquake.commonlib import readinput, valid, datastore, export
 
 
 def get_calc_id(job_id=None):
@@ -444,11 +444,13 @@ def expose_outputs(dstore, job):
     :param dstore: a datastore instance
     :param job: an OqJob instance
     """
+    exportable = set(ekey[0] for ekey in export.export)
     for key in dstore:
-        out = models.Output.objects.create_output(
-            job, key, output_type='datastore')
-        out.ds_key = key
-        out.save()
+        if key in exportable:
+            out = models.Output.objects.create_output(
+                job, key, output_type='datastore')
+            out.ds_key = key
+            out.save()
 
 
 def check_hazard_risk_consistency(haz_job, risk_mode):
