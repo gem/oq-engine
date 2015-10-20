@@ -21,4 +21,5 @@ install:
   - python setup.py develop
 
 script:
-  - nosetests --with-doctest -xv -a'!slow'
+  - find . -name \*_test.py| parallel 'nosetests -xv -a"!slow"'
+
