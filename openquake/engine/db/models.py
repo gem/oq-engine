@@ -47,7 +47,7 @@ from openquake.hazardlib import geo, correlation
 
 from openquake.commonlib.riskmodels import loss_type_to_cost_type
 from openquake.commonlib.readinput import get_mesh
-from openquake.commonlib.oqvalidation import OqParam
+from openquake.commonlib.oqvalidation import OqParam, RISK_CALCULATORS
 from openquake.commonlib import logictree, valid
 
 from openquake.engine.db import fields
@@ -300,9 +300,10 @@ class OqJob(djm.Model):
         """
         'hazard' or 'risk'
         """
-        # only if the job is of kind 'risk' the field hazard_calculation_id
-        # is not null and contains a reference to the previous hazard job
-        return 'hazard' if self.hazard_calculation is None else 'risk'
+        calcmode = self.get_param('calculation_mode', 'unknown')
+        # the calculation mode can be unknown if the job parameters
+        # have not been written on the database yet
+        return 'risk' if calcmode in RISK_CALCULATORS else 'hazard'
 
     def get_or_create_output(self, display_name, output_type):
         """
@@ -368,7 +369,6 @@ class OqJob(djm.Model):
         Populate the table HazardSite by inferring the points from
         the sites, region, or exposure.
         """
-        assert self.job_type == 'hazard', self.job_type
         oqparam = self.get_oqparam()
         if 'exposure' in oqparam.inputs:
             assets = self.exposuremodel.exposuredata_set.all()
