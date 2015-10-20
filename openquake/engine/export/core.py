@@ -42,7 +42,7 @@ def zipfiles(fnames, archive):
     """
     z = zipfile.ZipFile(archive, 'w')
     for f in fnames:
-        z.write(f)
+        z.write(f, os.path.basename(f))
     z.close()
 
 
