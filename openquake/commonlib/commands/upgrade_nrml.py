@@ -96,7 +96,7 @@ def upgrade_file(path):
             nodes=list(map(riskmodels.obj_to_node, list(vf_dict.values()))))
     elif tag == 'fragilityModel':
         node0 = riskmodels.convert_fragility_model_04(
-            nrml.parse(path)[0], path)
+            nrml.read(path)[0], path)
     with open(path, 'w') as f:
         nrml.write([node0], f)
 
