@@ -47,7 +47,7 @@ from openquake.hazardlib import geo, correlation
 
 from openquake.commonlib.riskmodels import loss_type_to_cost_type
 from openquake.commonlib.readinput import get_mesh
-from openquake.commonlib.oqvalidation import OqParam
+from openquake.commonlib.oqvalidation import OqParam, RISK_CALCULATORS
 from openquake.commonlib import logictree, valid
 
 from openquake.engine.db import fields
@@ -300,9 +300,8 @@ class OqJob(djm.Model):
         """
         'hazard' or 'risk'
         """
-        # only if the job is of kind 'risk' the field hazard_calculation_id
-        # is not null and contains a reference to the previous hazard job
-        return 'hazard' if self.hazard_calculation is None else 'risk'
+        cmode = self.get_param('calculation_mode')
+        return 'risk' if cmode in RISK_CALCULATORS else 'hazard'
 
     def get_or_create_output(self, display_name, output_type):
         """

@@ -273,8 +273,7 @@ def run_calc(request):
     hazard_output_id = request.POST.get('hazard_output_id')
     hazard_job_id = request.POST.get('hazard_job_id')
 
-    is_risk = hazard_output_id or hazard_job_id
-    if is_risk:
+    if hazard_output_id or hazard_job_id:
         candidates = ("job_risk.ini", "job.ini")
     else:
         candidates = ("job_hazard.ini", "job.ini")
