@@ -543,23 +543,3 @@ def export_loss_csv(key, export_dir, data, suffix):
         data.sort(key=operator.itemgetter(2))  # order by asset_ref
     writers.write_csv(dest, [header] + data, fmt='%11.7E')
     return dest
-
-
-@export.add(('assetcol', 'csv'))
-def export_assetcol(ekey, dstore):
-    assetcol = dstore[ekey[0]].value
-    sitemesh = dstore['sitemesh'].value
-    taxonomies = dstore['taxonomies'].value
-    header = list(assetcol.dtype.names)
-    dest = os.path.join(dstore.export_dir, '%s.%s' % ekey)
-    columns = [None] * len(header)
-    for i, field in enumerate(header):
-        if field == 'taxonomy':
-            columns[i] = taxonomies[assetcol[field]]
-        elif field == 'site_id':
-            header[i] = 'lon_lat'
-            columns[i] = sitemesh[assetcol[field]]
-        else:
-            columns[i] = assetcol[field]
-    writers.write_csv(dest, [header] + list(zip(*columns)), fmt='%s')
-    return [dest]

@@ -441,7 +441,7 @@ _pkgtest_innervm_run () {
         cmp /tmp/agglosses.csv ScenarioRisk/expected_agglosses.csv
 
         echo 'running ProbabilisticEventBased...'
-        oq-lite run ProbabilisticEventBased/job_risk.ini
+        oq-lite run ProbabilisticEventBased/job.ini
         oq-lite export -1 /agg_losses-rlzs csv /tmp
         echo 'Show all the oq-lite calculations'
         oq-lite show 0

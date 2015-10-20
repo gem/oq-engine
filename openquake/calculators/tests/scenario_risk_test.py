@@ -25,8 +25,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_3(self):
         out = self.run_calc(case_3.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
-        [assetcol] = out['assetcol', 'csv']
-        self.assertEqualFiles('expected/assetcol.csv', assetcol)
 
         [fname] = out['avglosses', 'csv']
         self.assertEqualFiles('expected/asset-loss.csv', fname)
