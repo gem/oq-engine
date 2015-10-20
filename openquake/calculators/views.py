@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import os.path
 import numbers
 import operator
@@ -26,7 +27,8 @@ from openquake.baselib.performance import PerformanceMonitor
 from openquake.commonlib import parallel
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.datastore import view
-from openquake.commonlib.writers import build_header, scientificformat
+from openquake.commonlib.writers import (
+    build_header, scientificformat, write_csv)
 
 
 def rst_table(data, header=None, fmt='%9.7E'):
@@ -302,7 +304,7 @@ def view_mean_avg_losses(token, dstore):
 
 
 @view.add('exposure_info')
-def exposure_info(token, dstore):
+def view_exposure_info(token, dstore):
     """
     Display info about the exposure model
     """
@@ -318,3 +320,21 @@ def exposure_info(token, dstore):
             ('#taxonomies', len(taxonomies))]
     return rst_table(data) + '\n\n' + rst_table(
         tbl, header=['Taxonomy', '#Assets'])
+
+
+@view.add('assetcol')
+def view_assetcol(token, dstore):
+    assetcol = dstore['assetcol'].value
+    sitemesh = dstore['sitemesh'].value
+    taxonomies = dstore['taxonomies'].value
+    header = list(assetcol.dtype.names)
+    columns = [None] * len(header)
+    for i, field in enumerate(header):
+        if field == 'taxonomy':
+            columns[i] = taxonomies[assetcol[field]]
+        elif field == 'site_id':
+            header[i] = 'lon_lat'
+            columns[i] = sitemesh[assetcol[field]]
+        else:
+            columns[i] = assetcol[field]
+    return write_csv(io.StringIO(), [header] + list(zip(*columns)), fmt='%s')
