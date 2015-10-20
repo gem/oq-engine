@@ -78,6 +78,7 @@ class CalculatorTestCase(unittest.TestCase):
             self.calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=hc_id, **kw)
             result.update(self.calc.run())
+        self.calc.datastore.close()
         return result
 
     def execute(self, testfile, job_ini):
