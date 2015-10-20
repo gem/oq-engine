@@ -523,10 +523,6 @@ _pkgtest_innervm_run () {
 
         cd /usr/share/doc/python-oq-risklib/examples/demos
 
-        ## comment this demo is you get a segmentation fault!        
-        echo \"Running ProbabilisticEventBased/job_risk.ini\"
-        oq-engine --run ProbabilisticEventBased/job_risk.ini
-
         for ini in \$(find . -name job.ini | sort); do
             echo \"Running \$ini\"
             for loop in \$(seq 1 $GEM_MAXLOOP); do
