@@ -37,10 +37,8 @@ class EnginePerformanceMonitor(PerformanceMonitor):
 
     def __init__(self, operation, job_id, task=None, tracing=False,
                  measuremem=True, autoflush=False):
-        self.measuremem = measuremem
-        pid = os.getpid() if measuremem else None
         super(EnginePerformanceMonitor, self).__init__(
-            operation, pid, autoflush=autoflush)
+            operation, autoflush=autoflush, measuremem=measuremem)
         self.job_id = job_id
         if task:
             self.task = task
