@@ -322,18 +322,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         #         'rcurves-rlzs' in self.datastore):
         #     self.build_loss_maps()
 
-    def clean_up(self):
-        """
-        Final checks and cleanup
-        """
-        if (self.oqparam.ground_motion_fields and
-                'gmf_by_trt_gsim' not in self.datastore):
-            logging.warn(
-                'Even if the flag `ground_motion_fields` was set the GMFs '
-                'were not saved.\nYou should use the event_based hazard '
-                'calculator to do that, not the risk one')
-        super(EventBasedRiskCalculator, self).clean_up()
-
     def build_specific_loss_curves(self, group, kind='loss'):
         ses_ratio = self.oqparam.ses_ratio
         assetcol = self.assetcol[self.spec_indices]
