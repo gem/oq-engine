@@ -4,7 +4,7 @@
 <consequenceModel id="cm-italy" assetCategory="buildings" lossCategory="structural">
 
   <description>Consequence Model - Italy</description>
-  <limitStates>slight moderate collapse</limitStates>
+  <limitStates>slight moderate extreme collapse</limitStates>
 
   <consequenceFunction id="RC" dist="LN">
     <params ls="slight" mean="0.04" stddev="0.00"/>
