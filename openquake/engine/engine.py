@@ -270,6 +270,9 @@ def _do_run_calc(calc, exports):
 
     CacheInserter.flushall()  # flush caches into the db
 
+    if hasattr(calc, 'datastore'):
+        calc.datastore.close()
+
     log_status(job, "complete")
 
 
