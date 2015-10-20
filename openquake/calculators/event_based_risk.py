@@ -23,7 +23,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import AccumDict, humansize
-from openquake.calculators import base, event_based
+from openquake.calculators import base
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import apply_reduce
