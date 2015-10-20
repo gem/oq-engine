@@ -23,7 +23,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import AccumDict, humansize
-from openquake.calculators import base
+from openquake.calculators import base, event_based
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import apply_reduce
@@ -151,7 +151,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     Event based PSHA calculator generating the event loss table and
     fixed ratios loss curves.
     """
-    pre_calculator = 'event_based_rupture'
+    pre_calculator = 'event_based'
     core_func = event_based_risk
 
     epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
