@@ -65,7 +65,7 @@ def export_from_datastore(output_key, output, target):
         raise DataStoreExportError(
             'Nothing to export for %s' % output.ds_key)
     elif len(exported) > 1:
-        archname = output.ds_key.lstrip('/') + '-' + fmt + '.zip'
+        archname = '.' + output.ds_key + '-' + fmt + '.zip'
         zipfiles(exported, os.path.join(target, archname))
         return os.path.join(target, archname)
     else:  # single file
@@ -82,6 +82,7 @@ def export(output_id, target, export_type='xml,geojson,csv'):
     specified `target` directory in the specified `export_type`.
     """
     output = models.Output.objects.get(id=output_id)
+    job_id = output.oq_job.id
     if isinstance(target, basestring):  # create target directory
         makedirs(target)
     for exptype in export_type.split(','):
