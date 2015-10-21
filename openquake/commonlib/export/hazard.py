@@ -240,11 +240,11 @@ class GmfCollection(object):
             yield GmfSet(gmfset[ses_idx], self.investigation_time, ses_idx)
 
 
-def export_gmf_xml(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
+def export_gmf_xml(key, dstore, fname, sitecol, ruptures, gmfs, rlz,
                    investigation_time):
     """
     :param key: output_type and export_type
-    :param export_dir: the directory where to export
+    :param dstore: the datastore
     :param fname: name of the exported file
     :param sitecol: the full site collection
     :param ruptures: an ordered list of ruptures
@@ -252,7 +252,7 @@ def export_gmf_xml(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
     :param rlz: a realization object
     :param investigation_time: investigation time (None for scenario)
     """
-    dest = os.path.join(export_dir, fname)
+    dest = dstore.export_path(fname)
     if hasattr(rlz, 'gsim_rlz'):  # event based
         smltpath = '_'.join(rlz.sm_lt_path)
         gsimpath = rlz.gsim_rlz.uid
@@ -266,11 +266,11 @@ def export_gmf_xml(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
     return {key: [dest]}
 
 
-def export_gmf_csv(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
+def export_gmf_csv(key, dstore, fname, sitecol, ruptures, gmfs, rlz,
                    investigation_time):
     """
     :param key: output_type and export_type
-    :param export_dir: the directory where to export
+    :param dstore: DataStore instance
     :param fname: name of the exported file
     :param sitecol: the full site collection
     :param ruptures: an ordered list of ruptures
@@ -278,7 +278,7 @@ def export_gmf_csv(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
     :param rlz: a realization object
     :param investigation_time: investigation time (None for scenario)
     """
-    dest = os.path.join(export_dir, fname)
+    dest = dstore.export_path(fname)
     imts = list(gmfs[0].dtype.fields)
     # the csv file has the form
     # tag,indices,gmvs_imt_1,...,gmvs_imt_N
@@ -326,8 +326,9 @@ def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
     return {fname: dest}
 
 
-def hazard_curve_name(ekey, kind, rlzs_assoc, sampling):
+def hazard_curve_name(dstore, ekey, kind, rlzs_assoc, sampling):
     """
+    :param calc_id: the calculation ID
     :param ekey: the export key
     :param kind: the kind of key
     :param rlzs_assoc: a RlzsAssoc instance
@@ -339,7 +340,7 @@ def hazard_curve_name(ekey, kind, rlzs_assoc, sampling):
     if kind.startswith('rlz-'):
         rlz_no = int(kind[4:])
         rlz = rlzs_assoc.realizations[rlz_no]
-        fname = build_name(rlz, prefix, fmt, sampling)
+        fname = build_name(dstore, rlz, prefix, fmt, sampling)
     elif kind == 'mean':
         fname = '%s-mean.csv' % prefix
     elif kind.startswith('quantile-'):
@@ -350,10 +351,11 @@ def hazard_curve_name(ekey, kind, rlzs_assoc, sampling):
     return fname
 
 
-def build_name(rlz, prefix, fmt, sampling):
+def build_name(dstore, rlz, prefix, fmt, sampling):
     """
     Build a file name from a realization, by using prefix and extension.
 
+    :param dstore: a DataStore instance
     :param rlz: a realization object
     :param prefix: the prefix to use
     :param fmt: the extension
@@ -368,7 +370,7 @@ def build_name(rlz, prefix, fmt, sampling):
             prefix, smlt_path, rlz.gsim_rlz.uid, suffix, fmt)
     else:  # GSIM logic tree realization used in scenario calculators
         fname = '%s_%s.%s' % (prefix, rlz.uid, fmt)
-    return fname
+    return dstore.export_path(fname)
 
 
 @export.add(('hcurves', 'csv'), ('hmaps', 'csv'), ('uhs', 'csv'))
@@ -386,8 +388,8 @@ def export_hcurves_csv(ekey, dstore):
     fnames = []
     for kind, hcurves in dstore[key].items():
         fname = hazard_curve_name(
-            ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
-        fnames.append(os.path.join(dstore.export_dir, fname))
+            dstore, ekey, kind, rlzs_assoc,
+            oq.number_of_logic_tree_samples)
         if key == 'uhs':
             export_uhs_csv(ekey, dstore.export_dir, fname, sitecol, hcurves)
         else:
@@ -421,7 +423,8 @@ def export_hcurves_xml_json(ekey, dstore):
     for kind, curves in dstore[ekey[0]].items():
         rlz = next(rlzs)
         name = hazard_curve_name(
-            ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
+            dstore.calc_id, ekey, kind, rlzs_assoc,
+            oq.number_of_logic_tree_samples)
         for imt in oq.imtls:
             name_imt = name[:-len_ext] + '-' + imt + '.' + export_type
             fname = os.path.join(dstore.export_dir, name_imt)
@@ -464,10 +467,10 @@ def export_gmf(ekey, dstore):
         if not gmfs:
             continue
         ruptures = [rupture_by_tag[tag] for tag in tags]
-        fname = build_name(rlz, 'gmf', fmt, samples)
-        fnames.append(os.path.join(dstore.export_dir, fname))
+        fname = build_name(dstore, rlz, 'gmf', fmt, samples)
+        fnames.append(fname)
         globals()['export_gmf_%s' % fmt](
-            ('gmf', fmt), dstore.export_dir, fname, sitecol,
+            ('gmf', fmt), dstore, fname, sitecol,
             ruptures, gmfs, rlz, investigation_time)
     return fnames
 

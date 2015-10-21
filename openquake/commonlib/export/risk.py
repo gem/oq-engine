@@ -143,8 +143,7 @@ def export_avg_losses(ekey, dstore):
         .split()
     fnames = []
     for rlz, losses in zip(rlzs, avg_losses):
-        dest = os.path.join(
-            dstore.export_dir, 'rlz-%03d-avg_loss.csv' % rlz.ordinal)
+        dest = dstore.export_path('rlz-%03d-avg_loss.csv' % rlz.ordinal)
         data = compose_arrays(assets, losses)
         writers.write_csv(dest, data, fmt='%10.6E', header=columns)
         fnames.append(dest)
@@ -256,13 +255,13 @@ def export_damage(ekey, dstore):
                         ExposureData(aref, site), dmg_states[ds],
                         dist['mean'][ds], dist['stddev'][ds]))
 
-        f1 = export_dmg_xml(('dmg_dist_per_asset', 'xml'), dstore.export_dir,
+        f1 = export_dmg_xml(('dmg_dist_per_asset', 'xml'), dstore,
                             dmg_states, dd_asset, suffix)
         max_damage = dmg_states[-1]
         # the collapse map is extracted from the damage distribution per asset
         # (dda) by taking the value corresponding to the maximum damage
         collapse_map = [dda for dda in dd_asset if dda.dmg_state == max_damage]
-        f2 = export_dmg_xml(('collapse_map', 'xml'), dstore.export_dir,
+        f2 = export_dmg_xml(('collapse_map', 'xml'), dstore,
                             dmg_states, collapse_map, suffix)
         fnames.extend(sum((f1 + f2).values(), []))
     return sorted(fnames)
@@ -296,7 +295,7 @@ def export_damage_taxon(ekey, dstore):
                         dist['mean'][ds], dist['stddev'][ds]))
 
         f = export_dmg_xml(('dmg_dist_per_taxonomy', 'xml'),
-                           dstore.export_dir, dmg_states, dd_taxo, suffix)
+                           dstore, dmg_states, dd_taxo, suffix)
         fnames.extend(sum(f.values(), []))
     return sorted(fnames)
 
@@ -323,7 +322,7 @@ def export_damage_total(ekey, dstore):
             dd_total.append(DmgDistTotal(
                 dmg_states[ds], dist['mean'][ds], dist['stddev'][ds]))
 
-        f = export_dmg_xml(('dmg_dist_total', 'xml'), dstore.export_dir,
+        f = export_dmg_xml(('dmg_dist_total', 'xml'), dstore,
                            dmg_states, dd_total, suffix)
         fnames.extend(sum(f.values(), []))
     return sorted(fnames)
@@ -337,7 +336,7 @@ def export_csq_csv(ekey, dstore):
     fnames = []
     for rlz, values in zip(rlzs, value.T):
         suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
-        fname = os.path.join(dstore.export_dir, ekey[0] + suffix)
+        fname = dstore.export_path(ekey[0] + suffix)
         writers.write_csv(fname, values)
         fnames.append(fname)
     return fnames
@@ -351,20 +350,20 @@ def export_csq_total_csv(ekey, dstore):
     fnames = []
     for rlz, values in zip(rlzs, value):
         suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
-        fname = os.path.join(dstore.export_dir, ekey[0] + suffix)
+        fname = dstore.export_path(ekey[0] + suffix)
         writers.write_csv(fname, numpy.array([values], value.dtype))
         fnames.append(fname)
     return fnames
 
 
-def export_dmg_xml(key, export_dir, damage_states, dmg_data, suffix):
+def export_dmg_xml(key, dstore, damage_states, dmg_data, suffix):
     """
     Export damage outputs in XML format.
 
     :param key:
         dmg_dist_per_asset|dmg_dist_per_taxonomy|dmg_dist_total|collapse_map
-    :param export_dir:
-        the export directory
+    :param dstore:
+        the datastore
     :param damage_states:
         the list of damage states
     :param dmg_data:
@@ -372,7 +371,7 @@ def export_dmg_xml(key, export_dir, damage_states, dmg_data, suffix):
     :param suffix:
         a suffix specifying the GSIM realization
     """
-    dest = os.path.join(export_dir, '%s%s.%s' % (key[0], suffix, key[1]))
+    dest = dstore.export_path('%s%s.%s' % (key[0], suffix, key[1]))
     risk_writers.DamageWriter(damage_states).to_nrml(key[0], dmg_data, dest)
     return AccumDict({key: [dest]})
 
@@ -388,22 +387,21 @@ def export_classical_damage_csv(ekey, dstore):
         damages = damages_by_rlz[rlz.ordinal]
         fname = 'damage_%d.csv' % rlz.ordinal
         fnames.append(
-            _export_classical_damage_csv(
-                dstore.export_dir, fname, dmg_states, damages))
+            _export_classical_damage_csv(dstore, fname, dmg_states, damages))
     return fnames
 
 
-def _export_classical_damage_csv(export_dir, fname, damage_states,
+def _export_classical_damage_csv(dstore, fname, damage_states,
                                  fractions_by_asset):
     """
     Export damage fractions in CSV.
 
-    :param export_dir: the export directory
+    :param dstore: the datastore
     :param fname: the name of the exported file
     :param damage_states: the damage states
     :fractions_by_asset: a dictionary with the fractions by asset
     """
-    dest = os.path.join(export_dir, fname)
+    dest = dstore.export_path(fname)
     with open(dest, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter='|', lineterminator='\n')
         writer.writerow(['asset_ref'] + [ds.dmg_state for ds in damage_states])
@@ -444,8 +442,7 @@ def export_avglosses(ekey, dstore):
                 rlz.uid, lt)
             losses = [PerAssetLoss(lt, unit, ass, stat['mean'], stat['stddev'])
                       for ass, stat in zip(assets, alosses[:, r])]
-            out = export_loss_csv(
-                ('avg', 'csv'), dstore.export_dir, losses, suffix)
+            out = export_loss_csv(('avg', 'csv'), dstore, losses, suffix)
             fnames.append(out)
     return sorted(fnames)
 
@@ -484,8 +481,8 @@ def export_lossmaps_xml_geojson(ekey, dstore):
             unit = unit_by_lt[lt]
             suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
                 rlz.uid, lt)
-            fname = os.path.join(
-                dstore.export_dir, '%s%s.%s' % (ekey[0], suffix, ekey[1]))
+            name = '%s%s.%s' % (ekey[0], suffix, ekey[1])
+            fname = dstore.export_path(name)
             data = []
             for ass, stat in zip(assetcol, alosses[:, r]):
                 loc = Location(sitemesh[ass['site_id']])
@@ -520,22 +517,21 @@ def export_agglosses(ekey, dstore):
                 rlz.uid, lt)
             loss = agglosses[r][lt]
             losses = [AggLoss(lt, unit, loss['mean'], loss['stddev'])]
-            out = export_loss_csv(
-                ('agg', 'csv'), dstore.export_dir, losses, suffix)
+            out = export_loss_csv(('agg', 'csv'), dstore, losses, suffix)
             fnames.append(out)
     return sorted(fnames)
 
 
-def export_loss_csv(key, export_dir, data, suffix):
+def export_loss_csv(key, dstore, data, suffix):
     """
     Export (aggregate) losses in CSV.
 
     :param key: per_asset_loss|asset-ins
-    :param export_dir: the export directory
+    :param dstore: the datastore
     :param data: a list [(loss_type, unit, asset_ref, mean, stddev), ...]
     :param suffix: a suffix specifying the GSIM realization
     """
-    dest = os.path.join(export_dir, '%s%s.%s' % (key[0], suffix, key[1]))
+    dest = dstore.export_path('%s%s.%s' % (key[0], suffix, key[1]))
     if key[0] in ('agg', 'ins'):  # aggregate
         header = ['LossType', 'Unit', 'Mean', 'Standard Deviation']
     else:
