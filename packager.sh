@@ -542,7 +542,7 @@ _pkgtest_innervm_run () {
             fi
         done
 
-        for demo_dir in \$(find . -mindepth 1 -maxdepth 1 -type d | sort); do
+        for demo_dir in \$(find . -type d | sort); do
             if [ -f \$demo_dir/job_hazard.ini ]; then
             cd \$demo_dir
             echo \"Running \$demo_dir/job_hazard.ini\"
