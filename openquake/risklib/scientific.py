@@ -525,7 +525,8 @@ class FragilityFunctionDiscrete(object):
                     no_damage_limit=self.no_damage_limit)
 
     def __eq__(self, other):
-        return (self.poes == other.poes and self.imls == other.imls)
+        return (self.poes == other.poes and self.imls == other.imls
+                and self.no_damage_limit == other.no_damage_limit)
 
     def __ne__(self, other):
         return not self == other
