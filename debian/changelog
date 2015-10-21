@@ -1,6 +1,6 @@
   [Michele Simionato]
   * Made customizable the display_name of datastore outputs (before it was
-    identical to the output type)
+    identical to the datastore key)
   * The zip files generated for internal use of the Web UI are now hidden
   * Made visible to the engine db only the exportable outputs of the datastore
   * Closed explicitly the datastore after each calculation
