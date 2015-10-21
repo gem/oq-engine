@@ -65,6 +65,9 @@ def export_from_datastore(output_key, output, target):
         raise DataStoreExportError(
             'Nothing to export for %s' % output.ds_key)
     elif len(exported) > 1:
+        # NB: I am hiding the archive by putting a '.' in front
+        # to now confuse the users; the archive is used internally
+        # by the WebUI so it must be there
         archname = '.' + output.ds_key + '-' + fmt + '.zip'
         zipfiles(exported, os.path.join(target, archname))
         return os.path.join(target, archname)
