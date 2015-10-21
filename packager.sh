@@ -420,12 +420,9 @@ _pkgtest_innervm_run () {
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run selected demos
-        ssh $lxc_ip "set -e; cd /usr/share/doc/python-oq-risklib/examples/demos
+        ssh $lxc_ip "set -e; cd /usr/share/doc/python-oq-risklib/examples/demos/risk
         echo 'running the report tool'
-        oq-lite info --report SimpleFaultSourceClassicalPSHA/job.ini
-
-        echo 'running SimpleFaultSourceClassicalPSHA...'
-        oq-lite run SimpleFaultSourceClassicalPSHA/job.ini
+        oq-lite info --report ClassicalRisk/job_hazard.ini
 
         echo 'running ClassicalRisk...'
         oq-lite run ClassicalRisk/job_hazard.ini,ClassicalRisk/job_risk.ini
@@ -433,6 +430,7 @@ _pkgtest_innervm_run () {
         echo 'running ScenarioDamage...'
         oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini
         oq-lite export -1 dmg_by_asset xml /tmp
+
         echo 'running ScenarioRisk...'
         oq-lite run ScenarioRisk/job_hazard.ini,ScenarioRisk/job_risk.ini
         oq-lite show -1 agglosses > /tmp/agglosses.csv
