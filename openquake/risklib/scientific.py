@@ -525,7 +525,8 @@ class FragilityFunctionDiscrete(object):
                     no_damage_limit=self.no_damage_limit)
 
     def __eq__(self, other):
-        return (self.poes == other.poes and self.imls == other.imls)
+        return (self.poes == other.poes and self.imls == other.imls
+                and self.no_damage_limit == other.no_damage_limit)
 
     def __ne__(self, other):
         return not self == other
@@ -587,21 +588,17 @@ def build_imls(ff, continuous_fragility_discretization,
     is continuous, they are produced simply as a linear space between minIML
     and maxIML. If the function is discrete, they are generated with a
     complex logic depending on the noDamageLimit and the parameter
-    steps per interval. A flag `add_zero` is also returned, which is
-    True only if the fragility function is discrete and there is a
-    sensible noDamageLimit value.
+    steps per interval.
 
     :param ff: a fragility function object
     :param continuous_fragility_discretization: .ini file parameter
     :param steps_per_interval:  .ini file parameter
-    :returns: a pair (generated imls, add_zero flag)
+    :returns: generated imls
     """
-    add_zero = False
     if ff.format == 'discrete':
         imls = ff.imls
         if ff.nodamage is not None and ff.nodamage < imls[0]:
             imls = [ff.nodamage] + imls
-            add_zero = True
         if steps_per_interval:
             gen_imls = fine_graining(imls, steps_per_interval)
         else:
@@ -609,7 +606,7 @@ def build_imls(ff, continuous_fragility_discretization,
     else:  # continuous
         gen_imls = numpy.linspace(ff.minIML, ff.maxIML,
                                   continuous_fragility_discretization)
-    return gen_imls, add_zero
+    return gen_imls
 
 
 # this is meant to be instantiated by riskmodels.get_fragility_model
@@ -651,11 +648,11 @@ class FragilityModel(dict):
         newfm = copy.copy(self)
         for imt_taxo, ff in self.items():
             newfm[imt_taxo] = new = copy.copy(ff)
-            # TODO: this is horribly complicated and perhaps wrong:
-            # check with Anirudh
-            imls, add_zero = build_imls(
-                new, continuous_fragility_discretization)
-            new.imls, add_zero = build_imls(
+            # TODO: this is complicated and perhaps wrong: check with Anirudh
+            add_zero = (ff.format == 'discrete' and ff.nodamage is not None
+                        and ff.nodamage < ff.imls[0])
+            imls = build_imls(new, continuous_fragility_discretization)
+            new.imls = build_imls(
                 new, continuous_fragility_discretization, steps_per_interval)
             range_ls = range(len(ff))
             for i, ls, data in zip(range_ls, self.limitStates, ff):
