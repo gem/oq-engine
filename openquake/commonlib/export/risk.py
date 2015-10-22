@@ -16,7 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import csv
 import operator
 import itertools
@@ -29,6 +28,7 @@ from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers, riskmodels
 from openquake.commonlib.writers import scientificformat
 from openquake.commonlib.oqvalidation import OqParam
+from openquake.commonlib.export import export_csv
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
@@ -354,6 +354,10 @@ def export_csq_total_csv(ekey, dstore):
         writers.write_csv(fname, numpy.array([values], value.dtype))
         fnames.append(fname)
     return fnames
+
+
+export.add(('dmg_by_asset', 'csv'), ('dmg_by_taxon', 'csv'),
+           ('dmg_total', 'csv'))(export_csv)
 
 
 def export_dmg_xml(key, dstore, damage_states, dmg_data, suffix):
