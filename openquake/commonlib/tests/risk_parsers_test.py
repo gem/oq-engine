@@ -31,19 +31,6 @@ def get_example(fname):
 
 class ExposureModelParserTestCase(unittest.TestCase):
 
-    @unittest.skip
-    def test_schema_validation(self):
-        invalid_exposure = """\
-<?xml version='1.0' encoding='utf-8'?>
-  <nrml xmlns:gml="http://www.opengis.net/gml"
-    xmlns="http://openquake.org/xmlns/nrml/0.4">
-    <exposureModel id="ep1"/>
-</nrml>
-"""
-
-        self.assertRaises(InvalidFile, parsers.ExposureModelParser,
-                          io.BytesIO(invalid_exposure))
-
     def test_parsing(self):
         exposure = """\
 <?xml version='1.0' encoding='utf-8'?>
