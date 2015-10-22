@@ -182,12 +182,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
                 ekey = (key, fmt)
-                try:
-                    exported[ekey] = sorted(
-                        export.export(ekey, self.datastore))
-                    logging.info('exported %s: %s', key, exported[ekey])
-                except KeyError:
-                    logging.info('%s is not exportable in %s', key, fmt)
+                if ekey not in export.export:  # non-exportable output
+                    continue
+                exported[ekey] = export.export(ekey, self.datastore)
+                logging.info('exported %s: %s', key, exported[ekey])
         return exported
 
     def clean_up(self):

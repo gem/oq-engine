@@ -37,8 +37,7 @@ def export_csv(ekey, dstore):
         return []  # write a custom exporter in this case
     if len(array.shape) == 1:  # vector
         array = array.reshape((len(array), 1))
-    dest = os.path.join(dstore.export_dir, name)
-    return [write_csv(dest, array)]
+    return [write_csv(dstore.export_path(name), array)]
 
 
 def get_export_csv(ekey):
