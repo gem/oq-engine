@@ -85,7 +85,6 @@ def export(output_id, target, export_type='xml,geojson,csv'):
     specified `target` directory in the specified `export_type`.
     """
     output = models.Output.objects.get(id=output_id)
-    job_id = output.oq_job.id
     if isinstance(target, basestring):  # create target directory
         makedirs(target)
     for exptype in export_type.split(','):
