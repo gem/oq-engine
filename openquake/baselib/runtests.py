@@ -48,7 +48,8 @@ class TestResult(unittest.TextTestResult):
         with open(fname, 'w') as f:
             for name, value in items:
                 f.write('%s %s\n' % (name, value))
-        print('Saved times in', fname)
+        print(''.join(open(fname).readlines()[:20]))
+        print('Saved times in ' + fname)
 
 unittest.TextTestRunner.resultclass = TestResult
 
