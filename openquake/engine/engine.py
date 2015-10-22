@@ -435,6 +435,9 @@ def run_job_lite(cfg_file, log_level, log_file, exports='',
             sys.exit('Calculation %s failed' % job.id)
     return job
 
+DISPLAY_NAME = dict(
+    dmg_by_asset='dmg_by_asset_and_collapse_map')
+
 
 def expose_outputs(dstore, job):
     """
@@ -448,7 +451,7 @@ def expose_outputs(dstore, job):
     for key in dstore:
         if key in exportable:
             out = models.Output.objects.create_output(
-                job, key, output_type='datastore')
+                job, DISPLAY_NAME.get(key, key), output_type='datastore')
             out.ds_key = key
             out.save()
 
