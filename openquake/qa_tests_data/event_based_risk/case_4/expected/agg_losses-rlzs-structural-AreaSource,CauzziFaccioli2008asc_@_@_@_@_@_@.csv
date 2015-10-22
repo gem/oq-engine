@@ -1,0 +1,18 @@
+rupture_tag,aggregate_loss,insured_loss
+col=05~ses=0001~src=AS_TRAS334-149~rup=005-01,1.2725792E+05,      NAN
+col=05~ses=0001~src=AS_TRAS334-155~rup=001-01,2.3611938E+05,      NAN
+col=05~ses=0001~src=AS_TRAS334-160~rup=031-01,4.0513442E+06,      NAN
+col=05~ses=0001~src=AS_TRAS360-0~rup=007-01,1.8012972E+06,      NAN
+col=05~ses=0001~src=AS_TRAS360-107~rup=013-01,6.6219519E+05,      NAN
+col=05~ses=0001~src=AS_TRAS360-138~rup=007-01,3.0798925E+05,      NAN
+col=05~ses=0001~src=AS_TRAS360-91~rup=003-01,1.8516046E+06,      NAN
+col=05~ses=0001~src=AS_TRAS395-23~rup=001-01,3.7246887E+04,      NAN
+col=05~ses=0001~src=AS_TRAS395-65~rup=004-01,8.0316992E+04,      NAN
+col=05~ses=0001~src=AS_TRAS395-83~rup=029-01,1.6778254E+06,      NAN
+col=05~ses=0001~src=AS_TRAS395-84~rup=004-01,3.3156497E+05,      NAN
+col=05~ses=0001~src=AS_TRAS395-88~rup=003-01,2.8845109E+05,      NAN
+col=05~ses=0001~src=AS_TRAS395-90~rup=017-01,2.9137241E+05,      NAN
+col=05~ses=0001~src=AS_TRAS410-35~rup=001-01,8.4915215E+03,      NAN
+col=05~ses=0001~src=AS_TRAS410-50~rup=011-01,2.2658766E+05,      NAN
+col=05~ses=0001~src=AS_TRAS410-52~rup=006-01,1.7738069E+05,      NAN
+col=05~ses=0001~src=AS_TRAS458-30~rup=041-01,3.7951438E+03,      NAN

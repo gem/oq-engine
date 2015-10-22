@@ -95,7 +95,7 @@ def get_assets_sites(dstore):
     return numpy.array(rows, asset_dt)
 
 
-def extract_outputs(dkey, dstore, root='', ext=''):
+def extract_outputs(dkey, dstore, ext=''):
     """
     An utility to extract outputs ordered by loss types from a datastore
     containing nested structures as follows:
@@ -114,15 +114,14 @@ def extract_outputs(dkey, dstore, root='', ext=''):
     """
     group = dstore[dkey]
     dashkey = dkey.replace('/', '-')
-    if root and not root.endswith('/'):
-        root += '/'
     if ext and not ext.startswith('.'):
         ext = '.' + ext
     outputs = []
     for ltype in sorted(group):
         subgroup = group[ltype]
         for key in subgroup:
-            path = '%s%s-%s-%s%s' % (root, dashkey, ltype, key, ext)
+            path = dstore.export_path(
+                '%s-%s-%s%s' % (dashkey, ltype, key, ext))
             outputs.append(Output(ltype, path, subgroup[key][:]))
     return outputs
 
@@ -157,7 +156,7 @@ def export_avglosses_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    outs = extract_outputs(ekey[0], dstore, dstore.export_dir, ekey[1])
+    outs = extract_outputs(ekey[0], dstore, ekey[1])
     sitemesh = dstore['sitemesh']
     assetcol = dstore['assetcol']
     header = ['lon', 'lat', 'asset_ref', 'asset_value', 'average_loss',
@@ -187,7 +186,7 @@ def export_avglosses_csv(ekey, dstore):
 )
 def export_ebr(ekey, dstore):
     assets = get_assets_sites(dstore)
-    outs = extract_outputs(ekey[0], dstore, dstore.export_dir, ekey[1])
+    outs = extract_outputs(ekey[0], dstore, ekey[1])
     for out in outs:
         writers.write_csv(
             out.path, compose_arrays(assets, out.array), fmt='%9.7E')
@@ -205,7 +204,7 @@ def export_ebr(ekey, dstore):
 def export_ebr_specific(ekey, dstore):
     all_assets = get_assets_sites(dstore)
     spec_assets = all_assets[dstore['spec_indices'].value]
-    outs = extract_outputs(ekey[0], dstore, dstore.export_dir, ekey[1])
+    outs = extract_outputs(ekey[0], dstore, ekey[1])
     for out in outs:
         arr = compose_arrays(spec_assets, out.array)
         writers.write_csv(out.path, arr, fmt='%9.7E')
@@ -215,7 +214,7 @@ def export_ebr_specific(ekey, dstore):
 @export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'))
 def export_agg_losses(ekey, dstore):
     tags = dstore['tags']
-    outs = extract_outputs(ekey[0], dstore, dstore.export_dir, ekey[1])
+    outs = extract_outputs(ekey[0], dstore, ekey[1])
     header = ['rupture_tag', 'aggregate_loss', 'insured_loss']
     for out in outs:
         data = [[tags[rec['rup_id']], rec['loss'], rec['ins_loss']]
