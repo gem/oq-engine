@@ -16,7 +16,7 @@ install:
   - pip install http://ftp.openquake.org/python-wheels/scipy-0.16.0-cp27-none-linux_x86_64.whl
   - pip install http://ftp.openquake.org/python-wheels/Cython-0.22.1-cp27-none-linux_x86_64.whl
   - pip install http://ftp.openquake.org/python-wheels/Shapely-1.5.9-py2-none-any.whl
-  - pip install http://ftp.openquake.org/python-wheels/h5py-2.5.0-cp27-none-linux_x86_64.whl
+  - pip install http://ftp.openquake.org/python-wheels/h5py-2.2.1-cp27-none-linux_x86_64.whl
   - pip install https://github.com/gem/oq-hazardlib/archive/master.zip
 
 script:
