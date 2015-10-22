@@ -47,11 +47,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # case with two gsims
         out = self.run_calc(case_6a.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
-        fnames = out['agglosses', 'csv']
-        # comparing agg-gsimltp_b1.csv and agg-gsimltp_b2.csv
-        for fname in fnames:
-            expected = os.path.join('expected', os.path.basename(fname))
-            self.assertEqualFiles(expected, fname)
+        f1, f2 = out['agglosses', 'csv']
+        self.assertEqualFiles('expected/agg-gsimltp_b1_structural.csv', f1)
+        self.assertEqualFiles('expected/agg-gsimltp_b2_structural.csv', f2)
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_1g(self):
