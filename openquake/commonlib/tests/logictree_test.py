@@ -181,8 +181,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
 
     # FIXME: the logic tree validation must be rewritten
     # see https://bugs.launchpad.net/oq-engine/+bug/1323916
-    @unittest.skip
     def test_logictree_schema_violation(self):
+        raise unittest.SkipTest
         source = _make_nrml("""\
             <logicTreeSet>
                 <logicTree logicTreeID="lt1"/>
@@ -498,8 +498,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
 
     # FIXME: the logic tree validation must be rewritten
     # see https://bugs.launchpad.net/oq-engine/+bug/1323916
-    @unittest.skip
     def test_source_model_schema_violation(self):
+        raise unittest.SkipTest
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
