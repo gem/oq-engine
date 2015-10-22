@@ -20,7 +20,7 @@ Core functionality for the classical PSHA risk calculator.
 import itertools
 
 from openquake.engine.calculators.risk import (
-    base, hazard_getters, validation, writers)
+    base, hazard_getters, writers)
 from openquake.engine.calculators import calculators
 
 
@@ -91,7 +91,7 @@ def save_individual_outputs(outputdict, outs, params):
 
     outputdict.write_all(
         "poe", params.conditional_loss_poes,
-        outs.loss_maps,
+        outs.loss_map,
         outs.assets,
         output_type="loss_map")
 
