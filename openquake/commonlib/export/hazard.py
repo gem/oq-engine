@@ -423,8 +423,7 @@ def export_hcurves_xml_json(ekey, dstore):
     for kind, curves in dstore[ekey[0]].items():
         rlz = next(rlzs)
         name = hazard_curve_name(
-            dstore.calc_id, ekey, kind, rlzs_assoc,
-            oq.number_of_logic_tree_samples)
+            dstore, ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
         for imt in oq.imtls:
             name_imt = name[:-len_ext] + '-' + imt + '.' + export_type
             fname = os.path.join(dstore.export_dir, name_imt)
