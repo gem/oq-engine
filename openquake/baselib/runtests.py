@@ -67,6 +67,6 @@ unittest.BaseTestSuite.addTest = addTest
 
 if __name__ == '__main__':
     import sys
-    for pkgname in sys.argv[1:]:
-        suite = TestLoader().loadTestsFromNames([pkgname])
-        unittest.TextTestRunner(verbosity=2).run(suite).save_times(pkgname)
+    pkgnames = sys.argv[1]  # comma separated package names
+    suite = TestLoader().loadTestsFromNames([pkgnames])
+    unittest.TextTestRunner(verbosity=2).run(suite).save_times(pkgnames)
