@@ -18,8 +18,7 @@ install:
   - pip install http://ftp.openquake.org/python-wheels/Shapely-1.5.9-py2-none-any.whl
   - pip install http://ftp.openquake.org/python-wheels/h5py-2.5.0-cp27-none-linux_x86_64.whl
   - pip install https://github.com/gem/oq-hazardlib/archive/master.zip
-  - python setup.py develop
 
 script:
-  - find . -name \*_test.py| parallel 'nosetests -xv -a"!slow"'
+  - python setup.py test
 
