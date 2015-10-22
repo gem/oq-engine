@@ -51,7 +51,7 @@ setup(
         'numpy',
         'scipy',
         'decorator',
-        'psutil >= 0.4.1, <= 1.2.1',
+        'psutil >= 0.4.1, <= 2.1.1',
     ],
     author='GEM Foundation',
     author_email='devops@openquake.org',
@@ -77,6 +77,6 @@ setup(
     namespace_packages=['openquake'],
     include_package_data=True,
     test_loader='openquake.baselib.runtests:TestLoader',
-    test_suite='openquake.risklib,openquake.commonlib',
+    test_suite='openquake.risklib,openquake.commonlib,openquake.calculators',
     zip_safe=False,
 )
