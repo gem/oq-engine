@@ -380,10 +380,6 @@ class BranchSet(object):
             # source didn't pass the filter
             return
 
-        #if not isinstance(source.mfd, openquake.hazardlib.mfd.TruncatedGRMFD):
-            # source's mfd is not gutenberg-richter
-        #    return
-
         self._apply_uncertainty_to_mfd(source.mfd, value)
 
     def _apply_uncertainty_to_mfd(self, mfd, value):
@@ -402,6 +398,7 @@ class BranchSet(object):
 
         elif self.uncertainty_type == 'maxMagGRAbsolute':
             mfd.modify('set_max_mag', dict(value=value))
+
         elif self.uncertainty_type == 'incrementalMFDAbsolute':
             min_mag, bin_width, occur_rates = value
             mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,

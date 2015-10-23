@@ -1220,8 +1220,6 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
                                      'occurrence_rates': [0.01, 0.005]}),  {})]
         )
 
-    
-
     def test_apply_uncertainty_unknown_uncertainty_type(self):
         bs = logictree.BranchSet('makeMeFeelGood', {})
         self.assertRaises(AssertionError,
@@ -1305,22 +1303,6 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         self.assertEqual(inc_point_source.mfd.bin_width, 0.1)
         self.assertEqual(inc_point_source.mfd.occurrence_rates[0], 0.05)
         self.assertEqual(inc_point_source.mfd.occurrence_rates[1], 0.01)
-
-#
-#
-#
-#        
-#
-#    def test_ignore_non_gr_mfd(self):
-#        uncertainties = [('maxMagGRAbsolute', 10),
-#                         ('abGRAbsolute', (-1, 0.3))]
-#        source = self.point_source
-#        source.mfd = EvenlyDiscretizedMFD(min_mag=3, bin_width=1,
-#                                          occurrence_rates=[1, 2, 3])
-#        source.mfd.modify = lambda *args, **kwargs: self.fail()
-#        for uncertainty, value in uncertainties:
-#            branchset = logictree.BranchSet(uncertainty, {})
-#            branchset.apply_uncertainty(value, source)
 
 
 class BranchSetFilterTestCase(unittest.TestCase):
