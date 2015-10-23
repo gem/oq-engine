@@ -88,7 +88,7 @@ def get_calc_ids(datadir=DATADIR):
         return []
     calc_ids = []
     for f in os.listdir(DATADIR):
-        mo = re.match('calc_(\d+)', f)
+        mo = re.match(r'calc_(\d+)\.hdf5', f)
         if mo:
             calc_ids.append(int(mo.group(1)))
     return sorted(calc_ids)
@@ -150,13 +150,7 @@ class Hdf5Dataset(object):
 class DataStore(collections.MutableMapping):
     """
     DataStore class to store the inputs/outputs of each calculation on the
-    filesystem. It works like a mapping; composite keys ending with
-    "h5" are associated to .hdf5 files; other keys are associated
-    to .pik files containing pickled objects.
-
-    NB: the calc_dir is created only at the first attempt to write on it,
-    so there is potentially a race condition if the client code does not pass
-    an unique calc_id and relies on the DataStore to create it.
+    filesystem.
 
     Here is a minimal example of usage:
 
@@ -166,12 +160,8 @@ class DataStore(collections.MutableMapping):
     [(u'example', 'hello world')]
     >>> ds.clear()
 
-    It possible to store numpy arrays in HDF5 format, if the library h5py is
-    installed and if the last field of the key is 'h5'. It is also possible
-    to store items of the form (name, value) where name is a string and value
-    is an array, and the last field of the key is 'hdf5'. When reading the
-    items, the DataStore will return a generator. The items will be ordered
-    lexicographically according to their name.
+    When reading the items, the DataStore will return a generator. The
+    items will be ordered lexicographically according to their name.
     """
     def __init__(self, calc_id=None, datadir=DATADIR, parent=(),
                  export_dir='.', params=()):
@@ -191,10 +181,8 @@ class DataStore(collections.MutableMapping):
         self.parent = parent  # parent datastore (if any)
         self.datadir = datadir
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
-        if not os.path.exists(self.calc_dir):
-            os.mkdir(self.calc_dir)
         self.export_dir = export_dir
-        self.hdf5path = os.path.join(self.calc_dir, 'output.hdf5')
+        self.hdf5path = self.calc_dir + '.hdf5'
         mode = 'r+' if os.path.exists(self.hdf5path) else 'w'
         self.hdf5 = h5py.File(self.hdf5path, mode, libver='latest')
         self.attrs = self.hdf5.attrs
@@ -251,7 +239,7 @@ class DataStore(collections.MutableMapping):
     def clear(self):
         """Remove the datastore from the file system"""
         self.close()
-        shutil.rmtree(self.calc_dir)
+        os.remove(self.hdf5path)
 
     def getsize(self, key=None):
         """

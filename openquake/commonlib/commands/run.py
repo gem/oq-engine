@@ -69,8 +69,7 @@ def run(job_ini, concurrent_tasks=None, pdb=None,
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
     monitor.flush()
-    print('See the output with hdfview %s/output.hdf5' %
-          calc.datastore.calc_dir)
+    print('See the output with hdfview %s' % calc.datastore.hdf5path)
     return calc
 
 parser = sap.Parser(run)
