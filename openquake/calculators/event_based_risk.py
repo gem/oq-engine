@@ -145,6 +145,10 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                 result[idx] = [sum(lst, AccumDict())]
         else:
             result[idx] = []
+
+    # NB: don't return back large amounts of data
+    delattr(monitor, 'assets_by_site')
+    delattr(monitor, 'eps_dict')
     return result
 
 
