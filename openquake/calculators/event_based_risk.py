@@ -71,9 +71,12 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         a single array of dtype elt_dt, or an empty list
     """
     lti = riskmodel.lti  # loss type -> index
+    L, R = len(lti), len(rlzs_assoc.realizations)
     specific_assets = monitor.oqparam.specific_assets
-    result = cube(
-        monitor.num_outputs, len(lti), len(rlzs_assoc.realizations), list)
+    result = cube(monitor.num_outputs, L, R, list)
+    for l in range(L):
+        for r in range(R):
+            result[AVGLOSS, l, r] = numpy.zeros((monitor.num_assets, 2))
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         rup_slice = out_by_rlz.rup_slice
         rup_ids = list(range(rup_slice.start, rup_slice.stop))
@@ -122,11 +125,11 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                 # the order in which the tasks are run, which is random
                 # i.e. at each run one may get different results!!
                 arr[aid] = [avgloss, ins_avgloss]
-            result[AVGLOSS, l, out.hid].append(arr)
+            result[AVGLOSS, l, out.hid] += arr
 
     for idx, lst in numpy.ndenumerate(result):
         o, l, r = idx
-        if lst:
+        if len(lst):
             if o == AGGLOSS:
                 acc = collections.defaultdict(float)
                 for rupt, loss in lst:
@@ -135,7 +138,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                                             for rup, loss in acc.items()],
                                            elt_dt)]
             elif o == AVGLOSS:
-                result[idx] = [sum(lst)]
+                result[idx] = [lst]
             elif o == SPECLOSS:
                 result[idx] = [numpy.array(lst, ela_dt)]
             else:  # risk curves
