@@ -380,9 +380,9 @@ class BranchSet(object):
             # source didn't pass the filter
             return
 
-        if not isinstance(source.mfd, openquake.hazardlib.mfd.TruncatedGRMFD):
+        #if not isinstance(source.mfd, openquake.hazardlib.mfd.TruncatedGRMFD):
             # source's mfd is not gutenberg-richter
-            return
+        #    return
 
         self._apply_uncertainty_to_mfd(source.mfd, value)
 
@@ -402,7 +402,10 @@ class BranchSet(object):
 
         elif self.uncertainty_type == 'maxMagGRAbsolute':
             mfd.modify('set_max_mag', dict(value=value))
-
+        elif self.uncertainty_type == 'incrementalMFDAbsolute':
+            min_mag, bin_width, occur_rates = value
+            mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
+                                       occurrence_rates=occur_rates))
         else:
             raise AssertionError('unknown uncertainty type %r'
                                  % self.uncertainty_type)
@@ -759,6 +762,10 @@ class SourceModelLogicTree(BaseLogicTree):
         elif branchset.uncertainty_type == 'abGRAbsolute':
             [a, b] = value.strip().split()
             return float(a), float(b)
+        elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
+            min_mag, bin_width, rates = value.strip().split(',')
+            return float(min_mag), float(bin_width),\
+                valid.positivefloats(rates)
         else:
             return float(value)
 
@@ -791,6 +798,21 @@ class SourceModelLogicTree(BaseLogicTree):
             raise ValidationError(
                 node, self.filename,
                 'expected a pair of floats separated by space'
+            )
+        elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
+            mbr = value.split(',')
+            if len(mbr) == 3:
+                min_mag, bin_width, rates = mbr
+                try:
+                    rates = positivefloat(rates)
+                except:
+                    rates = []
+                if _float_re.match(min_mag) and _float_re.match(bin_width) and\
+                    len(rates):
+                    return
+            raise ValidationError(
+                node, self.filename,
+                'expected mfd in the form min_mag,bin_width,rate_1 rate_2 ...'
             )
         else:
             if not _float_re.match(value):

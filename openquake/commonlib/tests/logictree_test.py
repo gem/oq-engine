@@ -476,6 +476,38 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.message, 'expected single float value',
                          "wrong exception message: %s" % exc.message)
 
+    def test_incremental_mfd_absolute_wrong_format(self):
+        lt = _make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+              <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="incrementalMFDAbsolute"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>8.0,0.1,belgium 0.05</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
+                                            logictree.ValidationError)
+        self.assertEqual(exc.lineno, 15)
+        self.assertEqual(
+            exc.message, 
+            'expected mfd in the form min_mag,bin_width,rate_1 rate_2 ...',
+            "wrong exception message: %s" % exc.message)
+
     def test_source_model_invalid_xml(self):
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
@@ -1177,6 +1209,19 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
         self.assertEqual(mfd.method_calls,
                          [('modify', ('set_max_mag', {'value': 55}), {})])
 
+    def test_apply_uncertainty_incremental_mfd_absolute(self):
+        mfd = Mock()
+        bs = logictree.BranchSet('incrementalMFDAbsolute', {})
+        bs._apply_uncertainty_to_mfd(mfd, (8.0, 0.1, [0.01, 0.005]))
+        self.assertEqual(
+            mfd.method_calls,
+            [('modify', ('set_mfd', {'min_mag': 8.0,
+                                     'bin_width': 0.1,
+                                     'occurrence_rates': [0.01, 0.005]}),  {})]
+        )
+
+    
+
     def test_apply_uncertainty_unknown_uncertainty_type(self):
         bs = logictree.BranchSet('makeMeFeelGood', {})
         self.assertRaises(AssertionError,
@@ -1229,16 +1274,53 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         self.assertEqual(self.point_source.mfd.b_val, 0.2)
         self.assertEqual(self.point_source.mfd.a_val, -1)
 
-    def test_ignore_non_gr_mfd(self):
-        uncertainties = [('maxMagGRAbsolute', 10),
-                         ('abGRAbsolute', (-1, 0.3))]
-        source = self.point_source
-        source.mfd = EvenlyDiscretizedMFD(min_mag=3, bin_width=1,
-                                          occurrence_rates=[1, 2, 3])
-        source.mfd.modify = lambda *args, **kwargs: self.fail()
-        for uncertainty, value in uncertainties:
-            branchset = logictree.BranchSet(uncertainty, {})
-            branchset.apply_uncertainty(value, source)
+    def test_absolute_incremental_mfd_uncertainty(self):
+        inc_point_source = openquake.hazardlib.source.PointSource(
+            source_id='point', name='point',
+            tectonic_region_type=
+            openquake.hazardlib.const.TRT.ACTIVE_SHALLOW_CRUST,
+            mfd=EvenlyDiscretizedMFD(min_mag=8.0, bin_width=0.2,
+                                     occurrence_rates=[0.5, 0.1]),
+            nodal_plane_distribution=PMF(
+                [(1, openquake.hazardlib.geo.NodalPlane(0.0, 90.0, 0.0))]
+            ),
+            hypocenter_distribution=PMF([(1, 10)]),
+            upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
+            magnitude_scaling_relationship=
+            openquake.hazardlib.scalerel.PeerMSR(),
+            rupture_aspect_ratio=1, location=openquake.hazardlib.geo.Point(
+                5, 6),
+            rupture_mesh_spacing=1.0,
+            temporal_occurrence_model=PoissonTOM(50.)
+        )
+        self.assertEqual(inc_point_source.mfd.min_mag, 8.0)
+        self.assertEqual(inc_point_source.mfd.bin_width, 0.2)
+        self.assertEqual(inc_point_source.mfd.occurrence_rates[0], 0.5)
+        self.assertEqual(inc_point_source.mfd.occurrence_rates[1], 0.1)
+        uncertainty, value = ('incrementalMFDAbsolute',
+                              (8.5, 0.1, [0.05, 0.01]))
+        branchset = logictree.BranchSet(uncertainty, {})
+        branchset.apply_uncertainty(value, inc_point_source)
+        self.assertEqual(inc_point_source.mfd.min_mag, 8.5)
+        self.assertEqual(inc_point_source.mfd.bin_width, 0.1)
+        self.assertEqual(inc_point_source.mfd.occurrence_rates[0], 0.05)
+        self.assertEqual(inc_point_source.mfd.occurrence_rates[1], 0.01)
+
+#
+#
+#
+#        
+#
+#    def test_ignore_non_gr_mfd(self):
+#        uncertainties = [('maxMagGRAbsolute', 10),
+#                         ('abGRAbsolute', (-1, 0.3))]
+#        source = self.point_source
+#        source.mfd = EvenlyDiscretizedMFD(min_mag=3, bin_width=1,
+#                                          occurrence_rates=[1, 2, 3])
+#        source.mfd.modify = lambda *args, **kwargs: self.fail()
+#        for uncertainty, value in uncertainties:
+#            branchset = logictree.BranchSet(uncertainty, {})
+#            branchset.apply_uncertainty(value, source)
 
 
 class BranchSetFilterTestCase(unittest.TestCase):
