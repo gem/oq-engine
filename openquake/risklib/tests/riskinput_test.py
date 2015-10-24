@@ -86,16 +86,16 @@ a4,3,1,50,500000,2.0,6.0
 
         gsims_by_trt_id = rupcalc.rlzs_assoc.gsims_by_trt_id
 
-        eps_dict = riskinput.make_eps_dict(
+        eps = riskinput.make_eps(
             self.assets_by_site, len(ses_ruptures), oq.master_seed,
             oq.asset_correlation)
 
         [ri] = self.riskmodel.build_inputs_from_ruptures(
             self.sitecol, ses_ruptures, gsims_by_trt_id, oq.truncation_level,
-            correl_model, eps_dict, 1)
+            correl_model, eps, 1)
 
         assets, hazards, epsilons = ri.get_all(
-            rlzs_assoc, self.assets_by_site, eps_dict)
+            rlzs_assoc, self.assets_by_site, eps)
         self.assertEqual([a.id for a in assets],
                          [b'a0', b'a1', b'a2', b'a3', b'a4'])
         self.assertEqual(set(a.taxonomy for a in assets),
