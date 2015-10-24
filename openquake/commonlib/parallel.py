@@ -31,6 +31,7 @@ import psutil
 
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import PerformanceMonitor, DummyMonitor
+from openquake.baselib.general import split_in_blocks, AccumDict, humansize
 
 
 if psutil.__version__ > '2.0.0':  # Ubuntu 14.10
@@ -53,9 +54,6 @@ else:  # Ubuntu 12.04
 
     def memory_info(proc):
         return proc.get_memory_info()
-
-
-from openquake.baselib.general import split_in_blocks, AccumDict, humansize
 
 
 executor = ProcessPoolExecutor()
