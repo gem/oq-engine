@@ -801,8 +801,8 @@ class SourceModelLogicTree(BaseLogicTree):
             if len(mbr) == 3:
                 min_mag, bin_width, rates = mbr
                 try:
-                    rates = positivefloats(rates)
-                except:
+                    rates = valid.positivefloats(rates)
+                except ValueError:
                     rates = []
                 if _float_re.match(min_mag) and _float_re.match(bin_width) and\
                         len(rates):
