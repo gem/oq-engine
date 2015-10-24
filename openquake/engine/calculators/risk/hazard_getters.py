@@ -91,8 +91,7 @@ class HazardGetter(object):
    :attr site_ids:
         The ids of the sites associated to the hazards
     """
-    def __init__(self, imt, taxonomy, hazard_outputs, assets,
-                 epsilon_sampling=None):
+    def __init__(self, imt, taxonomy, hazard_outputs, assets):
         self.imt = imt
         self.taxonomy = taxonomy
         self.hazard_outputs = hazard_outputs
@@ -201,92 +200,6 @@ def haz_out_to_ses_coll(ho):
         trt_model__lt_model=ho.output_container.lt_realization.lt_model)
 
 
-class GroundMotionGetter(HazardGetter):
-    """
-    Hazard getter for loading ground motion values.
-    """ + HazardGetter.__doc__
-
-    def __init__(self, imt, taxonomy, hazard_outputs, assets,
-                 epsilon_sampling=None):
-        """
-        Perform the needed queries on the database to populate
-        hazards and epsilons.
-        """
-        HazardGetter.__init__(self, imt, taxonomy, hazard_outputs, assets)
-        self.hazards = {}  # dict ho, imt -> {site_id: {rup_id: gmv}}
-        self.rupture_ids = []
-        sescolls = set()
-        for ho in self.hazard_outputs:
-            self.hazards[ho] = self._get_gmv_dict(ho)
-            for sc in haz_out_to_ses_coll(ho):
-                sescolls.add(sc)
-        for sc in sorted(sescolls, key=operator.attrgetter('ordinal')):
-            rids = sc.get_ruptures().values_list('id', flat=True)
-            self.rupture_ids.extend(rids)
-        num_ruptures = len(self.rupture_ids)
-        num_samples = min(epsilon_sampling, num_ruptures)
-        epsilons = numpy.zeros((len(assets), num_samples))
-        for i, asset_site_id in enumerate(self.asset_site_ids):
-            eps = models.Epsilon.objects.get(asset_site=asset_site_id)
-            epsilons[i] = eps.epsilons
-        if epsilons.sum():
-            self.epsilons = epsilons
-
-    def get_epsilons(self):
-        """
-        Expand the underlying epsilons
-        """
-        eps = self.epsilons
-        # expand the inner epsilons to the right number, if needed
-        _n, m = eps.shape
-        e = len(self.rupture_ids)
-        if e > m:  # there are more ruptures than epsilons
-            # notice the double transpose below; a shape (1, 3) will go into
-            # (1, 3); without, it would go incorrectly into (3, 3)
-            return expand(eps.T, e).T
-        return eps
-
-    def _get_gmv_dict(self, ho):
-        # return a nested dictionary site_id -> {rupture_id: gmv}
-        imt_type, sa_period, sa_damping = from_string(self.imt)
-        gmf_id = ho.output_container.id
-        if sa_period:
-            imt_query = 'imt=%s and sa_period=%s and sa_damping=%s'
-        else:
-            imt_query = 'imt=%s and sa_period is %s and sa_damping is %s'
-        gmv_dict = {}  # dict site_id -> {rup_id: gmv}
-        cursor = models.getcursor('job_init')
-        cursor.execute('select site_id, rupture_ids, gmvs from '
-                       'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
-                       'and {} order by site_id'.format(imt_query),
-                       (gmf_id, tuple(set(self.site_ids)),
-                        imt_type, sa_period, sa_damping))
-        for sid, group in itertools.groupby(cursor, operator.itemgetter(0)):
-            gmvs = []
-            ruptures = []
-            for site_id, rupture_ids, gmvs_chunk in group:
-                gmvs.extend(gmvs_chunk)
-                ruptures.extend(rupture_ids)
-            gmv_dict[sid] = dict(itertools.izip(ruptures, gmvs))
-        return gmv_dict
-
-    def _get_data(self, ho):
-        # return a list of N arrays with R elements each
-        all_gmvs = []
-        no_data = 0
-        gmv_dict = self.hazards[ho]
-        for site_id in self.site_ids:
-            gmv = gmv_dict.get(site_id, {})
-            if not gmv:
-                no_data += 1
-            array = numpy.array([gmv.get(r, 0.) for r in self.rupture_ids])
-            all_gmvs.append(array)
-        if no_data:
-            logs.LOG.info('No data for %d assets out of %d, IMT=%s',
-                          no_data, len(self.site_ids), self.imt)
-        return all_gmvs
-
-
 class RiskInitializer(object):
     """
     A facility providing the brigde between the hazard (sites and outputs)
@@ -376,75 +289,3 @@ SELECT * FROM assocs""", (self.calc.job.id, self.oqparam.id,
                 'Could not associate any asset of taxonomy %s to '
                 'hazard sites within the distance of %s km'
                 % (self.taxonomy, self.calc.best_maximum_distance))
-
-    def calc_nbytes(self, epsilon_sampling=None):
-        """
-        :param epsilon_sampling:
-             flag saying if the epsilon_sampling feature is enabled
-        :returns:
-            the number of bytes to be allocated (a guess)
-
-        If the hazard_outputs come from an event based or scenario computation,
-        populate the .epsilons_shape dictionary.
-        """
-        if self.calculation_mode.startswith('event_based'):
-            lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
-                               for ho in self.hazard_outputs)
-            for trt_model in models.TrtModel.objects.filter(
-                    lt_model__in=lt_model_ids):
-                ses_coll = models.SESCollection.objects.get(
-                    trt_model=trt_model)
-                num_ruptures = ses_coll.get_ruptures().count()
-                self.epsilons_shape[ses_coll.id] = (
-                    self.num_assets, num_ruptures)
-        elif self.calculation_mode.startswith('scenario'):
-            [out] = self.oqparam.output_set.filter(output_type='ses')
-            samples = self.number_of_ground_motion_fields
-            self.epsilons_shape[out.ses.id] = (self.num_assets, samples)
-        nbytes = 0
-        for (n, r) in self.epsilons_shape.values():
-            # the max(n, r) is taken because if n > r then the limiting
-            # factor is the size of the correlation matrix, i.e. n
-            nbytes += max(n, r) * n * BYTES_PER_FLOAT
-        return nbytes
-
-    def init_epsilons(self, epsilon_sampling=None):
-        """
-        :param epsilon_sampling:
-             flag saying if the epsilon_sampling feature is enabled
-
-        Populate the .epsilons_shape and the ._rupture_ids dictionaries.
-        For the calculators `event_based_risk` and `scenario_risk` also
-        stores the epsilons in the database for each asset_site association.
-        """
-        oq = self.calc.oqparam
-        if not self.epsilons_shape:
-            self.calc_nbytes(epsilon_sampling)
-        if self.calculation_mode.startswith('event_based'):
-            lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
-                               for ho in self.hazard_outputs)
-            ses_collections = models.SESCollection.objects.filter(
-                trt_model__lt_model__in=lt_model_ids)
-        elif self.calculation_mode.startswith('scenario'):
-            [out] = self.oqparam.output_set.filter(output_type='ses')
-            ses_collections = [out.ses]
-        else:
-            ses_collections = []
-        num_ruptures = 0
-        for ses_coll in ses_collections:
-            scid = ses_coll.id  # ses collection id
-            self._rupture_ids[scid] = rupids = ses_coll.get_ruptures(
-                ).values_list('id', flat=True)
-            num_ruptures += len(rupids)
-        # build the epsilons
-        samples = (min(epsilon_sampling, num_ruptures)
-                   if epsilon_sampling else num_ruptures)
-        logs.LOG.info(
-            'Building (%d, %d) epsilons for taxonomy %s',
-            self.num_assets, samples, self.taxonomy)
-        asset_sites = models.AssetSite.objects.filter(
-            job=self.calc.job, asset__taxonomy=self.taxonomy
-        ).order_by('asset__asset_ref')  # epsilon association order
-        eps = make_epsilons(
-            self.num_assets, samples, oq.master_seed, oq.asset_correlation)
-        models.Epsilon.saveall(asset_sites, eps)
