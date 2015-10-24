@@ -216,7 +216,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.R = len(self.rlzs_assoc.realizations)
         self.outs = OUTPUTS
         self.datasets = {}
-        self.monitor.oqparam = self.oqparam
         # ugly: attaching an attribute needed in the task function
         self.monitor.num_outputs = len(self.outs)
         self.monitor.num_assets = N = self.count_assets()
