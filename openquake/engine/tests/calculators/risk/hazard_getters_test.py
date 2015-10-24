@@ -52,13 +52,8 @@ class HazardCurveGetterTestCase(unittest.TestCase):
         assocs = models.AssetSite.objects.filter(job=self.job)
         self.assets = models.ExposureData.objects.get_asset_chunk(
             calc.exposure_model, calc.time_event, assocs)
-        self.nbytes = self.builder.calc_nbytes()
-        self.builder.init_epsilons()
         self.getter = self.getter_class(
             self.imt, self.taxonomy, calc.get_hazard_outputs(), self.assets)
-
-    def test_nbytes(self):
-        self.assertEqual(self.nbytes, 0)
 
     def test_is_pickleable(self):
         pickle.dumps(self.getter)  # raises an error if not
