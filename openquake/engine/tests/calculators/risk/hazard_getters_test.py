@@ -55,8 +55,7 @@ class HazardCurveGetterTestCase(unittest.TestCase):
         self.nbytes = self.builder.calc_nbytes()
         self.builder.init_epsilons()
         self.getter = self.getter_class(
-            self.imt, self.taxonomy, calc.get_hazard_outputs(), self.assets,
-            epsilon_sampling=1000)
+            self.imt, self.taxonomy, calc.get_hazard_outputs(), self.assets)
 
     def test_nbytes(self):
         self.assertEqual(self.nbytes, 0)
@@ -71,75 +70,3 @@ class HazardCurveGetterTestCase(unittest.TestCase):
         self.assertEqual(self.getter.assets, [a2, a3])
         data = self.getter.get_data()
         numpy.testing.assert_allclose([[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]], data)
-
-
-class GroundMotionGetterTestCase(HazardCurveGetterTestCase):
-
-    hazard_demo = get_data_path('event_based_hazard/job.ini')
-    risk_demo = get_data_path('event_based_risk/job.ini')
-    hazard_output_type = 'gmf'
-    getter_class = hazard_getters.GroundMotionGetter
-    taxonomy = 'RM'
-
-    def test_nbytes(self):
-        # 1 asset * 3 ruptures
-        self.assertEqual(self.builder.epsilons_shape.values(), [(1, 3)])
-        self.assertEqual(self.nbytes, 24)
-
-    def test_call(self):
-        # the exposure model in this example has two assets of taxonomy RM
-        # (a1 and a3); the asset a3 has no hazard data within the
-        # maximum distance, so it is excluded;
-        # there is one realization and three ruptures
-        a1, = self.assets
-        self.assertEqual(self.getter.assets, [a1])
-        rupture_ids = self.getter.rupture_ids
-        self.assertEqual(len(rupture_ids), 3)
-
-        data = self.getter.get_data()
-        numpy.testing.assert_allclose([[0.1, 0.2, 0.3]], data)
-        numpy.testing.assert_allclose(
-            numpy.array([[0.49671415, -0.1382643, 0.64768854]]),
-            self.getter.epsilons)  # shape (1, 3)
-
-
-class ScenarioTestCase(GroundMotionGetterTestCase):
-    """
-    Here is some info about this test. Here are the assets::
-   
-      asset_ref | taxonomy | st_x  | st_y  
-     -----------+----------+-------+-------
-      a1        | RM       | 15.48 | 38.09
-      a2        | RC       | 15.56 | 38.17
-      a3        | RM       | 15.48 | 38.25
-
-    Here are the sites::
-
-       lon   |    lat     
-     --------+------------
-      15.565 |      38.17
-      15.481 |      38.25
-       15.48 | 38.0900001
-   
-    The maximum_distance is 200 km.
-    """
-    hazard_demo = get_data_path('scenario_hazard/job.ini')
-    risk_demo = get_data_path('scenario_risk/job.ini')
-    hazard_output_type = 'gmf_scenario'
-    taxonomy = 'RM'
-
-    def test_nbytes(self):
-        # I am not populating the table ses_rupture
-        self.assertEqual(len(self.getter.rupture_ids), 0)
-        self.assertEqual(self.nbytes, 160)
-
-    def test_call(self):
-        # the exposure model in this example has two assets of taxonomy RM
-        # (a1 and a3) within the maximum distance; there are 10 realizations
-        a1, a3 = self.assets
-        self.assertEqual(self.getter.assets, [a1, a3])
-        [hazard] = self.getter.hazards.values()
-        self.assertEqual(hazard.values()[0], {0: 0.1, 1: 0.2, 2: 0.3})
-
-        # NB: since I am not populating the table ses_rupture,
-        # self.getter.get_data() is empty
