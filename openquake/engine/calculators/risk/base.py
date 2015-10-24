@@ -25,23 +25,15 @@ from openquake.baselib import general
 from openquake.commonlib import risk_parsers
 from openquake.hazardlib.imt import from_string
 from openquake.commonlib.readinput import get_risk_model
-from openquake.commonlib.parallel import virtual_memory
 
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import \
     writers, validation, hazard_getters
-from openquake.engine.utils import config, tasks
+from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.input.exposure import ExposureDBWriter
-
-MEMORY_ERROR = '''Running the calculation will require approximately
-%dM, i.e. more than the memory which is available right now (%dM).
-Please increase the free memory or apply a stringent region
-constraint to reduce the number of assets. If the correlation is
-nonzero, consider setting asset_correlation=0 to avoid building the
-correlation matrix.'''
 
 
 @tasks.oqtask
