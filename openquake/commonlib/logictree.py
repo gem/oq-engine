@@ -801,11 +801,11 @@ class SourceModelLogicTree(BaseLogicTree):
             if len(mbr) == 3:
                 min_mag, bin_width, rates = mbr
                 try:
-                    rates = positivefloat(rates)
+                    rates = positivefloats(rates)
                 except:
                     rates = []
                 if _float_re.match(min_mag) and _float_re.match(bin_width) and\
-                    len(rates):
+                        len(rates):
                     return
             raise ValidationError(
                 node, self.filename,
