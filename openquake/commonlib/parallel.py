@@ -104,14 +104,14 @@ def safely_call(func, args, pickle=False):
     """
     if pickle:
         args = [a.unpickle() for a in args]
-    mon = args and isinstance(args[-1], PerformanceMonitor)
+    ismon = args and isinstance(args[-1], PerformanceMonitor)
+    mon = args[-1] if ismon else DummyMonitor()
     try:
-        res = func(*args), None, args[-1] if mon else DummyMonitor()
+        res = func(*args), None, mon
     except:
         etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
-        res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype,
-               args[-1] if mon else DummyMonitor())
+        res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype, mon)
     if pickle:
         return Pickled(res)
     return res
