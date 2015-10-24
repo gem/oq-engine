@@ -287,7 +287,7 @@ class RiskInput(object):
             self.weight += len(assets)
         self.taxonomies = sorted(taxonomies)
         self.tags = None  # for API compatibility with RiskInputFromRuptures
-        self.eps = eps
+        self.eps = {} if eps is None else eps
 
     @property
     def imt_taxonomies(self):

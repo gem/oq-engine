@@ -77,7 +77,7 @@ class ClassicalDamageCalculator(base.RiskCalculator):
 
         logging.info('Preparing the risk input')
         self.riskinputs = self.build_riskinputs(
-            {(0, 'FromFile'): hcurves_by_imt}, eps_dict={})
+            {(0, 'FromFile'): hcurves_by_imt})
         fake_rlz = logictree.Realization(
             value=('FromFile',), weight=1, lt_path=('',),
             ordinal=0, lt_uid=('*',))
