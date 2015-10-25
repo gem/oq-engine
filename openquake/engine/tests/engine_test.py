@@ -43,12 +43,6 @@ class CheckHazardRiskConsistencyTestCase(unittest.TestCase):
         engine.check_hazard_risk_consistency(
             haz_job, 'scenario_risk')
 
-    def test_no_hazard(self):
-        haz_job = FakeJob('risk', 'scenario')
-        with self.assertRaises(engine.InvalidHazardCalculationID):
-            engine.check_hazard_risk_consistency(
-                haz_job, 'scenario_risk')
-
     def test_obsolete_mode(self):
         haz_job = FakeJob('hazard', 'scenario')
         with self.assertRaises(ValueError) as ctx:
@@ -60,14 +54,14 @@ class CheckHazardRiskConsistencyTestCase(unittest.TestCase):
 
     def test_inconsistent_mode(self):
         haz_job = FakeJob('hazard', 'scenario')
-        with self.assertRaises(engine.InvalidHazardCalculationID) as ctx:
+        with self.assertRaises(engine.InvalidCalculationID) as ctx:
             engine.check_hazard_risk_consistency(
                 haz_job, 'classical_risk')
         msg = str(ctx.exception)
         self.assertEqual(
             msg, "In order to run a risk calculation of kind "
-            "'classical_risk', you need to provide a hazard "
-            "calculation of kind ['classical'], "
+            "'classical_risk', you need to provide a "
+            "calculation of kind ['classical', 'classical_risk'], "
             "but you provided a 'scenario' instead")
 
 

@@ -72,17 +72,16 @@ TERMINATE = valid.boolean(
     config.get('celery', 'terminate_workers_on_revoke') or 'false')
 
 
-class InvalidHazardCalculationID(Exception):
+class InvalidCalculationID(Exception):
     pass
 
 RISK_HAZARD_MAP = dict(
-    scenario_risk=['scenario'],
-    scenario_damage=['scenario'],
-    classical_risk=['classical'],
-    classical_bcr=['classical'],
-    classical_damage=['classical'],
-    event_based_risk=['event_based'],
-    ebr=['ebr'])
+    scenario_risk=['scenario', 'scenario_risk'],
+    scenario_damage=['scenario', 'scenario_damage'],
+    classical_risk=['classical', 'classical_risk'],
+    classical_bcr=['classical', 'classical_bcr'],
+    classical_damage=['classical', 'classical_damage'],
+    event_based_risk=['event_based', 'event_based_risk'])
 
 
 def cleanup_after_job(job, terminate):
@@ -466,24 +465,20 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
     :param risk_mode:
         the `calculation_mode` string of the current risk calculation
     """
-    if haz_job.job_type == 'risk':
-        raise InvalidHazardCalculationID(
-            'You provided a risk calculation instead of a hazard calculation!')
-
     # check for obsolete calculation_mode
     if risk_mode in ('classical', 'event_based', 'scenario'):
         raise ValueError('Please change calculation_mode=%s into %s_risk '
                          'in the .ini file' % (risk_mode, risk_mode))
 
-    # check hazard calculation_mode consistency
-    hazard_mode = haz_job.get_param('calculation_mode')
-    expected_mode = RISK_HAZARD_MAP[risk_mode]
-    if hazard_mode not in expected_mode:
-        raise InvalidHazardCalculationID(
+    # check calculation_mode consistency
+    prev_mode = haz_job.get_param('calculation_mode')
+    ok_mode = RISK_HAZARD_MAP[risk_mode]
+    if prev_mode not in ok_mode:
+        raise InvalidCalculationID(
             'In order to run a risk calculation of kind %r, '
-            'you need to provide a hazard calculation of kind %r, '
+            'you need to provide a calculation of kind %r, '
             'but you provided a %r instead' %
-            (risk_mode, expected_mode, hazard_mode))
+            (risk_mode, ok_mode, prev_mode))
 
 
 @django_db.transaction.atomic
