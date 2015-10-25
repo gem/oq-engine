@@ -17,8 +17,9 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-from openquake.commonlib import sap, datastore
+import os
 import shutil
+from openquake.commonlib import sap, datastore
 
 
 def purge(calc_id):
@@ -29,8 +30,9 @@ def purge(calc_id):
         shutil.rmtree(datastore.DATADIR)
         print('Removed %s' % datastore.DATADIR)
     else:
-        hdf5 = datastore.DataStore(calc_id).hdf5path
-        print('Removed %s' % hdf5)
+        hdf5path = datastore.DataStore(calc_id).hdf5path
+        os.remove(hdf5path)
+        print('Removed %s' % hdf5path)
 
 
 parser = sap.Parser(purge)
