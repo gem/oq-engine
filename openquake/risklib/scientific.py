@@ -353,7 +353,7 @@ class VulnerabilityFunctionWithPMF(object):
     :param ratios: mean ratios (M)
     :param probs: a matrix of probabilities of shape (M, L)
     """
-    def __init__(self, vf_id, imt, imls, loss_ratios, probs, seed):
+    def __init__(self, vf_id, imt, imls, loss_ratios, probs, seed=42):
         self.id = vf_id
         self.imt = imt
         self._check_vulnerability_data(imls, loss_ratios, probs)
