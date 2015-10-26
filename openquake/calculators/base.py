@@ -485,12 +485,7 @@ def get_gmfs(calc):
     """
     if 'gmfs' in calc.oqparam.inputs:  # from file
         logging.info('Reading gmfs from file')
-        try:
-            sitecol = calc.sitecol.complete
-        except KeyError:
-            sitecol = None
-        calc.sitecol, calc.tags, gmfs_by_imt = readinput.get_gmfs(
-            calc.oqparam, sitecol)
+        calc.sitecol, calc.tags, gmfs_by_imt = readinput.get_gmfs(calc.oqparam)
         calc.save_params()  # save number_of_ground_motion_fields and sites
 
         # reduce the gmfs matrices to the filtered sites
