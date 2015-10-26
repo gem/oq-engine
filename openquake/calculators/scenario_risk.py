@@ -108,7 +108,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.oqparam.number_of_ground_motion_fields)
         self.epsilon_matrix = numpy.array(
             [eps_dict[a['asset_ref']] for a in self.assetcol])
-        self.riskinputs = self.build_riskinputs(self.gmfs, eps_dict)
+        sitecol, gmfs = base.get_gmfs(self)
+        self.riskinputs = self.build_riskinputs(gmfs, eps_dict)
 
     def post_execute(self, result):
         """

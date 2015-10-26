@@ -281,13 +281,8 @@ class HazardCalculator(BaseCalculator):
         extracted from the exposure.
         """
         inputs = self.oqparam.inputs
-
-        if 'gmfs' in inputs and self.oqparam.sites:
-            haz_sitecol = self.sitecol = readinput.get_site_collection(
-                self.oqparam)
-        if 'scenario_' in self.oqparam.calculation_mode:
-            self.gmfs = get_gmfs(self)
-            haz_sitecol = self.sitecol
+        if 'gmfs' in inputs:
+            haz_sitecol, self.gmfs = get_gmfs(self)
         if 'exposure' in inputs:
             logging.info('Reading the exposure')
             with self.monitor('reading exposure', autoflush=True):
@@ -485,19 +480,19 @@ def get_gmfs(calc):
     """
     if 'gmfs' in calc.oqparam.inputs:  # from file
         logging.info('Reading gmfs from file')
-        calc.sitecol, calc.tags, gmfs_by_imt = readinput.get_gmfs(calc.oqparam)
+        sitecol, calc.tags, gmfs_by_imt = readinput.get_gmfs(calc.oqparam)
         calc.save_params()  # save number_of_ground_motion_fields and sites
 
         # reduce the gmfs matrices to the filtered sites
         for imt in calc.oqparam.imtls:
-            gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]
+            gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
 
         logging.info('Preparing the risk input')
         fake_rlz = logictree.Realization(
             value=('FromFile',), weight=1, lt_path=('',),
             ordinal=0, lt_uid=('*',))
         calc.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
-        return {(0, 'FromFile'): gmfs_by_imt}
+        return sitecol, {(0, 'FromFile'): gmfs_by_imt}
 
     # else from rupture
     gmf = calc.datastore['gmfs/col00'].value
@@ -522,4 +517,4 @@ def get_gmfs(calc):
             if sid in risk_indices:
                 for trt_id, gsim in gmfs:
                     gmfs[trt_id, gsim][sid, rupid] = gmv[gsim]
-    return gmfs
+    return haz_sitecol, gmfs
