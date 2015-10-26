@@ -30,6 +30,7 @@ from shapely import wkt, geometry
 from openquake.hazardlib import geo, site, correlation, imt
 from openquake.risklib import workflows, riskinput
 
+from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.oqvalidation import OqParam, rmdict
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
@@ -209,6 +210,11 @@ def get_mesh(oqparam):
         coords = [(param.lon, param.lat) for param in get_site_model(oqparam)]
         lons, lats = zip(*sorted(coords))
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
+    elif 'gmfs' in oqparam.inputs:
+        return get_gmfs(oqparam)[0].mesh
+    elif oqparam.hazard_calculation_id:
+        sitemesh = DataStore(oqparam.hazard_calculation_id)['sitemesh']
+        return geo.Mesh(sitemesh['lon'], sitemesh['lat'])
     # if there is an exposure the mesh is extracted from get_sitecol_assets
 
 
@@ -216,7 +222,6 @@ def sitecol_from_coords(oqparam, coords):
     """
     Return a SiteCollection instance from an ordered set of coordinates
     """
-    assert coords == sorted(coords)
     lons, lats = zip(*coords)
     return site.SiteCollection.from_points(
         lons, lats, range(len(lons)), oqparam)
@@ -256,6 +261,8 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
     """
     if mesh is None:
         mesh = get_mesh(oqparam)
+    if mesh is None:
+        return
     site_ids = site_ids or list(range(len(mesh)))
     if oqparam.inputs.get('site_model'):
         if site_model_params is None:

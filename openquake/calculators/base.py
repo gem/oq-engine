@@ -280,9 +280,10 @@ class HazardCalculator(BaseCalculator):
         Read the exposure (if any) and then the site collection, possibly
         extracted from the exposure.
         """
+        logging.info('Reading the site collection')
+        with self.monitor('reading site collection', autoflush=True):
+            haz_sitecol = readinput.get_site_collection(self.oqparam)
         inputs = self.oqparam.inputs
-        if 'gmfs' in inputs:
-            haz_sitecol, self.gmfs = get_gmfs(self)
         if 'exposure' in inputs:
             logging.info('Reading the exposure')
             with self.monitor('reading exposure', autoflush=True):
@@ -295,11 +296,6 @@ class HazardCalculator(BaseCalculator):
             num_assets = self.count_assets()
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
-            elif 'gmfs' in inputs:
-                pass  # haz_sitecol is already defined
-            # TODO: think about the case hazard_curves in inputs
-            else:
-                haz_sitecol = None
             if haz_sitecol is not None and haz_sitecol != self.sitecol:
                 with self.monitor('assoc_assets_sites'):
                     self.sitecol, self.assets_by_site = \
@@ -312,9 +308,7 @@ class HazardCalculator(BaseCalculator):
               OqParam.from_(self.datastore.parent.attrs).inputs):
             logging.info('Re-using the already imported exposure')
         else:  # no exposure
-            logging.info('Reading the site collection')
-            with self.monitor('reading site collection', autoflush=True):
-                self.sitecol = readinput.get_site_collection(self.oqparam)
+            self.sitecol = haz_sitecol
 
         # save mesh and asset collection
         self.save_mesh()
