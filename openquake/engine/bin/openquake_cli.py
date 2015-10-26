@@ -404,8 +404,8 @@ def export(output_id, target_dir, export_type):
         the_file = core.export(output_id, target_dir, export_type)
         print 'File Exported:'
         print the_file
-    except NotImplementedError, err:
-        print err.message
+    except NotImplementedError as err:
+        print err
         print 'This feature is probably not implemented yet'
 
 
@@ -432,8 +432,8 @@ def del_calc(job_id, confirmed=False):
             'associated outputs?\nThis action cannot be undone. (y/n): '):
         try:
             engine.del_calc(job_id)
-        except RuntimeError, err:
-            print err.message
+        except RuntimeError as err:
+            print err
 
 
 def confirm(prompt):
