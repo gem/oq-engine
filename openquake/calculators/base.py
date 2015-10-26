@@ -484,7 +484,26 @@ def get_gmfs(calc):
     :returns: a dictionary of gmfs
     """
     if 'gmfs' in calc.oqparam.inputs:  # from file
-        return read_gmfs_from_file(calc)
+        logging.info('Reading gmfs from file')
+        try:
+            sitecol = calc.sitecol.complete
+        except KeyError:
+            sitecol = None
+        calc.sitecol, calc.tags, gmfs_by_imt = readinput.get_gmfs(
+            calc.oqparam, sitecol)
+        calc.save_params()  # save number_of_ground_motion_fields and sites
+
+        # reduce the gmfs matrices to the filtered sites
+        for imt in calc.oqparam.imtls:
+            gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]
+
+        logging.info('Preparing the risk input')
+        fake_rlz = logictree.Realization(
+            value=('FromFile',), weight=1, lt_path=('',),
+            ordinal=0, lt_uid=('*',))
+        calc.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
+        return {(0, 'FromFile'): gmfs_by_imt}
+
     # else from rupture
     gmf = calc.datastore['gmfs/col00'].value
     # NB: if the hazard site collection has N sites, the hazard
@@ -509,29 +528,3 @@ def get_gmfs(calc):
                 for trt_id, gsim in gmfs:
                     gmfs[trt_id, gsim][sid, rupid] = gmv[gsim]
     return gmfs
-
-
-def read_gmfs_from_file(calc):
-    """
-    :param calc: a ScenarioDamage or ScenarioRisk calculator
-    :returns: riskinputs
-    """
-    logging.info('Reading gmfs from file')
-    try:
-        sitecol = calc.sitecol.complete
-    except KeyError:
-        sitecol = None
-    calc.sitecol, calc.tags, gmfs_by_imt = readinput.get_gmfs(
-        calc.oqparam, sitecol)
-    calc.save_params()  # save number_of_ground_motion_fields and sites
-
-    # reduce the gmfs matrices to the filtered sites
-    for imt in calc.oqparam.imtls:
-        gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]
-
-    logging.info('Preparing the risk input')
-    fake_rlz = logictree.Realization(
-        value=('FromFile',), weight=1, lt_path=('',),
-        ordinal=0, lt_uid=('*',))
-    calc.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
-    return {(0, 'FromFile'): gmfs_by_imt}
