@@ -404,7 +404,7 @@ def export(output_id, target_dir, export_type):
         the_file = core.export(output_id, target_dir, export_type)
         print 'File Exported:'
         print the_file
-    except NotImplementedError, err:
+    except NotImplementedError as err:
         print err
         print 'This feature is probably not implemented yet'
 
