@@ -886,15 +886,15 @@ def get_gmfs(oqparam, sitecol=None):
         sitecol, tags, gmf array
     """
     fname = oqparam.inputs['gmfs']
-    if fname.endswith('.csv'):
-        return get_gmfs_from_csv(oqparam, sitecol, fname)
+    if fname.endswith('.txt'):
+        return get_gmfs_from_txt(oqparam, sitecol, fname)
     elif fname.endswith('.xml'):
         return get_scenario_from_nrml(oqparam, fname)
     else:
         raise InvalidFile(fname)
 
 
-def get_gmfs_from_csv(oqparam, sitecol, fname):
+def get_gmfs_from_txt(oqparam, sitecol, fname):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance

@@ -545,7 +545,7 @@ col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
 col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 3.92602000E-01
 ''')
-        _, _, gmfs = readinput.get_gmfs_from_csv(
+        _, _, gmfs = readinput.get_gmfs_from_txt(
             self.oqparam, self.sitecol, fname)
         gmvs1, gmvs2 = gmfs['PGA']
         assert_allclose(gmvs1, [0.305128, 0.267031, 0.159434])
@@ -557,7 +557,7 @@ col=00|ses=0001|src=test|rup=001-00,,1.59434000E-01 3.92602000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-02,0,2.67031000E-01
 ''')
-        _, _, gmfs = readinput.get_gmfs_from_csv(
+        _, _, gmfs = readinput.get_gmfs_from_txt(
             self.oqparam, self.sitecol, fname)
         gmvs1, gmvs2 = gmfs['PGA']
         assert_allclose(gmvs1, [0.159434, 0.305128, 0.267031])
@@ -570,7 +570,7 @@ col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
 col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 -3.92602000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs_from_csv(self.oqparam, self.sitecol, fname)
+            readinput.get_gmfs_from_txt(self.oqparam, self.sitecol, fname)
 
     def test_missing_line(self):
         fname = general.writetmp('''\
@@ -578,7 +578,7 @@ col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs_from_csv(self.oqparam, self.sitecol, fname)
+            readinput.get_gmfs_from_txt(self.oqparam, self.sitecol, fname)
 
     def test_not_ordered_tags(self):
         fname = general.writetmp('''\
@@ -587,7 +587,7 @@ col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs_from_csv(self.oqparam, self.sitecol, fname)
+            readinput.get_gmfs_from_txt(self.oqparam, self.sitecol, fname)
 
     def test_negative_indices(self):
         fname = general.writetmp('''\
@@ -596,7 +596,7 @@ col=00|ses=0001|src=test|rup=001-01,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-02,0 1,2.67031000E-01 3.34878000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs_from_csv(self.oqparam, self.sitecol, fname)
+            readinput.get_gmfs_from_txt(self.oqparam, self.sitecol, fname)
 
     def test_missing_bad_indices(self):
         fname = general.writetmp('''\
@@ -605,7 +605,7 @@ col=00|ses=0001|src=test|rup=001-01,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-02,X,2.67031000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs_from_csv(self.oqparam, self.sitecol, fname)
+            readinput.get_gmfs_from_txt(self.oqparam, self.sitecol, fname)
 
 
 class TestLoadGmfTestCase(unittest.TestCase):
