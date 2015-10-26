@@ -20,6 +20,7 @@ import os
 import re
 import time
 import operator
+import tempfile
 from datetime import datetime
 import collections
 
@@ -73,11 +74,9 @@ class PerformanceMonitor(object):
     and by overriding the method on_exit(), called at end and used to display
     or store the results of the analysis.
     """
-    def __init__(self, operation, monitor_dir=None, pid=None,
-                 autoflush=False, measuremem=False):
+    def __init__(self, operation, pid=None, autoflush=False, measuremem=False):
         self.operation = operation
         self.pid = pid
-        self.monitor_dir = monitor_dir
         self.autoflush = autoflush
         self.measuremem = measuremem
         self._proc = None
@@ -85,6 +84,7 @@ class PerformanceMonitor(object):
         self.duration = 0
         self._start_time = time.time()
         self.children = []
+        self.perftemp = None
 
     def measure_mem(self):
         """A memory measurement (in bytes)"""
@@ -103,20 +103,13 @@ class PerformanceMonitor(object):
         """
         return datetime.fromtimestamp(self._start_time)
 
-    @property
-    def monitor_csv(self):
-        """
-        The path to the .csv where the monitor will write, or None.
-        """
-        if self.monitor_dir:
-            return os.path.join(self.monitor_dir, 'performance.csv')
-
     # this is used by readinput.get_composite_source_model
     def write(self, row):
         """Write a row in the performance file, if any"""
-        csv = self.monitor_csv
-        if csv:
-            open(csv, 'a').write('\t'.join(row) + '\n')
+        if self.perftemp is None:
+            fd, self.perftemp = tempfile.mkstemp(suffix='.csv')
+            os.close(fd)
+        open(self.perftemp, 'a').write('\t'.join(row) + '\n')
 
     def get_data(self):
         """
@@ -187,17 +180,12 @@ class PerformanceMonitor(object):
         """
         :returns: a composite array (operation, time, memory, counts)
         """
-        if self.monitor_dir is None:  # no monitoring info
+        if self.perftemp is None:  # no monitoring info
             return
         data = collections.defaultdict(lambda: numpy.zeros(3))
-        for f in os.listdir(self.monitor_dir):
-            mo = re.match(r'performance.csv', f)
-            if mo:
-                fname = os.path.join(self.monitor_dir, f)
-                for line in open(fname):
-                    operation, time, memory = line.split('\t')
-                    data[operation] += numpy.array(
-                        [float(time), float(memory), 1])
+        for line in open(self.perftemp):
+            operation, time, memory = line.split('\t')
+            data[operation] += numpy.array([float(time), float(memory), 1])
         perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
                                ('memory_mb', float), ('counts', int)])
         rows = []
