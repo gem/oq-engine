@@ -106,7 +106,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves,
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
-            msg %= (source.source_id, err.message)
+            msg %= (source.source_id, err)
             raise etype, msg, tb
 
     calc_dist.flush()
