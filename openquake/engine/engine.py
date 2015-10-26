@@ -313,6 +313,12 @@ def del_calc(job_id):
     else:
         # this doesn't belong to the current user
         raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
+    try:
+        os.remove(job.ds_calc_dir + '.hdf5')
+    except:
+        pass
+    else:
+        print('Removed %s' % job.ds_calc_dir + '.hdf5')
 
 
 def list_outputs(job_id, full=True):
