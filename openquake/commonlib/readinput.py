@@ -214,7 +214,7 @@ def get_mesh(oqparam):
 
 def sitecol_from_coords(oqparam, coords):
     """
-    Return a SiteCollection instance for an ordered set of coordinates
+    Return a SiteCollection instance from an ordered set of coordinates
     """
     assert coords == sorted(coords)
     lons, lats = zip(*coords)
