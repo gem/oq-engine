@@ -25,34 +25,22 @@ from openquake.baselib import general
 from openquake.commonlib import risk_parsers
 from openquake.hazardlib.imt import from_string
 from openquake.commonlib.readinput import get_risk_model
-from openquake.commonlib.parallel import virtual_memory
 
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import \
     writers, validation, hazard_getters
-from openquake.engine.utils import config, tasks
+from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.input.exposure import ExposureDBWriter
-
-MEMORY_ERROR = '''Running the calculation will require approximately
-%dM, i.e. more than the memory which is available right now (%dM).
-Please increase the free memory or apply a stringent region
-constraint to reduce the number of assets. Alternatively you can set
-epsilon_sampling in openquake.cfg. It the correlation is
-nonzero, consider setting asset_correlation=0 to avoid building the
-correlation matrix.'''
-
-eps_sampling = int(config.get('risk', 'epsilon_sampling'))
 
 
 @tasks.oqtask
 def prepare_risk(counts_taxonomy, calc, monitor):
     """
     Associates the assets to the closest hazard sites and populate
-    the table asset_site. For some calculators also initializes the
-    epsilon matrices and save them on the database.
+    the table asset_site.
 
     :param counts_taxonomy:
         a sorted list of pairs (counts, taxonomy) for each bunch of assets
@@ -62,7 +50,6 @@ def prepare_risk(counts_taxonomy, calc, monitor):
         monitor of the current risk job
     """
     assoc_mon = monitor("associating asset->site", autoflush=True)
-    init_mon = monitor("initializing epsilons", autoflush=True)
 
     for counts, taxonomy in counts_taxonomy:
 
@@ -70,23 +57,6 @@ def prepare_risk(counts_taxonomy, calc, monitor):
         with assoc_mon:
             initializer = hazard_getters.RiskInitializer(taxonomy, calc)
             initializer.init_assocs()
-
-        # estimating the needed memory
-        nbytes = initializer.calc_nbytes(eps_sampling)
-        if nbytes:
-            # TODO: the estimate should be revised by taking into account
-            # the number of realizations
-            estimate_mb = nbytes / 1024 / 1024 * 3
-            phymem = virtual_memory()
-            available_memory = (1 - phymem.percent / 100) * phymem.total
-            available_mb = available_memory / 1024 / 1024
-            if nbytes * 3 > available_memory:
-                raise MemoryError(
-                    MEMORY_ERROR % (estimate_mb, available_mb))
-
-        # initializing epsilons
-        with init_mon:
-            initializer.init_epsilons(calc.epsilon_sampling)
 
 
 @tasks.oqtask
@@ -127,8 +97,7 @@ def run_risk(sorted_assocs, calc, monitor):
             imt = it.imt.imt_str
             with get_haz_mon:
                 getter = calc.getter_class(
-                    imt, taxonomy, hazard_outputs, assets,
-                    calc.epsilon_sampling)
+                    imt, taxonomy, hazard_outputs, assets)
             logs.LOG.info(
                 'Read %d data for %d assets of taxonomy %s, imt=%s',
                 len(set(getter.site_ids)), len(assets), taxonomy, imt)
@@ -176,12 +145,6 @@ class RiskCalculator(base.Calculator):
         self.best_maximum_distance = dist
         self.time_event = self.oqparam.time_event
         self.taxonomies_from_model = self.oqparam.taxonomies_from_model
-        if hasattr(self.oqparam, 'number_of_ground_motion_fields'):
-            # scenario_risk
-            self.epsilon_sampling = self.oqparam.number_of_ground_motion_fields
-        else:
-            # event_based_risk
-            self.epsilon_sampling = eps_sampling
 
     def get_hazard_outputs(self):
         """
@@ -281,8 +244,7 @@ class RiskCalculator(base.Calculator):
 
     def prepare_risk(self):
         """
-        Associate assets and sites and for some calculator generate the
-        epsilons.
+        Associate assets and sites.
         """
         self.outputdict = writers.combine_builders(
             [ob(self) for ob in self.output_builders])
