@@ -507,6 +507,8 @@ def get_gmfs(calc):
     gmfs = {(trt_id, gsim): numpy.zeros((N, R), imt_dt)
             for trt_id, gsim in calc.rlzs_assoc}
     for rupid, rows in sorted(gmf_by_idx.items()):
+        assert len(haz_sitecol.indices) == len(rows), (
+            len(haz_sitecol.indices), len(rows))
         for sid, gmv in zip(haz_sitecol.indices, rows):
             if sid in risk_indices:
                 for trt_id, gsim in gmfs:
