@@ -78,7 +78,6 @@ class CalculatorTestCase(unittest.TestCase):
             self.calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=hc_id, **kw)
             result.update(self.calc.run())
-        self.calc.datastore.close()
         return result
 
     def execute(self, testfile, job_ini):
@@ -136,3 +135,7 @@ class CalculatorTestCase(unittest.TestCase):
         """
         with open(os.path.join(self.calc.oqparam.export_dir, fname)) as actual:
             self.assertEqual(expected_content, actual.read())
+
+    def tearDown(self):
+        if hasattr(self, 'calc'):
+            self.calc.datastore.close()
