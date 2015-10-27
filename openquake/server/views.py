@@ -474,15 +474,6 @@ def get_result(request, result_id):
     etype = request.GET.get('export_type')
     export_type = etype or DEFAULT_EXPORT_TYPE
 
-    dload = request.GET.get('dload')
-    download = False
-    if dload is None:
-        if etype is not None:
-            download = True
-    else:
-        if dload == "true":
-            download = True
-
     tmpdir = tempfile.mkdtemp()
     try:
         exported = core.export(result_id, tmpdir, export_type=export_type)
@@ -503,8 +494,7 @@ def get_result(request, result_id):
         data = open(exported).read()
         response = HttpResponse(data, content_type=content_type)
         response['Content-Length'] = len(data)
-        if download:  # download as a file
-            response['Content-Disposition'] = 'attachment; filename=%s' % fname
+        response['Content-Disposition'] = 'attachment; filename=%s' % fname
         return response
     finally:
         shutil.rmtree(tmpdir)
