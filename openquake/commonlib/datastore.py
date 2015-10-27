@@ -229,15 +229,13 @@ class DataStore(collections.MutableMapping):
     def export_path(self, name, export_dir=None):
         """
         Return the path of the exported file by adding the export_dir in
-        front, the calculation ID at the end, and by stripping _@ characters.
+        front, the calculation ID at the end.
 
         :param fname: file name template
         """
         assert not os.path.dirname(name), name
         name, ext = os.path.splitext(name)
-        # if there is a single realization, or if the logic tree is reduced,
-        # then rlz.uid contains @ signs; we strip them
-        newname = '%s_%s%s' % (name.replace('_@', ''), self.calc_id, ext)
+        newname = '%s_%s%s' % (name, self.calc_id, ext)
         if export_dir is None:
             export_dir = self.export_dir
         return os.path.join(export_dir, newname)

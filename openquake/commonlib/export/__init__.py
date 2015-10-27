@@ -16,7 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 from openquake.baselib.general import import_all, CallableDict
 from openquake.commonlib.writers import write_csv
 
@@ -40,16 +39,6 @@ def export_csv(ekey, dstore):
     return [write_csv(dstore.export_path(name), array)]
 
 
-def get_export_csv(ekey):
-    """
-    If the key corresponds to a HDF5 path and the format is csv,
-    return the default csv exporter, otherwise raise a KeyError.
-    """
-    key, fmt = ekey
-    if fmt == 'csv':
-        return export_csv
-    raise KeyError(ekey)
-
-export = CallableDict(keymissing=get_export_csv)
+export = CallableDict()
 
 import_all('openquake.commonlib.export')
