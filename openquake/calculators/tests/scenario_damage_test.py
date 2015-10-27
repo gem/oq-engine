@@ -30,8 +30,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_1c(self):
         # this is a case with more hazard sites than exposure sites
         test_dir = os.path.dirname(case_1c.__file__)
-        out = self.run_calc(
-            test_dir, 'job_haz.ini,job_risk.ini', exports='xml')
+        out = self.run_calc(test_dir, 'job.ini', exports='xml')
         [total] = out['dmg_total', 'xml']
         self.assertEqualFiles('expected/dmg_dist_total.xml', total)
 
