@@ -270,7 +270,7 @@ def view_totlosses(token, dstore):
     dtlist = [('%s-%s' % (name, stat), float)
               for name in avglosses.dtype.names
               for stat in ('mean', 'mean_ins')]
-    zero = numpy.zeros(1, numpy.dtype(dtlist))
+    zero = numpy.zeros(avglosses.shape[1:], numpy.dtype(dtlist))
     for name in avglosses.dtype.names:
         for stat in ('mean', 'mean_ins'):
             for rec in avglosses:

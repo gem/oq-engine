@@ -19,7 +19,6 @@
 import os
 import re
 import ast
-import shutil
 from openquake.baselib.python3compat import pickle
 import collections
 
@@ -228,6 +227,12 @@ class DataStore(collections.MutableMapping):
         Generic csv exporter
         """
         return write_csv(self.export_path(key, 'csv'), self[key])
+
+    def reopen(self):
+        """Reopen a closed datastore"""
+        parent = () if self.parent is () else self.parent.reopen()
+        return self.__class__(self.calc_id, self.datadir, parent,
+                              self.export_dir)
 
     def close(self):
         """Close the underlying hdf5 file"""
