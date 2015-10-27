@@ -428,11 +428,11 @@ _pkgtest_innervm_run () {
         oq-lite run ClassicalRisk/job_hazard.ini,ClassicalRisk/job_risk.ini
 
         echo 'running ScenarioDamage...'
-        oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini
+        oq-lite run ScenarioDamage/job.ini
         oq-lite export -1 dmg_by_asset xml /tmp
 
         echo 'running ScenarioRisk...'
-        oq-lite run ScenarioRisk/job_hazard.ini,ScenarioRisk/job_risk.ini
+        oq-lite run ScenarioRisk/job.ini
         oq-lite show -1 agglosses > /tmp/agglosses.csv
         cmp /tmp/agglosses.csv ScenarioRisk/expected_agglosses.csv
 
