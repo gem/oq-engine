@@ -321,7 +321,7 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     :param int num_samples: the number of ruptures
     :param int seed: a random seed
     :param float correlation: the correlation coefficient
-    :returns: epsilons matrix of shape (N, S)
+    :returns: epsilons matrix of shape (num_assets, num_samples)
     """
     all_assets = (a for assets in assets_by_site for a in assets)
     assets_by_taxo = groupby(all_assets, operator.attrgetter('taxonomy'))
