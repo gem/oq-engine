@@ -56,7 +56,8 @@ def cube(O, L, R, factory):
 
 
 @parallel.litetask
-def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
+def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
+                     eps_dict, specific_assets, monitor):
     """
     :param riskinputs:
         a list of :class:`openquake.risklib.riskinput.RiskInput` objects
@@ -64,6 +65,12 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         a :class:`openquake.risklib.riskinput.RiskModel` instance
     :param rlzs_assoc:
         a class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param assets_by_site:
+        a representation of the exposure
+    :param eps_dict:
+        a dictionary with the epsilons per asset
+    :param specific_assets:
+        .ini file parameter
     :param monitor:
         :class:`openquake.baselib.performance.PerformanceMonitor` instance
     :returns:
@@ -71,10 +78,13 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         a single array of dtype elt_dt, or an empty list
     """
     lti = riskmodel.lti  # loss type -> index
-    specific_assets = monitor.oqparam.specific_assets
-    result = cube(
-        monitor.num_outputs, len(lti), len(rlzs_assoc.realizations), list)
-    for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
+    L, R = len(lti), len(rlzs_assoc.realizations)
+    result = cube(monitor.num_outputs, L, R, list)
+    for l in range(L):
+        for r in range(R):
+            result[AVGLOSS, l, r] = numpy.zeros((monitor.num_assets, 2))
+    for out_by_rlz in riskmodel.gen_outputs(
+            riskinputs, rlzs_assoc, monitor, assets_by_site, eps_dict):
         rup_slice = out_by_rlz.rup_slice
         rup_ids = list(range(rup_slice.start, rup_slice.stop))
         for out in out_by_rlz:
@@ -122,11 +132,11 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                 # the order in which the tasks are run, which is random
                 # i.e. at each run one may get different results!!
                 arr[aid] = [avgloss, ins_avgloss]
-            result[AVGLOSS, l, out.hid].append(arr)
+            result[AVGLOSS, l, out.hid] += arr
 
     for idx, lst in numpy.ndenumerate(result):
         o, l, r = idx
-        if lst:
+        if len(lst):
             if o == AGGLOSS:
                 acc = collections.defaultdict(float)
                 for rupt, loss in lst:
@@ -135,7 +145,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                                             for rup, loss in acc.items()],
                                            elt_dt)]
             elif o == AVGLOSS:
-                result[idx] = [sum(lst)]
+                result[idx] = [lst]
             elif o == SPECLOSS:
                 result[idx] = [numpy.array(lst, ela_dt)]
             else:  # risk curves
@@ -191,6 +201,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         eps_dict = riskinput.make_eps_dict(
             assets_by_site, num_samples, oq.master_seed, oq.asset_correlation)
         logging.info('Generated %d epsilons', num_samples * len(eps_dict))
+        self.eps_dict = eps_dict
         self.epsilon_matrix = numpy.array(
             [eps_dict[a['asset_ref']] for a in self.assetcol])
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
@@ -208,9 +219,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.monitor.oqparam = self.oqparam
         # ugly: attaching an attribute needed in the task function
         self.monitor.num_outputs = len(self.outs)
-        # attaching two other attributes used in riskinput.gen_outputs
-        self.monitor.assets_by_site = self.assets_by_site
-        self.monitor.eps_dict = eps_dict
         self.monitor.num_assets = N = self.count_assets()
         for o, out in enumerate(self.outs):
             self.datastore.hdf5.create_group(out)
@@ -242,7 +250,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         return apply_reduce(
             self.core_func.__func__,
-            (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
+            (self.riskinputs, self.riskmodel, self.rlzs_assoc,
+             self.assets_by_site, self.eps_dict,
+             self.oqparam.specific_assets, self.monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             agg=self.agg,
             acc=cube(self.monitor.num_outputs, self.L, self.R, list),
