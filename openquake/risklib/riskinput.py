@@ -180,16 +180,16 @@ class RiskModel(collections.Mapping):
     def __len__(self):
         return len(self._workflows)
 
-    def build_input(self, imt, hazards_by_site, assets_by_site, eps=None):
+    def build_input(self, imt, hazards_by_site, assets_by_site, eps_dict):
         """
         :param imt: an Intensity Measure Type
         :param hazards_by_site: an array of hazards per each site
         :param assets_by_site: an array of assets per each site
-        :param eps: a matrix of epsilons
+        :param eps_dict: a dictionary of epsilons
         :returns: a :class:`RiskInput` instance
         """
         imt_taxonomies = [(imt, self.get_taxonomies(imt))]
-        return RiskInput(imt_taxonomies, hazards_by_site, assets_by_site, eps)
+        return RiskInput(imt_taxonomies, hazards_by_site, assets_by_site, eps_dict)
 
     def build_inputs_from_ruptures(self, sitecol, all_ruptures,
                                    gsims_by_col, trunc_level, correl_model,
@@ -270,10 +270,13 @@ class RiskInput(object):
     Contains all the assets and hazard values associated to a given
     imt and site.
 
-    :param imt: Intensity Measure Type string
-    :param hazard_assets_by_taxo: pairs (hazard, {imt: assets}) for each site
+    :param imt_taxonomies: a pair (IMT, taxonomies)
+    :param hazard_by_site: array of hazards, one per site
+    :param assets_by_site: array of assets, one per site
+    :param eps_dict: dictionary of epsilons
     """
-    def __init__(self, imt_taxonomies, hazard_by_site, assets_by_site, eps):
+    def __init__(self, imt_taxonomies, hazard_by_site, assets_by_site,
+                 eps_dict):
         [(self.imt, taxonomies)] = imt_taxonomies
         self.hazard_by_site = hazard_by_site
         self.assets_by_site = [
@@ -287,14 +290,14 @@ class RiskInput(object):
             self.weight += len(assets)
         self.taxonomies = sorted(taxonomies)
         self.tags = None  # for API compatibility with RiskInputFromRuptures
-        self.eps = {} if eps is None else eps
+        self.eps_dict = eps_dict
 
     @property
     def imt_taxonomies(self):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def get_all(self, rlzs_assoc, assets_by_site=None, eps=None):
+    def get_all(self, rlzs_assoc, assets_by_site=None, _eps=None):
         """
         :returns:
             lists of assets, hazards and epsilons
@@ -306,7 +309,7 @@ class RiskInput(object):
             for asset in assets_:
                 assets.append(asset)
                 hazards.append({self.imt: rlzs_assoc.combine(hazard)})
-                epsilons.append(self.eps.get(asset.idx, None))
+                epsilons.append(self.eps_dict.get(asset.idx, None))
         return assets, hazards, epsilons
 
     def __repr__(self):

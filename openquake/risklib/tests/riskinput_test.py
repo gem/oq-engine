@@ -54,21 +54,21 @@ a4,3,1,50,500000,2.0,6.0
         hazard_by_site = [{}] * 4
 
         ri_PGA = self.riskmodel.build_input(
-            'PGA', hazard_by_site, self.assets_by_site)
+            'PGA', hazard_by_site, self.assets_by_site, {})
         assets, hazards, epsilons = ri_PGA.get_all(rlzs_assoc)
         self.assertEqual([a.id for a in assets], ['a0', 'a3', 'a4'])
         self.assertEqual(set(a.taxonomy for a in assets), set(['RM']))
         self.assertEqual(epsilons, [None, None, None])
 
         ri_SA_02 = self.riskmodel.build_input(
-            'SA(0.2)', hazard_by_site, self.assets_by_site)
+            'SA(0.2)', hazard_by_site, self.assets_by_site, {})
         assets, hazards, epsilons = ri_SA_02.get_all(rlzs_assoc)
         self.assertEqual([a.id for a in assets], ['a1'])
         self.assertEqual(set(a.taxonomy for a in assets), set(['RC']))
         self.assertEqual(epsilons, [None])
 
         ri_SA_05 = self.riskmodel.build_input(
-            'SA(0.5)', hazard_by_site, self.assets_by_site)
+            'SA(0.5)', hazard_by_site, self.assets_by_site, {})
         assets, hazards, epsilons = ri_SA_05.get_all(rlzs_assoc)
         self.assertEqual([a.id for a in assets], ['a2'])
         self.assertEqual(set(a.taxonomy for a in assets), set(['W']))
