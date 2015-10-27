@@ -257,6 +257,21 @@ def view_old_avg_losses(token, dstore):
     return rst_table(losses)
 
 
+# for scenario_risk
+@view.add('totlosses')
+def view_totlosses(token, dstore):
+    avglosses = dstore['avglosses'].value
+    dtlist = [('%s-%s' % (name, stat), float)
+              for name in avglosses.dtype.names
+              for stat in ('mean', 'mean_ins')]
+    zero = numpy.zeros(1, numpy.dtype(dtlist))
+    for name in avglosses.dtype.names:
+        for stat in ('mean', 'mean_ins'):
+            for rec in avglosses:
+                zero['%s-%s' % (name, stat)] += rec[name][stat]
+    return rst_table(zero)
+
+
 def sum_table(records):
     """
     Used to compute summaries. The records are assumed to have numeric

@@ -32,15 +32,7 @@ from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
 
 
-def sum_composite_array(value):
-    arr = value.view(float)
-    tot = numpy.zeros(arr.shape[1:], float)
-    for el in arr:
-        tot += el
-    return tot.view(value.dtype)
-
-
-def show(calc_id, key=None, spec=None, rlzs=None):
+def show(calc_id, key=None, rlzs=None):
     """
     Show the content of a datastore.
 
@@ -72,9 +64,7 @@ def show(calc_id, key=None, spec=None, rlzs=None):
             return
         obj = ds[key]
         if hasattr(obj, 'value'):  # an array
-            value = (sum_composite_array(obj.value)
-                     if spec == 'sum' else obj.value)
-            print(write_csv(io.StringIO(), value))
+            print(write_csv(io.StringIO(), obj.value))
         else:
             print(obj)
         return
@@ -102,5 +92,4 @@ def show(calc_id, key=None, spec=None, rlzs=None):
 parser = sap.Parser(show)
 parser.arg('calc_id', 'calculation ID', type=int)
 parser.arg('key', 'key of the datastore')
-parser.arg('spec', 'specifier', choices=['sum'])
 parser.flg('rlzs', 'print out the realizations')
