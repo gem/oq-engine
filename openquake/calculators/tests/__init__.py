@@ -137,4 +137,5 @@ class CalculatorTestCase(unittest.TestCase):
             self.assertEqual(expected_content, actual.read())
 
     def tearDown(self):
-        self.calc.datastore.close()
+        if hasattr(self, 'calc'):
+            self.calc.datastore.close()
