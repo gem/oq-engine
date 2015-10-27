@@ -55,9 +55,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles(expected, fname)
 
         # testing the totlosses view
-        dstore = self.calc.datastore.reopen()
+        dstore = self.calc.datastore
         text = view('totlosses', dstore)
-        dstore.close()
         self.assertEqual(text, '''\
 =============== ===================
 structural-mean structural-mean_ins
