@@ -260,6 +260,12 @@ def view_old_avg_losses(token, dstore):
 # for scenario_risk
 @view.add('totlosses')
 def view_totlosses(token, dstore):
+    """
+    This is a debugging view. You can use it to check that the total
+    losses, i.e. the losses obtained by summing the average losses on
+    all assets are indeed equal to the aggregate losses. This is a
+    sanity check for the correctness of the implementation.
+    """
     avglosses = dstore['avglosses'].value
     dtlist = [('%s-%s' % (name, stat), float)
               for name in avglosses.dtype.names
