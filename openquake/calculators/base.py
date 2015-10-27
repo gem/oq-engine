@@ -393,10 +393,12 @@ class RiskCalculator(HazardCalculator):
                 self.assets_by_site, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
 
-    def build_riskinputs(self, hazards_by_key, eps=None):
+    def build_riskinputs(self, hazards_by_key, eps=numpy.zeros(0)):
         """
         :param hazards_by_key:
             a dictionary key -> IMT -> array of length num_sites
+        :param eps:
+            a matrix of epsilons (possibly empty)
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
@@ -414,7 +416,7 @@ class RiskCalculator(HazardCalculator):
                 indices = numpy.array([idx for idx, _weight in block])
                 reduced_assets = self.assets_by_site[indices]
                 reduced_eps = {}  # for the assets belonging to the indices
-                if eps is not None:
+                if len(eps):
                     for assets in reduced_assets:
                         for asset in assets:
                             reduced_eps[asset.idx] = eps[asset.idx]
