@@ -22,8 +22,6 @@ import os
 import shutil
 import logging
 
-import numpy
-
 from openquake.commonlib import sap, datastore
 from openquake.baselib.general import humansize
 from openquake.commonlib.oqvalidation import OqParam
