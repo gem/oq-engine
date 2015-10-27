@@ -1,6 +1,8 @@
   [Michele Simionato]
   * Improved the export names of the oq-lite calculators
   * Updated all the risk demos
+  * Improved the memory consumption and data transfer of the event_based_risk
+    calculator
   * The ProbabilisticEventBased risk demo works with a single job.ini
   * Added support for NRML 0.5 for fragility functions and deprecated NRML 0.4
   * Added a ConsequenceModel parser and implemented the calculation of

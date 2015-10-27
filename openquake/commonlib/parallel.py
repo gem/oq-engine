@@ -31,6 +31,7 @@ import psutil
 
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import PerformanceMonitor, DummyMonitor
+from openquake.baselib.general import split_in_blocks, AccumDict, humansize
 
 
 if psutil.__version__ > '2.0.0':  # Ubuntu 14.10
@@ -53,9 +54,6 @@ else:  # Ubuntu 12.04
 
     def memory_info(proc):
         return proc.get_memory_info()
-
-
-from openquake.baselib.general import split_in_blocks, AccumDict, humansize
 
 
 executor = ProcessPoolExecutor()
@@ -104,14 +102,14 @@ def safely_call(func, args, pickle=False):
     """
     if pickle:
         args = [a.unpickle() for a in args]
-    mon = args and isinstance(args[-1], PerformanceMonitor)
+    ismon = args and isinstance(args[-1], PerformanceMonitor)
+    mon = args[-1] if ismon else DummyMonitor()
     try:
-        res = func(*args), None, args[-1] if mon else DummyMonitor()
+        res = func(*args), None, mon
     except:
         etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
-        res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype,
-               args[-1] if mon else DummyMonitor())
+        res = ('\n%s%s: %s' % (tb_str, etype.__name__, exc), etype, mon)
     if pickle:
         return Pickled(res)
     return res

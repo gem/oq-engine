@@ -230,7 +230,7 @@ def get_vulnerability_functions_05(node, fname):
             vf_dict[imt, taxonomy] = (
                 scientific.VulnerabilityFunctionWithPMF(
                     taxonomy, imt, imls, numpy.array(loss_ratios),
-                    probs, seed=42))  # it is fine to hard-code it
+                    probs))  # the seed will be set by readinput.get_risk_model
         else:
             with context(fname, vfun):
                 loss_ratios = ~vfun.meanLRs

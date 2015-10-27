@@ -381,21 +381,22 @@ class RiskCalculator(HazardCalculator):
     riskmodel = datastore.persistent_attribute('riskmodel')
     specific_assets = datastore.persistent_attribute('specific_assets')
 
-    def make_eps_dict(self, num_ruptures):
+    def make_eps(self, num_ruptures):
         """
         :param num_ruptures: the size of the epsilon array for each asset
         """
         oq = self.oqparam
         with self.monitor('building epsilons', autoflush=True):
-            eps = riskinput.make_eps_dict(
+            return riskinput.make_eps(
                 self.assets_by_site, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
-            return eps
 
-    def build_riskinputs(self, hazards_by_key, eps_dict=None):
+    def build_riskinputs(self, hazards_by_key, eps=numpy.zeros(0)):
         """
         :param hazards_by_key:
             a dictionary key -> IMT -> array of length num_sites
+        :param eps:
+            a matrix of epsilons (possibly empty)
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
@@ -413,10 +414,10 @@ class RiskCalculator(HazardCalculator):
                 indices = numpy.array([idx for idx, _weight in block])
                 reduced_assets = self.assets_by_site[indices]
                 reduced_eps = {}  # for the assets belonging to the indices
-                if eps_dict:
+                if len(eps):
                     for assets in reduced_assets:
                         for asset in assets:
-                            reduced_eps[asset.id] = eps_dict[asset.id]
+                            reduced_eps[asset.idx] = eps[asset.idx]
 
                 # collect the hazards by key into hazards by imt
                 hdata = collections.defaultdict(lambda: [{} for _ in indices])

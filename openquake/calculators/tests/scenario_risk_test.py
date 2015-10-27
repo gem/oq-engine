@@ -5,6 +5,7 @@ from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_1g, case_3, occupants, case_6a)
 
 from openquake.calculators.tests import CalculatorTestCase
+from openquake.commonlib.datastore import view
 
 
 class ScenarioRiskTestCase(CalculatorTestCase):
@@ -50,6 +51,17 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         f1, f2 = out['agglosses', 'csv']
         self.assertEqualFiles('expected/agg-gsimltp_b1_structural.csv', f1)
         self.assertEqualFiles('expected/agg-gsimltp_b2_structural.csv', f2)
+
+        # testing the totlosses view
+        dstore = self.calc.datastore
+        text = view('totlosses', dstore)
+        self.assertEqual(text, '''\
+=============== ===================
+structural-mean structural-mean_ins
+=============== ===================
+2.6872496E+03         NAN          
+3.2341374E+03         NAN          
+=============== ===================''')
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_1g(self):
