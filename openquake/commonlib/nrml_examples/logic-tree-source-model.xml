@@ -55,6 +55,25 @@
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
+        
+        <logicTreeBranchingLevel branchingLevelID="bl4">
+            <logicTreeBranchSet uncertaintyType="incrementalMFDAbsolute" branchSetID="bs4">
+                <logicTreeBranch branchID="b9">
+                    <uncertaintyModel>8.0,0.1,0.005 0.0025</uncertaintyModel>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b10">
+                    <uncertaintyModel>8.0,0.1,0.01 0.005</uncertaintyModel>
+                    <uncertaintyWeight>0.34</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b11">
+                    <uncertaintyModel>8.0,0.1,0.05 0.025</uncertaintyModel>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
 
     </logicTree>
 </nrml>

@@ -611,6 +611,10 @@ def get_risk_model(oqparam):
     else:
         # classical, event based and scenario calculators
         for imt_taxo, vfs in get_vfs(oqparam.inputs).items():
+            for vf in vfs.values():
+                # set the seed; this is important for the case of
+                # VulnerabilityFunctionWithPMF
+                vf.seed = oqparam.random_seed
             risk_models[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 vulnerability_functions=vfs)

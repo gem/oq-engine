@@ -220,7 +220,8 @@ class RiskModel(collections.Mapping):
                 slice(rup_start, rup_stop))
             rup_start = rup_stop
 
-    def gen_outputs(self, riskinputs, rlzs_assoc, monitor):
+    def gen_outputs(self, riskinputs, rlzs_assoc, monitor,
+                    assets_by_site=None, eps_dict=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying workflows. Yield the outputs generated as dictionaries
@@ -232,15 +233,10 @@ class RiskModel(collections.Mapping):
         """
         mon_hazard = monitor('getting hazard')
         mon_risk = monitor('computing individual risk')
+        eps_dict = eps_dict or {}
         for riskinput in riskinputs:
-            try:
-                assets_by_site = riskinput.assets_by_site
-            except AttributeError:  # for event_based_risk
-                assets_by_site = monitor.assets_by_site
-            try:
-                eps_dict = monitor.eps_dict
-            except AttributeError:
-                eps_dict = {}
+            assets_by_site = getattr(
+                riskinput, 'assets_by_site', assets_by_site)
             with mon_hazard:
                 # get assets, hazards, epsilons
                 a, h, e = riskinput.get_all(
