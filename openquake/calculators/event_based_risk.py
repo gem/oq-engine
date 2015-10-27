@@ -57,7 +57,7 @@ def cube(O, L, R, factory):
 
 @parallel.litetask
 def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
-                     eps_dict, specific_assets, monitor):
+                     eps, specific_assets, monitor):
     """
     :param riskinputs:
         a list of :class:`openquake.risklib.riskinput.RiskInput` objects
@@ -67,8 +67,8 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
         a class:`openquake.commonlib.source.RlzsAssoc` instance
     :param assets_by_site:
         a representation of the exposure
-    :param eps_dict:
-        a dictionary with the epsilons per asset
+    :param eps:
+        a matrix of shape (N, E) with N=#assets and E=#ruptures
     :param specific_assets:
         .ini file parameter
     :param monitor:
@@ -84,7 +84,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
         for r in range(R):
             result[AVGLOSS, l, r] = numpy.zeros((monitor.num_assets, 2))
     for out_by_rlz in riskmodel.gen_outputs(
-            riskinputs, rlzs_assoc, monitor, assets_by_site, eps_dict):
+            riskinputs, rlzs_assoc, monitor, assets_by_site, eps):
         rup_slice = out_by_rlz.rup_slice
         rup_ids = list(range(rup_slice.start, rup_slice.stop))
         for out in out_by_rlz:
@@ -198,15 +198,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         for i, rup in enumerate(all_ruptures):
             rup.ordinal = i
         num_samples = min(len(all_ruptures), epsilon_sampling)
-        eps_dict = riskinput.make_eps_dict(
+        self.epsilon_matrix = eps = riskinput.make_eps(
             assets_by_site, num_samples, oq.master_seed, oq.asset_correlation)
-        logging.info('Generated %d epsilons', num_samples * len(eps_dict))
-        self.eps_dict = eps_dict
-        self.epsilon_matrix = numpy.array(
-            [eps_dict[a['asset_ref']] for a in self.assetcol])
+        logging.info('Generated %d epsilons', num_samples * len(eps))
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
             self.sitecol.complete, all_ruptures, gsims_by_col,
-            oq.truncation_level, correl_model, eps_dict,
+            oq.truncation_level, correl_model, eps,
             oq.concurrent_tasks or 1))
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
@@ -216,7 +213,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.R = len(self.rlzs_assoc.realizations)
         self.outs = OUTPUTS
         self.datasets = {}
-        self.monitor.oqparam = self.oqparam
         # ugly: attaching an attribute needed in the task function
         self.monitor.num_outputs = len(self.outs)
         self.monitor.num_assets = N = self.count_assets()
@@ -251,7 +247,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         return apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc,
-             self.assets_by_site, self.eps_dict,
+             self.assets_by_site, self.epsilon_matrix,
              self.oqparam.specific_assets, self.monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             agg=self.agg,
