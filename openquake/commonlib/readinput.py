@@ -206,16 +206,18 @@ def get_mesh(oqparam):
             raise ValueError(
                 'Could not discretize region %(region)s with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
-    elif 'site_model' in oqparam.inputs:
-        coords = [(param.lon, param.lat) for param in get_site_model(oqparam)]
-        lons, lats = zip(*sorted(coords))
-        return geo.Mesh(numpy.array(lons), numpy.array(lats))
     elif 'gmfs' in oqparam.inputs:
         return get_gmfs(oqparam)[0].mesh
     elif oqparam.hazard_calculation_id:
         sitemesh = DataStore(oqparam.hazard_calculation_id)['sitemesh']
         return geo.Mesh(sitemesh['lon'], sitemesh['lat'])
-    # if there is an exposure the mesh is extracted from get_sitecol_assets
+    elif 'exposure' in oqparam.inputs:
+        # the mesh is extracted from get_sitecol_assets
+        return
+    elif 'site_model' in oqparam.inputs:
+        coords = [(param.lon, param.lat) for param in get_site_model(oqparam)]
+        lons, lats = zip(*sorted(coords))
+        return geo.Mesh(numpy.array(lons), numpy.array(lats))
 
 
 def sitecol_from_coords(oqparam, coords):
