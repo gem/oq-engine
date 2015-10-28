@@ -129,19 +129,20 @@ def extract_outputs(dkey, dstore, ext=''):
 
 
 # this is used by classical_risk from csv
-@export.add(('avg_losses', 'csv'))
+@export.add(('avg_losses-rlzs', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    avg_losses = dstore[ekey[0] + '/rlzs']
+    avg_losses = dstore[ekey[0]]
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets(dstore)
     columns = 'asset_ref lon lat avg_loss~structural ins_loss~structural' \
         .split()
     fnames = []
-    for rlz, losses in zip(rlzs, avg_losses):
+    for rlz in rlzs:
+        losses = avg_losses[:, rlz.ordinal]
         dest = dstore.export_path('rlz-%03d-avg_loss.csv' % rlz.ordinal)
         data = compose_arrays(assets, losses)
         writers.write_csv(dest, data, fmt='%10.6E', header=columns)
@@ -177,7 +178,6 @@ def export_avglosses_csv(ekey, dstore):
 
 
 @export.add(
-    ('avg_losses-rlzs', 'csv'),
     ('avg_losses-stats', 'csv'),
     ('rcurves-rlzs', 'csv'),
     ('icurves-rlzs', 'csv'),

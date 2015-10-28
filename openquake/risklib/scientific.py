@@ -1527,6 +1527,25 @@ class SimpleStats(object):
                 path = '%s-stats/%s/quantile-%s' % (name, loss_type, q)
                 dstore[path] = numpy.array([values, ins_values]).T  # N x 2
 
+    def compute(self, name, dstore):
+        """
+        Compute mean and quantiles from the data in the datastore
+        under the group `<name>` and store them under the group
+        `<name>-stats`.
+        """
+        array = dstore[name].value
+        loss_types = array.dtype.names
+        weights = [rlz.weight for rlz in self.rlzs]
+        for loss_type in loss_types:
+            data = array[loss_type].transpose(1, 0, 2)  # array R x N x 2
+            dstore['%s-stats/%s/mean' % (name, loss_type)] = mean_curve(
+                data, weights)
+            for q in self.quantiles:
+                values = quantile_curve([d.T[0] for d in data], q, weights)
+                ins_values = quantile_curve([d.T[1] for d in data], q, weights)
+                path = '%s-stats/%s/quantile-%s' % (name, loss_type, q)
+                dstore[path] = numpy.array([values, ins_values]).T  # N x 2
+
 
 class StatsBuilder(object):
     """
