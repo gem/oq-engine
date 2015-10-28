@@ -141,6 +141,13 @@ def get_risk_models(kind, inputs):
             '_' + kind, key)
         if mo:
             rmodel = nrml.parse(inputs[key])
+            rmodel_kind = rmodel.__class__.__name__
+            if not rmodel_kind.lower().startswith(kind):
+                raise ValueError(
+                    'Error in the .ini file: "%s_file=%s" points to a file '
+                    'of kind %s, expected %s' % (
+                        key, inputs[key], rmodel_kind,
+                        kind.capitalize() + 'Model'))
             expected_loss_type = mo.group(1)  # the loss type in the key
             if rmodel.lossCategory != expected_loss_type:
                 raise ValueError(

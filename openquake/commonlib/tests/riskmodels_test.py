@@ -249,7 +249,7 @@ lossCategory="contents">
         # test pickleability
         pickle.loads(pickle.dumps(cmodel))
 
-    def test_wrong_association(self):
+    def test_wrong_loss_type_association(self):
         scm = os.path.join(FF_DIR, 'structural_consequence_model.xml')
         ccm = os.path.join(FF_DIR, 'contents_consequence_model.xml')
         # exchanging the associations on purpose
@@ -259,6 +259,15 @@ lossCategory="contents">
         self.assertIn('structural_consequence_model.xml" is of type '
                       '"structural", expected "contents"',
                       str(ctx.exception))
+
+    def test_wrong_riskmodel_association(self):
+        cfm = os.path.join(FF_DIR, 'contents_fragility_model.xml')
+        # passing a fragility model instead of a consequence model
+        inputs = dict(contents_consequence=cfm)
+        with self.assertRaises(ValueError) as ctx:
+            riskmodels.get_risk_models('consequence', inputs)
+        self.assertIn('points to a file of kind FragilityModel, '
+                      'expected ConsequenceModel', str(ctx.exception))
 
     def test_wrong_files(self):
         # missing lossCategory

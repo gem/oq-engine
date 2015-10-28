@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a consistency check between the risk model keys in the job.ini and
+    the risk model files
   * Improved the memory consumption and data transfer of the event_based_risk
     calculator
   * The ProbabilisticEventBased risk demo works with a single job.ini
