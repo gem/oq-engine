@@ -189,7 +189,8 @@ class RiskModel(collections.Mapping):
         :returns: a :class:`RiskInput` instance
         """
         imt_taxonomies = [(imt, self.get_taxonomies(imt))]
-        return RiskInput(imt_taxonomies, hazards_by_site, assets_by_site, eps_dict)
+        return RiskInput(imt_taxonomies, hazards_by_site, assets_by_site,
+                         eps_dict)
 
     def build_inputs_from_ruptures(self, sitecol, all_ruptures,
                                    gsims_by_col, trunc_level, correl_model,
