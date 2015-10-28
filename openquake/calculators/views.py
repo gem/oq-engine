@@ -266,7 +266,7 @@ def view_totlosses(token, dstore):
     all assets are indeed equal to the aggregate losses. This is a
     sanity check for the correctness of the implementation.
     """
-    avglosses = dstore['avglosses'].value
+    avglosses = dstore['avglosses-rlzs'].value
     dtlist = [('%s-%s' % (name, stat), float)
               for name in avglosses.dtype.names
               for stat in ('mean', 'mean_ins')]

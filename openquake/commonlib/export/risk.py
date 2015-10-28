@@ -423,13 +423,13 @@ PerAssetLoss = collections.namedtuple(
     'PerAssetLoss', 'loss_type unit asset_ref mean stddev')
 
 
-@export.add(('avglosses', 'csv'))
+@export.add(('avglosses-rlzs', 'csv'))
 def export_avglosses(ekey, dstore):
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                   for ct in dstore['cost_types']}
     unit_by_lt['fatalities'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
-    avglosses = dstore['avglosses']
+    avglosses = dstore[ekey[0]]
     riskmodel = dstore['riskmodel']
     assets = dstore['assetcol']['asset_ref']
     N, R = avglosses.shape
@@ -459,14 +459,14 @@ class Location(object):
         self.wkt = 'POINT(%s %s)' % tuple(xy)
 
 
-@export.add(('avglosses', 'xml'), ('avglosses', 'geojson'))
+@export.add(('avglosses-rlzs', 'xml'), ('avglosses-rlzs', 'geojson'))
 def export_lossmaps_xml_geojson(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                   for ct in dstore['cost_types']}
     unit_by_lt['fatalities'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
-    avglosses = dstore['avglosses']
+    avglosses = dstore[ekey[0]]
     riskmodel = dstore['riskmodel']
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
