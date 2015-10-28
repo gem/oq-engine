@@ -125,19 +125,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 pdb.post_mortem(tb)
             else:
                 raise
-        finally:
-            critical = sys.exc_info()[0]
-            if critical:
-                logging.critical('', exc_info=True)
-            if clean_up:
-                try:
-                    self.clean_up()
-                except:
-                    # display the cleanup error only if there was no
-                    # critical error, to avoid covering it
-                    if critical is None:
-                        logging.error('Cleanup error', exc_info=True)
-            return exported
+        # don't do cleanup if there is a critical error, otherwise
+        # there will likely be a cleanup error covering the real one
+        if clean_up:
+            self.clean_up()
+        return exported
 
     def core_func(*args):
         """
@@ -262,8 +254,7 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam, self.monitor('precalculator'),
                     self.datastore.calc_id)
                 precalc.run(clean_up=False)
-                if 'scenario' not in self.oqparam.calculation_mode:
-                    self.csm = precalc.csm
+                self.csm = precalc.datastore.get('csm', None)
             else:  # read previously computed data
                 self.datastore.set_parent(datastore.DataStore(precalc_id))
                 # update oqparam with the attributes saved in the datastore
