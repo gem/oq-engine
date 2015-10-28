@@ -1530,8 +1530,8 @@ class SimpleStats(object):
     def compute(self, name, dstore):
         """
         Compute mean and quantiles from the data in the datastore
-        under the group `<name>` and store them under the group
-        `<name>-stats`.
+        under the group `<name>-rlzs` and store them under the group
+        `<name>-stats`. Return the number of bytes stored.
         """
         array = dstore[name].value
         loss_types = array.dtype.names
@@ -1549,7 +1549,7 @@ class SimpleStats(object):
                 ins_values = quantile_curve([d.T[1] for d in data], q, weights)
                 new[:, i] = numpy.array([values, ins_values]).T  # N x 2
         dstore[newname] = newarray
-        dstore.hdf5.flush()
+        return newarray.nbytes
 
 
 class StatsBuilder(object):

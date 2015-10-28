@@ -306,7 +306,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     [avgloss] = data
                     for i, avalue in enumerate(asset_values):
                         avg_losses_lt[i, r] = tuple(avgloss[i] * avalue)
-                    # saved[self.outs[o]] += avglosses_lr.nbytes
                 elif cb.user_provided:  # risk curves
                     # data is a list of dicts asset idx -> counts
                     poes = cb.build_poes(N, data, ses_ratio)
@@ -488,7 +487,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     self._store(path % 'loss_maps', loss_map_stats[i])
 
         stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
-        stats.compute('avg_losses-rlzs', self.datastore)
+        nbytes = stats.compute('avg_losses-rlzs', self.datastore)
+        self.datastore['avg_losses-stats'].attrs['nbytes'] = nbytes
+        self.datastore.hdf5.flush()
 
     def _store(self, path, curves):
         if curves.view(float).sum():

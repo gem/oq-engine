@@ -433,7 +433,7 @@ _pkgtest_innervm_run () {
 
         echo 'running ScenarioRisk...'
         oq-lite run ScenarioRisk/job_hazard.ini,ScenarioRisk/job_risk.ini
-        oq-lite show -1 agglosses > /tmp/agglosses.csv
+        oq-lite show -1 agglosses-rlzs > /tmp/agglosses.csv
         oq-lite show -1 totlosses > /tmp/totlosses.txt
         cmp /tmp/agglosses.csv ScenarioRisk/expected_agglosses.csv
         cmp /tmp/totlosses.txt ScenarioRisk/expected_totlosses.txt
