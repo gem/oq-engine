@@ -254,7 +254,8 @@ class HazardCalculator(BaseCalculator):
                     self.oqparam, self.monitor('precalculator'),
                     self.datastore.calc_id)
                 precalc.run(clean_up=False)
-                self.csm = precalc.datastore.get('csm', None)
+                if 'scenario' not in self.oqparam.calculation_mode:
+                    self.csm = precalc.csm
             else:  # read previously computed data
                 self.datastore.set_parent(datastore.DataStore(precalc_id))
                 # update oqparam with the attributes saved in the datastore
