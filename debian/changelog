@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the 'view' button from the Web UI
   * Removed the epsilon_sampling configuration parameter
   * Made customizable the display_name of datastore outputs (before it was
     identical to the datastore key)
