@@ -1536,15 +1536,20 @@ class SimpleStats(object):
         array = dstore[name].value
         loss_types = array.dtype.names
         weights = [rlz.weight for rlz in self.rlzs]
+        newname = name.replace('-rlzs', '-stats')
+        newshape = list(array.shape)
+        newshape[1] = len(self.quantiles) + 1  # number of statistical outputs
+        newarray = numpy.zeros(newshape, array.dtype)
         for loss_type in loss_types:
+            new = newarray[loss_type]
             data = array[loss_type].transpose(1, 0, 2)  # array R x N x 2
-            dstore['%s-stats/%s/mean' % (name, loss_type)] = mean_curve(
-                data, weights)
-            for q in self.quantiles:
+            new[:, 0] = mean_curve(data, weights)
+            for i, q in enumerate(self.quantiles, 1):
                 values = quantile_curve([d.T[0] for d in data], q, weights)
                 ins_values = quantile_curve([d.T[1] for d in data], q, weights)
-                path = '%s-stats/%s/quantile-%s' % (name, loss_type, q)
-                dstore[path] = numpy.array([values, ins_values]).T  # N x 2
+                new[:, i] = numpy.array([values, ins_values]).T  # N x 2
+        dstore[newname] = newarray
+        dstore.hdf5.flush()
 
 
 class StatsBuilder(object):

@@ -128,7 +128,7 @@ def extract_outputs(dkey, dstore, ext=''):
 # ############################### exporters ############################## #
 
 
-# this is used by classical_risk from csv
+# this is used by classical_risk and event_based_risk
 @export.add(('avg_losses-rlzs', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
@@ -138,14 +138,32 @@ def export_avg_losses(ekey, dstore):
     avg_losses = dstore[ekey[0]]
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets(dstore)
-    columns = 'asset_ref lon lat avg_loss~structural ins_loss~structural' \
-        .split()
     fnames = []
     for rlz in rlzs:
         losses = avg_losses[:, rlz.ordinal]
-        dest = dstore.export_path('rlz-%03d-avg_loss.csv' % rlz.ordinal)
+        dest = dstore.export_path('avg_loss-rlz%03d.csv' % rlz.ordinal)
         data = compose_arrays(assets, losses)
-        writers.write_csv(dest, data, fmt='%10.6E', header=columns)
+        writers.write_csv(dest, data, fmt='%10.6E')
+        fnames.append(dest)
+    return fnames
+
+
+@export.add(('avg_losses-stats', 'csv'))
+def export_avg_losses_stats(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    oq = OqParam.from_(dstore.attrs)
+    avg_losses = dstore[ekey[0]]
+    quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+    assets = get_assets(dstore)
+    fnames = []
+    for i, quantile in enumerate(quantiles):
+        losses = avg_losses[:, i]
+        dest = dstore.export_path('avg_losses-%s.csv' % quantile)
+        data = compose_arrays(assets, losses)
+        writers.write_csv(dest, data, fmt='%10.6E')
         fnames.append(dest)
     return fnames
 
@@ -178,7 +196,6 @@ def export_avglosses_csv(ekey, dstore):
 
 
 @export.add(
-    ('avg_losses-stats', 'csv'),
     ('rcurves-rlzs', 'csv'),
     ('icurves-rlzs', 'csv'),
     ('rcurves-stats', 'csv'),
