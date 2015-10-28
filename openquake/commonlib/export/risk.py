@@ -501,13 +501,13 @@ def export_lossmaps_xml_geojson(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('agglosses', 'csv'))
+@export.add(('agglosses-rlzs', 'csv'))
 def export_agglosses(ekey, dstore):
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                   for ct in dstore['cost_types']}
     unit_by_lt['fatalities'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
-    agglosses = dstore['agglosses']
+    agglosses = dstore[ekey[0]]
     riskmodel = dstore['riskmodel']
     L = len(riskmodel.loss_types)
     R, = agglosses.shape

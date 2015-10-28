@@ -134,4 +134,4 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             for (l, r, aid, stat) in result['avg']:
                 avglosses[ltypes[l]][aid, r] = stat
             self.datastore['avglosses-rlzs'] = avglosses
-            self.datastore['agglosses'] = agglosses
+            self.datastore['agglosses-rlzs'] = agglosses
