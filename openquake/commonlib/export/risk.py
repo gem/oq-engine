@@ -141,7 +141,7 @@ def export_avg_losses(ekey, dstore):
     fnames = []
     for rlz in rlzs:
         losses = avg_losses[:, rlz.ordinal]
-        dest = dstore.export_path('avg_loss-rlz%03d.csv' % rlz.ordinal)
+        dest = dstore.export_path('avg_losses-rlz%03d.csv' % rlz.ordinal)
         data = compose_arrays(assets, losses)
         writers.write_csv(dest, data, fmt='%10.6E')
         fnames.append(dest)
