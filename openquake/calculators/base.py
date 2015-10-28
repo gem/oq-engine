@@ -124,8 +124,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 traceback.print_exc(tb)
                 pdb.post_mortem(tb)
             else:
+                logging.critical('', exc_info=True)
                 raise
-        # don't do cleanup if there is a critical error, otherwise
+        # don't cleanup if there is a critical error, otherwise
         # there will likely be a cleanup error covering the real one
         if clean_up:
             self.clean_up()
