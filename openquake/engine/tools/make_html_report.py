@@ -211,8 +211,7 @@ ORDER BY c.lt_model_id;
 '''
 
 ALL_JOBS = '''
-SELECT s.oq_job_id, 'hazard ' || COALESCE(o.hazard_calculation_id::text, ''),
-o.user_name, status FROM uiapi.job_stats AS s
+SELECT s.oq_job_id, o.user_name, status FROM uiapi.job_stats AS s
 INNER JOIN uiapi.oq_job AS o
 ON o.id=s.oq_job_id
 WHERE stop_time::date = %s OR stop_time IS NULL AND start_time >= %s
@@ -276,7 +275,7 @@ def make_report(conn, isodate='today'):
     jobs = fetcher.query(ALL_JOBS, isodate, isodate)[1:]
     page = '<h2>%d job(s) finished before midnight of %s</h2>' % (
         len(jobs), isodate)
-    for job_id, prev_job, user, status in jobs:
+    for job_id, user, status in jobs:
         page = ''
         tag_ids.append(job_id)
         tag_status.append(status)
@@ -301,8 +300,8 @@ def make_report(conn, isodate='today'):
                 )) + html(data)
             page += info_rows
 
-        job_stats = '<h3>Job Stats for job %d [%s, %s]</h3>' % (
-            job_id, user, prev_job) + html(
+        job_stats = '<h3>Job Stats for job %d [%s]</h3>' % (
+            job_id, user) + html(
             fetcher.query(JOB_STATS, job_id))
         page += job_stats
 
