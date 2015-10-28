@@ -27,7 +27,7 @@ class ReportWriter(object):
         ruptures_by_trt='Number of ruptures per tectonic region type',
         rlzs_assoc='Realizations per (TRT, GSIM)',
         source_data_transfer='Expected data transfer for the sources',
-        avglosses_data_transfer='Expected data transfer for the avglosses',
+        avglosses_data_transfer='Estimated data transfer for the avglosses',
         exposure_info='Exposure model',
     )
 

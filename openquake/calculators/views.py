@@ -238,12 +238,14 @@ def avglosses_data_transfer(token, dstore):
     Determine the amount of average losses transferred from the workers to the
     controller node in a risk calculation.
     """
+    oq = OqParam.from_(dstore.attrs)
     N = len(dstore['assetcol'])
     R = len(dstore['rlzs_assoc'].realizations)
     L = len(dstore['riskmodel'].loss_types)
-    ct = int(dstore.attrs['concurrent_tasks'])
-    size_bytes = N * R * L * 2 * 8  # two 8 byte floats for loss and ins_loss
-    return humansize(size_bytes * ct)
+    ct = oq.concurrent_tasks
+    size_bytes = N * R * L * 2 * 8 * ct  # two 8 byte floats, loss and ins_loss
+    return ('%d asset(s) x %d realization(s) x %d loss type(s) x 2 losses x '
+            '8 bytes x %d tasks = %s' % (N, R, L, ct, humansize(size_bytes)))
 
 
 # this is used by the ebr calculator
