@@ -26,7 +26,8 @@ class ReportWriter(object):
         col_rlz_assocs='Collections <-> realizations',
         ruptures_by_trt='Number of ruptures per tectonic region type',
         rlzs_assoc='Realizations per (TRT, GSIM)',
-        data_transfer='Expected data transfer for the sources',
+        source_data_transfer='Expected data transfer for the sources',
+        avglosses_data_transfer='Expected data transfer for the avglosses',
         exposure_info='Exposure model',
     )
 
@@ -82,7 +83,9 @@ def build_report(job_ini, output_dir=None):
     elif 'scenario' not in oq.calculation_mode:
         rw.add('ruptures_by_trt')
     if oq.calculation_mode in ('classical', 'event_based', 'event_based_risk'):
-        rw.add('data_transfer')
+        rw.add('source_data_transfer')
+    if oq.calculation_mode in ('event_based_risk',):
+        rw.add('avglosses_data_transfer')
     if 'exposure' in oq.inputs:
         rw.add('exposure_info')
     rw.save(report)

@@ -218,8 +218,8 @@ def get_data_transfer(dstore):
     return numpy.array(block_info, block_dt), to_send_forward, to_send_back
 
 
-@view.add('data_transfer')
-def data_transfer(token, dstore):
+@view.add('source_data_transfer')
+def source_data_transfer(token, dstore):
     """
     Determine the amount of data transferred from the controller node
     to the workers and back in a classical calculation.
@@ -230,6 +230,20 @@ def data_transfer(token, dstore):
         ('Estimated sources to send', humansize(to_send_forward)),
         ('Estimated hazard curves to receive', humansize(to_send_back))]
     return rst_table(tbl)
+
+
+@view.add('avglosses_data_transfer')
+def avglosses_data_transfer(token, dstore):
+    """
+    Determine the amount of average losses transferred from the workers to the
+    controller node in a risk calculation.
+    """
+    N = len(dstore['assetcol'])
+    R = len(dstore['rlzs_assoc'].realizations)
+    L = len(dstore['riskmodel'].loss_types)
+    ct = int(dstore.attrs['concurrent_tasks'])
+    size_bytes = N * R * L * 2 * 8  # two 8 byte floats for loss and ins_loss
+    return humansize(size_bytes * ct)
 
 
 # this is used by the ebr calculator
