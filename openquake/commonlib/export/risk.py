@@ -100,16 +100,17 @@ def extract_outputs(dkey, dstore, ext=''):
     An utility to extract outputs ordered by loss types from a datastore
     containing nested structures as follows:
 
-    >>> dstore = {
-    ...     'risk_output':
-    ...        {'structural':
-    ...            {'b1': numpy.array([[0.10, 0.20], [0.30, 0.40]]),
-    ...             'b2': numpy.array([[0.12, 0.22], [0.33, 0.44]]),
-    ...            }}}
-    >>> outputs = extract_outputs('risk_output', dstore)
-    >>> [o.path for o in outputs]
+
+    >> dstore = {
+    ..     'risk_output':
+    ..        {'structural':
+    ..            {'b1': numpy.array([[0.10, 0.20], [0.30, 0.40]]),
+    ..             'b2': numpy.array([[0.12, 0.22], [0.33, 0.44]]),
+    ..            }}}
+    >> outputs = extract_outputs('risk_output', dstore)
+    >> [o.path for o in outputs]
     ['risk_output-structural-b1', 'risk_output-structural-b2']
-    >>> [o.ltype for o in outputs]
+    >> [o.ltype for o in outputs]
     ['structural', 'structural']
     """
     group = dstore[dkey]
