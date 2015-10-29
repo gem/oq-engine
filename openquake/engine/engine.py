@@ -453,6 +453,12 @@ def expose_outputs(dstore, job):
     :param job: an OqJob instance
     """
     exportable = set(ekey[0] for ekey in export.export)
+
+    # small hack: remove the sescollection outputs from scenario
+    # calculators, as requested by Vitor
+    calcmode = job.get_param('calculation_mode')
+    if 'scenario' in calcmode and 'sescollection' in exportable:
+        exportable.remove('sescollection')
     for key in dstore:
         if key in exportable:
             out = models.Output.objects.create_output(
