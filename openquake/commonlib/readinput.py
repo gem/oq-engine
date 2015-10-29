@@ -744,9 +744,10 @@ def get_exposure(oqparam):
         elif missing and oqparam.calculation_mode != 'classical_damage':
             # TODO: rewrite the classical_damage to work with multiple
             # loss types, then the special case will disappear
-            raise ValueError("Invalid Exposure. "
-                             "Missing cost %s for asset %s" % (
-                                 missing, asset_id))
+            with context(fname, asset):
+                raise ValueError("Invalid Exposure. "
+                                 "Missing cost %s for asset %s" % (
+                                     missing, asset_id))
 
         tot_fatalities = 0
         for occupancy in occupancies:
