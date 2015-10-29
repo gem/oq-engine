@@ -724,18 +724,15 @@ def get_exposure(oqparam):
             occupancies = asset.occupancies
         except NameError:
             occupancies = LiteralNode('occupancies', [])
-        with context(fname, costs):
-            for cost in costs:
+        for cost in costs:
+            with context(fname, cost):
                 cost_type = cost['type']
                 if cost_type not in relevant_cost_types:
                     continue
                 values[cost_type] = cost['value']
-                deduct = cost.attrib.get('deductible')
-                if deduct is not None:
-                    deductibles[cost_type] = deduct
-                limit = cost.attrib.get('insuranceLimit')
-                if limit is not None:
-                    insurance_limits[cost_type] = limit
+                if oqparam.insured_losses:
+                    deductibles[cost_type] = cost['deductible']
+                    insurance_limits[cost_type] = cost['insuranceLimit']
 
             # check we are not missing a cost type
             missing = relevant_cost_types - set(values)

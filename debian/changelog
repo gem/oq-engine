@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * When computing insured losses for an exposure without deductible and
+    insuredLimit, raise an error early
   * Changed the EventBasedRisk demo to produce loss curves
   * Fixed a bug with the error management: now a critical error in the
     the pre-calculation stops the whole computation and there is a single
