@@ -904,7 +904,7 @@ class CurveBuilder(object):
         self.ratios = numpy.array(loss_ratios, F32)
         self.user_provided = user_provided
         self.curve_resolution = len(loss_ratios)
-        R = self.curve_resolution or 1  # avoid bug in hdf5 2.0
+        R = self.curve_resolution
         self.loss_curve_dt = numpy.dtype([
             ('losses', (F32, R)), ('poes', (F32, R)), ('avg', F32)])
         self.lr_dt = numpy.dtype([('poes', (F32, R))])
@@ -949,7 +949,8 @@ class CurveBuilder(object):
         """
         counts_matrix = self.get_counts(N, count_dicts)
         poes = build_poes(counts_matrix, 1. / ses_ratio)
-        return poes.view(self.lr_dt)
+        # poes has shape (N, R) and goes into a composite array of shape N
+        return poes.view(self.lr_dt)[:, 0]
 
     def build_loss_curves(self, assetcol, losses_by_aid, ses_ratio):
         """
@@ -973,7 +974,7 @@ class CurveBuilder(object):
     def __repr__(self):
         return '<%s %s=%s user_provided=%s>' % (
             self.__class__.__name__, self.loss_type,
-            self.loss_ratios, self.user_provided)
+            self.ratios, self.user_provided)
 
 
 # should I use the ses_ratio here?
