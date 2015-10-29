@@ -44,6 +44,6 @@ class BaseCalculatorTestCase(unittest.TestCase):
         calc = ErrorCalculator(FakeParams())
         with mock.patch('logging.error') as error, mock.patch(
                 'logging.critical') as critical:
-            calc.run()
+            self.assertRaises(ZeroDivisionError, calc.run)
         self.assertEqual(error.call_count, 0)
         self.assertEqual(critical.call_count, 1)

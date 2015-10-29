@@ -1,3 +1,4 @@
+import re
 import unittest
 import numpy
 from openquake.commonlib.datastore import DataStore, view
@@ -64,3 +65,8 @@ class DataStoreTestCase(unittest.TestCase):
         self.dstore.set_parent(parent)
         attrs = sorted(self.dstore.attrs.items())
         self.assertEqual(attrs, [('a', 2), ('b', 2)])
+
+    def test_export_path(self):
+        path = self.dstore.export_path('hello')
+        mo = re.match('\./hello_\d+', path)
+        self.assertIsNotNone(mo)
