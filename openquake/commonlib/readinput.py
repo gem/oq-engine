@@ -727,27 +727,26 @@ def get_exposure(oqparam):
         for cost in costs:
             with context(fname, cost):
                 cost_type = cost['type']
-                if cost_type not in relevant_cost_types:
-                    continue
-                values[cost_type] = cost['value']
-                if oqparam.insured_losses:
-                    deductibles[cost_type] = cost['deductible']
-                    insurance_limits[cost_type] = cost['insuranceLimit']
+                if cost_type in relevant_cost_types:
+                    values[cost_type] = cost['value']
+                    if oqparam.insured_losses:
+                        deductibles[cost_type] = cost['deductible']
+                        insurance_limits[cost_type] = cost['insuranceLimit']
 
-            # check we are not missing a cost type
-            missing = relevant_cost_types - set(values)
-            if missing and missing <= ignore_missing_costs:
-                logging.warn(
-                    'Ignoring asset %s, missing cost type(s): %s',
-                    asset_id, ', '.join(missing))
-                for cost_type in missing:
-                    values[cost_type] = None
-            elif missing and oqparam.calculation_mode != 'classical_damage':
-                # TODO: rewrite the classical_damage to work with multiple
-                # loss types, then the special case will disappear
-                raise ValueError("Invalid Exposure. "
-                                 "Missing cost %s for asset %s" % (
-                                     missing, asset_id))
+        # check we are not missing a cost type
+        missing = relevant_cost_types - set(values)
+        if missing and missing <= ignore_missing_costs:
+            logging.warn(
+                'Ignoring asset %s, missing cost type(s): %s',
+                asset_id, ', '.join(missing))
+            for cost_type in missing:
+                values[cost_type] = None
+        elif missing and oqparam.calculation_mode != 'classical_damage':
+            # TODO: rewrite the classical_damage to work with multiple
+            # loss types, then the special case will disappear
+            raise ValueError("Invalid Exposure. "
+                             "Missing cost %s for asset %s" % (
+                                 missing, asset_id))
 
         tot_fatalities = 0
         for occupancy in occupancies:

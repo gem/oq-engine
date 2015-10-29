@@ -7,6 +7,7 @@
     traceback
   * Improved the memory consumption and data transfer of the event_based_risk
     calculator
+  * All data of a computation are now stored in a single calc_XXX.hdf5 file    
   * The ProbabilisticEventBased risk demo works with a single job.ini
   * Added support for NRML 0.5 for fragility functions and deprecated NRML 0.4
   * Added a ConsequenceModel parser and implemented the calculation of
