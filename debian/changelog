@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed a bug with the error management: now a critical error in the
+    the pre-calculation stops the whole computation and there is a single
+    traceback
   * Improved the memory consumption and data transfer of the event_based_risk
     calculator
   * The ProbabilisticEventBased risk demo works with a single job.ini
