@@ -950,7 +950,7 @@ class CurveBuilder(object):
         counts_matrix = self.get_counts(N, count_dicts)
         poes = build_poes(counts_matrix, 1. / ses_ratio)
         # poes has shape (N, R) and goes into a composite array of shape N
-        return poes.view(self.lr_dt)[:, 0]
+        return poes.view(self.lr_dt).reshape(N)
 
     def build_loss_curves(self, assetcol, losses_by_aid, ses_ratio):
         """
