@@ -240,19 +240,17 @@ class GmfCollection(object):
             yield GmfSet(gmfset[ses_idx], self.investigation_time, ses_idx)
 
 
-def export_gmf_xml(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
+def export_gmf_xml(key, dest, sitecol, ruptures, gmfs, rlz,
                    investigation_time):
     """
     :param key: output_type and export_type
-    :param export_dir: the directory where to export
-    :param fname: name of the exported file
+    :param dest: name of the exported file
     :param sitecol: the full site collection
     :param ruptures: an ordered list of ruptures
     :param gmfs: a matrix of ground motion fields of shape (R, N)
     :param rlz: a realization object
     :param investigation_time: investigation time (None for scenario)
     """
-    dest = os.path.join(export_dir, fname)
     if hasattr(rlz, 'gsim_rlz'):  # event based
         smltpath = '_'.join(rlz.sm_lt_path)
         gsimpath = rlz.gsim_rlz.uid
@@ -266,19 +264,17 @@ def export_gmf_xml(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
     return {key: [dest]}
 
 
-def export_gmf_csv(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
+def export_gmf_csv(key, dest, sitecol, ruptures, gmfs, rlz,
                    investigation_time):
     """
     :param key: output_type and export_type
-    :param export_dir: the directory where to export
-    :param fname: name of the exported file
+    :param dest: name of the exported file
     :param sitecol: the full site collection
     :param ruptures: an ordered list of ruptures
     :param gmfs: an orderd list of ground motion fields
     :param rlz: a realization object
     :param investigation_time: investigation time (None for scenario)
     """
-    dest = os.path.join(export_dir, fname)
     imts = list(gmfs[0].dtype.fields)
     # the csv file has the form
     # tag,indices,gmvs_imt_1,...,gmvs_imt_N
@@ -301,18 +297,18 @@ def export_gmf_csv(key, export_dir, fname, sitecol, ruptures, gmfs, rlz,
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
-def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
+def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
                              imtls, investigation_time=None):
     """
     Export the curves of the given realization into XML.
 
     :param key: output_type and export_type
-    :param export_dir: the directory where to export
-    :param fname: name of the exported file
+    :param dest: name of the exported file
     :param sitecol: site collection
     :param curves_by_imt: dictionary with the curves keyed by IMT
+    :param dict imtls: intensity measure types and levels
+    :param investigation_time: investigation time
     """
-    dest = os.path.join(export_dir, fname)
     nsites = len(sitecol)
     # build a matrix of strings with size nsites * (num_imts + 1)
     # the + 1 is needed since the 0-th column contains lon lat
@@ -323,11 +319,12 @@ def export_hazard_curves_csv(key, export_dir, fname, sitecol, curves_by_imt,
         for sid, curve in zip(range(nsites), curves_by_imt[imt]):
             rows[sid, i] = scientificformat(curve, fmt='%11.7E')
     write_csv(dest, rows)
-    return {fname: dest}
+    return {dest: dest}
 
 
-def hazard_curve_name(ekey, kind, rlzs_assoc, sampling):
+def hazard_curve_name(dstore, ekey, kind, rlzs_assoc, sampling):
     """
+    :param calc_id: the calculation ID
     :param ekey: the export key
     :param kind: the kind of key
     :param rlzs_assoc: a RlzsAssoc instance
@@ -339,21 +336,23 @@ def hazard_curve_name(ekey, kind, rlzs_assoc, sampling):
     if kind.startswith('rlz-'):
         rlz_no = int(kind[4:])
         rlz = rlzs_assoc.realizations[rlz_no]
-        fname = build_name(rlz, prefix, fmt, sampling)
+        fname = build_name(dstore, rlz, prefix, fmt, sampling)
     elif kind == 'mean':
-        fname = '%s-mean.csv' % prefix
+        fname = dstore.export_path('%s-mean.csv' % prefix)
     elif kind.startswith('quantile-'):
         # strip the 7 characters 'hazard_'
-        fname = 'quantile_%s-%s.%s' % (prefix[7:], kind[9:], fmt)
+        fname = dstore.export_path(
+            'quantile_%s-%s.%s' % (prefix[7:], kind[9:], fmt))
     else:
         raise ValueError('Unknown kind of hazard curve: %s' % kind)
     return fname
 
 
-def build_name(rlz, prefix, fmt, sampling):
+def build_name(dstore, rlz, prefix, fmt, sampling):
     """
     Build a file name from a realization, by using prefix and extension.
 
+    :param dstore: a DataStore instance
     :param rlz: a realization object
     :param prefix: the prefix to use
     :param fmt: the extension
@@ -368,7 +367,7 @@ def build_name(rlz, prefix, fmt, sampling):
             prefix, smlt_path, rlz.gsim_rlz.uid, suffix, fmt)
     else:  # GSIM logic tree realization used in scenario calculators
         fname = '%s_%s.%s' % (prefix, rlz.uid, fmt)
-    return fname
+    return dstore.export_path(fname)
 
 
 @export.add(('hcurves', 'csv'), ('hmaps', 'csv'), ('uhs', 'csv'))
@@ -386,14 +385,14 @@ def export_hcurves_csv(ekey, dstore):
     fnames = []
     for kind, hcurves in dstore[key].items():
         fname = hazard_curve_name(
-            ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
-        fnames.append(os.path.join(dstore.export_dir, fname))
+            dstore, ekey, kind, rlzs_assoc,
+            oq.number_of_logic_tree_samples)
         if key == 'uhs':
-            export_uhs_csv(ekey, dstore.export_dir, fname, sitecol, hcurves)
+            export_uhs_csv(ekey, fname, sitecol, hcurves)
         else:
-            export_hazard_curves_csv(ekey, dstore.export_dir, fname, sitecol,
-                                     hcurves, oq.imtls)
-    return fnames
+            export_hazard_curves_csv(ekey, fname, sitecol, hcurves, oq.imtls)
+        fnames.append(fname)
+    return sorted(fnames)
 
 
 # emulate a Django point
@@ -421,10 +420,9 @@ def export_hcurves_xml_json(ekey, dstore):
     for kind, curves in dstore[ekey[0]].items():
         rlz = next(rlzs)
         name = hazard_curve_name(
-            ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
+            dstore, ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
         for imt in oq.imtls:
-            name_imt = name[:-len_ext] + '-' + imt + '.' + export_type
-            fname = os.path.join(dstore.export_dir, name_imt)
+            fname = name[:-len_ext] + '-' + imt + '.' + export_type
             data = [HazardCurve(Location(site), poes[imt])
                     for site, poes in zip(sitemesh, curves)]
             writer = writercls(fname, investigation_time=oq.investigation_time,
@@ -464,24 +462,22 @@ def export_gmf(ekey, dstore):
         if not gmfs:
             continue
         ruptures = [rupture_by_tag[tag] for tag in tags]
-        fname = build_name(rlz, 'gmf', fmt, samples)
-        fnames.append(os.path.join(dstore.export_dir, fname))
+        fname = build_name(dstore, rlz, 'gmf', fmt, samples)
+        fnames.append(fname)
         globals()['export_gmf_%s' % fmt](
-            ('gmf', fmt), dstore.export_dir, fname, sitecol,
+            ('gmf', fmt), fname, sitecol,
             ruptures, gmfs, rlz, investigation_time)
     return fnames
 
 
-def export_hazard_curves_xml(key, export_dir, fname, sitecol, curves_by_imt,
+def export_hazard_curves_xml(key, dest, sitecol, curves_by_imt,
                              imtls, investigation_time):
     """
     Export the curves of the given realization into XML.
 
     :param key: output_type and export_type
-    :param export_dir: the directory where to export
-    :param fname: name of the exported file
+    :param dest: name of the exported file
     :param sitecol: site collection
-    :param rlz: realization instance
     :param curves_by_imt: dictionary with the curves keyed by IMT
     :param imtls: dictionary with the intensity measure types and levels
     :param investigation_time: investigation time in years
@@ -504,48 +500,24 @@ def export_hazard_curves_xml(key, export_dir, fname, sitecol, curves_by_imt,
             'sa_damping': imt[2],
             'imls': imls,
         })
-    dest = os.path.join(export_dir, fname)
     writer = hazard_writers.MultiHazardCurveXMLWriter(dest, mdata)
     with floatformat('%12.8E'):
         writer.serialize(hcurves)
-    return {fname: dest}
+    return {dest: dest}
 
 
-def export_stats_csv(key, export_dir, fname, sitecol, data_by_imt):
+def export_uhs_csv(key, dest, sitecol, hmaps):
     """
     Export the scalar outputs.
 
     :param key: output_type and export_type
-    :param export_dir: the directory where to export
-    :param fname: file name
-    :param sitecol: site collection
-    :param data_by_imt: dictionary of floats keyed by IMT
-    """
-    dest = os.path.join(export_dir, fname)
-    rows = []
-    for imt in sorted(data_by_imt):
-        row = [imt]
-        for col in data_by_imt[imt]:
-            row.append(scientificformat(col))
-        rows.append(row)
-    write_csv(dest, numpy.array(rows).T)
-    return {fname: dest}
-
-
-def export_uhs_csv(key, export_dir, fname, sitecol, hmaps):
-    """
-    Export the scalar outputs.
-
-    :param key: output_type and export_type
-    :param export_dir: the directory where to export
-    :param fname: file name
+    :param dest: file name
     :param sitecol: site collection
     :param hmaps:
         an array N x I x P where N is the number of sites,
         I the number of IMTs of SA type, and P the number of poes
     """
-    dest = os.path.join(export_dir, fname)
     rows = [[[lon, lat]] + list(row)
             for lon, lat, row in zip(sitecol.lons, sitecol.lats, hmaps)]
     write_csv(dest, rows)
-    return {fname: dest}
+    return {dest: dest}

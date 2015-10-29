@@ -1,9 +1,15 @@
 import os
+import re
 from nose.plugins.attrib import attr
 
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a)
+
+
+def strip_calc_id(fname):
+    name = os.path.basename(fname)
+    return re.sub('_\d+\.', '.', name)
 
 
 class EventBasedRiskTestCase(CalculatorTestCase):
@@ -24,7 +30,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         assert all_csv, 'Could not find any CSV file??'
         for fname in all_csv:
             self.assertEqualFiles(
-                'expected/%s' % os.path.basename(fname), fname)
+                'expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
@@ -64,7 +70,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fnames = out['agg_losses-rlzs', 'csv']
         assert fnames, 'No agg_losses-rlzs exported??'
         for fname in fnames:
-            self.assertEqualFiles('expected/' + os.path.basename(fname), fname)
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):

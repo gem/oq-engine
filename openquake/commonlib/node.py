@@ -112,7 +112,7 @@ Then is trivial to generate the XML representation of a node:
 >>> print(ElementTree.tostring(node_to_elem(root)))
 <root><a>A1</a><b attrb="B">B1</b></root>
 
-Generating XML files larger than the available memory require some
+Generating XML files larger than the available memory requires some
 care. The trick is to use a node generator, such that it is not
 necessary to keep the entire tree in memory. Here is an example:
 
