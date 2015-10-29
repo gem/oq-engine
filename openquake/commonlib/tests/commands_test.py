@@ -105,9 +105,9 @@ lon:float64:,lat:float64:
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            export(self.datastore.calc_id, 'sitemesh', export_dir=tempdir)
-        fnames = [os.path.join(tempdir, 'sitemesh.csv')]
-        self.assertIn(str(fnames), str(p))
+            export(self.datastore.calc_id, 'hcurves', export_dir=tempdir)
+        [fname] = os.listdir(tempdir)
+        self.assertIn(str(fname), str(p))
         shutil.rmtree(tempdir)
 
 
