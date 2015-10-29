@@ -23,7 +23,7 @@ import numpy
 
 from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import (
-    get_imtls, get_risk_files, get_vfs, get_risk_models)
+    get_imtls, get_risk_files, get_risk_models, risk_dict)
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
@@ -152,13 +152,12 @@ class OqParam(valid.ParamSet):
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
         file_type, file_by_ct = get_risk_files(self.inputs)
-        if file_type == 'vulnerability':
-            self.risk_imtls = get_imtls(get_vfs(self.inputs))
-        elif file_type == 'fragility':
-            fmodels = get_risk_models('fragility', self.inputs)
-            rmdict.clear()
+        rmdict.clear()
+        rmodels = get_risk_models(file_type, self.inputs)
+        rmdict.update(risk_dict(rmodels))
+        if file_type == 'fragility':
             limit_states = []
-            for loss_type, fm in sorted(fmodels.items()):
+            for loss_type, fm in sorted(rmodels.items()):
                 # build a copy of the FragilityModel with different IM levels
                 newfm = fm.build(self.continuous_fragility_discretization,
                                  self.steps_per_interval)
@@ -169,12 +168,11 @@ class OqParam(valid.ParamSet):
                     # limit states; this may change in the future
                     assert limit_states == fm.limitStates, (
                         limit_states, fm.limitStates)
-                    rmdict[imt_taxo][loss_type] = ff
                     # TODO: see if it is possible to remove the attribute
                     # below, used in classical_damage
                     ff.steps_per_interval = self.steps_per_interval
             self.limit_states = limit_states
-            self.risk_imtls = get_imtls(rmdict)
+        self.risk_imtls = get_imtls(rmdict)
 
         # check the IMTs vs the GSIMs
         if 'gsim_logic_tree' in self.inputs:
