@@ -168,6 +168,8 @@ class OqParam(valid.ParamSet):
                     # limit states; this may change in the future
                     assert limit_states == fm.limitStates, (
                         limit_states, fm.limitStates)
+                    # FIXME: overriding array with FragilityFunction instance
+                    rmdict[imt_taxo][loss_type] = ff
                     # TODO: see if it is possible to remove the attribute
                     # below, used in classical_damage
                     ff.steps_per_interval = self.steps_per_interval
