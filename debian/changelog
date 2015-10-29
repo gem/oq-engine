@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the EventBasedRisk demo to produce loss curves
   * Improved the memory consumption and data transfer of the event_based_risk
     calculator
   * The ProbabilisticEventBased risk demo works with a single job.ini
