@@ -106,7 +106,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         logging.info('Building the epsilons')
         self.epsilon_matrix = self.make_eps(
             self.oqparam.number_of_ground_motion_fields)
-        self.riskinputs = self.build_riskinputs(self.gmfs, self.epsilon_matrix)
+        sitecol, gmfs = base.get_gmfs(self)
+        self.riskinputs = self.build_riskinputs(gmfs, self.epsilon_matrix)
 
     def post_execute(self, result):
         """

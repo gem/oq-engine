@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Scenario Risk and Scenario Damage calculators can work with a single
+    configuration file now
   * When computing insured losses for an exposure without deductible and
     insuredLimit, raise an error early
   * Improved the export names of the oq-lite calculators
