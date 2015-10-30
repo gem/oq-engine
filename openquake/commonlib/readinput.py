@@ -30,6 +30,7 @@ from shapely import wkt, geometry
 from openquake.hazardlib import geo, site, correlation, imt
 from openquake.risklib import workflows, riskinput
 
+from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.oqvalidation import OqParam, rmdict
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
@@ -205,11 +206,27 @@ def get_mesh(oqparam):
             raise ValueError(
                 'Could not discretize region %(region)s with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
+    elif 'gmfs' in oqparam.inputs:
+        return get_gmfs(oqparam)[0].mesh
+    elif oqparam.hazard_calculation_id:
+        sitemesh = DataStore(oqparam.hazard_calculation_id)['sitemesh']
+        return geo.Mesh(sitemesh['lon'], sitemesh['lat'])
+    elif 'exposure' in oqparam.inputs:
+        # the mesh is extracted from get_sitecol_assets
+        return
     elif 'site_model' in oqparam.inputs:
         coords = [(param.lon, param.lat) for param in get_site_model(oqparam)]
         lons, lats = zip(*sorted(coords))
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
-    # if there is an exposure the mesh is extracted from get_sitecol_assets
+
+
+def sitecol_from_coords(oqparam, coords):
+    """
+    Return a SiteCollection instance from an ordered set of coordinates
+    """
+    lons, lats = zip(*coords)
+    return site.SiteCollection.from_points(
+        lons, lats, range(len(lons)), oqparam)
 
 
 def get_site_model(oqparam):
@@ -246,6 +263,8 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
     """
     if mesh is None:
         mesh = get_mesh(oqparam)
+    if mesh is None:
+        return
     site_ids = site_ids or list(range(len(mesh)))
     if oqparam.inputs.get('site_model'):
         if site_model_params is None:
@@ -724,30 +743,27 @@ def get_exposure(oqparam):
             occupancies = asset.occupancies
         except NameError:
             occupancies = LiteralNode('occupancies', [])
-        with context(fname, costs):
-            for cost in costs:
+        for cost in costs:
+            with context(fname, cost):
                 cost_type = cost['type']
-                if cost_type not in relevant_cost_types:
-                    continue
-                values[cost_type] = cost['value']
-                deduct = cost.attrib.get('deductible')
-                if deduct is not None:
-                    deductibles[cost_type] = deduct
-                limit = cost.attrib.get('insuranceLimit')
-                if limit is not None:
-                    insurance_limits[cost_type] = limit
+                if cost_type in relevant_cost_types:
+                    values[cost_type] = cost['value']
+                    if oqparam.insured_losses:
+                        deductibles[cost_type] = cost['deductible']
+                        insurance_limits[cost_type] = cost['insuranceLimit']
 
-            # check we are not missing a cost type
-            missing = relevant_cost_types - set(values)
-            if missing and missing <= ignore_missing_costs:
-                logging.warn(
-                    'Ignoring asset %s, missing cost type(s): %s',
-                    asset_id, ', '.join(missing))
-                for cost_type in missing:
-                    values[cost_type] = None
-            elif missing and oqparam.calculation_mode != 'classical_damage':
-                # TODO: rewrite the classical_damage to work with multiple
-                # loss types, then the special case will disappear
+        # check we are not missing a cost type
+        missing = relevant_cost_types - set(values)
+        if missing and missing <= ignore_missing_costs:
+            logging.warn(
+                'Ignoring asset %s, missing cost type(s): %s',
+                asset_id, ', '.join(missing))
+            for cost_type in missing:
+                values[cost_type] = None
+        elif missing and oqparam.calculation_mode != 'classical_damage':
+            # TODO: rewrite the classical_damage to work with multiple
+            # loss types, then the special case will disappear
+            with context(fname, asset):
                 raise ValueError("Invalid Exposure. "
                                  "Missing cost %s for asset %s" % (
                                      missing, asset_id))
@@ -880,50 +896,55 @@ def get_sitecol_hcurves(oqparam):
     return sitecol, hcurves_by_imt
 
 
-def get_gmfs(oqparam, sitecol=None):
+def get_gmfs(oqparam):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param sitecol:
-        a SiteCollection instance with sites consistent with the data file
     :returns:
         sitecol, tags, gmf array
     """
     fname = oqparam.inputs['gmfs']
-    if fname.endswith('.csv'):
-        return get_gmfs_from_csv(oqparam, sitecol, fname)
+    if fname.endswith('.txt'):
+        return get_gmfs_from_txt(oqparam, fname)
     elif fname.endswith('.xml'):
         return get_scenario_from_nrml(oqparam, fname)
     else:
         raise InvalidFile(fname)
 
 
-def get_gmfs_from_csv(oqparam, sitecol, fname):
+def get_gmfs_from_txt(oqparam, fname):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param sitecol:
-        a SiteCollection instance with sites consistent with the CSV file
     :param fname:
         the full path of the CSV file
     :returns:
         a composite array of shape (N, R) read from a CSV file with format
         `tag indices [gmv1 ... gmvN] * num_imts`
     """
-    imts = list(oqparam.imtls)
-    imt_dt = numpy.dtype([(imt, float) for imt in imts])
-    num_gmfs = oqparam.number_of_ground_motion_fields
-    gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
-    tags = []
     with open(fname) as csvfile:
-        for lineno, line in enumerate(csvfile, 1):
+        firstline = next(csvfile)
+        try:
+            coords = valid.coordinates(firstline)
+        except:
+            raise InvalidFile(
+                'The first line of %s is expected to contain comma separated'
+                'ordered coordinates, got %s instead' % (fname, firstline))
+        sitecol = sitecol_from_coords(oqparam, coords)
+        imts = list(oqparam.imtls)
+        imt_dt = numpy.dtype([(imt, float) for imt in imts])
+        num_gmfs = oqparam.number_of_ground_motion_fields
+        gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
+        tags = []
+
+        for lineno, line in enumerate(csvfile, 2):
             row = line.split(',')
             try:
                 indices = list(map(valid.positiveint, row[1].split()))
             except:
                 raise InvalidFile(
                     'The second column in %s is expected to contain integer '
-                    'indices, got %s instead' % (fname, row[1]))
+                    'indices, got %s' % (fname, row[1]))
             r_sites = (
                 sitecol if not indices else
                 site.FilteredSiteCollection(indices, sitecol))
@@ -935,11 +956,11 @@ def get_gmfs_from_csv(oqparam, sitecol, fname):
                     raise InvalidFile(
                         'The column #%d in %s is expected to contain positive '
                         'floats, got %s instead' % (i + 3, fname, row[i + 2]))
-                gmf_by_imt[imts[i]][lineno - 1] = r_sites.expand(array, 0)
+                gmf_by_imt[imts[i]][lineno - 2] = r_sites.expand(array, 0)
             tags.append(row[0])
-    if lineno < num_gmfs:
+    if lineno < num_gmfs + 1:
         raise InvalidFile('%s contains %d rows, expected %d' % (
-            fname, lineno, num_gmfs))
+            fname, lineno, num_gmfs + 1))
     if tags != sorted(tags):
         raise InvalidFile('The tags in %s are not ordered: %s' % (fname, tags))
     return sitecol, numpy.array(tags, '|S100'), gmf_by_imt.T
