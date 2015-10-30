@@ -119,3 +119,10 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
         return len(self.get_annual_occurrence_rates())
+
+    def modify_set_geometry(self, surface, surface_node=None):
+        """
+        Modifies the current fault geometry
+        """
+        self.surface = surface
+        self.surface_node = surface_node

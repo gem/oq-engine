@@ -110,3 +110,26 @@ class CharacteristicFaultSourceIterRuptures(_BaseFaultSourceTestCase):
             self.assertTrue(ruptures[i].occurrence_rate == self.RATES[i])
             self.assertTrue(ruptures[i].temporal_occurrence_model == self.TOM)
 
+
+class ModifyCharacteristicFaultSurfaceTestCase(_BaseFaultSourceTestCase):
+
+    def setUp(self):
+        self.fault = self._make_source()
+
+    def test_modify_set_geometry(self):
+        new_corner_lons = numpy.array([-1.1, 1.1, -1.1, 1.1])
+        new_corner_lats = numpy.array([0., 0., 0., 0.])
+        new_corner_depths = numpy.array([0., 0., 15., 15.])
+        points = [Point(lon, lat, depth) for lon, lat, depth in
+                  zip(new_corner_lons, new_corner_lats, new_corner_depths)]
+        new_surface = PlanarSurface(self.MESH_SPACING, self.STRIKE, self.DIP,
+                                    points[0], points[1], points[3], points[2])
+        self.fault.modify_set_geometry(new_surface, "XYZ")
+        self.assertEqual(self.fault.surface_node, "XYZ")
+        numpy.testing.assert_array_almost_equal(self.fault.surface.corner_lons,
+                                                new_corner_lons)
+        numpy.testing.assert_array_almost_equal(self.fault.surface.corner_lats,
+                                                new_corner_lats)
+        numpy.testing.assert_array_almost_equal(
+            self.fault.surface.corner_depths,
+            new_corner_depths)

@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Adds methods for modifying the geometry configurations of the fault sources
+
   [Matteo Nastasi]
   * Imposed version for python-h5py dependency, Ubuntu 12.04 will use
     backported version from GEM repository

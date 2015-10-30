@@ -152,6 +152,13 @@ class ComplexFaultSource(ParametricSeismicSource):
             counts += len(rupture_slices)
         return counts
 
+    def modify_set_geometry(self, edges):
+        """
+        Modifies the complex fault geometry
+        """
+        ComplexFaultSurface.check_fault_data(edges, self.rupture_mesh_spacing)
+        self.edges = edges
+
 
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
     """

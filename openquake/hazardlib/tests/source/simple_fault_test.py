@@ -648,3 +648,78 @@ class HypoLocSlipRupture(unittest.TestCase):
             self.assertAlmostEqual(rup.rupture_slip_direction,
                                    slip[i], delta=0.1)
             self.assertAlmostEqual(rup.occurrence_rate, rate[i], delta=0.01)
+
+
+class ModifySimpleFaultTestCase(_BaseFaultSourceTestCase):
+    """
+    Tests all of the geometry modification methods
+    """
+    def setUp(self):
+        self.basic_trace = Line([Point(30.0, 30.0), Point(30.0, 32.0)])
+        self.mfd = EvenlyDiscretizedMFD(7.0, 0.1, [1.0])
+        self.aspect = 1.0
+        self.dip = 45.0
+        self.fault = self._make_source(self.mfd, self.aspect, self.basic_trace,
+                                       self.dip)
+        self.fault.lower_seismogenic_depth = 10.0
+
+    def test_modify_set_geometry_trace(self):
+        new_trace = Line([Point(30.0, 30.0), Point(30.2, 32.25)])
+        self.fault.modify_set_geometry(new_trace, 0., 10., 45.)
+        exp_lons = [30.0, 30.2]
+        exp_lats = [30.0, 32.25]
+        for iloc in range(len(self.fault.fault_trace)):
+            self.assertAlmostEqual(
+                self.fault.fault_trace.points[iloc].longitude,
+                exp_lons[iloc]
+                )
+            self.assertAlmostEqual(
+                self.fault.fault_trace.points[iloc].latitude,
+                exp_lats[iloc]
+                )
+        # Verify that the dip and seismogenic depths were not modified
+        self.assertAlmostEqual(self.fault.dip, 45.0)
+        self.assertAlmostEqual(self.fault.upper_seismogenic_depth, 0.0)
+        self.assertAlmostEqual(self.fault.lower_seismogenic_depth, 10.0)
+        # Return trace back to original state
+        self.fault = self._make_source(self.mfd, self.aspect, self.basic_trace,
+                                       self.dip)
+        self.fault.lower_seismogenic_depth = 10.0
+
+    def test_modify_set_geometry_other_params(self):
+        self.fault.modify_set_geometry(self.basic_trace, 1., 12., 60.)
+        self.assertAlmostEqual(self.fault.dip, 60.)
+        self.assertAlmostEqual(self.fault.upper_seismogenic_depth, 1.0)
+        self.assertAlmostEqual(self.fault.lower_seismogenic_depth, 12.0)
+        # Return fault to original format
+        self.fault = self._make_source(self.mfd, self.aspect, self.basic_trace,
+                                       self.dip)
+        self.fault.lower_seismogenic_depth = 10.0
+
+    def test_modify_adjust_dip(self):
+        # Increase dip
+        self.fault.modify_adjust_dip(15.0)
+        self.assertAlmostEqual(self.fault.dip, 60.0)
+        self.fault = self._make_source(self.mfd, self.aspect, self.basic_trace,
+                                       self.dip)
+        self.fault.lower_seismogenic_depth = 10.0
+        # Decrease dip
+        self.fault.modify_adjust_dip(-15.0)
+        self.assertAlmostEqual(self.fault.dip, 30.0)
+        self.fault = self._make_source(self.mfd, self.aspect, self.basic_trace,
+                                       self.dip)
+        self.fault.lower_seismogenic_depth = 10.0
+
+    def test_modify_adjust_dip_bad(self):
+        with self.assertRaises(ValueError) as ar:
+            # Adjustment would put dip out of 0 - 90 degree range
+            self.fault.modify_adjust_dip(70.0)
+        self.assertEqual(str(ar.exception), "dip must be between 0.0 and 90.0")
+
+    def test_modify_set_dip(self):
+        self.fault.modify_set_dip(72.0)
+        self.assertAlmostEqual(self.fault.dip, 72.0)
+        # Return fault to original configuration
+        self.fault = self._make_source(self.mfd, self.aspect, self.basic_trace,
+                                       self.dip)
+        self.fault.lower_seismogenic_depth = 10.0
