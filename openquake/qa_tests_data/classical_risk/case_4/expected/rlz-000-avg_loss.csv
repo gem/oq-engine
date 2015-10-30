@@ -1,4 +1,4 @@
-asset_ref,lon,lat,avg_loss~structural,ins_loss~structural
+asset_ref:|S20:,lon:float64:,lat:float64:,avg_loss~structural:float64:,ins_loss~structural:float64:
 a1,8.129850E+01,2.910980E+01,1.699100E+04,       NAN
 a2,8.308230E+01,2.790060E+01,2.229242E+06,       NAN
 a3,8.325100E+01,2.834050E+01,2.560890E+06,       NAN

@@ -26,7 +26,8 @@ class ReportWriter(object):
         col_rlz_assocs='Collections <-> realizations',
         ruptures_by_trt='Number of ruptures per tectonic region type',
         rlzs_assoc='Realizations per (TRT, GSIM)',
-        data_transfer='Expected data transfer for the sources',
+        source_data_transfer='Expected data transfer for the sources',
+        avglosses_data_transfer='Estimated data transfer for the avglosses',
         exposure_info='Exposure model',
     )
 
@@ -63,7 +64,9 @@ class ReportWriter(object):
             self.add('ruptures_by_trt')
         if oq.calculation_mode in ('classical', 'event_based',
                                    'event_based_risk'):
-            self.add('data_transfer')
+            self.add('source_data_transfer')
+        if oq.calculation_mode in ('event_based_risk',):
+            self.add('avglosses_data_transfer')
         if 'exposure' in oq.inputs:
             self.add('exposure_info')
         return self.text

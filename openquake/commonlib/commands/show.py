@@ -69,7 +69,7 @@ def show(calc_id, key=None, rlzs=None):
     # print all keys
     oq = OqParam.from_(ds.attrs)
     print(oq.calculation_mode, 'calculation (%r) saved in %s contains:' %
-          (oq.description, ds.calc_dir))
+          (oq.description, ds.hdf5path))
     for key in ds:
         print(key, humansize(ds.getsize(key)))
 

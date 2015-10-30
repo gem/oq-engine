@@ -129,23 +129,42 @@ def extract_outputs(dkey, dstore, ext=''):
 # ############################### exporters ############################## #
 
 
-# this is used by classical_risk from csv
-@export.add(('avg_losses', 'csv'))
+# this is used by classical_risk and event_based_risk
+@export.add(('avg_losses-rlzs', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    avg_losses = dstore[ekey[0] + '/rlzs']
+    avg_losses = dstore[ekey[0]]
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets(dstore)
-    columns = 'asset_ref lon lat avg_loss~structural ins_loss~structural' \
-        .split()
     fnames = []
-    for rlz, losses in zip(rlzs, avg_losses):
-        dest = dstore.export_path('rlz-%03d-avg_loss.csv' % rlz.ordinal)
+    for rlz in rlzs:
+        losses = avg_losses[:, rlz.ordinal]
+        dest = dstore.export_path('avg_losses-rlz%03d.csv' % rlz.ordinal)
         data = compose_arrays(assets, losses)
-        writers.write_csv(dest, data, fmt='%10.6E', header=columns)
+        writers.write_csv(dest, data, fmt='%10.6E')
+        fnames.append(dest)
+    return fnames
+
+
+@export.add(('avg_losses-stats', 'csv'))
+def export_avg_losses_stats(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    oq = OqParam.from_(dstore.attrs)
+    avg_losses = dstore[ekey[0]]
+    quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+    assets = get_assets(dstore)
+    fnames = []
+    for i, quantile in enumerate(quantiles):
+        losses = avg_losses[:, i]
+        dest = dstore.export_path('avg_losses-%s.csv' % quantile)
+        data = compose_arrays(assets, losses)
+        writers.write_csv(dest, data, fmt='%10.6E')
         fnames.append(dest)
     return fnames
 
@@ -178,8 +197,6 @@ def export_avglosses_csv(ekey, dstore):
 
 
 @export.add(
-    ('avg_losses-rlzs', 'csv'),
-    ('avg_losses-stats', 'csv'),
     ('rcurves-rlzs', 'csv'),
     ('icurves-rlzs', 'csv'),
     ('rcurves-stats', 'csv'),
@@ -424,13 +441,13 @@ PerAssetLoss = collections.namedtuple(
     'PerAssetLoss', 'loss_type unit asset_ref mean stddev')
 
 
-@export.add(('avglosses', 'csv'))
+@export.add(('avglosses-rlzs', 'csv'))
 def export_avglosses(ekey, dstore):
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                   for ct in dstore['cost_types']}
     unit_by_lt['fatalities'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
-    avglosses = dstore['avglosses']
+    avglosses = dstore[ekey[0]]
     riskmodel = dstore['riskmodel']
     assets = dstore['assetcol']['asset_ref']
     N, R = avglosses.shape
@@ -460,14 +477,14 @@ class Location(object):
         self.wkt = 'POINT(%s %s)' % tuple(xy)
 
 
-@export.add(('avglosses', 'xml'), ('avglosses', 'geojson'))
+@export.add(('avglosses-rlzs', 'xml'), ('avglosses-rlzs', 'geojson'))
 def export_lossmaps_xml_geojson(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                   for ct in dstore['cost_types']}
     unit_by_lt['fatalities'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
-    avglosses = dstore['avglosses']
+    avglosses = dstore[ekey[0]]
     riskmodel = dstore['riskmodel']
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
@@ -502,13 +519,13 @@ def export_lossmaps_xml_geojson(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('agglosses', 'csv'))
+@export.add(('agglosses-rlzs', 'csv'))
 def export_agglosses(ekey, dstore):
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                   for ct in dstore['cost_types']}
     unit_by_lt['fatalities'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
-    agglosses = dstore['agglosses']
+    agglosses = dstore[ekey[0]]
     riskmodel = dstore['riskmodel']
     L = len(riskmodel.loss_types)
     R, = agglosses.shape

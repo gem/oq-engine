@@ -218,8 +218,8 @@ def get_data_transfer(dstore):
     return numpy.array(block_info, block_dt), to_send_forward, to_send_back
 
 
-@view.add('data_transfer')
-def data_transfer(token, dstore):
+@view.add('source_data_transfer')
+def source_data_transfer(token, dstore):
     """
     Determine the amount of data transferred from the controller node
     to the workers and back in a classical calculation.
@@ -230,6 +230,22 @@ def data_transfer(token, dstore):
         ('Estimated sources to send', humansize(to_send_forward)),
         ('Estimated hazard curves to receive', humansize(to_send_back))]
     return rst_table(tbl)
+
+
+@view.add('avglosses_data_transfer')
+def avglosses_data_transfer(token, dstore):
+    """
+    Determine the amount of average losses transferred from the workers to the
+    controller node in a risk calculation.
+    """
+    oq = OqParam.from_(dstore.attrs)
+    N = len(dstore['assetcol'])
+    R = len(dstore['rlzs_assoc'].realizations)
+    L = len(dstore['riskmodel'].loss_types)
+    ct = oq.concurrent_tasks
+    size_bytes = N * R * L * 2 * 8 * ct  # two 8 byte floats, loss and ins_loss
+    return ('%d asset(s) x %d realization(s) x %d loss type(s) x 2 losses x '
+            '8 bytes x %d tasks = %s' % (N, R, L, ct, humansize(size_bytes)))
 
 
 # this is used by the ebr calculator
@@ -266,7 +282,7 @@ def view_totlosses(token, dstore):
     all assets are indeed equal to the aggregate losses. This is a
     sanity check for the correctness of the implementation.
     """
-    avglosses = dstore['avglosses'].value
+    avglosses = dstore['avglosses-rlzs'].value
     dtlist = [('%s-%s' % (name, stat), float)
               for name in avglosses.dtype.names
               for stat in ('mean', 'mean_ins')]
