@@ -31,9 +31,9 @@ class ReportWriter(object):
     )
 
     def __init__(self, dstore):
-        description = OqParam.from_(dstore.attrs).description
         self.dstore = dstore
-        self.text = description + '\n' + '=' * len(description)
+        self.oq = oq = OqParam.from_(dstore.attrs)
+        self.text = oq.description + '\n' + '=' * len(oq.description)
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""
@@ -47,6 +47,26 @@ class ReportWriter(object):
             text = datastore.view(name, self.dstore)
             views.rst_table.__defaults__ = orig
         self.text += '\n'.join(['\n\n' + title, line, text])
+
+    def make_report(self):
+        """Build the report and return a restructed text string"""
+        oq, ds = self.oq, self.dstore
+        for name in ('params', 'inputs'):
+            self.add(name)
+        if 'scenario' not in oq.calculation_mode:
+            self.add('csm_info')
+        self.add('rlzs_assoc', ds['rlzs_assoc'])
+        if 'num_ruptures' in ds:
+            self.add('rupture_collections')
+            self.add('col_rlz_assocs')
+        elif 'scenario' not in oq.calculation_mode:
+            self.add('ruptures_by_trt')
+        if oq.calculation_mode in ('classical', 'event_based',
+                                   'event_based_risk'):
+            self.add('data_transfer')
+        if 'exposure' in oq.inputs:
+            self.add('exposure_info')
+        return self.text
 
     def save(self, fname):
         """Save the report"""
@@ -70,21 +90,8 @@ def build_report(job_ini, output_dir=None):
     calc.save_params()
     ds = datastore.DataStore(calc.datastore.calc_id)
     rw = ReportWriter(ds)
+    rw.make_report()
     report = os.path.join(output_dir, 'report.rst')
-    for name in ('params', 'inputs'):
-        rw.add(name)
-    if 'scenario' not in oq.calculation_mode:
-        rw.add('csm_info')
-    rw.add('rlzs_assoc', calc.rlzs_assoc)
-    if 'num_ruptures' in ds:
-        rw.add('rupture_collections')
-        rw.add('col_rlz_assocs')
-    elif 'scenario' not in oq.calculation_mode:
-        rw.add('ruptures_by_trt')
-    if oq.calculation_mode in ('classical', 'event_based', 'event_based_risk'):
-        rw.add('data_transfer')
-    if 'exposure' in oq.inputs:
-        rw.add('exposure_info')
     rw.save(report)
     return report
 

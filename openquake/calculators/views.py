@@ -345,6 +345,9 @@ def view_exposure_info(token, dstore):
 
 @view.add('assetcol')
 def view_assetcol(token, dstore):
+    """
+    Display the exposure in CSV format
+    """
     assetcol = dstore['assetcol'].value
     sitemesh = dstore['sitemesh'].value
     taxonomies = dstore['taxonomies'].value
@@ -359,3 +362,13 @@ def view_assetcol(token, dstore):
         else:
             columns[i] = assetcol[field]
     return write_csv(io.StringIO(), [header] + list(zip(*columns)), fmt='%s')
+
+
+@view.add('fullreport')
+def view_fullreport(token, dstore):
+    """
+    Display an .rst report about the computation
+    """
+    # avoid circular imports
+    from openquake.commonlib.reportwriter import ReportWriter
+    return ReportWriter(dstore).make_report()
