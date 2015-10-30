@@ -649,8 +649,8 @@ class FragilityModel(dict):
         for imt_taxo, ff in self.items():
             newfm[imt_taxo] = new = copy.copy(ff)
             # TODO: this is complicated and perhaps wrong: check with Anirudh
-            add_zero = (ff.format == 'discrete' and ff.nodamage is not None
-                        and ff.nodamage < ff.imls[0])
+            add_zero = (ff.format == 'discrete' and
+                        ff.nodamage is not None and ff.nodamage < ff.imls[0])
             imls = build_imls(new, continuous_fragility_discretization)
             new.imls = build_imls(
                 new, continuous_fragility_discretization, steps_per_interval)
