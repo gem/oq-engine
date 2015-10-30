@@ -217,30 +217,17 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.datasets = {}
         # ugly: attaching an attribute needed in the task function
         self.monitor.num_outputs = len(self.outs)
-        self.monitor.num_assets = N = self.count_assets()
+        self.monitor.num_assets = self.count_assets()
         for o, out in enumerate(self.outs):
             self.datastore.hdf5.create_group(out)
             for l, loss_type in enumerate(loss_types):
-                cb = self.riskmodel.curve_builders[l]
-                C = cb.curve_resolution
                 for r, rlz in enumerate(self.rlzs_assoc.realizations):
                     key = '/%s/%s' % (loss_type, rlz.uid)
                     if o == AGGLOSS:  # loss tables
                         dset = self.datastore.create_dset(out + key, elt_dt)
-                    elif o == AVGLOSS:  # average losses
-                        dset = self.datastore.create_dset(
-                            out + key, F32, (N, 2))
                     elif o == SPECLOSS:  # specific losses
                         dset = self.datastore.create_dset(out + key, ela_dt)
-                    else:  # risk curves
-                        if not C:
-                            continue
-                        dset = self.datastore.create_dset(
-                            out + key, F32, (N, C))
                     self.datasets[o, l, r] = dset
-                if o == RC and C:
-                    grp = self.datastore['%s/%s' % (out, loss_type)]
-                    grp.attrs['loss_ratios'] = cb.ratios
 
     def execute(self):
         """
