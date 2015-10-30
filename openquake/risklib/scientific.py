@@ -649,8 +649,8 @@ class FragilityModel(dict):
         for imt_taxo, ff in self.items():
             newfm[imt_taxo] = new = copy.copy(ff)
             # TODO: this is complicated and perhaps wrong: check with Anirudh
-            add_zero = (ff.format == 'discrete' and ff.nodamage is not None
-                        and ff.nodamage < ff.imls[0])
+            add_zero = (ff.format == 'discrete' and
+                        ff.nodamage is not None and ff.nodamage < ff.imls[0])
             imls = build_imls(new, continuous_fragility_discretization)
             new.imls = build_imls(
                 new, continuous_fragility_discretization, steps_per_interval)
@@ -904,7 +904,7 @@ class CurveBuilder(object):
         self.ratios = numpy.array(loss_ratios, F32)
         self.user_provided = user_provided
         self.curve_resolution = len(loss_ratios)
-        R = self.curve_resolution or 1  # avoid bug in hdf5 2.0
+        R = self.curve_resolution
         self.loss_curve_dt = numpy.dtype([
             ('losses', (F32, R)), ('poes', (F32, R)), ('avg', F32)])
         self.lr_dt = numpy.dtype([('poes', (F32, R))])
@@ -949,7 +949,8 @@ class CurveBuilder(object):
         """
         counts_matrix = self.get_counts(N, count_dicts)
         poes = build_poes(counts_matrix, 1. / ses_ratio)
-        return poes.view(self.lr_dt)
+        # poes has shape (N, R) and goes into a composite array of shape N
+        return poes.view(self.lr_dt).reshape(N)
 
     def build_loss_curves(self, assetcol, losses_by_aid, ses_ratio):
         """
@@ -973,7 +974,7 @@ class CurveBuilder(object):
     def __repr__(self):
         return '<%s %s=%s user_provided=%s>' % (
             self.__class__.__name__, self.loss_type,
-            self.loss_ratios, self.user_provided)
+            self.ratios, self.user_provided)
 
 
 # should I use the ses_ratio here?
@@ -1526,6 +1527,30 @@ class SimpleStats(object):
                 ins_values = quantile_curve([d.T[1] for d in data], q, weights)
                 path = '%s-stats/%s/quantile-%s' % (name, loss_type, q)
                 dstore[path] = numpy.array([values, ins_values]).T  # N x 2
+
+    def compute(self, name, dstore):
+        """
+        Compute mean and quantiles from the data in the datastore
+        under the group `<name>-rlzs` and store them under the group
+        `<name>-stats`. Return the number of bytes stored.
+        """
+        array = dstore[name].value
+        loss_types = array.dtype.names
+        weights = [rlz.weight for rlz in self.rlzs]
+        newname = name.replace('-rlzs', '-stats')
+        newshape = list(array.shape)
+        newshape[1] = len(self.quantiles) + 1  # number of statistical outputs
+        newarray = numpy.zeros(newshape, array.dtype)
+        for loss_type in loss_types:
+            new = newarray[loss_type]
+            data = array[loss_type].transpose(1, 0, 2)  # array R x N x 2
+            new[:, 0] = mean_curve(data, weights)
+            for i, q in enumerate(self.quantiles, 1):
+                values = quantile_curve([d.T[0] for d in data], q, weights)
+                ins_values = quantile_curve([d.T[1] for d in data], q, weights)
+                new[:, i] = numpy.array([values, ins_values]).T  # N x 2
+        dstore[newname] = newarray
+        return newarray.nbytes
 
 
 class StatsBuilder(object):

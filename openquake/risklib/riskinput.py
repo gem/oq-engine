@@ -126,14 +126,16 @@ class RiskModel(collections.Mapping):
         """
         Populate the inner lists .loss_types, .curve_builders.
         """
+        default_loss_ratios = numpy.linspace(
+            0, 1, oqparam.loss_curve_resolution + 1)[1:]
         for i, loss_type in enumerate(self.get_loss_types()):
-            if not oqparam.loss_ratios:
-                loss_ratios = numpy.linspace(
-                    0, 1, oqparam.loss_curve_resolution + 1)[1:]
-                cb = scientific.CurveBuilder(loss_type, loss_ratios, False)
-            else:  # user-provided loss ratios
-                loss_ratios = oqparam.loss_ratios[loss_type]
-                cb = scientific.CurveBuilder(loss_type, loss_ratios, True)
+            if loss_type in oqparam.loss_ratios:
+                cb = scientific.CurveBuilder(
+                    loss_type, oqparam.loss_ratios[loss_type],
+                    user_provided=True)
+            else:
+                cb = scientific.CurveBuilder(
+                    loss_type, default_loss_ratios, user_provided=False)
             self.curve_builders.append(cb)
             self.loss_types.append(loss_type)
             self.lti[loss_type] = i
@@ -189,7 +191,8 @@ class RiskModel(collections.Mapping):
         :returns: a :class:`RiskInput` instance
         """
         imt_taxonomies = [(imt, self.get_taxonomies(imt))]
-        return RiskInput(imt_taxonomies, hazards_by_site, assets_by_site, eps_dict)
+        return RiskInput(imt_taxonomies, hazards_by_site, assets_by_site,
+                         eps_dict)
 
     def build_inputs_from_ruptures(self, sitecol, all_ruptures,
                                    gsims_by_col, trunc_level, correl_model,

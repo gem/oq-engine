@@ -124,20 +124,13 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 traceback.print_exc(tb)
                 pdb.post_mortem(tb)
             else:
-                raise
-        finally:
-            critical = sys.exc_info()[0]
-            if critical:
                 logging.critical('', exc_info=True)
-            if clean_up:
-                try:
-                    self.clean_up()
-                except:
-                    # display the cleanup error only if there was no
-                    # critical error, to avoid covering it
-                    if critical is None:
-                        logging.error('Cleanup error', exc_info=True)
-            return exported
+                raise
+        # don't cleanup if there is a critical error, otherwise
+        # there will likely be a cleanup error covering the real one
+        if clean_up:
+            self.clean_up()
+        return exported
 
     def core_func(*args):
         """
@@ -182,12 +175,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
                 ekey = (key, fmt)
-                try:
-                    exported[ekey] = sorted(
-                        export.export(ekey, self.datastore))
-                    logging.info('exported %s: %s', key, exported[ekey])
-                except KeyError:
-                    logging.info('%s is not exportable in %s', key, fmt)
+                if ekey not in export.export:  # non-exportable output
+                    continue
+                exported[ekey] = export.export(ekey, self.datastore)
+                logging.info('exported %s: %s', key, exported[ekey])
         return exported
 
     def clean_up(self):
