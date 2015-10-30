@@ -382,6 +382,9 @@ class RiskCalculator(HazardCalculator):
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
+        # add asset.idx as side effect
+        riskinput.build_asset_collection(
+            self.assets_by_site, self.oqparam.time_event)
         imtls = self.oqparam.imtls
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
