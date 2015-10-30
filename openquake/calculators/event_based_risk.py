@@ -367,14 +367,19 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             curves_lt = curves[cb.loss_type]
             maps_lt = maps[cb.loss_type]
             for rlz in rlzs:
-                maps_lt[:, rlz.ordinal] = scientific.calc_loss_maps(
+                loss_maps = scientific.calc_loss_maps(
                     oq.conditional_loss_poes, asset_values, cb.ratios,
                     curves_lt[:, rlz.ordinal])
+                for i in range(N):
+                    # NB: it does not work without the loop, there is a
+                    # ValueError: could not broadcast input array from shape
+                    # (N,1) into shape (N)
+                    maps_lt[i, rlz.ordinal] = loss_maps[i]
         self.datastore[maps_key] = maps
 
     # ################### methods to compute statistics  #################### #
 
-    def _collect_data(self):
+    def _collect_all_data(self):
         # return a list of list of outputs
         if 'rcurves-rlzs' not in self.datastore:
             return []
@@ -421,7 +426,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         assets = assetcol['asset_ref']
         rlzs = self.rlzs_assoc.realizations
-        all_data = []
+        specific_data = []
         avglosses = self.datastore['avg_losses-rlzs'][specific_ids]
         for loss_type in self.riskmodel.loss_types:
             group = self.datastore['/specific-loss_curves-rlzs/%s' % loss_type]
@@ -439,8 +444,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     average_losses=average_losses[:, 0],
                     average_insured_losses=average_losses[:, 1])
                 data.append(out)
-            all_data.append(data)
-        return all_data
+            specific_data.append(data)
+        return specific_data
 
     def compute_store_stats(self, rlzs, kind):
         """
@@ -455,7 +460,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             all_stats = [builder.build(data, prefix='specific-')
                          for data in self._collect_specific_data()]
         else:
-            all_stats = map(builder.build, self._collect_data())
+            all_stats = map(builder.build, self._collect_all_data())
         for stat in all_stats:
             # there is one stat for each loss_type
             curves, ins_curves, maps = scientific.get_stat_curves(stat)
