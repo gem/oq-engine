@@ -279,6 +279,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param result:
             a numpy array of shape (O, L, R) containing lists of arrays
         """
+        insured_losses = self.oqparam.insured_losses
         ses_ratio = self.oqparam.ses_ratio
         saved = {out: 0 for out in self.outs}
         N = len(self.assetcol)
@@ -293,6 +294,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                           autoflush=True, measuremem=True):
             for (o, l, r), data in numpy.ndenumerate(result):
                 if not data:  # empty list
+                    continue
+                elif o == IC and not insured_losses:  # no insured curves
                     continue
                 cb = self.riskmodel.curve_builders[l]
                 if o in (AGGLOSS, SPECLOSS):  # data is a list of arrays
@@ -309,7 +312,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 elif cb.user_provided:  # risk curves
                     # data is a list of dicts asset idx -> counts
                     poes = cb.build_poes(N, data, ses_ratio)
-                    self.datasets[o, l, r] = poes
+                    self.datasets[o, l, r].dset[:] = poes
                     saved[self.outs[o]] += poes.nbytes
                 self.datastore.hdf5.flush()
 

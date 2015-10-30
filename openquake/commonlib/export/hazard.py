@@ -303,10 +303,11 @@ def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
     Export the curves of the given realization into XML.
 
     :param key: output_type and export_type
-    :param export_dir: the directory where to export
-    :param fname: name of the exported file
+    :param dest: name of the exported file
     :param sitecol: site collection
     :param curves_by_imt: dictionary with the curves keyed by IMT
+    :param dict imtls: intensity measure types and levels
+    :param investigation_time: investigation time
     """
     nsites = len(sitecol)
     # build a matrix of strings with size nsites * (num_imts + 1)
@@ -477,7 +478,6 @@ def export_hazard_curves_xml(key, dest, sitecol, curves_by_imt,
     :param key: output_type and export_type
     :param dest: name of the exported file
     :param sitecol: site collection
-    :param rlz: realization instance
     :param curves_by_imt: dictionary with the curves keyed by IMT
     :param imtls: dictionary with the intensity measure types and levels
     :param investigation_time: investigation time in years
