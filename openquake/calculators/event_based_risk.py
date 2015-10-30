@@ -376,9 +376,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             curves_lt = curves[cb.loss_type]
             maps_lt = maps[cb.loss_type]
             for rlz in rlzs:
-                maps_lt[:, rlz.ordinal] = scientific.calc_loss_maps(
+                loss_maps = scientific.calc_loss_maps(
                     oq.conditional_loss_poes, asset_values, cb.ratios,
                     curves_lt[:, rlz.ordinal])
+                for i in range(N):
+                    # NB: it does not work without the loop, there is a
+                    # ValueError: could not broadcast input array from shape
+                    # (N,1) into shape (N)
+                    maps_lt[i, rlz.ordinal] = loss_maps[i]
         self.datastore[maps_key] = maps
 
     # ################### methods to compute statistics  #################### #
