@@ -1330,7 +1330,8 @@ def quantile_curve(curves, quantile, weights=None):
         sorted_poes = poes[sorted_poe_idxs]
         cum_weights = numpy.cumsum(sorted_weights)
         result_curve.append(numpy.interp(quantile, cum_weights, sorted_poes))
-    return numpy.array(result_curve)
+
+    return numpy.array(result_curve).reshape(curves[0].shape)
 
 
 # TODO: remove this from openquake.risklib.qa_tests.bcr_test
@@ -1541,12 +1542,10 @@ class SimpleStats(object):
         newarray = numpy.zeros(newshape, array.dtype)
         for loss_type in loss_types:
             new = newarray[loss_type]
-            data = array[loss_type].transpose(1, 0, 2)  # array R x N x 2
+            data = [array[loss_type][:, i] for i in range(len(self.rlzs))]
             new[:, 0] = mean_curve(data, weights)
             for i, q in enumerate(self.quantiles, 1):
-                values = quantile_curve([d.T[0] for d in data], q, weights)
-                ins_values = quantile_curve([d.T[1] for d in data], q, weights)
-                new[:, i] = numpy.array([values, ins_values]).T  # N x 2
+                new[:, i] = quantile_curve(data, q, weights)
         dstore[newname] = newarray
         return newarray.nbytes
 
