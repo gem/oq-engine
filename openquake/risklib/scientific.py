@@ -1505,6 +1505,7 @@ class SimpleStats(object):
     def __init__(self, rlzs, quantiles=()):
         self.rlzs = rlzs
         self.quantiles = quantiles
+        self.names = ['mean'] + ['quantile-%s' % q for q in quantiles]
 
     def compute_and_store(self, name, dstore):
         """

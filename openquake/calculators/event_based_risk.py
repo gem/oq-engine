@@ -476,8 +476,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     self.datastore[path % 'loss_maps'] = maps[i]
 
         stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
-        nbytes = stats.compute('avg_losses-rlzs', self.datastore)
-        self.datastore['avg_losses-stats'].attrs['nbytes'] = nbytes
+        for name in ('avg_losses-rlzs', 'rcurves-rlzs', 'icurves-rlzs'):
+            if name in self.datastore:
+                nbytes = stats.compute(name, self.datastore)
+                self.datastore[name].attrs['nbytes'] = nbytes
+                self.datastore[name].attrs['statnames'] = stats.names
         self.datastore.hdf5.flush()
 
 
