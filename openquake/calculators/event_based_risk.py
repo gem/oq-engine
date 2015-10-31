@@ -294,6 +294,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for (l, r), data in numpy.ndenumerate(result['RC']):
                 if data and cb.user_provided:
                     # data is a dict asset idx -> counts
+                    lt = self.riskmodel.loss_types[l]
                     poes = cb.build_poes(N, [data], ses_ratio)
                     rcurves[lt][:, r, 0] = poes
                     saved['rcurves-rlzs'] += poes.nbytes
@@ -302,6 +303,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for (l, r), data in numpy.ndenumerate(result['IC']):
                 if data and cb.user_provided and insured_losses:
                     # data is a dict asset idx -> counts
+                    lt = self.riskmodel.loss_types[l]
                     poes = cb.build_poes(N, [data], ses_ratio)
                     rcurves[lt][:, r, 1] = poes
                     saved['rcurves-rlzs'] += poes.nbytes
