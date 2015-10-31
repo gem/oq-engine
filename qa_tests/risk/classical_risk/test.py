@@ -28,6 +28,13 @@ from openquake.commonlib import writers
 from openquake.engine.db import models
 
 
+def strip_header(fname):
+    """Return the content of a file, ignoring the first line"""
+    with open(fname) as f:
+        lines = list(f)[1:]
+    return ''.join(lines)
+
+
 class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
     module = case_1
 
@@ -223,7 +230,7 @@ class ClassicalRiskCase3TestCase(
             fname, [['asset_ref', 'lon', 'lat', 'avg_loss~structural',
                      'ins_loss~structural']] + data, fmt='%10.6E')
         expected = self._test_path('expected/rlz-000-avg_loss.csv')
-        self.assertEqual(open(fname).read(), open(expected).read())
+        self.assertEqual(strip_header(fname), strip_header(expected))
 
     items_per_output = None
 
@@ -269,4 +276,4 @@ class ClassicalRiskCase4TestCase(
                    'ins_loss~structural']] + data
             writers.write_csv(fname, hd, fmt='%10.6E')
             expected = self._test_path('expected/%s.csv' % key)
-            self.assertEqual(open(fname).read(), open(expected).read())
+            self.assertEqual(strip_header(fname), strip_header(expected))
