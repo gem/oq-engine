@@ -292,13 +292,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     continue
                 elif o == IC and not insured_losses:  # no insured curves
                     continue
+                lt = self.riskmodel.loss_types[l]
                 cb = self.riskmodel.curve_builders[l]
                 if o in (AGGLOSS, SPECLOSS):  # data is a list of arrays
                     losses = numpy.concatenate(data)
                     self.datasets[o, l, r].extend(losses)
                     saved[self.outs[o]] += losses.nbytes
                 elif o == AVGLOSS:  # average losses
-                    lt = self.riskmodel.loss_types[l]
                     avg_losses_lt = avg_losses[lt]
                     asset_values = self.assetcol[lt]
                     [avgloss] = data
