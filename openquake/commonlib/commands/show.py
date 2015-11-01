@@ -74,7 +74,7 @@ def show(calc_id, key=None, rlzs=None):
         print(key, humansize(ds.getsize(key)))
 
     # this part is experimental and not tested on purpose
-    if rlzs and 'curves_by_trt_gsim' in ds:
+    if rlzs and 'curves_by_sm' in ds:
         min_value = 0.01  # used in rmsep
         curves_by_rlz, mean_curves = combined_curves(ds)
         dists = []

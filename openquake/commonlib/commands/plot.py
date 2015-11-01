@@ -57,11 +57,11 @@ def combined_curves(dstore):
     :param dstore: a DataStore instance
     :returns: curves_by_rlz, mean_curves
     """
-    no_curves = all(len(c) == 0 for c in dstore['curves_by_trt_gsim'].values())
+    no_curves = all(len(c) == 0 for c in dstore['curves_by_sm'].values())
     if no_curves:
         raise Exception('Could not find hazard curves in %s' % dstore)
 
-    curves_by_rlz = dstore['rlzs_assoc'].combine(dstore['curves_by_trt_gsim'])
+    curves_by_rlz = dstore['rlzs_assoc'].combine(dstore['curves_by_sm'])
     rlzs = sorted(curves_by_rlz)
     weights = [rlz.weight for rlz in rlzs]
     return curves_by_rlz, scientific.mean_curve(
