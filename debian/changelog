@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Refactored atkinson_boore_2003 classes to avoid unneeded instantiation
+
   [Matteo Nastasi]
   * Imposed version for python-h5py dependency, Ubuntu 12.04 will use
     backported version from GEM repository
