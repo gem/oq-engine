@@ -362,7 +362,6 @@ class ModifyComplexFaultGeometryTestCase(unittest.TestCase):
             magnitude_scaling_relationship, self.aspect, tom,
             edges, self.rake
         )
-        assert_pickleable(cfs)
         return cfs
 
     def test_modify_geometry(self):
@@ -371,7 +370,7 @@ class ModifyComplexFaultGeometryTestCase(unittest.TestCase):
         top_edge_2 = Line([Point(29.9, 30.0, 2.0), Point(31.1, 30.0, 2.1)])
         bottom_edge_2 = Line([Point(29.6, 29.9, 29.0),
                               Point(31.4, 29.9, 33.0)])
-        fault.modify_set_geometry([top_edge_2, bottom_edge_2])
+        fault.modify_set_geometry([top_edge_2, bottom_edge_2], self.spacing)
         exp_lons_top = [29.9, 31.1]
         exp_lats_top = [30.0, 30.0]
         exp_depths_top = [2.0, 2.1]

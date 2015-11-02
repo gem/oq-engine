@@ -279,7 +279,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         return rup_cols, rup_rows
 
     def modify_set_geometry(self, fault_trace, upper_seismogenic_depth,
-                            lower_seismogenic_depth, dip):
+                            lower_seismogenic_depth, dip, spacing):
         """
         Modifies the current source geometry including trace, seismogenic
         depths and dip
@@ -287,12 +287,14 @@ class SimpleFaultSource(ParametricSeismicSource):
         # Check the new geometries are valid
         SimpleFaultSurface.check_fault_data(
             fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
-            dip, self.rupture_mesh_spacing
+            dip, spacing
         )
         self.fault_trace = fault_trace
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
         self.dip = dip
+        self.rupture_mesh_spacing = spacing
+
 
     def modify_adjust_dip(self, increment):
         """
