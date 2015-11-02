@@ -1327,6 +1327,7 @@ def quantile_curve(curves, quantile, weights=None):
     :returns:
         A numpy array representing the quantile aggregate
     """
+    assert len(curves)
     if weights is None:
         # this implementation is an alternative to
         # numpy.array(mstats.mquantiles(curves, prob=quantile, axis=0))[0]
@@ -1356,7 +1357,11 @@ def quantile_curve(curves, quantile, weights=None):
         cum_weights = numpy.cumsum(sorted_weights)
         result_curve.append(numpy.interp(quantile, cum_weights, sorted_poes))
 
-    return numpy.array(result_curve).reshape(curves[0].shape)
+    shape = getattr(curves[0], 'shape', None)
+    if shape:  # passed a sequence of arrays
+        return numpy.array(result_curve).reshape(shape)
+    else:  # passed a sequence of numbers
+        return result_curve
 
 
 # TODO: remove this from openquake.risklib.qa_tests.bcr_test
@@ -1572,7 +1577,8 @@ class SimpleStats(object):
             for i, q in enumerate(self.quantiles, 1):
                 new[:, i] = quantile_curve(data, q, weights)
         dstore[newname] = newarray
-        return newarray.nbytes
+        dstore[newname].attrs['nbytes'] = newarray.nbytes
+        dstore[newname].attrs['statnames'] = self.names
 
 
 class StatsBuilder(object):

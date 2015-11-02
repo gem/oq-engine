@@ -471,9 +471,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
         for name in ('avg_losses-rlzs', 'rcurves-rlzs'):
             if name in self.datastore:
-                nbytes = stats.compute(name, self.datastore)
-                self.datastore[name].attrs['nbytes'] = nbytes
-                self.datastore[name].attrs['statnames'] = stats.names
+                stats.compute(name, self.datastore)
+
         self.datastore.hdf5.flush()
 
 
