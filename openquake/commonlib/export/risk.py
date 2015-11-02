@@ -198,7 +198,10 @@ def export_avglosses_csv(ekey, dstore):
 
 @export.add(
     ('rcurves-rlzs', 'csv'),
-    ('icurves-rlzs', 'csv'))
+    ('icurves-rlzs', 'csv'),
+    ('rmaps-rlzs', 'csv'),
+    ('imaps-rlzs', 'csv'),
+)
 def export_ebr_curves(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets_sites(dstore)
@@ -215,7 +218,10 @@ def export_ebr_curves(ekey, dstore):
 
 @export.add(
     ('rcurves-stats', 'csv'),
-    ('icurves-stats', 'csv'))
+    ('icurves-stats', 'csv'),
+    ('rmaps-stats', 'csv'),
+    ('imaps-stats', 'csv'),
+)
 def export_ebr_stats(ekey, dstore):
     assets = get_assets_sites(dstore)
     curves = dstore[ekey[0]]

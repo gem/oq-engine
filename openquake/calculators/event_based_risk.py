@@ -486,6 +486,18 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             if name in self.datastore:
                 stats.compute(name, self.datastore)
 
+        # build statistical loss maps
+        # TODO: ask if this the right way, i.e. we are not doing the
+        # stats of rmaps-rlzs, but converting rcurves-stats
+        if (self.oqparam.conditional_loss_poes and
+                'rcurves-rlzs' in self.datastore):
+            self.build_loss_maps('rcurves-stats', 'rmaps-stats')
+            self.datastore['rmaps-stats'].attrs['statnames'] = stats.names
+        if (self.oqparam.conditional_loss_poes and
+                'icurves-rlzs' in self.datastore):
+            self.build_loss_maps('icurves-stats', 'imaps-stats')
+            self.datastore['imaps-stats'].attrs['statnames'] = stats.names
+
         self.datastore.hdf5.flush()
 
 
