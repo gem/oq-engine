@@ -78,7 +78,7 @@ setup(
         'numpy',
         'scipy',
         'shapely',
-        'psutil >= 0.4.1, <= 1.2.1',
+        'psutil >= 0.4.1, < 2.2.0',
         'decorator',
     ],
     ext_modules=[geodetic_speedups, geoutils_speedups],
