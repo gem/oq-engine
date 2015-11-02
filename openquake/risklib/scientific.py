@@ -903,11 +903,9 @@ class CurveBuilder(object):
         self.loss_type = loss_type
         self.ratios = numpy.array(loss_ratios, F32)
         self.user_provided = user_provided
-        self.curve_resolution = len(loss_ratios)
-        R = self.curve_resolution
+        self.curve_resolution = R = len(loss_ratios)
         self.loss_curve_dt = numpy.dtype([
             ('losses', (F32, R)), ('poes', (F32, R)), ('avg', F32)])
-        self.lr_dt = numpy.dtype([('poes', (F32, R))])
 
     def get_counts(self, N, count_dicts):
         """
@@ -948,9 +946,8 @@ class CurveBuilder(object):
         :param ses_ratio: event based factor
         """
         counts_matrix = self.get_counts(N, count_dicts)
-        poes = build_poes(counts_matrix, 1. / ses_ratio)
-        # poes has shape (N, R) and goes into a composite array of shape N
-        return poes.view(self.lr_dt).reshape(N)
+        poes = build_poes(counts_matrix, 1. / ses_ratio)  # shape (N, R)
+        return poes
 
     def build_loss_curves(self, assetcol, losses_by_aid, ses_ratio):
         """
