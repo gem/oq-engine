@@ -271,14 +271,10 @@ class HazardCalculator(BaseCalculator):
         Read the exposure (if any) and then the site collection, possibly
         extracted from the exposure.
         """
+        logging.info('Reading the site collection')
+        with self.monitor('reading site collection', autoflush=True):
+            haz_sitecol = readinput.get_site_collection(self.oqparam)
         inputs = self.oqparam.inputs
-
-        if 'gmfs' in inputs and self.oqparam.sites:
-            haz_sitecol = self.sitecol = readinput.get_site_collection(
-                self.oqparam)
-        if 'scenario_' in self.oqparam.calculation_mode:
-            self.gmfs = get_gmfs(self)
-            haz_sitecol = self.sitecol
         if 'exposure' in inputs:
             logging.info('Reading the exposure')
             with self.monitor('reading exposure', autoflush=True):
@@ -291,11 +287,6 @@ class HazardCalculator(BaseCalculator):
             num_assets = self.count_assets()
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
-            elif 'gmfs' in inputs:
-                pass  # haz_sitecol is already defined
-            # TODO: think about the case hazard_curves in inputs
-            else:
-                haz_sitecol = None
             if haz_sitecol is not None and haz_sitecol != self.sitecol:
                 with self.monitor('assoc_assets_sites'):
                     self.sitecol, self.assets_by_site = \
@@ -308,9 +299,7 @@ class HazardCalculator(BaseCalculator):
               OqParam.from_(self.datastore.parent.attrs).inputs):
             logging.info('Re-using the already imported exposure')
         else:  # no exposure
-            logging.info('Reading the site collection')
-            with self.monitor('reading site collection', autoflush=True):
-                self.sitecol = readinput.get_site_collection(self.oqparam)
+            self.sitecol = haz_sitecol
 
         # save mesh and asset collection
         self.save_mesh()
@@ -393,6 +382,9 @@ class RiskCalculator(HazardCalculator):
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
+        # add asset.idx as side effect
+        riskinput.build_asset_collection(
+            self.assets_by_site, self.oqparam.time_event)
         imtls = self.oqparam.imtls
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
@@ -476,7 +468,21 @@ def get_gmfs(calc):
     :returns: a dictionary of gmfs
     """
     if 'gmfs' in calc.oqparam.inputs:  # from file
-        return read_gmfs_from_file(calc)
+        logging.info('Reading gmfs from file')
+        sitecol, calc.tags, gmfs_by_imt = readinput.get_gmfs(calc.oqparam)
+        calc.save_params()  # save number_of_ground_motion_fields and sites
+
+        # reduce the gmfs matrices to the filtered sites
+        for imt in calc.oqparam.imtls:
+            gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
+
+        logging.info('Preparing the risk input')
+        fake_rlz = logictree.Realization(
+            value=('FromFile',), weight=1, lt_path=('',),
+            ordinal=0, lt_uid=('*',))
+        calc.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
+        return sitecol, {(0, 'FromFile'): gmfs_by_imt}
+
     # else from rupture
     gmf = calc.datastore['gmfs/col00'].value
     # NB: if the hazard site collection has N sites, the hazard
@@ -496,34 +502,10 @@ def get_gmfs(calc):
     gmfs = {(trt_id, gsim): numpy.zeros((N, R), imt_dt)
             for trt_id, gsim in calc.rlzs_assoc}
     for rupid, rows in sorted(gmf_by_idx.items()):
+        assert len(haz_sitecol.indices) == len(rows), (
+            len(haz_sitecol.indices), len(rows))
         for sid, gmv in zip(haz_sitecol.indices, rows):
             if sid in risk_indices:
                 for trt_id, gsim in gmfs:
                     gmfs[trt_id, gsim][sid, rupid] = gmv[gsim]
-    return gmfs
-
-
-def read_gmfs_from_file(calc):
-    """
-    :param calc: a ScenarioDamage or ScenarioRisk calculator
-    :returns: riskinputs
-    """
-    logging.info('Reading gmfs from file')
-    try:
-        sitecol = calc.sitecol.complete
-    except KeyError:
-        sitecol = None
-    calc.sitecol, calc.tags, gmfs_by_imt = readinput.get_gmfs(
-        calc.oqparam, sitecol)
-    calc.save_params()  # save number_of_ground_motion_fields and sites
-
-    # reduce the gmfs matrices to the filtered sites
-    for imt in calc.oqparam.imtls:
-        gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]
-
-    logging.info('Preparing the risk input')
-    fake_rlz = logictree.Realization(
-        value=('FromFile',), weight=1, lt_path=('',),
-        ordinal=0, lt_uid=('*',))
-    calc.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
-    return {(0, 'FromFile'): gmfs_by_imt}
+    return haz_sitecol, gmfs
