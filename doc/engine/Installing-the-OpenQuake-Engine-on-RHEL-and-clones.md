@@ -72,7 +72,7 @@ $ sudo service rabbitmq-server start
 ## Bootstrap the DB
 ```bash
 $ sudo -u postgres oq_create_db
-$ oq-engine/bin/oq-engine --upgrade-db
+$ oq-engine --upgrade-db
 ```
 A previously installed database can be removed running the `dropdb` tool
 ```bash
@@ -86,7 +86,7 @@ $ cd /usr/share/openquake/engine && celery worker --purge -Ofair
 
 ## Run a demo
 ```bash
-$ oq-engine --rh=/usr/share/doc/python-oq-risklib/demos/AreaSourceClassicalPSHA/job.ini
+$ oq-engine --rh=/usr/share/openquake/risklib/demos/hazard/AreaSourceClassicalPSHA/job.ini
 [2015-05-31 18:17:58,996 hazard job #407 - PROGRESS MainProcess/1562] **  pre_executing (hazard)
 [2015-05-31 18:17:59,088 hazard job #407 - PROGRESS MainProcess/1562] **  initializing sites
 [2015-05-31 18:17:59,660 hazard job #407 - PROGRESS MainProcess/1562] **  initializing site collection
