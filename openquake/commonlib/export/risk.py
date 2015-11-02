@@ -207,7 +207,7 @@ def export_ebr_curves(ekey, dstore):
     name = ekey[0].split('-')[0]  # rcurves, icurves
     for rlz in rlzs:
         array = compose_arrays(assets, curves[:, rlz.ordinal])
-        path = dstore.export_path('%s-%s' % (name, rlz.uid))
+        path = dstore.export_path('%s-%s.csv' % (name, rlz.uid))
         writers.write_csv(path, array, fmt='%9.7E')
         paths.append(path)
     return paths
@@ -223,7 +223,7 @@ def export_ebr_stats(ekey, dstore):
     name = ekey[0].split('-')[0]  # rcurves, icurves
     for i, statname in enumerate(curves.attrs['statnames']):
         array = compose_arrays(assets, curves[:, i])
-        path = dstore.export_path('%s-%s' % (name, statname))
+        path = dstore.export_path('%s-%s.csv' % (name, statname))
         writers.write_csv(path, array, fmt='%9.7E')
         paths.append(path)
     return paths
