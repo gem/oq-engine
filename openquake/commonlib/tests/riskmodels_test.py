@@ -16,6 +16,7 @@
 import os
 import pickle
 import unittest
+import mock
 import numpy
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import writetmp
@@ -253,9 +254,10 @@ lossCategory="contents">
         scm = os.path.join(FF_DIR, 'structural_consequence_model.xml')
         ccm = os.path.join(FF_DIR, 'contents_consequence_model.xml')
         # exchanging the associations on purpose
-        inputs = dict(structural_consequence=ccm, contents_consequence=scm)
+        oq = mock.Mock()
+        oq.inputs = dict(structural_consequence=ccm, contents_consequence=scm)
         with self.assertRaises(ValueError) as ctx:
-            riskmodels.get_risk_models('consequence', inputs)
+            riskmodels.get_risk_models(oq, 'consequence')
         self.assertIn('structural_consequence_model.xml" is of type '
                       '"structural", expected "contents"',
                       str(ctx.exception))
@@ -263,9 +265,10 @@ lossCategory="contents">
     def test_wrong_riskmodel_association(self):
         cfm = os.path.join(FF_DIR, 'contents_fragility_model.xml')
         # passing a fragility model instead of a consequence model
-        inputs = dict(contents_consequence=cfm)
+        oq = mock.Mock()
+        oq.inputs = dict(contents_consequence=cfm)
         with self.assertRaises(ValueError) as ctx:
-            riskmodels.get_risk_models('consequence', inputs)
+            riskmodels.get_risk_models(oq, 'consequence')
         self.assertIn('points to a file of kind FragilityModel, '
                       'expected ConsequenceModel', str(ctx.exception))
 

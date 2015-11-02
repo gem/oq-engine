@@ -34,8 +34,7 @@ from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.oqvalidation import OqParam, rmdict
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
-from openquake.commonlib.riskmodels import (
-    get_risk_files, get_risk_models, risk_dict)
+from openquake.commonlib.riskmodels import get_risk_files, get_risk_models
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.performance import DummyMonitor
 from openquake.baselib.python3compat import configparser
@@ -600,8 +599,7 @@ def get_risk_model(oqparam):
                 fragility_functions=ffs_by_lt)
     elif oqparam.calculation_mode.endswith('_bcr'):
         # classical_bcr calculator
-        retro = risk_dict(get_risk_models(
-            'vulnerability_retrofitted', oqparam.inputs))
+        retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
         for (imt_taxo, vf_orig), (imt_taxo_, vf_retro) in \
                 zip(rmdict.items(), retro.items()):
             assert imt_taxo == imt_taxo_  # same imt and taxonomy
