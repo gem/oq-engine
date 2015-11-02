@@ -132,7 +132,6 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
                 result['d_asset'].append(
                     (l, r, asset.idx, scientific.mean_std(damages)))
                 result['d_taxon'][t, l, r, :] += damages
-
     return result
 
 
@@ -150,7 +149,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
         self.monitor.consequence_models = riskmodels.get_risk_models(
-            'consequence', self.oqparam.inputs)
+            self.oqparam, 'consequence')
         self.riskinputs = self.build_riskinputs(self.gmfs)
         self.monitor.taxonomies = sorted(self.taxonomies)
 

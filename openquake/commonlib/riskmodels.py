@@ -65,18 +65,6 @@ def get_risk_files(inputs):
     return names.pop(), vfs
 
 
-def risk_dict(rmodels):
-    """
-    Convert a diction loss_type -> imt_taxo -> rf into a dictionary
-    imt_taxo -> loss_type -> rf.
-    """
-    rdict = collections.defaultdict(dict)
-    for loss_type, rm in sorted(rmodels.items()):
-        for imt_taxo, rf in rm.items():
-            rdict[imt_taxo][loss_type] = rf
-    return rdict
-
-
 # loss types (in the risk models) and cost types (in the exposure)
 # are the sames except for fatalities -> occupants
 
@@ -118,24 +106,24 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def get_risk_models(kind, inputs):
+def get_risk_models(oqparam, kind):
     """
+    :param oqparam:
+        an OqParam instancs
     :param kind:
         "vulnerability"|"vulnerability_retrofitted"|"fragility"|"consequence"
-    :param inputs:
-        a dictionary key -> path name
     :returns:
-        a dictionary loss_type -> imt_taxo -> function
+        a dictionary imt_taxo -> loss_type -> function
     """
     rmodels = {}
-    for key in inputs:
+    for key in oqparam.inputs:
         mo = re.match(
             '(occupants|structural|nonstructural|contents|'
             'business_interruption)_%s$' % kind, key)
         if mo:
             key_type = mo.group(1)  # the cost_type in the key
             # can be occupants, structural, nonstructural, ...
-            rmodel = nrml.parse(inputs[key])
+            rmodel = nrml.parse(oqparam.inputs[key])
             rmodels[cost_type_to_loss_type(key_type)] = rmodel
             if rmodel.lossCategory is None:  # NRML 0.4
                 continue
@@ -145,14 +133,39 @@ def get_risk_models(kind, inputs):
                 raise ValueError(
                     'Error in the .ini file: "%s_file=%s" points to a file '
                     'of kind %s, expected %s' % (
-                        key, inputs[key], rmodel_kind,
+                        key, oqparam.inputs[key], rmodel_kind,
                         kind.capitalize() + 'Model'))
             if cost_type != key_type:
                 raise ValueError(
                     'Error in the .ini file: "%s_file=%s" is of type "%s", '
-                    'expected "%s"' % (key, inputs[key], rmodel.lossCategory,
-                                       key_type))
-    return rmodels
+                    'expected "%s"' % (key, oqparam.inputs[key],
+                                       rmodel.lossCategory, key_type))
+    rdict = collections.defaultdict(dict)
+    if kind == 'fragility':
+        limit_states = []
+        for loss_type, fm in sorted(rmodels.items()):
+            # build a copy of the FragilityModel with different IM levels
+            newfm = fm.build(oqparam.continuous_fragility_discretization,
+                             oqparam.steps_per_interval)
+            for imt_taxo, ff in newfm.items():
+                if not limit_states:
+                    limit_states.extend(fm.limitStates)
+                # we are rejecting the case of loss types with different
+                # limit states; this may change in the future
+                assert limit_states == fm.limitStates, (
+                    limit_states, fm.limitStates)
+                rdict[imt_taxo][loss_type] = ff
+                # TODO: see if it is possible to remove the attribute
+                # below, used in classical_damage
+                ff.steps_per_interval = oqparam.steps_per_interval
+        oqparam.limit_states = limit_states
+    elif kind == 'consequence':
+        rdict = rmodels
+    else:  # vulnerability
+        for loss_type, rm in rmodels.items():
+            for imt_taxo, rf in rm.items():
+                rdict[imt_taxo][loss_type] = rf
+    return rdict
 
 
 @nrml.build.add(('vulnerabilityModel', 'nrml/0.4'))

@@ -23,7 +23,7 @@ import numpy
 
 from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import (
-    get_imtls, get_risk_files, get_risk_models, risk_dict)
+    get_imtls, get_risk_files, get_risk_models)
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
@@ -153,27 +153,8 @@ class OqParam(valid.ParamSet):
             delattr(self, 'intensity_measure_types')
         file_type, file_by_ct = get_risk_files(self.inputs)
         rmdict.clear()
-        rmodels = get_risk_models(file_type, self.inputs)
-        rmdict.update(risk_dict(rmodels))
-        if file_type == 'fragility':
-            limit_states = []
-            for loss_type, fm in sorted(rmodels.items()):
-                # build a copy of the FragilityModel with different IM levels
-                newfm = fm.build(self.continuous_fragility_discretization,
-                                 self.steps_per_interval)
-                for imt_taxo, ff in newfm.items():
-                    if not limit_states:
-                        limit_states.extend(fm.limitStates)
-                    # we are rejecting the case of loss types with different
-                    # limit states; this may change in the future
-                    assert limit_states == fm.limitStates, (
-                        limit_states, fm.limitStates)
-                    # FIXME: overriding array with FragilityFunction instance
-                    rmdict[imt_taxo][loss_type] = ff
-                    # TODO: see if it is possible to remove the attribute
-                    # below, used in classical_damage
-                    ff.steps_per_interval = self.steps_per_interval
-            self.limit_states = limit_states
+        rmodels = get_risk_models(self, file_type)
+        rmdict.update(rmodels)
         self.risk_imtls = get_imtls(rmdict)
 
         # check the IMTs vs the GSIMs
