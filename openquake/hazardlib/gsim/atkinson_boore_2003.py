@@ -356,13 +356,14 @@ class AtkinsonBoore2003SInterNSHMP2008(AtkinsonBoore2003SInter):
 
         return mean, stddevs
 
-    def _compute_soil_amplification(self, C, vs30, pga_rock, imt):
+    @classmethod
+    def _compute_soil_amplification(cls, C, vs30, pga_rock, imt):
         """
         Compute soil amplification (5th, 6th, and 7th terms in equation 1,
         page 1706) and add the B/C site condition as implemented by NSHMP.
         """
-        Sbc, Sc, Sd, Se = self._compute_site_class_dummy_variables(vs30)
-        sl = self._compute_soil_linear_factor(pga_rock, imt)
+        Sbc, Sc, Sd, Se = cls._compute_site_class_dummy_variables(vs30)
+        sl = cls._compute_soil_linear_factor(pga_rock, imt)
 
         return (
             C['c5'] * sl * Sbc * 0.5 +
@@ -371,7 +372,8 @@ class AtkinsonBoore2003SInterNSHMP2008(AtkinsonBoore2003SInter):
             C['c7'] * sl * Se
         )
 
-    def _compute_site_class_dummy_variables(self, vs30):
+    @classmethod
+    def _compute_site_class_dummy_variables(cls, vs30):
         """
         Extend
         :meth:`AtkinsonBoore2003SInter._compute_site_class_dummy_variables`
@@ -403,7 +405,8 @@ class AtkinsonBoore2003SSlabNSHMP2008(AtkinsonBoore2003SSlab):
     in ``hazgridXnga2.f`` Fortran code available at:
     http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
     """
-    def _compute_soil_amplification(self, C, vs30, pga_rock, imt):
+    @classmethod
+    def _compute_soil_amplification(cls, C, vs30, pga_rock, imt):
         """
         Compute soil amplification (5th, 6th, and 7th terms in equation 1,
         page 1706) and add the B/C site condition as implemented by NSHMP.
@@ -414,7 +417,8 @@ class AtkinsonBoore2003SSlabNSHMP2008(AtkinsonBoore2003SSlab):
         return AtkinsonBoore2003SInterNSHMP2008._compute_soil_amplification(
             C, vs30, pga_rock, imt)
 
-    def _compute_site_class_dummy_variables(self, vs30):
+    @classmethod
+    def _compute_site_class_dummy_variables(cls, vs30):
         """
         Extend
         :meth:`AtkinsonBoore2003SInter._compute_site_class_dummy_variables`
