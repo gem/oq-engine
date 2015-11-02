@@ -166,17 +166,19 @@ class AtkinsonBoore2003SInter(GMPE):
 
         return mean
 
-    def _compute_soil_amplification(self, C, vs30, pga_rock, imt):
+    @classmethod
+    def _compute_soil_amplification(cls, C, vs30, pga_rock, imt):
         """
         Compute soil amplification (5th, 6th, and 7th terms in equation 1,
         page 1706).
         """
-        Sc, Sd, Se = self._compute_site_class_dummy_variables(vs30)
-        sl = self._compute_soil_linear_factor(pga_rock, imt)
+        Sc, Sd, Se = cls._compute_site_class_dummy_variables(vs30)
+        sl = cls._compute_soil_linear_factor(pga_rock, imt)
 
         return C['c5'] * sl * Sc + C['c6'] * sl * Sd + C['c7'] * sl * Se
 
-    def _compute_site_class_dummy_variables(self, vs30):
+    @classmethod
+    def _compute_site_class_dummy_variables(cls, vs30):
         """
         Compute site class dummy variables as explained in paragraph
         'Functional Form', page 1706.
@@ -191,7 +193,8 @@ class AtkinsonBoore2003SInter(GMPE):
 
         return Sc, Sd, Se
 
-    def _compute_soil_linear_factor(self, pga_rock, imt):
+    @classmethod
+    def _compute_soil_linear_factor(cls, pga_rock, imt):
         """
         Compute soil linear factor as explained in paragraph 'Functional
         Form', page 1706.
@@ -408,9 +411,8 @@ class AtkinsonBoore2003SSlabNSHMP2008(AtkinsonBoore2003SSlab):
         Call
         :meth:`AtkinsonBoore2003SInterNSHMP2008._compute_soil_amplification`
         """
-        return AtkinsonBoore2003SInterNSHMP2008()._compute_soil_amplification(
-            C, vs30, pga_rock, imt
-        )
+        return AtkinsonBoore2003SInterNSHMP2008._compute_soil_amplification(
+            C, vs30, pga_rock, imt)
 
     def _compute_site_class_dummy_variables(self, vs30):
         """
@@ -421,7 +423,7 @@ class AtkinsonBoore2003SSlabNSHMP2008(AtkinsonBoore2003SSlab):
         Call
         meth:`AtkinsonBoore2003SInter._compute_site_class_dummy_variables`
         """
-        return AtkinsonBoore2003SInterNSHMP2008(). \
+        return AtkinsonBoore2003SInterNSHMP2008. \
             _compute_site_class_dummy_variables(vs30)
 
 
