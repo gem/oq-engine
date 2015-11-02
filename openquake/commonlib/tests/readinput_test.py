@@ -389,6 +389,21 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         self.assertIn("Invalid ID 'a 1': the only accepted chars are "
                       "a-zA-Z0-9_-, line 11", str(ctx.exception))
 
+    def test_exposure_no_insured_data(self):
+        oqparam = mock.Mock()
+        oqparam.base_path = '/'
+        oqparam.calculation_mode = 'scenario_risk'
+        oqparam.insured_losses = True
+        oqparam.inputs = {'exposure': self.exposure,
+                          'structural_vulnerability': None}
+        oqparam.region_constraint = '''\
+POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
+        oqparam.time_event = None
+        oqparam.ignore_missing_costs = []
+        with self.assertRaises(KeyError) as ctx:
+            readinput.get_exposure(oqparam)
+        self.assertIn("node cost: 'deductible', line 14", str(ctx.exception))
+
 
 class ReadCsvTestCase(unittest.TestCase):
     def test_get_mesh_csvdata_ok(self):
@@ -536,78 +551,81 @@ class TestReadGmfTestCase(unittest.TestCase):
         self.oqparam = mock.Mock()
         self.oqparam.base_path = '/'
         self.oqparam.inputs = {}
-        self.oqparam.sites = [(0, 0), (0, 1)]
         self.oqparam.imtls = {'PGA': None}
         self.oqparam.number_of_ground_motion_fields = 3
-        self.sitecol = readinput.get_site_collection(self.oqparam)
 
     def test_gmf_ok(self):
         fname = general.writetmp('''\
+0 0,0 1
 col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
 col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 3.92602000E-01
 ''')
-        _, _, gmfs = readinput.get_gmfs_from_csv(
-            self.oqparam, self.sitecol, fname)
+        _, _, gmfs = readinput.get_gmfs_from_txt(self.oqparam, fname)
         gmvs1, gmvs2 = gmfs['PGA']
         assert_allclose(gmvs1, [0.305128, 0.267031, 0.159434])
         assert_allclose(gmvs2, [0.604032, 0.334878, 0.392602])
 
     def test_missing_indices_are_ok(self):
         fname = general.writetmp('''\
+0 0,0 1
 col=00|ses=0001|src=test|rup=001-00,,1.59434000E-01 3.92602000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-02,0,2.67031000E-01
 ''')
-        _, _, gmfs = readinput.get_gmfs_from_csv(
-            self.oqparam, self.sitecol, fname)
+        _, _, gmfs = readinput.get_gmfs_from_txt(self.oqparam, fname)
         gmvs1, gmvs2 = gmfs['PGA']
         assert_allclose(gmvs1, [0.159434, 0.305128, 0.267031])
         assert_allclose(gmvs2, [0.392602, 0.604032, 0.])
 
     def test_negative_gmf(self):
         fname = general.writetmp('''\
+0 0,0 1
 col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
 col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 -3.92602000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs_from_csv(self.oqparam, self.sitecol, fname)
+            readinput.get_gmfs_from_txt(self.oqparam, fname)
 
     def test_missing_line(self):
         fname = general.writetmp('''\
+0 0,0 1
 col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs_from_csv(self.oqparam, self.sitecol, fname)
+            readinput.get_gmfs_from_txt(self.oqparam, fname)
 
     def test_not_ordered_tags(self):
         fname = general.writetmp('''\
+0 0,0 1
 col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 3.92602000E-01
 col=00|ses=0001|src=test|rup=001-00,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs_from_csv(self.oqparam, self.sitecol, fname)
+            readinput.get_gmfs_from_txt(self.oqparam, fname)
 
     def test_negative_indices(self):
         fname = general.writetmp('''\
+0 0,0 1
 col=00|ses=0001|src=test|rup=001-00,0 -1,1.59434000E-01 3.92602000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-02,0 1,2.67031000E-01 3.34878000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs_from_csv(self.oqparam, self.sitecol, fname)
+            readinput.get_gmfs_from_txt(self.oqparam, fname)
 
     def test_missing_bad_indices(self):
         fname = general.writetmp('''\
+0 0,0 1
 col=00|ses=0001|src=test|rup=001-00,,1.59434000E-01 3.92602000E-01
 col=00|ses=0001|src=test|rup=001-01,0 1,3.05128000E-01 6.04032000E-01
 col=00|ses=0001|src=test|rup=001-02,X,2.67031000E-01
 ''')
         with self.assertRaises(readinput.InvalidFile):
-            readinput.get_gmfs_from_csv(self.oqparam, self.sitecol, fname)
+            readinput.get_gmfs_from_txt(self.oqparam, fname)
 
 
 class TestLoadGmfTestCase(unittest.TestCase):

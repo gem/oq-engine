@@ -150,7 +150,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         base.RiskCalculator.pre_execute(self)
         self.monitor.consequence_models = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        self.riskinputs = self.build_riskinputs(self.gmfs)
+        _, gmfs = base.get_gmfs(self)
+        self.riskinputs = self.build_riskinputs(gmfs)
         self.monitor.taxonomies = sorted(self.taxonomies)
 
     def post_execute(self, result):
