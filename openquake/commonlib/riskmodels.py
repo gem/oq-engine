@@ -65,6 +65,18 @@ def get_risk_files(inputs):
     return names.pop(), vfs
 
 
+def risk_dict(rmodels):
+    """
+    Convert a diction loss_type -> imt_taxo -> rf into a dictionary
+    imt_taxo -> loss_type -> rf.
+    """
+    rdict = collections.defaultdict(dict)
+    for loss_type, rm in sorted(rmodels.items()):
+        for imt_taxo, rf in rm.items():
+            rdict[imt_taxo][loss_type] = rf
+    return rdict
+
+
 # loss types (in the risk models) and cost types (in the exposure)
 # are the sames except for fatalities -> occupants
 
@@ -84,28 +96,6 @@ def cost_type_to_loss_type(ct):
     :param ct: loss type
     """
     return 'fatalities' if ct == 'occupants' else ct
-
-
-def get_vfs(inputs, retrofitted=False):
-    """
-    Given a dictionary {key: pathname}, look for keys with name
-    <cost_type>__vulnerability, parse them and returns a dictionary
-    imt, taxonomy -> vf_by_loss_type.
-
-    :param inputs: a dictionary key -> pathname
-    :param retrofitted: a flag (default False)
-    """
-    retro = '_retrofitted' if retrofitted else ''
-    vulnerability_functions = collections.defaultdict(dict)
-    for cost_type in get_risk_files(inputs)[1]:
-        key = '%s_vulnerability%s' % (cost_type, retro)
-        if key not in inputs:
-            continue
-        vf_dict = nrml.parse(inputs[key])
-        for (imt, tax), vf in vf_dict.items():
-            vulnerability_functions[imt, tax][
-                cost_type_to_loss_type(cost_type)] = vf
-    return vulnerability_functions
 
 
 # ########################### vulnerability ############################## #
@@ -130,24 +120,38 @@ def build_vf_node(vf):
 
 def get_risk_models(kind, inputs):
     """
-    :param kind: the string 'fragility', 'consequence'
-    :param inputs: a dictionary key -> path name
-    :returns: a dictionary loss_type -> ConsequenceModel instance
+    :param kind:
+        "vulnerability"|"vulnerability_retrofitted"|"fragility"|"consequence"
+    :param inputs:
+        a dictionary key -> path name
+    :returns:
+        a dictionary loss_type -> imt_taxo -> function
     """
     rmodels = {}
     for key in inputs:
         mo = re.match(
-            '(structural|nonstructural|contents|business_interruption)'
-            '_' + kind, key)
+            '(occupants|structural|nonstructural|contents|'
+            'business_interruption)_%s$' % kind, key)
         if mo:
+            key_type = mo.group(1)  # the cost_type in the key
+            # can be occupants, structural, nonstructural, ...
             rmodel = nrml.parse(inputs[key])
-            expected_loss_type = mo.group(1)  # the loss type in the key
-            if rmodel.lossCategory != expected_loss_type:
+            rmodels[cost_type_to_loss_type(key_type)] = rmodel
+            if rmodel.lossCategory is None:  # NRML 0.4
+                continue
+            cost_type = str(rmodel.lossCategory)
+            rmodel_kind = rmodel.__class__.__name__
+            if not rmodel_kind.lower().startswith(kind):
+                raise ValueError(
+                    'Error in the .ini file: "%s_file=%s" points to a file '
+                    'of kind %s, expected %s' % (
+                        key, inputs[key], rmodel_kind,
+                        kind.capitalize() + 'Model'))
+            if cost_type != key_type:
                 raise ValueError(
                     'Error in the .ini file: "%s_file=%s" is of type "%s", '
                     'expected "%s"' % (key, inputs[key], rmodel.lossCategory,
-                                       expected_loss_type))
-            rmodels[rmodel.lossCategory] = rmodel
+                                       key_type))
     return rmodels
 
 
@@ -166,7 +170,8 @@ def get_vulnerability_functions_04(node, fname):
     # vulnerability function in a set will get its own levels
     imts = set()
     taxonomies = set()
-    vf_dict = {}  # imt, taxonomy -> vulnerability function
+    # imt, taxonomy -> vulnerability function
+    vmodel = scientific.VulnerabilityModel(**node.attrib)
     for vset in node:
         imt_str, imls, min_iml, max_iml, imlUnit = ~vset.IML
         imts.add(imt_str)
@@ -191,10 +196,10 @@ def get_vulnerability_functions_04(node, fname):
                     (len(coefficients), len(imls), fname,
                      vfun.coefficientsVariation.lineno))
             with context(fname, vfun):
-                vf_dict[imt_str, taxonomy] = scientific.VulnerabilityFunction(
+                vmodel[imt_str, taxonomy] = scientific.VulnerabilityFunction(
                     taxonomy, imt_str, imls, loss_ratios, coefficients,
                     vfun['probabilisticDistribution'])
-    return vf_dict
+    return vmodel
 
 
 @nrml.build.add(('vulnerabilityModel', 'nrml/0.5'))
@@ -210,7 +215,8 @@ def get_vulnerability_functions_05(node, fname):
     # NB: the IMTs can be duplicated and with different levels, each
     # vulnerability function in a set will get its own levels
     taxonomies = set()
-    vf_dict = {}  # imt, taxonomy -> vulnerability function
+    vmodel = scientific.VulnerabilityModel(**node.attrib)
+    # imt, taxonomy -> vulnerability function
     for vfun in node.getnodes('vulnerabilityFunction'):
         with context(fname, vfun):
             imt = vfun.imls['imt']
@@ -227,7 +233,7 @@ def get_vulnerability_functions_05(node, fname):
                 probs.append(valid.probabilities(~probabilities))
             probs = numpy.array(probs)
             assert probs.shape == (len(loss_ratios), len(imls))
-            vf_dict[imt, taxonomy] = (
+            vmodel[imt, taxonomy] = (
                 scientific.VulnerabilityFunctionWithPMF(
                     taxonomy, imt, imls, numpy.array(loss_ratios),
                     probs))  # the seed will be set by readinput.get_risk_model
@@ -246,10 +252,10 @@ def get_vulnerability_functions_05(node, fname):
                     'line %d' % (len(coefficients), len(imls), fname,
                                  vfun.covLRs.lineno))
             with context(fname, vfun):
-                vf_dict[imt, taxonomy] = scientific.VulnerabilityFunction(
+                vmodel[imt, taxonomy] = scientific.VulnerabilityFunction(
                     taxonomy, imt, imls, loss_ratios, coefficients,
                     vfun['dist'])
-    return vf_dict
+    return vmodel
 
 
 def get_imtls(ddict):

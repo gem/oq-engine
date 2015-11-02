@@ -34,7 +34,8 @@ from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.oqvalidation import OqParam, rmdict
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
-from openquake.commonlib.riskmodels import get_vfs, get_risk_files
+from openquake.commonlib.riskmodels import (
+    get_risk_files, get_risk_models, risk_dict)
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.performance import DummyMonitor
 from openquake.baselib.python3compat import configparser
@@ -598,11 +599,11 @@ def get_risk_model(oqparam):
                 imt_taxo[0], imt_taxo[1], oqparam,
                 fragility_functions=ffs_by_lt)
     elif oqparam.calculation_mode.endswith('_bcr'):
-        # bcr calculators
-        vfs_orig = list(get_vfs(oqparam.inputs, retrofitted=False).items())
-        vfs_retro = list(get_vfs(oqparam.inputs, retrofitted=True).items())
+        # classical_bcr calculator
+        retro = risk_dict(get_risk_models(
+            'vulnerability_retrofitted', oqparam.inputs))
         for (imt_taxo, vf_orig), (imt_taxo_, vf_retro) in \
-                zip(vfs_orig, vfs_retro):
+                zip(rmdict.items(), retro.items()):
             assert imt_taxo == imt_taxo_  # same imt and taxonomy
             risk_models[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
@@ -610,7 +611,7 @@ def get_risk_model(oqparam):
                 vulnerability_functions_retro=vf_retro)
     else:
         # classical, event based and scenario calculators
-        for imt_taxo, vfs in get_vfs(oqparam.inputs).items():
+        for imt_taxo, vfs in rmdict.items():
             for vf in vfs.values():
                 # set the seed; this is important for the case of
                 # VulnerabilityFunctionWithPMF

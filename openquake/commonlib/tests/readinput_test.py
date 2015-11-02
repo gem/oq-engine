@@ -68,6 +68,7 @@ export_dir = %s
                            'site_model': site_model_input},
                 'sites': [(0.0, 0.0)],
                 'hazard_imtls': {'PGA': None},
+                'risk_imtls': {},
                 'investigation_time': 50.0,
                 'risk_investigation_time': 50.0,
             }
@@ -124,6 +125,7 @@ export_dir = %s
                 'reference_vs30_type': 'measured',
                 'reference_vs30_value': 600.0,
                 'hazard_imtls': {'PGA': [0.1, 0.2]},
+                'risk_imtls': {},
                 'investigation_time': 50.0,
                 'risk_investigation_time': 50.0,
             }
