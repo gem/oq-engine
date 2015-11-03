@@ -71,9 +71,9 @@ cp -R demos %{buildroot}/%{_datadir}/openquake/risklib
 rm -rf %{buildroot}
 
 %files -f INSTALLED_FILES
-%files %{buildroot}/%{_datadir}/openquake/risklib
 %defattr(-,root,root)
 %doc LICENSE README.md doc
+%{_datadir}/openquake/risklib
 
 %changelog
 * %(date -d @%{oqtimestamp} '+%a %b %d %Y') GEM Automatic Packager <gem-autopack@openquake.org> %{oqversion}-%{oqtimestamp}_%{oqrelease}
