@@ -146,13 +146,13 @@ celeryd --purge &
 celery worker --purge -Ofair &
 </pre>
 
-Then run `openquake` without the `--no-distribute` option:
+Then run `oq-engine` without the `--no-distribute` option:
 <pre>
 oq-engine --run-hazard=/usr/share/openquake/risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
 </pre>
 
 ## More commands
-For a list of additional commands, type `openquake --help`.
+For a list of additional commands, type `oq-engine --help`.
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
