@@ -64,13 +64,16 @@ python setup.py build
 
 %install
 python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --record=INSTALLED_FILES
+mkdir -p %{buildroot}/%{_datadir}/openquake/risklib
+cp -R demos %{buildroot}/%{_datadir}/openquake/risklib
 
 %clean
 rm -rf %{buildroot}
 
 %files -f INSTALLED_FILES
+%files %{buildroot}/%{_datadir}/openquake/risklib
 %defattr(-,root,root)
-%doc LICENSE README.md doc demos
+%doc LICENSE README.md doc
 
 %changelog
 * %(date -d @%{oqtimestamp} '+%a %b %d %Y') GEM Automatic Packager <gem-autopack@openquake.org> %{oqversion}-%{oqtimestamp}_%{oqrelease}
