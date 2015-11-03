@@ -290,10 +290,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     self.dsets['SPECLOSS'][r].extend(losses)
                     saved['specific-losses-rlzs'] += losses.nbytes
 
-            cb = self.riskmodel.curve_builders[l]
-
             # RC
             for (l, r), data in numpy.ndenumerate(result['RC']):
+                cb = self.riskmodel.curve_builders[l]
                 if data and cb.user_provided:
                     # data is a dict asset idx -> counts
                     lt = self.riskmodel.loss_types[l]
@@ -303,6 +302,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
             # IC
             for (l, r), data in numpy.ndenumerate(result['IC']):
+                cb = self.riskmodel.curve_builders[l]
                 if data and cb.user_provided and insured_losses:
                     # data is a dict asset idx -> counts
                     lt = self.riskmodel.loss_types[l]
