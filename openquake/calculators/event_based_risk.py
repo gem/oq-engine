@@ -72,11 +72,12 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
 
     def zeroN2():
         return numpy.zeros((monitor.num_assets, 2))
-    result = dict(AVGLOSS=square(L, R, zeroN2),
-                  AGGLOSS=square(L, R, list),
+    result = dict(AGGLOSS=square(L, R, list),
                   SPECLOSS=square(L, R, list),
                   RC=square(L, R, list),
                   IC=square(L, R, list))
+    if monitor.avg_losses:
+        result['AVGLOSS'] = square(L, R, zeroN2)
     for out_by_rlz in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor, assets_by_site, eps):
         rup_slice = out_by_rlz.rup_slice
@@ -357,6 +358,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.build_agg_curve()
 
     def build_specific_loss_curves(self, group):
+        """
+        Build loss curves for specific assets
+        """
         ses_ratio = self.oqparam.ses_ratio
         assetcol = self.assetcol[self.spec_indices]
         for cb in self.riskmodel.curve_builders:
