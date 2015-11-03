@@ -38,8 +38,7 @@ while (( "$#" )); do
             shift
             ;;
         "-c")
-            rm -Rf $BASE/build-rpm
-            echo "$BASE/build-rpm cleaned"
+            CLEAN=1
             shift
             ;;
         *)
@@ -48,6 +47,11 @@ while (( "$#" )); do
             ;;
     esac
 done
+
+if [ "$CLEAN" == "1" ]; then
+    rm -Rf $BASE/build-rpm
+    echo "$BASE/build-rpm cleaned"
+fi
 
 cd $BASE
 mkdir -p build-rpm/{RPMS,SOURCES,SPECS,SRPMS}
