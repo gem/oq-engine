@@ -638,11 +638,16 @@ class DuplicatedID(Exception):
     Raised when two assets with the same ID are found in an exposure model
     """
 
+cost_type_dt = numpy.dtype([('name', '|S20'), ('type', '|S20'),
+                            ('unit', '|S20')])
 
-def get_exposure_lazy(fname):
+
+def get_exposure_lazy(fname, ok_cost_types):
     """
     :param fname:
         path of the XML file containing the exposure
+    :param ok_cost_types:
+        a set of cost types (as strings)
     :returns:
         a pair (Exposure instance, list of asset nodes)
     """
@@ -665,9 +670,15 @@ def get_exposure_lazy(fname):
         area = conversions.area
     except NameError:
         area = LiteralNode('area', dict(type=''))
+    cost_types = [(ct['name'], ct['type'], ct['unit'])
+                  for ct in conversions.costTypes
+                  if ct['name'] in ok_cost_types]
+    if 'occupants' in ok_cost_types:
+        cost_types.append(('occupants', 'per_area', 'people'))
+    cost_types.sort(key=operator.itemgetter(0))
     return Exposure(
         exposure['id'], exposure['category'],
-        ~description, [ct.attrib for ct in conversions.costTypes],
+        ~description, numpy.array(cost_types, cost_type_dt),
         ~inslimit, ~deductible, area.attrib, [], set()), exposure.assets
 
 
@@ -688,8 +699,9 @@ def get_exposure(oqparam):
         region = wkt.loads(oqparam.region_constraint)
     else:
         region = None
+    all_cost_types = set(oqparam.all_cost_types)
     fname = oqparam.inputs['exposure']
-    exposure, assets_node = get_exposure_lazy(fname)
+    exposure, assets_node = get_exposure_lazy(fname, all_cost_types)
     cc = workflows.CostCalculator(
         {}, {}, exposure.deductible_is_absolute,
         exposure.insurance_limit_is_absolute)
@@ -698,8 +710,6 @@ def get_exposure(oqparam):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = exposure.area['type']
 
-    file_type, risk_files = get_risk_files(oqparam.inputs)
-    all_cost_types = set(risk_files)
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
