@@ -272,14 +272,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                           autoflush=True, measuremem=True) as mon:
 
             # AVGLOSS
-            with mon('building avg_losses-rlzs'):
-                for (l, r), avgloss in numpy.ndenumerate(result['AVGLOSS']):
-                    lt = self.riskmodel.loss_types[l]
-                    avg_losses_lt = self.avg_losses[lt]
-                    asset_values = self.assetcol[lt]
-                    for i, avalue in enumerate(asset_values):
-                        avg_losses_lt[i, r] = tuple(avgloss[i] * avalue)
-                if self.oqparam.avg_losses:
+            if self.oqparam.avg_losses:
+                with mon('building avg_losses-rlzs'):
+                    for (l, r), avgloss in numpy.ndenumerate(
+                            result['AVGLOSS']):
+                        lt = self.riskmodel.loss_types[l]
+                        avg_losses_lt = self.avg_losses[lt]
+                        asset_values = self.assetcol[lt]
+                        for i, avalue in enumerate(asset_values):
+                            avg_losses_lt[i, r] = tuple(avgloss[i] * avalue)
                     self.datastore['avg_losses-rlzs'] = self.avg_losses
                     saved['avg_losses-rlzs'] = self.avg_losses.nbytes
 
