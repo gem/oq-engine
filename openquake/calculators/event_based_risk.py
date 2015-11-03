@@ -343,6 +343,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 'icurves-rlzs' in self.datastore):
             self.build_loss_maps('icurves-rlzs', 'imaps-rlzs')
 
+        # build a single aggregate loss curve per realization
+        self.build_agg_curve()
+
     def build_specific_loss_curves(self, group):
         ses_ratio = self.oqparam.ses_ratio
         assetcol = self.assetcol[self.spec_indices]
@@ -383,6 +386,35 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     # (N,1) into shape (N)
                     maps_lt[aid, rlz.ordinal] = loss_maps[aid]
         self.datastore[maps_key] = maps
+
+    def build_agg_curve(self):
+        """
+        Build a single loss curve per realization. It is NOT obtained
+        by aggregating the loss curves; instead, it is obtained without
+        generating the loss curves, directly from the the aggregate losses.
+        """
+        C = self.oqparam.loss_curve_resolution
+        I = self.oqparam.insured_losses
+        rlzs = self.datastore['rlzs_assoc'].realizations
+        R = len(rlzs)
+        ses_ratio = self.oqparam.ses_ratio
+        agg_losses = self.datastore['agg_losses-rlzs']
+        loss_curve_dt = numpy.dtype([
+            ('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)])
+        agg_curve = numpy.empty((R, 2), loss_curve_dt)
+        agg_curve.fill(numpy.nan)
+        for loss_type in agg_losses:
+            for rlz_idx, data in enumerate(agg_losses[loss_type].values()):
+                if len(data) == 0:  # realization with no losses
+                    continue
+                for i in range(I + 1):  # insured_losses
+                    the_losses = numpy.array(
+                        [loss[i] for _rupid, loss in data], F32)
+                    losses, poes = scientific.event_based(
+                        the_losses, ses_ratio, C)
+                    avg = scientific.average_loss((losses, poes))
+                    agg_curve[rlz_idx, i] = (losses, poes, avg)
+        self.datastore['agg_curve-rlzs'] = agg_curve
 
     # ################### methods to compute statistics  #################### #
 

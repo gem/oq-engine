@@ -928,9 +928,9 @@ class CurveBuilder(object):
         self.loss_type = loss_type
         self.ratios = numpy.array(loss_ratios, F32)
         self.user_provided = user_provided
-        self.curve_resolution = R = len(loss_ratios)
+        self.curve_resolution = C = len(loss_ratios)
         self.loss_curve_dt = numpy.dtype([
-            ('losses', (F32, R)), ('poes', (F32, R)), ('avg', F32)])
+            ('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)])
 
     def get_counts(self, N, count_dicts):
         """
