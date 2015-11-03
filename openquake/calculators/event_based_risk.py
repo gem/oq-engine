@@ -213,15 +213,16 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         self.datastore.hdf5.create_group(self.outs['AGGLOSS'])
         self.datastore.hdf5.create_group(self.outs['SPECLOSS'])
-        self.dsets = dict(AGGLOSS=[], SPECLOSS=[])
-        for loss_type in loss_types:
+        self.dsets = dict(AGGLOSS=numpy.zeros((self.L, self.R), object),
+                          SPECLOSS=numpy.zeros((self.L, self.R), object))
+        for l, loss_type in enumerate(loss_types):
             for r, rlz in enumerate(self.rlzs_assoc.realizations):
                 key = self.outs['AGGLOSS'] + '/%s/%s' % (loss_type, rlz.uid)
-                self.dsets['AGGLOSS'].append(
-                    self.datastore.create_dset(key, self.elt_dt))
+                self.dsets['AGGLOSS'][l, r] = self.datastore.create_dset(
+                    key, self.elt_dt)
                 key = self.outs['SPECLOSS'] + '/%s/%s' % (loss_type, rlz.uid)
-                self.dsets['SPECLOSS'].append(
-                    self.datastore.create_dset(key, self.ela_dt))
+                self.dsets['SPECLOSS'][l, r] = self.datastore.create_dset(
+                    key, self.ela_dt)
 
         # ugly: attaching an attribute needed in the task function
         self.monitor.num_assets = self.count_assets()
@@ -284,14 +285,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for (l, r), data in numpy.ndenumerate(result['AGGLOSS']):
                 if data:  # # data is a list of arrays
                     losses = numpy.array(data, self.elt_dt)
-                    self.dsets['AGGLOSS'][r].extend(losses)
+                    self.dsets['AGGLOSS'][l, r].extend(losses)
                     saved['agg_losses-rlzs'] += losses.nbytes
 
             # SPECLOSS
             for (l, r), data in numpy.ndenumerate(result['SPECLOSS']):
                 if data:  # # data is a list of arrays
                     losses = numpy.array(data, self.ela_dt)
-                    self.dsets['SPECLOSS'][r].extend(losses)
+                    self.dsets['SPECLOSS'][l, r].extend(losses)
                     saved['specific-losses-rlzs'] += losses.nbytes
 
             # RC
