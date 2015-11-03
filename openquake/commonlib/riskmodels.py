@@ -129,7 +129,8 @@ def get_risk_models(oqparam, kind):
                 continue
             cost_type = str(rmodel.lossCategory)
             rmodel_kind = rmodel.__class__.__name__
-            if not rmodel_kind.lower().startswith(kind):
+            kind_ = kind.replace('_retrofitted', '')  # strip retrofitted
+            if not rmodel_kind.lower().startswith(kind_):
                 raise ValueError(
                     'Error in the .ini file: "%s_file=%s" points to a file '
                     'of kind %s, expected %s' % (
