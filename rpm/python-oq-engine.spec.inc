@@ -67,7 +67,7 @@ rm -rf %{buildroot}
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
 %doc README.md LICENSE CONTRIBUTORS.txt doc
-%{_datadir}/openquake/engine/celeryconfig.py*
+%{_datadir}/openquake/engine
 %{_sysconfdir}/openquake/openquake.cfg
 
 %changelog
