@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an output agg_curve-rlzs in the HDF5 file
   * Changed the storage of the event based risk outputs in the HDF5 file
   * Added a consistency check between the risk model keys in the job.ini and
     the risk model files
