@@ -40,7 +40,7 @@ while (( "$#" )); do
         "-c")
             rm -Rf $BASE/build-rpm
             echo "$BASE/build-rpm cleaned"
-            exit 0
+            shift
             ;;
         *)
             BRANCH="$1"
