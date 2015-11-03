@@ -869,7 +869,7 @@ mksafedir "$GEM_BUILD_ROOT"
 mksafedir "$GEM_BUILD_SRC"
 
 git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
-mv "$GEM_BUILD_SRC"/demos "$GEM_BUILD_SRC"/usr/share/openquake/risklib/demos
+
 # NOTE: if in the future we need modules we need to execute the following commands
 #
 # git submodule init
