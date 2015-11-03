@@ -638,6 +638,9 @@ class DuplicatedID(Exception):
     Raised when two assets with the same ID are found in an exposure model
     """
 
+cost_type_dt = numpy.dtype([('name', '|S20'), ('type', '|S20'),
+                            ('unit', '|S20')])
+
 
 def get_exposure_lazy(fname):
     """
@@ -665,10 +668,13 @@ def get_exposure_lazy(fname):
         area = conversions.area
     except NameError:
         area = LiteralNode('area', dict(type=''))
+    cts = sorted(conversions.costTypes, key=operator.itemgetter('name'))
+    cost_types = numpy.array([(ct['name'], ct['type'], ct['unit'])
+                              for ct in cts], cost_type_dt)
     return Exposure(
         exposure['id'], exposure['category'],
-        ~description, [ct.attrib for ct in conversions.costTypes],
-        ~inslimit, ~deductible, area.attrib, [], set()), exposure.assets
+        ~description, cost_types, ~inslimit, ~deductible,
+        area.attrib, [], set()), exposure.assets
 
 
 def get_exposure(oqparam):
