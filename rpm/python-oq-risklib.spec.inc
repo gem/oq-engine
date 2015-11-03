@@ -73,6 +73,7 @@ rm -rf %{buildroot}
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
 %doc LICENSE README.md doc
+%dir %{_datadir}/openquake
 %{_datadir}/openquake/risklib
 
 %changelog
