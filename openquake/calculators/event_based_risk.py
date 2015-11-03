@@ -401,10 +401,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         agg_losses = self.datastore['agg_losses-rlzs']
         loss_curve_dt = numpy.dtype([
             ('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)])
-        agg_curve = numpy.empty((R, 2), loss_curve_dt)
         for loss_type in agg_losses:
-            agg_curve_lt = agg_curve[loss_type]
-            agg_curve_lt.fill(numpy.nan)
+            agg_curve = numpy.empty((R, 2), loss_curve_dt)
+            for field in loss_curve_dt.fields:  # loop needed for Ubuntu 12.04
+                agg_curve[field].fill(numpy.nan)
             for rlz_idx, data in enumerate(agg_losses[loss_type].values()):
                 if len(data) == 0:  # realization with no losses
                     continue
@@ -414,8 +414,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     losses, poes = scientific.event_based(
                         the_losses, ses_ratio, C)
                     avg = scientific.average_loss((losses, poes))
-                    agg_curve_lt[rlz_idx, i] = (losses, poes, avg)
-        self.datastore['agg_curve-rlzs'] = agg_curve
+                    agg_curve[rlz_idx, i] = (losses, poes, avg)
+            self.datastore['agg_curve-rlzs/' + loss_type] = agg_curve
 
     # ################### methods to compute statistics  #################### #
 
