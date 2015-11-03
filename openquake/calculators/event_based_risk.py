@@ -32,6 +32,28 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
+@parallel.litetask
+def build_agg_curve(lr_list, insured_losses, ses_ratio, C, monitor):
+    """
+    Build the aggregate loss curve in parallel, by distributing on the pairs
+    (l, r) i.e. loss types and realizations.
+
+    :returns: a dictionary (r, l, i) -> (losses, poes, avg)
+    """
+    result = {}
+    for l, r, data in lr_list:
+        if len(data) == 0:  # realization with no losses
+            continue
+        for i in range(insured_losses + 1):  # insured_losses
+            the_losses = numpy.array(
+                [loss[i] for _rupid, loss in data], F32)
+            losses, poes = scientific.event_based(
+                the_losses, ses_ratio, C)
+            avg = scientific.average_loss((losses, poes))
+            result[l, r, i] = (losses, poes, avg)
+    return result
+
+
 def square(L, R, factory):
     """
     :param L: the number of loss types
@@ -408,28 +430,27 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         by aggregating the loss curves; instead, it is obtained without
         generating the loss curves, directly from the the aggregate losses.
         """
+        ltypes = self.riskmodel.loss_types
         C = self.oqparam.loss_curve_resolution
         I = self.oqparam.insured_losses
         rlzs = self.datastore['rlzs_assoc'].realizations
+        agglosses = self.datastore['agg_losses-rlzs']
         R = len(rlzs)
         ses_ratio = self.oqparam.ses_ratio
-        agg_losses = self.datastore['agg_losses-rlzs']
         loss_curve_dt = numpy.dtype([
             ('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)])
-        for loss_type in agg_losses:
+        lr_list = [(l, r.ordinal, agglosses[l][r.uid].value)
+                   for l in ltypes for r in rlzs]
+        result = parallel.apply_reduce(
+            build_agg_curve, (lr_list, I, ses_ratio, C, self.monitor),
+            concurrent_tasks=self.oqparam.concurrent_tasks)
+        for loss_type in ltypes:
             agg_curve = numpy.empty((R, 2), loss_curve_dt)
             for field in loss_curve_dt.fields:  # loop needed for Ubuntu 12.04
                 agg_curve[field].fill(numpy.nan)
-            for rlz_idx, data in enumerate(agg_losses[loss_type].values()):
-                if len(data) == 0:  # realization with no losses
-                    continue
-                for i in range(I + 1):  # insured_losses
-                    the_losses = numpy.array(
-                        [loss[i] for _rupid, loss in data], F32)
-                    losses, poes = scientific.event_based(
-                        the_losses, ses_ratio, C)
-                    avg = scientific.average_loss((losses, poes))
-                    agg_curve[rlz_idx, i] = (losses, poes, avg)
+            for l, r, i in result:
+                if l == loss_type:
+                    agg_curve[r, i] = result[l, r, i]
             self.datastore['agg_curve-rlzs/' + loss_type] = agg_curve
 
     # ################### methods to compute statistics  #################### #
