@@ -670,8 +670,9 @@ def get_exposure_lazy(fname, ok_cost_types):
         area = conversions.area
     except NameError:
         area = LiteralNode('area', dict(type=''))
-    cts = [ct for ct in conversions.costTypes if ct['name'] in ok_cost_types]
-    cost_types = [(ct['name'], ct['type'], ct['unit']) for ct in cts]
+    cost_types = [(ct['name'], ct['type'], ct['unit'])
+                  for ct in conversions.costTypes
+                  if ct['name'] in ok_cost_types]
     if 'occupants' in ok_cost_types:
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
