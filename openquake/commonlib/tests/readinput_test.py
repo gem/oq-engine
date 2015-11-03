@@ -338,7 +338,8 @@ class ExposureTestCase(unittest.TestCase):
 </nrml>''')
 
     def test_get_exposure_metadata(self):
-        exp, _assets = readinput.get_exposure_lazy(self.exposure)
+        exp, _assets = readinput.get_exposure_lazy(
+            self.exposure, ['structural'])
         self.assertEqual(exp.description, 'Exposure model for buildings')
         self.assertTrue(exp.insurance_limit_is_absolute)
         self.assertTrue(exp.deductible_is_absolute)
@@ -349,6 +350,7 @@ class ExposureTestCase(unittest.TestCase):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
+        oqparam.all_cost_types = ['occupants']
         oqparam.inputs = {'exposure': self.exposure}
         oqparam.region_constraint = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
@@ -363,6 +365,8 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
+        oqparam.all_cost_types = ['structural']
+        oqparam.insured_losses = False
         oqparam.inputs = {'exposure': self.exposure0}
         oqparam.region_constraint = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
@@ -379,6 +383,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
+        oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': self.exposure1}
         oqparam.region_constraint = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
@@ -393,6 +398,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_risk'
+        oqparam.all_cost_types = ['structural']
         oqparam.insured_losses = True
         oqparam.inputs = {'exposure': self.exposure,
                           'structural_vulnerability': None}
