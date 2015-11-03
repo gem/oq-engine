@@ -281,7 +281,8 @@ class HazardCalculator(BaseCalculator):
                 self.exposure = readinput.get_exposure(self.oqparam)
                 self.sitecol, self.assets_by_site = (
                     readinput.get_sitecol_assets(self.oqparam, self.exposure))
-                self.cost_types = self.exposure.cost_types
+                if len(self.exposure.cost_types):
+                    self.cost_types = self.exposure.cost_types
                 self.taxonomies = numpy.array(
                     sorted(self.exposure.taxonomies), '|S100')
             num_assets = self.count_assets()

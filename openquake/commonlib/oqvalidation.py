@@ -228,6 +228,14 @@ class OqParam(valid.ParamSet):
         imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
         return collections.OrderedDict(sorted(imtls.items()))
 
+    @property
+    def all_cost_types(self):
+        """
+        Return the cost types of the computation (including `occupants`
+        if it is there) in order.
+        """
+        return sorted(get_risk_files(self.inputs)[1])
+
     def no_imls(self):
         """
         Return True if there are no intensity measure levels
