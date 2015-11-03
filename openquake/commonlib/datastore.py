@@ -222,8 +222,8 @@ class DataStore(collections.MutableMapping):
         :param export_dir: export directory (if None use .export_dir)
         """
         assert not os.path.dirname(relname), relname
-        name, ext = os.path.splitext(relname)
-        newname = '%s_%s%s' % (name, self.calc_id, ext)
+        name, ext = relname.rsplit('.', 1)
+        newname = '%s_%s.%s' % (name, self.calc_id, ext)
         if export_dir is None:
             export_dir = self.export_dir
         return os.path.join(export_dir, newname)

@@ -1,8 +1,8 @@
   [Michele Simionato]
-  * Added a consistency check between the risk model keys in the job.ini and
-    the risk model files
   * Scenario Risk and Scenario Damage calculators can work with a single
     configuration file now
+  * Added a consistency check between the risk model keys in the job.ini and
+    the risk model files
   * When computing insured losses for an exposure without deductible and
     insuredLimit, raise an error early
   * Improved the export names of the oq-lite calculators
