@@ -51,6 +51,9 @@ done
 if [ "$CLEAN" == "1" ]; then
     rm -Rf $BASE/build-rpm
     echo "$BASE/build-rpm cleaned"
+    if [ "$BUILD" != "1" ]; then
+        exit 0
+    fi
 fi
 
 cd $BASE
