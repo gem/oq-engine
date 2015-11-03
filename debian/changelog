@@ -1,3 +1,6 @@
+  [Matteo Nastasi]
+  * demos moved to /usr/share/openquake/risklib
+
   [Michele Simionato]
   * Removed the 'view' button from the Web UI
   * Removed the epsilon_sampling configuration parameter
