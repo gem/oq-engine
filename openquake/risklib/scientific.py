@@ -459,6 +459,31 @@ class VulnerabilityFunctionWithPMF(object):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
 
 
+# this is meant to be instantiated by riskmodels.get_risk_models
+class VulnerabilityModel(dict):
+    """
+    Container for a set of vulnerability functions. You can access each
+    function given the IMT and taxonomy with the square bracket notation.
+
+    :param str id: ID of the model
+    :param str assetCategory: asset category (i.e. buildings, population)
+    :param str lossCategory: loss type (i.e. structural, contents, ...)
+
+    All such attributes are None for a vulnerability model coming from a
+    NRML 0.4 file.
+    """
+    def __init__(self, id=None, assetCategory=None, lossCategory=None):
+        self.id = id
+        self.assetCategory = assetCategory
+        self.lossCategory = lossCategory
+
+    def __repr__(self):
+        return '<%s %s %s>' % (
+            self.__class__.__name__, self.lossCategory, sorted(self))
+
+
+# ############################## fragility ############################### #
+
 class FragilityFunctionContinuous(object):
     # FIXME (lp). Should be re-factored with LogNormalDistribution
     def __init__(self, limit_state, mean, stddev):
