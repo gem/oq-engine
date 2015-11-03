@@ -123,3 +123,14 @@ Calculation 407 completed in 50 seconds. Results:
 1513 | Uniform Hazard Spectra | UHS (0.02) rlz-356
 1512 | Uniform Hazard Spectra | UHS (0.1) rlz-356
 ```
+
+## Uninstall the OpenQuake Engine
+```bash
+$ sudo yum erase python-oq-*
+```
+If you want to remove all the dependencies installed by the OpenQuake Engine, you need to have a `yum` plugin called `yum-plugin-remove-with-leaves` first and then use the `--remove-leaves` yum's flag:
+```bash
+$ sudo yum install yum-plugin-remove-with-leaves
+$ sudo yum erase --remove-leaves python-oq-*
+```
+
