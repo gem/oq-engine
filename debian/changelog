@@ -1,8 +1,9 @@
   [Michele Simionato]
-  * Scenario Risk and Scenario Damage calculators can work with a single
-    configuration file now
+  * Changed the storage of the event based risk outputs in the HDF5 file
   * Added a consistency check between the risk model keys in the job.ini and
     the risk model files
+  * Scenario Risk and Scenario Damage calculators can work with a single
+    configuration file now
   * When computing insured losses for an exposure without deductible and
     insuredLimit, raise an error early
   * Improved the export names of the oq-lite calculators
@@ -13,7 +14,7 @@
     traceback
   * Improved the memory consumption and data transfer of the event_based_risk
     calculator
-  * All data of a computation are now stored in a single calc_XXX.hdf5 file    
+  * All data of a computation are now stored in a single calc_XXX.hdf5 file
   * The ProbabilisticEventBased risk demo works with a single job.ini
   * Added support for NRML 0.5 for fragility functions and deprecated NRML 0.4
   * Added a ConsequenceModel parser and implemented the calculation of
