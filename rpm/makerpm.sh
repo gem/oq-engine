@@ -30,7 +30,7 @@ while (( "$#" )); do
     case "$1" in
         "-h")
             echo "Usage: $0 [-c] [-l] [BRANCH]"
-            echo -e "\nOptions:\n\t-l: build RPM locally\n\t-c: clean build dir"
+            echo -e "\nOptions:\n\t-l: build RPM locally\n\t-c: clean build dir before starting a new build"
             exit 0
             ;;
         "-l")
@@ -51,9 +51,6 @@ done
 if [ "$CLEAN" == "1" ]; then
     rm -Rf $BASE/build-rpm
     echo "$BASE/build-rpm cleaned"
-    if [ "$BUILD" != "1" ]; then
-        exit 0
-    fi
 fi
 
 cd $BASE
