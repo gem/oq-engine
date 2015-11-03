@@ -117,16 +117,18 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
                         zip(asset_ids, out.insured_counts_matrix)))
 
             # average losses
-            arr = numpy.zeros((monitor.num_assets, 2))
-            for aid, avgloss, ins_avgloss in zip(
-                    asset_ids, out.average_losses, out.average_insured_losses):
-                # NB: here I cannot use numpy.float32, because the sum of
-                # numpy.float32 numbers is noncommutative!
-                # the net effect is that the final loss is affected by
-                # the order in which the tasks are run, which is random
-                # i.e. at each run one may get different results!!
-                arr[aid] = [avgloss, ins_avgloss]
-            result['AVGLOSS'][l, out.hid] += arr
+            if monitor.avg_losses:
+                arr = numpy.zeros((monitor.num_assets, 2))
+                for aid, avgloss, ins_avgloss in zip(
+                        asset_ids, out.average_losses,
+                        out.average_insured_losses):
+                    # NB: here I cannot use numpy.float32, because the sum of
+                    # numpy.float32 numbers is noncommutative!
+                    # the net effect is that the final loss is affected by
+                    # the order in which the tasks are run, which is random
+                    # i.e. at each run one may get different results!!
+                    arr[aid] = [avgloss, ins_avgloss]
+                result['AVGLOSS'][l, out.hid] += arr
 
     for (l, r), lst in numpy.ndenumerate(result['AGGLOSS']):
         # aggregate the losses corresponding to the same rupture
@@ -223,6 +225,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         # ugly: attaching an attribute needed in the task function
         self.monitor.num_assets = self.count_assets()
+        self.monitor.avg_losses = self.oqparam.avg_losses
 
     def execute(self):
         """
@@ -253,7 +256,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         # average losses
         multi_avg_dt = numpy.dtype([(lt, (F32, 2)) for lt in ltypes])
-        avg_losses = numpy.zeros((N, R), multi_avg_dt)
+        self.avg_losses = numpy.zeros((N, R), multi_avg_dt)
 
         # loss curves
         multi_lr_dt = numpy.dtype(
@@ -269,12 +272,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             # AVGLOSS
             for (l, r), avgloss in numpy.ndenumerate(result['AVGLOSS']):
                 lt = self.riskmodel.loss_types[l]
-                avg_losses_lt = avg_losses[lt]
+                avg_losses_lt = self.avg_losses[lt]
                 asset_values = self.assetcol[lt]
                 for i, avalue in enumerate(asset_values):
                     avg_losses_lt[i, r] = tuple(avgloss[i] * avalue)
-            self.datastore['avg_losses-rlzs'] = avg_losses
-            saved['avg_losses-rlzs'] = avg_losses.nbytes
+            if self.oqparam.avg_losses:
+                self.datastore['avg_losses-rlzs'] = self.avg_losses
+                saved['avg_losses-rlzs'] = self.avg_losses.nbytes
 
             # AGGLOSS
             for (l, r), data in numpy.ndenumerate(result['AGGLOSS']):
@@ -389,7 +393,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         all_data = []
         assets = self.assetcol['asset_ref']
         rlzs = self.rlzs_assoc.realizations
-        avg_losses = self.datastore['avg_losses-rlzs'].value
+        if self.oqparam.avg_losses:
+            avg_losses = self.datastore['avg_losses-rlzs'].value
+        else:
+            avg_losses = self.avg_losses
         r_curves = self.datastore['rcurves-rlzs'].value
         if self.oqparam.insured_losses:
             i_curves = self.datastore['icurves-rlzs'].value
@@ -397,12 +404,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             i_curves = []
         for loss_type, cbuilder in zip(
                 self.riskmodel.loss_types, self.riskmodel.curve_builders):
-            avglosses = avg_losses[loss_type]
             rcurves = r_curves[loss_type]
             asset_values = self.assetcol[loss_type]
             data = []
+            avglosses = avg_losses[loss_type]
             for rlz in rlzs:
-                average_losses = avglosses[:, rlz.ordinal]
+                average_losses = avglosses[:, rlz.ordinal, 0]
+                average_insured_losses = avglosses[:, rlz.ordinal, 1]
                 loss_curves = old_loss_curves(
                     asset_values, rcurves, rlz.ordinal, cbuilder.ratios)
                 insured_curves = old_loss_curves(
@@ -412,8 +420,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     assets, loss_type, rlz.ordinal, rlz.weight,
                     loss_curves=loss_curves,
                     insured_curves=insured_curves,
-                    average_losses=average_losses[:, 0],
-                    average_insured_losses=average_losses[:, 1])
+                    average_losses=average_losses,
+                    average_insured_losses=average_insured_losses)
                 data.append(out)
             all_data.append(data)
         return all_data
