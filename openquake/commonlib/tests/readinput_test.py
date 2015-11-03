@@ -342,8 +342,8 @@ class ExposureTestCase(unittest.TestCase):
         self.assertEqual(exp.description, 'Exposure model for buildings')
         self.assertTrue(exp.insurance_limit_is_absolute)
         self.assertTrue(exp.deductible_is_absolute)
-        self.assertEqual(exp.cost_types, [
-            {'type': 'per_asset', 'name': 'structural', 'unit': 'USD'}])
+        self.assertEqual([tuple(ct) for ct in exp.cost_types],
+                         [('structural', 'per_asset', 'USD')])
 
     def test_exposure_missing_number(self):
         oqparam = mock.Mock()
