@@ -1,7 +1,7 @@
 ### Supported operating systems
 
 #### Ubuntu 
-[Ubuntu 12.04 LTS](Installing-the-OpenQuake-Engine-1.4.md) and [Ubuntu 14.04 LTS](Installing-the-OpenQuake-Engine-1.4.md), both 32 and 64 bit, are supported.
+[Ubuntu 12.04 LTS](Installing-the-OpenQuake-Engine.md) and [Ubuntu 14.04 LTS](Installing-the-OpenQuake-Engine.md), both 32 and 64 bit, are supported.
 
 #### RHEL/Fedora
 
