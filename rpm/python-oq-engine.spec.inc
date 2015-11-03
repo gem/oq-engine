@@ -67,7 +67,6 @@ rm -rf %{buildroot}
 %files -f INSTALLED_FILES
 %defattr(-,root,root)
 %doc README.md LICENSE CONTRIBUTORS.txt doc
-%dir %{_datadir}/openquake
 %{_datadir}/openquake/engine
 %{_sysconfdir}/openquake/openquake.cfg
 
