@@ -273,7 +273,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         insured_losses = self.oqparam.insured_losses
         ses_ratio = self.oqparam.ses_ratio
-        saved = {out: 0 for out in self.outs.values()}
+        saved = collections.Counter()  # nbytes per HDF5 key
         N = len(self.assetcol)
         R = len(self.rlzs_assoc.realizations)
         ltypes = self.riskmodel.loss_types
@@ -332,6 +332,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         poes = cb.build_poes(N, [data], ses_ratio)
                         rcurves[lt][:, r] = poes
                         saved['rcurves-rlzs'] += poes.nbytes
+                self.datastore['rcurves-rlzs'] = rcurves
 
             # IC
             with mon('building icurves-rlzs'):
@@ -343,14 +344,17 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         poes = cb.build_poes(N, [data], ses_ratio)
                         icurves[lt][:, r] = poes
                         saved['rcurves-rlzs'] += poes.nbytes
+                if insured_losses:
+                    self.datastore['icurves-rlzs'] = icurves
 
-            self.datastore['rcurves-rlzs'] = rcurves
-            if insured_losses:
-                self.datastore['icurves-rlzs'] = icurves
+            # build an aggregate loss curve per realization
+            with mon('building agg_curve-rlzs'):
+                self.build_agg_curve(saved)
+
             self.datastore.hdf5.flush()
             self.dsets.clear()
 
-        for out in self.outs.values():
+        for out in sorted(saved):
             nbytes = saved[out]
             if nbytes:
                 self.datastore[out].attrs['nbytes'] = nbytes
@@ -368,17 +372,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 self.compute_store_stats(rlzs, '')  # generic
                 self.compute_store_stats(rlzs, '_specific')
 
-        with mon('building curves-rlzs'):
+        with mon('building rmaps-rlzs'):
             if (self.oqparam.conditional_loss_poes and
                     'rcurves-rlzs' in self.datastore):
                 self.build_loss_maps('rcurves-rlzs', 'rmaps-rlzs')
             if (self.oqparam.conditional_loss_poes and
                     'icurves-rlzs' in self.datastore):
                 self.build_loss_maps('icurves-rlzs', 'imaps-rlzs')
-
-        # build a single aggregate loss curve per realization
-        with mon('building agg_curve-rlzs'):
-            self.build_agg_curve()
 
     def build_specific_loss_curves(self, group):
         """
@@ -424,7 +424,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     maps_lt[aid, rlz.ordinal] = loss_maps[aid]
         self.datastore[maps_key] = maps
 
-    def build_agg_curve(self):
+    def build_agg_curve(self, saved):
         """
         Build a single loss curve per realization. It is NOT obtained
         by aggregating the loss curves; instead, it is obtained without
@@ -451,7 +451,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for l, r, i in result:
                 if l == loss_type:
                     agg_curve[r, i] = result[l, r, i]
-            self.datastore['agg_curve-rlzs/' + loss_type] = agg_curve
+            outkey = 'agg_curve-rlzs/' + loss_type
+            self.datastore[outkey] = agg_curve
+            saved[outkey] = agg_curve.nbytes
 
     # ################### methods to compute statistics  #################### #
 
