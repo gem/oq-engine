@@ -199,16 +199,21 @@ def export_avglosses_csv(ekey, dstore):
 @export.add(
     ('rcurves-rlzs', 'csv'),
     ('icurves-rlzs', 'csv'),
-    ('rcurves-stats', 'csv'),
-    ('icurves-stats', 'csv'),
+    ('rmaps-rlzs', 'csv'),
+    ('imaps-rlzs', 'csv'),
 )
-def export_ebr(ekey, dstore):
+def export_ebr_curves(ekey, dstore):
+    rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets_sites(dstore)
-    outs = extract_outputs(ekey[0], dstore, ekey[1])
-    for out in outs:
-        writers.write_csv(
-            out.path, compose_arrays(assets, out.array), fmt='%9.7E')
-    return [out.path for out in outs]
+    curves = dstore[ekey[0]]
+    paths = []
+    name = ekey[0].split('-')[0]  # rcurves, icurves
+    for rlz in rlzs:
+        array = compose_arrays(assets, curves[:, rlz.ordinal])
+        path = dstore.export_path('%s-%s.csv' % (name, rlz.uid))
+        writers.write_csv(path, array, fmt='%9.7E')
+        paths.append(path)
+    return paths
 
 
 @export.add(
@@ -235,7 +240,7 @@ def export_agg_losses(ekey, dstore):
     outs = extract_outputs(ekey[0], dstore, ekey[1])
     header = ['rupture_tag', 'aggregate_loss', 'insured_loss']
     for out in outs:
-        data = [[tags[rec['rup_id']], rec['loss'], rec['ins_loss']]
+        data = [[tags[rec['rup_id']], rec['loss'][0], rec['loss'][1]]
                 for rec in out.array]
         writers.write_csv(out.path, sorted(data), fmt='%9.7E', header=header)
     return [out.path for out in outs]

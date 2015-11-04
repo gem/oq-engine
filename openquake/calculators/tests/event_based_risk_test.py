@@ -25,7 +25,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fnames in out.values():
             for fname in fnames:
                 if fname.endswith('.csv') and any(x in fname for x in (
-                        'loss_curve', 'loss_map', 'agg_loss', 'avg_loss')):
+                        'loss_curve', 'loss_map', 'agg_loss', 'avg_loss',
+                        'rcurves', 'icurves', 'rmaps', 'imaps')):
                     all_csv.append(fname)
         assert all_csv, 'Could not find any CSV file??'
         for fname in all_csv:
