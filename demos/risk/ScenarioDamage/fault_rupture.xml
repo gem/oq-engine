@@ -3,13 +3,13 @@
   <simpleFaultRupture>
     <magnitude>7.0</magnitude>
     <rake>90</rake>
-    <hypocenter lat="27.6" lon="84.4" depth="30.0"/>
+    <hypocenter lon="84.4" lat="27.6" depth="30.0"/>
     <simpleFaultGeometry>
       <gml:LineString>
         <gml:posList>
-						85.0 27.3
-						83.8 27.8
-                    </gml:posList>
+		85.0 27.3
+		83.8 27.8
+        </gml:posList>
       </gml:LineString>
       <dip>30.0</dip>
       <upperSeismoDepth>20.0</upperSeismoDepth>
