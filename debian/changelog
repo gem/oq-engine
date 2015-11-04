@@ -1,3 +1,6 @@
+  [Matteo Nastasi]
+  * demos moved to /usr/share/openquake/risklib
+  
   [Michele Simionato]
   * Changed the storage of the event based risk outputs in the HDF5 file
   * Added a consistency check between the risk model keys in the job.ini and
