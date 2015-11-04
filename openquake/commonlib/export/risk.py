@@ -598,7 +598,7 @@ def export_agg_curve(ekey, dstore):
     return sorted(fnames)
 
 
-def gen_idx_sname_qvalue(quantiles):
+def _gen_idx_sname_qvalue(quantiles):
     yield 0, 'mean', None
     for i, q in enumerate(quantiles):
         yield i, 'quantile', q
@@ -615,7 +615,7 @@ def export_agg_curve_stats(ekey, dstore):
         loss_type = ct['name']
         array = agg_curve[loss_type].value
         for ins in range(oq.insured_losses + 1):
-            for i, sname, qvalue in gen_idx_sname_qvalue(quantiles):
+            for i, sname, qvalue in _gen_idx_sname_qvalue(quantiles):
                 dest = dstore.export_path('agg_curve-%s-%s%s.%s' % (
                     sname, loss_type, '_ins' if ins else '', ekey[1]))
                 rec = array[i, ins]

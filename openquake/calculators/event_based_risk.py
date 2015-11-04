@@ -33,12 +33,26 @@ F32 = numpy.float32
 
 
 @parallel.litetask
-def build_agg_curve(lr_list, insured_losses, ses_ratio, C, monitor):
+def build_agg_curve(lr_list, insured_losses, ses_ratio, curve_resolution,
+                    monitor):
     """
-    Build the aggregate loss curve in parallel, by distributing on the pairs
-    (l, r) i.e. loss types and realizations.
+    Build the aggregate loss curve in parallel for each loss type
+    and realization pair.
 
-    :returns: a dictionary (r, l, i) -> (losses, poes, avg)
+    :param lr_list:
+        a list of triples `(l, r, data)` where `l` is a loss type string,
+        `r` as realization index and `data` is an array of pairs
+        `(rupture_id, loss)` where loss is an array with two values
+    :param insured_losses:
+        job.ini configuration parameter
+    :param ses_ratio:
+        a ratio obtained from ses_per_logic_tree_path
+    :param curve_resolution:
+        the number of discretization steps for the loss curve
+    :param monitor:
+        a Monitor instance
+    :returns:
+        a dictionary (r, l, i) -> (losses, poes, avg)
     """
     result = {}
     for l, r, data in lr_list:
@@ -48,7 +62,7 @@ def build_agg_curve(lr_list, insured_losses, ses_ratio, C, monitor):
             the_losses = numpy.array(
                 [loss[i] for _rupid, loss in data], F32)
             losses, poes = scientific.event_based(
-                the_losses, ses_ratio, C)
+                the_losses, ses_ratio, curve_resolution)
             avg = scientific.average_loss((losses, poes))
             result[l, r, i] = (losses, poes, avg)
     return result
@@ -239,14 +253,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         # preparing empty datasets
         loss_types = self.riskmodel.loss_types
-        self.C = C= self.oqparam.loss_curve_resolution
+        self.C = self.oqparam.loss_curve_resolution
         self.L = len(loss_types)
         self.R = len(self.rlzs_assoc.realizations)
         self.elt_dt = numpy.dtype([('rup_id', U32), ('loss', (F32, 2))])
         self.ela_dt = numpy.dtype([('rup_id', U32), ('ass_id', U32),
                                    ('loss', (F32, 2))])
         self.loss_curve_dt = numpy.dtype([
-            ('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)])
+            ('losses', (F32, self.C)), ('poes', (F32, self.C)), ('avg', F32)])
 
         self.datastore.hdf5.create_group(self.outs['AGGLOSS'])
         self.datastore.hdf5.create_group(self.outs['SPECLOSS'])
@@ -396,7 +410,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     def build_specific_loss_curves(self, group):
         """
-        Build loss curves for specific assets
+        Build loss curves for specific assets.
+
+        :param group: HDF5 group for the key 'specific-losses-rlzs'
         """
         ses_ratio = self.oqparam.ses_ratio
         assetcol = self.assetcol[self.spec_indices]
@@ -412,7 +428,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     def build_loss_maps(self, curves_key, maps_key):
         """
-        Build loss maps from the loss curves
+        Build loss maps from the loss curves.
+
+        :param curves_key: 'rcurves-rlzs'
+        :param maps_key: 'rmaps-rlzs'
         """
         oq = self.oqparam
         rlzs = self.datastore['rlzs_assoc'].realizations
@@ -443,6 +462,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Build a single loss curve per realization. It is NOT obtained
         by aggregating the loss curves; instead, it is obtained without
         generating the loss curves, directly from the the aggregate losses.
+
+        :param saved: a Counter {<HDF5 key>: <nbytes>}
         """
         ltypes = self.riskmodel.loss_types
         C = self.oqparam.loss_curve_resolution
@@ -544,7 +565,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     def compute_store_stats(self, rlzs, kind):
         """
-        Compute and store the statistical outputs
+        Compute and store the statistical outputs.
+
+        :param rlzs: list of realizations
+        :param kind: "_specific"|""
         """
         oq = self.oqparam
         builder = scientific.StatsBuilder(
@@ -580,7 +604,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     def build_agg_curve_stats(self, builder):
         """
-        Build and save `agg_curve-stats` in the HDF5 file
+        Build and save `agg_curve-stats` in the HDF5 file.
+
+        :param builder:
+            :class:`openquake.risklib.scientific.StatsBuilder` instance
         """
         rlzs = self.datastore['rlzs_assoc'].realizations
         agg_curve = self.datastore['agg_curve-rlzs']
