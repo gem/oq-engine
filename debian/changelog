@@ -1,3 +1,6 @@
+  [Matteo Nastasi]
+  * demos moved to /usr/share/openquake/risklib
+  
   [Michele Simionato]
   * Added an output agg_curve-rlzs in the HDF5 file
   * Changed the storage of the event based risk outputs in the HDF5 file
