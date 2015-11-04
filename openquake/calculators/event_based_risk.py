@@ -483,22 +483,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     self.datastore[path % 'loss_maps'] = maps[i]
 
         stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
-        for name in ('avg_losses-rlzs', 'rcurves-rlzs', 'icurves-rlzs'):
-            if name in self.datastore:
-                stats.compute(name, self.datastore)
-
-        # build statistical loss maps
-        # TODO: ask if this the right way, i.e. we are not doing the
-        # stats of rmaps-rlzs, but converting rcurves-stats
-        if (self.oqparam.conditional_loss_poes and
-                'rcurves-rlzs' in self.datastore):
-            self.build_loss_maps('rcurves-stats', 'rmaps-stats')
-            self.datastore['rmaps-stats'].attrs['statnames'] = stats.names
-        if (self.oqparam.conditional_loss_poes and
-                'icurves-rlzs' in self.datastore):
-            self.build_loss_maps('icurves-stats', 'imaps-stats')
-            self.datastore['imaps-stats'].attrs['statnames'] = stats.names
-
+        stats.compute('avg_losses-rlzs', self.datastore)
         self.datastore.hdf5.flush()
 
 
