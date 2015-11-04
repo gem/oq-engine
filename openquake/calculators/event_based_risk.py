@@ -560,8 +560,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 if oq.conditional_loss_poes:
                     self.datastore[path % 'loss_maps'] = maps[i]
 
-        stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
-        stats.compute('avg_losses-rlzs', self.datastore)
+        if oq.avg_losses:  # stats for avg_losses
+            stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
+            stats.compute('avg_losses-rlzs', self.datastore)
+
         self.datastore.hdf5.flush()
 
 
