@@ -1506,6 +1506,10 @@ def normalize_curves_eb(curves):
         curves_poes = [interpolate.interp1d(
             losses, poes, bounds_error=False, fill_value=0)(loss_ratios)
             for losses, poes in curves]
+        # fix degenerated case with flat curve
+        for cp in curves_poes:
+            if numpy.isnan(cp[0]):
+                cp[0] = 0
     return loss_ratios, curves_poes
 
 
@@ -1647,6 +1651,7 @@ class StatsBuilder(object):
             average_insured_losses.append(out.average_insured_losses)
         average_losses = numpy.array(average_losses, F32)
         mean_average_losses = mean_curve(average_losses, weights)
+
         quantile_average_losses = quantile_matrix(
             average_losses, self.quantiles, weights)
         (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
@@ -1654,7 +1659,6 @@ class StatsBuilder(object):
                 self.normalize(loss_curves),
                 self.conditional_loss_poes + self.poes_disagg,
                 weights, self.quantiles))
-
         if outputs[0].insured_curves is not None:
             average_insured_losses = numpy.array(average_insured_losses, F32)
             mean_average_insured_losses = mean_curve(
@@ -1712,10 +1716,10 @@ def _combine_mq(mean, quantile):
 
 
 def _loss_curves(assets, mean, mean_averages, quantile, quantile_averages):
-    R = mean.shape[-1]
-    loss_curve_dt = numpy.dtype([('losses', (float, R)), ('poes', (float, R)),
+    C = mean.shape[-1]
+    loss_curve_dt = numpy.dtype([('losses', (float, C)), ('poes', (float, C)),
                                  ('avg', float)])
-    mq_curves = _combine_mq(mean, quantile)  # shape (Q + 1, N, 2, R)
+    mq_curves = _combine_mq(mean, quantile)  # shape (Q + 1, N, 2, C)
     mq_avgs = _combine_mq(mean_averages, quantile_averages)  # (Q + 1, N)
     acc = []
     for mq_curve, mq_avg in zip(mq_curves.transpose(1, 0, 2, 3), mq_avgs.T):

@@ -590,9 +590,39 @@ def export_agg_curve(ekey, dstore):
                 rec = array[rlz.ordinal, ins]
                 curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
                 risk_writers.AggregateLossCurveXMLWriter(
-                    dest, oq.risk_investigation_time, loss_type,
+                    dest, oq.investigation_time, loss_type,
                     source_model_tree_path='_'.join(rlz.sm_lt_path),
                     gsim_tree_path='_'.join(rlz.gsim_lt_path),
+                    unit=ct['unit']).serialize(curve)
+                fnames.append(dest)
+    return sorted(fnames)
+
+
+def gen_idx_sname_qvalue(quantiles):
+    yield 0, 'mean', None
+    for i, q in enumerate(quantiles):
+        yield i, 'quantile', q
+
+
+@export.add(('agg_curve-stats', 'xml'))
+def export_agg_curve_stats(ekey, dstore):
+    oq = OqParam.from_(dstore.attrs)
+    quantiles = oq.quantile_loss_curves
+    cost_types = dstore['cost_types']
+    agg_curve = dstore[ekey[0]]
+    fnames = []
+    for ct in cost_types:
+        loss_type = ct['name']
+        array = agg_curve[loss_type].value
+        for ins in range(oq.insured_losses + 1):
+            for i, sname, qvalue in gen_idx_sname_qvalue(quantiles):
+                dest = dstore.export_path('agg_curve-%s-%s%s.%s' % (
+                    sname, loss_type, '_ins' if ins else '', ekey[1]))
+                rec = array[i, ins]
+                curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
+                risk_writers.AggregateLossCurveXMLWriter(
+                    dest, oq.investigation_time, loss_type,
+                    statistics=sname, quantile_value=qvalue,
                     unit=ct['unit']).serialize(curve)
                 fnames.append(dest)
     return sorted(fnames)
