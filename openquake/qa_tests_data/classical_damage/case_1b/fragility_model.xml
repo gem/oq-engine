@@ -1,24 +1,50 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" 
- 	  xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <fragilityModel format="discrete">
-    <description>Fragility Functions for Case 1b</description>
-    <limitStates>slight moderate extreme complete</limitStates>
-    <ffs noDamageLimit="0.3">
-      <taxonomy>Wood</taxonomy>
-      <IML IMT="PGA" imlUnit="g">0.2 0.4 0.6 0.8 1.0 1.2 1.4</IML>
-      <ffd ls="slight">
-        <poEs>0.771 0.950 0.989 0.997 0.999 1.000 1.000</poEs>
-      </ffd>
-      <ffd ls="moderate">
-        <poEs>0.500 0.861 0.957 0.985 0.994 0.997 0.999</poEs>
-      </ffd>
-      <ffd ls="extreme">
-        <poEs>0.231 0.636 0.837 0.924 0.962 0.981 0.989</poEs>
-      </ffd>
-      <ffd ls="complete">
-        <poEs>0.097 0.414 0.661 0.806 0.887 0.933 0.959</poEs>
-      </ffd>
-    </ffs>
-  </fragilityModel>
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <fragilityModel
+    assetCategory="building"
+    id="fm_11_converted_from_NRML_04"
+    lossCategory="structural"
+    >
+        <description>
+            Fragility Functions for Case 1b
+        </description>
+        <limitStates>
+            slight moderate extreme complete
+        </limitStates>
+        <fragilityFunction
+        format="discrete"
+        id="Wood"
+        shape="logncdf"
+        >
+            <imls
+            imt="PGA"
+            noDamageLimit="3.0000000E-01"
+            >
+                0.2 0.4 0.6 0.8 1.0 1.2 1.4
+            </imls>
+            <poes
+            ls="slight"
+            >
+                0.771 0.95 0.989 0.997 0.999 1.0 1.0
+            </poes>
+            <poes
+            ls="moderate"
+            >
+                0.5 0.861 0.957 0.985 0.994 0.997 0.999
+            </poes>
+            <poes
+            ls="extreme"
+            >
+                0.231 0.636 0.837 0.924 0.962 0.981 0.989
+            </poes>
+            <poes
+            ls="complete"
+            >
+                0.097 0.414 0.661 0.806 0.887 0.933 0.959
+            </poes>
+        </fragilityFunction>
+    </fragilityModel>
 </nrml>
