@@ -58,7 +58,7 @@ $ source $HOME/.profile
 This is an example of the output from the `AreaSourceClassicalPSHA` demo:
 
 ```bash
-$ oq-lite run $HOME/GEM/oq-risklib/demos/AreaSourceClassicalPSHA/job.ini
+$ oq-lite run $HOME/GEM/oq-risklib/demos/hazard/AreaSourceClassicalPSHA/job.ini
 
 INFO:root:Reading the site collection
 INFO:root:Reading the composite source model

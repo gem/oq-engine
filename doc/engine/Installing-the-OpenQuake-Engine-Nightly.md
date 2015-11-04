@@ -53,9 +53,9 @@ sudo service rabbitmq-server stop
 ```
 
 ## Run OQ Engine, without calculation parallelization
-You are now ready to run the OQ Engine. First, try running one of the demos included with the package. There are several demo calculations located in `/usr/share/doc/python-oq-risklib/examples/demos`. Example:
+You are now ready to run the OQ Engine. First, try running one of the demos included with the package. There are several demo calculations located in `/usr/share/openquake/risklib/demos`. Example:
 <pre>
-oq-engine --run-hazard=/usr/share/doc/python-oq-risklib/examples/demos/SimpleFaultSourceClassicalPSHA/job.ini --no-distribute
+oq-engine --run-hazard=/usr/share/openquake/risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini --no-distribute
 </pre>
 
 The output should look something like this:
@@ -146,13 +146,13 @@ celeryd --purge &
 celery worker --purge -Ofair &
 </pre>
 
-Then run `openquake` without the `--no-distribute` option:
+Then run `oq-engine` without the `--no-distribute` option:
 <pre>
-oq-engine --run-hazard=/usr/share/doc/python-oq-risklib/examples/demos/SimpleFaultSourceClassicalPSHA/job.ini
+oq-engine --run-hazard=/usr/share/openquake/risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
 </pre>
 
 ## More commands
-For a list of additional commands, type `openquake --help`.
+For a list of additional commands, type `oq-engine --help`.
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
