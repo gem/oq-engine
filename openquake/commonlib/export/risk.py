@@ -217,25 +217,6 @@ def export_ebr_curves(ekey, dstore):
 
 
 @export.add(
-    ('rcurves-stats', 'csv'),
-    ('icurves-stats', 'csv'),
-    ('rmaps-stats', 'csv'),
-    ('imaps-stats', 'csv'),
-)
-def export_ebr_stats(ekey, dstore):
-    assets = get_assets_sites(dstore)
-    curves = dstore[ekey[0]]
-    paths = []
-    name = ekey[0].split('-')[0]  # rcurves, icurves
-    for i, statname in enumerate(curves.attrs['statnames']):
-        array = compose_arrays(assets, curves[:, i])
-        path = dstore.export_path('%s-%s.csv' % (name, statname))
-        writers.write_csv(path, array, fmt='%9.7E')
-        paths.append(path)
-    return paths
-
-
-@export.add(
     ('specific-loss_curves-rlzs', 'csv'),
     ('specific-ins_curves-rlzs', 'csv'),
     ('specific-loss_maps-rlzs', 'csv'),
