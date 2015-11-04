@@ -70,7 +70,7 @@ To build the Hazardlib speedups see: https://github.com/gem/oq-hazardlib/wiki/In
 ## Run OQ Engine, without calculation parallelization
 You are now ready to run the OQ Engine. First, try running one of the demos included with the source code:
 ```bash
-./bin/oq-engine --run-hazard=../oq-risklib/demos/SimpleFaultSourceClassicalPSHA/job.ini  --no-distribute
+./bin/oq-engine --run-hazard=../oq-risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini  --no-distribute
 ```
 
 The output should look something like this:
@@ -165,7 +165,7 @@ celery worker --purge -Ofair & #Run it in background
 
 Then run `bin/oq-engine` without the `--no-distribute` option:
 ```bash
-./bin/oq-engine --run-hazard=../oq-risklib/demos/SimpleFaultSourceClassicalPSHA/job.ini
+./bin/oq-engine --run-hazard=../oq-risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
 ```
 
 ## More commands
