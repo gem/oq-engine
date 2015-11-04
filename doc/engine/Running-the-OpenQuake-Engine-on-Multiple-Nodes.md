@@ -159,5 +159,11 @@ If using `supervisord` (or similar) to execute `celeryd` at boot time please ens
 
 Storage requirements depend a lot on the type of calculations run. On a worker node you will need just the space for the operating system, the logs and the OpenQuake installation: less than 20GB are usually enough. Workers can be also diskless (using iSCSI or NFS for example).
 
-On the master node you will also need space for the PostgreSQL DB and for the RabbitMQ mnesia dir. Both are located in ```/var```, but on large installation we strongly suggest to create separate partition for ```/var```, PostgreSQL (```/var/lib/postgres```) and RabbitMQ (```/var/lib/rabbitmq```).
+On the master node you will also need space for:
+- the PostgreSQL DB (on Ubuntu usually located under `/var/lib/postgres`)
+- RabbitMQ mnesia dir (on Ubuntu usually located under `/var/lib/rabbitmq`)
+- the users home directory (usually located under `/home`). The users home folders will contains the calculations exported results and the calculations datastores (`hdf5` files located in the `oqdata` folder)
+
+On large installation we strongly suggest to create separate partition for `/home`, `/var`, PostgreSQL (```/var/lib/postgres```) and RabbitMQ (```/var/lib/rabbitmq```).
 Those partitions should be stored on fast local disks or on a high performance SAN (i.e. using a FC or a 10Gbps link).
+

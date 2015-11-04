@@ -7,7 +7,7 @@
 
 From http://en.wikipedia.org/wiki/LXC
 
-**GEM** provides a ready-to-use LXC container with Ubuntu 14.04 and the OpenQuake engine. The LXC is available with OpenQuake installed using Ubuntu packages (for users). If you need to work with GIT sources (for developers and advanced users) see [Deploy-the-OpenQuake-Engine-Nightly-using-LXC.md](Deploy-the-OpenQuake-Engine-Nightly-using-LXC.md).
+**GEM** provides a ready-to-use LXC container with Ubuntu 14.04 and the OpenQuake engine. The LXC is available with OpenQuake installed using Ubuntu packages (for users). If you need to work with GIT sources (for developers and advanced users) see [Installing-the-OpenQuake-Engine-from-source-code.md](Installing-the-OpenQuake-Engine-from-source-code.md).
 
 ### Host prerequisites
 * Ubuntu >= 12.04 64bit
