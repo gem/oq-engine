@@ -13,8 +13,8 @@ To `/etc/supervisord/conf.d/celeryd.conf` add:
 command=celery worker --purge -Ofair
 
 ; This must be set to the oq-engine installation dir
-; /usr/share/openquake/oq-engine is the default for installation from packages
-directory=/usr/share/openquake/oq-engine
+; /usr/share/openquake/engine is the default for installation from packages
+directory=/usr/share/openquake/engine
 user=celery
 group=celery
 stdout_logfile=/var/log/celery/celeryd.log
