@@ -1,14 +1,11 @@
 ### Supported operating systems
 
 #### Ubuntu 
-[Ubuntu 12.04 LTS](Installing-the-OpenQuake-Engine-1.4.md) and [Ubuntu 14.04 LTS](Installing-the-OpenQuake-Engine-1.4.md), both 32 and 64 bit, are supported.
+[Ubuntu 12.04 LTS](Installing-the-OpenQuake-Engine.md) and [Ubuntu 14.04 LTS](Installing-the-OpenQuake-Engine.md), both 32 and 64 bit, are supported.
 
 #### RHEL/Fedora
 
-RHEL/Fedora is not officially supported yet, but the current OpenQuake Engine code works fine on [Fedora 20, Fedora 21 and RHEL/CentOS 7](Installing-the-OpenQuake-Engine-from-source-code-on-Fedora-and-RHEL.md). On RHEL/CentOS 7 only support for 64 bit is available.
-
-An unofficial, experimental port for CentOS/RHEL 5 and 6 is available at https://github.com/daniviga/openquake-centos.
-
+Preliminary support and binary RPMs for unstable (nightly builds) and stable releases on [RHEL7 and its clones](Installing-the-OpenQuake-Engine-on-RHEL-and-clones.md) are provided. An experimental support for unstable releases is available also for [Fedora 21/22](Installing-the-OpenQuake-Engine-from-source-code-on-Fedora-and-RHEL.md).
 
 ***
 
