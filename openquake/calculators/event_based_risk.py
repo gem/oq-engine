@@ -263,7 +263,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             ('losses', (F32, self.C)), ('poes', (F32, self.C)), ('avg', F32)])
 
         self.datastore.hdf5.create_group(self.outs['AGGLOSS'])
-        self.datastore.hdf5.create_group(self.outs['SPECLOSS'])
+        if oq.specific_assets:
+            self.datastore.hdf5.create_group(self.outs['SPECLOSS'])
         self.dsets = dict(AGGLOSS=numpy.zeros((self.L, self.R), object),
                           SPECLOSS=numpy.zeros((self.L, self.R), object))
         for l, loss_type in enumerate(loss_types):
@@ -271,9 +272,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 key = self.outs['AGGLOSS'] + '/%s/%s' % (loss_type, rlz.uid)
                 self.dsets['AGGLOSS'][l, r] = self.datastore.create_dset(
                     key, self.elt_dt)
-                key = self.outs['SPECLOSS'] + '/%s/%s' % (loss_type, rlz.uid)
-                self.dsets['SPECLOSS'][l, r] = self.datastore.create_dset(
-                    key, self.ela_dt)
+                if oq.specific_assets:
+                    key = self.outs['SPECLOSS'] + '/%s/%s' % (
+                        loss_type, rlz.uid)
+                    self.dsets['SPECLOSS'][l, r] = self.datastore.create_dset(
+                        key, self.ela_dt)
 
         # ugly: attaching an attribute needed in the task function
         self.monitor.num_assets = self.count_assets()
@@ -348,24 +351,26 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         self.dsets['SPECLOSS'][l, r].extend(losses)
                         saved['specific-losses-rlzs'] += losses.nbytes
 
-            with mon('building rcurves-rlzs'):
-                for (l, r), data in numpy.ndenumerate(result['RC']):
-                    cb = self.riskmodel.curve_builders[l]
-                    if data and cb.user_provided:
-                        # data is a dict asset idx -> counts
-                        lt = self.riskmodel.loss_types[l]
-                        poes = cb.build_poes(N, [data], ses_ratio)
-                        rcurves[lt][:, r, 0] = poes
-                        saved['rcurves-rlzs'] += poes.nbytes
-                for (l, r), data in numpy.ndenumerate(result['IC']):
-                    cb = self.riskmodel.curve_builders[l]
-                    if data and cb.user_provided and insured_losses:
-                        # data is a dict asset idx -> counts
-                        lt = self.riskmodel.loss_types[l]
-                        poes = cb.build_poes(N, [data], ses_ratio)
-                        rcurves[lt][:, r, 1] = poes
-                        saved['rcurves-rlzs'] += poes.nbytes
-                self.datastore['rcurves-rlzs'] = rcurves
+            # RC, IC
+            if self.oqparam.loss_ratios:
+                with mon('building rcurves-rlzs'):
+                    for (l, r), data in numpy.ndenumerate(result['RC']):
+                        cb = self.riskmodel.curve_builders[l]
+                        if data and cb.user_provided:
+                            # data is a dict asset idx -> counts
+                            lt = self.riskmodel.loss_types[l]
+                            poes = cb.build_poes(N, [data], ses_ratio)
+                            rcurves[lt][:, r, 0] = poes
+                            saved['rcurves-rlzs'] += poes.nbytes
+                    for (l, r), data in numpy.ndenumerate(result['IC']):
+                        cb = self.riskmodel.curve_builders[l]
+                        if data and cb.user_provided and insured_losses:
+                            # data is a dict asset idx -> counts
+                            lt = self.riskmodel.loss_types[l]
+                            poes = cb.build_poes(N, [data], ses_ratio)
+                            rcurves[lt][:, r, 1] = poes
+                            saved['rcurves-rlzs'] += poes.nbytes
+                    self.datastore['rcurves-rlzs'] = rcurves
 
             # build an aggregate loss curve per realization
             with mon('building agg_curve-rlzs'):
