@@ -417,7 +417,7 @@ def read_lazy(source, lazytags):
     return nodes
 
 
-def write(nodes, output=sys.stdout, fmt='%10.7E'):
+def write(nodes, output=sys.stdout, fmt='%10.7E', gml=True):
     """
     Convert nodes into a NRML file. output must be a file
     object open in write mode. If you want to perform a
@@ -428,8 +428,11 @@ def write(nodes, output=sys.stdout, fmt='%10.7E'):
     :params output: a file-like object in write or read-write mode
     """
     root = Node('nrml', nodes=nodes)
+    namespaces = {NRML05: ''}
+    if gml:
+        namespaces[GML_NAMESPACE] = 'gml:'
     with writers.floatformat(fmt):
-        node_to_xml(root, output, {NRML05: '', GML_NAMESPACE: 'gml:'})
+        node_to_xml(root, output, namespaces)
     if hasattr(output, 'mode') and '+' in output.mode:  # read-write mode
         output.seek(0)
         read(output)  # validate the written file
