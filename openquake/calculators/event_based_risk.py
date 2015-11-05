@@ -414,7 +414,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for rlz, dset in group[cb.loss_type].items():
                 losses_by_aid = collections.defaultdict(list)
                 for ela in dset.value:
-                    losses_by_aid[ela['ass_id']].append(ela['loss'][0])
+                    losses_by_aid[ela['ass_id']].append(ela['loss'])
                 curves = cb.build_loss_curves(
                     assetcol, losses_by_aid, ses_ratio)
                 key = 'specific-loss_curves-rlzs/%s/%s' % (cb.loss_type, rlz)
@@ -540,13 +540,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             avglosses_lt = avglosses[loss_type]
             for rlz, dataset in zip(rlzs, group.values()):
                 average_losses = avglosses_lt[:, rlz.ordinal]
-                lcs = dataset.value
-                losses_poes = numpy.array(  # -> shape (N, 2, C)
-                    [lcs['losses'], lcs['poes']]).transpose(1, 0, 2)
+                losses_poes = [None, None]
+                for i in 0, 1:
+                    lcs = dataset.value[:, i]
+                    losses_poes[i] = numpy.array(  # -> shape (N, 2, C)
+                        [lcs['losses'], lcs['poes']]).transpose(1, 0, 2)
                 out = scientific.Output(
                     assets, loss_type, rlz.ordinal, rlz.weight,
-                    loss_curves=losses_poes,
-                    insured_curves=None,  # FIXME: why None?
+                    loss_curves=losses_poes[0],
+                    insured_curves=losses_poes[1],
                     average_losses=average_losses[:, 0],
                     average_insured_losses=average_losses[:, 1])
                 data.append(out)
@@ -572,17 +574,17 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             all_stats = map(builder.build, self._collect_all_data())
         for stat in all_stats:
             # there is one stat for each loss_type
-            curves, ins_curves, maps = scientific.get_stat_curves(stat)
+            curves, maps = scientific.get_stat_curves_maps(stat)
             for i, path in enumerate(stat.paths):
                 # there are paths like
                 # %s-stats/structural/mean
                 # %s-stats/structural/quantile-0.1
                 # ...
-                self.datastore[path % 'loss_curves'] = curves[i]
-                if oq.insured_losses:
-                    self.datastore[path % 'ins_curves'] = ins_curves[i]
+                self.datastore[path % 'loss_curves'] = numpy.array(
+                    [curves[0][i], curves[1][i]]).T  # shape (N, 2)
                 if oq.conditional_loss_poes:
-                    self.datastore[path % 'loss_maps'] = maps[i]
+                    self.datastore[path % 'loss_maps'] = numpy.array(
+                        [maps[0][i], maps[1][i]]).T  # shape (N, 2)
 
         self.build_agg_curve_stats(builder)
 
@@ -623,13 +625,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     average_insured_losses=[average_insured_loss])
                 outputs.append(out)
             stat = builder.build(outputs)
-            curves, ins_curves, _maps = scientific.get_stat_curves(stat)
-            # arrays of shape (Q1, 1)
+            curves, _maps = scientific.get_stat_curves_maps(stat)
+            # arrays of shape (2, Q1, 1)
             agg_curve_stats = numpy.zeros((Q1, 2), self.loss_curve_dt)
             for name in self.loss_curve_dt.names:
-                agg_curve_stats[name][:, 0] = curves[name][:, 0]
+                agg_curve_stats[name][:, 0] = curves[0][name][:, 0]
                 if self.oqparam.insured_losses:
-                    agg_curve_stats[name][:, 1] = ins_curves[name][:, 0]
+                    agg_curve_stats[name][:, 1] = curves[1][name][:, 0]
             key = 'agg_curve-stats/' + loss_type
             self.datastore[key] = agg_curve_stats
             self.datastore[key].attrs['nbytes'] = agg_curve_stats.nbytes

@@ -95,7 +95,7 @@ def get_assets_sites(dstore):
     return numpy.array(rows, asset_dt)
 
 
-def extract_outputs(dkey, dstore, ext=''):
+def extract_outputs(dkey, dstore, loss_type=None, ext=''):
     """
     An utility to extract outputs ordered by loss types from a datastore
     containing nested structures as follows:
@@ -104,8 +104,8 @@ def extract_outputs(dkey, dstore, ext=''):
     >> dstore = {
     ..     'risk_output':
     ..        {'structural':
-    ..            {'b1': numpy.array([[0.10, 0.20], [0.30, 0.40]]),
-    ..             'b2': numpy.array([[0.12, 0.22], [0.33, 0.44]]),
+    ..            {'b1': array N x 2,
+    ..             'b2': array N x 2,
     ..            }}}
     >> outputs = extract_outputs('risk_output', dstore)
     >> [o.path for o in outputs]
@@ -114,16 +114,22 @@ def extract_outputs(dkey, dstore, ext=''):
     ['structural', 'structural']
     """
     group = dstore[dkey]
-    dashkey = dkey.replace('/', '-')
+    dashkey = dkey.replace('-rlzs', '').replace('-stats', '')
     if ext and not ext.startswith('.'):
         ext = '.' + ext
     outputs = []
     for ltype in sorted(group):
         subgroup = group[ltype]
         for key in subgroup:
-            path = dstore.export_path(
-                '%s-%s-%s%s' % (dashkey, ltype, key, ext))
-            outputs.append(Output(ltype, path, subgroup[key][:]))
+            for i in 0, 1:
+                ins = '_ins' if i else ''
+                path = dstore.export_path(
+                    '%s-%s-%s%s%s' % (dashkey, ltype, key, ins, ext))
+                if loss_type:
+                    data = subgroup[key][loss_type][:, i]
+                else:
+                    data = subgroup[key][:, i]
+                outputs.append(Output(ltype, path, data))
     return outputs
 
 # ############################### exporters ############################## #
@@ -176,7 +182,7 @@ def export_avglosses_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    outs = extract_outputs(ekey[0], dstore, ekey[1])
+    outs = extract_outputs(ekey[0], dstore, ext=ekey[1])
     sitemesh = dstore['sitemesh']
     assetcol = dstore['assetcol']
     header = ['lon', 'lat', 'asset_ref', 'asset_value', 'average_loss',
@@ -196,9 +202,7 @@ def export_avglosses_csv(ekey, dstore):
 # oq-lite show <calc_id> agg_avgloss_rlzs
 
 
-@export.add(
-    ('rcurves-rlzs', 'csv'),
-    ('rmaps-rlzs', 'csv'))
+@export.add(('rcurves-rlzs', 'csv'))
 def export_ebr_curves(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
     rlzs = dstore['rlzs_assoc'].realizations
@@ -218,16 +222,14 @@ def export_ebr_curves(ekey, dstore):
 
 @export.add(
     ('specific-loss_curves-rlzs', 'csv'),
-    ('specific-ins_curves-rlzs', 'csv'),
     ('specific-loss_maps-rlzs', 'csv'),
     ('specific-loss_curves-stats', 'csv'),
-    ('specific-ins_curves-stats', 'csv'),
     ('specific-loss_maps-stats', 'csv'),
 )
 def export_ebr_specific(ekey, dstore):
     all_assets = get_assets_sites(dstore)
     spec_assets = all_assets[dstore['spec_indices'].value]
-    outs = extract_outputs(ekey[0], dstore, ekey[1])
+    outs = extract_outputs(ekey[0], dstore, ext=ekey[1])
     for out in outs:
         arr = compose_arrays(spec_assets, out.array)
         writers.write_csv(out.path, arr, fmt='%9.7E')
@@ -236,13 +238,12 @@ def export_ebr_specific(ekey, dstore):
 
 @export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'))
 def export_agg_losses(ekey, dstore):
-    tags = dstore['tags']
-    outs = extract_outputs(ekey[0], dstore, ekey[1])
-    header = ['rupture_tag', 'aggregate_loss', 'insured_loss']
+    tags = dstore['tags'].value
+    outs = extract_outputs(ekey[0], dstore, 'loss', ekey[1])
+    header = ['rupture_tag', 'aggregate_loss']
     for out in outs:
-        data = [[tags[rec['rup_id']], rec['loss'][0], rec['loss'][1]]
-                for rec in out.array]
-        writers.write_csv(out.path, sorted(data), fmt='%9.7E', header=header)
+        data = sorted(zip(tags, out.array))
+        writers.write_csv(out.path, data, fmt='%9.7E', header=header)
     return [out.path for out in outs]
 
 
