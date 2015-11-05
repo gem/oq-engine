@@ -94,11 +94,15 @@ def upgrade_file(path):
         node0 = LiteralNode(
             'vulnerabilityModel', cat_dict,
             nodes=list(map(riskmodels.obj_to_node, list(vf_dict.values()))))
+        gml = False
     elif tag == 'fragilityModel':
         node0 = riskmodels.convert_fragility_model_04(
             nrml.read(path)[0], path)
+        gml = False
+    else:
+        gml = True
     with open(path, 'w') as f:
-        nrml.write([node0], f)
+        nrml.write([node0], f, gml=gml)
 
 
 # NB: this works only for migrations from NRML version 0.4 to 0.5
