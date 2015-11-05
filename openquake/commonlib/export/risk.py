@@ -198,21 +198,21 @@ def export_avglosses_csv(ekey, dstore):
 
 @export.add(
     ('rcurves-rlzs', 'csv'),
-    ('icurves-rlzs', 'csv'),
-    ('rmaps-rlzs', 'csv'),
-    ('imaps-rlzs', 'csv'),
-)
+    ('rmaps-rlzs', 'csv'))
 def export_ebr_curves(ekey, dstore):
+    oq = OqParam.from_(dstore.attrs)
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets_sites(dstore)
     curves = dstore[ekey[0]]
     paths = []
-    name = ekey[0].split('-')[0]  # rcurves, icurves
-    for rlz in rlzs:
-        array = compose_arrays(assets, curves[:, rlz.ordinal])
-        path = dstore.export_path('%s-%s.csv' % (name, rlz.uid))
-        writers.write_csv(path, array, fmt='%9.7E')
-        paths.append(path)
+    name = ekey[0].split('-')[0]  # rcurves, rmaps
+    for ins in range(oq.insured_losses + 1):
+        for rlz in rlzs:
+            array = compose_arrays(assets, curves[:, rlz.ordinal, ins])
+            path = dstore.export_path(
+                '%s-%s%s.csv' % (name, rlz.uid, '_ins' if ins else ''))
+            writers.write_csv(path, array, fmt='%9.7E')
+            paths.append(path)
     return paths
 
 

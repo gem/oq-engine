@@ -82,13 +82,13 @@ def square(L, R, factory):
     return losses
 
 
-def old_loss_curves(asset_values, rcurves, ordinal, ratios):
+def old_loss_curves(asset_values, rcurves, ratios):
     """
     Build loss curves in the old format (i.e. (losses, poes)) from
     loss curves in the new format (i.e. poes).
     """
     lcs = []
-    for avalue, poes in zip(asset_values, rcurves[:, ordinal]):
+    for avalue, poes in zip(asset_values, rcurves):
         lcs.append((avalue * ratios, poes))
     return numpy.array(lcs)  # -> shape (N, 2, C)
 
@@ -315,9 +315,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             [(ltype, (F32, cbuilder.curve_resolution))
              for ltype, cbuilder in zip(
                 ltypes, self.riskmodel.curve_builders)])
-        rcurves = numpy.zeros((N, R), multi_lr_dt)
-        if insured_losses:
-            icurves = numpy.zeros((N, R), multi_lr_dt)
+        rcurves = numpy.zeros((N, R, 2), multi_lr_dt)
         with self.monitor('saving risk outputs',
                           autoflush=True, measuremem=True) as mon:
 
@@ -350,7 +348,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         self.dsets['SPECLOSS'][l, r].extend(losses)
                         saved['specific-losses-rlzs'] += losses.nbytes
 
-            # RC
             with mon('building rcurves-rlzs'):
                 for (l, r), data in numpy.ndenumerate(result['RC']):
                     cb = self.riskmodel.curve_builders[l]
@@ -358,22 +355,17 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         # data is a dict asset idx -> counts
                         lt = self.riskmodel.loss_types[l]
                         poes = cb.build_poes(N, [data], ses_ratio)
-                        rcurves[lt][:, r] = poes
+                        rcurves[lt][:, r, 0] = poes
                         saved['rcurves-rlzs'] += poes.nbytes
-                self.datastore['rcurves-rlzs'] = rcurves
-
-            # IC
-            with mon('building icurves-rlzs'):
                 for (l, r), data in numpy.ndenumerate(result['IC']):
                     cb = self.riskmodel.curve_builders[l]
                     if data and cb.user_provided and insured_losses:
                         # data is a dict asset idx -> counts
                         lt = self.riskmodel.loss_types[l]
                         poes = cb.build_poes(N, [data], ses_ratio)
-                        icurves[lt][:, r] = poes
+                        rcurves[lt][:, r, 1] = poes
                         saved['rcurves-rlzs'] += poes.nbytes
-                if insured_losses:
-                    self.datastore['icurves-rlzs'] = icurves
+                self.datastore['rcurves-rlzs'] = rcurves
 
             # build an aggregate loss curve per realization
             with mon('building agg_curve-rlzs'):
@@ -404,9 +396,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             if (self.oqparam.conditional_loss_poes and
                     'rcurves-rlzs' in self.datastore):
                 self.build_loss_maps('rcurves-rlzs', 'rmaps-rlzs')
-            if (self.oqparam.conditional_loss_poes and
-                    'icurves-rlzs' in self.datastore):
-                self.build_loss_maps('icurves-rlzs', 'imaps-rlzs')
 
     def build_specific_loss_curves(self, group):
         """
@@ -439,22 +428,24 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         N = len(self.assetcol)
         R = len(rlzs)
         P = len(oq.conditional_loss_poes)
+        I = oq.insured_losses
         loss_map_dt = numpy.dtype(
             [(lt, (F32, P)) for lt in self.riskmodel.loss_types])
-        maps = numpy.zeros((N, R), loss_map_dt)
+        maps = numpy.zeros((N, R, 2), loss_map_dt)
         for cb in self.riskmodel.curve_builders:
             asset_values = self.assetcol[cb.loss_type]
             curves_lt = curves[cb.loss_type]
             maps_lt = maps[cb.loss_type]
-            for rlz in rlzs:
-                loss_maps = scientific.calc_loss_maps(
-                    oq.conditional_loss_poes, asset_values, cb.ratios,
-                    curves_lt[:, rlz.ordinal])
-                for aid in range(N):
-                    # NB: it does not work without the loop, there is a
-                    # ValueError:could not broadcast input array from shape
-                    # (N,1) into shape (N)
-                    maps_lt[aid, rlz.ordinal] = loss_maps[aid]
+            for ins in range(I):
+                for rlz in rlzs:
+                    loss_maps = scientific.calc_loss_maps(
+                        oq.conditional_loss_poes, asset_values, cb.ratios,
+                        curves_lt[:, rlz.ordinal, ins])
+                    for aid in range(N):
+                        # NB: it does not work without the loop, there is a
+                        # ValueError:could not broadcast input array from shape
+                        # (N,1) into shape (N)
+                        maps_lt[aid, rlz.ordinal, ins] = loss_maps[aid]
         self.datastore[maps_key] = maps
 
     def build_agg_curve(self, saved):
@@ -495,15 +486,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         all_data = []
         assets = self.assetcol['asset_ref']
         rlzs = self.rlzs_assoc.realizations
+        insured = self.oqparam.insured_losses
         if self.oqparam.avg_losses:
             avg_losses = self.datastore['avg_losses-rlzs'].value
         else:
             avg_losses = self.avg_losses
         r_curves = self.datastore['rcurves-rlzs'].value
-        if self.oqparam.insured_losses:
-            i_curves = self.datastore['icurves-rlzs'].value
-        else:
-            i_curves = []
         for loss_type, cbuilder in zip(
                 self.riskmodel.loss_types, self.riskmodel.curve_builders):
             rcurves = r_curves[loss_type]
@@ -512,12 +500,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             avglosses = avg_losses[loss_type]
             for rlz in rlzs:
                 average_losses = avglosses[:, rlz.ordinal, 0]
-                average_insured_losses = avglosses[:, rlz.ordinal, 1]
+                average_insured_losses = (avglosses[:, rlz.ordinal, 1]
+                                          if insured else None)
                 loss_curves = old_loss_curves(
-                    asset_values, rcurves, rlz.ordinal, cbuilder.ratios)
+                    asset_values, rcurves[:, rlz.ordinal, 0], cbuilder.ratios)
                 insured_curves = old_loss_curves(
-                    asset_values, i_curves[loss_type], rlz.ordinal,
-                    cbuilder.ratios) if len(i_curves) else None
+                    asset_values, rcurves[:, rlz.ordinal, 1],
+                    cbuilder.ratios) if insured else None
                 out = scientific.Output(
                     assets, loss_type, rlz.ordinal, rlz.weight,
                     loss_curves=loss_curves,
