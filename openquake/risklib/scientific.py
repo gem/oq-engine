@@ -1593,14 +1593,20 @@ class StatsBuilder(object):
     """
     def __init__(self, quantiles,
                  conditional_loss_poes, poes_disagg,
-                 normalize_curves=normalize_curves):
+                 curve_resolution, normalize_curves=normalize_curves):
         self.quantiles = quantiles
         self.conditional_loss_poes = conditional_loss_poes
+        self.curve_resolution = C = curve_resolution
         self.poes_disagg = poes_disagg
         self.normalize_curves = normalize_curves
         self.mean_quantiles = ['mean']
         for q in quantiles:
             self.mean_quantiles.append('quantile-%s' % q)
+
+        self.loss_curve_dt = numpy.dtype(
+            [('losses', (float, C)), ('poes', (float, C)), ('avg', float)])
+        poes = ['poe~%s' % clp for clp in conditional_loss_poes]
+        self.loss_map_dt = numpy.dtype([(poe, F32) for poe in poes])
 
     def normalize(self, loss_curves):
         """
@@ -1708,6 +1714,47 @@ class StatsBuilder(object):
             conditional_loss_poes=self.conditional_loss_poes,
             prefix=prefix, paths=paths)
 
+    def get_curves_maps(self, stats):
+        """
+        :param stats:
+            an object with attributes mean_curves, mean_average_losses,
+            mean_maps, quantile_curves, quantile_average_losses,
+            quantile_loss_curves, quantile_maps, assets.
+            There is also a loss_type attribute which must be always the same.
+        :returns:
+            statistical loss curves and maps per asset
+        """
+        curves = [None, None]
+        maps = [None, None]
+        for i in 0, 1:  # insured index
+            curves[i] = self._loss_curves(
+                stats.assets, stats.mean_curves[i],
+                stats.mean_average_losses[i],
+                stats.quantile_curves[i],
+                stats.quantile_average_losses[i])
+
+            if stats.conditional_loss_poes:
+                mq = _combine_mq(stats.mean_maps[i], stats.quantile_maps[i])
+                Q1, P, N = mq.shape
+                maps[i] = m = numpy.zeros((Q1, N), self.loss_map_dt)
+                for aid, maps_ in enumerate(mq):
+                    for poe, map_ in zip(self.loss_map_dt.names, maps_):
+                        m[poe][aid, :] = map_
+        return curves, maps
+
+    def _loss_curves(self, assets, mean, mean_averages,
+                     quantile, quantile_averages):
+        mq_curves = _combine_mq(mean, quantile)  # shape (Q + 1, N, 2, C)
+        mq_avgs = _combine_mq(mean_averages, quantile_averages)  # (Q + 1, N)
+        acc = []
+        for mq_curve, mq_avg in zip(
+                mq_curves.transpose(1, 0, 2, 3), mq_avgs.T):
+            lcs = []
+            for (losses, poes), avg in zip(mq_curve, mq_avg):
+                lcs.append((losses, poes, avg))
+            acc.append(numpy.array(lcs, self.loss_curve_dt))
+        return numpy.array(acc, self.loss_curve_dt).T  # (Q + 1, N)
+
 
 def _combine_mq(mean, quantile):
     # combine mean and quantile into a single array of length Q + 1
@@ -1719,46 +1766,3 @@ def _combine_mq(mean, quantile):
     array[1:] = quantile
     return array
 
-
-def _loss_curves(assets, mean, mean_averages, quantile, quantile_averages):
-    C = mean.shape[-1]
-    loss_curve_dt = numpy.dtype([('losses', (float, C)), ('poes', (float, C)),
-                                 ('avg', float)])
-    mq_curves = _combine_mq(mean, quantile)  # shape (Q + 1, N, 2, C)
-    mq_avgs = _combine_mq(mean_averages, quantile_averages)  # (Q + 1, N)
-    acc = []
-    for mq_curve, mq_avg in zip(mq_curves.transpose(1, 0, 2, 3), mq_avgs.T):
-        lcs = []
-        for (losses, poes), avg in zip(mq_curve, mq_avg):
-            lcs.append((losses, poes, avg))
-        acc.append(numpy.array(lcs, loss_curve_dt))
-    return numpy.array(acc, loss_curve_dt).T  # (Q + 1, N)
-
-
-def get_stat_curves_maps(stats):
-    """
-    :param stats:
-        an object with attributes mean_curves, mean_average_losses, mean_maps,
-        quantile_curves, quantile_average_losses, quantile_loss_curves,
-        quantile_maps, assets.
-        There is also a loss_type attribute which must be always the same.
-    :returns:
-        statistical loss curves and maps per asset
-    """
-    curves = [None, None]
-    maps = [None, None]
-    poes = ['poe~%s' % clp for clp in stats.conditional_loss_poes]
-    loss_map_dt = numpy.dtype([(poe, F32) for poe in poes])
-    for i in 0, 1:  # insured index
-        curves[i] = _loss_curves(
-            stats.assets, stats.mean_curves[i], stats.mean_average_losses[i],
-            stats.quantile_curves[i], stats.quantile_average_losses[i])
-
-        if stats.conditional_loss_poes:
-            mq = _combine_mq(stats.mean_maps[i], stats.quantile_maps[i])
-            Q1, P, N = mq.shape
-            maps[i] = m = numpy.zeros((Q1, N), loss_map_dt)
-            for aid, maps_ in enumerate(mq):
-                for poe, map_ in zip(poes, maps_):
-                    m[aid, :][poe] = map_
-    return curves, maps

@@ -565,7 +565,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         builder = scientific.StatsBuilder(
             oq.quantile_loss_curves, oq.conditional_loss_poes, [],
-            scientific.normalize_curves_eb)
+            oq.loss_curve_resolution, scientific.normalize_curves_eb)
 
         if kind == '_specific':
             all_stats = [builder.build(data, prefix='specific-')
@@ -574,17 +574,22 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             all_stats = map(builder.build, self._collect_all_data())
         for stat in all_stats:
             # there is one stat for each loss_type
-            curves, maps = scientific.get_stat_curves_maps(stat)
+            N = len(stat.assets)
+            curves, maps = builder.get_curves_maps(stat)
             for i, path in enumerate(stat.paths):
                 # there are paths like
                 # %s-stats/structural/mean
                 # %s-stats/structural/quantile-0.1
                 # ...
-                self.datastore[path % 'loss_curves'] = numpy.array(
-                    [curves[0][i], curves[1][i]]).T  # shape (N, 2)
+                lcs = numpy.zeros((N, 2), builder.loss_curve_dt)
+                lms = numpy.zeros((N, 2), builder.loss_map_dt)
+                for ins in 0, 1:
+                    for aid in range(N):
+                        lcs[aid, ins] = curves[ins][i, aid]
+                        lms[aid, ins] = maps[ins][i, aid]
+                self.datastore[path % 'loss_curves'] = lcs
                 if oq.conditional_loss_poes:
-                    self.datastore[path % 'loss_maps'] = numpy.array(
-                        [maps[0][i], maps[1][i]]).T  # shape (N, 2)
+                    self.datastore[path % 'loss_maps'] = lms
 
         self.build_agg_curve_stats(builder)
 
@@ -624,8 +629,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     average_losses=[average_loss],
                     average_insured_losses=[average_insured_loss])
                 outputs.append(out)
-            stat = builder.build(outputs)
-            curves, _maps = scientific.get_stat_curves_maps(stat)
+            stats = builder.build(outputs)
+            curves, _maps = builder.get_curves_maps(stats)
             # arrays of shape (2, Q1, 1)
             agg_curve_stats = numpy.zeros((Q1, 2), self.loss_curve_dt)
             for name in self.loss_curve_dt.names:
