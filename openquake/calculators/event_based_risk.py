@@ -563,6 +563,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param kind: "_specific"|""
         """
         oq = self.oqparam
+        ltypes = self.riskmodel.loss_types
         builder = scientific.StatsBuilder(
             oq.quantile_loss_curves, oq.conditional_loss_poes, [],
             oq.loss_curve_resolution, scientific.normalize_curves_eb)
@@ -572,17 +573,23 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                          for data in self._collect_specific_data()]
         else:
             all_stats = map(builder.build, self._collect_all_data())
-        for stat in all_stats:
+        for stats in all_stats:
             # there is one stat for each loss_type
-            N = len(stat.assets)
-            curves, maps = builder.get_curves_maps(stat)
-            for i, path in enumerate(stat.paths):
+            N = len(stats.assets)
+            cb = self.riskmodel.curve_builders[ltypes.index(stats.loss_type)]
+            if not cb.user_provided:
+                continue
+            sb = scientific.StatsBuilder(
+                oq.quantile_loss_curves, oq.conditional_loss_poes, [],
+                len(cb.ratios), scientific.normalize_curves_eb)
+            curves, maps = sb.get_curves_maps(stats)
+            for i, path in enumerate(stats.paths):
                 # there are paths like
                 # %s-stats/structural/mean
                 # %s-stats/structural/quantile-0.1
                 # ...
-                lcs = numpy.zeros((N, 2), builder.loss_curve_dt)
-                lms = numpy.zeros((N, 2), builder.loss_map_dt)
+                lcs = numpy.zeros((N, 2), sb.loss_curve_dt)
+                lms = numpy.zeros((N, 2), sb.loss_map_dt)
                 for ins in 0, 1:
                     for aid in range(N):
                         lcs[aid, ins] = curves[ins][i, aid]
