@@ -445,10 +445,12 @@ def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
         ff['shape'] = convert_type[ffs.attrib.get('type', 'lognormal')]
         if fmt == 'continuous':
             with context(fname, IML):
-                ff.append(LiteralNode('imls', dict(imt=IML['IMT'],
-                                                   minIML=IML['minIML'],
-                                                   maxIML=IML['maxIML'],
-                                                   noDamageLimit=nodamage)))
+                attr = dict(imt=IML['IMT'],
+                            minIML=IML['minIML'],
+                            maxIML=IML['maxIML'])
+                if nodamage is not None:
+                    attr['noDamageLimit'] = nodamage
+                ff.append(LiteralNode('imls', attr))
             for ffc in ffs[2:]:
                 with context(fname, ffc):
                     ls = ffc['ls']
