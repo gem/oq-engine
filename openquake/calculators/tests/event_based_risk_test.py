@@ -43,7 +43,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
-        self.assert_stats_ok(case_3)
+        out = self.run_calc(case_3.__file__, 'job_haz.ini,job_risk.ini',
+                            exports='xml', individual_curves='false',
+                            concurrent_tasks=4)
+        [fname] = out['agg_curve-stats', 'xml']
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2bis(self):
