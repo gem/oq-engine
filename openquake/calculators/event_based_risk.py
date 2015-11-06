@@ -176,8 +176,10 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
         for rupt, loss in lst:
             acc[rupt] += loss
         result['AGGLOSS'][l, r] = [numpy.array(acc.items(), elt_dt)]
-    for (l, r), lst in numpy.ndenumerate(result['SPECLOSS']):
-        result['SPECLOSS'][l, r] = [numpy.array(lst, ela_dt)]
+
+    if monitor.asset_loss_table:
+        for (l, r), lst in numpy.ndenumerate(result['SPECLOSS']):
+            result['SPECLOSS'][l, r] = numpy.array(lst, ela_dt)
     for (l, r), lst in numpy.ndenumerate(result['RC']):
         result['RC'][l, r] = sum(lst, AccumDict())
     for (l, r), lst in numpy.ndenumerate(result['IC']):
@@ -255,31 +257,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.monitor.avg_losses = self.oqparam.avg_losses
         self.monitor.asset_loss_table = self.oqparam.asset_loss_table
 
-    def execute(self):
-        """
-        Run the event_based_risk calculator and aggregate the results
-        """
-        return apply_reduce(
-            self.core_func.__func__,
-            (self.riskinputs, self.riskmodel, self.rlzs_assoc,
-             self.assets_by_site, self.epsilon_matrix, self.monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=operator.attrgetter('weight'),
-            key=operator.attrgetter('col_id'))
-
-    def post_execute(self, result):
-        """
-        Save the event loss table in the datastore.
-
-        :param result:
-            a numpy array of shape (O, L, R) containing lists of arrays
-        """
-        insured_losses = self.oqparam.insured_losses
-        ses_ratio = self.oqparam.ses_ratio
-        saved = collections.Counter()  # nbytes per HDF5 key
         N = len(self.assetcol)
         R = len(self.rlzs_assoc.realizations)
         ltypes = self.riskmodel.loss_types
+        L = len(ltypes)
 
         # average losses, stored in a composite array of shape N, R, 2
         multi_avg_dt = numpy.dtype([(lt, F32) for lt in ltypes])
@@ -290,11 +271,53 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.agg_losses = self.datastore.hdf5.create_dataset(
             'agg_losses-rlzs', (E, R, 2), self.riskmodel.loss_type_dt,
             compression='gzip', compression_opts=9)
+
         if self.oqparam.asset_loss_table:
             self.all_losses = self.datastore.hdf5.create_dataset(
-                'specific-losses-rlzs', (N, E, R, 2),
+                'specific-losses-rlzs', (N, E, L, R, 2),
                 self.riskmodel.loss_type_dt,
                 compression='gzip', compression_opts=9)
+
+    def execute(self):
+        """
+        Run the event_based_risk calculator and aggregate the results
+        """
+        self.saved = collections.Counter()  # nbytes per HDF5 key
+        return apply_reduce(
+            self.core_func.__func__,
+            (self.riskinputs, self.riskmodel, self.rlzs_assoc,
+             self.assets_by_site, self.epsilon_matrix, self.monitor),
+            concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg,
+            weight=operator.attrgetter('weight'),
+            key=operator.attrgetter('col_id'))
+
+    def agg(self, acc, result):
+        # SPECLOSS
+        if self.oqparam.asset_loss_table:
+            nbytes = 0
+            dset = self.all_losses
+            loss_matrix = result.pop('SPECLOSS')
+            with self.monitor('building specific-losses-rlzs'):
+                for (l, r), array in numpy.ndenumerate(loss_matrix):
+                    for rupid, aid, loss in array:
+                        dset[aid, rupid, l, r] = loss
+                    nbytes += array.nbytes
+            self.saved['specific-losses-rlzs'] = nbytes
+        return acc + result
+
+    def post_execute(self, result):
+        """
+        Save the event loss table in the datastore.
+
+        :param result:
+            a numpy array of shape (O, L, R) containing lists of arrays
+        """
+        insured_losses = self.oqparam.insured_losses
+        ses_ratio = self.oqparam.ses_ratio
+        saved = self.saved
+        N = len(self.assetcol)
+        R = len(self.rlzs_assoc.realizations)
+        ltypes = self.riskmodel.loss_types
 
         # loss curves
         multi_lr_dt = numpy.dtype(
@@ -329,20 +352,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         agg_losses_lt[array['rup_id'], r, :] = array['loss']
                     self.agg_losses[lt] = agg_losses_lt
                     saved['agg_losses-rlzs'] += agg_losses_lt.nbytes
-
-            # SPECLOSS
-            if self.oqparam.asset_loss_table:
-                with mon('building specific-losses-rlzs'):
-                    nbytes = 0
-                    for (l, r), data in numpy.ndenumerate(result['SPECLOSS']):
-                        if data:  # data is a list of arrays
-                            lt = self.riskmodel.loss_types[l]
-                            all_losses_lt = self.all_losses[lt]
-                            for array in data:
-                                for rupid, aid, loss in array:
-                                    all_losses_lt[aid, rupid, r] = loss
-                                nbytes += loss.nbytes * len(array)
-                    saved['specific-losses-rlzs'] = nbytes
 
             # RC, IC
             if self.oqparam.loss_ratios:
