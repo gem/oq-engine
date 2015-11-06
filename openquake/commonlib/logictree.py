@@ -39,10 +39,18 @@ import numpy
 
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
-from openquake.commonlib import nrml, valid
-from openquake.commonlib.node import node_from_xml, parse, iterparse
-
 import openquake.hazardlib
+from openquake.hazardlib import geo
+from openquake.commonlib import nrml, valid
+from openquake.commonlib.sourceconverter import (RuptureConverter,
+                                                 split_coords_2d,
+                                                 split_coords_3d)
+
+from openquake.commonlib.node import (node_from_xml,
+                                      parse,
+                                      iterparse,
+                                      node_from_elem,
+                                      LiteralNode)
 from openquake.baselib.python3compat import with_metaclass
 
 #: Minimum value for a seed number
@@ -224,6 +232,17 @@ class Branch(object):
         self.child_branchset = None
 
 
+# Define the keywords associated with the MFD
+MFD_UNCERTAINTY_TYPES = ['maxMagGRRelative', 'maxMagGRAbsolute',
+                         'bGRRelative', 'abGRAbsolute',
+                         'incrementalMFDAbsolute']
+
+# Define the keywords associated with the source geometry
+GEOMETRY_UNCERTAINTY_TYPES = ['simpleFaultDipRelative',
+    'simpleFaultDipAbsolute', 'simpleFaultGeometryAbsolute',
+    'complexFaultGeometryAbsolute', 'characteristicFaultGeometryAbsolute']
+
+
 class BranchSet(object):
     """
     Branchset object, represents a ``<logicTreeBranchSet />`` element.
@@ -250,6 +269,20 @@ class BranchSet(object):
         abGRAbsolute
             Values to replace "a" and "b" values of GR MFD. Lists of pairs
             of floats, one pair for one GR MFD in a target source.
+        incrementalMFDAbsolute
+            Replaces an evenly discretized MFD with the values provided
+        simpleFaultDipRelative
+            Increases or decreases the angle of fault dip from that given
+            in the original source model
+        simpleFaultDipAbsolute
+            Replaces the fault dip in the specified source(s)
+        simpleFaultGeometryAbsolute
+            Replaces the simple fault geometry (trace, upper seismogenic depth
+            lower seismogenic depth and dip) of a given source with the values
+            provided
+        complexFaultGeometryAbsolute
+            Replaces the complex fault geometry edges of a given source with
+            the values provided
 
     :param filters:
         Dictionary, a set of filters to specify which sources should
@@ -379,8 +412,35 @@ class BranchSet(object):
         if not self.filter_source(source):
             # source didn't pass the filter
             return
+        if self.uncertainty_type in MFD_UNCERTAINTY_TYPES:
+            self._apply_uncertainty_to_mfd(source.mfd, value)
+        elif self.uncertainty_type in GEOMETRY_UNCERTAINTY_TYPES:
+            self._apply_uncertainty_to_geometry(source, value)
+        else:
+            pass
 
-        self._apply_uncertainty_to_mfd(source.mfd, value)
+    def _apply_uncertainty_to_geometry(self, source, value):
+        """
+        Modify ``source`` geometry with the uncertainty value ``value``
+        """
+        if self.uncertainty_type == 'simpleFaultDipRelative':
+            source.modify('adjust_dip', dict(increment=value))
+        elif self.uncertainty_type == 'simpleFaultDipAbsolute':
+            source.modify('set_dip', dict(dip=value))
+        elif self.uncertainty_type == 'simpleFaultGeometryAbsolute':
+            trace, usd, lsd, dip, spacing = value
+            source.modify(
+                'set_geometry',
+                dict(fault_trace=trace, upper_seismogenic_depth=usd,
+                     lower_seismogenic_depth=lsd, dip=dip, spacing=spacing))
+        elif self.uncertainty_type == 'complexFaultGeometryAbsolute':
+            edges, spacing = value
+            source.modify('set_geometry', dict(edges=edges, spacing=spacing))
+        elif self.uncertainty_type == 'characteristicFaultGeometryAbsolute':
+            source.modify('set_geometry', dict(surface=value))
+        else:
+            raise AssertionError('unknown uncertainty type %r'
+                                 % self.uncertainty_type)
 
     def _apply_uncertainty_to_mfd(self, mfd, value):
         """
@@ -564,12 +624,13 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
             weight = branchnode.find('{%s}uncertaintyWeight' % self.NRML).text
             weight = Decimal(weight.strip())
             weight_sum += weight
-            value_node = branchnode.find('{%s}uncertaintyModel' % self.NRML)
+            value_node = node_from_elem(
+                branchnode.find('{%s}uncertaintyModel' % self.NRML),
+                nodefactory=LiteralNode
+                )
             if validate:
-                self.validate_uncertainty_value(value_node, branchset,
-                                                value_node.text.strip())
-            value = self.parse_uncertainty_value(value_node, branchset,
-                                                 value_node.text.strip())
+                self.validate_uncertainty_value(value_node, branchset)
+            value = self.parse_uncertainty_value(value_node, branchset)
             branch_id = branchnode.get('branchID')
             branch = Branch(branch_id, weight, value)
             if branch_id in self.branches:
@@ -654,7 +715,7 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
                                   tuple(smlt_branch_ids))
 
     @abc.abstractmethod
-    def parse_uncertainty_value(self, node, branchset, value):
+    def parse_uncertainty_value(self, node, branchset):
         """
         Do any kind of type conversion or adaptation on the uncertainty value.
 
@@ -667,7 +728,7 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         """
 
     @abc.abstractmethod
-    def validate_uncertainty_value(self, node, branchset, value):
+    def validate_uncertainty_value(self, node, branchset):
         """
         Check the value ``value`` for correctness to be set for one
         of branchset's branches.
@@ -747,7 +808,7 @@ class SourceModelLogicTree(BaseLogicTree):
         self.source_types = set()
         super(SourceModelLogicTree, self).__init__(*args, **kwargs)
 
-    def parse_uncertainty_value(self, node, branchset, value):
+    def parse_uncertainty_value(self, node, branchset):
         """
         See superclass' method for description and signature specification.
 
@@ -755,18 +816,95 @@ class SourceModelLogicTree(BaseLogicTree):
         pair of floats or a single float depending on uncertainty type.
         """
         if branchset.uncertainty_type == 'sourceModel':
-            return value
+            return node.text.strip()
         elif branchset.uncertainty_type == 'abGRAbsolute':
-            [a, b] = value.strip().split()
+            [a, b] = node.text.strip().split()
             return float(a), float(b)
         elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
-            min_mag, bin_width, rates = value.strip().split(',')
+            #mfd_node = node_from_elem(node, nodefactory=LiteralNode)
+            min_mag, bin_width = (float(incrementalMFD["minMag"]),
+                                  float(incrementalMFD["binWidth"]))
+            rates = (incrementalMFD.occurRates.text.strip()).split()
             return float(min_mag), float(bin_width),\
                 valid.positivefloats(rates)
+        elif branchset.uncertainty_type == 'simpleFaultGeometryAbsolute':
+            return self._parse_simple_fault_geometry_surface(
+                node.simpleFaultGeometry)
+        elif branchset.uncertainty_type == 'complexFaultGeometryAbsolute':
+            return self._parse_complex_fault_geometry_surface(
+                node.complexFaultGeometry)
+        elif branchset.uncertainty_type ==\
+            'characteristicFaultGeometryAbsolute':
+            surfaces = []
+            for geom_node in node.surface:
+                if "simpleFaultGeometry" in geom_node.tag:
+                    trace, usd, lsd, dip, spacing =\
+                        self._parse_simple_fault_geometry_surface(geom_node)
+                    surface.append(geo.SimpleFaultSurface.from_fault_data(
+                        trace, usd, lsd, dip, spacing))
+                elif "complexFaultGeometry" in geom_node.tag:
+                    edges, spacing =\
+                        self._parse_complex_fault_geometry_surface(geom_node)
+                    surface.append(geo.ComplexFaultSurface.from_fault_data(
+                        edges, spacing))
+                elif "planarSurface" in geom_node.tag:
+                    surface.append(
+                        self._parse_planar_geometry_surface(geom_node)
+                        )
+                else:
+                    pass
+            if len(surfaces) > 1:
+                return geo.MultiSurface(surfaces)
+            else:
+                return surfaces[0]
         else:
-            return float(value)
+            return float(node.text.strip())
 
-    def validate_uncertainty_value(self, node, branchset, value):
+    def _parse_simple_fault_geometry_surface(self, node):
+        """
+        Parses a simple fault geometry surface
+        """
+        spacing = float(node["spacing"].strip())
+        usd, lsd, dip = (float(node.upperSeismoDepth.text.strip()),
+                         float(node.lowerSeismoDepth.text.strip()),
+                         float(node.dip.text.strip()))
+        # Parse the geometry
+        coords = split_coords_2d(map(float,
+                                     node.LineString.posList.text.split())) 
+        trace = geo.Line([geo.Point(*p) for p in coords])
+        return trace, usd, lsd, dip, spacing
+
+    def _parse_complex_fault_geometry_surface(self, node):
+        """
+        Parses a complex fault geometry surface
+        """
+        spacing = float(node["spacing"].strip())
+        edges = []
+        for edge_node in node.nodes:
+            coords = split_coords_3d(map(
+                float,
+                edge_node.LineString.posList.text.split()))
+            edges.append(geo.Line([geo.Point(*p) for p in coords]))
+        return edges, spacing
+
+    def _parse_planar_geometry_surface(self, node):
+        """
+        Parses a planar geometry surface
+        """
+        spacing = float(node["spacing"].strip())
+        nodes = []
+        for key in ["topLeft", "topRight", "bottomRight", "bottomLeft"]:
+            nodes.append(Point(float(getattr(node, key)["lon"].strip()),
+                               float(getattr(node, key)["lat"].strip()),
+                               float(getattr(node, key)["depth"].strip())))
+        top_left, top_right, bottom_left, bottom_right = tuple(nodes)
+        return geo.PlanarSurface.from_corner_points(spacing,
+                                                    top_left,
+                                                    top_right,
+                                                    bottom_right,
+                                                    bottom_left)
+
+    def validate_uncertainty_value(self, node, branchset):
         """
         See superclass' method for description and signature specification.
 
@@ -784,10 +922,10 @@ class SourceModelLogicTree(BaseLogicTree):
         _float_re = re.compile(r'^(\+|\-)?(\d+|\d*\.\d+)$')
 
         if branchset.uncertainty_type == 'sourceModel':
-            self.collect_source_model_data(value)
+            self.collect_source_model_data(node.text.strip())
 
         elif branchset.uncertainty_type == 'abGRAbsolute':
-            ab = value.split()
+            ab = (node.text.strip()).split()
             if len(ab) == 2:
                 a, b = ab
                 if _float_re.match(a) and _float_re.match(b):
@@ -797,26 +935,116 @@ class SourceModelLogicTree(BaseLogicTree):
                 'expected a pair of floats separated by space'
             )
         elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
-            mbr = value.split(',')
-            if len(mbr) == 3:
-                min_mag, bin_width, rates = mbr
-                try:
-                    rates = valid.positivefloats(rates)
-                except ValueError:
-                    rates = []
-                if _float_re.match(min_mag) and _float_re.match(bin_width) and\
-                        len(rates):
-                    return
+            min_mag, bin_width =  (node.incrementalMFD["minMag"],
+                                   node.incrementalMFD["binWidth"])
+            rates = node.incrementalMFD.occurRates.text.strip()
+            try:
+                rates = valid.positivefloats(rates)
+            except ValueError:
+                rates = []
+            if _float_re.match(min_mag) and _float_re.match(bin_width) and\
+                    len(rates):
+                return
             raise ValidationError(
                 node, self.filename,
-                'expected mfd in the form min_mag,bin_width,rate_1 rate_2 ...'
+                "expected valid 'incrementalMFD' node"
             )
+        elif branchset.uncertainty_type == 'simpleFaultGeometryAbsolute':
+            self._validate_simple_fault_geometry(node.simpleFaultGeometry,
+                                                 _float_re)
+        elif branchset.uncertainty_type == 'complexFaultGeometryAbsolute':
+            self._validate_complex_fault_geometry(node.complexFaultGeometry,
+                                                  _float_re)
+        elif branchset.uncertainty_type ==\
+            'characteristicFaultGeometryAbsolute':
+            for geom_node in node.surface:
+                if "simpleFaultGeometry" in geom_node.tag:
+                    self._validate_simple_fault_geometry(geom_node, _float_re)
+                elif "complexFaultGeometry" in geom_node.tag:
+                    self._validate_complex_fault_geometry(geom_node, _float_re)
+                elif "planarSurface" in geom_node.tag:
+                    self._validate_planar_fault_geometry(geom_node, _float_re)
+                else:
+                    raise ValidationError(
+                        geom_node, self.filename,
+                        "Surface geometry type not recognised")
         else:
-            if not _float_re.match(value):
+            if not _float_re.match(node.text.strip()):
                 raise ValidationError(
                     node, self.filename,
                     'expected single float value'
                 )
+
+    def _validate_simple_fault_geometry(self, node, _float_re):
+        """
+        Validates a node representation of a simple fault geometry
+        """
+        usd, lsd, dip = (node.upperSeismoDepth.text.strip(),
+                         node.lowerSeismoDepth.text.strip(),
+                         node.dip.text.strip())
+        spacing = node["spacing"].strip()
+        try:
+            # Parse the geometry
+            coords = split_coords_2d(map(float,
+                                         node.LineString.posList.text.split()))
+            trace = geo.Line([geo.Point(*p) for p in coords])
+        except ValueError:
+            trace = []
+        if _float_re.match(usd) and _float_re.match(lsd) and\
+                _float_re.match(dip) and _float_re.match(spacing) and\
+                len(trace):
+            return
+        raise ValidationError(
+            node, self.filename,
+            "'simpleFaultGeometry' node is not valid")
+
+    def _validate_complex_fault_geometry(self, node, _float_re):
+        """
+        Validates a node representation of a complex fault geometry - this
+        check merely verifies that the format is correct. If the geometry
+        does not conform to the Aki & Richards convention this will not be
+        verified here, but will raise an error when the surface is created.
+        """
+        valid_edges = []
+        for edge_node in node.nodes:
+            try:
+                coords = split_coords_3d(map(
+                    float,
+                    edge_node.LineString.posList.text.split()))
+                edge = geo.Line([geo.Point(*p) for p in coords])
+            except ValueError:
+                edge = []
+            if len(edge):
+                valid_edges.append(True)
+            else:
+                valid_edges.append(False)
+        if _float_re.match(node["spacing"]) and all(valid_edges):
+            return
+        raise ValidationError(
+            node, self.filename,
+            "'complexFaultGeometry' node is not valid")
+
+    def _validate_planar_fault_geometry(self, node, _float_re):
+        """
+        Validares a node representation of a planar fault geometry
+        """
+        valid_spacing = _float_re.match(node["spacing"])
+        for key in ["topLeft", "topRight", "bottomLeft", "bottomRight"]:
+            is_valid = _float_re.match(getattr(node, key)["lon"]) and\
+                _float_re.match(getattr(node, key)["lat"]) and\
+                _float_re.match(getattr(node, key)["depth"])
+            if is_valid: 
+                lon = float(getattr(node, key)["lon"])
+                lat = float(getattr(node, key)["lat"])
+                depth = float(getattr(node, key)["depth"])
+                valid_lon = (lon >= -180.0) and (lon <= 180.0)
+                valid_lat = (lat >= -90.0) and (lat <= 90.0)
+                valid_depth = (depth >= 0.0)
+                is_valid = valid_lon and valid_lat and valid_depth
+            if not is_valid or not valid_spacing:
+                raise ValidationError(
+                    node, self.filename,
+                    "'planarFaultGeometry' node is not valid")
 
     def parse_filters(self, branchset_node, uncertainty_type, filters):
         """
@@ -882,13 +1110,24 @@ class SourceModelLogicTree(BaseLogicTree):
                         % source_id
                     )
 
-        if uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute'):
+        if uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute',
+            'simpleFaultGeometryAbsolute', 'complexFaultGeometryAbsolute'):
             if not filters or not filters.keys() == ['applyToSources'] \
                     or not len(filters['applyToSources'].split()) == 1:
                 raise ValidationError(
                     branchset_node, self.filename,
                     "uncertainty of type %r must define 'applyToSources' "
                     "with only one source id" % uncertainty_type
+                )
+        if uncertainty_type in ('simpleFaultDipRelative',
+            'simpleFaultDipAbsolute'):
+            if not filters or (not ('applyToSources' in filters.keys()) and not
+                    ('applyToSourceType' in filters.keys())):
+                raise ValidationError(
+                    branchset_node, self.filename,
+                    "uncertainty of type %r must define either"
+                    "'applyToSources' or 'applyToSourceType'"
+                    % uncertainty_type
                 )
 
     def validate_branchset(self, branchset_node, depth, number, branchset):
