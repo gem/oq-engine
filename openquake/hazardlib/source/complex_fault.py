@@ -50,6 +50,8 @@ class ComplexFaultSource(ParametricSeismicSource):
 
     __slots__ = ParametricSeismicSource.__slots__ + '''edges rake'''.split()
 
+    MODIFICATIONS = set(('set_geometry',))
+
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
                  rupture_aspect_ratio, temporal_occurrence_model,

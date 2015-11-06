@@ -85,6 +85,10 @@ class SimpleFaultSource(ParametricSeismicSource):
     lower_seismogenic_depth fault_trace dip rake hypo_list
     slip_list'''.split()
 
+    MODIFICATIONS = set(('set_geometry',
+                         'adjust_dip',
+                         'set_dip'))
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,

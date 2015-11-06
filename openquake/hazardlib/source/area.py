@@ -41,6 +41,8 @@ class AreaSource(PointSource):
     """
     __slots__ = PointSource.__slots__ + 'polygon area_discretization'.split()
 
+    MODIFICATIONS = set(())
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,
