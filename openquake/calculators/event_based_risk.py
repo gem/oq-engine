@@ -82,11 +82,9 @@ def square(L, R, factory):
     return losses
 
 
-def old_loss_curves(asset_values, rcurves, ordinal, ratios):
-    """
-    Build loss curves in the old format (i.e. (losses, poes)) from
-    loss curves in the new format (i.e. poes).
-    """
+def _old_loss_curves(asset_values, rcurves, ordinal, ratios):
+    # build loss curves in the old format (i.e. (losses, poes)) from
+    # loss curves in the new format (i.e. poes).
     lcs = []
     for avalue, poes in zip(asset_values, rcurves[:, ordinal]):
         lcs.append((avalue * ratios, poes))
@@ -513,9 +511,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for rlz in rlzs:
                 average_losses = avglosses[:, rlz.ordinal, 0]
                 average_insured_losses = avglosses[:, rlz.ordinal, 1]
-                loss_curves = old_loss_curves(
+                loss_curves = _old_loss_curves(
                     asset_values, rcurves, rlz.ordinal, cbuilder.ratios)
-                insured_curves = old_loss_curves(
+                insured_curves = _old_loss_curves(
                     asset_values, i_curves[loss_type], rlz.ordinal,
                     cbuilder.ratios) if len(i_curves) else None
                 out = scientific.Output(
