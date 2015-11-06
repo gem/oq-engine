@@ -55,11 +55,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
                             concurrent_tasks=0)
         # this also tests that concurrent_tasks=0 does not give issues
-        [f1, f2] = out['agg_losses-rlzs', 'csv']
+        [fname] = out['agg_losses-rlzs', 'csv']
         self.assertEqualFiles(
-            'expected/agg_losses-b1,b1-structural.csv', f1)
-        self.assertEqualFiles(
-            'expected/agg_losses-b1,b1-structural.csv', f2)
+            'expected/agg_losses-b1,b1-structural.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4_hazard(self):

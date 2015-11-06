@@ -44,6 +44,10 @@ def compose_arrays(a1, a2):
     all the fields. The two arrays must have the same length.
     """
     assert len(a1) == len(a2),  (len(a1), len(a2))
+    if a1.dtype.names is None and len(a1.shape) == 1:
+        # the first array is not composite, but its is one-dimensional
+        a1 = numpy.array(a1, numpy.dtype([('tag', a1.dtype)]))
+
     fields1 = [(f, a1.dtype.fields[f][0]) for f in a1.dtype.names]
     if a2.dtype.names is None:  # the second array is not composite
         assert len(a2.shape) == 2, a2.shape
@@ -135,6 +139,26 @@ def extract_outputs(dkey, dstore, loss_type=None, ext=''):
 # ############################### exporters ############################## #
 
 
+def compactify(array):
+    """
+    Compactify a composite array of type (name, N1, N2, N3, 2) into a
+    composite array of type (name, N1, N2, (N3, 2)). Works with any number
+    of Ns.
+    """
+    if array.shape[-1] != 2:
+        raise ValueError('You can only compactify an array which last '
+                         'dimension is 2, got shape %s' % array.shape)
+    dtype = array.dtype
+    pairs = []
+    for name in dtype.names:
+        dt = dtype.fields[name][0]
+        pairs.append((name, (dt, 2)))
+    zeros = numpy.zeros(array.shape[:-1], numpy.dtype(pairs))
+    for idx, _ in numpy.ndenumerate(zeros):
+        zeros[idx] = array[idx]
+    return zeros
+
+
 # this is used by classical_risk and event_based_risk
 @export.add(('avg_losses-rlzs', 'csv'))
 def export_avg_losses(ekey, dstore):
@@ -142,7 +166,7 @@ def export_avg_losses(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    avg_losses = dstore[ekey[0]]
+    avg_losses = compactify(dstore[ekey[0]].value)
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets(dstore)
     fnames = []
@@ -162,7 +186,7 @@ def export_avg_losses_stats(ekey, dstore):
     :param dstore: datastore object
     """
     oq = OqParam.from_(dstore.attrs)
-    avg_losses = dstore[ekey[0]]
+    avg_losses = compactify(dstore[ekey[0]].value)
     quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     assets = get_assets(dstore)
     fnames = []
@@ -170,6 +194,46 @@ def export_avg_losses_stats(ekey, dstore):
         losses = avg_losses[:, i]
         dest = dstore.export_path('avg_losses-%s.csv' % quantile)
         data = compose_arrays(assets, losses)
+        writers.write_csv(dest, data, fmt='%10.6E')
+        fnames.append(dest)
+    return fnames
+
+
+# this is used by classical_risk and event_based_risk
+@export.add(('agg_losses-rlzs', 'csv'))
+def export_agg_losses(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    agg_losses = compactify(dstore[ekey[0]].value)
+    rlzs = dstore['rlzs_assoc'].realizations
+    tags = dstore['tags'].value
+    fnames = []
+    for rlz in rlzs:
+        losses = agg_losses[:, rlz.ordinal]
+        dest = dstore.export_path('agg_losses-rlz%03d.csv' % rlz.ordinal)
+        data = compose_arrays(tags, losses)
+        writers.write_csv(dest, data, fmt='%10.6E')
+        fnames.append(dest)
+    return fnames
+
+
+@export.add(('agg_losses-stats', 'csv'))
+def export_agg_losses_stats(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    oq = OqParam.from_(dstore.attrs)
+    agg_losses = compactify(dstore[ekey[0]].value)
+    quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+    tags = dstore['tags'].value
+    fnames = []
+    for i, quantile in enumerate(quantiles):
+        losses = agg_losses[:, i]
+        dest = dstore.export_path('avg_losses-%s.csv' % quantile)
+        data = compose_arrays(tags, losses)
         writers.write_csv(dest, data, fmt='%10.6E')
         fnames.append(dest)
     return fnames
@@ -198,25 +262,18 @@ def export_avglosses_csv(ekey, dstore):
     return [out.path for out in outs]
 
 
-# NB: agg_avgloss_rlzs is not exported on purpose, but it can be shown:
-# oq-lite show <calc_id> agg_avgloss_rlzs
-
-
 @export.add(('rcurves-rlzs', 'csv'))
 def export_ebr_curves(ekey, dstore):
-    oq = OqParam.from_(dstore.attrs)
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets_sites(dstore)
-    curves = dstore[ekey[0]]
+    curves = compactify(dstore[ekey[0]].value)
     paths = []
     name = ekey[0].split('-')[0]  # rcurves, rmaps
-    for ins in range(oq.insured_losses + 1):
-        for rlz in rlzs:
-            array = compose_arrays(assets, curves[:, rlz.ordinal, ins])
-            path = dstore.export_path(
-                '%s-%s%s.csv' % (name, rlz.uid, '_ins' if ins else ''))
-            writers.write_csv(path, array, fmt='%9.7E')
-            paths.append(path)
+    for rlz in rlzs:
+        array = compose_arrays(assets, curves[:, rlz.ordinal])
+        path = dstore.export_path('%s-%s.csv' % (name, rlz.uid))
+        writers.write_csv(path, array, fmt='%9.7E')
+        paths.append(path)
     return paths
 
 
@@ -233,17 +290,6 @@ def export_ebr_specific(ekey, dstore):
     for out in outs:
         arr = compose_arrays(spec_assets, out.array)
         writers.write_csv(out.path, arr, fmt='%9.7E')
-    return [out.path for out in outs]
-
-
-@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'))
-def export_agg_losses(ekey, dstore):
-    tags = dstore['tags'].value
-    outs = extract_outputs(ekey[0], dstore, 'loss', ekey[1])
-    header = ['rupture_tag', 'aggregate_loss']
-    for out in outs:
-        data = sorted(zip(tags, out.array))
-        writers.write_csv(out.path, data, fmt='%9.7E', header=header)
     return [out.path for out in outs]
 
 

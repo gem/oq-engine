@@ -121,6 +121,7 @@ class RiskModel(collections.Mapping):
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
         self.taxonomies = []  # populated in get_risk_model
+        self.loss_type_dt = None  # populated in get_risk_model
 
     def make_curve_builders(self, oqparam):
         """
@@ -128,7 +129,8 @@ class RiskModel(collections.Mapping):
         """
         default_loss_ratios = numpy.linspace(
             0, 1, oqparam.loss_curve_resolution + 1)[1:]
-        for i, loss_type in enumerate(self.get_loss_types()):
+        pairs = []
+        for i, loss_type in enumerate(self._get_loss_types()):
             if loss_type in oqparam.loss_ratios:
                 cb = scientific.CurveBuilder(
                     loss_type, oqparam.loss_ratios[loss_type],
@@ -138,9 +140,11 @@ class RiskModel(collections.Mapping):
                     loss_type, default_loss_ratios, user_provided=False)
             self.curve_builders.append(cb)
             self.loss_types.append(loss_type)
+            pairs.append((loss_type, numpy.float32))
             self.lti[loss_type] = i
+        self.loss_type_dt = numpy.dtype(pairs)
 
-    def get_loss_types(self):
+    def _get_loss_types(self):
         """
         :returns: a sorted list with all the loss_types contained in the model
         """
