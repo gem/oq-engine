@@ -284,11 +284,10 @@ def export_ebr_curves(ekey, dstore):
     ('specific-loss_maps-stats', 'csv'),
 )
 def export_ebr_specific(ekey, dstore):
-    all_assets = get_assets_sites(dstore)
-    spec_assets = all_assets[dstore['spec_indices'].value]
+    assets = get_assets_sites(dstore)
     outs = extract_outputs(ekey[0], dstore, ext=ekey[1])
     for out in outs:
-        arr = compose_arrays(spec_assets, out.array)
+        arr = compose_arrays(assets, out.array)
         writers.write_csv(out.path, arr, fmt='%9.7E')
     return [out.path for out in outs]
 

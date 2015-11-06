@@ -400,7 +400,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param group: HDF5 group for the key 'specific-losses-rlzs'
         """
         ses_ratio = self.oqparam.ses_ratio
-        assetcol = self.assetcol[self.spec_indices]
+        assetcol = self.assetcol
         for cb in self.riskmodel.curve_builders:
             for rlz, dset in group[cb.loss_type].items():
                 losses_by_aid = collections.defaultdict(list)
