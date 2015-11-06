@@ -93,7 +93,7 @@ def _old_loss_curves(asset_values, rcurves, ratios):
 
 @parallel.litetask
 def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
-                     eps, specific_assets, monitor):
+                     eps, monitor):
     """
     :param riskinputs:
         a list of :class:`openquake.risklib.riskinput.RiskInput` objects
@@ -105,8 +105,6 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
         a representation of the exposure
     :param eps:
         a matrix of shape (N, E) with N=#assets and E=#ruptures
-    :param specific_assets:
-        .ini file parameter
     :param monitor:
         :class:`openquake.baselib.performance.PerformanceMonitor` instance
     :returns:
@@ -131,19 +129,15 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
             l = lti[out.loss_type]
             asset_ids = [a.idx for a in out.assets]
 
-            # collect losses for specific assets
-            specific_ids = set(a.idx for a in out.assets
-                               if a.id in specific_assets)
-            if specific_ids:
+            if monitor.asset_loss_table:
                 for rup_id, all_losses, ins_losses in zip(
                         rup_ids, out.event_loss_per_asset,
                         out.insured_loss_per_asset):
                     for aid, sloss, iloss in zip(
                             asset_ids, all_losses, ins_losses):
-                        if aid in specific_ids:
-                            if sloss > 0:
-                                result['SPECLOSS'][l, out.hid].append(
-                                    (rup_id, aid, numpy.array([sloss, iloss])))
+                        if sloss > 0:
+                            result['SPECLOSS'][l, out.hid].append(
+                                (rup_id, aid, numpy.array([sloss, iloss])))
 
             # collect aggregate losses
             agg_losses = out.event_loss_per_asset.sum(axis=1)
@@ -200,7 +194,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     core_func = event_based_risk
 
     epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
-    spec_indices = datastore.persistent_attribute('spec_indices')
     is_stochastic = True
 
     outs = collections.OrderedDict(
@@ -231,8 +224,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # the following is needed to set the asset idx attribute
         self.assetcol = riskinput.build_asset_collection(
             assets_by_site, oq.time_event)
-        self.spec_indices = numpy.array([a['asset_ref'] in oq.specific_assets
-                                         for a in self.assetcol])
 
         logging.info('Populating the risk inputs')
         rup_by_tag = sum(self.datastore['sescollection'], AccumDict())
@@ -257,10 +248,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.loss_curve_dt = numpy.dtype([
             ('losses', (F32, self.C)), ('poes', (F32, self.C)), ('avg', F32)])
 
-        if oq.specific_assets:
+        if oq.asset_loss_table:
             self.datastore.hdf5.create_group(self.outs['SPECLOSS'])
         self.dsets = numpy.zeros((self.L, self.R), object)
-        if oq.specific_assets:
+        if oq.asset_loss_table:
             for l, loss_type in enumerate(loss_types):
                 for r, rlz in enumerate(self.rlzs_assoc.realizations):
                     key = self.outs['SPECLOSS'] + '/%s/%s' % (
@@ -271,6 +262,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # ugly: attaching an attribute needed in the task function
         self.monitor.num_assets = self.count_assets()
         self.monitor.avg_losses = self.oqparam.avg_losses
+        self.monitor.asset_loss_table = self.oqparam.asset_loss_table
 
     def execute(self):
         """
@@ -279,8 +271,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         return apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc,
-             self.assets_by_site, self.epsilon_matrix,
-             self.oqparam.specific_assets, self.monitor),
+             self.assets_by_site, self.epsilon_matrix, self.monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('col_id'))
@@ -384,7 +375,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 self.datastore[out].attrs['nbytes'] = nbytes
                 logging.info('Saved %s in %s', humansize(nbytes), out)
 
-        if self.oqparam.specific_assets:
+        if self.oqparam.asset_loss_table:
             with mon('building specific loss curves'):
                 self.build_specific_loss_curves(
                     self.datastore['specific-losses-rlzs'])
@@ -399,7 +390,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if len(rlzs) > 1:
             with mon('computing stats'):
                 self.compute_store_stats(rlzs, '')  # generic
-                self.compute_store_stats(rlzs, '_specific')
+                if self.oqparam.asset_loss_table:
+                    self.compute_store_stats(rlzs, '_specific')
 
     def build_specific_loss_curves(self, group):
         """
@@ -521,18 +513,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # return a list of list of outputs
         if not self.oqparam.specific_assets:
             return []
-
-        specific_assets = set(self.oqparam.specific_assets)
-        assetcol = self.assetcol
-        specific_ids = []
-        for i, a in enumerate(assetcol):
-            if a['asset_ref'] in specific_assets:
-                specific_ids.append(i)
-
-        assets = assetcol['asset_ref']
+        assets = self.datastore['assetcol']['asset_ref']
         rlzs = self.rlzs_assoc.realizations
         specific_data = []
-        avglosses = self.datastore['avg_losses-rlzs'][specific_ids]
+        avglosses = self.datastore['avg_losses-rlzs']
         for loss_type in self.riskmodel.loss_types:
             group = self.datastore['/specific-loss_curves-rlzs/%s' % loss_type]
             data = []
