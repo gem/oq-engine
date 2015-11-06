@@ -170,7 +170,7 @@ class NormalizeTestCase(unittest.TestCase):
                 [trivial, curve])
 
         numpy.testing.assert_allclose(exp_losses, curve[0])
-        numpy.testing.assert_allclose(poes1, [numpy.nan, 0., 0., 0., 0., 0.])
+        numpy.testing.assert_allclose(poes1, [0, 0., 0., 0., 0., 0.])
         numpy.testing.assert_allclose(poes2, curve[1])
 
 

@@ -199,16 +199,21 @@ def export_avglosses_csv(ekey, dstore):
 @export.add(
     ('rcurves-rlzs', 'csv'),
     ('icurves-rlzs', 'csv'),
-    ('rcurves-stats', 'csv'),
-    ('icurves-stats', 'csv'),
+    ('rmaps-rlzs', 'csv'),
+    ('imaps-rlzs', 'csv'),
 )
-def export_ebr(ekey, dstore):
+def export_ebr_curves(ekey, dstore):
+    rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets_sites(dstore)
-    outs = extract_outputs(ekey[0], dstore, ekey[1])
-    for out in outs:
-        writers.write_csv(
-            out.path, compose_arrays(assets, out.array), fmt='%9.7E')
-    return [out.path for out in outs]
+    curves = dstore[ekey[0]]
+    paths = []
+    name = ekey[0].split('-')[0]  # rcurves, icurves
+    for rlz in rlzs:
+        array = compose_arrays(assets, curves[:, rlz.ordinal])
+        path = dstore.export_path('%s-%s.csv' % (name, rlz.uid))
+        writers.write_csv(path, array, fmt='%9.7E')
+        paths.append(path)
+    return paths
 
 
 @export.add(
@@ -235,7 +240,7 @@ def export_agg_losses(ekey, dstore):
     outs = extract_outputs(ekey[0], dstore, ekey[1])
     header = ['rupture_tag', 'aggregate_loss', 'insured_loss']
     for out in outs:
-        data = [[tags[rec['rup_id']], rec['loss'], rec['ins_loss']]
+        data = [[tags[rec['rup_id']], rec['loss'][0], rec['loss'][1]]
                 for rec in out.array]
         writers.write_csv(out.path, sorted(data), fmt='%9.7E', header=header)
     return [out.path for out in outs]
@@ -560,3 +565,64 @@ def export_loss_csv(key, dstore, data, suffix):
         data.sort(key=operator.itemgetter(2))  # order by asset_ref
     writers.write_csv(dest, [header] + data, fmt='%11.7E')
     return dest
+
+AggCurve = collections.namedtuple(
+    'AggCurve', ['losses', 'poes', 'average_loss', 'stddev_loss'])
+
+
+@export.add(('agg_curve-rlzs', 'xml'))
+def export_agg_curve(ekey, dstore):
+    oq = OqParam.from_(dstore.attrs)
+    cost_types = dstore['cost_types']
+    rlzs = dstore['rlzs_assoc'].realizations
+    agg_curve = dstore[ekey[0]]
+    fnames = []
+    L, R = len(cost_types), len(rlzs)
+    for ct in cost_types:
+        loss_type = ct['name']
+        array = agg_curve[loss_type].value
+        for ins in range(oq.insured_losses + 1):
+            for rlz in rlzs:
+                suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
+                    rlz.uid, loss_type)
+                dest = dstore.export_path('agg_curve%s%s.%s' % (
+                    suffix, '_ins' if ins else '', ekey[1]))
+                rec = array[rlz.ordinal, ins]
+                curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
+                risk_writers.AggregateLossCurveXMLWriter(
+                    dest, oq.investigation_time, loss_type,
+                    source_model_tree_path='_'.join(rlz.sm_lt_path),
+                    gsim_tree_path='_'.join(rlz.gsim_lt_path),
+                    unit=ct['unit']).serialize(curve)
+                fnames.append(dest)
+    return sorted(fnames)
+
+
+def _gen_idx_sname_qvalue(quantiles):
+    yield 0, 'mean', None
+    for i, q in enumerate(quantiles):
+        yield i, 'quantile', q
+
+
+@export.add(('agg_curve-stats', 'xml'))
+def export_agg_curve_stats(ekey, dstore):
+    oq = OqParam.from_(dstore.attrs)
+    quantiles = oq.quantile_loss_curves
+    cost_types = dstore['cost_types']
+    agg_curve = dstore[ekey[0]]
+    fnames = []
+    for ct in cost_types:
+        loss_type = ct['name']
+        array = agg_curve[loss_type].value
+        for ins in range(oq.insured_losses + 1):
+            for i, sname, qvalue in _gen_idx_sname_qvalue(quantiles):
+                dest = dstore.export_path('agg_curve-%s-%s%s.%s' % (
+                    sname, loss_type, '_ins' if ins else '', ekey[1]))
+                rec = array[i, ins]
+                curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
+                risk_writers.AggregateLossCurveXMLWriter(
+                    dest, oq.investigation_time, loss_type,
+                    statistics=sname, quantile_value=qvalue,
+                    unit=ct['unit']).serialize(curve)
+                fnames.append(dest)
+    return sorted(fnames)

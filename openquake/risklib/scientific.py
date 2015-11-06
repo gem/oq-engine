@@ -459,6 +459,31 @@ class VulnerabilityFunctionWithPMF(object):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
 
 
+# this is meant to be instantiated by riskmodels.get_risk_models
+class VulnerabilityModel(dict):
+    """
+    Container for a set of vulnerability functions. You can access each
+    function given the IMT and taxonomy with the square bracket notation.
+
+    :param str id: ID of the model
+    :param str assetCategory: asset category (i.e. buildings, population)
+    :param str lossCategory: loss type (i.e. structural, contents, ...)
+
+    All such attributes are None for a vulnerability model coming from a
+    NRML 0.4 file.
+    """
+    def __init__(self, id=None, assetCategory=None, lossCategory=None):
+        self.id = id
+        self.assetCategory = assetCategory
+        self.lossCategory = lossCategory
+
+    def __repr__(self):
+        return '<%s %s %s>' % (
+            self.__class__.__name__, self.lossCategory, sorted(self))
+
+
+# ############################## fragility ############################### #
+
 class FragilityFunctionContinuous(object):
     # FIXME (lp). Should be re-factored with LogNormalDistribution
     def __init__(self, limit_state, mean, stddev):
@@ -903,11 +928,9 @@ class CurveBuilder(object):
         self.loss_type = loss_type
         self.ratios = numpy.array(loss_ratios, F32)
         self.user_provided = user_provided
-        self.curve_resolution = len(loss_ratios)
-        R = self.curve_resolution
+        self.curve_resolution = C = len(loss_ratios)
         self.loss_curve_dt = numpy.dtype([
-            ('losses', (F32, R)), ('poes', (F32, R)), ('avg', F32)])
-        self.lr_dt = numpy.dtype([('poes', (F32, R))])
+            ('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)])
 
     def get_counts(self, N, count_dicts):
         """
@@ -948,9 +971,8 @@ class CurveBuilder(object):
         :param ses_ratio: event based factor
         """
         counts_matrix = self.get_counts(N, count_dicts)
-        poes = build_poes(counts_matrix, 1. / ses_ratio)
-        # poes has shape (N, R) and goes into a composite array of shape N
-        return poes.view(self.lr_dt).reshape(N)
+        poes = build_poes(counts_matrix, 1. / ses_ratio)  # shape (N, R)
+        return poes
 
     def build_loss_curves(self, assetcol, losses_by_aid, ses_ratio):
         """
@@ -1305,6 +1327,7 @@ def quantile_curve(curves, quantile, weights=None):
     :returns:
         A numpy array representing the quantile aggregate
     """
+    assert len(curves)
     if weights is None:
         # this implementation is an alternative to
         # numpy.array(mstats.mquantiles(curves, prob=quantile, axis=0))[0]
@@ -1333,7 +1356,12 @@ def quantile_curve(curves, quantile, weights=None):
         sorted_poes = poes[sorted_poe_idxs]
         cum_weights = numpy.cumsum(sorted_weights)
         result_curve.append(numpy.interp(quantile, cum_weights, sorted_poes))
-    return numpy.array(result_curve)
+
+    shape = getattr(curves[0], 'shape', None)
+    if shape:  # passed a sequence of arrays
+        return numpy.array(result_curve).reshape(shape)
+    else:  # passed a sequence of numbers
+        return result_curve
 
 
 # TODO: remove this from openquake.risklib.qa_tests.bcr_test
@@ -1478,6 +1506,10 @@ def normalize_curves_eb(curves):
         curves_poes = [interpolate.interp1d(
             losses, poes, bounds_error=False, fill_value=0)(loss_ratios)
             for losses, poes in curves]
+        # fix degenerated case with flat curve
+        for cp in curves_poes:
+            if numpy.isnan(cp[0]):
+                cp[0] = 0
     return loss_ratios, curves_poes
 
 
@@ -1508,6 +1540,7 @@ class SimpleStats(object):
     def __init__(self, rlzs, quantiles=()):
         self.rlzs = rlzs
         self.quantiles = quantiles
+        self.names = ['mean'] + ['quantile-%s' % q for q in quantiles]
 
     def compute_and_store(self, name, dstore):
         """
@@ -1543,14 +1576,13 @@ class SimpleStats(object):
         newarray = numpy.zeros(newshape, array.dtype)
         for loss_type in loss_types:
             new = newarray[loss_type]
-            data = array[loss_type].transpose(1, 0, 2)  # array R x N x 2
+            data = [array[loss_type][:, i] for i in range(len(self.rlzs))]
             new[:, 0] = mean_curve(data, weights)
             for i, q in enumerate(self.quantiles, 1):
-                values = quantile_curve([d.T[0] for d in data], q, weights)
-                ins_values = quantile_curve([d.T[1] for d in data], q, weights)
-                new[:, i] = numpy.array([values, ins_values]).T  # N x 2
+                new[:, i] = quantile_curve(data, q, weights)
         dstore[newname] = newarray
-        return newarray.nbytes
+        dstore[newname].attrs['nbytes'] = newarray.nbytes
+        dstore[newname].attrs['statnames'] = self.names
 
 
 class StatsBuilder(object):
@@ -1619,6 +1651,7 @@ class StatsBuilder(object):
             average_insured_losses.append(out.average_insured_losses)
         average_losses = numpy.array(average_losses, F32)
         mean_average_losses = mean_curve(average_losses, weights)
+
         quantile_average_losses = quantile_matrix(
             average_losses, self.quantiles, weights)
         (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
@@ -1626,7 +1659,6 @@ class StatsBuilder(object):
                 self.normalize(loss_curves),
                 self.conditional_loss_poes + self.poes_disagg,
                 weights, self.quantiles))
-
         if outputs[0].insured_curves is not None:
             average_insured_losses = numpy.array(average_insured_losses, F32)
             mean_average_insured_losses = mean_curve(
@@ -1684,10 +1716,10 @@ def _combine_mq(mean, quantile):
 
 
 def _loss_curves(assets, mean, mean_averages, quantile, quantile_averages):
-    R = mean.shape[-1]
-    loss_curve_dt = numpy.dtype([('losses', (float, R)), ('poes', (float, R)),
+    C = mean.shape[-1]
+    loss_curve_dt = numpy.dtype([('losses', (float, C)), ('poes', (float, C)),
                                  ('avg', float)])
-    mq_curves = _combine_mq(mean, quantile)  # shape (Q + 1, N, 2, R)
+    mq_curves = _combine_mq(mean, quantile)  # shape (Q + 1, N, 2, C)
     mq_avgs = _combine_mq(mean_averages, quantile_averages)  # (Q + 1, N)
     acc = []
     for mq_curve, mq_avg in zip(mq_curves.transpose(1, 0, 2, 3), mq_avgs.T):

@@ -81,8 +81,9 @@ import logging
 from openquake.baselib.general import CallableDict
 from openquake.baselib.python3compat import unicode, raise_
 from openquake.commonlib import valid, writers
-from openquake.commonlib.node import node_to_xml, \
-    Node, LiteralNode, node_from_elem, striptag, parse as xmlparse, iterparse
+from openquake.commonlib.node import (
+    node_to_xml, Node, LiteralNode, node_from_elem, striptag,
+    parse as xmlparse, iterparse)
 
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
 NRML05 = 'http://openquake.org/xmlns/nrml/0.5'
@@ -378,7 +379,10 @@ def read(source, chatty=True):
     subnodes = []
     for elem in nrml:
         nodecls = nodefactory[striptag(elem.tag)]
-        subnodes.append(node_from_elem(elem, nodecls))
+        try:
+            subnodes.append(node_from_elem(elem, nodecls))
+        except ValueError as exc:
+            raise ValueError('%s of %s' % (exc, source))
     return LiteralNode(
         'nrml', {'xmlns': xmlns, 'xmlns:gml': GML_NAMESPACE},
         nodes=subnodes)
@@ -413,7 +417,7 @@ def read_lazy(source, lazytags):
     return nodes
 
 
-def write(nodes, output=sys.stdout, fmt='%10.7E'):
+def write(nodes, output=sys.stdout, fmt='%10.7E', gml=True):
     """
     Convert nodes into a NRML file. output must be a file
     object open in write mode. If you want to perform a
@@ -424,8 +428,11 @@ def write(nodes, output=sys.stdout, fmt='%10.7E'):
     :params output: a file-like object in write or read-write mode
     """
     root = Node('nrml', nodes=nodes)
+    namespaces = {NRML05: ''}
+    if gml:
+        namespaces[GML_NAMESPACE] = 'gml:'
     with writers.floatformat(fmt):
-        node_to_xml(root, output, {NRML05: '', GML_NAMESPACE: 'gml:'})
+        node_to_xml(root, output, namespaces)
     if hasattr(output, 'mode') and '+' in output.mode:  # read-write mode
         output.seek(0)
         read(output)  # validate the written file

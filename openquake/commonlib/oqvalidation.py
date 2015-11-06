@@ -23,7 +23,7 @@ import numpy
 
 from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import (
-    get_imtls, get_risk_files, get_vfs, get_risk_models)
+    get_imtls, get_risk_files, get_risk_models)
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
@@ -57,6 +57,7 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
     asset_life_expectancy = valid.Param(valid.positivefloat)
+    avg_losses = valid.Param(valid.boolean, True)
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice(*CALCULATORS), '')
     coordinate_bin_width = valid.Param(valid.positivefloat)
@@ -152,29 +153,10 @@ class OqParam(valid.ParamSet):
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
         file_type, file_by_ct = get_risk_files(self.inputs)
-        if file_type == 'vulnerability':
-            self.risk_imtls = get_imtls(get_vfs(self.inputs))
-        elif file_type == 'fragility':
-            fmodels = get_risk_models('fragility', self.inputs)
-            rmdict.clear()
-            limit_states = []
-            for loss_type, fm in sorted(fmodels.items()):
-                # build a copy of the FragilityModel with different IM levels
-                newfm = fm.build(self.continuous_fragility_discretization,
-                                 self.steps_per_interval)
-                for imt_taxo, ff in newfm.items():
-                    if not limit_states:
-                        limit_states.extend(fm.limitStates)
-                    # we are rejecting the case of loss types with different
-                    # limit states; this may change in the future
-                    assert limit_states == fm.limitStates, (
-                        limit_states, fm.limitStates)
-                    rmdict[imt_taxo][loss_type] = ff
-                    # TODO: see if it is possible to remove the attribute
-                    # below, used in classical_damage
-                    ff.steps_per_interval = self.steps_per_interval
-            self.limit_states = limit_states
-            self.risk_imtls = get_imtls(rmdict)
+        rmdict.clear()
+        rmodels = get_risk_models(self, file_type)
+        rmdict.update(rmodels)
+        self.risk_imtls = get_imtls(rmdict)
 
         # check the IMTs vs the GSIMs
         if 'gsim_logic_tree' in self.inputs:
@@ -245,6 +227,14 @@ class OqParam(valid.ParamSet):
         """
         imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
         return collections.OrderedDict(sorted(imtls.items()))
+
+    @property
+    def all_cost_types(self):
+        """
+        Return the cost types of the computation (including `occupants`
+        if it is there) in order.
+        """
+        return sorted(get_risk_files(self.inputs)[1])
 
     def no_imls(self):
         """

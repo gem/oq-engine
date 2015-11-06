@@ -68,6 +68,7 @@ export_dir = %s
                            'site_model': site_model_input},
                 'sites': [(0.0, 0.0)],
                 'hazard_imtls': {'PGA': None},
+                'risk_imtls': {},
                 'investigation_time': 50.0,
                 'risk_investigation_time': 50.0,
             }
@@ -124,6 +125,7 @@ export_dir = %s
                 'reference_vs30_type': 'measured',
                 'reference_vs30_value': 600.0,
                 'hazard_imtls': {'PGA': [0.1, 0.2]},
+                'risk_imtls': {},
                 'investigation_time': 50.0,
                 'risk_investigation_time': 50.0,
             }
@@ -336,17 +338,19 @@ class ExposureTestCase(unittest.TestCase):
 </nrml>''')
 
     def test_get_exposure_metadata(self):
-        exp, _assets = readinput.get_exposure_lazy(self.exposure)
+        exp, _assets = readinput.get_exposure_lazy(
+            self.exposure, ['structural'])
         self.assertEqual(exp.description, 'Exposure model for buildings')
         self.assertTrue(exp.insurance_limit_is_absolute)
         self.assertTrue(exp.deductible_is_absolute)
-        self.assertEqual(exp.cost_types, [
-            {'type': 'per_asset', 'name': 'structural', 'unit': 'USD'}])
+        self.assertEqual([tuple(ct) for ct in exp.cost_types],
+                         [('structural', 'per_asset', 'USD')])
 
     def test_exposure_missing_number(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
+        oqparam.all_cost_types = ['occupants']
         oqparam.inputs = {'exposure': self.exposure}
         oqparam.region_constraint = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
@@ -361,6 +365,8 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
+        oqparam.all_cost_types = ['structural']
+        oqparam.insured_losses = False
         oqparam.inputs = {'exposure': self.exposure0}
         oqparam.region_constraint = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
@@ -377,6 +383,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_damage'
+        oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': self.exposure1}
         oqparam.region_constraint = '''\
 POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
@@ -391,6 +398,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam = mock.Mock()
         oqparam.base_path = '/'
         oqparam.calculation_mode = 'scenario_risk'
+        oqparam.all_cost_types = ['structural']
         oqparam.insured_losses = True
         oqparam.inputs = {'exposure': self.exposure,
                           'structural_vulnerability': None}

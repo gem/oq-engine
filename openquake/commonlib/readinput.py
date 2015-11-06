@@ -34,7 +34,7 @@ from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.oqvalidation import OqParam, rmdict
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
-from openquake.commonlib.riskmodels import get_vfs, get_risk_files
+from openquake.commonlib.riskmodels import get_risk_files, get_risk_models
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.performance import DummyMonitor
 from openquake.baselib.python3compat import configparser
@@ -598,11 +598,10 @@ def get_risk_model(oqparam):
                 imt_taxo[0], imt_taxo[1], oqparam,
                 fragility_functions=ffs_by_lt)
     elif oqparam.calculation_mode.endswith('_bcr'):
-        # bcr calculators
-        vfs_orig = list(get_vfs(oqparam.inputs, retrofitted=False).items())
-        vfs_retro = list(get_vfs(oqparam.inputs, retrofitted=True).items())
+        # classical_bcr calculator
+        retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
         for (imt_taxo, vf_orig), (imt_taxo_, vf_retro) in \
-                zip(vfs_orig, vfs_retro):
+                zip(rmdict.items(), retro.items()):
             assert imt_taxo == imt_taxo_  # same imt and taxonomy
             risk_models[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
@@ -610,7 +609,7 @@ def get_risk_model(oqparam):
                 vulnerability_functions_retro=vf_retro)
     else:
         # classical, event based and scenario calculators
-        for imt_taxo, vfs in get_vfs(oqparam.inputs).items():
+        for imt_taxo, vfs in rmdict.items():
             for vf in vfs.values():
                 # set the seed; this is important for the case of
                 # VulnerabilityFunctionWithPMF
@@ -639,11 +638,16 @@ class DuplicatedID(Exception):
     Raised when two assets with the same ID are found in an exposure model
     """
 
+cost_type_dt = numpy.dtype([('name', '|S20'), ('type', '|S20'),
+                            ('unit', '|S20')])
 
-def get_exposure_lazy(fname):
+
+def get_exposure_lazy(fname, ok_cost_types):
     """
     :param fname:
         path of the XML file containing the exposure
+    :param ok_cost_types:
+        a set of cost types (as strings)
     :returns:
         a pair (Exposure instance, list of asset nodes)
     """
@@ -666,9 +670,15 @@ def get_exposure_lazy(fname):
         area = conversions.area
     except NameError:
         area = LiteralNode('area', dict(type=''))
+    cost_types = [(ct['name'], ct['type'], ct['unit'])
+                  for ct in conversions.costTypes
+                  if ct['name'] in ok_cost_types]
+    if 'occupants' in ok_cost_types:
+        cost_types.append(('occupants', 'per_area', 'people'))
+    cost_types.sort(key=operator.itemgetter(0))
     return Exposure(
         exposure['id'], exposure['category'],
-        ~description, [ct.attrib for ct in conversions.costTypes],
+        ~description, numpy.array(cost_types, cost_type_dt),
         ~inslimit, ~deductible, area.attrib, [], set()), exposure.assets
 
 
@@ -689,8 +699,9 @@ def get_exposure(oqparam):
         region = wkt.loads(oqparam.region_constraint)
     else:
         region = None
+    all_cost_types = set(oqparam.all_cost_types)
     fname = oqparam.inputs['exposure']
-    exposure, assets_node = get_exposure_lazy(fname)
+    exposure, assets_node = get_exposure_lazy(fname, all_cost_types)
     cc = workflows.CostCalculator(
         {}, {}, exposure.deductible_is_absolute,
         exposure.insurance_limit_is_absolute)
@@ -699,8 +710,6 @@ def get_exposure(oqparam):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = exposure.area['type']
 
-    file_type, risk_files = get_risk_files(oqparam.inputs)
-    all_cost_types = set(risk_files)
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)

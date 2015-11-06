@@ -153,12 +153,14 @@ def view_ruptures_by_trt(token, dstore):
 @view.add('params')
 def view_params(token, dstore):
     oq = OqParam.from_(dstore.attrs)
-    params = ('calculation_mode', 'number_of_logic_tree_samples',
+    params = ['calculation_mode', 'number_of_logic_tree_samples',
               'maximum_distance', 'investigation_time',
               'ses_per_logic_tree_path', 'truncation_level',
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
-              'random_seed', 'master_seed', 'concurrent_tasks')
+              'random_seed', 'master_seed', 'concurrent_tasks']
+    if 'risk' in oq.calculation_mode:
+        params.append('avg_losses')
     return rst_table([(param, getattr(oq, param)) for param in params])
 
 
