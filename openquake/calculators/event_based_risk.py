@@ -43,7 +43,8 @@ def build_agg_curve(lr_list, insured_losses, ses_ratio, curve_resolution,
 
     :param lr_list:
         a list of triples `(l, r, data)` where `l` is a loss type string,
-        `r` as realization index and `data` is an array of losses
+        `r` as realization index and `data` is an array of pairs
+        `(rupture_id, loss)` where loss is an array with two values
     :param insured_losses:
         job.ini configuration parameter
     :param ses_ratio:
@@ -82,11 +83,9 @@ def square(L, R, factory):
     return losses
 
 
-def old_loss_curves(asset_values, rcurves, ratios):
-    """
-    Build loss curves in the old format (i.e. (losses, poes)) from
-    loss curves in the new format (i.e. poes).
-    """
+def _old_loss_curves(asset_values, rcurves, ratios):
+    # build loss curves in the old format (i.e. (losses, poes)) from
+    # loss curves in the new format (i.e. poes).
     # shape (N, 2, C)
     return numpy.array([(avalue * ratios, poes)
                         for avalue, poes in zip(asset_values, rcurves)])
@@ -503,9 +502,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 average_losses = avglosses[:, rlz.ordinal, 0]
                 average_insured_losses = (avglosses[:, rlz.ordinal, 1]
                                           if insured else None)
-                loss_curves = old_loss_curves(
+                loss_curves = _old_loss_curves(
                     asset_values, rcurves[:, rlz.ordinal, 0], cbuilder.ratios)
-                insured_curves = old_loss_curves(
+                insured_curves = _old_loss_curves(
                     asset_values, rcurves[:, rlz.ordinal, 1],
                     cbuilder.ratios) if insured else None
                 out = scientific.Output(
