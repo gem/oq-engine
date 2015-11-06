@@ -977,14 +977,14 @@ class CurveBuilder(object):
     def build_loss_curves(self, assetcol, losses_by_aid, ses_ratio):
         """
         :param assetcol: asset collection object
-        :param losses_by_aid: a dictionary asset_idx -> losses
+        :param losses_by_aid: a matrix of losses indexed by asset
         :param ses_ratio: event based factor
         """
         lcs = numpy.zeros((len(assetcol), 2), self.loss_curve_dt)
         zeros = numpy.zeros(self.curve_resolution)
         for aid, value in enumerate(assetcol[self.loss_type]):
             for i in 0, 1:
-                all_losses = losses_by_aid.get(aid)
+                all_losses = losses_by_aid[aid, i]
                 if all_losses is None:  # no losses for the given asset
                     lcs[aid, i] = (self.ratios * value, zeros, 0)
                 else:  # build the loss curve
