@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Added fault geometry epistemic uncertainties to the source model logic tree
+
   [Matteo Nastasi]
   * demos moved to /usr/share/openquake/risklib
   

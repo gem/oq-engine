@@ -239,8 +239,10 @@ MFD_UNCERTAINTY_TYPES = ['maxMagGRRelative', 'maxMagGRAbsolute',
 
 # Define the keywords associated with the source geometry
 GEOMETRY_UNCERTAINTY_TYPES = ['simpleFaultDipRelative',
-    'simpleFaultDipAbsolute', 'simpleFaultGeometryAbsolute',
-    'complexFaultGeometryAbsolute', 'characteristicFaultGeometryAbsolute']
+                              'simpleFaultDipAbsolute',
+                              'simpleFaultGeometryAbsolute',
+                              'complexFaultGeometryAbsolute',
+                              'characteristicFaultGeometryAbsolute']
 
 
 class BranchSet(object):
@@ -821,7 +823,6 @@ class SourceModelLogicTree(BaseLogicTree):
             [a, b] = node.text.strip().split()
             return float(a), float(b)
         elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
-            #mfd_node = node_from_elem(node, nodefactory=LiteralNode)
             min_mag, bin_width = (float(incrementalMFD["minMag"]),
                                   float(incrementalMFD["binWidth"]))
             rates = (incrementalMFD.occurRates.text.strip()).split()
@@ -834,7 +835,7 @@ class SourceModelLogicTree(BaseLogicTree):
             return self._parse_complex_fault_geometry_surface(
                 node.complexFaultGeometry)
         elif branchset.uncertainty_type ==\
-            'characteristicFaultGeometryAbsolute':
+                'characteristicFaultGeometryAbsolute':
             surfaces = []
             for geom_node in node.surface:
                 if "simpleFaultGeometry" in geom_node.tag:
@@ -870,7 +871,7 @@ class SourceModelLogicTree(BaseLogicTree):
                          float(node.dip.text.strip()))
         # Parse the geometry
         coords = split_coords_2d(map(float,
-                                     node.LineString.posList.text.split())) 
+                                     node.LineString.posList.text.split()))
         trace = geo.Line([geo.Point(*p) for p in coords])
         return trace, usd, lsd, dip, spacing
 
@@ -935,8 +936,8 @@ class SourceModelLogicTree(BaseLogicTree):
                 'expected a pair of floats separated by space'
             )
         elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
-            min_mag, bin_width =  (node.incrementalMFD["minMag"],
-                                   node.incrementalMFD["binWidth"])
+            min_mag, bin_width = (node.incrementalMFD["minMag"],
+                                  node.incrementalMFD["binWidth"])
             rates = node.incrementalMFD.occurRates.text.strip()
             try:
                 rates = valid.positivefloats(rates)
@@ -956,7 +957,7 @@ class SourceModelLogicTree(BaseLogicTree):
             self._validate_complex_fault_geometry(node.complexFaultGeometry,
                                                   _float_re)
         elif branchset.uncertainty_type ==\
-            'characteristicFaultGeometryAbsolute':
+                'characteristicFaultGeometryAbsolute':
             for geom_node in node.surface:
                 if "simpleFaultGeometry" in geom_node.tag:
                     self._validate_simple_fault_geometry(geom_node, _float_re)
@@ -1033,7 +1034,7 @@ class SourceModelLogicTree(BaseLogicTree):
             is_valid = _float_re.match(getattr(node, key)["lon"]) and\
                 _float_re.match(getattr(node, key)["lat"]) and\
                 _float_re.match(getattr(node, key)["depth"])
-            if is_valid: 
+            if is_valid:
                 lon = float(getattr(node, key)["lon"])
                 lat = float(getattr(node, key)["lat"])
                 depth = float(getattr(node, key)["depth"])
@@ -1111,7 +1112,8 @@ class SourceModelLogicTree(BaseLogicTree):
                     )
 
         if uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute',
-            'simpleFaultGeometryAbsolute', 'complexFaultGeometryAbsolute'):
+                                'simpleFaultGeometryAbsolute',
+                                'complexFaultGeometryAbsolute'):
             if not filters or not filters.keys() == ['applyToSources'] \
                     or not len(filters['applyToSources'].split()) == 1:
                 raise ValidationError(
@@ -1120,9 +1122,9 @@ class SourceModelLogicTree(BaseLogicTree):
                     "with only one source id" % uncertainty_type
                 )
         if uncertainty_type in ('simpleFaultDipRelative',
-            'simpleFaultDipAbsolute'):
+                                'simpleFaultDipAbsolute'):
             if not filters or (not ('applyToSources' in filters.keys()) and not
-                    ('applyToSourceType' in filters.keys())):
+                               ('applyToSourceType' in filters.keys())):
                 raise ValidationError(
                     branchset_node, self.filename,
                     "uncertainty of type %r must define either"

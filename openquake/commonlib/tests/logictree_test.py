@@ -508,10 +508,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
         self.assertEqual(
-            exc.message, 
+            exc.message,
             "expected valid 'incrementalMFD' node",
             "wrong exception message: %s" % exc.message)
-    
+
     def test_simple_fault_geometry_absolute_wrong_format(self):
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
@@ -558,7 +558,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                                             logictree.ValidationError)
         self.assertEqual(
             exc.message,
-            "'simpleFaultGeometry' node is not valid", 
+            "'simpleFaultGeometry' node is not valid",
             "wrong exception message: %s" % exc.message)
 
     def test_complex_fault_geometry_absolute_wrong_format(self):
@@ -606,8 +606,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
         self.assertEqual(
-            exc.message, 
-            "'complexFaultGeometry' node is not valid", 
+            exc.message,
+            "'complexFaultGeometry' node is not valid",
             "wrong exception message: %s" % exc.message)
 
     def test_characteristic_fault_planar_geometry_wrong_format(self):
@@ -639,7 +639,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                                 <bottomLeft depth="59.0" lat="-1.0" lon="-1.0"/>
                                 <bottomRight depth="59.0" lat="-1.0" lon="1.0"/>
                             </planarSurface>
-                        </surface>                   
+                        </surface>
                     </uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
@@ -651,10 +651,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
         self.assertEqual(
-            exc.message, 
-            "'planarFaultGeometry' node is not valid", 
+            exc.message,
+            "'planarFaultGeometry' node is not valid",
             "wrong exception message: %s" % exc.message)
-        
+
     def test_characteristic_fault_simple_geometry_wrong_format(self):
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
@@ -690,7 +690,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                                     20.0
                                 </lowerSeismoDepth>
                             </simpleFaultGeometry>
-                        </surface>                   
+                        </surface>
                     </uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
@@ -702,8 +702,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
         self.assertEqual(
-            exc.message, 
-            "'simpleFaultGeometry' node is not valid", 
+            exc.message,
+            "'simpleFaultGeometry' node is not valid",
             "wrong exception message: %s" % exc.message)
 
     def test_characteristic_fault_complex_geometry_wrong_format(self):
@@ -741,7 +741,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                                     </gml:LineString>
                                 </faultBottomEdge>
                             </complexFaultGeometry>
-                        </surface>                   
+                        </surface>
                     </uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
@@ -753,10 +753,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
         self.assertEqual(
-            exc.message, 
-            "'complexFaultGeometry' node is not valid", 
+            exc.message,
+            "'complexFaultGeometry' node is not valid",
             "wrong exception message: %s" % exc.message)
-    
+
     def test_characteristic_fault_invalid_geometry(self):
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
@@ -777,7 +777,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                     <uncertaintyModel>
                         <surface>
                             <badFaultGeometry spacing="5.0">XXX</badFaultGeometry>
-                        </surface>                   
+                        </surface>
                     </uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
@@ -789,7 +789,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
         self.assertEqual(
-            exc.message, 
+            exc.message,
             "Surface geometry type not recognised",
             "wrong exception message: %s" % exc.message)
 
@@ -1520,7 +1520,7 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
         self.assertEqual(
             source.method_calls,
             [('modify', ('set_dip', {'dip': 45.0}), {})])
-    
+
     def test_apply_uncertainty_simple_fault_geometry_absolute(self):
         source = Mock()
         trace = geo.Line([geo.Point(0., 0.), geo.Point(1., 1.)])
@@ -1557,7 +1557,7 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
         bs._apply_uncertainty_to_geometry(source, surface)
         self.assertEqual(
             source.method_calls,
-            [('modify', ('set_geometry', {'surface': surface}), {})])    
+            [('modify', ('set_geometry', {'surface': surface}), {})])
 
     def test_apply_uncertainty_unknown_uncertainty_type(self):
         bs = logictree.BranchSet('makeMeFeelGood', {})
@@ -1649,7 +1649,7 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
         self.trace = geo.Line([geo.Point(30., 30.), geo.Point(31., 30.)])
         self.fault_source = self._make_simple_fault_source(self.trace, 0.,
                                                            10., 60., 1.)
-    
+
     def _make_simple_fault_source(self, trace, usd, lsd, dip, spacing):
         return openquake.hazardlib.source.SimpleFaultSource(
             source_id="SFLT0", name="Simple Fault",
@@ -1663,7 +1663,7 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
             temporal_occurrence_model=PoissonTOM(50.),
             upper_seismogenic_depth=usd, lower_seismogenic_depth=lsd,
             fault_trace=trace, dip=dip, rake=90.0)
-    
+
     def _make_complex_fault_source(self, edges, spacing):
         return openquake.hazardlib.source.ComplexFaultSource(
             source_id="CFLT0", name="Complex Fault",
@@ -1686,12 +1686,12 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
             bottom_left = geo.Point(plane[3, 0], plane[3, 1], plane[3, 2])
             surfaces.append(geo.PlanarSurface.from_corner_points(
                 1.0, top_left, top_right, bottom_right, bottom_left))
-        
+
         if len(surfaces) > 1:
             return geo.MultiSurface(surfaces)
         else:
             return surfaces[0]
-        
+
     def _make_characteristic_fault_source(self, surface):
         return openquake.hazardlib.source.CharacteristicFaultSource(
             source_id="CHARFLT0", name="Characteristic Fault",
@@ -1701,7 +1701,6 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
             temporal_occurrence_model=PoissonTOM(50.),
             surface=surface, rake=90)
 
-
     def test_simple_fault_dip_relative_uncertainty(self):
         self.assertAlmostEqual(self.fault_source.dip, 60.)
         new_fault_source = deepcopy(self.fault_source)
@@ -1709,7 +1708,7 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
         branchset = logictree.BranchSet(uncertainty, {})
         branchset.apply_uncertainty(value, new_fault_source)
         self.assertAlmostEqual(new_fault_source.dip, 45.)
-    
+
     def test_simple_fault_dip_absolute_uncertainty(self):
         self.assertAlmostEqual(self.fault_source.dip, 60.)
         new_fault_source = deepcopy(self.fault_source)
@@ -1830,6 +1829,7 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
         # If the surface has changed the first element in the latitude
         # array of the surface mesh should be 30.2
         self.assertAlmostEqual(new_surface.mesh.lats[0, 0], 30.2)
+
 
 class BranchSetFilterTestCase(unittest.TestCase):
     def setUp(self):
