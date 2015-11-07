@@ -185,7 +185,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     if monitor.asset_loss_table:
         items = []
         for (rid, aid), group in itertools.groupby(
-                result['SPECLOSS'], operator.itemgetter(0, 1)):
+                sorted(result['SPECLOSS']), operator.itemgetter(0, 1)):
             array = numpy.zeros((L, R, 2), F32)
             for _rid, _aid, lr, loss in group:
                 array[lr] = loss
