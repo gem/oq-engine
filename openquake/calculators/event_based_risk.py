@@ -15,7 +15,7 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import division
 import logging
 import operator
 import itertools
@@ -298,16 +298,21 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # AGGLOSS
         with self.monitor('building agg_losses', autoflush=True):
             agg_losses = self.agg_losses
+            fullsize = numpy.prod(agg_losses.shape) * 4  # 32 bit floats
+            nbytes = 0
             for (l, r), data in numpy.ndenumerate(result['AGGLOSS']):
                 # data is a list of arrays of type elt_dt
                 for array in data:
                     agg_losses[array['rup_id'], l, r, :] = array['loss']
-                    self.saved['agg_losses'] += array['loss'].nbytes
+                    nbytes += array['loss'].nbytes
+            self.saved['agg_losses'] = nbytes
+            agg_losses.attrs['nonzero_fraction'] = nbytes / fullsize
 
         # SPECLOSS
         if self.oqparam.asset_loss_table:
             nbytes = 0
             dset = self.all_losses
+            fullsize = numpy.prod(dset.shape) * 4  # 32 bit floats
             loss_matrix = result.pop('SPECLOSS')
             with self.monitor('building specific-losses-rlzs', autoflush=True):
                 for (l, r), items in numpy.ndenumerate(loss_matrix):
@@ -315,6 +320,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         dset[array['ass_id'], rupid, l, r, :] = array['loss']
                         nbytes += array['loss'].nbytes
             self.saved['specific-losses'] = nbytes
+            dset.attrs['nonzero_fraction'] = nbytes / fullsize
         return acc + result
 
     def post_execute(self, result):
