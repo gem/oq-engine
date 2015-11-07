@@ -190,8 +190,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
             for _rid, _aid, lr, loss in group:
                 array[lr] = loss
             items.append((rid, aid, array))
-        if items:
-            result['SPECLOSS'] = numpy.array(items, ela_dt)
+        result['SPECLOSS'] = numpy.array(items, ela_dt)
     for (l, r), lst in numpy.ndenumerate(result['RC']):
         result['RC'][l, r] = sum(lst, AccumDict())
     for (l, r), lst in numpy.ndenumerate(result['IC']):
@@ -287,7 +286,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                                   ('loss', (F32, (L, R, 2)))])
             self.all_losses = self.datastore.create_dset(
                 'specific-losses', ela_dt)
-            self.all_losses.attrs['nbytes'] = 0
 
     def execute(self):
         """
@@ -334,7 +332,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         if self.oqparam.asset_loss_table:
             dset = self.all_losses.dset
-            dset.attrs['nbytes'] = dset[0].nbytes * len(dset)
             dset.attrs['nonzero_fraction'] = len(dset) / (self. N * self.E)
 
         insured_losses = self.oqparam.insured_losses
