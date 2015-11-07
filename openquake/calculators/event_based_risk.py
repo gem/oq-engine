@@ -441,7 +441,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         I = self.oqparam.insured_losses
         agglosses = self.datastore['agg_losses']
         ses_ratio = self.oqparam.ses_ratio
-        lr_list = [(l, r, agglosses[l][:, r, :])
+        lr_list = [(l, r, agglosses[:, l, r, :])
                    for l in range(self.L) for r in range(self.R)]
         result = parallel.apply_reduce(
             build_agg_curve, (lr_list, I, ses_ratio, C, self.monitor),

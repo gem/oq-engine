@@ -59,6 +59,18 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = out['agg_curve-stats', 'xml']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
+    @attr('qa', 'risk', 'event_based_risk')
+    def test_case_4(self):
+        # Turkey with SHARE logic tree
+        out = self.run_calc(case_4.__file__, 'job_h.ini,job_r.ini',
+                            exports='csv', individual_curves='true')
+        fnames = out['agg_losses', 'csv']
+        assert fnames, 'No agg_losses exported??'
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+    # now a couple of hazard tests
+
     @attr('qa', 'hazard', 'event_based')
     def test_case_4_hazard(self):
         # Turkey with SHARE logic tree; TODO: add site model
@@ -66,16 +78,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                             ground_motion_fields='false', exports='csv')
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles('expected/hazard_curve-mean.csv', fname)
-
-    @attr('qa', 'risk', 'event_based_risk')
-    def test_case_4(self):
-        # Turkey with SHARE logic tree
-        out = self.run_calc(case_4.__file__, 'job_h.ini,job_r.ini',
-                            exports='csv', individual_curves='true')
-        fnames = out['agg_losses-rlzs', 'csv']
-        assert fnames, 'No agg_losses-rlzs exported??'
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):
