@@ -175,8 +175,9 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
         # aggregate the losses corresponding to the same rupture
         if lst:
             acc = collections.Counter()
-            for rupt, loss in lst:
-                acc[rupt] += loss
+            for rupid, loss in lst:
+                acc[rupid] += loss
+            # h5py wants sorted array indices
             array = numpy.array(sorted(acc.items()), elt_dt)
             result['AGGLOSS'][l, r] = [array]
 
@@ -184,6 +185,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
         for (l, r), lst in numpy.ndenumerate(result['SPECLOSS']):
             items = []
             for rid, group in itertools.groupby(lst, operator.itemgetter(0)):
+                # h5py wants sorted array indices
                 data = sorted((aid, loss) for _rid, aid, loss in group)
                 items.append((rid, numpy.array(data, ela_dt)))
             result['SPECLOSS'][l, r] = items
@@ -275,11 +277,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.E = E = len(self.datastore['tags'])
         self.agg_losses = self.datastore.hdf5.create_dataset(
             'agg_losses', (E, L, R, 2), F32, compression='gzip')
+        self.agg_losses.attrs['nbytes'] = 0
 
         if self.oqparam.asset_loss_table:
             self.all_losses = self.datastore.hdf5.create_dataset(
                 'specific-losses', (N, E, L, R, 2),
                 self.riskmodel.loss_type_dt, compression='lzf')
+            # using the lzf compression can be much faster the using
+            # the gzip compression, even 3-5 times faster
+            self.all_losses.attrs['nbytes'] = 0
 
     def execute(self):
         """
@@ -298,29 +304,26 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # AGGLOSS
         with self.monitor('building agg_losses', autoflush=True):
             agg_losses = self.agg_losses
-            fullsize = numpy.prod(agg_losses.shape) * 4  # 32 bit floats
             nbytes = 0
             for (l, r), data in numpy.ndenumerate(result['AGGLOSS']):
                 # data is a list of arrays of type elt_dt
                 for array in data:
                     agg_losses[array['rup_id'], l, r, :] = array['loss']
                     nbytes += array['loss'].nbytes
-            self.saved['agg_losses'] = nbytes
-            agg_losses.attrs['nonzero_fraction'] = nbytes / fullsize
+            self.agg_losses.attrs['nbytes'] += nbytes
 
         # SPECLOSS
         if self.oqparam.asset_loss_table:
             nbytes = 0
             dset = self.all_losses
-            fullsize = numpy.prod(dset.shape) * 4  # 32 bit floats
             loss_matrix = result.pop('SPECLOSS')
             with self.monitor('building specific-losses-rlzs', autoflush=True):
                 for (l, r), items in numpy.ndenumerate(loss_matrix):
                     for rupid, array in items:
                         dset[array['ass_id'], rupid, l, r, :] = array['loss']
                         nbytes += array['loss'].nbytes
-            self.saved['specific-losses'] = nbytes
-            dset.attrs['nonzero_fraction'] = nbytes / fullsize
+            self.all_losses.attrs['nbytes'] += nbytes
+
         return acc + result
 
     def post_execute(self, result):
@@ -330,6 +333,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param result:
             a numpy array of shape (O, L, R) containing lists of arrays
         """
+        fullsize = numpy.prod(self.agg_losses.shape) * 4  # 32 bit floats
+        self.agg_losses.attrs['nonzero_fraction'] = (
+            self.agg_losses.attrs['nbytes'] / fullsize)
+
+        if self.oqparam.asset_loss_table:
+            fullsize = numpy.prod(self.all_losses.shape) * 4  # 32 bit floats
+            self.all_losses.attrs['nonzero_fraction'] = (
+                self.all_losses.attrs['nbytes'] / fullsize)
+
         insured_losses = self.oqparam.insured_losses
         ses_ratio = self.oqparam.ses_ratio
         saved = self.saved
