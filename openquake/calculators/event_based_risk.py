@@ -32,7 +32,6 @@ from openquake.commonlib.parallel import apply_reduce
 U32 = numpy.uint32
 F32 = numpy.float32
 elt_dt = numpy.dtype([('rup_id', U32), ('loss', (F32, 2))])
-ela_dt = numpy.dtype([('ass_id', U32), ('loss', (F32, 2))])
 
 
 @parallel.litetask
@@ -113,11 +112,13 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     """
     lti = riskmodel.lti  # loss type -> index
     L, R = len(lti), len(rlzs_assoc.realizations)
+    ela_dt = numpy.dtype([('rup_id', U32), ('ass_id', U32),
+                          ('loss', (F32, (L, R, 2)))])
 
     def zeroN2():
         return numpy.zeros((monitor.num_assets, 2))
     result = dict(AGGLOSS=square(L, R, list),
-                  SPECLOSS=square(L, R, list),
+                  SPECLOSS=[],
                   RC=square(L, R, list),
                   IC=square(L, R, list))
     if monitor.avg_losses:
@@ -137,8 +138,8 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
                     for aid, sloss, iloss in zip(
                             asset_ids, all_losses, ins_losses):
                         if sloss > 0:
-                            result['SPECLOSS'][l, out.hid].append(
-                                (rup_id, aid, (sloss, iloss)))
+                            result['SPECLOSS'].append(
+                                (rup_id, aid, (l, out.hid), (sloss, iloss)))
 
             # collect aggregate losses
             agg_losses = out.event_loss_per_asset.sum(axis=1)
@@ -182,13 +183,15 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
             result['AGGLOSS'][l, r] = [array]
 
     if monitor.asset_loss_table:
-        for (l, r), lst in numpy.ndenumerate(result['SPECLOSS']):
-            items = []
-            for rid, group in itertools.groupby(lst, operator.itemgetter(0)):
-                # h5py wants sorted array indices
-                data = sorted((aid, loss) for _rid, aid, loss in group)
-                items.append((rid, numpy.array(data, ela_dt)))
-            result['SPECLOSS'][l, r] = items
+        items = []
+        for (rid, aid), group in itertools.groupby(
+                result['SPECLOSS'], operator.itemgetter(0, 1)):
+            array = numpy.zeros((L, R, 2), F32)
+            for _rid, _aid, lr, loss in group:
+                array[lr] = loss
+            items.append((rid, aid, array))
+        if items:
+            result['SPECLOSS'] = numpy.array(items, ela_dt)
     for (l, r), lst in numpy.ndenumerate(result['RC']):
         result['RC'][l, r] = sum(lst, AccumDict())
     for (l, r), lst in numpy.ndenumerate(result['IC']):
@@ -280,11 +283,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.agg_losses.attrs['nbytes'] = 0
 
         if self.oqparam.asset_loss_table:
-            self.all_losses = self.datastore.hdf5.create_dataset(
-                'specific-losses', (N, E, L, R, 2),
-                self.riskmodel.loss_type_dt, compression='lzf')
-            # using the lzf compression can be much faster the using
-            # the gzip compression, even 3-5 times faster
+            ela_dt = numpy.dtype([('rup_id', U32), ('ass_id', U32),
+                                  ('loss', (F32, (L, R, 2)))])
+            self.all_losses = self.datastore.create_dset(
+                'specific-losses', ela_dt)
             self.all_losses.attrs['nbytes'] = 0
 
     def execute(self):
@@ -314,15 +316,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         # SPECLOSS
         if self.oqparam.asset_loss_table:
-            nbytes = 0
-            dset = self.all_losses
-            loss_matrix = result.pop('SPECLOSS')
             with self.monitor('building specific-losses-rlzs', autoflush=True):
-                for (l, r), items in numpy.ndenumerate(loss_matrix):
-                    for rupid, array in items:
-                        dset[array['ass_id'], rupid, l, r, :] = array['loss']
-                        nbytes += array['loss'].nbytes
-            self.all_losses.attrs['nbytes'] += nbytes
+                self.all_losses.extend(result.pop('SPECLOSS'))
 
         return acc + result
 
@@ -338,9 +333,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.agg_losses.attrs['nbytes'] / fullsize)
 
         if self.oqparam.asset_loss_table:
-            fullsize = numpy.prod(self.all_losses.shape) * 4  # 32 bit floats
-            self.all_losses.attrs['nonzero_fraction'] = (
-                self.all_losses.attrs['nbytes'] / fullsize)
+            dset = self.all_losses.dset
+            dset.attrs['nbytes'] = dset[0].nbytes * len(dset)
+            dset.attrs['nonzero_fraction'] = len(dset) / (self. N * self.E)
 
         insured_losses = self.oqparam.insured_losses
         ses_ratio = self.oqparam.ses_ratio
