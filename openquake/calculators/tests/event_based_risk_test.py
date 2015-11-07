@@ -42,22 +42,22 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assert_stats_ok(case_2, individual_curves='true')
 
     @attr('qa', 'risk', 'event_based_risk')
+    def test_case_2bis(self):
+        # test for a single realization
+        out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
+                            concurrent_tasks=0)
+        # this also tests that concurrent_tasks=0 does not give issues
+        [fname] = out['agg_losses', 'csv']
+        self.assertEqualFiles(
+            'expected/agg_losses-b1,b1-structural.csv', fname)
+
+    @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         out = self.run_calc(case_3.__file__, 'job_haz.ini,job_risk.ini',
                             exports='xml', individual_curves='false',
                             concurrent_tasks=4)
         [fname] = out['agg_curve-stats', 'xml']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
-
-    @attr('qa', 'risk', 'event_based_risk')
-    def test_case_2bis(self):
-        # test for a single realization
-        out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
-                            concurrent_tasks=0)
-        # this also tests that concurrent_tasks=0 does not give issues
-        [fname] = out['agg_losses-rlzs', 'csv']
-        self.assertEqualFiles(
-            'expected/agg_losses-b1,b1-structural.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4_hazard(self):

@@ -199,7 +199,7 @@ def export_avg_losses_stats(ekey, dstore):
     return fnames
 
 
-# this is used by classical_risk and event_based_risk
+# this is used by classical_risk and event based_risk
 @export.add(('agg_losses-rlzs', 'csv'))
 def export_agg_losses(ekey, dstore):
     """
@@ -219,21 +219,25 @@ def export_agg_losses(ekey, dstore):
     return fnames
 
 
-@export.add(('agg_losses-stats', 'csv'))
-def export_agg_losses_stats(ekey, dstore):
+# this is used by event based_risk
+@export.add(('agg_losses', 'csv'))
+def export_agg_losses_ebr(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    oq = OqParam.from_(dstore.attrs)
-    agg_losses = compactify(dstore[ekey[0]].value)
-    quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
+    agg_losses = dstore[ekey[0]]
+    rlzs = dstore['rlzs_assoc'].realizations
     tags = dstore['tags'].value
+    E = len(tags)
+    loss_type_dt = dstore['riskmodel'].loss_type_dt
     fnames = []
-    for i, quantile in enumerate(quantiles):
-        losses = agg_losses[:, i]
-        dest = dstore.export_path('avg_losses-%s.csv' % quantile)
-        data = compose_arrays(tags, losses)
+    for rlz in rlzs:
+        array = numpy.zeros((E, 2), loss_type_dt)
+        for l, ltype in enumerate(loss_type_dt.names):
+            array[ltype] = agg_losses[:, l, rlz.ordinal, :]
+        dest = dstore.export_path('agg_losses-rlz%03d.csv' % rlz.ordinal)
+        data = compose_arrays(tags, compactify(array))
         writers.write_csv(dest, data, fmt='%10.6E')
         fnames.append(dest)
     return fnames
@@ -275,21 +279,6 @@ def export_ebr_curves(ekey, dstore):
         writers.write_csv(path, array, fmt='%9.7E')
         paths.append(path)
     return paths
-
-
-@export.add(
-    ('specific-loss_curves-rlzs', 'csv'),
-    ('specific-loss_maps-rlzs', 'csv'),
-    ('specific-loss_curves-stats', 'csv'),
-    ('specific-loss_maps-stats', 'csv'),
-)
-def export_ebr_specific(ekey, dstore):
-    assets = get_assets_sites(dstore)
-    outs = extract_outputs(ekey[0], dstore, ext=ekey[1])
-    for out in outs:
-        arr = compose_arrays(assets, out.array)
-        writers.write_csv(out.path, arr, fmt='%9.7E')
-    return [out.path for out in outs]
 
 
 @export.add(('dmg_by_asset', 'xml'))
@@ -570,6 +559,7 @@ def export_lossmaps_xml_geojson(ekey, dstore):
     return sorted(fnames)
 
 
+# this is used by scenario_risk
 @export.add(('agglosses-rlzs', 'csv'))
 def export_agglosses(ekey, dstore):
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
@@ -616,6 +606,7 @@ AggCurve = collections.namedtuple(
     'AggCurve', ['losses', 'poes', 'average_loss', 'stddev_loss'])
 
 
+# this is used by event_based_risk
 @export.add(('agg_curve-rlzs', 'xml'))
 def export_agg_curve(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
@@ -624,16 +615,15 @@ def export_agg_curve(ekey, dstore):
     agg_curve = dstore[ekey[0]]
     fnames = []
     L, R = len(cost_types), len(rlzs)
-    for ct in cost_types:
-        loss_type = ct['name']
-        array = agg_curve[loss_type].value
+    for l, ct in enumerate(cost_types):
+        loss_type = ct['name']  # TODO: missing conversion cost_type->loss_type
         for ins in range(oq.insured_losses + 1):
             for rlz in rlzs:
                 suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
                     rlz.uid, loss_type)
                 dest = dstore.export_path('agg_curve%s%s.%s' % (
                     suffix, '_ins' if ins else '', ekey[1]))
-                rec = array[rlz.ordinal, ins]
+                rec = agg_curve[l, rlz.ordinal, ins]
                 curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
                 risk_writers.AggregateLossCurveXMLWriter(
                     dest, oq.investigation_time, loss_type,
@@ -644,12 +634,13 @@ def export_agg_curve(ekey, dstore):
     return sorted(fnames)
 
 
-def _gen_idx_sname_qvalue(quantiles):
-    yield 0, 'mean', None
-    for i, q in enumerate(quantiles):
-        yield i, 'quantile', q
+def _gen_sname_qvalue(quantiles):
+    yield 'mean', None
+    for q in quantiles:
+        yield 'quantile', q
 
 
+# this is used by event_based_risk
 @export.add(('agg_curve-stats', 'xml'))
 def export_agg_curve_stats(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
@@ -657,14 +648,13 @@ def export_agg_curve_stats(ekey, dstore):
     cost_types = dstore['cost_types']
     agg_curve = dstore[ekey[0]]
     fnames = []
-    for ct in cost_types:
+    for l, ct in enumerate(cost_types):
         loss_type = ct['name']
-        array = agg_curve[loss_type].value
         for ins in range(oq.insured_losses + 1):
-            for i, sname, qvalue in _gen_idx_sname_qvalue(quantiles):
+            for sname, qvalue in _gen_sname_qvalue(quantiles):
                 dest = dstore.export_path('agg_curve-%s-%s%s.%s' % (
                     sname, loss_type, '_ins' if ins else '', ekey[1]))
-                rec = array[i, ins]
+                rec = agg_curve[sname][l, ins]
                 curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
                 risk_writers.AggregateLossCurveXMLWriter(
                     dest, oq.investigation_time, loss_type,
