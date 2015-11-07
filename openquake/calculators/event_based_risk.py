@@ -18,6 +18,7 @@
 
 import logging
 import operator
+import itertools
 import collections
 
 import numpy
@@ -31,7 +32,7 @@ from openquake.commonlib.parallel import apply_reduce
 U32 = numpy.uint32
 F32 = numpy.float32
 elt_dt = numpy.dtype([('rup_id', U32), ('loss', (F32, 2))])
-ela_dt = numpy.dtype([('rup_id', U32), ('ass_id', U32), ('loss', (F32, 2))])
+ela_dt = numpy.dtype([('ass_id', U32), ('loss', (F32, 2))])
 
 
 @parallel.litetask
@@ -137,7 +138,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
                             asset_ids, all_losses, ins_losses):
                         if sloss > 0:
                             result['SPECLOSS'][l, out.hid].append(
-                                (rup_id, aid, numpy.array([sloss, iloss])))
+                                (rup_id, aid, (sloss, iloss)))
 
             # collect aggregate losses
             agg_losses = out.event_loss_per_asset.sum(axis=1)
@@ -179,7 +180,11 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
 
     if monitor.asset_loss_table:
         for (l, r), lst in numpy.ndenumerate(result['SPECLOSS']):
-            result['SPECLOSS'][l, r] = numpy.array(lst, ela_dt)
+            items = []
+            for rid, group in itertools.groupby(lst, operator.itemgetter(0)):
+                items.append(
+                    (rid, numpy.array([row[1:] for row in group], ela_dt)))
+            result['SPECLOSS'][l, r] = items
     for (l, r), lst in numpy.ndenumerate(result['RC']):
         result['RC'][l, r] = sum(lst, AccumDict())
     for (l, r), lst in numpy.ndenumerate(result['IC']):
@@ -247,8 +252,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # preparing empty datasets
         loss_types = self.riskmodel.loss_types
         self.C = self.oqparam.loss_curve_resolution
-        self.L = len(loss_types)
-        self.R = len(self.rlzs_assoc.realizations)
+        self.L = L = len(loss_types)
+        self.R = R = len(self.rlzs_assoc.realizations)
         self.loss_curve_dt = numpy.dtype([
             ('losses', (F32, self.C)), ('poes', (F32, self.C)), ('avg', F32)])
 
@@ -257,17 +262,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.monitor.avg_losses = self.oqparam.avg_losses
         self.monitor.asset_loss_table = self.oqparam.asset_loss_table
 
-        N = len(self.assetcol)
-        R = len(self.rlzs_assoc.realizations)
+        self.N = N = len(self.assetcol)
         ltypes = self.riskmodel.loss_types
-        L = len(ltypes)
 
         # average losses, stored in a composite array of shape N, R, 2
         multi_avg_dt = numpy.dtype([(lt, F32) for lt in ltypes])
         self.avg_losses = numpy.zeros((N, R, 2), multi_avg_dt)
 
         # aggregate losses, stored in a compressed array of shape E, R, 2
-        E = len(self.datastore['tags'])
+        self.E = E = len(self.datastore['tags'])
         self.agg_losses = self.datastore.hdf5.create_dataset(
             'agg_losses-rlzs', (E, R, 2), self.riskmodel.loss_type_dt,
             compression='gzip', compression_opts=9)
@@ -276,7 +279,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.all_losses = self.datastore.hdf5.create_dataset(
                 'specific-losses-rlzs', (N, E, L, R, 2),
                 self.riskmodel.loss_type_dt,
-                compression='gzip', compression_opts=9)
+                compression='lzf')
 
     def execute(self):
         """
@@ -297,11 +300,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             nbytes = 0
             dset = self.all_losses
             loss_matrix = result.pop('SPECLOSS')
-            with self.monitor('building specific-losses-rlzs'):
-                for (l, r), array in numpy.ndenumerate(loss_matrix):
-                    for rupid, aid, loss in array:
-                        dset[aid, rupid, l, r] = loss
-                    nbytes += array.nbytes
+            mon = self.monitor('building specific-losses-rlzs', autoflush=True)
+            with mon:
+                for (l, r), items in numpy.ndenumerate(loss_matrix):
+                    data = numpy.zeros((self.N, self.E, 2), F32)
+                    for rupid, array in items:
+                        nbytes += array['loss'].nbytes
+                        for el in array:
+                            data[el['ass_id'], rupid] = el['loss']
+                    dset[:, :, l, r, :] = data
             self.saved['specific-losses-rlzs'] = nbytes
         return acc + result
 
