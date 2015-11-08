@@ -152,7 +152,11 @@ def compactify(array):
     pairs = []
     for name in dtype.names:
         dt = dtype.fields[name][0]
-        pairs.append((name, (dt, 2)))
+        if dt.subdtype is None:
+            pairs.append((name, (dt, 2)))
+        else:  # this is the case for rcurves
+            sdt, shp = dt.subdtype
+            pairs.append((name, (sdt, shp + (2,))))
     zeros = numpy.zeros(array.shape[:-1], numpy.dtype(pairs))
     for idx, _ in numpy.ndenumerate(zeros):
         zeros[idx] = array[idx]
