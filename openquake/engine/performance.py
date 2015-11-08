@@ -61,6 +61,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         new = self.__class__(operation, self.job_id, task or self.task,
                              self.tracing, self.measuremem, self.autoflush)
         vars(new).update(kw)
+        self.children.append(new)
         return new
 
     def __enter__(self):
