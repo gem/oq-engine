@@ -19,7 +19,6 @@
 from __future__ import print_function
 import io
 import os
-import shutil
 import logging
 
 from openquake.commonlib import sap, datastore
@@ -46,10 +45,12 @@ def show(calc_id, key=None, rlzs=None):
             try:
                 oq = OqParam.from_(datastore.DataStore(calc_id).attrs)
                 cmode, descr = oq.calculation_mode, oq.description
-            except:  # invalid datastore directory
+            except:
+                # invalid datastore file, or missing calculation_mode
+                # and description attributes, perhaps due to a manual kill
                 logging.warn('Removed invalid calculation %d', calc_id)
-                shutil.rmtree(os.path.join(
-                    datastore.DATADIR, 'calc_%s' % calc_id))
+                os.remove(os.path.join(
+                    datastore.DATADIR, 'calc_%s.hdf5' % calc_id))
             else:
                 rows.append((calc_id, cmode, descr))
         for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
