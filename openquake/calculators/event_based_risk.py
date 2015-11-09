@@ -386,11 +386,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         saved['rcurves-rlzs'] += poes.nbytes
                 self.datastore['rcurves-rlzs'] = rcurves
 
-            # build an aggregate loss curve per realization
-            with self.monitor('building agg_curve-rlzs'):
-                self.build_agg_curve(saved)
+        # build an aggregate loss curve per realization
+        with self.monitor('building agg_curve-rlzs'):
+            self.build_agg_curve(saved)
 
-            self.datastore.hdf5.flush()
+        self.datastore.hdf5.flush()
 
         for out in sorted(saved):
             nbytes = saved[out]
