@@ -1,5 +1,9 @@
+  [Michele Simionato]
+  * Added a command oq-lite show_attrs to display the attributes of a HDF5
+    dataset
+
   [Matteo Nastasi]
-  * demos moved to /usr/share/openquake/risklib
+  * Demos moved to /usr/share/openquake/risklib
   
   [Michele Simionato]
   * Added outputs `agg_curve-rlzs` and `agg_curve-stats` in the HDF5 file
