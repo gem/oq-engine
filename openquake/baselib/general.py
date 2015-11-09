@@ -25,6 +25,7 @@ import os
 import sys
 import imp
 import math
+import operator
 import warnings
 import tempfile
 import importlib
@@ -621,6 +622,27 @@ def groupby(objects, key, reducegroup=list):
     kgroups = itertools.groupby(sorted(objects, key=key), key)
     return collections.OrderedDict((k, reducegroup(group))
                                    for k, group in kgroups)
+
+
+def groupby2(records, kfield, vfield):
+    """
+    :param records: a sequence of records with positional or named fields
+    :param kfield: the index or name of the field to use as a key
+    :param reducegroup: the index or name of the field to use as a value
+    :returns: an OrderedDict of lists of the form {key: [value, ...]}.
+
+    >>> groupby2(['A1', 'A2', 'B1', 'B2', 'B3'], 0, 1)
+    OrderedDict([('A', ['1', '2']), ('B', ['1', '2', '3'])])
+    """
+    if isinstance(kfield, int):
+        kgetter = operator.itemgetter(kfield)
+    else:
+        kgetter = operator.attrgetter(kfield)
+    if isinstance(vfield, int):
+        vgetter = operator.itemgetter(vfield)
+    else:
+        vgetter = operator.attrgetter(vfield)
+    return groupby(records, kgetter, lambda rows: map(vgetter, rows))
 
 
 def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
