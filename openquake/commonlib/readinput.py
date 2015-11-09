@@ -34,7 +34,7 @@ from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.oqvalidation import OqParam, rmdict
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
-from openquake.commonlib.riskmodels import get_risk_files, get_risk_models
+from openquake.commonlib.riskmodels import get_risk_models
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.performance import DummyMonitor
 from openquake.baselib.python3compat import configparser
@@ -681,6 +681,7 @@ def get_exposure_lazy(fname, ok_cost_types):
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
     for row in cost_types:
+        valid.simple_id(row[0])  # the name
         for col in row:
             if len(col) > COST_TYPE_SIZE:
                 raise ValueError('The cost_type %s has a field too long, more '
