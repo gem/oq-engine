@@ -627,21 +627,26 @@ def groupby(objects, key, reducegroup=list):
 def groupby2(records, kfield, vfield):
     """
     :param records: a sequence of records with positional or named fields
-    :param kfield: the index or name of the field to use as a key
-    :param reducegroup: the index or name of the field to use as a value
+    :param kfield: the index/name/tuple specifying the field to use as a key
+    :param vfield: the index/name/tuple specifying the field to use as a value
     :returns: an OrderedDict of lists of the form {key: [value, ...]}.
 
     >>> groupby2(['A1', 'A2', 'B1', 'B2', 'B3'], 0, 1)
     OrderedDict([('A', ['1', '2']), ('B', ['1', '2', '3'])])
+
+    Here is an example where the keyfield is a tuple of integers:
+
+    >>> groupby2(['A11', 'A12', 'B11', 'B21'], (0, 1), 2)
+    OrderedDict([(('A', '1'), ['1', '2']), (('B', '1'), ['1']), (('B', '2'), ['1'])])
     """
-    if isinstance(kfield, int):
+    if isinstance(kfield, tuple):
+        kgetter = operator.itemgetter(*kfield)
+    else:
         kgetter = operator.itemgetter(kfield)
+    if isinstance(vfield, tuple):
+        vgetter = operator.itemgetter(*vfield)
     else:
-        kgetter = operator.attrgetter(kfield)
-    if isinstance(vfield, int):
         vgetter = operator.itemgetter(vfield)
-    else:
-        vgetter = operator.attrgetter(vfield)
     return groupby(records, kgetter, lambda rows: map(vgetter, rows))
 
 
