@@ -322,19 +322,15 @@ def view_mean_avg_losses(token, dstore):
     assets = dstore['assetcol'].value['asset_ref']
     try:
         group = dstore['avg_losses-stats']
-        single_rlz = False
+        data = group[0, :, :]  # shape (S, N, 2)
     except KeyError:
         group = dstore['avg_losses-rlzs']
-        single_rlz = True
-    loss_types = sorted(group)
+        data = group[:, 0, :]  # shape (N, R, 2)
+    loss_types = dstore['riskmodel'].loss_types
     header = ['asset_ref'] + loss_types
     losses = [[a] + [None] * len(loss_types) for a in assets]
     for lti, lt in enumerate(loss_types):
-        if single_rlz:
-            [key] = list(group[lt])
-        else:
-            key = 'mean'
-        for aid, pair in enumerate(group[lt][key]):
+        for aid, pair in enumerate(data[lt]):
             losses[aid][lti + 1] = pair  # loss, ins_loss
     losses.sort()
     if len(losses) > 1:
