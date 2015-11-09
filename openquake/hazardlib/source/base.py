@@ -142,7 +142,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         as keyword arguments. See also :attr:`MODIFICATIONS`.
 
         Modifications can be applied one on top of another. The logic
-        of stacking modifications is up to a specific MFD implementation.
+        of stacking modifications is up to a specific source implementation.
 
         :param modification:
             String name representing the type of modification.
