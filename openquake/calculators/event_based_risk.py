@@ -60,7 +60,8 @@ def build_agg_curve(lr_list, insured_losses, ses_ratio, curve_resolution,
     for l, r, data in lr_list:
         if len(data) == 0:  # realization with no losses
             continue
-        for i in range(insured_losses + 1):  # insured_losses
+        for i in range(insured_losses + 1):
+            # if insured_losses is False, don't build them
             the_losses = data[:, i]
             losses, poes = scientific.event_based(
                 the_losses, ses_ratio, curve_resolution)
@@ -117,10 +118,8 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
 
     def zeroN2():
         return numpy.zeros((monitor.num_assets, 2))
-    result = dict(AGGLOSS=square(L, R, list),
-                  SPECLOSS=[],
-                  RC=square(L, R, list),
-                  IC=square(L, R, list))
+    result = dict(AGGLOSS=square(L, R, list), ASSLOSS=[],
+                  RC=square(L, R, list), IC=square(L, R, list))
     if monitor.avg_losses:
         result['AVGLOSS'] = square(L, R, zeroN2)
     for out_by_rlz in riskmodel.gen_outputs(
@@ -135,11 +134,12 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
                 for rup_id, all_losses, ins_losses in zip(
                         rup_ids, out.event_loss_per_asset,
                         out.insured_loss_per_asset):
-                    for aid, sloss, iloss in zip(
+                    for aid, groundloss, insuredloss in zip(
                             asset_ids, all_losses, ins_losses):
-                        if sloss > 0:
-                            result['SPECLOSS'].append(
-                                (rup_id, aid, (l, out.hid), (sloss, iloss)))
+                        if groundloss > 0:
+                            result['ASSLOSS'].append(
+                                (rup_id, aid, (l, out.hid),
+                                 (groundloss, insuredloss)))
 
             # collect aggregate losses
             agg_losses = out.event_loss_per_asset.sum(axis=1)
@@ -185,12 +185,12 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     if monitor.asset_loss_table:
         items = []
         for (rid, aid), group in itertools.groupby(
-                sorted(result['SPECLOSS']), operator.itemgetter(0, 1)):
+                sorted(result['ASSLOSS']), operator.itemgetter(0, 1)):
             array = numpy.zeros((L, R, 2), F32)
             for _rid, _aid, lr, loss in group:
                 array[lr] = loss
             items.append((rid, aid, array))
-        result['SPECLOSS'] = numpy.array(items, ela_dt)
+        result['ASSLOSS'] = numpy.array(items, ela_dt)
     for (l, r), lst in numpy.ndenumerate(result['RC']):
         result['RC'][l, r] = sum(lst, AccumDict())
     for (l, r), lst in numpy.ndenumerate(result['IC']):
@@ -214,7 +214,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     outs = collections.OrderedDict(
         [('AVGLOSS', 'avg_losses-rlzs'),
          ('AGGLOSS', 'agg_losses'),
-         ('SPECLOSS', 'asset_loss_table'),
+         ('ASSLOSS', 'asset_loss_table'),
          ('RC', 'rcurves-rlzs'),
          ('IC', 'icurves-rlzs')])
 
@@ -315,10 +315,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.agg_losses.attrs['nbytes'] += nbytes
             self.datastore.hdf5.flush()
 
-        # SPECLOSS
+        # ASSLOSS
         if self.oqparam.asset_loss_table:
             with self.alt_mon:
-                self.all_losses.extend(result.pop('SPECLOSS'))
+                self.all_losses.extend(result.pop('ASSLOSS'))
                 self.datastore.hdf5.flush()
 
         return acc + result
@@ -336,7 +336,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         if self.oqparam.asset_loss_table:
             dset = self.all_losses.dset
-            dset.attrs['nonzero_fraction'] = len(dset) / (self. N * self.E)
+            dset.attrs['nonzero_fraction'] = len(dset) / (self.N * self.E)
 
         insured_losses = self.oqparam.insured_losses
         ses_ratio = self.oqparam.ses_ratio
@@ -388,7 +388,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         # build an aggregate loss curve per realization
         with self.monitor('building agg_curve-rlzs'):
-            self.build_agg_curve(saved)
+            self.build_agg_curve()
 
         self.datastore.hdf5.flush()
 
@@ -440,13 +440,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     key = '%s/%s/%s' % (maps_key, cb.loss_type, rlz.uid)
                     self.datastore[key] = loss_map
 
-    def build_agg_curve(self, saved):
+    def build_agg_curve(self):
         """
         Build a single loss curve per realization. It is NOT obtained
         by aggregating the loss curves; instead, it is obtained without
         generating the loss curves, directly from the the aggregate losses.
-
-        :param saved: a Counter {<HDF5 key>: <nbytes>}
         """
         C = self.oqparam.loss_curve_resolution
         I = self.oqparam.insured_losses
@@ -461,7 +459,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         for l, r, i in result:
             agg_curve[l, r, i] = result[l, r, i]
         self.datastore['agg_curve-rlzs'] = agg_curve
-        saved['agg_curve-rlzs'] = agg_curve.nbytes
+        self.saved['agg_curve-rlzs'] = agg_curve.nbytes
 
     # ################### methods to compute statistics  #################### #
 
