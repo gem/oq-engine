@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2014-2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -114,6 +114,7 @@ class CalculatorTestCase(unittest.TestCase):
         expected_lines = make_comparable(open(expected).readlines())
         actual_lines = make_comparable(open(actual).readlines())
         try:
+            self.assertEqual(len(expected_lines), len(actual_lines))
             for exp, got in zip(expected_lines, actual_lines):
                 if delta:
                     self.practicallyEqual(exp, got, delta)
