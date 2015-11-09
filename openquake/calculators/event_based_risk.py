@@ -214,7 +214,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     outs = collections.OrderedDict(
         [('AVGLOSS', 'avg_losses-rlzs'),
          ('AGGLOSS', 'agg_losses'),
-         ('SPECLOSS', 'specific-losses'),
+         ('SPECLOSS', 'asset_loss_table'),
          ('RC', 'rcurves-rlzs'),
          ('IC', 'icurves-rlzs')])
 
@@ -285,7 +285,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             ela_dt = numpy.dtype([('rup_id', U32), ('ass_id', U32),
                                   ('loss', (F32, (L, R, 2)))])
             self.all_losses = self.datastore.create_dset(
-                'specific-losses', ela_dt, compression='gzip')
+                'asset_loss_table', ela_dt, compression='gzip')
 
     def execute(self):
         """
@@ -315,7 +315,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         # SPECLOSS
         if self.oqparam.asset_loss_table:
-            with self.monitor('building specific-losses-rlzs', autoflush=True):
+            with self.monitor('building asset_loss_table', autoflush=True):
                 self.all_losses.extend(result.pop('SPECLOSS'))
                 self.datastore.hdf5.flush()
 
