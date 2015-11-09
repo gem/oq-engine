@@ -45,7 +45,7 @@ def compose_arrays(a1, a2):
     """
     assert len(a1) == len(a2),  (len(a1), len(a2))
     if a1.dtype.names is None and len(a1.shape) == 1:
-        # the first array is not composite, but its is one-dimensional
+        # the first array is not composite, but it is one-dimensional
         a1 = numpy.array(a1, numpy.dtype([('tag', a1.dtype)]))
 
     fields1 = [(f, a1.dtype.fields[f][0]) for f in a1.dtype.names]
