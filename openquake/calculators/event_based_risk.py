@@ -292,6 +292,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Run the event_based_risk calculator and aggregate the results
         """
         self.saved = collections.Counter()  # nbytes per HDF5 key
+        self.agg_mon = self.monitor('building agg_losses')
+        self.alt_mon = self.monitor('building asset_loss_table')
         return apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc,
@@ -302,7 +304,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     def agg(self, acc, result):
         # AGGLOSS
-        with self.monitor('building agg_losses', autoflush=True):
+        with self.agg_mon:
             agg_losses = self.agg_losses
             nbytes = 0
             for (l, r), data in numpy.ndenumerate(result['AGGLOSS']):
@@ -315,7 +317,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         # SPECLOSS
         if self.oqparam.asset_loss_table:
-            with self.monitor('building asset_loss_table', autoflush=True):
+            with self.alt_mon:
                 self.all_losses.extend(result.pop('SPECLOSS'))
                 self.datastore.hdf5.flush()
 
@@ -350,45 +352,42 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 ltypes, self.riskmodel.curve_builders)])
         rcurves = numpy.zeros((N, R, 2), multi_lr_dt)
 
-        with self.monitor('saving risk outputs',
-                          autoflush=True, measuremem=True) as mon:
+        # AVGLOSS
+        if self.oqparam.avg_losses:
+            with self.monitor('building avg_losses-rlzs'):
+                for (l, r), avgloss in numpy.ndenumerate(
+                        result['AVGLOSS']):
+                    lt = self.riskmodel.loss_types[l]
+                    avg_losses_lt = self.avg_losses[lt]
+                    asset_values = self.assetcol[lt]
+                    for i, avalue in enumerate(asset_values):
+                        avg_losses_lt[i, r] = avgloss[i] * avalue
+                self.datastore['avg_losses-rlzs'] = self.avg_losses
+                saved['avg_losses-rlzs'] = self.avg_losses.nbytes
 
-            # AVGLOSS
-            if self.oqparam.avg_losses:
-                with mon('building avg_losses-rlzs'):
-                    for (l, r), avgloss in numpy.ndenumerate(
-                            result['AVGLOSS']):
+        # RC, IC
+        if self.oqparam.loss_ratios:
+            with self.monitor('building rcurves-rlzs'):
+                for (l, r), data in numpy.ndenumerate(result['RC']):
+                    cb = self.riskmodel.curve_builders[l]
+                    if data and cb.user_provided:
+                        # data is a dict asset idx -> counts
                         lt = self.riskmodel.loss_types[l]
-                        avg_losses_lt = self.avg_losses[lt]
-                        asset_values = self.assetcol[lt]
-                        for i, avalue in enumerate(asset_values):
-                            avg_losses_lt[i, r] = avgloss[i] * avalue
-                    self.datastore['avg_losses-rlzs'] = self.avg_losses
-                    saved['avg_losses-rlzs'] = self.avg_losses.nbytes
-
-            # RC, IC
-            if self.oqparam.loss_ratios:
-                with mon('building rcurves-rlzs'):
-                    for (l, r), data in numpy.ndenumerate(result['RC']):
-                        cb = self.riskmodel.curve_builders[l]
-                        if data and cb.user_provided:
-                            # data is a dict asset idx -> counts
-                            lt = self.riskmodel.loss_types[l]
-                            poes = cb.build_poes(N, [data], ses_ratio)
-                            rcurves[lt][:, r, 0] = poes
-                            saved['rcurves-rlzs'] += poes.nbytes
-                    for (l, r), data in numpy.ndenumerate(result['IC']):
-                        cb = self.riskmodel.curve_builders[l]
-                        if data and cb.user_provided and insured_losses:
-                            # data is a dict asset idx -> counts
-                            lt = self.riskmodel.loss_types[l]
-                            poes = cb.build_poes(N, [data], ses_ratio)
-                            rcurves[lt][:, r, 1] = poes
-                            saved['rcurves-rlzs'] += poes.nbytes
-                    self.datastore['rcurves-rlzs'] = rcurves
+                        poes = cb.build_poes(N, [data], ses_ratio)
+                        rcurves[lt][:, r, 0] = poes
+                        saved['rcurves-rlzs'] += poes.nbytes
+                for (l, r), data in numpy.ndenumerate(result['IC']):
+                    cb = self.riskmodel.curve_builders[l]
+                    if data and cb.user_provided and insured_losses:
+                        # data is a dict asset idx -> counts
+                        lt = self.riskmodel.loss_types[l]
+                        poes = cb.build_poes(N, [data], ses_ratio)
+                        rcurves[lt][:, r, 1] = poes
+                        saved['rcurves-rlzs'] += poes.nbytes
+                self.datastore['rcurves-rlzs'] = rcurves
 
             # build an aggregate loss curve per realization
-            with mon('building agg_curve-rlzs'):
+            with self.monitor('building agg_curve-rlzs'):
                 self.build_agg_curve(saved)
 
             self.datastore.hdf5.flush()
@@ -402,14 +401,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if self.oqparam.asset_loss_table:
             pass  # TODO: build specific loss curves
 
-        with mon('building loss_maps-rlzs'):
+        with self.monitor('building loss_maps-rlzs'):
             if (self.oqparam.conditional_loss_poes and
                     'rcurves-rlzs' in self.datastore):
                 self.build_loss_maps('rcurves-rlzs', 'loss_maps-rlzs')
 
         rlzs = self.rlzs_assoc.realizations
         if len(rlzs) > 1:
-            with mon('computing stats'):
+            with self.monitor('computing stats'):
                 self.compute_store_stats(rlzs)
 
     def build_loss_maps(self, curves_key, maps_key):
