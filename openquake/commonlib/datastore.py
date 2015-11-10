@@ -112,8 +112,9 @@ class Hdf5Dataset(object):
     :param key: an hdf5 key string
     :param dtype: dtype of the dataset (usually composite)
     :param shape: shape of the dataset (if None, the dataset is extendable)
+    :param compression: None or 'gzip' are recommended
     """
-    def __init__(self, hdf5, key, dtype, shape):
+    def __init__(self, hdf5, key, dtype, shape, compression=None):
         self.hdf5 = hdf5
         self.key = key
         self.dtype = dtype
@@ -203,7 +204,7 @@ class DataStore(collections.MutableMapping):
             if name not in self.attrs:  # add missing parameter
                 self.attrs[name] = value
 
-    def create_dset(self, key, dtype, size=None):
+    def create_dset(self, key, dtype, size=None, compression=None):
         """
         Create a one-dimensional HDF5 dataset.
 
@@ -211,7 +212,7 @@ class DataStore(collections.MutableMapping):
         :param dtype: dtype of the dataset (usually composite)
         :param size: size of the dataset (if None, the dataset is extendable)
         """
-        return Hdf5Dataset(self.hdf5, key, dtype, size)
+        return Hdf5Dataset(self.hdf5, key, dtype, size, compression)
 
     def export_path(self, relname, export_dir=None):
         """

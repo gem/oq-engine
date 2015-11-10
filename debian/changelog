@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Added flags `asset_loss_table` (default False) and `avg_losses`
+    (default True) to build the event loss table and the average losses
+    per asset respectively
   * Added a check on the cost types read from the exposure
 
   [Matteo Nastasi]
