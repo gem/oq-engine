@@ -119,7 +119,7 @@ def oqtask(task_func):
             # run the task
             try:
                 total = 'total ' + task_func.__name__
-                with monitor(total, task=tsk, autoflush=True):
+                with monitor(total, task=tsk):
                     with GroundShakingIntensityModel.forbid_instantiation():
                         return task_func(*args)
             finally:
