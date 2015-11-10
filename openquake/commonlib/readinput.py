@@ -34,7 +34,7 @@ from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.oqvalidation import OqParam, rmdict
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
-from openquake.commonlib.riskmodels import get_risk_files, get_risk_models
+from openquake.commonlib.riskmodels import get_risk_models
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.performance import DummyMonitor
 from openquake.baselib.python3compat import configparser
@@ -632,14 +632,16 @@ def get_risk_model(oqparam):
 
 # ########################### exposure ############################ #
 
+COST_TYPE_SIZE = 21  # using 21 chars since business_interruption has 21 chars
+cost_type_dt = numpy.dtype([('name', (bytes, COST_TYPE_SIZE)),
+                            ('type', (bytes, COST_TYPE_SIZE)),
+                            ('unit', (bytes, COST_TYPE_SIZE))])
+
 
 class DuplicatedID(Exception):
     """
     Raised when two assets with the same ID are found in an exposure model
     """
-
-cost_type_dt = numpy.dtype([('name', '|S20'), ('type', '|S20'),
-                            ('unit', '|S20')])
 
 
 def get_exposure_lazy(fname, ok_cost_types):
@@ -670,6 +672,8 @@ def get_exposure_lazy(fname, ok_cost_types):
         area = conversions.area
     except NameError:
         area = LiteralNode('area', dict(type=''))
+
+    # read the cost types and make some check
     cost_types = [(ct['name'], ct['type'], ct['unit'])
                   for ct in conversions.costTypes
                   if ct['name'] in ok_cost_types]

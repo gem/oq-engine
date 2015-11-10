@@ -200,7 +200,7 @@ class ExposureDataNode(LiteralNode):
     validators = dict(
         id=valid.simple_id,
         description=valid.utf8,
-        name=valid.name,
+        name=valid.cost_type,
         type=valid.name,
         insuranceLimit=float_or_flag,
         deductible=float_or_flag,
