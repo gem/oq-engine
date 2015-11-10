@@ -292,8 +292,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Run the event_based_risk calculator and aggregate the results
         """
         self.saved = collections.Counter()  # nbytes per HDF5 key
-        self.agg_mon = self.monitor('building agg_losses')
-        self.alt_mon = self.monitor('building asset_loss_table')
         return apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc,
@@ -303,8 +301,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             key=operator.attrgetter('col_id'))
 
     def agg(self, acc, result):
+        Monitor = self.monitor.__class__
+
         # AGGLOSS
-        with self.agg_mon:
+        with Monitor('saving agg_losses', autoflush=True):
             agg_losses = self.agg_losses
             nbytes = 0
             for (l, r), data in numpy.ndenumerate(result['AGGLOSS']):
@@ -317,7 +317,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         # ASSLOSS
         if self.oqparam.asset_loss_table:
-            with self.alt_mon:
+            with Monitor('saving asset_loss_table', autoflush=True):
                 self.all_losses.extend(result.pop('ASSLOSS'))
                 self.datastore.hdf5.flush()
 
