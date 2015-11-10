@@ -2,6 +2,7 @@ import os
 import re
 from nose.plugins.attrib import attr
 
+from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a)
@@ -40,6 +41,17 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
         self.assert_stats_ok(case_2, individual_curves='true')
+        text = view('mean_avg_losses', self.calc.datastore)
+        self.assertEqual(text, '''\
+========= =========================
+asset_ref structural               
+========= =========================
+a0        2.546726E+02 9.594796E+01
+a1        2.471865E+02 6.348668E+01
+a2        9.838715E+01 6.268233E+01
+a3        9.505429E+01 0.000000E+00
+total     6.953005E+02 2.221170E+02
+========= =========================''')
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2bis(self):

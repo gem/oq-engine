@@ -440,7 +440,7 @@ _pkgtest_innervm_run () {
 
         echo 'running EventBasedRisk...'
         oq-lite run EventBasedRisk/job.ini
-        oq-lite show -1 mean_avg_losses
+
         echo 'Show all the oq-lite calculations'
         oq-lite show 0
         "

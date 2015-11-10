@@ -309,7 +309,7 @@ def sum_table(records):
     result = [None] * size
     firstrec = records[0]
     for i in range(size):
-        if isinstance(firstrec[i], numbers.Number):
+        if isinstance(firstrec[i], (numbers.Number, numpy.ndarray)):
             result[i] = sum(rec[i] for rec in records)
         else:
             result[i] = 'total'
