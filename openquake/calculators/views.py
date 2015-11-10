@@ -321,14 +321,14 @@ def sum_table(records):
 def view_mean_avg_losses(token, dstore):
     assets = dstore['assetcol'].value['asset_ref']
     try:
-        group = dstore['avg_losses-stats']
-        data = group[0, :, :]  # shape (S, N, 2)
+        array = dstore['avg_losses-stats']  # shape (S, N, 2)
+        data = array[0, :, :]  # shape (N, 2)
     except KeyError:
-        group = dstore['avg_losses-rlzs']
-        data = group[:, 0, :]  # shape (N, R, 2)
+        array = dstore['avg_losses-rlzs']  # shape (N, R, 2)
+        data = array[:, 0, :]  # shape (N, 2)
     loss_types = dstore['riskmodel'].loss_types
     header = ['asset_ref'] + loss_types
-    losses = [[a] + [None] * len(loss_types) for a in assets]
+    losses = [[a] + [numpy.zeros(2)] * len(loss_types) for a in assets]
     for lti, lt in enumerate(loss_types):
         for aid, pair in enumerate(data[lt]):
             losses[aid][lti + 1] = pair  # loss, ins_loss
