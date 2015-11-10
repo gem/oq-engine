@@ -203,7 +203,7 @@ def export_avg_losses_stats(ekey, dstore):
     return fnames
 
 
-# this is used by classical_risk and event based_risk
+# this is used by classical_risk and event_based_risk
 @export.add(('agg_losses-rlzs', 'csv'))
 def export_agg_losses(ekey, dstore):
     """
@@ -223,7 +223,7 @@ def export_agg_losses(ekey, dstore):
     return fnames
 
 
-# this is used by event based_risk
+# this is used by event_based_risk
 @export.add(('agg_losses', 'csv'))
 def export_agg_losses_ebr(ekey, dstore):
     """
