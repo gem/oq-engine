@@ -35,7 +35,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         newmeth.__name__ = method.__name__
         return newmeth
 
-    def __init__(self, operation, job_id, task=None, tracing=False,
+    def __init__(self, operation, job_id=None, task=None, tracing=False,
                  measuremem=True, autoflush=False):
         super(EnginePerformanceMonitor, self).__init__(
             operation, autoflush=autoflush, measuremem=measuremem)
@@ -52,16 +52,6 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     def task_id(self):
         """Return the celery task ID or None"""
         return None if self.task is None else self.task.request.id
-
-    def __call__(self, operation, task=None, **kw):
-        """
-        Return a copy of the monitor usable for a different operation
-        in the same task.
-        """
-        new = self.__class__(operation, self.job_id, task or self.task,
-                             self.tracing, self.measuremem, self.autoflush)
-        vars(new).update(kw)
-        return new
 
     def __enter__(self):
         # start measuring time and memory
@@ -87,15 +77,16 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         """Save a row in the performance table for each child"""
         monitors = [self] + self.children
         for mon in monitors:
-            models.Performance.objects.create(
-                oq_job_id=mon.job_id,
-                task_id=mon.task_id,
-                task=getattr(mon.task, '__name__', None),
-                operation=mon.operation,
-                start_time=mon.start_time,
-                duration=mon.duration,
-                pymemory=mon.mem if mon.measuremem else None,
-                pgmemory=None)
+            if mon.duration:  # the monitor has been used
+                models.Performance.objects.create(
+                    oq_job_id=mon.job_id,
+                    task_id=mon.task_id,
+                    task=getattr(mon.task, '__name__', None),
+                    operation=mon.operation,
+                    start_time=mon.start_time,
+                    duration=mon.duration,
+                    pymemory=mon.mem if mon.measuremem else None,
+                    pgmemory=None)
             mon.mem = 0
             mon.duration = 0
 
