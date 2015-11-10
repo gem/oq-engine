@@ -301,10 +301,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             key=operator.attrgetter('col_id'))
 
     def agg(self, acc, result):
-        Monitor = self.monitor.__class__
-
         # AGGLOSS
-        with Monitor('saving agg_losses', autoflush=True):
+        with self.monitor('saving agg_losses', autoflush=True):
             agg_losses = self.agg_losses
             nbytes = 0
             for (l, r), data in numpy.ndenumerate(result['AGGLOSS']):
@@ -317,7 +315,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         # ASSLOSS
         if self.oqparam.asset_loss_table:
-            with Monitor('saving asset_loss_table', autoflush=True):
+            with self.monitor('saving asset_loss_table', autoflush=True):
                 self.all_losses.extend(result.pop('ASSLOSS'))
                 self.datastore.hdf5.flush()
 
