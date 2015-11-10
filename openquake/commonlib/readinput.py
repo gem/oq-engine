@@ -632,16 +632,16 @@ def get_risk_model(oqparam):
 
 # ########################### exposure ############################ #
 
+COST_TYPE_SIZE = 21  # using 21 chars since business_interruption has 21 chars
+cost_type_dt = numpy.dtype([('name', (bytes, COST_TYPE_SIZE)),
+                            ('type', (bytes, COST_TYPE_SIZE)),
+                            ('unit', (bytes, COST_TYPE_SIZE))])
+
 
 class DuplicatedID(Exception):
     """
     Raised when two assets with the same ID are found in an exposure model
     """
-
-COST_TYPE_SIZE = 21  # using 21 chars since business_interruption has 21 chars
-cost_type_dt = numpy.dtype([('name', (bytes, COST_TYPE_SIZE)),
-                            ('type', (bytes, COST_TYPE_SIZE)),
-                            ('unit', (bytes, COST_TYPE_SIZE))])
 
 
 def get_exposure_lazy(fname, ok_cost_types):
@@ -680,12 +680,6 @@ def get_exposure_lazy(fname, ok_cost_types):
     if 'occupants' in ok_cost_types:
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
-    for row in cost_types:
-        valid.simple_id(row[0])  # the name
-        for col in row:
-            if len(col) > COST_TYPE_SIZE:
-                raise ValueError('The cost_type %s has a field too long, more '
-                                 'than %d chars' % (row, COST_TYPE_SIZE))
     return Exposure(
         exposure['id'], exposure['category'],
         ~description, numpy.array(cost_types, cost_type_dt),
