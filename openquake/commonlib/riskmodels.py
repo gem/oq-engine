@@ -33,9 +33,10 @@ from openquake.commonlib.sourcewriter import obj_to_node
 
 F64 = numpy.float64
 
+COST_TYPE_REGEX = '|'.join(valid.cost_type.choices)
+
 LOSS_TYPE_KEY = re.compile(
-    '(structural|nonstructural|contents|business_interruption|'
-    'occupants|fragility)_([\w_]+)')
+    '(%s|occupants|fragility)_([\w_]+)' % COST_TYPE_REGEX)
 
 
 def get_risk_files(inputs):
@@ -117,9 +118,7 @@ def get_risk_models(oqparam, kind):
     """
     rmodels = {}
     for key in oqparam.inputs:
-        mo = re.match(
-            '(occupants|structural|nonstructural|contents|'
-            'business_interruption)_%s$' % kind, key)
+        mo = re.match('(occupants|%s)_%s$' % (COST_TYPE_REGEX, kind), key)
         if mo:
             key_type = mo.group(1)  # the cost_type in the key
             # can be occupants, structural, nonstructural, ...

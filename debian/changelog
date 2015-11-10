@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Added a check on the cost types read from the exposure
+
   [Matteo Nastasi]
   * demos moved to /usr/share/openquake/risklib
   
