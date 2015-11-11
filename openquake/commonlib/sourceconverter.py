@@ -36,7 +36,7 @@ MAGNITUDE_FOR_RUPTURE_SPLITTING = 6.5  # given by Marco Pagani
 # splitting: different sources => different seeds => different numbers
 
 
-def area_to_point_sources(area_src, area_src_disc):
+def area_to_point_sources(area_src):
     """
     Split an area source into a generator of point sources.
 
@@ -45,10 +45,8 @@ def area_to_point_sources(area_src, area_src_disc):
 
     :param area_src:
         :class:`openquake.hazardlib.source.AreaSource`
-    :param float area_src_disc:
-        Area source discretization step, in kilometers.
     """
-    mesh = area_src.polygon.discretize(area_src_disc)
+    mesh = area_src.polygon.discretize(area_src.area_discretization)
     num_points = len(mesh)
     area_mfd = area_src.mfd
 
@@ -172,18 +170,16 @@ class SingleRuptureSource(object):
         return sitecol
 
 
-def split_source(src, area_source_discretization):
+def split_source(src):
     """
     Split an area source into point sources and a fault sources into
     smaller fault sources.
 
     :param src:
         an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
-    :param float area_source_discretization:
-        area source discretization
     """
     if isinstance(src, source.AreaSource):
-        for s in area_to_point_sources(src, src.area_discretization):
+        for s in area_to_point_sources(src):
             yield s
     elif isinstance(
             src, (source.SimpleFaultSource, source.ComplexFaultSource)):
