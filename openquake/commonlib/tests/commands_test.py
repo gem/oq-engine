@@ -108,8 +108,17 @@ lon:float64:,lat:float64:
 
     def test_show_attrs(self):
         with Print.patch() as p:
+            show_attrs(self.datastore.calc_id, 'hcurve')
+        self.assertEqual("'hcurve' is not in %s" % self.datastore, str(p))
+
+        with Print.patch() as p:
             show_attrs(self.datastore.calc_id, 'hcurves')
         self.assertEqual('hcurves has no attributes', str(p))
+
+        self.datastore['hcurves'].attrs['some_attribute'] = True
+        with Print.patch() as p:
+            show_attrs(self.datastore.calc_id, 'hcurves')
+        self.assertEqual('some_attribute True', str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
