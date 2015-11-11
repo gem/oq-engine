@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an attribute `discretization` to `areaGeometry` nodes
   * Added a command oq-lite show_attrs to display the attributes of a HDF5
     dataset
   * Added flags `asset_loss_table` (default False) and `avg_losses`
