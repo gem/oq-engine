@@ -1589,16 +1589,21 @@ class SimpleStats(object):
 
 class StatsBuilder(object):
     """
-    A class to build risk statistics
+    A class to build risk statistics.
+
+    :param quantiles: list of quantile values
+    :param conditional_loss_poes: list of conditional loss poes
+    :param poes_disagg: list of poes_disagg
+    :param curve_resolution: only meaninful for the event based
     """
     def __init__(self, quantiles,
                  conditional_loss_poes, poes_disagg,
-                 curve_resolution, normalize_curves=normalize_curves):
+                 curve_resolution=0, _normalize_curves=normalize_curves):
         self.quantiles = quantiles
         self.conditional_loss_poes = conditional_loss_poes
         self.curve_resolution = C = curve_resolution
         self.poes_disagg = poes_disagg
-        self.normalize_curves = normalize_curves
+        self.normalize_curves = _normalize_curves
         self.mean_quantiles = ['mean']
         for q in quantiles:
             self.mean_quantiles.append('quantile-%s' % q)
