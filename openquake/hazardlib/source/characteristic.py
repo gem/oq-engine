@@ -58,6 +58,8 @@ class CharacteristicFaultSource(ParametricSeismicSource):
     __slots__ = ParametricSeismicSource.__slots__ + (
         'surface surface_node rake').split()
 
+    MODIFICATIONS = set(('set_geometry',))
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, temporal_occurrence_model, surface, rake,
                  surface_node=None):
@@ -119,3 +121,16 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
         return len(self.get_annual_occurrence_rates())
+
+    def modify_set_geometry(self, surface, surface_node=None):
+        """
+        Modifies the current fault geometry
+
+        :param surface:
+            Fault surface, see :mod:`openquake.hazardlib.geo.surface`.
+
+        :param surface_node:
+            If needed for export, provide the surface as a LiteralNode object
+        """
+        self.surface = surface
+        self.surface_node = surface_node

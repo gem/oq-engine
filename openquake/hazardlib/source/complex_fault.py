@@ -50,6 +50,8 @@ class ComplexFaultSource(ParametricSeismicSource):
 
     __slots__ = ParametricSeismicSource.__slots__ + '''edges rake'''.split()
 
+    MODIFICATIONS = set(('set_geometry',))
+
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
                  rupture_aspect_ratio, temporal_occurrence_model,
@@ -151,6 +153,14 @@ class ComplexFaultSource(ParametricSeismicSource):
                                              cell_area, cell_length)
             counts += len(rupture_slices)
         return counts
+
+    def modify_set_geometry(self, edges, spacing):
+        """
+        Modifies the complex fault geometry
+        """
+        ComplexFaultSurface.check_fault_data(edges, spacing)
+        self.edges = edges
+        self.rupture_mesh_spacing = spacing
 
 
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):

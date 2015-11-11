@@ -85,6 +85,10 @@ class SimpleFaultSource(ParametricSeismicSource):
     lower_seismogenic_depth fault_trace dip rake hypo_list
     slip_list'''.split()
 
+    MODIFICATIONS = set(('set_geometry',
+                         'adjust_dip',
+                         'set_dip'))
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,
@@ -277,3 +281,49 @@ class SimpleFaultSource(ParametricSeismicSource):
         rup_cols = int(round(rup_length / self.rupture_mesh_spacing) + 1)
         rup_rows = int(round(rup_width / self.rupture_mesh_spacing) + 1)
         return rup_cols, rup_rows
+
+    def modify_set_geometry(self, fault_trace, upper_seismogenic_depth,
+                            lower_seismogenic_depth, dip, spacing):
+        """
+        Modifies the current source geometry including trace, seismogenic
+        depths and dip
+        """
+        # Check the new geometries are valid
+        SimpleFaultSurface.check_fault_data(
+            fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
+            dip, spacing
+        )
+        self.fault_trace = fault_trace
+        self.upper_seismogenic_depth = upper_seismogenic_depth
+        self.lower_seismogenic_depth = lower_seismogenic_depth
+        self.dip = dip
+        self.rupture_mesh_spacing = spacing
+
+
+    def modify_adjust_dip(self, increment):
+        """
+        Modifies the dip by an incremental value
+
+        :param float increment:
+            Value by which to increase or decrease the dip (the resulting
+            dip must still be within 0.0 to 90.0 degrees)
+        """
+        SimpleFaultSurface.check_fault_data(
+            self.fault_trace, self.upper_seismogenic_depth,
+            self.lower_seismogenic_depth, self.dip + increment,
+            self.rupture_mesh_spacing
+        )
+        self.dip += increment
+
+    def modify_set_dip(self, dip):
+        """
+        Modifies the dip to the specified value
+
+        :param float dip:
+            New value of dip (must still be within 0.0 to 90.0 degrees)
+        """
+        SimpleFaultSurface.check_fault_data(
+            self.fault_trace, self.upper_seismogenic_depth,
+            self.lower_seismogenic_depth, dip, self.rupture_mesh_spacing
+        )
+        self.dip = dip
