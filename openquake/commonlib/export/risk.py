@@ -521,45 +521,47 @@ class Location(object):
         self.wkt = 'POINT(%s %s)' % tuple(xy)
 
 
-@export.add(('avglosses-rlzs', 'xml'), ('avglosses-rlzs', 'geojson'))
-def export_lossmaps_xml_geojson(ekey, dstore):
+@export.add(('loss_maps-rlzs', 'xml'), ('loss_maps-rlzs', 'geojson'))
+def export_loss_maps_xml_geojson(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
                   for ct in dstore['cost_types']}
     unit_by_lt['fatalities'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
-    avglosses = dstore[ekey[0]]
+    loss_maps = dstore[ekey[0]]
     riskmodel = dstore['riskmodel']
     assetcol = dstore['assetcol']
+    R = len(rlzs)
     sitemesh = dstore['sitemesh']
     L = len(riskmodel.loss_types)
-    N, R = avglosses.shape
     fnames = []
     export_type = ekey[1]
     writercls = (risk_writers.LossMapGeoJSONWriter
                  if export_type == 'geojson' else
                  risk_writers.LossMapXMLWriter)
-    for l, lt in enumerate(riskmodel.loss_types):
-        alosses = avglosses[lt]
-        for r in range(R):
-            rlz = rlzs[r]
-            unit = unit_by_lt[lt]
-            suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
-                rlz.uid, lt)
-            name = '%s%s.%s' % (ekey[0], suffix, ekey[1])
-            fname = dstore.export_path(name)
-            data = []
-            for ass, stat in zip(assetcol, alosses[:, r]):
-                loc = Location(sitemesh[ass['site_id']])
-                lm = LossMap(loc, ass['asset_ref'],
-                             stat['mean'], stat['stddev'])
-                data.append(lm)
-            writer = writercls(
-                fname, oq.investigation_time, poe=None, loss_type=lt,
-                gsim_tree_path=None, unit=unit, loss_category=None)
-            # TODO: replace the category with the exposure category
-            writer.serialize(data)
-            fnames.append(fname)
+    for lt in riskmodel.loss_types:
+        alosses = loss_maps[lt]
+        for r, lmaps in enumerate(alosses.values()):
+            for p, poe in enumerate(oq.conditional_loss_poes):
+                for ins in range(oq.insured_losses + 1):
+                    rlz = rlzs[r]
+                    unit = unit_by_lt[lt]
+                    suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
+                        rlz.uid, lt)
+                    name = '%s%s-poe-%s%s.%s' % (
+                        ekey[0], suffix, poe, '_ins' if ins else '', ekey[1])
+                    fname = dstore.export_path(name)
+                    data = []
+                    for ass, stat in zip(assetcol, lmaps[:, p]):
+                        loc = Location(sitemesh[ass['site_id']])
+                        lm = LossMap(loc, ass['asset_ref'], stat[ins], None)
+                        data.append(lm)
+                    writer = writercls(
+                        fname, oq.investigation_time, poe=poe, loss_type=lt,
+                        gsim_tree_path=rlz.gsim_rlz.uid, unit=unit,
+                        loss_category=lt)
+                    writer.serialize(data)
+                    fnames.append(fname)
     return sorted(fnames)
 
 
