@@ -495,6 +495,11 @@ class SourceConverter(RuptureConverter):
         msr = valid.SCALEREL[~node.magScaleRel]()
         area_discretization = geom.attrib.get(
             'discretization', self.area_source_discretization)
+        if area_discretization is None:
+            raise ValueError(
+                'The source %r has no `discretization` parameter and the job.'
+                'ini file has no `area_source_discretization` parameter either'
+                % node['id'])
         return source.AreaSource(
             source_id=node['id'],
             name=node['name'],
