@@ -184,9 +184,13 @@ def split_source(src, area_source_discretization):
     """
     if isinstance(src, source.AreaSource):
         # area_source_discretization cannot be None if there are area sources
-        assert area_source_discretization, (
-            "Please set area_source_discretization in the job.ini file")
-        for s in area_to_point_sources(src, area_source_discretization):
+        discretization = src.areaGeometry.attrib.get(
+            'discretization', area_source_discretization)
+        if not discretization:
+            raise ValueError(
+                "Please set area_source_discretization in the sources or in "
+                "the job.ini file")
+        for s in area_to_point_sources(src, discretization):
             yield s
     elif isinstance(
             src, (source.SimpleFaultSource, source.ComplexFaultSource)):
@@ -500,6 +504,8 @@ class SourceConverter(RuptureConverter):
         coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
         polygon = geo.Polygon([geo.Point(*xy) for xy in coords])
         msr = valid.SCALEREL[~node.magScaleRel]()
+        area_discretization = geom.attrib.get(
+            'discretization', self.area_source_discretization)
         return source.AreaSource(
             source_id=node['id'],
             name=node['name'],
@@ -513,7 +519,7 @@ class SourceConverter(RuptureConverter):
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hpdist(node),
             polygon=polygon,
-            area_discretization=self.area_source_discretization,
+            area_discretization=area_discretization,
             temporal_occurrence_model=self.tom)
 
     def convert_pointSource(self, node):
