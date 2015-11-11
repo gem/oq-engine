@@ -31,6 +31,7 @@ class SourceWriterTestCase(unittest.TestCase):
         fd, name = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'w'):
             write_source_model(name, sources, 'Test Source Model')
+        import pdb; pdb.set_trace()
         if open(name).read() != open(fname).read():
             raise Exception('Different files: %s %s' % (name, fname))
         os.remove(name)
