@@ -139,7 +139,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         """
         Apply a single modificaton to the source parameters
         Reflects the modification method and calls it passing ``parameters``
-        as keyword arguments. See also :attr:`MODIFICATIONS`.
+        as keyword arguments.
 
         Modifications can be applied one on top of another. The logic
         of stacking modifications is up to a specific source implementation.
@@ -149,9 +149,9 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         :param parameters:
             Dictionary of parameters needed for modification.
         :raises ValueError:
-            If ``modification`` is missing from :attr:`MODIFICATIONS`.
+            If ``modification`` is missing from the attribute `MODIFICATIONS`.
         """
-        if not modification in self.MODIFICATIONS:
+        if modification not in self.MODIFICATIONS:
             raise ValueError('Modification %s is not supported by %s' %
                              (modification, type(self).__name__))
         meth = getattr(self, 'modify_%s' % modification)
