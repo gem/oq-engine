@@ -20,7 +20,7 @@ Core functionality for the classical PSHA risk calculator.
 import itertools
 
 from openquake.engine.calculators.risk import (
-    base, hazard_getters, validation, writers)
+    base, hazard_getters, writers)
 from openquake.engine.calculators import calculators
 
 
@@ -118,59 +118,53 @@ def save_statistical_output(outputdict, stats, params):
         a :class:`openquake.engine.calculators.risk.base.CalcParams`
         holding the parameters for this calculation
     """
+    for ins in range(params.insured_losses + 1):
 
-    # mean curves, maps and fractions
-    outputdict.write(
-        stats.assets, (stats.mean_curves, stats.mean_average_losses),
-        output_type="loss_curve", statistics="mean")
-
-    outputdict.write_all("poe", params.conditional_loss_poes,
-                         stats.mean_maps, stats.assets,
-                         output_type="loss_map",
-                         statistics="mean")
-
-    outputdict.write_all("poe", params.poes_disagg,
-                         stats.mean_fractions,
-                         stats.assets,
-                         [a.taxonomy for a in stats.assets],
-                         output_type="loss_fraction", statistics="mean",
-                         variable="taxonomy")
-
-    # quantile curves, maps and fractions
-    outputdict.write_all(
-        "quantile", params.quantile_loss_curves,
-        [(c, a) for c, a in itertools.izip(
-            stats.quantile_curves, stats.quantile_average_losses)],
-        stats.assets, output_type="loss_curve", statistics="quantile")
-
-    for quantile, maps in zip(
-            params.quantile_loss_curves, stats.quantile_maps):
-        outputdict.write_all("poe", params.conditional_loss_poes, maps,
-                             stats.assets, output_type="loss_map",
-                             statistics="quantile", quantile=quantile)
-
-    for quantile, fractions in zip(
-            params.quantile_loss_curves, stats.quantile_fractions):
-        outputdict.write_all("poe", params.poes_disagg, fractions,
-                             stats.assets, [a.taxonomy for a in stats.assets],
-                             output_type="loss_fraction",
-                             statistics="quantile", quantile=quantile,
-                             variable="taxonomy")
-
-    # mean and quantile insured curves
-    if stats.mean_insured_curves is not None:
+        # mean curves, maps and fractions
         outputdict.write(
-            stats.assets, (stats.mean_insured_curves,
-                           stats.mean_average_insured_losses),
-            output_type="loss_curve", statistics="mean", insured=True)
+            stats.assets,
+            (stats.mean_curves[ins], stats.mean_average_losses[ins]),
+            output_type="loss_curve", insured=ins, statistics="mean")
 
+        outputdict.write_all("poe", params.conditional_loss_poes,
+                             stats.mean_maps[ins], stats.assets,
+                             output_type="loss_map",
+                             insured=ins, statistics="mean")
+
+        outputdict.write_all("poe", params.poes_disagg,
+                             stats.mean_fractions[ins],
+                             stats.assets,
+                             [a.taxonomy for a in stats.assets],
+                             output_type="loss_fraction", statistics="mean",
+                             insured=ins, variable="taxonomy")
+
+        # quantile curves, maps and fractions
         outputdict.write_all(
             "quantile", params.quantile_loss_curves,
             [(c, a) for c, a in itertools.izip(
-                stats.quantile_insured_curves,
-                stats.quantile_average_insured_losses)],
-            stats.assets,
-            output_type="loss_curve", statistics="quantile", insured=True)
+                stats.quantile_curves[ins],
+                stats.quantile_average_losses[ins])],
+            stats.assets, output_type="loss_curve",
+            insured=ins, statistics="quantile")
+
+        for quantile, maps in zip(
+                params.quantile_loss_curves, stats.quantile_maps[ins]):
+            outputdict.write_all("poe", params.conditional_loss_poes,
+                                 maps, stats.assets,
+                                 output_type="loss_map",
+                                 insured=ins,
+                                 statistics="quantile",
+                                 quantile=quantile)
+
+        for quantile, fractions in zip(
+                params.quantile_loss_curves, stats.quantile_fractions[ins]):
+            outputdict.write_all("poe", params.poes_disagg, fractions,
+                                 stats.assets,
+                                 [a.taxonomy for a in stats.assets],
+                                 output_type="loss_fraction",
+                                 insured=ins,
+                                 statistics="quantile", quantile=quantile,
+                                 variable="taxonomy")
 
 
 @calculators.add('classical_risk')
