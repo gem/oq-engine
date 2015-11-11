@@ -285,6 +285,9 @@ class BranchSet(object):
         complexFaultGeometryAbsolute
             Replaces the complex fault geometry edges of a given source with
             the values provided
+        characteristicFaultGeometryAbsolute
+            Replaces the complex fault geometry surface of a given source with
+            the values provided
 
     :param filters:
         Dictionary, a set of filters to specify which sources should
@@ -419,7 +422,8 @@ class BranchSet(object):
         elif self.uncertainty_type in GEOMETRY_UNCERTAINTY_TYPES:
             self._apply_uncertainty_to_geometry(source, value)
         else:
-            pass
+            raise AssertionError('unknown uncertainty type %r'
+                                 % self.uncertainty_type)
 
     def _apply_uncertainty_to_geometry(self, source, value):
         """
@@ -440,9 +444,6 @@ class BranchSet(object):
             source.modify('set_geometry', dict(edges=edges, spacing=spacing))
         elif self.uncertainty_type == 'characteristicFaultGeometryAbsolute':
             source.modify('set_geometry', dict(surface=value))
-        else:
-            raise AssertionError('unknown uncertainty type %r'
-                                 % self.uncertainty_type)
 
     def _apply_uncertainty_to_mfd(self, mfd, value):
         """
@@ -465,9 +466,6 @@ class BranchSet(object):
             min_mag, bin_width, occur_rates = value
             mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
                                        occurrence_rates=occur_rates))
-        else:
-            raise AssertionError('unknown uncertainty type %r'
-                                 % self.uncertainty_type)
 
 
 class BaseLogicTree(with_metaclass(abc.ABCMeta)):
@@ -823,9 +821,9 @@ class SourceModelLogicTree(BaseLogicTree):
             [a, b] = node.text.strip().split()
             return float(a), float(b)
         elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
-            min_mag, bin_width = (float(incrementalMFD["minMag"]),
-                                  float(incrementalMFD["binWidth"]))
-            rates = (incrementalMFD.occurRates.text.strip()).split()
+            min_mag, bin_width = (float(node.incrementalMFD["minMag"]),
+                                  float(node.incrementalMFD["binWidth"]))
+            rates = node.incrementalMFD.occurRates.text
             return float(min_mag), float(bin_width),\
                 valid.positivefloats(rates)
         elif branchset.uncertainty_type == 'simpleFaultGeometryAbsolute':
@@ -841,15 +839,15 @@ class SourceModelLogicTree(BaseLogicTree):
                 if "simpleFaultGeometry" in geom_node.tag:
                     trace, usd, lsd, dip, spacing =\
                         self._parse_simple_fault_geometry_surface(geom_node)
-                    surface.append(geo.SimpleFaultSurface.from_fault_data(
+                    surfaces.append(geo.SimpleFaultSurface.from_fault_data(
                         trace, usd, lsd, dip, spacing))
                 elif "complexFaultGeometry" in geom_node.tag:
                     edges, spacing =\
                         self._parse_complex_fault_geometry_surface(geom_node)
-                    surface.append(geo.ComplexFaultSurface.from_fault_data(
+                    surfaces.append(geo.ComplexFaultSurface.from_fault_data(
                         edges, spacing))
                 elif "planarSurface" in geom_node.tag:
-                    surface.append(
+                    surfaces.append(
                         self._parse_planar_geometry_surface(geom_node)
                         )
                 else:
@@ -895,10 +893,10 @@ class SourceModelLogicTree(BaseLogicTree):
         spacing = float(node["spacing"].strip())
         nodes = []
         for key in ["topLeft", "topRight", "bottomRight", "bottomLeft"]:
-            nodes.append(Point(float(getattr(node, key)["lon"].strip()),
-                               float(getattr(node, key)["lat"].strip()),
-                               float(getattr(node, key)["depth"].strip())))
-        top_left, top_right, bottom_left, bottom_right = tuple(nodes)
+            nodes.append(geo.Point(float(getattr(node, key)["lon"].strip()),
+                                   float(getattr(node, key)["lat"].strip()),
+                                   float(getattr(node, key)["depth"].strip())))
+        top_left, top_right, bottom_right, bottom_left = tuple(nodes)
         return geo.PlanarSurface.from_corner_points(spacing,
                                                     top_left,
                                                     top_right,

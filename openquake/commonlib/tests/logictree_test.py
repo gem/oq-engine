@@ -1562,7 +1562,7 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
     def test_apply_uncertainty_unknown_uncertainty_type(self):
         bs = logictree.BranchSet('makeMeFeelGood', {})
         self.assertRaises(AssertionError,
-                          bs._apply_uncertainty_to_mfd, None, None)
+                          bs.apply_uncertainty, None, None)
 
 
 class BranchSetApplyUncertaintyTestCase(unittest.TestCase):

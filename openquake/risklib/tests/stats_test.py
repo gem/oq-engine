@@ -209,14 +209,17 @@ class StatsTestCase(unittest.TestCase):
                 loss_curves=lc, insured_curves=None,
                 average_losses=[.1, .12], average_insured_losses=None)
             outputs.append(out)
-        cls.stats = scientific.StatsBuilder(
+        cls.builder = scientific.StatsBuilder(
             quantiles=[0.1, 0.9],
             conditional_loss_poes=[0.35, 0.24, 0.13],
-            poes_disagg=[]).build(outputs)
+            poes_disagg=[], curve_resolution=len(baselosses))
+        cls.stats = cls.builder.build(outputs)
 
-    def test_get_stat_curves(self):
+    # TODO: add a test for insured curves and maps
+    def test_get_stat_curves_maps(self):
         tempdir = tempfile.mkdtemp()
-        curves, ins_curves, maps = scientific.get_stat_curves(self.stats)
+        [curves, _curves], [maps, _maps] = self.builder.get_curves_maps(
+            self.stats)
 
         actual = os.path.join(tempdir, 'expected_loss_curves.csv')
         writers.write_csv(actual, curves, fmt='%05.2f')
