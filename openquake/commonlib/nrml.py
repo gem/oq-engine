@@ -150,9 +150,9 @@ class ValidNode(LiteralNode):
     and ruptures from NRML files.
     """
     validators = dict(
-        strike=valid.strike_range,  # needed for the moment
-        dip=valid.dip_range,  # needed for the moment
-        rake=valid.rake_range,  # needed for the moment
+        strike=valid.strike_range,
+        dip=valid.dip_range,
+        rake=valid.rake_range,
         magnitude=valid.positivefloat,
         lon=valid.longitude,
         lat=valid.latitude,
@@ -171,7 +171,6 @@ class ValidNode(LiteralNode):
         binWidth=valid.positivefloat,
         probability=valid.probability,
         hypoDepth=valid.probability_depth,
-        nodalPlane=valid.nodal_plane,
         occurRates=valid.positivefloats,
         probs_occur=valid.pmf,
         weight=valid.probability,
