@@ -8,6 +8,7 @@ help() {
     cat <<HSD
 The command line arguments are as follows:
 
+    -v, --verbose        Be more verbose
     -s, --skip-new       The new database will not be created
     -y, --yes            Don't pause for user input, assume yes on all questions
     -h, --help           This help
