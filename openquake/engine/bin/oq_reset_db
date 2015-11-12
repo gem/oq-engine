@@ -23,6 +23,7 @@ bold=`tput bold`
 normal=`tput sgr0`
 oq_create_db='oq_create_db'
 oq_engine='oq-engine'
+database='openquake2'
 
 sudo -u postgres command -v oq_create_db &> /dev/null || {
     if [ -x "./${oq_create_db}" ]; then
@@ -86,8 +87,10 @@ echo ''
 echo ''
 
 if [[ "$answer" == "y" ]]; then
-    sudo -u postgres dropdb openquake2 || true
-    echo " * Database dropped"
+    if sudo -u postgres psql $database -c '' &> /dev/null; then
+        sudo -u postgres dropdb $database
+        echo " * Database dropped"
+    fi
     sudo find /home -maxdepth 2 -type d -name "oqdata" -exec rm -Rf '{}' \;
     echo " * Datastores cleaned"
     if [ -z $skipnew ]; then
