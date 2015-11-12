@@ -4,28 +4,43 @@
 
 set -e
 
+help() {
+    cat <<HSD
+The command line arguments are as follows:
+
+    --skip-new             The new database will not be created
+    --yes                  Don't pause for user input, assume yes on all questions
+    --help                 This help
+HSD
+    exit 0
+}
+
 if [ $(id -u) -gt 0 ]; then
     echo -e "This script requires sudo.\nPlease run 'sudo $0'." >&2
     exit 1
 fi
 
-case $1 in
-    '--yes')
-        force=y
-        shift ;;
-    '--skip-db')
-        skipdb=y
-        shift ;;
-esac
-
-bold=`tput bold`
-normal=`tput sgr0`
-force=$1
-
 command -v oq_create_db &> /dev/null || {
     echo -e "!! Can't find oq_create_db in your path. Aborting." >&2
     exit 1
 }
+
+while (( "$#" )); do
+    case "$1" in
+        '--yes')
+            force=y
+            shift ;;
+        '--skip-new')
+            skipnew=y
+            shift ;;
+        '--help')
+            help
+            shift ;;
+    esac
+done
+
+bold=`tput bold`
+normal=`tput sgr0`
 
 echo ''
 echo "!! ${bold}This script is going to remove the OpenQuake Engine data${normal}"
@@ -51,7 +66,7 @@ echo ''
 if [[ "$answer" == "y" ]]; then
     sudo -u postgres dropdb openquake2 || true
     find /home -maxdepth 2 -type d -name "oqdata" -exec rm -Rf '{}' \;
-    if [[ "$skipdb" == "y" ]]; then
+    if [[ "$skipnew" == "y" ]]; then
         sudo -u postgres oq_create_db
         oq-engine --upgrade-db --yes
     fi
