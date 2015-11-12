@@ -701,9 +701,11 @@ def _gen_writers(dstore, writercls, root):
 @export.add(('agg_curve-rlzs', 'xml'))
 def export_agg_curve(ekey, dstore):
     agg_curve = dstore[ekey[0]]
+    loss_types = dstore['riskmodel'].loss_types
     fnames = []
-    for writer, (l, r, ins) in _gen_writers(
+    for writer, (loss_type, r, ins) in _gen_writers(
             dstore, risk_writers.AggregateLossCurveXMLWriter, ekey[0]):
+        l = loss_types.index(loss_type)
         rec = agg_curve[l, r, ins]
         curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
         writer.serialize(curve)
