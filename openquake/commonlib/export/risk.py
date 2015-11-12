@@ -24,6 +24,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import AccumDict
+from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers, riskmodels
 from openquake.commonlib.writers import scientificformat
@@ -557,9 +558,10 @@ def export_loss_maps_xml_geojson(ekey, dstore):
                         ekey[0], suffix, poe, '_ins' if ins else '', ekey[1])
                     fname = dstore.export_path(name)
                     data = []
-                    for ass, stat in zip(assetcol, lmaps[:, p]):
+                    poe_str = 'poe~%s' % poe
+                    for ass, stat in zip(assetcol, lmaps[poe_str][:, ins]):
                         loc = Location(sitemesh[ass['site_id']])
-                        lm = LossMap(loc, ass['asset_ref'], stat[ins], None)
+                        lm = LossMap(loc, ass['asset_ref'], stat, None)
                         data.append(lm)
                     writer = writercls(
                         fname, oq.investigation_time, poe=poe, loss_type=lt,
@@ -681,7 +683,7 @@ def _gen_writers(dstore, writercls, root):
                         dest, oq.investigation_time, loss_type,
                         source_model_tree_path='_'.join(rlz.sm_lt_path),
                         gsim_tree_path='_'.join(rlz.gsim_lt_path),
-                        unit=ct['unit']), (l, rlz.ordinal, ins)
+                        unit=ct['unit']), (loss_type, rlz.ordinal, ins)
             elif root.endswith('-stats'):
                 pairs = [('mean', None)] + [
                     ('quantile-%s' % q, q) for q in oq.quantile_loss_curves]
@@ -749,6 +751,39 @@ def export_loss_curves_stats(ekey, dstore):
             loc = Location(sitemesh[ass['site_id']])
             curve = LossCurve(loc, ass['asset_ref'], rec['poes'],
                               rec['losses'], loss_ratios, rec['avg'], None)
+            curves.append(curve)
+        writer.serialize(curves)
+        fnames.append(writer._dest)
+    return sorted(fnames)
+
+
+# this is used by event_based_risk
+@export.add(('loss_curves-rlzs', 'xml'),
+            ('loss_curves-rlzs', 'geojson'))
+def export_loss_curves_rlzs(ekey, dstore):
+    assetcol = dstore['assetcol']
+    sitemesh = dstore['sitemesh']
+    rcurves = dstore['rcurves-rlzs']
+    cbuilders = dstore['riskmodel'].curve_builders
+    fnames = []
+    writercls = (risk_writers.LossCurveGeoJSONWriter
+                 if ekey[0] == 'geojson' else
+                 risk_writers.LossCurveXMLWriter)
+    for writer, (ltype, r, ins) in _gen_writers(dstore, writercls, ekey[0]):
+        for cb in cbuilders:
+            if cb.user_provided and cb.loss_type == ltype:
+                loss_ratios = cb.ratios
+                break
+        else:  # no break, ignore loss type
+            continue
+        array = rcurves[ltype][:, r, ins]
+        curves = []
+        for ass, poes in zip(assetcol, array):
+            loc = Location(sitemesh[ass['site_id']])
+            losses = cb.ratios * ass[cb.loss_type]
+            avg = scientific.average_loss((losses, poes))
+            curve = LossCurve(loc, ass['asset_ref'], poes,
+                              losses, loss_ratios, avg, None)
             curves.append(curve)
         writer.serialize(curves)
         fnames.append(writer._dest)
