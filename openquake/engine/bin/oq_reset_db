@@ -8,39 +8,53 @@ help() {
     cat <<HSD
 The command line arguments are as follows:
 
-    --skip-new             The new database will not be created
-    --yes                  Don't pause for user input, assume yes on all questions
-    --help                 This help
+    -s, --skip-new       The new database will not be created
+    -y, --yes            Don't pause for user input, assume yes on all questions
+    -h, --help           This help
 HSD
     exit 0
 }
 
-if [ $(id -u) -gt 0 ]; then
-    echo -e "This script requires sudo.\nPlease run 'sudo $0'." >&2
-    exit 1
-fi
+bold=`tput bold`
+normal=`tput sgr0`
+oq_create_db='oq_create_db'
+oq_engine='oq-engine'
 
-command -v oq_create_db &> /dev/null || {
-    echo -e "!! Can't find oq_create_db in your path. Aborting." >&2
-    exit 1
+sudo -u postgres command -v oq_create_db &> /dev/null || {
+    if [ -x "./${oq_create_db}" ]; then
+        oq_create_db="./${oq_create_db}"
+    else
+        echo -e "!! Can't find oq_create_db. Aborting." >&2
+        exit 1
+    fi
 }
+
+command -v oq-engine &> /dev/null || {
+    if [ -x "./${oq_engine}" ]; then
+        oq_engine="./${oq_engine}"
+    else
+        echo -e "!! Can't find oq-engine. Aborting." >&2
+        exit 1
+    fi
+}
+
 
 while (( "$#" )); do
     case "$1" in
-        '--yes')
+        '--verbose' | '-v')
+            verbose=y
+            shift ;;
+        '--yes' | '-y')
             force=y
             shift ;;
-        '--skip-new')
+        '--skip-new' | '-s')
             skipnew=y
             shift ;;
-        '--help')
+        '--help' | '-h' )
             help
             shift ;;
     esac
 done
-
-bold=`tput bold`
-normal=`tput sgr0`
 
 echo ''
 echo "!! ${bold}This script is going to remove the OpenQuake Engine data${normal}"
@@ -48,10 +62,13 @@ echo '!!'
 echo -e "!! \t*  Make sure no calculations are running"
 echo -e "!! \t*  Make sure Celery is stopped"
 echo -e "!! \t*  The OpenQuake Engine datastores located in /home/[user]/oqdata will be removed"
-echo -e "!! \t*  The OpenQuake Engine database will be drop and recreated"
+echo -e "!! \t*  The OpenQuake Engine database will be dropped"
 echo -e "!! \t   All the old data contained will be lost"
+if [ -z $skipnew ]; then
+    echo -e "!! \t*  A new OpenQuake Engine database will be created"
+fi
 echo '!!'
-if [[ "$force" == "y" ]]; then
+if [ $force ]; then
     for i in {5..1}; do
         echo -ne "\r!! Press CTRL-C to cancel the operation within ${i} seconds"
         sleep 1
@@ -62,13 +79,20 @@ else
     read -n 1 -s answer
 fi
 echo ''
+echo ''
 
 if [[ "$answer" == "y" ]]; then
     sudo -u postgres dropdb openquake2 || true
-    find /home -maxdepth 2 -type d -name "oqdata" -exec rm -Rf '{}' \;
-    if [[ "$skipnew" == "y" ]]; then
-        sudo -u postgres oq_create_db
-        oq-engine --upgrade-db --yes
+    echo " * Database dropped"
+    sudo find /home -maxdepth 2 -type d -name "oqdata" -exec rm -Rf '{}' \;
+    echo " * Datastores cleaned"
+    if [ -z $skipnew ]; then
+        out=$(sudo -u postgres $oq_create_db)
+        echo " * New database created"
+        if [ $verbose ]; then >&2 echo "$out"; fi
+        out=$(${oq_engine} --upgrade-db --yes 2>&1)
+        echo " * New database initializated"
+        if [ $verbose ]; then >&2 echo "$out"; fi
     fi
     echo ''
     echo "!!"
