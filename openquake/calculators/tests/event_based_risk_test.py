@@ -4,6 +4,7 @@ from nose.plugins.attrib import attr
 
 from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
+from openquake.commonlib.export import export
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a)
 
@@ -37,6 +38,16 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
         self.assert_stats_ok(case_1)
+
+        # make sure the XML and JSON exporters run
+        ekeys = [
+            ('loss_curves-stats', 'xml'),
+            ('loss_curves-stats', 'geojson'),
+            ('loss_maps-stats', 'xml'),
+            ('loss_maps-stats', 'geojson'),
+        ]
+        for ekey in ekeys:
+            export(ekey, self.calc.datastore)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):

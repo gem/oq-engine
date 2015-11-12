@@ -542,7 +542,9 @@ def export_loss_maps_xml_geojson(ekey, dstore):
     writercls = (risk_writers.LossMapGeoJSONWriter
                  if export_type == 'geojson' else
                  risk_writers.LossMapXMLWriter)
-    for lt in riskmodel.loss_types:
+    loss_types = [cb.loss_type for cb in riskmodel.curve_builders
+                  if cb.user_provided]
+    for lt in loss_types:
         alosses = loss_maps[lt]
         for r, lmaps in enumerate(alosses.values()):
             for p, poe in enumerate(oq.conditional_loss_poes):
@@ -585,7 +587,9 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
     writercls = (risk_writers.LossMapGeoJSONWriter
                  if export_type == 'geojson' else
                  risk_writers.LossMapXMLWriter)
-    for lt in riskmodel.loss_types:
+    loss_types = [cb.loss_type for cb in riskmodel.curve_builders
+                  if cb.user_provided]
+    for lt in loss_types:
         alosses = loss_maps[lt]
         for r, lmaps in enumerate(alosses.values()):
             for p, poe in enumerate(oq.conditional_loss_poes):
@@ -719,15 +723,19 @@ def export_agg_curve_stats(ekey, dstore):
 
 
 # this is used by event_based_risk
-@export.add(('loss_curves-stats', 'xml'))
+@export.add(('loss_curves-stats', 'xml'),
+            ('loss_curves-stats', 'geojson'))
 def export_loss_curves_stats(ekey, dstore):
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
     loss_curves = dstore[ekey[0]]
     builders = dstore['riskmodel'].curve_builders
     fnames = []
+    writercls = (risk_writers.LossCurveGeoJSONWriter
+                 if ekey[0] == 'geojson' else
+                 risk_writers.LossCurveXMLWriter)
     for writer, (ltype, sname, ins) in _gen_writers(
-            dstore, risk_writers.LossCurveXMLWriter, ekey[0]):
+            dstore, writercls, ekey[0]):
         for builder in builders:
             if builder.user_provided and builder.loss_type == ltype:
                 loss_ratios = builder.ratios
