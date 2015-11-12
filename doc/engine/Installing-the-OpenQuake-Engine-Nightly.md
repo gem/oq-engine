@@ -136,12 +136,12 @@ Some outputs where not shown. You can see the full list with the command
 
 ## Run OQ Engine, with calculation parallelization
 From the directory `/usr/share/openquake/engine`, launch celery worker processes like so:
-##### Ubuntu 12.04
+##### Ubuntu 12.04 / Celery 2
 <pre>
 celeryd --purge &
 </pre>
 
-##### Ubuntu 14.04
+##### Ubuntu 14.04 / Celery 3
 <pre>
 celery worker --purge -Ofair &
 </pre>
@@ -153,6 +153,17 @@ oq-engine --run-hazard=/usr/share/openquake/risklib/demos/hazard/SimpleFaultSour
 
 ## More commands
 For a list of additional commands, type `oq-engine --help`.
+
+## Reset the database and drop the datastore
+You can reset the OpenQuake Engine to start from a fresh installation:
+
+```bash
+oq_reset_db
+```
+
+This script will remove the database and the users datastore, then it will create a fresh new setup.
+
+To run the script without interaction the flag `--yes` can be used. To just drop all the data without recreating the database the flag `--skip-new` can be used.
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
