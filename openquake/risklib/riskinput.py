@@ -133,11 +133,12 @@ class RiskModel(collections.Mapping):
         for i, loss_type in enumerate(self._get_loss_types()):
             if loss_type in oqparam.loss_ratios:
                 cb = scientific.CurveBuilder(
-                    loss_type, oqparam.loss_ratios[loss_type],
-                    user_provided=True)
+                    loss_type, oqparam.loss_ratios[loss_type], True,
+                    oqparam.conditional_loss_poes, oqparam.insured_losses)
             else:
                 cb = scientific.CurveBuilder(
-                    loss_type, default_loss_ratios, user_provided=False)
+                    loss_type, default_loss_ratios, False,
+                    oqparam.conditional_loss_poes, oqparam.insured_losses)
             self.curve_builders.append(cb)
             self.loss_types.append(loss_type)
             pairs.append((loss_type, numpy.float32))

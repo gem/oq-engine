@@ -924,13 +924,18 @@ class CurveBuilder(object):
       builder = CurveBuilder(loss_type, loss_ratios, user_provided=True)
       counts = builder.build_counts(loss_matrix)
     """
-    def __init__(self, loss_type, loss_ratios, user_provided):
+    def __init__(self, loss_type, loss_ratios, user_provided,
+                 conditional_loss_poes=(), insured_losses=False):
         self.loss_type = loss_type
         self.ratios = numpy.array(loss_ratios, F32)
         self.user_provided = user_provided
         self.curve_resolution = C = len(loss_ratios)
+        self.conditional_loss_poes = conditional_loss_poes
+        self.insured_losses = insured_losses
         self.loss_curve_dt = numpy.dtype([
             ('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)])
+        poes = ['poe~%s' % clp for clp in conditional_loss_poes]
+        self.loss_map_dt = numpy.dtype([(poe, float) for poe in poes])
 
     def get_counts(self, N, count_dicts):
         """
@@ -994,6 +999,30 @@ class CurveBuilder(object):
                     avg = average_loss((losses, poes))
                     lcs[aid, i] = (losses, poes, avg)
         return lcs
+
+    def build_loss_maps(self, assetcol, rcurves):
+        """
+        Build loss maps from the risk curves. Yield pairs
+        (rlz_ordinal, loss_maps array).
+
+        :param assetcol: asset collection
+        :param rcurves: array of risk curves of shape (N, R, 2)
+        """
+        N = len(assetcol)
+        I = self.insured_losses + 1
+        R = rcurves.shape[1]
+        if self.user_provided:  # loss_ratios provided
+            asset_values = assetcol[self.loss_type]
+            curves_lt = rcurves[self.loss_type]
+            for rlzi in range(R):
+                loss_maps = numpy.zeros((N, 2), self.loss_map_dt)
+                for ins in range(I):
+                    lm = calc_loss_maps(
+                        self.conditional_loss_poes, asset_values, self.ratios,
+                        curves_lt[:, rlzi, ins])
+                    for i, poes in enumerate(lm):
+                        loss_maps[i, ins] = tuple(poes)
+                yield rlzi, loss_maps
 
     def __repr__(self):
         return '<%s %s=%s user_provided=%s>' % (
@@ -1770,4 +1799,3 @@ def _combine_mq(mean, quantile):
     array[0] = mean
     array[1:] = quantile
     return array
-
