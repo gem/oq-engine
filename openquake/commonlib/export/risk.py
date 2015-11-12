@@ -558,8 +558,50 @@ def export_loss_maps_xml_geojson(ekey, dstore):
                         data.append(lm)
                     writer = writercls(
                         fname, oq.investigation_time, poe=poe, loss_type=lt,
-                        gsim_tree_path=rlz.gsim_rlz.uid, unit=unit,
-                        loss_category=lt)
+                        gsim_tree_path=rlz.gsim_rlz.uid, unit=unit)
+                    writer.serialize(data)
+                    fnames.append(fname)
+    return sorted(fnames)
+
+
+@export.add(('loss_maps-stats', 'xml'), ('loss_stats-rlzs', 'geojson'))
+def export_loss_maps_stats_xml_geojson(ekey, dstore):
+    oq = OqParam.from_(dstore.attrs)
+    unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
+                  for ct in dstore['cost_types']}
+    unit_by_lt['fatalities'] = 'people'
+    rlzs = dstore['rlzs_assoc'].realizations
+    loss_maps = dstore[ekey[0]]
+    riskmodel = dstore['riskmodel']
+    assetcol = dstore['assetcol']
+    R = len(rlzs)
+    sitemesh = dstore['sitemesh']
+    L = len(riskmodel.loss_types)
+    fnames = []
+    export_type = ekey[1]
+    writercls = (risk_writers.LossMapGeoJSONWriter
+                 if export_type == 'geojson' else
+                 risk_writers.LossMapXMLWriter)
+    for lt in riskmodel.loss_types:
+        alosses = loss_maps[lt]
+        for r, lmaps in enumerate(alosses.values()):
+            for p, poe in enumerate(oq.conditional_loss_poes):
+                for ins in range(oq.insured_losses + 1):
+                    rlz = rlzs[r]
+                    unit = unit_by_lt[lt]
+                    suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
+                        rlz.uid, lt)
+                    name = '%s%s-poe-%s%s.%s' % (
+                        ekey[0], suffix, poe, '_ins' if ins else '', ekey[1])
+                    fname = dstore.export_path(name)
+                    data = []
+                    for ass, stat in zip(assetcol, lmaps[:, p]):
+                        loc = Location(sitemesh[ass['site_id']])
+                        lm = LossMap(loc, ass['asset_ref'], stat[ins], None)
+                        data.append(lm)
+                    writer = writercls(
+                        fname, oq.investigation_time, poe=poe, loss_type=lt,
+                        gsim_tree_path=rlz.gsim_rlz.uid, unit=unit)
                     writer.serialize(data)
                     fnames.append(fname)
     return sorted(fnames)
@@ -612,59 +654,62 @@ AggCurve = collections.namedtuple(
     'AggCurve', ['losses', 'poes', 'average_loss', 'stddev_loss'])
 
 
+def _gen_writers(dstore, writercls, root):
+    # build XMLWriter instances
+    oq = OqParam.from_(dstore.attrs)
+    rlzs = dstore['rlzs_assoc'].realizations
+    cost_types = dstore['cost_types']
+    L, R = len(cost_types), len(rlzs)
+    for l, ct in enumerate(cost_types):
+        loss_type = riskmodels.cost_type_to_loss_type(ct['name'])
+        for ins in range(oq.insured_losses + 1):
+            if root.endswith('-rlzs'):
+                for rlz in rlzs:
+                    suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
+                        rlz.uid, loss_type)
+                    dest = dstore.export_path('%s%s%s.xml' % (
+                        root[:-5], suffix, '_ins' if ins else ''))
+                    yield writercls(
+                        dest, oq.investigation_time, loss_type,
+                        source_model_tree_path='_'.join(rlz.sm_lt_path),
+                        gsim_tree_path='_'.join(rlz.gsim_lt_path),
+                        unit=ct['unit']), (l, rlz.ordinal, ins)
+            elif root.endswith('-stats'):  # stats
+                pairs = [('mean', None)] + [
+                    ('quantile-%s' % q, q) for q in oq.quantile_loss_curves]
+                for ordinal, (statname, statvalue) in enumerate(pairs):
+                    dest = dstore.export_path('%s-%s-%s%s.xml' % (
+                        root[:-6], statname, loss_type, '_ins' if ins else ''))
+                    yield writercls(
+                        dest, oq.investigation_time, loss_type,
+                        statistics='mean' if ordinal == 0 else 'quantile',
+                        quantile_value=statvalue, unit=ct['unit']
+                    ), (loss_type, statname, ins)
+
+
 # this is used by event_based_risk
 @export.add(('agg_curve-rlzs', 'xml'))
 def export_agg_curve(ekey, dstore):
-    oq = OqParam.from_(dstore.attrs)
-    cost_types = dstore['cost_types']
-    rlzs = dstore['rlzs_assoc'].realizations
     agg_curve = dstore[ekey[0]]
     fnames = []
-    L, R = len(cost_types), len(rlzs)
-    for l, ct in enumerate(cost_types):
-        loss_type = ct['name']  # TODO: missing conversion cost_type->loss_type
-        for ins in range(oq.insured_losses + 1):
-            for rlz in rlzs:
-                suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
-                    rlz.uid, loss_type)
-                dest = dstore.export_path('agg_curve%s%s.%s' % (
-                    suffix, '_ins' if ins else '', ekey[1]))
-                rec = agg_curve[l, rlz.ordinal, ins]
-                curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
-                risk_writers.AggregateLossCurveXMLWriter(
-                    dest, oq.investigation_time, loss_type,
-                    source_model_tree_path='_'.join(rlz.sm_lt_path),
-                    gsim_tree_path='_'.join(rlz.gsim_lt_path),
-                    unit=ct['unit']).serialize(curve)
-                fnames.append(dest)
+    for writer, (l, r, ins) in _gen_writers(
+            dstore, risk_writers.AggregateLossCurveXMLWriter, ekey[0]):
+        rec = agg_curve[l, r, ins]
+        curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
+        writer.serialize(curve)
+        fnames.append(writer._dest)
     return sorted(fnames)
-
-
-def _gen_sname_qvalue(quantiles):
-    yield 'mean', None
-    for q in quantiles:
-        yield 'quantile', q
 
 
 # this is used by event_based_risk
 @export.add(('agg_curve-stats', 'xml'))
 def export_agg_curve_stats(ekey, dstore):
-    oq = OqParam.from_(dstore.attrs)
-    quantiles = oq.quantile_loss_curves
-    cost_types = dstore['cost_types']
     agg_curve = dstore[ekey[0]]
     fnames = []
-    for l, ct in enumerate(cost_types):
-        loss_type = ct['name']
-        for ins in range(oq.insured_losses + 1):
-            for sname, qvalue in _gen_sname_qvalue(quantiles):
-                dest = dstore.export_path('agg_curve-%s-%s%s.%s' % (
-                    sname, loss_type, '_ins' if ins else '', ekey[1]))
-                rec = agg_curve[sname][l, ins]
-                curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
-                risk_writers.AggregateLossCurveXMLWriter(
-                    dest, oq.investigation_time, loss_type,
-                    statistics=sname, quantile_value=qvalue,
-                    unit=ct['unit']).serialize(curve)
-                fnames.append(dest)
+    for writer, (loss_type, statname, ins) in _gen_writers(
+            dstore, risk_writers.AggregateLossCurveXMLWriter, ekey[0]):
+        rec = agg_curve[loss_type][statname][ins]
+        curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
+        writer.serialize(curve)
+        fnames.append(writer._dest)
     return sorted(fnames)

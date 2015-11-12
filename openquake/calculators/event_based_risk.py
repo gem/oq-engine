@@ -564,8 +564,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 curve = agg_curve[l, rlz.ordinal]
                 average_loss = curve['avg'][0]
                 average_insured_loss = curve['avg'][1]
-                loss_curve = (curve['losses'][0],
-                              curve['poes'][0])
+                loss_curve = (curve['losses'][0], curve['poes'][0])
                 if self.oqparam.insured_losses:
                     insured_curves = [(curve['losses'][1], curve['poes'][1])]
                 else:
@@ -586,7 +585,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 if self.oqparam.insured_losses:
                     agg_curve_stats[name][:, 1] = curves[1][name][:, 0]
 
-            for statname in builder.mean_quantiles:
-                self.datastore['agg_curve-stats/' + statname] = agg_curve_stats
-                self.datastore['agg_curve-stats/' + statname]. \
-                    attrs['nbytes'] = agg_curve_stats.nbytes
+            for i, statname in enumerate(builder.mean_quantiles):
+                key = 'agg_curve-stats/%s/%s' % (loss_type, statname)
+                self.datastore[key] = agg_curve_stats[i]
+                self.datastore[key].attrs['nbytes'] = agg_curve_stats[i].nbytes
