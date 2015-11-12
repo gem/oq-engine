@@ -1001,6 +1001,19 @@ class CurveBuilder(object):
                     lcs[aid, i] = (losses, poes, avg)
         return lcs
 
+    def _calc_loss_maps(self, asset_values, poe_matrix):
+        """
+        Compute loss maps from the PoE matrix (i.e. the loss curves).
+
+        :param asset_values: asset values for the current loss type
+        :poe_matrix: an N x C matrix of PoEs
+        :returns: a matrix N x P
+        """
+        curves = []
+        for avalue, poes in zip(asset_values, poe_matrix):
+            curves.append((self.ratios * avalue, poes))
+        return loss_map_matrix(self.conditional_loss_poes, curves).T
+
     def build_loss_maps(self, assetcol, rcurves):
         """
         Build loss maps from the risk curves. Yield pairs
@@ -1018,9 +1031,8 @@ class CurveBuilder(object):
             for rlzi in range(R):
                 loss_maps = numpy.zeros((N, 2), self.loss_map_dt)
                 for ins in range(I):
-                    lm = calc_loss_maps(
-                        self.conditional_loss_poes, asset_values, self.ratios,
-                        curves_lt[:, rlzi, ins])
+                    lm = self._calc_loss_maps(
+                        asset_values, curves_lt[:, rlzi, ins])
                     for i, poes in enumerate(lm):
                         loss_maps[i, ins] = tuple(poes)
                 yield rlzi, loss_maps
@@ -1311,22 +1323,6 @@ def loss_map_matrix(poes, curves):
         [[conditional_loss_ratio(curve[0], curve[1], poe)
           for curve in curves] for poe in poes]
     ).reshape((len(poes), len(curves)))
-
-
-def calc_loss_maps(conditional_loss_poes, asset_values, ratios, poe_matrix):
-    """
-    Compute loss maps from the PoE matrix (i.e. the loss curves).
-
-    :param conditional_loss_poes: an array of P PoEs
-    :param asset_values: asset values for the current loss type
-    :param ratios: loss ratios for the current loss type
-    :poe_matrix: an N x C matrix of PoEs
-    :returns: a matrix N x P
-    """
-    curves = []
-    for avalue, poes in zip(asset_values, poe_matrix):
-        curves.append((ratios * avalue, poes))
-    return loss_map_matrix(conditional_loss_poes, curves).T
 
 
 def mean_curve(values, weights=None):
