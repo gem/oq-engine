@@ -602,9 +602,10 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
                         ekey[0], suffix, poe, '_ins' if ins else '', ekey[1])
                     fname = dstore.export_path(name)
                     data = []
-                    for ass, stat in zip(assetcol, lmaps[:, p]):
+                    poe_str = 'poe~%s' % poe
+                    for ass, stat in zip(assetcol, lmaps[poe_str][:, ins]):
                         loc = Location(sitemesh[ass['site_id']])
-                        lm = LossMap(loc, ass['asset_ref'], stat[ins], None)
+                        lm = LossMap(loc, ass['asset_ref'], stat, None)
                         data.append(lm)
                     writer = writercls(
                         fname, oq.investigation_time, poe=poe, loss_type=lt,
