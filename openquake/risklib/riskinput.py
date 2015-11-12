@@ -26,6 +26,7 @@ import numpy
 from openquake.baselib.general import groupby, split_in_blocks
 from openquake.baselib.performance import DummyMonitor
 from openquake.hazardlib.gsim.base import gsim_imt_dt
+from openquake.commonlib import riskmodels
 from openquake.risklib import scientific
 
 
@@ -131,9 +132,10 @@ class RiskModel(collections.Mapping):
             0, 1, oqparam.loss_curve_resolution + 1)[1:]
         pairs = []
         for i, loss_type in enumerate(self._get_loss_types()):
-            if loss_type in oqparam.loss_ratios:
+            cost_type = riskmodels.loss_type_to_cost_type(loss_type)
+            if cost_type in oqparam.loss_ratios:
                 cb = scientific.CurveBuilder(
-                    loss_type, oqparam.loss_ratios[loss_type], True,
+                    loss_type, oqparam.loss_ratios[cost_type], True,
                     oqparam.conditional_loss_poes, oqparam.insured_losses)
             else:
                 cb = scientific.CurveBuilder(

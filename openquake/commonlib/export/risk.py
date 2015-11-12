@@ -554,8 +554,9 @@ def export_loss_maps_xml_geojson(ekey, dstore):
                     unit = unit_by_lt[lt]
                     suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
                         rlz.uid, lt)
+                    root = ekey[0][:-5]  # strip -rlzs
                     name = '%s%s-poe-%s%s.%s' % (
-                        ekey[0], suffix, poe, '_ins' if ins else '', ekey[1])
+                        root, suffix, poe, '_ins' if ins else '', ekey[1])
                     fname = dstore.export_path(name)
                     data = []
                     poe_str = 'poe~%s' % poe
@@ -600,8 +601,9 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
                     unit = unit_by_lt[lt]
                     suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
                         rlz.uid, lt)
+                    root = ekey[0][:-6]  # strip -stats
                     name = '%s%s-poe-%s%s.%s' % (
-                        ekey[0], suffix, poe, '_ins' if ins else '', ekey[1])
+                        root, suffix, poe, '_ins' if ins else '', ekey[1])
                     fname = dstore.export_path(name)
                     data = []
                     poe_str = 'poe~%s' % poe

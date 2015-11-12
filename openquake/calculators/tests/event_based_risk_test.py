@@ -6,7 +6,7 @@ from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.export import export
 from openquake.qa_tests_data.event_based_risk import (
-    case_1, case_2, case_3, case_4, case_4a)
+    case_1, case_2, case_3, case_4, case_4a, occupants)
 
 
 def strip_calc_id(fname):
@@ -97,6 +97,15 @@ total     6.953005E+02 2.221170E+02
                             exports='csv', individual_curves='true')
         fnames = out['agg_losses', 'csv']
         assert fnames, 'No agg_losses exported??'
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+    @attr('qa', 'risk', 'event_based_risk')
+    def test_occupants(self):
+        out = self.run_calc(occupants.__file__, 'job_h.ini,job_r.ini',
+                            exports='xml', individual_curves='true')
+        fnames = out['loss_maps-rlzs', 'xml'] + out['agg_curve-rlzs', 'xml']
+        assert fnames, 'Nothing exported??'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
