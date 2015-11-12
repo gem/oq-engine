@@ -131,15 +131,15 @@ def get_risk_models(oqparam, kind):
             kind_ = kind.replace('_retrofitted', '')  # strip retrofitted
             if not rmodel_kind.lower().startswith(kind_):
                 raise ValueError(
-                    'Error in the .ini file: "%s_file=%s" points to a file '
+                    'Error in the file "%s_file=%s": is '
                     'of kind %s, expected %s' % (
                         key, oqparam.inputs[key], rmodel_kind,
                         kind.capitalize() + 'Model'))
             if cost_type != key_type:
                 raise ValueError(
-                    'Error in the .ini file: "%s_file=%s" is of type "%s", '
-                    'expected "%s"' % (key, oqparam.inputs[key],
-                                       rmodel.lossCategory, key_type))
+                    'Error in the file "%s_file=%s": lossCategory is of type '
+                    '"%s", expected "%s"' % (key, oqparam.inputs[key],
+                                             rmodel.lossCategory, key_type))
     rdict = collections.defaultdict(dict)
     if kind == 'fragility':
         limit_states = []
