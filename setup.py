@@ -92,6 +92,7 @@ setup(
         'openquake.hazardlib',
         'openquake.risklib',
     ],
-    scripts=["openquake/engine/bin/oq_create_db"],
+    scripts=["openquake/engine/bin/oq_create_db",
+             "openquake/engine/bin/oq_reset_db"],
     zip_safe=False,
     )

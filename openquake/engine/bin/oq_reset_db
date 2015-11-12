@@ -1,0 +1,63 @@
+#!/bin/bash
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+set -e
+
+if [ $(id -u) -gt 0 ]; then
+    echo -e "This script requires sudo.\nPlease run 'sudo $0'." >&2
+    exit 1
+fi
+
+case $1 in
+    '--yes')
+        force=y
+        shift ;;
+    '--skip-db')
+        skipdb=y
+        shift ;;
+esac
+
+bold=`tput bold`
+normal=`tput sgr0`
+force=$1
+
+command -v oq_create_db &> /dev/null || {
+    echo -e "!! Can't find oq_create_db in your path. Aborting." >&2
+    exit 1
+}
+
+echo ''
+echo "!! ${bold}This script is going to remove the OpenQuake Engine data${normal}"
+echo '!!'
+echo -e "!! \t*  Make sure no calculations are running"
+echo -e "!! \t*  Make sure Celery is stopped"
+echo -e "!! \t*  The OpenQuake Engine datastores located in /home/[user]/oqdata will be removed"
+echo -e "!! \t*  The OpenQuake Engine database will be drop and recreated"
+echo -e "!! \t   All the old data contained will be lost"
+echo '!!'
+if [[ "$force" == "y" ]]; then
+    for i in {5..1}; do
+        echo -ne "\r!! Press CTRL-C to cancel the operation within ${i} seconds"
+        sleep 1
+    done
+    answer="y"
+else
+    echo -n "!! Do you want to proceed? (y/n)"
+    read -n 1 -s answer
+fi
+echo ''
+
+if [[ "$answer" == "y" ]]; then
+    sudo -u postgres dropdb openquake2 || true
+    find /home -maxdepth 2 -type d -name "oqdata" -exec rm -Rf '{}' \;
+    if [[ "$skipdb" == "y" ]]; then
+        sudo -u postgres oq_create_db
+        oq-engine --upgrade-db --yes
+    fi
+    echo ''
+    echo "!!"
+    echo "!! DONE"
+    echo "!!"
+    echo ''
+fi
