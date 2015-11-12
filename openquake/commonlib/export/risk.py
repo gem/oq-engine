@@ -567,7 +567,7 @@ def export_loss_maps_xml_geojson(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('loss_maps-stats', 'xml'), ('loss_stats-rlzs', 'geojson'))
+@export.add(('loss_maps-stats', 'xml'), ('loss_maps-stats', 'geojson'))
 def export_loss_maps_stats_xml_geojson(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
     unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
