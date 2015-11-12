@@ -512,6 +512,9 @@ def export_avglosses(ekey, dstore):
     return sorted(fnames)
 
 LossMap = collections.namedtuple('LossMap', 'location asset_ref value std_dev')
+LossCurve = collections.namedtuple(
+    'LossCurve', 'location asset_ref poes losses loss_ratios '
+    'average_loss stddev_loss')
 
 
 # emulate a Django point
@@ -674,7 +677,7 @@ def _gen_writers(dstore, writercls, root):
                         source_model_tree_path='_'.join(rlz.sm_lt_path),
                         gsim_tree_path='_'.join(rlz.gsim_lt_path),
                         unit=ct['unit']), (l, rlz.ordinal, ins)
-            elif root.endswith('-stats'):  # stats
+            elif root.endswith('-stats'):
                 pairs = [('mean', None)] + [
                     ('quantile-%s' % q, q) for q in oq.quantile_loss_curves]
                 for ordinal, (statname, statvalue) in enumerate(pairs):
@@ -711,5 +714,33 @@ def export_agg_curve_stats(ekey, dstore):
         rec = agg_curve[loss_type][statname][ins]
         curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
         writer.serialize(curve)
+        fnames.append(writer._dest)
+    return sorted(fnames)
+
+
+# this is used by event_based_risk
+@export.add(('loss_curves-stats', 'xml'))
+def export_loss_curves_stats(ekey, dstore):
+    assetcol = dstore['assetcol']
+    sitemesh = dstore['sitemesh']
+    loss_curves = dstore[ekey[0]]
+    builders = dstore['riskmodel'].curve_builders
+    fnames = []
+    for writer, (ltype, sname, ins) in _gen_writers(
+            dstore, risk_writers.LossCurveXMLWriter, ekey[0]):
+        for builder in builders:
+            if builder.user_provided and builder.loss_type == ltype:
+                loss_ratios = builder.ratios
+                break
+        else:  # no break, ignore loss type
+            continue
+        array = loss_curves[ltype][sname][ins]
+        curves = []
+        for ass, rec in zip(assetcol, array):
+            loc = Location(sitemesh[ass['site_id']])
+            curve = LossCurve(loc, ass['asset_ref'], rec['poes'],
+                              rec['losses'], loss_ratios, rec['avg'], None)
+            curves.append(curve)
+        writer.serialize(curves)
         fnames.append(writer._dest)
     return sorted(fnames)
