@@ -934,8 +934,9 @@ class CurveBuilder(object):
         self.insured_losses = insured_losses
         self.loss_curve_dt = numpy.dtype([
             ('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)])
-        poes = ['poe~%s' % clp for clp in conditional_loss_poes]
-        self.loss_map_dt = numpy.dtype([(poe, float) for poe in poes])
+        if conditional_loss_poes:
+            poes = ['poe~%s' % clp for clp in conditional_loss_poes]
+            self.loss_map_dt = numpy.dtype([(poe, float) for poe in poes])
 
     def get_counts(self, N, count_dicts):
         """
