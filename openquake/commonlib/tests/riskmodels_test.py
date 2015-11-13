@@ -258,8 +258,8 @@ lossCategory="contents">
         oq.inputs = dict(structural_consequence=ccm, contents_consequence=scm)
         with self.assertRaises(ValueError) as ctx:
             riskmodels.get_risk_models(oq, 'consequence')
-        self.assertIn('structural_consequence_model.xml" is of type '
-                      '"structural", expected "contents"',
+        self.assertIn('structural_consequence_model.xml": lossCategory is of '
+                      'type "structural", expected "contents"',
                       str(ctx.exception))
 
     def test_wrong_riskmodel_association(self):
@@ -269,7 +269,7 @@ lossCategory="contents">
         oq.inputs = dict(contents_consequence=cfm)
         with self.assertRaises(ValueError) as ctx:
             riskmodels.get_risk_models(oq, 'consequence')
-        self.assertIn('points to a file of kind FragilityModel, '
+        self.assertIn('is of kind FragilityModel, '
                       'expected ConsequenceModel', str(ctx.exception))
 
     def test_wrong_files(self):
