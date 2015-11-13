@@ -271,7 +271,7 @@ def export_avglosses_csv(ekey, dstore):
     return [out.path for out in outs]
 
 
-@export.add(('rcurves-rlzs', 'csv'))
+@export.add(('loss_curves-rlzs', 'csv'))
 def export_ebr_curves(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets_sites(dstore)
@@ -767,7 +767,7 @@ def export_loss_curves_stats(ekey, dstore):
 def export_loss_curves_rlzs(ekey, dstore):
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
-    rcurves = dstore['rcurves-rlzs']
+    rcurves = dstore['loss_curves-rlzs']
     cbuilders = dstore['riskmodel'].curve_builders
     fnames = []
     writercls = (risk_writers.LossCurveGeoJSONWriter

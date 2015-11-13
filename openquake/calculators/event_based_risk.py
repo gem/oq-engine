@@ -211,13 +211,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
     is_stochastic = True
 
-    outs = collections.OrderedDict(
-        [('AVGLOSS', 'avg_losses-rlzs'),
-         ('AGGLOSS', 'agg_losses'),
-         ('ASSLOSS', 'asset_loss_table'),
-         ('RC', 'rcurves-rlzs'),
-         ('IC', 'icurves-rlzs')])
-
     def pre_execute(self):
         """
         Read the precomputed ruptures (or compute them on the fly) and
@@ -365,7 +358,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         # RC, IC
         if self.oqparam.loss_ratios:
-            with self.monitor('building rcurves-rlzs'):
+            with self.monitor('building loss_curves-rlzs'):
                 for (l, r), data in numpy.ndenumerate(result['RC']):
                     cb = self.riskmodel.curve_builders[l]
                     if data and cb.user_provided:
@@ -373,7 +366,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         lt = self.riskmodel.loss_types[l]
                         poes = cb.build_poes(N, [data], ses_ratio)
                         rcurves[lt][:, r, 0] = poes
-                        saved['rcurves-rlzs'] += poes.nbytes
+                        saved['loss_curves-rlzs'] += poes.nbytes
                 for (l, r), data in numpy.ndenumerate(result['IC']):
                     cb = self.riskmodel.curve_builders[l]
                     if data and cb.user_provided and insured_losses:
@@ -381,8 +374,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         lt = self.riskmodel.loss_types[l]
                         poes = cb.build_poes(N, [data], ses_ratio)
                         rcurves[lt][:, r, 1] = poes
-                        saved['rcurves-rlzs'] += poes.nbytes
-                self.datastore['rcurves-rlzs'] = rcurves
+                        saved['loss_curves-rlzs'] += poes.nbytes
+                self.datastore['loss_curves-rlzs'] = rcurves
 
         # build an aggregate loss curve per realization
         with self.monitor('building agg_curve-rlzs'):
@@ -403,8 +396,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         with self.monitor('building loss_maps-rlzs'):
             if (self.oqparam.conditional_loss_poes and
-                    'rcurves-rlzs' in self.datastore):
-                rcurves = self.datastore['rcurves-rlzs']
+                    'loss_curves-rlzs' in self.datastore):
+                rcurves = self.datastore['loss_curves-rlzs']
                 for cb in self.riskmodel.curve_builders:
                     for r, loss_maps in cb.build_loss_maps(
                             self.assetcol, rcurves):
@@ -441,7 +434,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     def _collect_all_data(self):
         # return a list of list of outputs
-        if 'rcurves-rlzs' not in self.datastore:
+        if 'loss_curves-rlzs' not in self.datastore:
             return []
         all_data = []
         assets = self.assetcol['asset_ref']
@@ -451,7 +444,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             avg_losses = self.datastore['avg_losses-rlzs'].value
         else:
             avg_losses = self.avg_losses
-        r_curves = self.datastore['rcurves-rlzs'].value
+        r_curves = self.datastore['loss_curves-rlzs'].value
         for loss_type, cbuilder in zip(
                 self.riskmodel.loss_types, self.riskmodel.curve_builders):
             rcurves = r_curves[loss_type]
