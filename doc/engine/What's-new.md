@@ -55,7 +55,9 @@ models, which before was supported in a limited and experimental way
 for a subset of the vulnerability functions. Now all kind of risk
 models are supported: vulnerability models, fragility risk models and
 consequence models. Consequence models are brand new, introduced for
-the first time in this release. The new format is simpler than before
+the first time in this release. All of that is documented in the [manual]
+(http://www.globalquakemodel.org/openquake/support/documentation/engine/).
+The new format is simpler than before
 and more convenient to use, since the OpenQuake platform offers a web
 tool to prepare risk models in NRML 0.5. Beware that the web tool does
 not support validation of the risk models yet.
@@ -83,11 +85,24 @@ kept, but with a `.bak` extension appended on the right. Notice that due
 to the validation discussed before, you will need to set the `lossCategory`
 to the correct value. This is easy to do, since if you try to run a computation
 you will get a clear error message telling which is the expected value for
-the `lossCategory` for each risk model file.
+the `lossCategory` for each risk model file. For instance, you may get an
+error like this:
 
-6. OpenQuake 1.6 can use the consequence model files to compute consequence
-ratios from a set of fragility models. This is a very important feature
-which is documented in the [manual](http://www.globalquakemodel.org/openquake/support/documentation/engine/)
+ValueError: Error in the file "structural_vulnerability_file=/home/.../vulnerability_model.xml": lossCategory is of type "economic_loss", expected "structural"
+
+The reason is that in NRML 0.4 the `lossCategory` attribute had no
+special meaning (actually it was ignored by the engine) whereas now
+there is a check on it. It must be consistent with the name of the
+variable used in the configuration file. In this example in the
+job_risk.ini file there was a line `structural_vulnerability_file=`,
+so the `lossCategory` is expected to be of kind `structural`. Edit the
+"vulnerability_model.xml" file and set the `lossCategory` attribute to
+the expected value. 
+
+Valid loss categories are `structural`, `nonstructural`, `contents`,
+`business_interruption` and `fatalities`.  There is now a strict check
+on the categories, both in the risk model files and in the exposure
+file.
 
 8. The demos have been revisited and updated. Also their location has
 changed for the users installing OpenQuake from the packages. Now they
@@ -127,32 +142,6 @@ This is meant to be used by system administrators.
 
 12. Some small improvements to the Web UI have been made and now it
 is finally documented here:
-The outputs of the engine, as printed at the end of a calculation
-and shown by the Web UI, are slightly different than before. In particular
-there are now composite outputs. A composite output is a zip file
-containing a set of XML files.
-Here is an example for an event based risk calculation.
-
-Engine 1.5:
-
-Engine 1.6:
-
-Calculation 186 completed in 9 seconds. Results:
-  id | output_type | name
- 419 | datastore | agg_curve-rlzs
- 420 | datastore | agg_curve-stats
- 421 | datastore | loss_curves-rlzs
- 422 | datastore | loss_curves-stats
- 423 | datastore | loss_maps-rlzs
- 424 | datastore | loss_maps-stats
-
-
-13. We removed the `epsilon_sampling` parameter from the engine
-configuration file `openquake.cfg`. Now the parameter can be managed
-directly by the users, on a calculation-specific base, by setting it
-in the `job.ini` file. This is only relevant for event based risk
-calculations. In the future we will remove such parameter (it is a
-performance hack required only in peculiar situations) completely.
 
 9. Countless small improvements and additional validations have been
 added. This release has seen more than 100 pull requests reviewed and
@@ -181,3 +170,58 @@ to install the necessary dependencies.
 
 Bug fixes and changes with respect to OpenQuake 1.5
 ----------------------------------------------------
+
+1. In very rare circumstances the region constraint was not honored,
+i.e.  assets very close to the border of region, but still outside, well
+taken in consideration by the engine. This has been fixed.
+
+2. The engine had a self-termination feature: if the controller node
+could not access the worker nodes, it assumed a failure in celery
+and self-killed if the configuration parameter 
+`terminate_job_when_celery_is_down` was true. We removed such parameter
+and such feature because it was too dangerous: sometimes celery was
+up and running but incorrectly reported down because too slow to
+respond, due to an heavy load. Now it celery appears to not respond
+a warning is printed and user has to see if celery is really dead
+and in that case can kill the computation manually.
+
+3. We removed the epsilon sampling "feature" from the scenario_risk calculator:
+it was a performance hack introducing a gratuitous seed dependency, now
+unneeded thanks to the recent performance improvements.
+
+4. We removed the `epsilon_sampling` parameter from the engine
+configuration file `openquake.cfg`. Now the parameter can be managed
+directly by the users, on a calculation-specific base, by setting it
+in the `job.ini` file. This is only relevant for event based risk
+calculations. In the future we will remove such parameter completely,
+but first further optimizations of the event based risk calculator
+are needed.
+
+13. We introduced the concept of composite outputs, i.e. outputs that
+can be exported to a zip file containing a set of output files. For
+instance an event based risk calculation with two realizations and
+four loss types in the past could print something like the following:
+
+```
+  id | output_type | name
+ 515 | Aggregate Loss Curve | aggregate loss curves. loss_type=contents hazard=430||gmf||GMF rlz-332
+ 514 | Aggregate Loss Curve | aggregate loss curves. loss_type=contents hazard=431||gmf||GMF rlz-333
+ 519 | Aggregate Loss Curve | aggregate loss curves. loss_type=fatalities hazard=430||gmf||GMF rlz-332
+ 518 | Aggregate Loss Curve | aggregate loss curves. loss_type=fatalities hazard=431||gmf||GMF rlz-333
+ 512 | Aggregate Loss Curve | aggregate loss curves. loss_type=nonstructural hazard=430||gmf||GMF rlz-332
+ 513 | Aggregate Loss Curve | aggregate loss curves. loss_type=nonstructural hazard=431||gmf||GMF rlz-333
+ 516 | Aggregate Loss Curve | aggregate loss curves. loss_type=structural hazard=430||gmf||GMF rlz-332
+ 517 | Aggregate Loss Curve | aggregate loss curves. loss_type=structural hazard=431||gmf||GMF rlz-333
+```
+
+Now it will print only one line:
+
+```
+  id | output_type | name
+ 419 | datastore | agg_curve-rlzs
+ ```
+
+When exporting the composite output, 8 XML files will be generated, in
+the same format as before, plus a zip file containing all of them.
+When using the Web UI the zip file will be available for download.
+
