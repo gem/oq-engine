@@ -18,7 +18,7 @@ from __future__ import print_function
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.commonlib import sap, datastore, oqvalidation
-from openquake.risklib import scientific
+from openquake.commonlib.commands.show import get_hcurves_and_means
 
 
 def make_figure(indices, imtls, spec_curves, curves=(), label=''):
@@ -52,22 +52,6 @@ def make_figure(indices, imtls, spec_curves, curves=(), label=''):
     return plt
 
 
-def combined_curves(dstore):
-    """
-    :param dstore: a DataStore instance
-    :returns: curves_by_rlz, mean_curves
-    """
-    no_curves = all(len(c) == 0 for c in dstore['curves_by_sm'].values())
-    if no_curves:
-        raise Exception('Could not find hazard curves in %s' % dstore)
-
-    curves_by_rlz = dstore['rlzs_assoc'].combine(dstore['curves_by_sm'])
-    rlzs = sorted(curves_by_rlz)
-    weights = [rlz.weight for rlz in rlzs]
-    return curves_by_rlz, scientific.mean_curve(
-        [curves_by_rlz[rlz] for rlz in rlzs], weights)
-
-
 def plot(calc_id, other_id=None, sites='0'):
     """
     Hazard curves plotter.
@@ -81,21 +65,21 @@ def plot(calc_id, other_id=None, sites='0'):
     other = datastore.DataStore(other_id) if other_id else None
     oq = oqvalidation.OqParam.from_(haz.attrs)
     indices = list(map(int, sites.split(',')))
-    n_sites = len(haz['sites'])
+    n_sites = len(haz['sitemesh'])
     if not set(indices) <= set(range(n_sites)):
         invalid = sorted(set(indices) - set(range(n_sites)))
         print('The indices %s are invalid: no graph for them' % invalid)
     valid = sorted(set(range(n_sites)) & set(indices))
     print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
-    curves_by_rlz, mean_curves = combined_curves(haz)
+    curves_by_rlz, mean_curves = get_hcurves_and_means(haz)
     if other is None:
         single_curve = len(curves_by_rlz) == 1 or not getattr(
             oq, 'individual_curves', True)
         plt = make_figure(valid, oq.imtls, mean_curves,
                           {} if single_curve else curves_by_rlz, 'mean')
     else:
-        _, mean1 = combined_curves(haz)
-        _, mean2 = combined_curves(other)
+        _, mean1 = get_hcurves_and_means(haz)
+        _, mean2 = get_hcurves_and_means(other)
         plt = make_figure(valid, oq.imtls, mean1, {'mean': mean2}, 'reference')
     plt.show()
 

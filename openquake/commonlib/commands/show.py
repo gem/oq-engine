@@ -21,12 +21,34 @@ import io
 import os
 import logging
 
-from openquake.commonlib import sap, datastore
 from openquake.baselib.general import humansize
+from openquake.hazardlib.calc.hazard_curve import zero_curves
+from openquake.commonlib import sap, datastore
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.commands.plot import combined_curves
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
+from openquake.risklib import scientific
+
+
+def get_hcurves_and_means(dstore):
+    """
+    Extract hcurves from the datastore and compute their means.
+
+    :returns: curves_by_rlz, mean_curves
+    """
+    oq = OqParam.from_(dstore.attrs)
+    hcurves = dstore['hcurves']
+    realizations = dstore['rlzs_assoc'].realizations
+    weights = [rlz.weight for rlz in realizations]
+    curves_by_rlz = {rlz: hcurves['rlz-%03d' % rlz.ordinal]
+                     for rlz in realizations}
+    N = len(dstore['sitemesh'])
+    mean_curves = zero_curves(N, oq.imtls)
+    for imt in oq.imtls:
+        mean_curves[imt] = scientific.mean_curve(
+            [curves_by_rlz[rlz][imt] for rlz in sorted(curves_by_rlz)],
+            weights)
+    return curves_by_rlz, mean_curves
 
 
 def show(calc_id, key=None, rlzs=None):
@@ -72,27 +94,16 @@ def show(calc_id, key=None, rlzs=None):
 
     # this part is experimental
     if rlzs and 'hcurves' in ds:
-        from openquake.hazardlib.calc.hazard_curve import zero_curves
-        from openquake.risklib import scientific
         min_value = 0.01  # used in rmsep
-        curves_by_rlz = ds['hcurves']
-        realizations = ds['rlzs_assoc'].realizations
-        weights = [rlz.weight for rlz in realizations]
-        all_curves = [curves_by_rlz['rlz-%03d' % rlz.ordinal]
-                      for rlz in realizations]
-        N = len(ds['sitemesh'])
-        mean_curves = zero_curves(N, oq.imtls)
-        for imt in oq.imtls:
-            mean_curves[imt] = scientific.mean_curve(
-                [curves[imt] for curves in all_curves], weights)
+        curves_by_rlz, mean_curves = get_hcurves_and_means(ds)
         dists = []
-        for rlz, curves in zip(realizations, all_curves):
+        for rlz, curves in curves_by_rlz.items():
             dist = sum(rmsep(mean_curves[imt], curves[imt], min_value)
                        for imt in mean_curves.dtype.fields)
-            dists.append((dist, rlz.ordinal, rlz.uid, rlz.weight))
+            dists.append((dist, rlz))
         print('Realizations in order of distance from the mean curves')
-        for dist, ordinal, uid, weight in sorted(dists):
-            print('rlz #%d(%s,w=%s): rmsep=%s' % (ordinal, uid, weight, dist))
+        for dist, rlz in sorted(dists):
+            print('%s: rmsep=%s' % (rlz, dist))
     else:
         # print all keys
         print(oq.calculation_mode, 'calculation (%r) saved in %s contains:' %
