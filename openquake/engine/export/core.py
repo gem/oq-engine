@@ -66,7 +66,8 @@ def export_from_datastore(output_key, output, target):
             'Nothing to export for %s' % output.ds_key)
     elif len(exported) > 1:
         # NB: I am hiding the archive by starting its name with a '.',
-        # to avoid confusing the users; the archive is used internally
+        # to avoid confusing the users, since the unzip files are
+        # already in the target directory; the archive is used internally
         # by the WebUI, so it must be there; it would be nice not to
         # generate it when not using the Web UI, but I will leave that
         # feature for after the removal of the old calculators
