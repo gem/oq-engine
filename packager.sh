@@ -442,6 +442,11 @@ _pkgtest_innervm_run () {
         oq-lite run EventBasedRisk/job.ini
         oq-lite export -1 loss_maps-rlzs xml /tmp
 
+        cd ../hazard
+        echo 'running LogicTreeCase1ClassicalPSHA'
+        oq-lite run LogicTreeCase1ClassicalPSHA/job.ini
+        oq-lite show -1 --rlzs
+
         echo 'Show all the oq-lite calculations'
         oq-lite show 0
         "
