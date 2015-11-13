@@ -8,12 +8,12 @@ New features of the OpenQuake Engine, version 1.6
 1. The following six calculators have been completely rewritten and now
 use the HDF5 technology that in previous versions was still experimental:
 
-  1. scenario hazard
-  2. scenario risk
-  3. scenario_damage
-  4. event_based_rupture
-  5. event_based
-  6. event_based_risk
+  1. `scenario`
+  2. `scenario_risk`
+  3. `scenario_damage`
+  4. `event_based_rupture`
+  5. `event_based`
+  6. `event_based_risk`
 
 As a consequence all such calculators are much faster and use a
 lot less memory than before. Even the disk space occupation has been
@@ -37,11 +37,11 @@ However the calculators accessible with the ``--lite`` flag should be
 considered experimental, previews of things to come, and they are still
 subject to change.
 
-6. The scenario_risk and scenario_damage calculators now support multiple
+6. The `scenario_risk` and `scenario_damage` calculators now support multiple
 GSIMs at the same time. 
 
-8. The scenario_damage calculator now supports multiple loss types at
-the same time, just as the scenario_risk calculator.
+8. The `scenario_damage` calculator now supports multiple loss types at
+the same time, just as the `scenario_risk` calculator.
 
 7. The event based risk calculator has been optimized and enhanced. Now it
 is possible to generate the full event loss table for each
@@ -117,7 +117,42 @@ using a public Continuous Integration system, Travis. Before our
 builds were internal on Jenkins and visible only to our staff.
 The engine is still built with Jenkins for various technical reasons.
 
-12. The .rst report of a calculation has been improved.
+12. The .rst report of a calculation has been improved. Now you can run
+
+$ oq-lite show -1 fullreport
+
+11. We added a script `oq_reset_db` to drop and recreate the engine
+database, as well as removing the datastore directories of all users.
+This is meant to be used by system administrators.
+
+12. Some small improvements to the Web UI have been made and now it
+is finally documented here:
+The outputs of the engine, as printed at the end of a calculation
+and shown by the Web UI, are slightly different than before. In particular
+there are now composite outputs. A composite output is a zip file
+containing a set of XML files.
+Here is an example for an event based risk calculation.
+
+Engine 1.5:
+
+Engine 1.6:
+
+Calculation 186 completed in 9 seconds. Results:
+  id | output_type | name
+ 419 | datastore | agg_curve-rlzs
+ 420 | datastore | agg_curve-stats
+ 421 | datastore | loss_curves-rlzs
+ 422 | datastore | loss_curves-stats
+ 423 | datastore | loss_maps-rlzs
+ 424 | datastore | loss_maps-stats
+
+
+13. We removed the `epsilon_sampling` parameter from the engine
+configuration file `openquake.cfg`. Now the parameter can be managed
+directly by the users, on a calculation-specific base, by setting it
+in the `job.ini` file. This is only relevant for event based risk
+calculations. In the future we will remove such parameter (it is a
+performance hack required only in peculiar situations) completely.
 
 9. Countless small improvements and additional validations have been
 added. This release has seen more than 100 pull requests reviewed and
