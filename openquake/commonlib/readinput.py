@@ -491,8 +491,7 @@ def get_composite_source_model(
     :returns:
         an iterator over :class:`openquake.commonlib.source.SourceModel`
     """
-    processor = SourceProcessor(sitecol, oqparam.maximum_distance,
-                                oqparam.area_source_discretization)
+    processor = SourceProcessor(sitecol, oqparam.maximum_distance)
     source_model_lt = get_source_model_lt(oqparam)
     smodels = []
     trt_id = 0

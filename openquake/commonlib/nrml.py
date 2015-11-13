@@ -178,6 +178,7 @@ class ValidNode(LiteralNode):
         alongStrike=valid.probability,
         downDip=valid.probability,
         id=valid.simple_id,
+        discretization=valid.compose(valid.positivefloat, valid.nonzero),
         )
 
 

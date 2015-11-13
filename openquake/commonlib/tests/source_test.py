@@ -16,7 +16,7 @@
 import os
 import mock
 import unittest
-from io import StringIO, BytesIO
+from io import BytesIO
 
 import numpy
 from numpy.testing import assert_allclose
@@ -152,7 +152,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
             polygon=polygon,
-            area_discretization=self.area_source_discretization,
+            area_discretization=2,
             temporal_occurrence_model=PoissonTOM(50.),
         )
         return area
@@ -582,10 +582,10 @@ class AreaToPointsTestCase(unittest.TestCase):
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
             polygon=polygon,
-            area_discretization=self.area_source_discretization,
+            area_discretization=10,
             temporal_occurrence_model=PoissonTOM(50.),
         )
-        actual = list(s.area_to_point_sources(area, 10))
+        actual = list(s.area_to_point_sources(area))
         self.assertEqual(len(actual), 96)  # expected 96 points
         self.assertAlmostEqual(actual[0].mfd.a_val, 0.1177287669604317)
 
@@ -618,10 +618,10 @@ class AreaToPointsTestCase(unittest.TestCase):
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
             polygon=polygon,
-            area_discretization=self.area_source_discretization,
+            area_discretization=10,
             temporal_occurrence_model=PoissonTOM(50.0),
         )
-        actual = list(s.area_to_point_sources(area, 10))
+        actual = list(s.area_to_point_sources(area))
         self.assertEqual(len(actual), 96)  # expected 96 points
         assert_allclose(
             actual[0].mfd.occurrence_rates,

@@ -7,6 +7,7 @@ import unittest
 
 from openquake.commonlib.commands.info import info
 from openquake.commonlib.commands.show import show
+from openquake.commonlib.commands.show_attrs import show_attrs
 from openquake.commonlib.commands.export import export
 from openquake.commonlib.commands.reduce import reduce
 from openquake.commonlib.commands.run import run
@@ -92,6 +93,9 @@ class RunShowExportTestCase(unittest.TestCase):
         self.assertIn('See the output with hdfview', str(self.p))
 
     def test_show_calc(self):
+        # test show all
+        with Print.patch() as p:
+            show(0)
         with Print.patch() as p:
             show(self.datastore.calc_id)
         self.assertIn('sitemesh', str(p))
@@ -101,6 +105,20 @@ class RunShowExportTestCase(unittest.TestCase):
         self.assertEqual(str(p), '''\
 lon:float64:,lat:float64:
 0.00000000E+00,0.00000000E+00''')
+
+    def test_show_attrs(self):
+        with Print.patch() as p:
+            show_attrs(self.datastore.calc_id, 'hcurve')
+        self.assertEqual("'hcurve' is not in %s" % self.datastore, str(p))
+
+        with Print.patch() as p:
+            show_attrs(self.datastore.calc_id, 'hcurves')
+        self.assertEqual('hcurves has no attributes', str(p))
+
+        self.datastore['hcurves'].attrs['some_attribute'] = True
+        with Print.patch() as p:
+            show_attrs(self.datastore.calc_id, 'hcurves')
+        self.assertEqual('some_attribute True', str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
