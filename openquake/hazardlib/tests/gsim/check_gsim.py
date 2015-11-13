@@ -29,10 +29,10 @@ import copy
 import numpy
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
+from openquake.hazardlib.gsim.base import GroundShakingIntensityModel, IPE
 from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
-from openquake.hazardlib.imt import PGA, PGV, PGD, SA, CAV
+from openquake.hazardlib.imt import PGA, PGV, PGD, SA, CAV, MMI
 
 
 def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
@@ -90,7 +90,11 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
                 break
 
             if result_type == 'MEAN':
-                result = numpy.exp(mean)
+                if isinstance(gsim, IPE):
+                    # For IPEs it is the values, not the logarithms returned
+                    result = mean
+                else:
+                    result = numpy.exp(mean)
             else:
                 [result] = stddevs
             assert isinstance(result, numpy.ndarray), result_type
@@ -292,6 +296,8 @@ def _parse_csv_line(headers, values):
                 imt = PGD()
             elif param == 'cav':
                 imt = CAV()
+            elif param == 'mmi':
+                imt = MMI()
             else:
                 period = float(param)
                 assert damping is not None
