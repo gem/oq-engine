@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Fixed the `oq-lite show --rlzs` command
+  * Fixed a minor bug in the source writer for nodalPlane nodes
   * Added an attribute `discretization` to `areaGeometry` nodes
   * Added a command oq-lite show_attrs to display the attributes of a HDF5
     dataset

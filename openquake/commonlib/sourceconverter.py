@@ -467,7 +467,8 @@ class SourceConverter(RuptureConverter):
         with context(self.fname, node):
             npdist = []
             for np in node.nodalPlaneDist:
-                prob, strike, dip, rake = ~np
+                prob, strike, dip, rake = (
+                    np['probability'], np['strike'], np['dip'], np['rake'])
                 npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
             return pmf.PMF(npdist)
 

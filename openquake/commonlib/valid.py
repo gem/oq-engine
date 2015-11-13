@@ -744,22 +744,6 @@ dip_range = FloatRange(0, 90)
 rake_range = FloatRange(-180, 180)
 
 
-def nodal_plane(value, probability, strike, dip, rake):
-    """
-    This is used to convert nodes of the form
-     <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
-
-    :param value: None
-    :param probability: a probability
-    :param strike: strike angle
-    :param dip: dip parameter
-    :param rake: rake angle
-    :returns: a validated pair (probability, depth)
-    """
-    return (range01(probability), strike_range(strike),
-            dip_range(dip), rake_range(rake))
-
-
 def ab_values(value):
     """
     a and b values of the GR magniture-scaling relation.
