@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <aggregateLossCurve
+    gsimTreePath="b1"
+    investigationTime="10000.0"
+    lossType="fatalities"
+    sourceModelTreePath="b1"
+    unit="people"
+    >
+        <poEs>
+            0.0392106 0.0108408 0.00239712 0.00119931 0.000499904 0.000100017 0.000100017 0.000100017 0.000100017 0.0
+        </poEs>
+        <losses>
+            0.0000 0.0121 0.0241 0.0362 0.0482 0.0603 0.0723 0.0844 0.0964 0.1085
+        </losses>
+        <averageLoss>
+            4.2126e-04
+        </averageLoss>
+    </aggregateLossCurve>
+</nrml>

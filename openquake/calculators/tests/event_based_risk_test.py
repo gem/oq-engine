@@ -4,8 +4,9 @@ from nose.plugins.attrib import attr
 
 from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
+from openquake.commonlib.export import export
 from openquake.qa_tests_data.event_based_risk import (
-    case_1, case_2, case_3, case_4, case_4a)
+    case_1, case_2, case_3, case_4, case_4a, occupants)
 
 
 def strip_calc_id(fname):
@@ -37,6 +38,24 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
         self.assert_stats_ok(case_1)
+
+        # make sure the XML and JSON exporters run
+        ekeys = [
+            ('loss_curves-stats', 'xml'),
+            ('loss_curves-stats', 'geojson'),
+            ('loss_curves-rlzs', 'xml'),
+            ('loss_curves-rlzs', 'geojson'),
+
+            ('loss_maps-stats', 'xml'),
+            ('loss_maps-stats', 'geojson'),
+            ('loss_maps-rlzs', 'xml'),
+            ('loss_maps-rlzs', 'geojson'),
+
+            ('agg_curve-stats', 'xml'),
+            ('agg_curve-rlzs', 'xml'),
+        ]
+        for ekey in ekeys:
+            export(ekey, self.calc.datastore)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
@@ -78,6 +97,15 @@ total     6.953005E+02 2.221170E+02
                             exports='csv', individual_curves='true')
         fnames = out['agg_losses', 'csv']
         assert fnames, 'No agg_losses exported??'
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+    @attr('qa', 'risk', 'event_based_risk')
+    def test_occupants(self):
+        out = self.run_calc(occupants.__file__, 'job_h.ini,job_r.ini',
+                            exports='xml', individual_curves='true')
+        fnames = out['loss_maps-rlzs', 'xml'] + out['agg_curve-rlzs', 'xml']
+        assert fnames, 'Nothing exported??'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
