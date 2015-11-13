@@ -77,19 +77,22 @@ def show(calc_id, key=None, rlzs=None):
         min_value = 0.01  # used in rmsep
         curves_by_rlz = ds['hcurves']
         realizations = ds['rlzs_assoc'].realizations
+        weights = [rlz.weight for rlz in realizations]
+        all_curves = [curves_by_rlz['rlz-%03d' % rlz.ordinal]
+                      for rlz in realizations]
         N = len(ds['sitemesh'])
         mean_curves = zero_curves(N, oq.imtls)
         for imt in oq.imtls:
             mean_curves[imt] = scientific.mean_curve(
-                [curves_by_rlz[r][imt] for r in curves_by_rlz],
-                [rlz.weight for rlz in realizations])
+                [curves[imt] for curves in all_curves], weights)
         dists = []
-        for rlz, curves in zip(realizations, curves_by_rlz.values()):
+        for rlz, curves in zip(realizations, all_curves):
             dist = sum(rmsep(mean_curves[imt], curves[imt], min_value)
                        for imt in mean_curves.dtype.fields)
-            dists.append((dist, rlz.ordinal, rlz.uid))
-        for dist, ordinal, uid in sorted(dists):
-            print('rlz #%d(%s): rmsep=%s' % (ordinal, uid, dist))
+            dists.append((dist, rlz.ordinal, rlz.uid, rlz.weight))
+        print('Realizations in order of distance from the mean curves')
+        for dist, ordinal, uid, weight in sorted(dists):
+            print('rlz #%d(%s,w=%s): rmsep=%s' % (ordinal, uid, weight, dist))
     else:
         # print all keys
         print(oq.calculation_mode, 'calculation (%r) saved in %s contains:' %

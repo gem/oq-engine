@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the `oq-lite show --rlzs` command
   * Added an attribute `discretization` to `areaGeometry` nodes
   * Added a command oq-lite show_attrs to display the attributes of a HDF5
     dataset
@@ -9,7 +10,7 @@
 
   [Matteo Nastasi]
   * Demos moved to /usr/share/openquake/risklib
-  
+
   [Michele Simionato]
   * Added outputs `agg_curve-rlzs` and `agg_curve-stats` in the HDF5 file
   * Changed the storage of the event based risk outputs in the HDF5 file
