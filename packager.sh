@@ -420,7 +420,7 @@ _pkgtest_innervm_run () {
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run selected demos
-        ssh $lxc_ip "set -e; cd /usr/share/doc/python-oq-risklib/examples/demos/risk
+        ssh $lxc_ip "set -e; cd /usr/share/openquake/risklib/demos/risk
         echo 'running the report tool'
         oq-lite info --report ClassicalRisk/job_hazard.ini
 
@@ -440,7 +440,8 @@ _pkgtest_innervm_run () {
 
         echo 'running EventBasedRisk...'
         oq-lite run EventBasedRisk/job.ini
-        oq-lite export -1 agg_losses-rlzs csv /tmp
+        oq-lite export -1 loss_maps-rlzs xml /tmp
+
         echo 'Show all the oq-lite calculations'
         oq-lite show 0
         "

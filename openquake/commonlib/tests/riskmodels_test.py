@@ -16,6 +16,7 @@
 import os
 import pickle
 import unittest
+import mock
 import numpy
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import writetmp
@@ -249,16 +250,27 @@ lossCategory="contents">
         # test pickleability
         pickle.loads(pickle.dumps(cmodel))
 
-    def test_wrong_association(self):
+    def test_wrong_loss_type_association(self):
         scm = os.path.join(FF_DIR, 'structural_consequence_model.xml')
         ccm = os.path.join(FF_DIR, 'contents_consequence_model.xml')
         # exchanging the associations on purpose
-        inputs = dict(structural_consequence=ccm, contents_consequence=scm)
+        oq = mock.Mock()
+        oq.inputs = dict(structural_consequence=ccm, contents_consequence=scm)
         with self.assertRaises(ValueError) as ctx:
-            riskmodels.get_risk_models('consequence', inputs)
-        self.assertIn('structural_consequence_model.xml" is of type '
-                      '"structural", expected "contents"',
+            riskmodels.get_risk_models(oq, 'consequence')
+        self.assertIn('structural_consequence_model.xml": lossCategory is of '
+                      'type "structural", expected "contents"',
                       str(ctx.exception))
+
+    def test_wrong_riskmodel_association(self):
+        cfm = os.path.join(FF_DIR, 'contents_fragility_model.xml')
+        # passing a fragility model instead of a consequence model
+        oq = mock.Mock()
+        oq.inputs = dict(contents_consequence=cfm)
+        with self.assertRaises(ValueError) as ctx:
+            riskmodels.get_risk_models(oq, 'consequence')
+        self.assertIn('is of kind FragilityModel, '
+                      'expected ConsequenceModel', str(ctx.exception))
 
     def test_wrong_files(self):
         # missing lossCategory

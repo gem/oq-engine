@@ -33,9 +33,10 @@ from openquake.commonlib.sourcewriter import obj_to_node
 
 F64 = numpy.float64
 
+COST_TYPE_REGEX = '|'.join(valid.cost_type.choices)
+
 LOSS_TYPE_KEY = re.compile(
-    '(structural|nonstructural|contents|business_interruption|'
-    'occupants|fragility)_([\w_]+)')
+    '(%s|occupants|fragility)_([\w_]+)' % COST_TYPE_REGEX)
 
 
 def get_risk_files(inputs):
@@ -86,28 +87,6 @@ def cost_type_to_loss_type(ct):
     return 'fatalities' if ct == 'occupants' else ct
 
 
-def get_vfs(inputs, retrofitted=False):
-    """
-    Given a dictionary {key: pathname}, look for keys with name
-    <cost_type>__vulnerability, parse them and returns a dictionary
-    imt, taxonomy -> vf_by_loss_type.
-
-    :param inputs: a dictionary key -> pathname
-    :param retrofitted: a flag (default False)
-    """
-    retro = '_retrofitted' if retrofitted else ''
-    vulnerability_functions = collections.defaultdict(dict)
-    for cost_type in get_risk_files(inputs)[1]:
-        key = '%s_vulnerability%s' % (cost_type, retro)
-        if key not in inputs:
-            continue
-        vf_dict = nrml.parse(inputs[key])
-        for (imt, tax), vf in vf_dict.items():
-            vulnerability_functions[imt, tax][
-                cost_type_to_loss_type(cost_type)] = vf
-    return vulnerability_functions
-
-
 # ########################### vulnerability ############################## #
 
 def filter_vset(elem):
@@ -128,27 +107,65 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def get_risk_models(kind, inputs):
+def get_risk_models(oqparam, kind):
     """
-    :param kind: the string 'fragility', 'consequence'
-    :param inputs: a dictionary key -> path name
-    :returns: a dictionary loss_type -> ConsequenceModel instance
+    :param oqparam:
+        an OqParam instancs
+    :param kind:
+        "vulnerability"|"vulnerability_retrofitted"|"fragility"|"consequence"
+    :returns:
+        a dictionary imt_taxo -> loss_type -> function
     """
     rmodels = {}
-    for key in inputs:
-        mo = re.match(
-            '(structural|nonstructural|contents|business_interruption)'
-            '_' + kind, key)
+    for key in oqparam.inputs:
+        mo = re.match('(occupants|%s)_%s$' % (COST_TYPE_REGEX, kind), key)
         if mo:
-            rmodel = nrml.parse(inputs[key])
-            expected_loss_type = mo.group(1)  # the loss type in the key
-            if rmodel.lossCategory != expected_loss_type:
+            key_type = mo.group(1)  # the cost_type in the key
+            # can be occupants, structural, nonstructural, ...
+            rmodel = nrml.parse(oqparam.inputs[key])
+            rmodels[cost_type_to_loss_type(key_type)] = rmodel
+            if rmodel.lossCategory is None:  # NRML 0.4
+                continue
+            cost_type = str(rmodel.lossCategory)
+            rmodel_kind = rmodel.__class__.__name__
+            kind_ = kind.replace('_retrofitted', '')  # strip retrofitted
+            if not rmodel_kind.lower().startswith(kind_):
                 raise ValueError(
-                    'Error in the .ini file: "%s_file=%s" is of type "%s", '
-                    'expected "%s"' % (key, inputs[key], rmodel.lossCategory,
-                                       expected_loss_type))
-            rmodels[rmodel.lossCategory] = rmodel
-    return rmodels
+                    'Error in the file "%s_file=%s": is '
+                    'of kind %s, expected %s' % (
+                        key, oqparam.inputs[key], rmodel_kind,
+                        kind.capitalize() + 'Model'))
+            if cost_type != key_type:
+                raise ValueError(
+                    'Error in the file "%s_file=%s": lossCategory is of type '
+                    '"%s", expected "%s"' % (key, oqparam.inputs[key],
+                                             rmodel.lossCategory, key_type))
+    rdict = collections.defaultdict(dict)
+    if kind == 'fragility':
+        limit_states = []
+        for loss_type, fm in sorted(rmodels.items()):
+            # build a copy of the FragilityModel with different IM levels
+            newfm = fm.build(oqparam.continuous_fragility_discretization,
+                             oqparam.steps_per_interval)
+            for imt_taxo, ff in newfm.items():
+                if not limit_states:
+                    limit_states.extend(fm.limitStates)
+                # we are rejecting the case of loss types with different
+                # limit states; this may change in the future
+                assert limit_states == fm.limitStates, (
+                    limit_states, fm.limitStates)
+                rdict[imt_taxo][loss_type] = ff
+                # TODO: see if it is possible to remove the attribute
+                # below, used in classical_damage
+                ff.steps_per_interval = oqparam.steps_per_interval
+        oqparam.limit_states = limit_states
+    elif kind == 'consequence':
+        rdict = rmodels
+    else:  # vulnerability
+        for loss_type, rm in rmodels.items():
+            for imt_taxo, rf in rm.items():
+                rdict[imt_taxo][loss_type] = rf
+    return rdict
 
 
 @nrml.build.add(('vulnerabilityModel', 'nrml/0.4'))
@@ -166,7 +183,8 @@ def get_vulnerability_functions_04(node, fname):
     # vulnerability function in a set will get its own levels
     imts = set()
     taxonomies = set()
-    vf_dict = {}  # imt, taxonomy -> vulnerability function
+    # imt, taxonomy -> vulnerability function
+    vmodel = scientific.VulnerabilityModel(**node.attrib)
     for vset in node:
         imt_str, imls, min_iml, max_iml, imlUnit = ~vset.IML
         imts.add(imt_str)
@@ -191,10 +209,10 @@ def get_vulnerability_functions_04(node, fname):
                     (len(coefficients), len(imls), fname,
                      vfun.coefficientsVariation.lineno))
             with context(fname, vfun):
-                vf_dict[imt_str, taxonomy] = scientific.VulnerabilityFunction(
+                vmodel[imt_str, taxonomy] = scientific.VulnerabilityFunction(
                     taxonomy, imt_str, imls, loss_ratios, coefficients,
                     vfun['probabilisticDistribution'])
-    return vf_dict
+    return vmodel
 
 
 @nrml.build.add(('vulnerabilityModel', 'nrml/0.5'))
@@ -210,7 +228,8 @@ def get_vulnerability_functions_05(node, fname):
     # NB: the IMTs can be duplicated and with different levels, each
     # vulnerability function in a set will get its own levels
     taxonomies = set()
-    vf_dict = {}  # imt, taxonomy -> vulnerability function
+    vmodel = scientific.VulnerabilityModel(**node.attrib)
+    # imt, taxonomy -> vulnerability function
     for vfun in node.getnodes('vulnerabilityFunction'):
         with context(fname, vfun):
             imt = vfun.imls['imt']
@@ -227,7 +246,7 @@ def get_vulnerability_functions_05(node, fname):
                 probs.append(valid.probabilities(~probabilities))
             probs = numpy.array(probs)
             assert probs.shape == (len(loss_ratios), len(imls))
-            vf_dict[imt, taxonomy] = (
+            vmodel[imt, taxonomy] = (
                 scientific.VulnerabilityFunctionWithPMF(
                     taxonomy, imt, imls, numpy.array(loss_ratios),
                     probs))  # the seed will be set by readinput.get_risk_model
@@ -246,10 +265,10 @@ def get_vulnerability_functions_05(node, fname):
                     'line %d' % (len(coefficients), len(imls), fname,
                                  vfun.covLRs.lineno))
             with context(fname, vfun):
-                vf_dict[imt, taxonomy] = scientific.VulnerabilityFunction(
+                vmodel[imt, taxonomy] = scientific.VulnerabilityFunction(
                     taxonomy, imt, imls, loss_ratios, coefficients,
                     vfun['dist'])
-    return vf_dict
+    return vmodel
 
 
 def get_imtls(ddict):
@@ -425,10 +444,12 @@ def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
         ff['shape'] = convert_type[ffs.attrib.get('type', 'lognormal')]
         if fmt == 'continuous':
             with context(fname, IML):
-                ff.append(LiteralNode('imls', dict(imt=IML['IMT'],
-                                                   minIML=IML['minIML'],
-                                                   maxIML=IML['maxIML'],
-                                                   noDamageLimit=nodamage)))
+                attr = dict(imt=IML['IMT'],
+                            minIML=IML['minIML'],
+                            maxIML=IML['maxIML'])
+                if nodamage is not None:
+                    attr['noDamageLimit'] = nodamage
+                ff.append(LiteralNode('imls', attr))
             for ffc in ffs[2:]:
                 with context(fname, ffc):
                     ls = ffc['ls']

@@ -722,7 +722,7 @@ def filter_and_split(src, sourceprocessor):
     out = []
     weight_time = 0
     weight = 0
-    for ss in sourceconverter.split_source(src, sourceprocessor.asd):
+    for ss in sourceconverter.split_source(src):
         if sourceprocessor.weight:
             t = time.time()
             ss.weight = get_weight(ss)
@@ -763,10 +763,9 @@ class BaseSourceProcessor(object):
     """
     weight = False  # when True, set the weight on each source
 
-    def __init__(self, sitecol, maxdist, area_source_discretization=None):
+    def __init__(self, sitecol, maxdist):
         self.sitecol = sitecol
         self.maxdist = maxdist
-        self.asd = area_source_discretization
 
 
 class SourceFilter(BaseSourceProcessor):

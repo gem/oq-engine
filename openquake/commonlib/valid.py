@@ -791,6 +791,10 @@ def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat, backarc="false"):
                      positivefloat(vs30), longitude(lon),
                      latitude(lat), boolean(backarc))
 
+# used for the exposure validation
+cost_type = Choice('structural', 'nonstructural', 'contents',
+                   'business_interruption')
+
 
 ###########################################################################
 

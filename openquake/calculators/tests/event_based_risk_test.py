@@ -2,6 +2,7 @@ import os
 import re
 from nose.plugins.attrib import attr
 
+from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a)
@@ -25,7 +26,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fnames in out.values():
             for fname in fnames:
                 if fname.endswith('.csv') and any(x in fname for x in (
-                        'loss_curve', 'loss_map', 'agg_loss', 'avg_loss')):
+                        'loss_curve', 'loss_map', 'agg_loss', 'avg_loss',
+                        'rcurves', 'rmaps')):
                     all_csv.append(fname)
         assert all_csv, 'Could not find any CSV file??'
         for fname in all_csv:
@@ -39,10 +41,17 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
         self.assert_stats_ok(case_2, individual_curves='true')
-
-    @attr('qa', 'risk', 'event_based_risk')
-    def test_case_3(self):
-        self.assert_stats_ok(case_3)
+        text = view('mean_avg_losses', self.calc.datastore)
+        self.assertEqual(text, '''\
+========= =========================
+asset_ref structural               
+========= =========================
+a0        2.546726E+02 9.594796E+01
+a1        2.471865E+02 6.348668E+01
+a2        9.838715E+01 6.268233E+01
+a3        9.505429E+01 0.000000E+00
+total     6.953005E+02 2.221170E+02
+========= =========================''')
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2bis(self):
@@ -50,9 +59,29 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
                             concurrent_tasks=0)
         # this also tests that concurrent_tasks=0 does not give issues
-        [fname] = out['agg_losses-rlzs', 'csv']
+        [fname] = out['agg_losses', 'csv']
         self.assertEqualFiles(
             'expected/agg_losses-b1,b1-structural.csv', fname)
+
+    @attr('qa', 'risk', 'event_based_risk')
+    def test_case_3(self):
+        out = self.run_calc(case_3.__file__, 'job_haz.ini,job_risk.ini',
+                            exports='xml', individual_curves='false',
+                            concurrent_tasks=4)
+        [fname] = out['agg_curve-stats', 'xml']
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+    @attr('qa', 'risk', 'event_based_risk')
+    def test_case_4(self):
+        # Turkey with SHARE logic tree
+        out = self.run_calc(case_4.__file__, 'job_h.ini,job_r.ini',
+                            exports='csv', individual_curves='true')
+        fnames = out['agg_losses', 'csv']
+        assert fnames, 'No agg_losses exported??'
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+    # now a couple of hazard tests
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4_hazard(self):
@@ -61,16 +90,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                             ground_motion_fields='false', exports='csv')
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles('expected/hazard_curve-mean.csv', fname)
-
-    @attr('qa', 'risk', 'event_based_risk')
-    def test_case_4(self):
-        # Turkey with SHARE logic tree
-        out = self.run_calc(case_4.__file__, 'job_h.ini,job_r.ini',
-                            exports='csv', individual_curves='true')
-        fnames = out['agg_losses-rlzs', 'csv']
-        assert fnames, 'No agg_losses-rlzs exported??'
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):

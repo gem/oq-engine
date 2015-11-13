@@ -112,8 +112,9 @@ class Hdf5Dataset(object):
     :param key: an hdf5 key string
     :param dtype: dtype of the dataset (usually composite)
     :param shape: shape of the dataset (if None, the dataset is extendable)
+    :param compression: None or 'gzip' are recommended
     """
-    def __init__(self, hdf5, key, dtype, shape):
+    def __init__(self, hdf5, key, dtype, shape, compression=None):
         self.hdf5 = hdf5
         self.key = key
         self.dtype = dtype
@@ -203,7 +204,7 @@ class DataStore(collections.MutableMapping):
             if name not in self.attrs:  # add missing parameter
                 self.attrs[name] = value
 
-    def create_dset(self, key, dtype, size=None):
+    def create_dset(self, key, dtype, size=None, compression=None):
         """
         Create a one-dimensional HDF5 dataset.
 
@@ -211,7 +212,7 @@ class DataStore(collections.MutableMapping):
         :param dtype: dtype of the dataset (usually composite)
         :param size: size of the dataset (if None, the dataset is extendable)
         """
-        return Hdf5Dataset(self.hdf5, key, dtype, size)
+        return Hdf5Dataset(self.hdf5, key, dtype, size, compression)
 
     def export_path(self, relname, export_dir=None):
         """
@@ -222,8 +223,8 @@ class DataStore(collections.MutableMapping):
         :param export_dir: export directory (if None use .export_dir)
         """
         assert not os.path.dirname(relname), relname
-        name, ext = os.path.splitext(relname)
-        newname = '%s_%s%s' % (name, self.calc_id, ext)
+        name, ext = relname.rsplit('.', 1)
+        newname = '%s_%s.%s' % (name, self.calc_id, ext)
         if export_dir is None:
             export_dir = self.export_dir
         return os.path.join(export_dir, newname)

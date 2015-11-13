@@ -1,4 +1,20 @@
   [Michele Simionato]
+  * Added an attribute `discretization` to `areaGeometry` nodes
+  * Added a command oq-lite show_attrs to display the attributes of a HDF5
+    dataset
+  * Added flags `asset_loss_table` (default False) and `avg_losses`
+    (default True) to build the event loss table and the average losses
+    per asset respectively
+  * Added a check on the cost types read from the exposure
+
+  [Matteo Nastasi]
+  * Demos moved to /usr/share/openquake/risklib
+  
+  [Michele Simionato]
+  * Added outputs `agg_curve-rlzs` and `agg_curve-stats` in the HDF5 file
+  * Changed the storage of the event based risk outputs in the HDF5 file
+  * Added a consistency check between the risk model keys in the job.ini and
+    the risk model files
   * Scenario Risk and Scenario Damage calculators can work with a single
     configuration file now
   * When computing insured losses for an exposure without deductible and
@@ -11,7 +27,7 @@
     traceback
   * Improved the memory consumption and data transfer of the event_based_risk
     calculator
-  * All data of a computation are now stored in a single calc_XXX.hdf5 file    
+  * All data of a computation are now stored in a single calc_XXX.hdf5 file
   * The ProbabilisticEventBased risk demo works with a single job.ini
   * Added support for NRML 0.5 for fragility functions and deprecated NRML 0.4
   * Added a ConsequenceModel parser and implemented the calculation of
