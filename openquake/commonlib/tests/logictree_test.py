@@ -495,7 +495,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>
                         <incrementalMFD binWidth="0.1" minMag="8.0">
-                            <occurRates>oops 0.005</occurRates>
+                            <occurRates>-0.01 0.005</occurRates>
                         </incrementalMFD>
                     </uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
@@ -505,12 +505,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
-        self.assertEqual(
-            exc.message,
-            "expected valid 'incrementalMFD' node",
-            "wrong exception message: %s" % exc.message)
+        with self.assertRaises(ValueError) as arc:
+            _TestableSourceModelLogicTree('lt', {'lt': lt, 'sm': sm}, 'base')
+        self.assertIn("node uncertaintyModel: float -0.01 < 0",
+                      str(arc.exception))
 
     def test_simple_fault_geometry_absolute_wrong_format(self):
         lt = _make_nrml("""\

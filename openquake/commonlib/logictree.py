@@ -50,7 +50,8 @@ from openquake.commonlib.node import (node_from_xml,
                                       parse,
                                       iterparse,
                                       node_from_elem,
-                                      LiteralNode)
+                                      LiteralNode,
+                                      context)
 from openquake.baselib.python3compat import with_metaclass
 
 #: Minimum value for a seed number
@@ -936,13 +937,11 @@ class SourceModelLogicTree(BaseLogicTree):
         elif branchset.uncertainty_type == 'incrementalMFDAbsolute':
             min_mag, bin_width = (node.incrementalMFD["minMag"],
                                   node.incrementalMFD["binWidth"])
-            rates = node.incrementalMFD.occurRates.text.strip()
-            try:
+
+            rates = node.incrementalMFD.occurRates.text
+            with context(self.filename, node):
                 rates = valid.positivefloats(rates)
-            except ValueError:
-                rates = []
-            if _float_re.match(min_mag) and _float_re.match(bin_width) and\
-                    len(rates):
+            if _float_re.match(min_mag) and _float_re.match(bin_width):
                 return
             raise ValidationError(
                 node, self.filename,
@@ -988,6 +987,10 @@ class SourceModelLogicTree(BaseLogicTree):
                                          node.LineString.posList.text.split()))
             trace = geo.Line([geo.Point(*p) for p in coords])
         except ValueError:
+            # If the geometry cannot be created then use the ValidationError
+            # to point the user to the incorrect node. Hence, if trace is
+            # compiled successfully then len(trace) is True, otherwise it is
+            # False
             trace = []
         if _float_re.match(usd) and _float_re.match(lsd) and\
                 _float_re.match(dip) and _float_re.match(spacing) and\
@@ -1012,6 +1015,8 @@ class SourceModelLogicTree(BaseLogicTree):
                     edge_node.LineString.posList.text.split()))
                 edge = geo.Line([geo.Point(*p) for p in coords])
             except ValueError:
+                # See use of validation error in simple geometry case
+                # The node is valid if all of the edges compile correctly
                 edge = []
             if len(edge):
                 valid_edges.append(True)
