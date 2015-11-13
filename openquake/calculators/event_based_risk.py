@@ -211,13 +211,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
     is_stochastic = True
 
-    outs = collections.OrderedDict(
-        [('AVGLOSS', 'avg_losses-rlzs'),
-         ('AGGLOSS', 'agg_losses'),
-         ('ASSLOSS', 'asset_loss_table'),
-         ('RC', 'loss_curves-rlzs'),
-         ('IC', 'icurves-rlzs')])
-
     def pre_execute(self):
         """
         Read the precomputed ruptures (or compute them on the fly) and
