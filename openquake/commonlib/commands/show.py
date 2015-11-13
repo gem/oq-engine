@@ -67,25 +67,35 @@ def show(calc_id, key=None, rlzs=None):
         else:
             print(obj)
         return
-    # print all keys
-    oq = OqParam.from_(ds.attrs)
-    print(oq.calculation_mode, 'calculation (%r) saved in %s contains:' %
-          (oq.description, ds.hdf5path))
-    for key in ds:
-        print(key, humansize(ds.getsize(key)))
 
-    # this part is experimental and not tested on purpose
-    if rlzs and 'curves_by_sm' in ds:
+    oq = OqParam.from_(ds.attrs)
+
+    # this part is experimental
+    if rlzs and 'hcurves' in ds:
+        from openquake.hazardlib.calc.hazard_curve import zero_curves
+        from openquake.risklib import scientific
         min_value = 0.01  # used in rmsep
-        curves_by_rlz, mean_curves = combined_curves(ds)
+        curves_by_rlz = ds['hcurves']
+        realizations = ds['rlzs_assoc'].realizations
+        N = len(ds['sitemesh'])
+        mean_curves = zero_curves(N, oq.imtls)
+        for imt in oq.imtls:
+            mean_curves[imt] = scientific.mean_curve(
+                [curves_by_rlz[r][imt] for r in curves_by_rlz],
+                [rlz.weight for rlz in realizations])
         dists = []
-        for rlz in sorted(curves_by_rlz):
-            curves = curves_by_rlz[rlz]
+        for rlz, curves in zip(realizations, curves_by_rlz.values()):
             dist = sum(rmsep(mean_curves[imt], curves[imt], min_value)
                        for imt in mean_curves.dtype.fields)
-            dists.append((dist, rlz))
-        for dist, rlz in sorted(dists):
-            print('rlz=%s, rmsep=%s' % (rlz, dist))
+            dists.append((dist, rlz.ordinal, rlz.uid))
+        for dist, ordinal, uid in sorted(dists):
+            print('rlz #%d(%s): rmsep=%s' % (ordinal, uid, dist))
+    else:
+        # print all keys
+        print(oq.calculation_mode, 'calculation (%r) saved in %s contains:' %
+              (oq.description, ds.hdf5path))
+        for key in ds:
+            print(key, humansize(ds.getsize(key)))
 
 
 parser = sap.Parser(show)
