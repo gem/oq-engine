@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Added fault geometry epistemic uncertainties to the source model logic tree
+
   [Michele Simionato]
   * Fixed the `oq-lite show --rlzs` command
   * Fixed a minor bug in the source writer for nodalPlane nodes
