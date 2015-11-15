@@ -124,6 +124,9 @@ Calculation 407 completed in 50 seconds. Results:
 1512 | Uniform Hazard Spectra | UHS (0.1) rlz-356
 ```
 
+## More commands
+For a list of additional commands, type `oq-engine --help`.
+
 ## Uninstall the OpenQuake Engine
 ```bash
 $ sudo yum erase python-oq-*
@@ -133,4 +136,18 @@ If you want to remove all the dependencies installed by the OpenQuake Engine, yo
 $ sudo yum install yum-plugin-remove-with-leaves
 $ sudo yum erase --remove-leaves python-oq-*
 ```
+## Reset the database and drop the datastore
+You can reset the OpenQuake Engine to start from a fresh installation:
 
+```bash
+oq_reset_db
+```
+
+This script will remove the database and the users datastore, then it will create a fresh new setup.
+
+To run the script without interaction the flag `--yes` can be used. To just drop all the data without recreating the database the flag `--skip-new` can be used.
+
+## Getting help
+If you need help or have questions/comments/feedback for us, you can:
+  * Subscribe to the developer mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-dev
+  * Contact us on IRC: irc.freenode.net, channel #openquake

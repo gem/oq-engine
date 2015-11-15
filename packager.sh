@@ -521,7 +521,7 @@ _pkgtest_innervm_run () {
             set -x
         fi
 
-        cd /usr/share/doc/python-oq-risklib/examples/demos
+        cd /usr/share/openquake/risklib/demos
 
         for ini in \$(find . -name job.ini | sort); do
             echo \"Running \$ini\"
