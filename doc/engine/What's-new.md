@@ -73,36 +73,38 @@ does not have the attributes `deductible` and `insuredLimit`, a clear
 error is raised early.
 
 5. NRML 0.4 is still supported and works just fine, however it is deprecated
-and a deprecation warning is printed every time you use a risk model in
-the old format. To get rid of the warning you must upgrade the risk model
-files to NRML 0.5. There is a command to do that recursively on a directory.
-Just write
+  and a deprecation warning is printed every time you use a risk model in
+  the old format. To get rid of the warning you must upgrade the risk model
+  files to NRML 0.5. There is a command to do that recursively on a directory.
+  Just write
+  
+  ``$ oq-lite upgrade_nrml <some-directory>``
+  
+  and all of your risk models will be upgraded. The original files will be
+  kept, but with a `.bak` extension appended on the right. Notice that due
+  to the validation discussed before, you will need to set the `lossCategory`
+  to the correct value. This is easy to do, since if you try to run a
+  computation you will get a clear error message telling which is the expected
+  value for the `lossCategory` for each risk model file. For instance, you may
+  get an error like this:
 
-``$ oq-lite upgrade_nrml <some-directory>``
-
-and all of your risk models will be upgraded. The original files will be
-kept, but with a `.bak` extension appended on the right. Notice that due
-to the validation discussed before, you will need to set the `lossCategory`
-to the correct value. This is easy to do, since if you try to run a computation
-you will get a clear error message telling which is the expected value for
-the `lossCategory` for each risk model file. For instance, you may get an
-error like this:
-
+```python
 ValueError: Error in the file "structural_vulnerability_file=/home/.../vulnerability_model.xml": lossCategory is of type "economic_loss", expected "structural"
+```
 
-The reason is that in NRML 0.4 the `lossCategory` attribute had no
-special meaning (actually it was ignored by the engine) whereas now
-there is a check on it. It must be consistent with the name of the
-variable used in the configuration file. In this example in the
-job_risk.ini file there was a line `structural_vulnerability_file=`,
-so the `lossCategory` is expected to be of kind `structural`. Edit the
-"vulnerability_model.xml" file and set the `lossCategory` attribute to
-the expected value. 
+  The reason is that in NRML 0.4 the `lossCategory` attribute had no
+  special meaning (actually it was ignored by the engine) whereas now
+  there is a check on it. It must be consistent with the name of the
+  variable used in the configuration file. In this example in the
+  job_risk.ini file there was a line `structural_vulnerability_file=`,
+  so the `lossCategory` is expected to be of kind `structural`. Edit the
+  "vulnerability_model.xml" file and set the `lossCategory` attribute to
+  the expected value. 
 
-Valid loss categories are `structural`, `nonstructural`, `contents`,
-`business_interruption` and `fatalities`.  There is now a strict check
-on the categories, both in the risk model files and in the exposure
-file.
+  Valid loss categories are `structural`, `nonstructural`, `contents`,
+  `business_interruption` and `fatalities`.  There is now a strict check
+  on the categories, both in the risk model files and in the exposure
+  file.
 
 8. The demos have been revisited and updated. Also their location has
 changed for the users installing OpenQuake from the packages. Now they
@@ -133,8 +135,10 @@ builds were internal on Jenkins and visible only to our staff.
 The engine is still built with Jenkins for various technical reasons.
 
 12. The .rst report of a calculation has been improved. Now you can run
-
-$ oq-lite show -1 fullreport
+  
+  ```bash
+  $ oq-lite show -1 fullreport
+  ```
 
 11. We added a script `oq_reset_db` to drop and recreate the engine
 database, as well as removing the datastore directories of all users.
@@ -146,27 +150,6 @@ is finally documented here:
 9. Countless small improvements and additional validations have been
 added. This release has seen more than 100 pull requests reviewed and
 merged.
-
-Support for different platforms
-----------------------------------------------------
-
-OpenQuake 1.5 supports Ubuntu from release 12.04 up to 15.10. 
-We provide official packages for the long term releases 12.04 and 14.04.
-We were able to extend the support to
-Ubuntu 12.04 by backporting the package `python-h5py` from Ubuntu 14.04.
-So *Ubuntu 12.04 is still supported, even if it is deprecated*.
-
-We have official packages also for CentOS 7
-and Fedora and in general for [Red Hat Enterprise Linux clones]
-(Installing-the-OpenQuake-Engine-from-source-code-on-Fedora-and-RHEL.md)
-
-While the engine is not supported on Windows and Mac OS X, we are
-happy to report that the underlying libraries and the
-`oq-lite` command-line tool run just fine. We do not offer
-any automatic tool to perform the installation, but there is
-a [guide for Windows](Installing-OQ-Lite-on-Windows.md) and
-a [guide for Mac OS X](Installing-OQ-Lite-on-MacOS.md) to help you
-to install the necessary dependencies.
 
 Bug fixes and changes with respect to OpenQuake 1.5
 ----------------------------------------------------
@@ -219,9 +202,29 @@ Now it will print only one line:
 ```
   id | output_type | name
  419 | datastore | agg_curve-rlzs
- ```
+```
 
 When exporting the composite output, 8 XML files will be generated, in
 the same format as before, plus a zip file containing all of them.
 When using the Web UI the zip file will be available for download.
 
+Support for different platforms
+----------------------------------------------------
+
+OpenQuake 1.6 supports Ubuntu from release 12.04 up to 15.10. 
+We provide official packages for the long term releases 12.04 and 14.04.
+We were able to extend the support to
+Ubuntu 12.04 by backporting the package `python-h5py` from Ubuntu 14.04.
+So *Ubuntu 12.04 is still supported, even if it is deprecated*.
+
+We have official packages also for CentOS 7
+and Fedora and in general for [Red Hat Enterprise Linux clones]
+(Installing-the-OpenQuake-Engine-from-source-code-on-Fedora-and-RHEL.md)
+
+While the engine is not supported on Windows and Mac OS X, we are
+happy to report that the underlying libraries and the
+`oq-lite` command-line tool run just fine. We do not offer
+any automatic tool to perform the installation, but there is
+a [guide for Windows](Installing-OQ-Lite-on-Windows.md) and
+a [guide for Mac OS X](Installing-OQ-Lite-on-MacOS.md) to help you
+to install the necessary dependencies.
