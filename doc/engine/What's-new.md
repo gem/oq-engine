@@ -6,8 +6,8 @@ New features of the OpenQuake Engine, version 1.6
 --------------------------------------------------
 
 1. The following six calculators have been completely rewritten and now
-use the HDF5 technology that in previous versions was still experimental:
-
+  use the HDF5 technology that in previous versions was still experimental:
+  
   1. `scenario`
   2. `scenario_risk`
   3. `scenario_damage`
@@ -15,27 +15,27 @@ use the HDF5 technology that in previous versions was still experimental:
   5. `event_based`
   6. `event_based_risk`
 
-As a consequence all such calculators are much faster and use a
-lot less memory than before. Even the disk space occupation has been
-drastically reduced, and large computations that before took terabytes
-of disk space now requires few gigabytes of disk space. Such
-calculators do not store anymore anymore their outputs in the
-database, but in an HDF5 file, named the datastore, and located by default in
-``$HOME/oqdata/calc_XXX.hdf5``. All such calculators can now run with a
-single configuration file contained both the hazard and the risk parameters.
+  As a consequence all such calculators are much faster and use a
+  lot less memory than before. Even the disk space occupation has been
+  drastically reduced, and large computations that before took terabytes
+  of disk space now requires few gigabytes of disk space. Such
+  calculators do not store anymore anymore their outputs in the
+  database, but in an HDF5 file, named the datastore, and located by default in
+  ``$HOME/oqdata/calc_XXX.hdf5``. All such calculators can now run with a
+  single configuration file contained both the hazard and the risk parameters.
 
 2. The other calculators are unchanged and they are still using PostgreSQL.
-They will be replaced with HDF5-based versions in future releases of the
-OpenQuake Engine. For some calculator the HDF5-based implementation is
-already available in the engine and can be accessed by using the ``--lite``
-flag. For instance the classical hazard calculator is supported and can be
-run with
-
-``$ oq-engine --lite --run job.ini``
-
-However the calculators accessible with the ``--lite`` flag should be
-considered experimental, previews of things to come, and they are still
-subject to change.
+  They will be replaced with HDF5-based versions in future releases of the
+  OpenQuake Engine. For some calculator the HDF5-based implementation is
+  already available in the engine and can be accessed by using the ``--lite``
+  flag. For instance the classical hazard calculator is supported and can be
+  run with
+  
+  ``$ oq-engine --lite --run job.ini``
+  
+  However the calculators accessible with the ``--lite`` flag should be
+  considered experimental, previews of things to come, and they are still
+  subject to change.
 
 6. The `scenario_risk` and `scenario_damage` calculators now support multiple
 GSIMs at the same time. 
