@@ -75,14 +75,11 @@ of the key in the job.ini file (see the [manual]
 (http://www.globalquakemodel.org/openquake/support/documentation/engine/)
 for the details).
 
-5. If an user set the parameter `insured_losses=True` but the exposure
-does not have the attributes `deductible` and `insuredLimit`, a clear
-error is raised early.
-
-9. Some work has been going on hazardlib, as usual, and you can
+6. Some work has been going on hazardlib, as usual, and you can
 have a look at the [changelog](https://github.com/gem/oq-hazardlib/blob/engine-1.6/debian/changelog). The most prominent feature is the introduction of
 epistemic uncertainties on the fault geometry into the Source Model Logic Tree.
-Moreover, we added an optional attribute `discretization` to the
+
+7 We added an optional attribute `discretization` to the
 area source geometry XML description: this means that it is possible to
 specify a source-specific discretization step. This is useful in site specific
 analysis: area sources with little impact on the site of interest can use
@@ -98,7 +95,7 @@ and *Tusa and Langer (2015)*.
   $ oq-lite show <calc_id> fullreport
   ```
   
-  To get information about a given calculation. This only works for the lite
+  to get information about a given calculation. This only works for the lite
   calculators.
 
 12. Some small improvements to the Engine Web User Interface have been
@@ -116,10 +113,11 @@ merged.
 Bug fixes and changes with respect to OpenQuake 1.5
 ----------------------------------------------------
 
-1. A deprecation warning is printed every time you use a risk model in
-  the NRML 0.4 format. To get rid of the warning you must upgrade the risk model
-  files to NRML 0.5. There is a command to do that recursively on a directory.
-  Just write
+1. The most important change is the support for NRML 0.5. A
+  deprecation warning is printed every time you use a risk model in
+  the NRML 0.4 format. To get rid of the warning you must upgrade the
+  risk model files to NRML 0.5. There is a command to do that
+  recursively on a directory.  Just write
   
   ``$ oq-lite upgrade_nrml <some-directory>``
   
@@ -145,13 +143,17 @@ Bug fixes and changes with respect to OpenQuake 1.5
   the expected value. 
 
 2. Valid loss categories are `structural`, `nonstructural`, `contents`,
-  `business_interruption` and `fatalities`.  There is now a strict check
-  on the categories, both in the risk model files and in the exposure
-  file. The check is disable for NRML 0.4 files, so we are fully
-  backward-compatible.
+`business_interruption` and `fatalities`.  There is now a strict check
+on the categories, both in the risk model files and in the exposure
+file. The check is disabled for NRML 0.4 files, so we are fully
+backward-compatible.
+
+5. If an user set the parameter `insured_losses=True` but the exposure
+does not have the attributes `deductible` and `insuredLimit`, a clear
+error is raised early.
 
 1. In very rare circumstances the region constraint was not honored,
-i.e.  assets very close to the border of region, but still outside, well
+i.e.  assets very close to the border of region, but still outside, were
 taken in consideration by the risk calculators. This has been fixed.
 
 2. The engine had a self-termination feature: if the controller node
