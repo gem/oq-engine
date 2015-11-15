@@ -71,8 +71,11 @@ improved. In particular now an user confusing a fragility model with a
 vulnerability model or a consequence model or any other combination
 will get a clear error message. Moreover, each risk model has a
 `lossCategory` attribute which must be set consistently with the name
-of the key in the job.ini file (see the user manual for the details).
-Also, if an user set the parameter `insured_losses=True` but the exposure
+of the key in the job.ini file (see the [manual]
+(http://www.globalquakemodel.org/openquake/support/documentation/engine/)
+for the details).
+
+5. If an user set the parameter `insured_losses=True` but the exposure
 does not have the attributes `deductible` and `insuredLimit`, a clear
 error is raised early.
 
@@ -86,14 +89,17 @@ analysis: area sources with little impact on the site of interest can use
 a large discretization step whereas the important area sources can use a
 finer discretization step.
 
-12. The .rst report of a calculation has been improved. Now you can run
+10. Two new GMPEs have been added to hazardlib: *Montalva et al. (2015)*
+and *Tusa and Langer (2015)*.
+
+11. The .rst report of a calculation has been improved. Now you can run
   
   ```bash
   $ oq-lite show <calc_id> fullreport
   ```
-
-To get information about a given calculation. This only works for the lite
-calculators.
+  
+  To get information about a given calculation. This only works for the lite
+  calculators.
 
 12. Some small improvements to the Engine Web User Interface have been
 made and this feature, first introduced in OpenQuake Engine 1.4, is
@@ -104,7 +110,7 @@ database, as well as removing the datastore directories of all users.
 This is meant to be used by system administrators.
 
 9. Countless small improvements and additional validations have been
-added. This release has seen more than 100 pull requests reviewed and
+added. This release has seen more than 150 pull requests reviewed and
 merged.
 
 Bug fixes and changes with respect to OpenQuake 1.5
@@ -146,19 +152,19 @@ Bug fixes and changes with respect to OpenQuake 1.5
 
 1. In very rare circumstances the region constraint was not honored,
 i.e.  assets very close to the border of region, but still outside, well
-taken in consideration by the engine. This has been fixed.
+taken in consideration by the risk calculators. This has been fixed.
 
 2. The engine had a self-termination feature: if the controller node
 could not access the worker nodes, it assumed a failure in celery
-and self-killed if the configuration parameter 
+and committed suicide if the configuration parameter 
 `terminate_job_when_celery_is_down` was true. We removed such parameter
 and such feature because it was too dangerous: sometimes celery was
 up and running but incorrectly reported down because too slow to
-respond, due to an heavy load. Now it celery appears to not respond
-a warning is printed and user has to see if celery is really dead
-and in that case can kill the computation manually.
+respond, due to an heavy load. Now if celery appears to not respond
+a warning is printed and that user has to see if celery is really dead
+and in that case she can kill the computation manually.
 
-3. We removed the epsilon sampling "feature" from the scenario_risk calculator:
+3. We removed the epsilon sampling feature from the scenario_risk calculator:
 it was a performance hack introducing a gratuitous seed dependency, now
 unneeded thanks to the recent performance improvements.
 
