@@ -15,16 +15,15 @@ New features of the OpenQuake Engine, version 1.6
   5. `event_based`
   6. `event_based_risk`
 
-  As a consequence all such calculators are much faster and use a
-  lot less memory than before. Even the disk space occupation has been
-  drastically reduced, and large computations that before took terabytes
-  of disk space now requires few gigabytes of disk space. Such
-  calculators do not store anymore anymore their outputs in the
-  database, but in an HDF5 file, named the datastore, and located by default in
-  ``$HOME/oqdata/calc_XXX.hdf5``. All such calculators can now run with a
-  single configuration file contained both the hazard and the risk parameters.
+  As a consequence all such calculators are much faster and use a lot
+  less memory than before. Even the disk space occupation has been
+  drastically reduced, and large event based computations that before
+  took terabytes of disk space now requires few gigabytes. The new
+  calculators do not store their outputs in the
+  database, but in an HDF5 file, named the datastore, located by
+  default in ``$HOME/oqdata/calc_XXX.hdf5``.
 
-2. The other calculators are unchanged and they are still using PostgreSQL.
+2. The other calculators are unchanged; they are still using PostgreSQL.
   They will be replaced with HDF5-based versions in future releases of the
   OpenQuake Engine. For some calculator the HDF5-based implementation is
   already available in the engine and can be accessed by using the ``--lite``
@@ -37,22 +36,27 @@ New features of the OpenQuake Engine, version 1.6
   considered experimental, previews of things to come, and they are still
   subject to change.
 
+3. The new calculators can run with a single configuration file contained both
+the hazard and the risk parameters. This is actually the recommended way to
+run such calculators.
+
 6. The `scenario_risk` and `scenario_damage` calculators now support multiple
-GSIMs at the same time. 
+GSIMs at the same time. This new functionality is documented in the [manual]
+(http://www.globalquakemodel.org/openquake/support/documentation/engine/).
 
 8. The `scenario_damage` calculator now supports multiple loss types at
-the same time, just as the `scenario_risk` calculator.
+the same time, just as the `scenario_risk` calculator. Again, see the [manual]
+(http://www.globalquakemodel.org/openquake/support/documentation/engine/) for
+the details.
 
-7. The event based risk calculator has been optimized and enhanced. Now it
+7. The `event_based_risk` calculator has been optimized and enhanced. Now it
 is possible to generate the full event loss table for each
 asset and for each realization. Just set the configuration parameter
-`asset_loss_table=True` (the default is False). The `specific_assets`
-feature has been removed since it has become useless thanks to the recent
-performance improvements. Use `asset_loss_table=True` instead.
+`asset_loss_table=True` (the default is False).
 
-3. OpenQuake 1.6 supports officially the format NRML 0.5 for the risk
-models, which before was supported in a limited and experimental way
-for a subset of the vulnerability functions. Now all kind of risk
+3. OpenQuake 1.6 supports officially the format NRML 0.5 for all risk
+models. In OpenQuake 1.5 it was supported in a limited and experimental way
+only for a subset of the vulnerability functions. Now all kind of risk
 models are supported: vulnerability models, fragility risk models and
 consequence models. Consequence models are brand new, introduced for
 the first time in this release. All of that is documented in the [manual]
@@ -72,48 +76,6 @@ Also, if an user set the parameter `insured_losses=True` but the exposure
 does not have the attributes `deductible` and `insuredLimit`, a clear
 error is raised early.
 
-5. NRML 0.4 is still supported and works just fine, however it is deprecated
-  and a deprecation warning is printed every time you use a risk model in
-  the old format. To get rid of the warning you must upgrade the risk model
-  files to NRML 0.5. There is a command to do that recursively on a directory.
-  Just write
-  
-  ``$ oq-lite upgrade_nrml <some-directory>``
-  
-  and all of your risk models will be upgraded. The original files will be
-  kept, but with a `.bak` extension appended on the right. Notice that due
-  to the validation discussed before, you will need to set the `lossCategory`
-  to the correct value. This is easy to do, since if you try to run a
-  computation you will get a clear error message telling which is the expected
-  value for the `lossCategory` for each risk model file. For instance, you may
-  get an error like this:
-
-```python
-ValueError: Error in the file "structural_vulnerability_file=/home/.../vulnerability_model.xml": lossCategory is of type "economic_loss", expected "structural"
-```
-
-  The reason is that in NRML 0.4 the `lossCategory` attribute had no
-  special meaning (actually it was ignored by the engine) whereas now
-  there is a check on it. It must be consistent with the name of the
-  variable used in the configuration file. In this example in the
-  job_risk.ini file there was a line `structural_vulnerability_file=`,
-  so the `lossCategory` is expected to be of kind `structural`. Edit the
-  "vulnerability_model.xml" file and set the `lossCategory` attribute to
-  the expected value. 
-
-  Valid loss categories are `structural`, `nonstructural`, `contents`,
-  `business_interruption` and `fatalities`.  There is now a strict check
-  on the categories, both in the risk model files and in the exposure
-  file.
-
-8. The demos have been revisited and updated. Also their location has
-changed for the users installing OpenQuake from the packages. Now they
-are installed in `/usr/share/openquake/risklib/demos`.
-
-12. When using a vulnerability function with a Probability Mass Function,
-now it is possible to set the seed by changing the `random_seed` parameter
-in the configuration file. Before the seed was hard-coded.
-
 9. Some work has been going on hazardlib, as usual, and you can
 have a look at the [changelog](https://github.com/gem/oq-hazardlib/blob/engine-1.6/debian/changelog). The most prominent feature is the introduction of
 epistemic uncertainties on the fault geometry into the Source Model Logic Tree.
@@ -123,16 +85,6 @@ specify a source-specific discretization step. This useful in site specific
 analysis: area sources with little impact on the site of interest can use
 a large discretization step whereas the important area sources can use a
 finer discretization step.
-
-11. From the technological point of view, the OpenQuake project is even
-more open than before. From this release we are using GitHub as our
-official bug tracker, which makes it easier to follow the development
-process (before the bug tracker was Launchpad, which is less popular
-than GitHub and not integrated with the code base). Moreover from this
-release our libraries (both oq-hazardlib and oq-risklib) are tested by
-using a public Continuous Integration system, Travis. Before our
-builds were internal on Jenkins and visible only to our staff.
-The engine is still built with Jenkins for various technical reasons.
 
 12. The .rst report of a calculation has been improved. Now you can run
   
@@ -180,6 +132,52 @@ calculations. In the future we will remove such parameter completely,
 but first further optimizations of the event based risk calculator
 are needed.
 
+5. The `specific_assets` feature has been removed from the
+`event_based_risk` calculator. It has become useless thanks to the
+recent performance improvements. Use `asset_loss_table=True` instead.
+
+5. NRML 0.4 is still supported and works just fine, however it is deprecated
+  and a deprecation warning is printed every time you use a risk model in
+  the old format. To get rid of the warning you must upgrade the risk model
+  files to NRML 0.5. There is a command to do that recursively on a directory.
+  Just write
+  
+  ``$ oq-lite upgrade_nrml <some-directory>``
+  
+  and all of your risk models will be upgraded. The original files will be
+  kept, but with a `.bak` extension appended on the right. Notice that due
+  to the validation discussed before, you will need to set the `lossCategory`
+  to the correct value. This is easy to do, since if you try to run a
+  computation you will get a clear error message telling which is the expected
+  value for the `lossCategory` for each risk model file. For instance, you may
+  get an error like this:
+
+```python
+ValueError: Error in the file "structural_vulnerability_file=/home/.../vulnerability_model.xml": lossCategory is of type "economic_loss", expected "structural"
+```
+
+  The reason is that in NRML 0.4 the `lossCategory` attribute had no
+  special meaning (actually it was ignored by the engine) whereas now
+  there is a check on it. It must be consistent with the name of the
+  variable used in the configuration file. In this example in the
+  job_risk.ini file there was a line `structural_vulnerability_file=`,
+  so the `lossCategory` is expected to be of kind `structural`. Edit the
+  "vulnerability_model.xml" file and set the `lossCategory` attribute to
+  the expected value. 
+
+  Valid loss categories are `structural`, `nonstructural`, `contents`,
+  `business_interruption` and `fatalities`.  There is now a strict check
+  on the categories, both in the risk model files and in the exposure
+  file.
+
+8. The demos have been revisited and updated. Also their location has
+changed for the users installing OpenQuake from the packages. Now they
+are installed in `/usr/share/openquake/risklib/demos`.
+
+12. When using a vulnerability function with a Probability Mass Function,
+now it is possible to set the seed by changing the `random_seed` parameter
+in the configuration file. Before the seed was hard-coded.
+
 13. We introduced the concept of composite outputs, i.e. outputs that
 can be exported to a zip file containing a set of output files. For
 instance an event based risk calculation with two realizations and
@@ -218,7 +216,7 @@ Ubuntu 12.04 by backporting the package `python-h5py` from Ubuntu 14.04.
 So *Ubuntu 12.04 is still supported, even if it is deprecated*.
 
 We have official packages also for CentOS 7
-and Fedora and in general for [Red Hat Enterprise Linux clones]
+and Fedora and in general for [Red Hat Enterprise Linux clones].
 (Installing-the-OpenQuake-Engine-from-source-code-on-Fedora-and-RHEL.md)
 
 While the engine is not supported on Windows and Mac OS X, we are
@@ -228,3 +226,16 @@ any automatic tool to perform the installation, but there is
 a [guide for Windows](Installing-OQ-Lite-on-Windows.md) and
 a [guide for Mac OS X](Installing-OQ-Lite-on-MacOS.md) to help you
 to install the necessary dependencies.
+
+Other
+------
+
+The OpenQuake project is even
+more open than before. From this release we are using GitHub as our
+official bug tracker, which makes it easier to follow the development
+process (before the bug tracker was Launchpad, which is less popular
+than GitHub and not integrated with the code base). Moreover from this
+release our libraries (both oq-hazardlib and oq-risklib) are tested by
+using a public Continuous Integration system, Travis. Before our
+builds were internal on Jenkins and visible only to our staff.
+The engine is still built with Jenkins for various technical reasons.
