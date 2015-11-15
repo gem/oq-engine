@@ -79,7 +79,7 @@ for the details).
 have a look at the [changelog](https://github.com/gem/oq-hazardlib/blob/engine-1.6/debian/changelog). The most prominent feature is the introduction of
 epistemic uncertainties on the fault geometry into the Source Model Logic Tree.
 
-7 We added an optional attribute `discretization` to the
+7. We added an optional attribute `discretization` to the
 area source geometry XML description: this means that it is possible to
 specify a source-specific discretization step. This is useful in site specific
 analysis: area sources with little impact on the site of interest can use
