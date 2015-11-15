@@ -155,7 +155,7 @@ celeryd --purge &
 celery worker --purge -Ofair &
 </pre>
 
-Then run `openquake` without the `--no-distribute` option:
+Then run `oq-engine` without the `--no-distribute` option:
 <pre>
 oq-engine --run-hazard=/usr/share/openquake/risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
 </pre>
@@ -163,15 +163,16 @@ oq-engine --run-hazard=/usr/share/openquake/risklib/demos/hazard/SimpleFaultSour
 ## More commands
 For a list of additional commands, type `oq-engine --help`.
 
-## Reset the database
+## Reset the database and drop the datastore
 You can reset the OpenQuake Engine to start from a fresh installation:
 
 ```bash
-killall celeryd
-sudo -u postgres dropdb openquake2
-sudo -u postgres oq_create_db
-oq-engine --upgrade-db --yes
+oq_reset_db
 ```
+
+This script will remove the database and the users datastore, then it will create a fresh new setup.
+
+To run the script without interaction the flag `--yes` can be used. To just drop all the data without recreating the database the flag `--skip-new` can be used.
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
