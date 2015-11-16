@@ -75,9 +75,26 @@ of the key in the job.ini file (see the [manual]
 (http://www.globalquakemodel.org/openquake/support/documentation/engine/)
 for the details).
 
-6. Some work has been going on hazardlib, as usual, and you can
-have a look at the [changelog](https://github.com/gem/oq-hazardlib/blob/engine-1.6/debian/changelog). The most prominent feature is the introduction of
-epistemic uncertainties on the fault geometry into the Source Model Logic Tree.
+6. Some work has been going on hazardlib, as usual, and you can have a
+look at the [changelog]
+(https://github.com/gem/oq-hazardlib/blob/engine-1.6/debian/changelog). The
+most prominent feature is the introduction of new epistemic
+uncertainties in the Source Model Logic Tree. Users are now able to
+represent alternative geometries for the fault source typologies using
+the following uncertainty model definitions:
+
+  1. simpleFaultGeometryAbsolute - Replaces the simple fault geometry with the specified simple fault surface.
+  2. complexFaultGeometryAbsolute - Replaces the complex fault geometry with the specified complex fault surface.
+  3. characteristicFaultGeometryAbsolute - Replaces the characteristic fault geometry with the specified surface.
+  4. simpleFaultDipRelative - Increases or decreases the fault dip with the specified value.
+  5. simpleFaultDipAbsolute - Replaces the simple fault dip with the specified value.
+
+  Also added is the ability to replace a given evenly discretised magnitude
+  frequency distribution of a source in the logic tree using the
+  `incrementalMFDAbsolute` option.
+
+  Documentation on the usage of these features will be added in the forthcoming
+  version of the manual.
 
 7. We added an optional attribute `discretization` to the
 area source geometry XML description: this means that it is possible to
