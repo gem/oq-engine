@@ -20,7 +20,7 @@ To stop the WebUI process press `CTRL-C`
 Open Firefox or Chrome and load the [http://localhost:8000/engine](http://localhost:8000/engine) page
 ![WebUI main page](../img/WebUI-main.png)
 
-### Start the calculation
+### Start a calculation
 
 Before starting a new calculation you need to prepare inputs. All the inputs file and the `job.ini` must be placed in a compressed zip file.
 
