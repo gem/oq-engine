@@ -500,7 +500,7 @@ class CallableDict(collections.OrderedDict):
 
     def __missing__(self, key):
         if callable(self.keymissing):
-            return self.keymissing(key)
+            return self.keymissing
         raise KeyError(key)
 
 

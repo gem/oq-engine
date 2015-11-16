@@ -48,6 +48,7 @@ class _BaseSeismicSourceTestCase(unittest.TestCase):
 
     def setUp(self):
         class FakeSource(ParametricSeismicSource):
+            MODIFICATIONS = set(())
             iter_ruptures = None
             count_ruptures = None
             get_rupture_enclosing_polygon = None

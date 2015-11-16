@@ -63,6 +63,8 @@ class PointSource(ParametricSeismicSource):
     hypocenter_distribution
     '''.split()
 
+    MODIFICATIONS = set(())
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,

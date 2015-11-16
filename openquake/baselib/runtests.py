@@ -70,4 +70,5 @@ if __name__ == '__main__':
     import sys
     pkgnames = sys.argv[1]  # comma separated package names
     suite = TestLoader().loadTestsFromNames([pkgnames])
-    unittest.TextTestRunner(verbosity=2).run(suite).save_times(pkgnames)
+    runner = unittest.TextTestRunner(verbosity=2, failfast=True)
+    runner.run(suite).save_times(pkgnames)

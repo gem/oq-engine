@@ -46,6 +46,8 @@ class NonParametricSeismicSource(BaseSeismicSource):
     """
     __slots__ = BaseSeismicSource.__slots__ + ['data']
 
+    MODIFICATIONS = set(())
+
     def __init__(self, source_id, name, tectonic_region_type, data):
         super(NonParametricSeismicSource, self). \
             __init__(source_id, name, tectonic_region_type)
