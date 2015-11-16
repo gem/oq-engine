@@ -96,7 +96,7 @@ The WebUI process owner must be member of the `shadow` group.
 
 ### Running with supervisord
 
-On a production system [nginx](http://nginx.org/en/), [supervisord](http://supervisord.org/) and [gunicorn](http://gunicorn.org/) is the reccomended software stack to run the WebUI.
+On a production system [nginx](http://nginx.org/en/) + [supervisord](http://supervisord.org/) + [gunicorn](http://gunicorn.org/) is the reccomended software stack to run the WebUI.
 
 #### Supervisord
 [OpenQuake Engine WebUI supervisord configuration](supervisord.md)
@@ -115,3 +115,8 @@ DJANGO_SETTINGS_MODULE="openquake.server.settings" python manage.py collectstati
 ```
 
 [OpenQuake Engine WebUI nginx configuration](nginx.md)
+
+## Getting help
+If you need help or have questions/comments/feedback for us, you can:
+  * Subscribe to the developer mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-dev
+  * Contact us on IRC: irc.freenode.net, channel #openquake
