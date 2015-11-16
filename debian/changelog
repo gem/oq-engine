@@ -1,6 +1,7 @@
   [Daniele Viganò]
   * Added the oq_reset_db script. It removes and recreates the database and
     the datastore
+
   [Matteo Nastasi]
   * Demos moved to /usr/share/openquake/risklib
 
