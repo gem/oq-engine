@@ -117,7 +117,7 @@ and *Tusa and Langer (2015)*.
 
 12. Some small improvements to the Engine Web User Interface have been
 made and this feature, first introduced in OpenQuake Engine 1.4, is
-now finally documented.
+[now finally documented](https://github.com/gem/oq-engine/blob/engine-1.6/doc/server/OpenQuake-engine-webui.md).
 
 11. We added a script `oq_reset_db` to drop and recreate the engine
 database, as well as removing the datastore directories of all users.
