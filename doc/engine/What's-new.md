@@ -272,3 +272,13 @@ using a public Continuous Integration system,
 [Travis](https://travis-ci.org/gem/). Before our
 builds were internal on Jenkins and visible only to our staff.
 The engine is still built with Jenkins for various technical reasons.
+
+Finally, depending on the version of the HDF5 libraries you are using,
+you may get a warning like the following:
+
+```
+HDF5: infinite loop closing library
+      D,G,A,S,T,F,D,A,S,T,F,FD,P,FD,P,FD,P,E,E,SL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL
+```
+
+Please ignore it. The engine is working correctly.
