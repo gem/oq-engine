@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module exports :class:'AllenEtAl2012',
-                      'AllenEtAl2012Rhypo
+                      'AllenEtAl2012Rhypo'
 """
 from __future__ import division
 import numpy as np
