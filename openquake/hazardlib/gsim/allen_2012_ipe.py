@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:'AllenEtAl2012IPE'
+Module exports :class:'AllenEtAl2012',
+                      'AllenEtAl2012Rhypo
 """
 from __future__ import division
 import numpy as np
@@ -109,7 +110,7 @@ class AllenEtAl2012Rhypo(AllenEtAl2012):
     """
     Version of the Allen, Wald and Worden (2012) IPE for hypocentral distance
     """
-    #: Required distance measure is rupture distance
+    #: Required distance measure is hypocentral distance
     REQUIRES_DISTANCES = set(('rhypo',))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
