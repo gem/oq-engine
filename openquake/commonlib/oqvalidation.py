@@ -23,7 +23,7 @@ import numpy
 
 from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import (
-    get_imtls, get_risk_files, get_vfs, get_ffs)
+    get_imtls, get_risk_files, get_risk_models)
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
@@ -36,6 +36,13 @@ RISK_CALCULATORS = [
     'classical_bcr', 'scenario_damage', 'classical_damage']
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
+
+# this global dictionary is populated with the risk model every time
+# an OqParam instance is created (i.e. once per calculation);
+# this is a suboptimal design but it is the best we can do without
+# being forced to rethink a lot of code; it has the advantage that
+# the risk model files are read only once per calculation
+rmdict = collections.defaultdict(dict)
 
 
 class OqParam(valid.ParamSet):
@@ -50,6 +57,8 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
     asset_life_expectancy = valid.Param(valid.positivefloat)
+    asset_loss_table = valid.Param(valid.boolean, False)
+    avg_losses = valid.Param(valid.boolean, False)
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice(*CALCULATORS), '')
     coordinate_bin_width = valid.Param(valid.positivefloat)
@@ -145,14 +154,10 @@ class OqParam(valid.ParamSet):
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
         file_type, file_by_ct = get_risk_files(self.inputs)
-        if file_type == 'vulnerability':
-            self.risk_imtls = get_imtls(get_vfs(self.inputs))
-        elif file_type == 'fragility':
-            # TODO: should I pass steps_per_interval?
-            # then ClassicalDamageCase1TestCase.test_interpolation will fail
-            ffs, _ = get_ffs(
-                file_by_ct, self.continuous_fragility_discretization)
-            self.risk_imtls = get_imtls(ffs)
+        rmdict.clear()
+        rmodels = get_risk_models(self, file_type)
+        rmdict.update(rmodels)
+        self.risk_imtls = get_imtls(rmdict)
 
         # check the IMTs vs the GSIMs
         if 'gsim_logic_tree' in self.inputs:
@@ -223,6 +228,14 @@ class OqParam(valid.ParamSet):
         """
         imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
         return collections.OrderedDict(sorted(imtls.items()))
+
+    @property
+    def all_cost_types(self):
+        """
+        Return the cost types of the computation (including `occupants`
+        if it is there) in order.
+        """
+        return sorted(get_risk_files(self.inputs)[1])
 
     def no_imls(self):
         """

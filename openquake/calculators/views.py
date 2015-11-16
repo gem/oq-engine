@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import io
 import os.path
 import numbers
 import operator
@@ -26,7 +27,8 @@ from openquake.baselib.performance import PerformanceMonitor
 from openquake.commonlib import parallel
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.datastore import view
-from openquake.commonlib.writers import build_header, scientificformat
+from openquake.commonlib.writers import (
+    build_header, scientificformat, write_csv)
 
 
 def rst_table(data, header=None, fmt='%9.7E'):
@@ -151,12 +153,14 @@ def view_ruptures_by_trt(token, dstore):
 @view.add('params')
 def view_params(token, dstore):
     oq = OqParam.from_(dstore.attrs)
-    params = ('calculation_mode', 'number_of_logic_tree_samples',
+    params = ['calculation_mode', 'number_of_logic_tree_samples',
               'maximum_distance', 'investigation_time',
               'ses_per_logic_tree_path', 'truncation_level',
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
-              'random_seed', 'master_seed', 'concurrent_tasks')
+              'random_seed', 'master_seed', 'concurrent_tasks']
+    if 'risk' in oq.calculation_mode:
+        params.append('avg_losses')
     return rst_table([(param, getattr(oq, param)) for param in params])
 
 
@@ -216,8 +220,8 @@ def get_data_transfer(dstore):
     return numpy.array(block_info, block_dt), to_send_forward, to_send_back
 
 
-@view.add('data_transfer')
-def data_transfer(token, dstore):
+@view.add('source_data_transfer')
+def source_data_transfer(token, dstore):
     """
     Determine the amount of data transferred from the controller node
     to the workers and back in a classical calculation.
@@ -228,6 +232,22 @@ def data_transfer(token, dstore):
         ('Estimated sources to send', humansize(to_send_forward)),
         ('Estimated hazard curves to receive', humansize(to_send_back))]
     return rst_table(tbl)
+
+
+@view.add('avglosses_data_transfer')
+def avglosses_data_transfer(token, dstore):
+    """
+    Determine the amount of average losses transferred from the workers to the
+    controller node in a risk calculation.
+    """
+    oq = OqParam.from_(dstore.attrs)
+    N = len(dstore['assetcol'])
+    R = len(dstore['rlzs_assoc'].realizations)
+    L = len(dstore['riskmodel'].loss_types)
+    ct = oq.concurrent_tasks
+    size_bytes = N * R * L * 2 * 8 * ct  # two 8 byte floats, loss and ins_loss
+    return ('%d asset(s) x %d realization(s) x %d loss type(s) x 2 losses x '
+            '8 bytes x %d tasks = %s' % (N, R, L, ct, humansize(size_bytes)))
 
 
 # this is used by the ebr calculator
@@ -255,6 +275,27 @@ def view_old_avg_losses(token, dstore):
     return rst_table(losses)
 
 
+# for scenario_risk
+@view.add('totlosses')
+def view_totlosses(token, dstore):
+    """
+    This is a debugging view. You can use it to check that the total
+    losses, i.e. the losses obtained by summing the average losses on
+    all assets are indeed equal to the aggregate losses. This is a
+    sanity check for the correctness of the implementation.
+    """
+    avglosses = dstore['avglosses-rlzs'].value
+    dtlist = [('%s-%s' % (name, stat), float)
+              for name in avglosses.dtype.names
+              for stat in ('mean', 'mean_ins')]
+    zero = numpy.zeros(avglosses.shape[1:], numpy.dtype(dtlist))
+    for name in avglosses.dtype.names:
+        for stat in ('mean', 'mean_ins'):
+            for rec in avglosses:
+                zero['%s-%s' % (name, stat)] += rec[name][stat]
+    return rst_table(zero)
+
+
 def sum_table(records):
     """
     Used to compute summaries. The records are assumed to have numeric
@@ -268,7 +309,7 @@ def sum_table(records):
     result = [None] * size
     firstrec = records[0]
     for i in range(size):
-        if isinstance(firstrec[i], numbers.Number):
+        if isinstance(firstrec[i], (numbers.Number, numpy.ndarray)):
             result[i] = sum(rec[i] for rec in records)
         else:
             result[i] = 'total'
@@ -280,20 +321,16 @@ def sum_table(records):
 def view_mean_avg_losses(token, dstore):
     assets = dstore['assetcol'].value['asset_ref']
     try:
-        group = dstore['avg_losses-stats']
-        single_rlz = False
+        array = dstore['avg_losses-stats']  # shape (S, N, 2)
+        data = array[0, :, :]  # shape (N, 2)
     except KeyError:
-        group = dstore['avg_losses-rlzs']
-        single_rlz = True
-    loss_types = sorted(group)
+        array = dstore['avg_losses-rlzs']  # shape (N, R, 2)
+        data = array[:, 0, :]  # shape (N, 2)
+    loss_types = dstore['riskmodel'].loss_types
     header = ['asset_ref'] + loss_types
-    losses = [[a] + [None] * len(loss_types) for a in assets]
+    losses = [[a] + [numpy.zeros(2)] * len(loss_types) for a in assets]
     for lti, lt in enumerate(loss_types):
-        if single_rlz:
-            [key] = list(group[lt])
-        else:
-            key = 'mean'
-        for aid, pair in enumerate(group[lt][key]):
+        for aid, pair in enumerate(data[lt]):
             losses[aid][lti + 1] = pair  # loss, ins_loss
     losses.sort()
     if len(losses) > 1:
@@ -302,7 +339,7 @@ def view_mean_avg_losses(token, dstore):
 
 
 @view.add('exposure_info')
-def exposure_info(token, dstore):
+def view_exposure_info(token, dstore):
     """
     Display info about the exposure model
     """
@@ -318,3 +355,34 @@ def exposure_info(token, dstore):
             ('#taxonomies', len(taxonomies))]
     return rst_table(data) + '\n\n' + rst_table(
         tbl, header=['Taxonomy', '#Assets'])
+
+
+@view.add('assetcol')
+def view_assetcol(token, dstore):
+    """
+    Display the exposure in CSV format
+    """
+    assetcol = dstore['assetcol'].value
+    sitemesh = dstore['sitemesh'].value
+    taxonomies = dstore['taxonomies'].value
+    header = list(assetcol.dtype.names)
+    columns = [None] * len(header)
+    for i, field in enumerate(header):
+        if field == 'taxonomy':
+            columns[i] = taxonomies[assetcol[field]]
+        elif field == 'site_id':
+            header[i] = 'lon_lat'
+            columns[i] = sitemesh[assetcol[field]]
+        else:
+            columns[i] = assetcol[field]
+    return write_csv(io.StringIO(), [header] + list(zip(*columns)), fmt='%s')
+
+
+@view.add('fullreport')
+def view_fullreport(token, dstore):
+    """
+    Display an .rst report about the computation
+    """
+    # avoid circular imports
+    from openquake.commonlib.reportwriter import ReportWriter
+    return ReportWriter(dstore).make_report()

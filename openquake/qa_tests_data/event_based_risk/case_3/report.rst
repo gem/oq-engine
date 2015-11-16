@@ -16,7 +16,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0        
 random_seed                  23         
 master_seed                  0          
-concurrent_tasks             32         
+concurrent_tasks             16         
 ============================ ===========
 
 Input files
@@ -24,7 +24,7 @@ Input files
 ======================== ============================================================
 Name                     File                                                        
 ======================== ============================================================
-exposure                 `exposure_model_10assets.xml <exposure_model_10assets.xml>`_
+exposure                 `exposure_model_1asset.xml <exposure_model_1asset.xml>`_    
 gsim_logic_tree          `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
 job_ini                  `job_haz.ini <job_haz.ini>`_                                
 source                   `SA_RA_CATAL1_00.xml <SA_RA_CATAL1_00.xml>`_                
@@ -75,11 +75,11 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ======
-Number of tasks to generate        34    
-Estimated sources to send          4.5 MB
-Estimated hazard curves to receive 18 KB 
-================================== ======
+================================== =======
+Number of tasks to generate        18     
+Estimated sources to send          4.51 MB
+Estimated hazard curves to receive 9 KB   
+================================== =======
 
 Exposure model
 --------------

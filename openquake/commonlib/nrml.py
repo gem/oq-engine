@@ -75,13 +75,15 @@ this is a job for the LiteralNode class which can be subclassed and
 supplemented by a dictionary of validators.
 """
 from __future__ import print_function
+import re
 import sys
 import logging
 from openquake.baselib.general import CallableDict
 from openquake.baselib.python3compat import unicode, raise_
 from openquake.commonlib import valid, writers
-from openquake.commonlib.node import node_to_xml, \
-    Node, LiteralNode, node_from_elem, striptag, parse, iterparse
+from openquake.commonlib.node import (
+    node_to_xml, Node, LiteralNode, node_from_elem, striptag,
+    parse as xmlparse, iterparse)
 
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
 NRML05 = 'http://openquake.org/xmlns/nrml/0.5'
@@ -115,7 +117,29 @@ class NRMLFile(object):
         self._file.close()
 
 
+def get_tag_version(nrml_node):
+    """
+    Extract from a node of kind NRML the tag and the version. For instance
+    from '{http://openquake.org/xmlns/nrml/0.4}fragilityModel' one gets
+    the pair ('fragilityModel', 'nrml/0.4').
+    """
+    version, tag = re.search(r'(nrml/[\d\.]+)\}(\w+)', nrml_node.tag).groups()
+    return tag, version
+
+
 nodefactory = CallableDict(keyfunc=striptag)
+
+build = CallableDict(keyfunc=get_tag_version)
+# dictionary of functions with at least two arguments, node and fname
+
+
+def parse(fname, *args):
+    """
+    Parse a NRML file and return an associated Python object. It works by
+    calling nrml.read() and nrml.build() in sequence.
+    """
+    [node] = read(fname)
+    return build(node, fname, *args)
 
 
 @nodefactory.add('sourceModel', 'simpleFaultRupture', 'complexFaultRupture',
@@ -126,9 +150,9 @@ class ValidNode(LiteralNode):
     and ruptures from NRML files.
     """
     validators = dict(
-        strike=valid.strike_range,  # needed for the moment
-        dip=valid.dip_range,  # needed for the moment
-        rake=valid.rake_range,  # needed for the moment
+        strike=valid.strike_range,
+        dip=valid.dip_range,
+        rake=valid.rake_range,
         magnitude=valid.positivefloat,
         lon=valid.longitude,
         lat=valid.latitude,
@@ -147,13 +171,13 @@ class ValidNode(LiteralNode):
         binWidth=valid.positivefloat,
         probability=valid.probability,
         hypoDepth=valid.probability_depth,
-        nodalPlane=valid.nodal_plane,
         occurRates=valid.positivefloats,
         probs_occur=valid.pmf,
         weight=valid.probability,
         alongStrike=valid.probability,
         downDip=valid.probability,
         id=valid.simple_id,
+        discretization=valid.compose(valid.positivefloat, valid.nonzero),
         )
 
 
@@ -176,7 +200,7 @@ class ExposureDataNode(LiteralNode):
     validators = dict(
         id=valid.simple_id,
         description=valid.utf8,
-        name=valid.name,
+        name=valid.cost_type,
         type=valid.name,
         insuranceLimit=float_or_flag,
         deductible=float_or_flag,
@@ -212,16 +236,24 @@ class VulnerabilityNode(LiteralNode):
     )
 
 
-@nodefactory.add('fragilityModel')
+@nodefactory.add('fragilityModel', 'consequenceModel')
 class FragilityNode(LiteralNode):
     """
-    Literal Node class used to validate fragility functions
+    Literal Node class used to validate fragility functions and consequence
+    functions.
     """
     validators = dict(
+        id=valid.utf8,  # no constraints on the taxonomy
         format=valid.ChoiceCI('discrete', 'continuous'),
+        assetCategory=valid.utf8,
+        dist=valid.Choice('LN'),
+        mean=valid.positivefloat,
+        stddev=valid.positivefloat,
         lossCategory=valid.name,
+        poes=lambda text, **kw: valid.positivefloats(text),
         IML=valid.IML,
-        params=valid.fragilityparams,
+        minIML=valid.positivefloat,
+        maxIML=valid.positivefloat,
         limitStates=valid.namelist,
         description=valid.utf8,
         type=valid.ChoiceCI('lognormal'),
@@ -337,7 +369,7 @@ def read(source, chatty=True):
     :param source:
         a file name or file object open for reading
     """
-    nrml = parse(source).getroot()
+    nrml = xmlparse(source).getroot()
     assert striptag(nrml.tag) == 'nrml', nrml.tag
     # extract the XML namespace URL ('http://openquake.org/xmlns/nrml/0.5')
     xmlns = nrml.tag.split('}')[0][1:]
@@ -347,7 +379,10 @@ def read(source, chatty=True):
     subnodes = []
     for elem in nrml:
         nodecls = nodefactory[striptag(elem.tag)]
-        subnodes.append(node_from_elem(elem, nodecls))
+        try:
+            subnodes.append(node_from_elem(elem, nodecls))
+        except ValueError as exc:
+            raise ValueError('%s of %s' % (exc, source))
     return LiteralNode(
         'nrml', {'xmlns': xmlns, 'xmlns:gml': GML_NAMESPACE},
         nodes=subnodes)
@@ -382,7 +417,7 @@ def read_lazy(source, lazytags):
     return nodes
 
 
-def write(nodes, output=sys.stdout, fmt='%10.7E'):
+def write(nodes, output=sys.stdout, fmt='%10.7E', gml=True):
     """
     Convert nodes into a NRML file. output must be a file
     object open in write mode. If you want to perform a
@@ -393,8 +428,11 @@ def write(nodes, output=sys.stdout, fmt='%10.7E'):
     :params output: a file-like object in write or read-write mode
     """
     root = Node('nrml', nodes=nodes)
+    namespaces = {NRML05: ''}
+    if gml:
+        namespaces[GML_NAMESPACE] = 'gml:'
     with writers.floatformat(fmt):
-        node_to_xml(root, output, {NRML05: '', GML_NAMESPACE: 'gml:'})
+        node_to_xml(root, output, namespaces)
     if hasattr(output, 'mode') and '+' in output.mode:  # read-write mode
         output.seek(0)
         read(output)  # validate the written file

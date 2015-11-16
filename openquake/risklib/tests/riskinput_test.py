@@ -29,6 +29,7 @@ class RiskInputTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.oqparam = readinput.get_oqparam('job_loss.ini', pkg=case_2)
+        cls.oqparam.insured_losses = True
         cls.sitecol, cls.assets_by_site = readinput.get_sitecol_assets(
             cls.oqparam, readinput.get_exposure(cls.oqparam))
         cls.riskmodel = readinput.get_risk_model(cls.oqparam)
@@ -54,21 +55,21 @@ a4,3,1,50,500000,2.0,6.0
         hazard_by_site = [{}] * 4
 
         ri_PGA = self.riskmodel.build_input(
-            'PGA', hazard_by_site, self.assets_by_site)
+            'PGA', hazard_by_site, self.assets_by_site, {})
         assets, hazards, epsilons = ri_PGA.get_all(rlzs_assoc)
         self.assertEqual([a.id for a in assets], ['a0', 'a3', 'a4'])
         self.assertEqual(set(a.taxonomy for a in assets), set(['RM']))
         self.assertEqual(epsilons, [None, None, None])
 
         ri_SA_02 = self.riskmodel.build_input(
-            'SA(0.2)', hazard_by_site, self.assets_by_site)
+            'SA(0.2)', hazard_by_site, self.assets_by_site, {})
         assets, hazards, epsilons = ri_SA_02.get_all(rlzs_assoc)
         self.assertEqual([a.id for a in assets], ['a1'])
         self.assertEqual(set(a.taxonomy for a in assets), set(['RC']))
         self.assertEqual(epsilons, [None])
 
         ri_SA_05 = self.riskmodel.build_input(
-            'SA(0.5)', hazard_by_site, self.assets_by_site)
+            'SA(0.5)', hazard_by_site, self.assets_by_site, {})
         assets, hazards, epsilons = ri_SA_05.get_all(rlzs_assoc)
         self.assertEqual([a.id for a in assets], ['a2'])
         self.assertEqual(set(a.taxonomy for a in assets), set(['W']))
@@ -86,16 +87,16 @@ a4,3,1,50,500000,2.0,6.0
 
         gsims_by_trt_id = rupcalc.rlzs_assoc.gsims_by_trt_id
 
-        eps_dict = riskinput.make_eps_dict(
+        eps = riskinput.make_eps(
             self.assets_by_site, len(ses_ruptures), oq.master_seed,
             oq.asset_correlation)
 
         [ri] = self.riskmodel.build_inputs_from_ruptures(
             self.sitecol, ses_ruptures, gsims_by_trt_id, oq.truncation_level,
-            correl_model, eps_dict, 1)
+            correl_model, eps, 1)
 
         assets, hazards, epsilons = ri.get_all(
-            rlzs_assoc, self.assets_by_site, eps_dict)
+            rlzs_assoc, self.assets_by_site, eps)
         self.assertEqual([a.id for a in assets],
                          [b'a0', b'a1', b'a2', b'a3', b'a4'])
         self.assertEqual(set(a.taxonomy for a in assets),

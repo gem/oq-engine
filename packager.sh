@@ -420,29 +420,33 @@ _pkgtest_innervm_run () {
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run selected demos
-        ssh $lxc_ip "set -e; cd /usr/share/doc/python-oq-risklib/examples/demos
+        ssh $lxc_ip "set -e; cd /usr/share/openquake/risklib/demos/risk
         echo 'running the report tool'
-        oq-lite info --report SimpleFaultSourceClassicalPSHA/job.ini
+        oq-lite info --report ClassicalRisk/job_hazard.ini
 
-        echo 'running SimpleFaultSourceClassicalPSHA...'
-        oq-lite run SimpleFaultSourceClassicalPSHA/job.ini
-
-        echo 'running ClassicalPSHA hazard...'
-        oq-lite run ClassicalPSHA/job_hazard.ini
-        echo 'running ClassicalPSHA risk...'
-        oq-lite run ClassicalPSHA/job_risk.ini --hc -1
+        echo 'running ClassicalRisk...'
+        oq-lite run ClassicalRisk/job_hazard.ini,ClassicalRisk/job_risk.ini
 
         echo 'running ScenarioDamage...'
-        oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini
+        oq-lite run ScenarioDamage/job.ini
         oq-lite export -1 dmg_by_asset xml /tmp
-        echo 'running ScenarioRisk...'
-        oq-lite run ScenarioRisk/job_hazard.ini,ScenarioRisk/job_risk.ini
-        oq-lite show -1 agglosses > /tmp/agglosses.csv
-        cmp /tmp/agglosses.csv ScenarioRisk/expected_agglosses.csv
 
-        echo 'running ProbabilisticEventBased...'
-        oq-lite run ProbabilisticEventBased/job_risk.ini
-        oq-lite export -1 /agg_losses-rlzs csv /tmp
+        echo 'running ScenarioRisk...'
+        oq-lite run ScenarioRisk/job.ini
+        oq-lite show -1 agglosses-rlzs > /tmp/agglosses.csv
+        oq-lite show -1 totlosses > /tmp/totlosses.txt
+        cmp /tmp/agglosses.csv ScenarioRisk/expected_agglosses.csv
+        cmp /tmp/totlosses.txt ScenarioRisk/expected_totlosses.txt
+
+        echo 'running EventBasedRisk...'
+        oq-lite run EventBasedRisk/job.ini
+        oq-lite export -1 loss_maps-rlzs xml /tmp
+
+        cd ../hazard
+        echo 'running LogicTreeCase1ClassicalPSHA'
+        oq-lite run LogicTreeCase1ClassicalPSHA/job.ini
+        oq-lite show -1 --rlzs
+
         echo 'Show all the oq-lite calculations'
         oq-lite show 0
         "

@@ -19,14 +19,36 @@
 from __future__ import print_function
 import io
 import os
-import shutil
 import logging
-from openquake.commonlib import sap, datastore
+
 from openquake.baselib.general import humansize
+from openquake.hazardlib.calc.hazard_curve import zero_curves
+from openquake.commonlib import sap, datastore
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.commands.plot import combined_curves
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import rmsep
+from openquake.risklib import scientific
+
+
+def get_hcurves_and_means(dstore):
+    """
+    Extract hcurves from the datastore and compute their means.
+
+    :returns: curves_by_rlz, mean_curves
+    """
+    oq = OqParam.from_(dstore.attrs)
+    hcurves = dstore['hcurves']
+    realizations = dstore['rlzs_assoc'].realizations
+    weights = [rlz.weight for rlz in realizations]
+    curves_by_rlz = {rlz: hcurves['rlz-%03d' % rlz.ordinal]
+                     for rlz in realizations}
+    N = len(dstore['sitemesh'])
+    mean_curves = zero_curves(N, oq.imtls)
+    for imt in oq.imtls:
+        mean_curves[imt] = scientific.mean_curve(
+            [curves_by_rlz[rlz][imt] for rlz in sorted(curves_by_rlz)],
+            weights)
+    return curves_by_rlz, mean_curves
 
 
 def show(calc_id, key=None, rlzs=None):
@@ -45,10 +67,12 @@ def show(calc_id, key=None, rlzs=None):
             try:
                 oq = OqParam.from_(datastore.DataStore(calc_id).attrs)
                 cmode, descr = oq.calculation_mode, oq.description
-            except:  # invalid datastore directory
+            except:
+                # invalid datastore file, or missing calculation_mode
+                # and description attributes, perhaps due to a manual kill
                 logging.warn('Removed invalid calculation %d', calc_id)
-                shutil.rmtree(os.path.join(
-                    datastore.DATADIR, 'calc_%s' % calc_id))
+                os.remove(os.path.join(
+                    datastore.DATADIR, 'calc_%s.hdf5' % calc_id))
             else:
                 rows.append((calc_id, cmode, descr))
         for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
@@ -65,25 +89,27 @@ def show(calc_id, key=None, rlzs=None):
         else:
             print(obj)
         return
-    # print all keys
-    oq = OqParam.from_(ds.attrs)
-    print(oq.calculation_mode, 'calculation (%r) saved in %s contains:' %
-          (oq.description, ds.calc_dir))
-    for key in ds:
-        print(key, humansize(ds.getsize(key)))
 
-    # this part is experimental and not tested on purpose
-    if rlzs and 'curves_by_trt_gsim' in ds:
+    oq = OqParam.from_(ds.attrs)
+
+    # this part is experimental
+    if rlzs and 'hcurves' in ds:
         min_value = 0.01  # used in rmsep
-        curves_by_rlz, mean_curves = combined_curves(ds)
+        curves_by_rlz, mean_curves = get_hcurves_and_means(ds)
         dists = []
-        for rlz in sorted(curves_by_rlz):
-            curves = curves_by_rlz[rlz]
+        for rlz, curves in curves_by_rlz.items():
             dist = sum(rmsep(mean_curves[imt], curves[imt], min_value)
                        for imt in mean_curves.dtype.fields)
             dists.append((dist, rlz))
+        print('Realizations in order of distance from the mean curves')
         for dist, rlz in sorted(dists):
-            print('rlz=%s, rmsep=%s' % (rlz, dist))
+            print('%s: rmsep=%s' % (rlz, dist))
+    else:
+        # print all keys
+        print(oq.calculation_mode, 'calculation (%r) saved in %s contains:' %
+              (oq.description, ds.hdf5path))
+        for key in ds:
+            print(key, humansize(ds.getsize(key)))
 
 
 parser = sap.Parser(show)

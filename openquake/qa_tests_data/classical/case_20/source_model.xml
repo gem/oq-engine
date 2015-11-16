@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Fault Source for Logic Tree 1"
+    >
+        <simpleFaultSource
+        id="SFLT1"
+        name="Simple Fault 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        -65.0 -0.38221 -65.0 0.38221
+                    </gml:posList>
+                </gml:LineString>
+                <dip>
+                    90.0
+                </dip>
+                <upperSeismoDepth>
+                    0.0
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    12.0
+                </lowerSeismoDepth>
+            </simpleFaultGeometry>
+            <magScaleRel>
+                PeerMSR
+            </magScaleRel>
+            <ruptAspectRatio>
+                2.0
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="0.1"
+            minMag="6.5"
+            >
+                <occurRates>0.01 0.005
+                </occurRates>
+            </incrementalMFD>
+            <rake>
+                0.0
+            </rake>
+        </simpleFaultSource>
+        <complexFaultSource
+        id="COMFLT1"
+        name="Complex Fault 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <complexFaultGeometry>
+                <faultTopEdge>
+                    <gml:LineString>
+                        <gml:posList>
+                            -64.7 -0.38221 0.0 -64.7 0.38221 0.0
+                        </gml:posList>
+                    </gml:LineString>
+                </faultTopEdge>
+                <faultBottomEdge>
+                    <gml:LineString>
+                        <gml:posList>
+                            -64.7 -0.38221 12.0 -64.7 0.38221 12.0
+                        </gml:posList>
+                    </gml:LineString>
+                </faultBottomEdge>
+            </complexFaultGeometry>
+            <magScaleRel>
+                PeerMSR
+            </magScaleRel>
+            <ruptAspectRatio>
+                2.0
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="0.01"
+            minMag="6.5"
+            >
+                <occurRates>0.015</occurRates>
+            </incrementalMFD>
+            <rake>
+                0.0
+            </rake>
+        </complexFaultSource>
+        <characteristicFaultSource
+        id="CHAR1"
+        name="Characteristic Source 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <incrementalMFD
+            binWidth="0.01"
+            minMag="6.7"
+            >
+                <occurRates>0.02</occurRates>
+            </incrementalMFD>
+            <rake>
+                0.0
+            </rake>
+            <surface>
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            -64.5 -0.38221 -64.5 0.38221
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        90.0
+                    </dip>
+                    <upperSeismoDepth>
+                        2.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        15.0
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+            </surface>
+        </characteristicFaultSource>
+    </sourceModel>
+</nrml>

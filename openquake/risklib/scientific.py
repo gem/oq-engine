@@ -24,6 +24,7 @@ from __future__ import division
 import abc
 import copy
 import bisect
+import collections
 
 import numpy
 from numpy.testing import assert_equal
@@ -352,7 +353,7 @@ class VulnerabilityFunctionWithPMF(object):
     :param ratios: mean ratios (M)
     :param probs: a matrix of probabilities of shape (M, L)
     """
-    def __init__(self, vf_id, imt, imls, loss_ratios, probs, seed):
+    def __init__(self, vf_id, imt, imls, loss_ratios, probs, seed=42):
         self.id = vf_id
         self.imt = imt
         self._check_vulnerability_data(imls, loss_ratios, probs)
@@ -458,6 +459,31 @@ class VulnerabilityFunctionWithPMF(object):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
 
 
+# this is meant to be instantiated by riskmodels.get_risk_models
+class VulnerabilityModel(dict):
+    """
+    Container for a set of vulnerability functions. You can access each
+    function given the IMT and taxonomy with the square bracket notation.
+
+    :param str id: ID of the model
+    :param str assetCategory: asset category (i.e. buildings, population)
+    :param str lossCategory: loss type (i.e. structural, contents, ...)
+
+    All such attributes are None for a vulnerability model coming from a
+    NRML 0.4 file.
+    """
+    def __init__(self, id=None, assetCategory=None, lossCategory=None):
+        self.id = id
+        self.assetCategory = assetCategory
+        self.lossCategory = lossCategory
+
+    def __repr__(self):
+        return '<%s %s %s>' % (
+            self.__class__.__name__, self.lossCategory, sorted(self))
+
+
+# ############################## fragility ############################### #
+
 class FragilityFunctionContinuous(object):
     # FIXME (lp). Should be re-factored with LogNormalDistribution
     def __init__(self, limit_state, mean, stddev):
@@ -511,7 +537,7 @@ class FragilityFunctionDiscrete(object):
         """
         highest_iml = self.imls[-1]
 
-        if self.no_damage_limit is not None and iml < self.no_damage_limit:
+        if self.no_damage_limit and iml < self.no_damage_limit:
             return 0.
         # when the intensity measure level is above
         # the range, we use the highest one
@@ -524,7 +550,8 @@ class FragilityFunctionDiscrete(object):
                     no_damage_limit=self.no_damage_limit)
 
     def __eq__(self, other):
-        return (self.poes == other.poes and self.imls == other.imls)
+        return (self.poes == other.poes and self.imls == other.imls
+                and self.no_damage_limit == other.no_damage_limit)
 
     def __ne__(self, other):
         return not self == other
@@ -536,7 +563,8 @@ class FragilityFunctionDiscrete(object):
 
 class FragilityFunctionList(list):
     """
-    A list of fragility functions with common attributes
+    A list of fragility functions with common attributes; there is a
+    function for each limit state.
     """
     def __init__(self, elements, **attrs):
         list.__init__(self, elements)
@@ -545,6 +573,127 @@ class FragilityFunctionList(list):
     def __repr__(self):
         kvs = ['%s=%s' % item for item in vars(self).items()]
         return '<FragilityFunctionList %s>' % ', '.join(kvs)
+
+
+ConsequenceFunction = collections.namedtuple(
+    'ConsequenceFunction', 'id dist params')
+
+
+class ConsequenceModel(dict):
+    """
+    Container for a set of consequence functions. You can access each
+    function given its name with the square bracket notation.
+
+    :param str id: ID of the model
+    :param str assetCategory: asset category (i.e. buildings, population)
+    :param str lossCategory: loss type (i.e. structural, contents, ...)
+    :param str description: description of the model
+    :param limitStates: a list of limit state strings
+    :param consequence_functions: a dictionary name -> ConsequenceFunction
+    """
+
+    def __init__(self, id, assetCategory, lossCategory, description,
+                 limitStates):
+        self.id = id
+        self.assetCategory = assetCategory
+        self.lossCategory = lossCategory
+        self.description = description
+        self.limitStates = limitStates
+
+    def __repr__(self):
+        return '<%s %s %s %s>' % (
+            self.__class__.__name__, self.lossCategory,
+            self.limitStates, ' '.join(sorted(self)))
+
+
+def build_imls(ff, continuous_fragility_discretization,
+               steps_per_interval=None):
+    """
+    Build intensity measure levels from a fragility function. If the function
+    is continuous, they are produced simply as a linear space between minIML
+    and maxIML. If the function is discrete, they are generated with a
+    complex logic depending on the noDamageLimit and the parameter
+    steps per interval.
+
+    :param ff: a fragility function object
+    :param continuous_fragility_discretization: .ini file parameter
+    :param steps_per_interval:  .ini file parameter
+    :returns: generated imls
+    """
+    if ff.format == 'discrete':
+        imls = ff.imls
+        if ff.nodamage is not None and ff.nodamage < imls[0]:
+            imls = [ff.nodamage] + imls
+        if steps_per_interval:
+            gen_imls = fine_graining(imls, steps_per_interval)
+        else:
+            gen_imls = imls
+    else:  # continuous
+        gen_imls = numpy.linspace(ff.minIML, ff.maxIML,
+                                  continuous_fragility_discretization)
+    return gen_imls
+
+
+# this is meant to be instantiated by riskmodels.get_fragility_model
+class FragilityModel(dict):
+    """
+    Container for a set of fragility functions. You can access each
+    function given the IMT and taxonomy with the square bracket notation.
+
+    :param str id: ID of the model
+    :param str assetCategory: asset category (i.e. buildings, population)
+    :param str lossCategory: loss type (i.e. structural, contents, ...)
+    :param str description: description of the model
+    :param limitStates: a list of limit state strings
+    """
+
+    def __init__(self, id, assetCategory, lossCategory, description,
+                 limitStates):
+        self.id = id
+        self.assetCategory = assetCategory
+        self.lossCategory = lossCategory
+        self.description = description
+        self.limitStates = limitStates
+
+    def __repr__(self):
+        return '<%s %s %s %s>' % (
+            self.__class__.__name__, self.lossCategory,
+            self.limitStates, sorted(self))
+
+    def build(self, continuous_fragility_discretization, steps_per_interval):
+        """
+        Return a new FragilityModel instance, in which the values have been
+        replaced with FragilityFunctionList instances.
+
+        :param continuous_fragility_discretization:
+            configuration parameter
+        :param steps_per_interval:
+            configuration parameter
+        """
+        newfm = copy.copy(self)
+        for imt_taxo, ff in self.items():
+            newfm[imt_taxo] = new = copy.copy(ff)
+            # TODO: this is complicated and perhaps wrong: check with Anirudh
+            add_zero = (ff.format == 'discrete' and
+                        ff.nodamage is not None and ff.nodamage < ff.imls[0])
+            imls = build_imls(new, continuous_fragility_discretization)
+            new.imls = build_imls(
+                new, continuous_fragility_discretization, steps_per_interval)
+            range_ls = range(len(ff))
+            for i, ls, data in zip(range_ls, self.limitStates, ff):
+                if ff.format == 'discrete':
+                    if add_zero:
+                        new[i] = FragilityFunctionDiscrete(
+                            ls, imls, numpy.concatenate([[0.], data]),
+                            ff.nodamage)
+                    else:
+                        new[i] = FragilityFunctionDiscrete(
+                            ls, ff.imls, data, ff.nodamage)
+                else:  # continuous
+                    new[i] = FragilityFunctionContinuous(
+                        ls, data['mean'], data['stddev'])
+        return newfm
+
 
 #
 # Distribution & Sampling
@@ -775,15 +924,19 @@ class CurveBuilder(object):
       builder = CurveBuilder(loss_type, loss_ratios, user_provided=True)
       counts = builder.build_counts(loss_matrix)
     """
-    def __init__(self, loss_type, loss_ratios, user_provided):
+    def __init__(self, loss_type, loss_ratios, user_provided,
+                 conditional_loss_poes=(), insured_losses=False):
         self.loss_type = loss_type
         self.ratios = numpy.array(loss_ratios, F32)
         self.user_provided = user_provided
-        self.curve_resolution = len(loss_ratios)
-        R = self.curve_resolution or 1  # avoid bug in hdf5 2.0
+        self.curve_resolution = C = len(loss_ratios)
+        self.conditional_loss_poes = conditional_loss_poes
+        self.insured_losses = insured_losses
         self.loss_curve_dt = numpy.dtype([
-            ('losses', (F32, R)), ('poes', (F32, R)), ('avg', F32)])
-        self.lr_dt = numpy.dtype([('poes', (F32, R))])
+            ('losses', (F32, C)), ('poes', (F32, C)), ('avg', F32)])
+        if conditional_loss_poes:
+            poes = ['poe~%s' % clp for clp in conditional_loss_poes]
+            self.loss_map_dt = numpy.dtype([(poe, float) for poe in poes])
 
     def get_counts(self, N, count_dicts):
         """
@@ -824,32 +977,70 @@ class CurveBuilder(object):
         :param ses_ratio: event based factor
         """
         counts_matrix = self.get_counts(N, count_dicts)
-        poes = build_poes(counts_matrix, 1. / ses_ratio)
-        return poes.view(self.lr_dt)
+        poes = build_poes(counts_matrix, 1. / ses_ratio)  # shape (N, R)
+        return poes
 
     def build_loss_curves(self, assetcol, losses_by_aid, ses_ratio):
         """
         :param assetcol: asset collection object
-        :param losses_by_aid: a dictionary asset_idx -> losses
+        :param losses_by_aid: a matrix of losses indexed by asset
         :param ses_ratio: event based factor
         """
-        lcs = numpy.zeros(len(assetcol), self.loss_curve_dt)
+        lcs = numpy.zeros((len(assetcol), 2), self.loss_curve_dt)
         zeros = numpy.zeros(self.curve_resolution)
-        for i, value in enumerate(assetcol[self.loss_type]):
-            all_losses = losses_by_aid.get(i)
-            if all_losses is None:  # no losses for the given asset
-                lcs[i] = (self.ratios * value, zeros, 0)
-            else:  # build the loss curve
-                losses, poes = event_based(all_losses, ses_ratio,
-                                           self.curve_resolution)
-                avg = average_loss((losses, poes))
-                lcs[i] = (losses, poes, avg)
+        for aid, value in enumerate(assetcol[self.loss_type]):
+            for i in 0, 1:
+                all_losses = losses_by_aid[aid, i]
+                if all_losses is None:  # no losses for the given asset
+                    lcs[aid, i] = (self.ratios * value, zeros, 0)
+                else:  # build the loss curve
+                    the_losses = [loss[i] for loss in all_losses]
+                    losses, poes = event_based(the_losses, ses_ratio,
+                                               self.curve_resolution)
+                    avg = average_loss((losses, poes))
+                    lcs[aid, i] = (losses, poes, avg)
         return lcs
+
+    def _calc_loss_maps(self, asset_values, poe_matrix):
+        """
+        Compute loss maps from the PoE matrix (i.e. the loss curves).
+
+        :param asset_values: asset values for the current loss type
+        :poe_matrix: an N x C matrix of PoEs
+        :returns: a matrix N x P
+        """
+        curves = []
+        for avalue, poes in zip(asset_values, poe_matrix):
+            curves.append((self.ratios * avalue, poes))
+        return loss_map_matrix(self.conditional_loss_poes, curves).T
+
+    def build_loss_maps(self, assetcol, rcurves):
+        """
+        Build loss maps from the risk curves. Yield pairs
+        (rlz_ordinal, loss_maps array).
+
+        :param assetcol: asset collection
+        :param rcurves: array of risk curves of shape (N, R, 2)
+        """
+        N = len(assetcol)
+        I = self.insured_losses + 1
+        R = rcurves.shape[1]
+        if self.user_provided:  # loss_ratios provided
+            asset_values = assetcol[self.loss_type]
+            curves_lt = rcurves[self.loss_type]
+            for rlzi in range(R):
+                loss_maps = numpy.zeros((N, 2), self.loss_map_dt)
+                for ins in range(I):
+                    lm = self._calc_loss_maps(
+                        asset_values, curves_lt[:, rlzi, ins])
+                    for i, poes in enumerate(lm):
+                        loss_maps[i, ins] = tuple(poes)
+                yield rlzi, loss_maps
 
     def __repr__(self):
         return '<%s %s=%s user_provided=%s>' % (
             self.__class__.__name__, self.loss_type,
-            self.loss_ratios, self.user_provided)
+            self.ratios, self.user_provided)
 
 
 # should I use the ses_ratio here?
@@ -1134,22 +1325,6 @@ def loss_map_matrix(poes, curves):
     ).reshape((len(poes), len(curves)))
 
 
-def calc_loss_maps(conditional_loss_poes, asset_values, ratios, poe_matrix):
-    """
-    Compute loss maps from the PoE matrix (i.e. the loss curves).
-
-    :param conditional_loss_poes: an array of P PoEs
-    :param asset_values: asset values for the current loss type
-    :param ratios: loss ratios for the current loss type
-    :poe_matrix: an N x C matrix of PoEs
-    :returns: a matrix N x P
-    """
-    curves = []
-    for avalue, poes in zip(asset_values, poe_matrix):
-        curves.append((ratios * avalue, poes))
-    return loss_map_matrix(conditional_loss_poes, curves).T
-
-
 def mean_curve(values, weights=None):
     """
     Compute the mean by using numpy.average on the first axis.
@@ -1180,6 +1355,7 @@ def quantile_curve(curves, quantile, weights=None):
     :returns:
         A numpy array representing the quantile aggregate
     """
+    assert len(curves)
     if weights is None:
         # this implementation is an alternative to
         # numpy.array(mstats.mquantiles(curves, prob=quantile, axis=0))[0]
@@ -1208,7 +1384,12 @@ def quantile_curve(curves, quantile, weights=None):
         sorted_poes = poes[sorted_poe_idxs]
         cum_weights = numpy.cumsum(sorted_weights)
         result_curve.append(numpy.interp(quantile, cum_weights, sorted_poes))
-    return numpy.array(result_curve)
+
+    shape = getattr(curves[0], 'shape', None)
+    if shape:  # passed a sequence of arrays
+        return numpy.array(result_curve).reshape(shape)
+    else:  # passed a sequence of numbers
+        return result_curve
 
 
 # TODO: remove this from openquake.risklib.qa_tests.bcr_test
@@ -1353,6 +1534,10 @@ def normalize_curves_eb(curves):
         curves_poes = [interpolate.interp1d(
             losses, poes, bounds_error=False, fill_value=0)(loss_ratios)
             for losses, poes in curves]
+        # fix degenerated case with flat curve
+        for cp in curves_poes:
+            if numpy.isnan(cp[0]):
+                cp[0] = 0
     return loss_ratios, curves_poes
 
 
@@ -1383,6 +1568,7 @@ class SimpleStats(object):
     def __init__(self, rlzs, quantiles=()):
         self.rlzs = rlzs
         self.quantiles = quantiles
+        self.names = ['mean'] + ['quantile-%s' % q for q in quantiles]
 
     def compute_and_store(self, name, dstore):
         """
@@ -1403,21 +1589,55 @@ class SimpleStats(object):
                 path = '%s-stats/%s/quantile-%s' % (name, loss_type, q)
                 dstore[path] = numpy.array([values, ins_values]).T  # N x 2
 
+    def compute(self, name, dstore):
+        """
+        Compute mean and quantiles from the data in the datastore
+        under the group `<name>-rlzs` and store them under the group
+        `<name>-stats`. Return the number of bytes stored.
+        """
+        array = dstore[name].value
+        loss_types = array.dtype.names
+        weights = [rlz.weight for rlz in self.rlzs]
+        newname = name.replace('-rlzs', '-stats')
+        newshape = list(array.shape)
+        newshape[1] = len(self.quantiles) + 1  # number of statistical outputs
+        newarray = numpy.zeros(newshape, array.dtype)
+        for loss_type in loss_types:
+            new = newarray[loss_type]
+            data = [array[loss_type][:, i] for i in range(len(self.rlzs))]
+            new[:, 0] = mean_curve(data, weights)
+            for i, q in enumerate(self.quantiles, 1):
+                new[:, i] = quantile_curve(data, q, weights)
+        dstore[newname] = newarray
+        dstore[newname].attrs['nbytes'] = newarray.nbytes
+        dstore[newname].attrs['statnames'] = self.names
+
 
 class StatsBuilder(object):
     """
-    A class to build risk statistics
+    A class to build risk statistics.
+
+    :param quantiles: list of quantile values
+    :param conditional_loss_poes: list of conditional loss poes
+    :param poes_disagg: list of poes_disagg
+    :param curve_resolution: only meaninful for the event based
     """
     def __init__(self, quantiles,
                  conditional_loss_poes, poes_disagg,
-                 normalize_curves=normalize_curves):
+                 curve_resolution=0, _normalize_curves=normalize_curves):
         self.quantiles = quantiles
         self.conditional_loss_poes = conditional_loss_poes
+        self.curve_resolution = C = curve_resolution
         self.poes_disagg = poes_disagg
-        self.normalize_curves = normalize_curves
+        self.normalize_curves = _normalize_curves
         self.mean_quantiles = ['mean']
         for q in quantiles:
             self.mean_quantiles.append('quantile-%s' % q)
+
+        self.loss_curve_dt = numpy.dtype(
+            [('losses', (float, C)), ('poes', (float, C)), ('avg', float)])
+        poes = ['poe~%s' % clp for clp in conditional_loss_poes]
+        self.loss_map_dt = numpy.dtype([(poe, F32) for poe in poes])
 
     def normalize(self, loss_curves):
         """
@@ -1443,33 +1663,30 @@ class StatsBuilder(object):
 
             01. assets (N)
             02. loss_type (1)
-            03. mean_curves (N, 2, R)
-            04. mean_average_losses (N)
-            05. mean_map (P, N)
-            06. mean_fractions (P, N)
-            07. quantile_curves (Q, N, 2, R)
-            08. quantile_average_losses (Q, N)
-            09. quantile_maps (Q, P, N)
-            10. quantile_fractions (Q, P, N)
-            11. mean_insured_curves (N)
-            12. mean_average_insured_losses (N)
-            13. quantile_insured_curves (Q, N, 2, R)
-            14. quantile_average_insured_losses (Q, N)
-            15. quantiles (Q)
+            03. mean_curves (2, N, 2, R)
+            04. mean_average_losses (2, N)
+            05. mean_map (2, P, N)
+            06. mean_fractions (2, P, N)
+            07. quantile_curves (2, Q, N, 2, R)
+            08. quantile_average_losses (2, Q, N)
+            09. quantile_maps (2, Q, P, N)
+            10. quantile_fractions (2, Q, P, N)
+            11. quantiles (Q)
         """
         outputs = []
         weights = []
         loss_curves = []
         average_losses = []
-        average_insured_losses = []
+        average_ins_losses = []
         for out in all_outputs:
             outputs.append(out)
             weights.append(out.weight)
             loss_curves.append(out.loss_curves)
             average_losses.append(out.average_losses)
-            average_insured_losses.append(out.average_insured_losses)
+            average_ins_losses.append(out.average_insured_losses)
         average_losses = numpy.array(average_losses, F32)
         mean_average_losses = mean_curve(average_losses, weights)
+
         quantile_average_losses = quantile_matrix(
             average_losses, self.quantiles, weights)
         (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
@@ -1477,24 +1694,26 @@ class StatsBuilder(object):
                 self.normalize(loss_curves),
                 self.conditional_loss_poes + self.poes_disagg,
                 weights, self.quantiles))
-
         if outputs[0].insured_curves is not None:
-            average_insured_losses = numpy.array(average_insured_losses, F32)
-            mean_average_insured_losses = mean_curve(
-                average_insured_losses, weights)
-            quantile_average_insured_losses = quantile_matrix(
-                average_insured_losses, self.quantiles, weights)
+            average_ins_losses = numpy.array(average_ins_losses, F32)
+            mean_average_ins_losses = mean_curve(
+                average_ins_losses, weights)
+            quantile_average_ins_losses = quantile_matrix(
+                average_ins_losses, self.quantiles, weights)
             loss_curves = [out.insured_curves for out in outputs]
-            (mean_insured_curves, _, quantile_insured_curves, _) = (
-                exposure_statistics(
-                    self.normalize(loss_curves), [], weights, self.quantiles))
+            (mean_ins_curves, mean_ins_maps, quantile_ins_curves,
+             quantile_ins_maps) = exposure_statistics(
+                 self.normalize(loss_curves), [], weights, self.quantiles)
         else:
-            mean_insured_curves = None
-            mean_average_insured_losses = None
-            quantile_insured_curves = None
-            quantile_average_insured_losses = None
+            mean_ins_curves = numpy.zeros_like(mean_curves)
+            mean_average_ins_losses = numpy.zeros_like(mean_average_losses)
+            mean_ins_maps = numpy.zeros_like(mean_maps)
+            quantile_ins_maps = numpy.zeros_like(quantile_maps)
+            quantile_ins_curves = numpy.zeros_like(quantile_curves)
+            quantile_average_ins_losses = numpy.zeros_like(
+                quantile_average_losses)
 
-        clp = len(self.conditional_loss_poes)
+        P = len(self.conditional_loss_poes)
         loss_type = outputs[0].loss_type
         paths = ['/'.join([prefix + '%s-stats', loss_type, name])
                  for name in self.mean_quantiles]
@@ -1506,21 +1725,66 @@ class StatsBuilder(object):
         return Output(
             assets=outputs[0].assets,
             loss_type=loss_type,
-            mean_curves=mean_curves,
-            mean_average_losses=mean_average_losses,
-            mean_maps=mean_maps[0:clp, :],  # P x N matrix
-            mean_fractions=mean_maps[clp:, :],  # P x N matrix
-            quantile_curves=quantile_curves,
-            quantile_average_losses=quantile_average_losses,
-            quantile_maps=quantile_maps[:, 0:clp],  # Q x P x N matrix
-            quantile_fractions=quantile_maps[:, clp:],  # Q x P x N matrix
-            mean_insured_curves=mean_insured_curves,
-            mean_average_insured_losses=mean_average_insured_losses,
-            quantile_insured_curves=quantile_insured_curves,
-            quantile_average_insured_losses=quantile_average_insured_losses,
+            mean_curves=[mean_curves, mean_ins_curves],
+            mean_average_losses=[mean_average_losses, mean_average_ins_losses],
+            mean_maps=[mean_maps[0:P, :], mean_ins_maps[0:P, :]],
+            # P x N matrix
+            mean_fractions=[mean_maps[P:, :], mean_ins_maps[P:, :]],
+            # P x N matrix
+            quantile_curves=[quantile_curves, quantile_ins_curves],
+            # (Q, N, 2, R) matrix
+            quantile_average_losses=[quantile_average_losses,
+                                     quantile_average_ins_losses],
+            quantile_maps=[quantile_maps[:, 0:P],
+                           quantile_ins_maps[:, 0:P]],
+            # Q x P x N matrix
+            quantile_fractions=[quantile_maps[:, P:],
+                                quantile_ins_maps[:, P:]],
+            # Q x P x N matrix
             quantiles=self.quantiles,
             conditional_loss_poes=self.conditional_loss_poes,
             prefix=prefix, paths=paths)
+
+    def get_curves_maps(self, stats):
+        """
+        :param stats:
+            an object with attributes mean_curves, mean_average_losses,
+            mean_maps, quantile_curves, quantile_average_losses,
+            quantile_loss_curves, quantile_maps, assets.
+            There is also a loss_type attribute which must be always the same.
+        :returns:
+            statistical loss curves and maps per asset
+        """
+        curves = [None, None]
+        maps = [None, None]
+        for i in 0, 1:  # insured index
+            curves[i] = self._loss_curves(
+                stats.assets, stats.mean_curves[i],
+                stats.mean_average_losses[i],
+                stats.quantile_curves[i],
+                stats.quantile_average_losses[i])
+
+            if stats.conditional_loss_poes:
+                mq = _combine_mq(stats.mean_maps[i], stats.quantile_maps[i])
+                Q1, P, N = mq.shape
+                maps[i] = m = numpy.zeros((Q1, N), self.loss_map_dt)
+                for aid, maps_ in enumerate(mq):
+                    for poe, map_ in zip(self.loss_map_dt.names, maps_):
+                        m[poe][aid, :] = map_
+        return curves, maps
+
+    def _loss_curves(self, assets, mean, mean_averages,
+                     quantile, quantile_averages):
+        mq_curves = _combine_mq(mean, quantile)  # shape (Q + 1, N, 2, C)
+        mq_avgs = _combine_mq(mean_averages, quantile_averages)  # (Q + 1, N)
+        acc = []
+        for mq_curve, mq_avg in zip(
+                mq_curves.transpose(1, 0, 2, 3), mq_avgs.T):
+            lcs = []
+            for (losses, poes), avg in zip(mq_curve, mq_avg):
+                lcs.append((losses, poes, avg))
+            acc.append(numpy.array(lcs, self.loss_curve_dt))
+        return numpy.array(acc, self.loss_curve_dt).T  # (Q + 1, N)
 
 
 def _combine_mq(mean, quantile):
@@ -1532,55 +1796,3 @@ def _combine_mq(mean, quantile):
     array[0] = mean
     array[1:] = quantile
     return array
-
-
-def _loss_curves(assets, mean, mean_averages, quantile, quantile_averages):
-    R = mean.shape[-1]
-    loss_curve_dt = numpy.dtype([('losses', (float, R)), ('poes', (float, R)),
-                                 ('avg', float)])
-    mq_curves = _combine_mq(mean, quantile)  # shape (Q + 1, N, 2, R)
-    mq_avgs = _combine_mq(mean_averages, quantile_averages)  # (Q + 1, N)
-    acc = []
-    for mq_curve, mq_avg in zip(mq_curves.transpose(1, 0, 2, 3), mq_avgs.T):
-        lcs = []
-        for (losses, poes), avg in zip(mq_curve, mq_avg):
-            lcs.append((losses, poes, avg))
-        acc.append(numpy.array(lcs, loss_curve_dt))
-    return numpy.array(acc, loss_curve_dt).T  # (Q + 1, N)
-
-
-def get_stat_curves(stats):
-    """
-    :param stats:
-        an object with attributes mean_curves, mean_average_losses, mean_maps,
-        quantile_curves, quantile_average_losses, quantile_loss_curves,
-        quantile_maps, mean_insured_curves, mean_average_insured_losses,
-        quantile_insured_curves, quantile_average_insured_losses, assets.
-        There is also a loss_type attribute which must be always the same.
-    :returns:
-        statistical loss curves per asset
-    """
-    curves = _loss_curves(
-        stats.assets, stats.mean_curves, stats.mean_average_losses,
-        stats.quantile_curves, stats.quantile_average_losses)
-
-    insured_curves = [] if stats.mean_insured_curves is None else _loss_curves(
-        stats.assets, stats.mean_insured_curves,
-        stats.mean_average_insured_losses,
-        stats.quantile_insured_curves,
-        stats.quantile_average_insured_losses)
-
-    if stats.conditional_loss_poes:
-        mq = _combine_mq(stats.mean_maps, stats.quantile_maps)
-
-        poes = ['poe~%s' % clp for clp in stats.conditional_loss_poes]
-        loss_map_dt = numpy.dtype([(poe, float) for poe in poes])
-
-        Q1, P, N = mq.shape
-        maps = numpy.zeros((Q1, N), loss_map_dt)
-        for i, imaps in enumerate(mq):
-            for poe, imap in zip(poes, imaps):
-                maps[i, :][poe] = imap
-    else:
-        maps = []
-    return curves, insured_curves, maps  # shape (Q1, N)

@@ -36,7 +36,7 @@ MAGNITUDE_FOR_RUPTURE_SPLITTING = 6.5  # given by Marco Pagani
 # splitting: different sources => different seeds => different numbers
 
 
-def area_to_point_sources(area_src, area_src_disc):
+def area_to_point_sources(area_src):
     """
     Split an area source into a generator of point sources.
 
@@ -45,10 +45,8 @@ def area_to_point_sources(area_src, area_src_disc):
 
     :param area_src:
         :class:`openquake.hazardlib.source.AreaSource`
-    :param float area_src_disc:
-        Area source discretization step, in kilometers.
     """
-    mesh = area_src.polygon.discretize(area_src_disc)
+    mesh = area_src.polygon.discretize(area_src.area_discretization)
     num_points = len(mesh)
     area_mfd = area_src.mfd
 
@@ -172,21 +170,16 @@ class SingleRuptureSource(object):
         return sitecol
 
 
-def split_source(src, area_source_discretization):
+def split_source(src):
     """
     Split an area source into point sources and a fault sources into
     smaller fault sources.
 
     :param src:
         an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
-    :param float area_source_discretization:
-        area source discretization
     """
     if isinstance(src, source.AreaSource):
-        # area_source_discretization cannot be None if there are area sources
-        assert area_source_discretization, (
-            "Please set area_source_discretization in the job.ini file")
-        for s in area_to_point_sources(src, area_source_discretization):
+        for s in area_to_point_sources(src):
             yield s
     elif isinstance(
             src, (source.SimpleFaultSource, source.ComplexFaultSource)):
@@ -474,7 +467,8 @@ class SourceConverter(RuptureConverter):
         with context(self.fname, node):
             npdist = []
             for np in node.nodalPlaneDist:
-                prob, strike, dip, rake = ~np
+                prob, strike, dip, rake = (
+                    np['probability'], np['strike'], np['dip'], np['rake'])
                 npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
             return pmf.PMF(npdist)
 
@@ -500,6 +494,13 @@ class SourceConverter(RuptureConverter):
         coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
         polygon = geo.Polygon([geo.Point(*xy) for xy in coords])
         msr = valid.SCALEREL[~node.magScaleRel]()
+        area_discretization = geom.attrib.get(
+            'discretization', self.area_source_discretization)
+        if area_discretization is None:
+            raise ValueError(
+                'The source %r has no `discretization` parameter and the job.'
+                'ini file has no `area_source_discretization` parameter either'
+                % node['id'])
         return source.AreaSource(
             source_id=node['id'],
             name=node['name'],
@@ -513,7 +514,7 @@ class SourceConverter(RuptureConverter):
             nodal_plane_distribution=self.convert_npdist(node),
             hypocenter_distribution=self.convert_hpdist(node),
             polygon=polygon,
-            area_discretization=self.area_source_discretization,
+            area_discretization=area_discretization,
             temporal_occurrence_model=self.tom)
 
     def convert_pointSource(self, node):

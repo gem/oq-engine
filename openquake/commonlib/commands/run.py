@@ -29,12 +29,10 @@ def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, monitor):
     """
     hcalc = base.calculators(readinput.get_oqparam(job_haz), monitor)
     with monitor:
-        monitor.monitor_dir = hcalc.datastore.calc_dir
         hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports)
         hc_id = hcalc.datastore.calc_id
         oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
         rcalc = base.calculators(oq, monitor)
-        monitor.monitor_dir = rcalc.datastore.calc_dir
         rcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports,
                   hazard_calculation_id=hc_id)
     return rcalc
@@ -61,7 +59,6 @@ def run(job_ini, concurrent_tasks=None, pdb=None,
                 raise SystemExit('There are %d old calculations, cannot '
                                  'retrieve the %s' % (len(calc_ids), hc))
         calc = base.calculators(oqparam, monitor)
-        monitor.monitor_dir = calc.datastore.calc_dir
         with monitor:
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports, hazard_calculation_id=hc)
@@ -72,8 +69,7 @@ def run(job_ini, concurrent_tasks=None, pdb=None,
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
     monitor.flush()
-    print('See the output with hdfview %s/output.hdf5' %
-          calc.datastore.calc_dir)
+    print('See the output with hdfview %s' % calc.datastore.hdf5path)
     return calc
 
 parser = sap.Parser(run)

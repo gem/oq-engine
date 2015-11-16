@@ -1,4 +1,4 @@
-# Copyright (c) 2014, GEM Foundation.
+# Copyright (c) 2014-2015, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -13,16 +13,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import pickle
 import unittest
+import mock
 import numpy
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import writetmp
-from openquake.commonlib.riskmodels import (
-    get_vulnerability_functions, get_fragility_functions)
-from openquake.commonlib import InvalidFile
+from openquake.commonlib import InvalidFile, nrml, nrml_examples, riskmodels
+from openquake.qa_tests_data.scenario_damage import case_4b
+
+EXAMPLES_DIR = os.path.dirname(nrml_examples.__file__)
+FF_DIR = os.path.dirname(case_4b.__file__)
 
 
-class ParseVulnerabilityModelTestCase(unittest.TestCase):
+class ParseRiskModelTestCase(unittest.TestCase):
 
     def test_different_levels_ok(self):
         # the same IMT can appear with different levels in different
@@ -57,7 +62,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
     </vulnerabilityModel>
 </nrml>
 """)
-        vfs = get_vulnerability_functions(vuln_content)
+        vfs = nrml.parse(vuln_content)
         assert_almost_equal(vfs['PGA', 'RC/A'].imls,
                             numpy.array([0.005, 0.007, 0.0098, 0.0137]))
         assert_almost_equal(vfs['PGA', 'RC/B'].imls,
@@ -99,7 +104,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
 </nrml>
 """)
         with self.assertRaises(InvalidFile) as ar:
-            get_vulnerability_functions(vuln_content)
+            nrml.parse(vuln_content)
         self.assertIn('Duplicated vulnerabilityFunctionID: A',
                       ar.exception.message)
 
@@ -126,7 +131,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
 </nrml>
 """)
         with self.assertRaises(ValueError) as ar:
-            get_vulnerability_functions(vuln_content)
+            nrml.parse(vuln_content)
         self.assertIn('It is not valid to define a loss ratio = 0.0 with a '
                       'corresponding coeff. of variation > 0.0',
                       ar.exception.message)
@@ -151,10 +156,9 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
         </ffs>
     </fragilityModel>
 </nrml>""")
-        with self.assertRaises(InvalidFile) as ar:
-            get_fragility_functions(vuln_content, 20)
-        self.assertEqual('Missing attribute minIML, line 9',
-                         ar.exception.message)
+        with self.assertRaises(KeyError) as ar:
+            nrml.parse(vuln_content)
+        self.assertIn("node IML: 'minIML', line 9", str(ar.exception))
 
     def test_missing_maxIML(self):
         vuln_content = writetmp(u"""\
@@ -176,7 +180,113 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
         </ffs>
     </fragilityModel>
 </nrml>""")
-        with self.assertRaises(InvalidFile) as ar:
-            get_fragility_functions(vuln_content, 20)
-        self.assertEqual('Missing attribute maxIML, line 9',
-                         ar.exception.message)
+        with self.assertRaises(KeyError) as ar:
+            nrml.parse(vuln_content)
+        self.assertIn("node IML: 'maxIML', line 9", str(ar.exception))
+
+
+class ParseConsequenceModelTestCase(unittest.TestCase):
+    wrong_csq_model_1 = writetmp(u"""<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+<consequenceModel id="example" assetCategory="buildings">
+
+  <description>ln cf | tax3 | zcov</description>
+  <limitStates>ds1 ds2 ds3 ds4</limitStates>
+
+  <consequenceFunction id="tax1" dist="LN">
+    <params ls="ds1" mean="0.10" stddev="0.00"/>
+    <params ls="ds2" mean="0.30" stddev="0.00"/>
+    <params ls="ds3" mean="0.60" stddev="0.00"/>
+    <params ls="ds4" mean="0.90" stddev="0.00"/>
+  </consequenceFunction>
+
+</consequenceModel>
+</nrml>
+""")
+    wrong_csq_model_2 = writetmp(u"""<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+<consequenceModel id="example" assetCategory="buildings"
+lossCategory="contents">
+
+  <description>ln cf | tax3 | zcov</description>
+  <limitStates>ds1 ds2 ds3 ds4</limitStates>
+
+  <consequenceFunction id="tax1" dist="LN">
+    <params ls="ds1" mean="0.10" stddev="0.00"/>
+    <params ls="ds2" mean="0.30" stddev="0.00"/>
+    <params ls="ds3" mean="0.60" stddev="0.00"/>
+  </consequenceFunction>
+
+</consequenceModel>
+</nrml>
+""")
+    wrong_csq_model_3 = writetmp(u"""<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+<consequenceModel id="example" assetCategory="buildings"
+lossCategory="contents">
+
+  <description>ln cf | tax3 | zcov</description>
+  <limitStates>ds1 ds2 ds3 ds4</limitStates>
+
+  <consequenceFunction id="tax1" dist="LN">
+    <params ls="ds1" mean="0.10" stddev="0.00"/>
+    <params ls="ds2" mean="0.30" stddev="0.00"/>
+    <params ls="ds4" mean="0.90" stddev="0.00"/>
+    <params ls="ds3" mean="0.60" stddev="0.00"/>
+  </consequenceFunction>
+
+</consequenceModel>
+</nrml>
+""")
+
+    def test_ok(self):
+        fname = os.path.join(EXAMPLES_DIR, 'consequence-model.xml')
+        cmodel = nrml.parse(fname)
+        self.assertEqual(
+            repr(cmodel),
+            "<ConsequenceModel structural "
+            "['ds1', 'ds2', 'ds3', 'ds4'] tax1>")
+
+        # test pickleability
+        pickle.loads(pickle.dumps(cmodel))
+
+    def test_wrong_loss_type_association(self):
+        scm = os.path.join(FF_DIR, 'structural_consequence_model.xml')
+        ccm = os.path.join(FF_DIR, 'contents_consequence_model.xml')
+        # exchanging the associations on purpose
+        oq = mock.Mock()
+        oq.inputs = dict(structural_consequence=ccm, contents_consequence=scm)
+        with self.assertRaises(ValueError) as ctx:
+            riskmodels.get_risk_models(oq, 'consequence')
+        self.assertIn('structural_consequence_model.xml": lossCategory is of '
+                      'type "structural", expected "contents"',
+                      str(ctx.exception))
+
+    def test_wrong_riskmodel_association(self):
+        cfm = os.path.join(FF_DIR, 'contents_fragility_model.xml')
+        # passing a fragility model instead of a consequence model
+        oq = mock.Mock()
+        oq.inputs = dict(contents_consequence=cfm)
+        with self.assertRaises(ValueError) as ctx:
+            riskmodels.get_risk_models(oq, 'consequence')
+        self.assertIn('is of kind FragilityModel, '
+                      'expected ConsequenceModel', str(ctx.exception))
+
+    def test_wrong_files(self):
+        # missing lossCategory
+        with self.assertRaises(KeyError) as ctx:
+            nrml.parse(self.wrong_csq_model_1)
+        self.assertIn("node consequenceModel: 'lossCategory', line 3",
+                      str(ctx.exception))
+
+        # missing loss state
+        with self.assertRaises(ValueError) as ctx:
+            nrml.parse(self.wrong_csq_model_2)
+        self.assertIn("node consequenceFunction: Expected 4 limit"
+                      " states, got 3, line 9", str(ctx.exception))
+
+        # inverted loss states
+        with self.assertRaises(ValueError) as ctx:
+            nrml.parse(self.wrong_csq_model_3)
+        self.assertIn("node params: Expected 'ds3', got 'ds4', line 12",
+                      str(ctx.exception))

@@ -26,6 +26,7 @@ import numpy
 from openquake.baselib.general import groupby, split_in_blocks
 from openquake.baselib.performance import DummyMonitor
 from openquake.hazardlib.gsim.base import gsim_imt_dt
+from openquake.commonlib import riskmodels
 from openquake.risklib import scientific
 
 
@@ -121,24 +122,32 @@ class RiskModel(collections.Mapping):
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
         self.taxonomies = []  # populated in get_risk_model
+        self.loss_type_dt = None  # populated in get_risk_model
 
     def make_curve_builders(self, oqparam):
         """
         Populate the inner lists .loss_types, .curve_builders.
         """
-        for i, loss_type in enumerate(self.get_loss_types()):
-            if not oqparam.loss_ratios:
-                loss_ratios = numpy.linspace(
-                    0, 1, oqparam.loss_curve_resolution + 1)[1:]
-                cb = scientific.CurveBuilder(loss_type, loss_ratios, False)
-            else:  # user-provided loss ratios
-                loss_ratios = oqparam.loss_ratios[loss_type]
-                cb = scientific.CurveBuilder(loss_type, loss_ratios, True)
+        default_loss_ratios = numpy.linspace(
+            0, 1, oqparam.loss_curve_resolution + 1)[1:]
+        pairs = []
+        for i, loss_type in enumerate(self._get_loss_types()):
+            cost_type = riskmodels.loss_type_to_cost_type(loss_type)
+            if cost_type in oqparam.loss_ratios:
+                cb = scientific.CurveBuilder(
+                    loss_type, oqparam.loss_ratios[cost_type], True,
+                    oqparam.conditional_loss_poes, oqparam.insured_losses)
+            else:
+                cb = scientific.CurveBuilder(
+                    loss_type, default_loss_ratios, False,
+                    oqparam.conditional_loss_poes, oqparam.insured_losses)
             self.curve_builders.append(cb)
             self.loss_types.append(loss_type)
+            pairs.append((loss_type, numpy.float32))
             self.lti[loss_type] = i
+        self.loss_type_dt = numpy.dtype(pairs)
 
-    def get_loss_types(self):
+    def _get_loss_types(self):
         """
         :returns: a sorted list with all the loss_types contained in the model
         """
@@ -180,28 +189,28 @@ class RiskModel(collections.Mapping):
     def __len__(self):
         return len(self._workflows)
 
-    def build_input(self, imt, hazards_by_site, assets_by_site, eps_dict=None):
+    def build_input(self, imt, hazards_by_site, assets_by_site, eps_dict):
         """
         :param imt: an Intensity Measure Type
         :param hazards_by_site: an array of hazards per each site
         :param assets_by_site: an array of assets per each site
-        :param eps_dict: a dictionary of epsilons per each asset
+        :param eps_dict: a dictionary of epsilons
         :returns: a :class:`RiskInput` instance
         """
         imt_taxonomies = [(imt, self.get_taxonomies(imt))]
-        return RiskInput(imt_taxonomies, hazards_by_site,
-                         assets_by_site, eps_dict)
+        return RiskInput(imt_taxonomies, hazards_by_site, assets_by_site,
+                         eps_dict)
 
     def build_inputs_from_ruptures(self, sitecol, all_ruptures,
                                    gsims_by_col, trunc_level, correl_model,
-                                   eps_dict, hint):
+                                   eps, hint):
         """
         :param sitecol: a SiteCollection instance
         :param all_ruptures: the complete list of SESRupture instances
         :param gsims_by_col: a dictionary of GSIM instances
         :param trunc_level: the truncation level (or None)
         :param correl_model: the correlation model (or None)
-        :param eps_dict: a dictionary asset_ref -> epsilon array
+        :param eps: a matrix of epsilons
         :param hint: hint for how many blocks to generate
 
         Yield :class:`RiskInputFromRuptures` instances.
@@ -209,7 +218,7 @@ class RiskModel(collections.Mapping):
         imt_taxonomies = list(self.get_imt_taxonomies())
         by_col = operator.attrgetter('col_id')
         rup_start = rup_stop = 0
-        num_epsilons = len(eps_dict[next(iter(eps_dict))])
+        num_epsilons = eps.shape[1]
         for ses_ruptures in split_in_blocks(
                 all_ruptures, hint or 1, key=by_col):
             rup_stop += len(ses_ruptures)
@@ -220,7 +229,8 @@ class RiskModel(collections.Mapping):
                 slice(rup_start, rup_stop))
             rup_start = rup_stop
 
-    def gen_outputs(self, riskinputs, rlzs_assoc, monitor):
+    def gen_outputs(self, riskinputs, rlzs_assoc, monitor,
+                    assets_by_site=None, eps=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying workflows. Yield the outputs generated as dictionaries
@@ -233,18 +243,12 @@ class RiskModel(collections.Mapping):
         mon_hazard = monitor('getting hazard')
         mon_risk = monitor('computing individual risk')
         for riskinput in riskinputs:
-            try:
-                assets_by_site = riskinput.assets_by_site
-            except AttributeError:  # for event_based_risk
-                assets_by_site = monitor.assets_by_site
-            try:
-                eps_dict = monitor.eps_dict
-            except AttributeError:
-                eps_dict = {}
+            assets_by_site = getattr(
+                riskinput, 'assets_by_site', assets_by_site)
             with mon_hazard:
                 # get assets, hazards, epsilons
                 a, h, e = riskinput.get_all(
-                    rlzs_assoc, assets_by_site, eps_dict)
+                    rlzs_assoc, assets_by_site, eps)
             with mon_risk:
                 # compute the outputs by using the worklow
                 for imt, taxonomies in riskinput.imt_taxonomies:
@@ -276,11 +280,13 @@ class RiskInput(object):
     Contains all the assets and hazard values associated to a given
     imt and site.
 
-    :param imt: Intensity Measure Type string
-    :param hazard_assets_by_taxo: pairs (hazard, {imt: assets}) for each site
+    :param imt_taxonomies: a pair (IMT, taxonomies)
+    :param hazard_by_site: array of hazards, one per site
+    :param assets_by_site: array of assets, one per site
+    :param eps_dict: dictionary of epsilons
     """
     def __init__(self, imt_taxonomies, hazard_by_site, assets_by_site,
-                 eps_dict=None):
+                 eps_dict):
         [(self.imt, taxonomies)] = imt_taxonomies
         self.hazard_by_site = hazard_by_site
         self.assets_by_site = [
@@ -294,14 +300,14 @@ class RiskInput(object):
             self.weight += len(assets)
         self.taxonomies = sorted(taxonomies)
         self.tags = None  # for API compatibility with RiskInputFromRuptures
-        self.eps_dict = eps_dict or {}
+        self.eps_dict = eps_dict
 
     @property
     def imt_taxonomies(self):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def get_all(self, rlzs_assoc, assets_by_site=None, eps_dict=None):
+    def get_all(self, rlzs_assoc, assets_by_site=None, _eps=None):
         """
         :returns:
             lists of assets, hazards and epsilons
@@ -313,7 +319,7 @@ class RiskInput(object):
             for asset in assets_:
                 assets.append(asset)
                 hazards.append({self.imt: rlzs_assoc.combine(hazard)})
-                epsilons.append(self.eps_dict.get(asset.id, None))
+                epsilons.append(self.eps_dict.get(asset.idx, None))
         return assets, hazards, epsilons
 
     def __repr__(self):
@@ -322,17 +328,18 @@ class RiskInput(object):
             self.weight)
 
 
-def make_eps_dict(assets_by_site, num_samples, seed, correlation):
+def make_eps(assets_by_site, num_samples, seed, correlation):
     """
     :param assets_by_site: a list of lists of assets
     :param int num_samples: the number of ruptures
     :param int seed: a random seed
     :param float correlation: the correlation coefficient
-    :returns: dictionary asset_id -> epsilons
+    :returns: epsilons matrix of shape (num_assets, num_samples)
     """
-    eps_dict = {}  # asset_id -> epsilons
     all_assets = (a for assets in assets_by_site for a in assets)
     assets_by_taxo = groupby(all_assets, operator.attrgetter('taxonomy'))
+    num_assets = sum(map(len, assets_by_site))
+    eps = numpy.zeros((num_assets, num_samples), numpy.float32)
     for taxonomy, assets in assets_by_taxo.items():
         # the association with the epsilons is done in order
         assets.sort(key=operator.attrgetter('id'))
@@ -340,9 +347,9 @@ def make_eps_dict(assets_by_site, num_samples, seed, correlation):
         logging.info('Building %s epsilons for taxonomy %s', shape, taxonomy)
         zeros = numpy.zeros(shape)
         epsilons = scientific.make_epsilons(zeros, seed, correlation)
-        for asset, eps in zip(assets, epsilons):
-            eps_dict[asset.id] = eps
-    return eps_dict
+        for asset, epsrow in zip(assets, epsilons):
+            eps[asset.idx] = epsrow
+    return eps
 
 
 def expand(array, N):
@@ -379,7 +386,7 @@ class RiskInputFromRuptures(object):
     :param gsims: list of GSIM instances
     :param trunc_level: truncation level for the GSIMs
     :param correl_model: correlation model for the GSIMs
-    :params eps_dict: a dictionary asset_id -> epsilons
+    :params eps: a matrix of epsilons
     :param rup_slice: a slice object specifying which ruptures are in
     """
     def __init__(self, imt_taxonomies, sitecol, ses_ruptures,
@@ -425,11 +432,12 @@ class RiskInputFromRuptures(object):
             gmfa[i] = expanded_gmf
         return gmfa  # array R x N
 
-    def get_all(self, rlzs_assoc, assets_by_site, eps_dict):
+    def get_all(self, rlzs_assoc, assets_by_site, eps):
         """
         :returns:
             lists of assets, hazards and epsilons
         """
+        E = len(self.ses_ruptures)
         indices = [sr.ordinal % self.num_epsilons for sr in self.ses_ruptures]
         assets, hazards, epsilons = [], [], []
         gmfs = self.compute_expand_gmfs()
@@ -444,9 +452,7 @@ class RiskInputFromRuptures(object):
             for asset in assets_:
                 assets.append(asset)
                 hazards.append(haz_by_imt_rlz)
-                eps = expand(eps_dict[asset.id][indices],
-                             len(self.ses_ruptures))
-                epsilons.append(eps)
+                epsilons.append(expand(eps[asset.idx][indices], E))
         return assets, hazards, epsilons
 
     def __repr__(self):

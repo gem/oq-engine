@@ -30,11 +30,11 @@ from shapely import wkt, geometry
 from openquake.hazardlib import geo, site, correlation, imt
 from openquake.risklib import workflows, riskinput
 
-from openquake.commonlib.oqvalidation import OqParam
+from openquake.commonlib.datastore import DataStore
+from openquake.commonlib.oqvalidation import OqParam, rmdict
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
-from openquake.commonlib.oqvalidation import get_risk_files
-from openquake.commonlib.riskmodels import get_vfs, get_ffs
+from openquake.commonlib.riskmodels import get_risk_models
 from openquake.baselib.general import groupby, AccumDict, writetmp
 from openquake.baselib.performance import DummyMonitor
 from openquake.baselib.python3compat import configparser
@@ -206,11 +206,27 @@ def get_mesh(oqparam):
             raise ValueError(
                 'Could not discretize region %(region)s with grid spacing '
                 '%(region_grid_spacing)s' % vars(oqparam))
+    elif 'gmfs' in oqparam.inputs:
+        return get_gmfs(oqparam)[0].mesh
+    elif oqparam.hazard_calculation_id:
+        sitemesh = DataStore(oqparam.hazard_calculation_id)['sitemesh']
+        return geo.Mesh(sitemesh['lon'], sitemesh['lat'])
+    elif 'exposure' in oqparam.inputs:
+        # the mesh is extracted from get_sitecol_assets
+        return
     elif 'site_model' in oqparam.inputs:
         coords = [(param.lon, param.lat) for param in get_site_model(oqparam)]
         lons, lats = zip(*sorted(coords))
         return geo.Mesh(numpy.array(lons), numpy.array(lats))
-    # if there is an exposure the mesh is extracted from get_sitecol_assets
+
+
+def sitecol_from_coords(oqparam, coords):
+    """
+    Return a SiteCollection instance from an ordered set of coordinates
+    """
+    lons, lats = zip(*coords)
+    return site.SiteCollection.from_points(
+        lons, lats, range(len(lons)), oqparam)
 
 
 def get_site_model(oqparam):
@@ -247,6 +263,8 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
     """
     if mesh is None:
         mesh = get_mesh(oqparam)
+    if mesh is None:
+        return
     site_ids = site_ids or list(range(len(mesh)))
     if oqparam.inputs.get('site_model'):
         if site_model_params is None:
@@ -473,8 +491,7 @@ def get_composite_source_model(
     :returns:
         an iterator over :class:`openquake.commonlib.source.SourceModel`
     """
-    processor = SourceProcessor(sitecol, oqparam.maximum_distance,
-                                oqparam.area_source_discretization)
+    processor = SourceProcessor(sitecol, oqparam.maximum_distance)
     source_model_lt = get_source_model_lt(oqparam)
     smodels = []
     trt_id = 0
@@ -573,22 +590,17 @@ def get_risk_model(oqparam):
 
     if oqparam.calculation_mode.endswith('_damage'):
         # scenario damage calculator
-        fragility_functions, damage_states = get_ffs(
-            get_risk_files(oqparam.inputs)[1],
-            oqparam.continuous_fragility_discretization,
-            oqparam.steps_per_interval,
-        )
-        riskmodel.damage_states = damage_states
-        for imt_taxo, ffs_by_lt in fragility_functions.items():
+        riskmodel.damage_states = ['no_damage'] + oqparam.limit_states
+        delattr(oqparam, 'limit_states')
+        for imt_taxo, ffs_by_lt in rmdict.items():
             risk_models[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 fragility_functions=ffs_by_lt)
     elif oqparam.calculation_mode.endswith('_bcr'):
-        # bcr calculators
-        vfs_orig = list(get_vfs(oqparam.inputs, retrofitted=False).items())
-        vfs_retro = list(get_vfs(oqparam.inputs, retrofitted=True).items())
+        # classical_bcr calculator
+        retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
         for (imt_taxo, vf_orig), (imt_taxo_, vf_retro) in \
-                zip(vfs_orig, vfs_retro):
+                zip(rmdict.items(), retro.items()):
             assert imt_taxo == imt_taxo_  # same imt and taxonomy
             risk_models[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
@@ -596,7 +608,11 @@ def get_risk_model(oqparam):
                 vulnerability_functions_retro=vf_retro)
     else:
         # classical, event based and scenario calculators
-        for imt_taxo, vfs in get_vfs(oqparam.inputs).items():
+        for imt_taxo, vfs in rmdict.items():
+            for vf in vfs.values():
+                # set the seed; this is important for the case of
+                # VulnerabilityFunctionWithPMF
+                vf.seed = oqparam.random_seed
             risk_models[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 vulnerability_functions=vfs)
@@ -615,6 +631,11 @@ def get_risk_model(oqparam):
 
 # ########################### exposure ############################ #
 
+COST_TYPE_SIZE = 21  # using 21 chars since business_interruption has 21 chars
+cost_type_dt = numpy.dtype([('name', (bytes, COST_TYPE_SIZE)),
+                            ('type', (bytes, COST_TYPE_SIZE)),
+                            ('unit', (bytes, COST_TYPE_SIZE))])
+
 
 class DuplicatedID(Exception):
     """
@@ -622,10 +643,12 @@ class DuplicatedID(Exception):
     """
 
 
-def get_exposure_lazy(fname):
+def get_exposure_lazy(fname, ok_cost_types):
     """
     :param fname:
         path of the XML file containing the exposure
+    :param ok_cost_types:
+        a set of cost types (as strings)
     :returns:
         a pair (Exposure instance, list of asset nodes)
     """
@@ -648,9 +671,17 @@ def get_exposure_lazy(fname):
         area = conversions.area
     except NameError:
         area = LiteralNode('area', dict(type=''))
+
+    # read the cost types and make some check
+    cost_types = [(ct['name'], ct['type'], ct['unit'])
+                  for ct in conversions.costTypes
+                  if ct['name'] in ok_cost_types]
+    if 'occupants' in ok_cost_types:
+        cost_types.append(('occupants', 'per_area', 'people'))
+    cost_types.sort(key=operator.itemgetter(0))
     return Exposure(
         exposure['id'], exposure['category'],
-        ~description, [ct.attrib for ct in conversions.costTypes],
+        ~description, numpy.array(cost_types, cost_type_dt),
         ~inslimit, ~deductible, area.attrib, [], set()), exposure.assets
 
 
@@ -671,8 +702,9 @@ def get_exposure(oqparam):
         region = wkt.loads(oqparam.region_constraint)
     else:
         region = None
+    all_cost_types = set(oqparam.all_cost_types)
     fname = oqparam.inputs['exposure']
-    exposure, assets_node = get_exposure_lazy(fname)
+    exposure, assets_node = get_exposure_lazy(fname, all_cost_types)
     cc = workflows.CostCalculator(
         {}, {}, exposure.deductible_is_absolute,
         exposure.insurance_limit_is_absolute)
@@ -681,8 +713,6 @@ def get_exposure(oqparam):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = exposure.area['type']
 
-    file_type, risk_files = get_risk_files(oqparam.inputs)
-    all_cost_types = set(risk_files) if file_type == 'vulnerability' else set()
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
@@ -725,28 +755,27 @@ def get_exposure(oqparam):
             occupancies = asset.occupancies
         except NameError:
             occupancies = LiteralNode('occupancies', [])
-        with context(fname, costs):
-            for cost in costs:
+        for cost in costs:
+            with context(fname, cost):
                 cost_type = cost['type']
-                if cost_type not in relevant_cost_types:
-                    continue
-                values[cost_type] = cost['value']
-                deduct = cost.attrib.get('deductible')
-                if deduct is not None:
-                    deductibles[cost_type] = deduct
-                limit = cost.attrib.get('insuranceLimit')
-                if limit is not None:
-                    insurance_limits[cost_type] = limit
+                if cost_type in relevant_cost_types:
+                    values[cost_type] = cost['value']
+                    if oqparam.insured_losses:
+                        deductibles[cost_type] = cost['deductible']
+                        insurance_limits[cost_type] = cost['insuranceLimit']
 
-            # check we are not missing a cost type
-            missing = relevant_cost_types - set(values)
-            if missing and missing <= ignore_missing_costs:
-                logging.warn(
-                    'Ignoring asset %s, missing cost type(s): %s',
-                    asset_id, ', '.join(missing))
-                for cost_type in missing:
-                    values[cost_type] = None
-            elif missing:
+        # check we are not missing a cost type
+        missing = relevant_cost_types - set(values)
+        if missing and missing <= ignore_missing_costs:
+            logging.warn(
+                'Ignoring asset %s, missing cost type(s): %s',
+                asset_id, ', '.join(missing))
+            for cost_type in missing:
+                values[cost_type] = None
+        elif missing and oqparam.calculation_mode != 'classical_damage':
+            # TODO: rewrite the classical_damage to work with multiple
+            # loss types, then the special case will disappear
+            with context(fname, asset):
                 raise ValueError("Invalid Exposure. "
                                  "Missing cost %s for asset %s" % (
                                      missing, asset_id))
@@ -879,50 +908,55 @@ def get_sitecol_hcurves(oqparam):
     return sitecol, hcurves_by_imt
 
 
-def get_gmfs(oqparam, sitecol=None):
+def get_gmfs(oqparam):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param sitecol:
-        a SiteCollection instance with sites consistent with the data file
     :returns:
         sitecol, tags, gmf array
     """
     fname = oqparam.inputs['gmfs']
-    if fname.endswith('.csv'):
-        return get_gmfs_from_csv(oqparam, sitecol, fname)
+    if fname.endswith('.txt'):
+        return get_gmfs_from_txt(oqparam, fname)
     elif fname.endswith('.xml'):
         return get_scenario_from_nrml(oqparam, fname)
     else:
         raise InvalidFile(fname)
 
 
-def get_gmfs_from_csv(oqparam, sitecol, fname):
+def get_gmfs_from_txt(oqparam, fname):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param sitecol:
-        a SiteCollection instance with sites consistent with the CSV file
     :param fname:
         the full path of the CSV file
     :returns:
         a composite array of shape (N, R) read from a CSV file with format
         `tag indices [gmv1 ... gmvN] * num_imts`
     """
-    imts = list(oqparam.imtls)
-    imt_dt = numpy.dtype([(imt, float) for imt in imts])
-    num_gmfs = oqparam.number_of_ground_motion_fields
-    gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
-    tags = []
     with open(fname) as csvfile:
-        for lineno, line in enumerate(csvfile, 1):
+        firstline = next(csvfile)
+        try:
+            coords = valid.coordinates(firstline)
+        except:
+            raise InvalidFile(
+                'The first line of %s is expected to contain comma separated'
+                'ordered coordinates, got %s instead' % (fname, firstline))
+        sitecol = sitecol_from_coords(oqparam, coords)
+        imts = list(oqparam.imtls)
+        imt_dt = numpy.dtype([(imt, float) for imt in imts])
+        num_gmfs = oqparam.number_of_ground_motion_fields
+        gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
+        tags = []
+
+        for lineno, line in enumerate(csvfile, 2):
             row = line.split(',')
             try:
                 indices = list(map(valid.positiveint, row[1].split()))
             except:
                 raise InvalidFile(
                     'The second column in %s is expected to contain integer '
-                    'indices, got %s instead' % (fname, row[1]))
+                    'indices, got %s' % (fname, row[1]))
             r_sites = (
                 sitecol if not indices else
                 site.FilteredSiteCollection(indices, sitecol))
@@ -934,11 +968,11 @@ def get_gmfs_from_csv(oqparam, sitecol, fname):
                     raise InvalidFile(
                         'The column #%d in %s is expected to contain positive '
                         'floats, got %s instead' % (i + 3, fname, row[i + 2]))
-                gmf_by_imt[imts[i]][lineno - 1] = r_sites.expand(array, 0)
+                gmf_by_imt[imts[i]][lineno - 2] = r_sites.expand(array, 0)
             tags.append(row[0])
-    if lineno < num_gmfs:
+    if lineno < num_gmfs + 1:
         raise InvalidFile('%s contains %d rows, expected %d' % (
-            fname, lineno, num_gmfs))
+            fname, lineno, num_gmfs + 1))
     if tags != sorted(tags):
         raise InvalidFile('The tags in %s are not ordered: %s' % (fname, tags))
     return sitecol, numpy.array(tags, '|S100'), gmf_by_imt.T

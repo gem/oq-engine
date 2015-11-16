@@ -21,10 +21,9 @@ import logging
 
 import numpy
 
-from openquake.baselib import general
 from openquake.commonlib import parallel, datastore
 from openquake.risklib import scientific
-from openquake.calculators import base, calc
+from openquake.calculators import base
 
 
 F64 = numpy.float64
@@ -68,17 +67,17 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         for out in out_by_rlz:
             l = lt2idx[out.loss_type]
             r = out.hid  # realization index
-            stats = numpy.zeros((len(out.assets), R, 4), F64)
+            stats = numpy.zeros((len(out.assets), 4), F64)
             # this is ugly but using a composite array (i.e.
             # stats['mean'], stats['stddev'], ...) may return
             # bogus numbers! even with the SAME version of numpy,
             # hdf5 and h5py!! the numbers are around 1E-300 and
             # different on different systems; we found issues
             # with Ubuntu 12.04 and Red Hat 7 (MS and DV)
-            stats[:, r, 0] = out.loss_matrix.mean(axis=1)
-            stats[:, r, 1] = out.loss_matrix.std(ddof=1, axis=1)
-            stats[:, r, 2] = out.insured_loss_matrix.mean(axis=1)
-            stats[:, r, 3] = out.insured_loss_matrix.std(ddof=1, axis=1)
+            stats[:, 0] = out.loss_matrix.mean(axis=1)
+            stats[:, 1] = out.loss_matrix.std(ddof=1, axis=1)
+            stats[:, 2] = out.insured_loss_matrix.mean(axis=1)
+            stats[:, 3] = out.insured_loss_matrix.std(ddof=1, axis=1)
             for asset, stat in zip(out.assets, stats):
                 result['avg'].append((l, r, asset.idx, stat))
             result['agg'][:, l, r, 0] += out.aggregate_losses
@@ -105,11 +104,10 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
         logging.info('Building the epsilons')
-        eps_dict = self.make_eps_dict(
+        self.epsilon_matrix = self.make_eps(
             self.oqparam.number_of_ground_motion_fields)
-        self.epsilon_matrix = numpy.array(
-            [eps_dict[a['asset_ref']] for a in self.assetcol])
-        self.riskinputs = self.build_riskinputs(self.gmfs, eps_dict)
+        sitecol, gmfs = base.get_gmfs(self)
+        self.riskinputs = self.build_riskinputs(gmfs, self.epsilon_matrix)
 
     def post_execute(self, result):
         """
@@ -135,6 +133,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             # average losses
             avglosses = numpy.zeros((N, R), multi_stat_dt)
             for (l, r, aid, stat) in result['avg']:
-                avglosses[lt][aid, r] = stat
-            self.datastore['avglosses'] = avglosses
-            self.datastore['agglosses'] = agglosses
+                avglosses[ltypes[l]][aid, r] = stat
+            self.datastore['avglosses-rlzs'] = avglosses
+            self.datastore['agglosses-rlzs'] = agglosses

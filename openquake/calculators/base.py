@@ -16,7 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import sys
 import abc
 import pdb
@@ -125,20 +124,13 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 traceback.print_exc(tb)
                 pdb.post_mortem(tb)
             else:
-                raise
-        finally:
-            critical = sys.exc_info()[0]
-            if critical:
                 logging.critical('', exc_info=True)
-            if clean_up:
-                try:
-                    self.clean_up()
-                except:
-                    # display the cleanup error only if there was no
-                    # critical error, to avoid covering it
-                    if critical is None:
-                        logging.error('Cleanup error', exc_info=True)
-            return exported
+                raise
+        # don't cleanup if there is a critical error, otherwise
+        # there will likely be a cleanup error covering the real one
+        if clean_up:
+            self.clean_up()
+        return exported
 
     def core_func(*args):
         """
@@ -183,12 +175,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
                 ekey = (key, fmt)
-                try:
-                    exported[ekey] = sorted(
-                        export.export(ekey, self.datastore))
-                    logging.info('exported %s: %s', key, exported[ekey])
-                except KeyError:
-                    logging.info('%s is not exportable in %s', key, fmt)
+                if ekey not in export.export:  # non-exportable output
+                    continue
+                exported[ekey] = export.export(ekey, self.datastore)
+                logging.info('exported %s: %s', key, exported[ekey])
         return exported
 
     def clean_up(self):
@@ -204,7 +194,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         if performance is not None:
             self.performance = performance
         # the datastore must not be closed, it will be closed automatically
-        self.datastore.symlink(os.path.dirname(self.oqparam.inputs['job_ini']))
 
 
 class HazardCalculator(BaseCalculator):
@@ -282,31 +271,23 @@ class HazardCalculator(BaseCalculator):
         Read the exposure (if any) and then the site collection, possibly
         extracted from the exposure.
         """
+        logging.info('Reading the site collection')
+        with self.monitor('reading site collection', autoflush=True):
+            haz_sitecol = readinput.get_site_collection(self.oqparam)
         inputs = self.oqparam.inputs
-
-        if 'gmfs' in inputs and self.oqparam.sites:
-            haz_sitecol = self.sitecol = readinput.get_site_collection(
-                self.oqparam)
-        if 'scenario_' in self.oqparam.calculation_mode:
-            self.gmfs = get_gmfs(self)
-            haz_sitecol = self.sitecol
         if 'exposure' in inputs:
             logging.info('Reading the exposure')
             with self.monitor('reading exposure', autoflush=True):
                 self.exposure = readinput.get_exposure(self.oqparam)
                 self.sitecol, self.assets_by_site = (
                     readinput.get_sitecol_assets(self.oqparam, self.exposure))
-                self.cost_types = self.exposure.cost_types
+                if len(self.exposure.cost_types):
+                    self.cost_types = self.exposure.cost_types
                 self.taxonomies = numpy.array(
                     sorted(self.exposure.taxonomies), '|S100')
             num_assets = self.count_assets()
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
-            elif 'gmfs' in inputs:
-                pass  # haz_sitecol is already defined
-            # TODO: think about the case hazard_curves in inputs
-            else:
-                haz_sitecol = None
             if haz_sitecol is not None and haz_sitecol != self.sitecol:
                 with self.monitor('assoc_assets_sites'):
                     self.sitecol, self.assets_by_site = \
@@ -319,9 +300,7 @@ class HazardCalculator(BaseCalculator):
               OqParam.from_(self.datastore.parent.attrs).inputs):
             logging.info('Re-using the already imported exposure')
         else:  # no exposure
-            logging.info('Reading the site collection')
-            with self.monitor('reading site collection', autoflush=True):
-                self.sitecol = readinput.get_site_collection(self.oqparam)
+            self.sitecol = haz_sitecol
 
         # save mesh and asset collection
         self.save_mesh()
@@ -385,24 +364,28 @@ class RiskCalculator(HazardCalculator):
     riskmodel = datastore.persistent_attribute('riskmodel')
     specific_assets = datastore.persistent_attribute('specific_assets')
 
-    def make_eps_dict(self, num_ruptures):
+    def make_eps(self, num_ruptures):
         """
         :param num_ruptures: the size of the epsilon array for each asset
         """
         oq = self.oqparam
         with self.monitor('building epsilons', autoflush=True):
-            eps = riskinput.make_eps_dict(
+            return riskinput.make_eps(
                 self.assets_by_site, num_ruptures,
                 oq.master_seed, oq.asset_correlation)
-            return eps
 
-    def build_riskinputs(self, hazards_by_key, eps_dict=None):
+    def build_riskinputs(self, hazards_by_key, eps=numpy.zeros(0)):
         """
         :param hazards_by_key:
             a dictionary key -> IMT -> array of length num_sites
+        :param eps:
+            a matrix of epsilons (possibly empty)
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
+        # add asset.idx as side effect
+        riskinput.build_asset_collection(
+            self.assets_by_site, self.oqparam.time_event)
         imtls = self.oqparam.imtls
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
@@ -417,10 +400,10 @@ class RiskCalculator(HazardCalculator):
                 indices = numpy.array([idx for idx, _weight in block])
                 reduced_assets = self.assets_by_site[indices]
                 reduced_eps = {}  # for the assets belonging to the indices
-                if eps_dict:
+                if len(eps):
                     for assets in reduced_assets:
                         for asset in assets:
-                            reduced_eps[asset.id] = eps_dict[asset.id]
+                            reduced_eps[asset.idx] = eps[asset.idx]
 
                 # collect the hazards by key into hazards by imt
                 hdata = collections.defaultdict(lambda: [{} for _ in indices])
@@ -486,7 +469,21 @@ def get_gmfs(calc):
     :returns: a dictionary of gmfs
     """
     if 'gmfs' in calc.oqparam.inputs:  # from file
-        return read_gmfs_from_file(calc)
+        logging.info('Reading gmfs from file')
+        sitecol, calc.tags, gmfs_by_imt = readinput.get_gmfs(calc.oqparam)
+        calc.save_params()  # save number_of_ground_motion_fields and sites
+
+        # reduce the gmfs matrices to the filtered sites
+        for imt in calc.oqparam.imtls:
+            gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
+
+        logging.info('Preparing the risk input')
+        fake_rlz = logictree.Realization(
+            value=('FromFile',), weight=1, lt_path=('',),
+            ordinal=0, lt_uid=('*',))
+        calc.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
+        return sitecol, {(0, 'FromFile'): gmfs_by_imt}
+
     # else from rupture
     gmf = calc.datastore['gmfs/col00'].value
     # NB: if the hazard site collection has N sites, the hazard
@@ -506,34 +503,10 @@ def get_gmfs(calc):
     gmfs = {(trt_id, gsim): numpy.zeros((N, R), imt_dt)
             for trt_id, gsim in calc.rlzs_assoc}
     for rupid, rows in sorted(gmf_by_idx.items()):
+        assert len(haz_sitecol.indices) == len(rows), (
+            len(haz_sitecol.indices), len(rows))
         for sid, gmv in zip(haz_sitecol.indices, rows):
             if sid in risk_indices:
                 for trt_id, gsim in gmfs:
                     gmfs[trt_id, gsim][sid, rupid] = gmv[gsim]
-    return gmfs
-
-
-def read_gmfs_from_file(calc):
-    """
-    :param calc: a ScenarioDamage or ScenarioRisk calculator
-    :returns: riskinputs
-    """
-    logging.info('Reading gmfs from file')
-    try:
-        sitecol = calc.sitecol.complete
-    except KeyError:
-        sitecol = None
-    calc.sitecol, calc.tags, gmfs_by_imt = readinput.get_gmfs(
-        calc.oqparam, sitecol)
-    calc.save_params()  # save number_of_ground_motion_fields and sites
-
-    # reduce the gmfs matrices to the filtered sites
-    for imt in calc.oqparam.imtls:
-        gmfs_by_imt[imt] = gmfs_by_imt[imt][calc.sitecol.indices]
-
-    logging.info('Preparing the risk input')
-    fake_rlz = logictree.Realization(
-        value=('FromFile',), weight=1, lt_path=('',),
-        ordinal=0, lt_uid=('*',))
-    calc.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
-    return {(0, 'FromFile'): gmfs_by_imt}
+    return haz_sitecol, gmfs

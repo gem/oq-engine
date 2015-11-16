@@ -497,14 +497,6 @@ def IML(value, IMT, minIML=None, maxIML=None, imlUnit=None):
     return (imt_str, imls, min_iml, max_iml, imlUnit)
 
 
-def fragilityparams(value, mean, stddev):
-    """
-    Convert a node of the form <params mean="0.30" stddev="0.16" /> into
-    a pair (0.30, 0.16)
-    """
-    return positivefloat(mean), positivefloat(stddev)
-
-
 def intensity_measure_types(value):
     """
     :param value: input string
@@ -752,22 +744,6 @@ dip_range = FloatRange(0, 90)
 rake_range = FloatRange(-180, 180)
 
 
-def nodal_plane(value, probability, strike, dip, rake):
-    """
-    This is used to convert nodes of the form
-     <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
-
-    :param value: None
-    :param probability: a probability
-    :param strike: strike angle
-    :param dip: dip parameter
-    :param rake: rake angle
-    :returns: a validated pair (probability, depth)
-    """
-    return (range01(probability), strike_range(strike),
-            dip_range(dip), rake_range(rake))
-
-
 def ab_values(value):
     """
     a and b values of the GR magniture-scaling relation.
@@ -798,6 +774,10 @@ def site_param(z1pt0, z2pt5, vs30Type, vs30, lon, lat, backarc="false"):
                      vs30_type(vs30Type) == 'measured',
                      positivefloat(vs30), longitude(lon),
                      latitude(lat), boolean(backarc))
+
+# used for the exposure validation
+cost_type = Choice('structural', 'nonstructural', 'contents',
+                   'business_interruption')
 
 
 ###########################################################################

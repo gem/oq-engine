@@ -87,13 +87,22 @@ def upgrade_file(path):
     """Upgrade to the latest NRML version"""
     node0 = nrml.read(path, chatty=False)[0]
     shutil.copy(path, path + '.bak')  # make a backup of the original file
-    if striptag(node0.tag) == 'vulnerabilityModel':
+    tag = striptag(node0.tag)
+    if tag == 'vulnerabilityModel':
         vf_dict, cat_dict = get_vulnerability_functions_04(path)
+        # below I am converting into a NRML 0.5 vulnerabilityModel
         node0 = LiteralNode(
             'vulnerabilityModel', cat_dict,
             nodes=list(map(riskmodels.obj_to_node, list(vf_dict.values()))))
+        gml = False
+    elif tag == 'fragilityModel':
+        node0 = riskmodels.convert_fragility_model_04(
+            nrml.read(path)[0], path)
+        gml = False
+    else:
+        gml = True
     with open(path, 'w') as f:
-        nrml.write([node0], f)
+        nrml.write([node0], f, gml=gml)
 
 
 # NB: this works only for migrations from NRML version 0.4 to 0.5
@@ -109,20 +118,23 @@ def upgrade_nrml(directory, dry_run):
         for f in files:
             path = os.path.join(cwd, f)
             if f.endswith('.xml'):
-                ip = iterparse(path)
+                ip = iterparse(path, events=('start',))
+                next(ip)  # read node zero
                 try:
-                    fulltag = ip.next()[1].tag
+                    fulltag = next(ip)[1].tag  # tag of the first node
                     xmlns, tag = fulltag.split('}')
                 except:  # not a NRML file
-                    pass
+                    xmlns, tag = '', ''
                 if xmlns[1:] == NRML05:  # already upgraded
                     pass
-                elif 'nrml/0.4' in xmlns and 'vulnerability' in f:
+                elif 'nrml/0.4' in xmlns and (
+                        'vulnerability' in tag or 'fragility' in tag):
                     if not dry_run:
                         print('Upgrading', path)
                         try:
                             upgrade_file(path)
                         except Exception as exc:
+                            raise
                             print(exc)
                     else:
                         print('Not upgrading', path)
