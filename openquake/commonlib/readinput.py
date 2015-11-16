@@ -28,6 +28,7 @@ import numpy
 from shapely import wkt, geometry
 
 from openquake.hazardlib import geo, site, correlation, imt
+from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import workflows, riskinput
 
 from openquake.commonlib.datastore import DataStore
@@ -922,6 +923,41 @@ def get_gmfs(oqparam):
         return get_scenario_from_nrml(oqparam, fname)
     else:
         raise InvalidFile(fname)
+
+
+def get_hcurves(oqparam):
+    """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        sitemesh, imtls, curve array
+    """
+    fname = oqparam.inputs['hcurves']
+    assert fname.endswith('.xml')
+    hcurves_by_imt = {}
+    imtls = {}
+    for hcurves in nrml.read(fname):
+        imt = hcurves['IMT']
+        if imt == 'SA':
+            imt += '(%s)' % hcurves['saPeriod']
+        imtls[imt] = ~hcurves.IMLs
+        data = []
+        for node in hcurves[1:]:
+            xy = ~node.Point.pos
+            poes = ~node.poEs
+            data.append((xy, poes))
+        data.sort()
+        hcurves_by_imt[imt] = numpy.array([d[1] for d in data])
+    n = len(hcurves_by_imt[imt])
+    curves = zero_curves(n, imtls)
+    for imt in imtls:
+        curves[imt] = hcurves_by_imt[imt]
+    lons, lats = [], []
+    for xy, poes in data:
+        lons.append(xy[0])
+        lats.append(xy[1])
+    mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
+    return mesh, collections.OrderedDict(sorted(imtls.items())), curves
 
 
 def get_gmfs_from_txt(oqparam, fname):
