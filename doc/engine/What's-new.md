@@ -245,7 +245,7 @@ Ubuntu 12.04 by backporting the package `python-h5py` from Ubuntu 14.04.
 So *Ubuntu 12.04 is still supported, even if it is deprecated*.
 
 We have official packages also for CentOS 7
-and Fedora and in general for [Red Hat Enterprise Linux clones].
+and in general for [Red Hat Enterprise Linux clones].
 (Installing-the-OpenQuake-Engine-from-source-code-on-Fedora-and-RHEL.md)
 
 While the engine is not supported on Windows and Mac OS X, we are
