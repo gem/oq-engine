@@ -121,7 +121,8 @@ now finally documented.
 
 11. We added a script `oq_reset_db` to drop and recreate the engine
 database, as well as removing the datastore directories of all users.
-This is meant to be used by system administrators.
+This is meant to be used with care by system administrators. See the
+instructions printed at the moment of running the script.
 
 9. Countless small improvements and additional validations have been
 added. This release has seen more than 150 pull requests reviewed and
