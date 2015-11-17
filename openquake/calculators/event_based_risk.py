@@ -298,6 +298,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             key=operator.attrgetter('col_id'))
 
     def agg(self, acc, result):
+        """
+        Aggregate losses and store them in the datastore.
+
+        :param acc: accumulator dictionary
+        :param result: dictionary coming from event_based_risk
+        """
         with self.monitor('saving event loss tables', autoflush=True):
             items = result.pop('ASSLOSS')
             for r, records in enumerate(items):
