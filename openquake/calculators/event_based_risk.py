@@ -94,7 +94,7 @@ def _old_loss_curves(asset_values, rcurves, ratios):
 
 @parallel.litetask
 def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
-                     eps, monitor):
+                     monitor):
     """
     :param riskinputs:
         a list of :class:`openquake.risklib.riskinput.RiskInput` objects
@@ -104,8 +104,6 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
         a class:`openquake.commonlib.source.RlzsAssoc` instance
     :param assets_by_site:
         a representation of the exposure
-    :param eps:
-        a matrix of shape (N, E) with N=#assets and E=#ruptures
     :param monitor:
         :class:`openquake.baselib.performance.PerformanceMonitor` instance
     :returns:
@@ -123,16 +121,14 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     if monitor.avg_losses:
         result['AVGLOSS'] = square(L, R, zeroN2)
     for out_by_rlz in riskmodel.gen_outputs(
-            riskinputs, rlzs_assoc, monitor, assets_by_site, eps):
-        rup_slice = out_by_rlz.rup_slice
-        rup_ids = list(range(rup_slice.start, rup_slice.stop))
+            riskinputs, rlzs_assoc, monitor, assets_by_site):
         for out in out_by_rlz:
             l = lti[out.loss_type]
             asset_ids = [a.idx for a in out.assets]
 
             if monitor.asset_loss_table:
                 for rup_id, all_losses, ins_losses in zip(
-                        rup_ids, out.event_loss_per_asset,
+                        out.tags, out.event_loss_per_asset,
                         out.insured_loss_per_asset):
                     for aid, groundloss, insuredloss in zip(
                             asset_ids, all_losses, ins_losses):
@@ -145,7 +141,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
             agg_losses = out.event_loss_per_asset.sum(axis=1)
             agg_ins_losses = out.insured_loss_per_asset.sum(axis=1)
             for rup_id, loss, ins_loss in zip(
-                    rup_ids, agg_losses, agg_ins_losses):
+                    out.tags, agg_losses, agg_ins_losses):
                 if loss > 0:
                     result['AGGLOSS'][l, out.hid].append(
                         (rup_id, numpy.array([loss, ins_loss])))
@@ -199,6 +195,27 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     return result
 
 
+class FakeMatrix(object):
+    """
+    A fake epsilon matrix, to be used when the coefficients are all zeros,
+    so the epsilons are ignored.
+    """
+    def __init__(self, n, e):
+        self.shape = (n, e)
+
+    def __getitem__(self, sliceobj):
+        if isinstance(sliceobj, int):
+            e = self.shape[1]
+            return numpy.zeros(e, F32)
+        elif len(sliceobj) == 2:
+            n = self.shape[0]
+            s1, s2 = sliceobj
+            size2 = s2.stop - s2.start
+            return self.__class__(n, size2)
+        else:
+            raise ValueError('Not a valid slice: %r' % sliceobj)
+
+
 @base.calculators.add('event_based_risk')
 class EventBasedRiskCalculator(base.RiskCalculator):
     """
@@ -222,10 +239,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.post_execute = lambda result: None
             return
         oq = self.oqparam
-        if self.riskmodel.covs:
-            epsilon_sampling = oq.epsilon_sampling
-        else:
-            epsilon_sampling = 1  # only one ignored epsilon
         correl_model = readinput.get_correl_model(oq)
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
         assets_by_site = self.assets_by_site
@@ -238,10 +251,16 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         all_ruptures = [rup_by_tag[tag] for tag in sorted(rup_by_tag)]
         for i, rup in enumerate(all_ruptures):
             rup.ordinal = i
-        num_samples = min(len(all_ruptures), epsilon_sampling)
-        self.epsilon_matrix = eps = riskinput.make_eps(
-            assets_by_site, num_samples, oq.master_seed, oq.asset_correlation)
-        logging.info('Generated %d epsilons', num_samples * len(eps))
+        self.N = len(self.assetcol)
+        self.E = len(all_ruptures)
+        if not self.riskmodel.covs:
+            # do not generate epsilons
+            eps = FakeMatrix(self.N, self.E)
+        else:
+            self.epsilon_matrix = eps = riskinput.make_eps(
+                assets_by_site, self.E, oq.master_seed,
+                oq.asset_correlation)
+            logging.info('Generated %s epsilons', eps.shape)
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
             self.sitecol.complete, all_ruptures, gsims_by_col,
             oq.truncation_level, correl_model, eps,
@@ -288,7 +307,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         return apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc,
-             self.assets_by_site, self.epsilon_matrix, self.monitor),
+             self.assets_by_site, self.monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('col_id'))
