@@ -114,7 +114,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     lti = riskmodel.lti  # loss type -> index
     L, R = len(lti), len(rlzs_assoc.realizations)
     ela_dt = numpy.dtype([('rup_id', U32), ('ass_id', U32),
-                          ('loss', (F32, (L, R, 2)))])
+                          ('loss', (F32, (L, 2)))])
 
     def zeroN2():
         return numpy.zeros((monitor.num_assets, 2))
@@ -138,7 +138,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
                             asset_ids, all_losses, ins_losses):
                         if groundloss > 0:
                             result['ASSLOSS'].append(
-                                (rup_id, aid, (l, out.hid),
+                                (out.hid, rup_id, aid, l,
                                  (groundloss, insuredloss)))
 
             # collect aggregate losses
@@ -183,14 +183,16 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
             result['AGGLOSS'][l, r] = [array]
 
     if monitor.asset_loss_table:
-        items = []
-        for (rid, aid), group in itertools.groupby(
-                sorted(result['ASSLOSS']), operator.itemgetter(0, 1)):
-            array = numpy.zeros((L, R, 2), F32)
-            for _rid, _aid, lr, loss in group:
-                array[lr] = loss
-            items.append((rid, aid, array))
-        result['ASSLOSS'] = numpy.array(items, ela_dt)
+        items = [[] for _ in range(R)]
+        for (r, rid, aid), group in itertools.groupby(
+                sorted(result['ASSLOSS']), operator.itemgetter(0, 1, 2)):
+            loss = numpy.zeros((L, 2), F32)
+            for i, row in enumerate(group):
+                loss[i] = row[4]
+            items[r].append((rid, aid, loss))
+        for r in range(R):
+            items[r] = numpy.array(items[r], ela_dt)
+        result['ASSLOSS'] = items
     for (l, r), lst in numpy.ndenumerate(result['RC']):
         result['RC'][l, r] = sum(lst, AccumDict())
     for (l, r), lst in numpy.ndenumerate(result['IC']):
@@ -276,9 +278,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         if self.oqparam.asset_loss_table:
             ela_dt = numpy.dtype([('rup_id', U32), ('ass_id', U32),
-                                  ('loss', (F32, (L, R, 2)))])
-            self.all_losses = self.datastore.create_dset(
-                'asset_loss_table', ela_dt, compression='gzip')
+                                  ('loss', (F32, (L, 2)))])
+            self.asset_loss_table = dset = [None] * R
+            for rlz in self.rlzs_assoc.realizations:
+                dset[rlz.ordinal] = self.datastore.create_dset(
+                    'asset_loss_table/%s' % rlz.uid, ela_dt,
+                    compression='gzip')
 
     def execute(self):
         """
@@ -309,7 +314,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # ASSLOSS
         if self.oqparam.asset_loss_table:
             with self.monitor('saving asset_loss_table', autoflush=True):
-                self.all_losses.extend(result.pop('ASSLOSS'))
+                items = result.pop('ASSLOSS')
+                for r, records in enumerate(items):
+                    self.asset_loss_table[r].extend(records)
                 self.datastore.hdf5.flush()
 
         return acc + result
@@ -326,8 +333,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.agg_losses.attrs['nbytes'] / fullsize)
 
         if self.oqparam.asset_loss_table:
-            dset = self.all_losses.dset
-            dset.attrs['nonzero_fraction'] = len(dset) / (self.N * self.E)
+            for dset in self.asset_loss_table:
+                dset.dset.attrs['nonzero_fraction'] = (
+                    len(dset.dset) / (self.N * self.E))
 
         insured_losses = self.oqparam.insured_losses
         ses_ratio = self.oqparam.ses_ratio
