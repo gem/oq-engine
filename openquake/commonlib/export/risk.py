@@ -204,7 +204,7 @@ def export_avg_losses_stats(ekey, dstore):
     return fnames
 
 
-# this is used by classical_risk and event_based_risk
+# this is used by classical_risk
 @export.add(('agg_losses-rlzs', 'csv'))
 def export_agg_losses(ekey, dstore):
     """
@@ -235,14 +235,17 @@ def export_agg_losses_ebr(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     tags = dstore['tags'].value
     E = len(tags)
-    loss_type_dt = dstore['riskmodel'].loss_type_dt
+    loss_types = dstore['riskmodel'].loss_types
+    ext_loss_types = loss_types + [lt + '_ins' for lt in loss_types]
+    ext_dt = numpy.dtype([(elt, numpy.float32) for elt in ext_loss_types])
     fnames = []
     for rlz in rlzs:
-        array = numpy.zeros((E, 2), loss_type_dt)
-        for l, ltype in enumerate(loss_type_dt.names):
-            array[ltype] = agg_losses[:, l, rlz.ordinal, :]
+        array = numpy.empty(E, ext_dt)
+        for l, ltype in enumerate(loss_types):
+            array[ltype] = agg_losses[:, l, rlz.ordinal, 0]
+            array[ltype + '_ins'] = agg_losses[:, l, rlz.ordinal, 1]
         dest = dstore.export_path('agg_losses-rlz%03d.csv' % rlz.ordinal)
-        data = compose_arrays(tags, compactify(array))
+        data = compose_arrays(tags, array)
         writers.write_csv(dest, data, fmt='%10.6E')
         fnames.append(dest)
     return fnames
