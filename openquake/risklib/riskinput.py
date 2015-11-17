@@ -303,6 +303,10 @@ class RiskInput(object):
 
     def get_all(self, rlzs_assoc, assets_by_site=None):
         """
+        :param rlzs_assoc:
+            :class:`openquake.commonlib.source.RlzsAssoc` instance
+        :param assets_by_site:
+            ignored, used only for compatibility with RiskInputFromRuptures
         :returns:
             lists of assets, hazards and epsilons
         """
@@ -396,6 +400,10 @@ class RiskInputFromRuptures(object):
 
     def get_all(self, rlzs_assoc, assets_by_site):
         """
+        :param rlzs_assoc:
+            :class:`openquake.commonlib.source.RlzsAssoc` instance
+        :param assets_by_site:
+            list of list of assets per each hazard site
         :returns:
             lists of assets, hazards and epsilons
         """
