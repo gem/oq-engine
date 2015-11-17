@@ -326,7 +326,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Save the event loss table in the datastore.
 
         :param result:
-            a numpy array of shape (O, L, R) containing lists of arrays
+            the dictionary returned by the .execute method
         """
         for rlz in self.realizations:
             elt = self.datastore['asset_loss_table/%s' % rlz['uid']]
