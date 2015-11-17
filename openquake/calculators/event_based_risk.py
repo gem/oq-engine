@@ -289,6 +289,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Run the event_based_risk calculator and aggregate the results
         """
         self.saved = collections.Counter()  # nbytes per HDF5 key
+        self.ass_bytes = 0
+        self.agg_bytes = 0
         return apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc,
@@ -308,6 +310,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             items = result.pop('ASSLOSS')
             for r, records in enumerate(items):
                 self.asset_loss_table[r].extend(records)
+                self.ass_bytes += records.nbytes
                 agg_losses = []
                 for rup_id, group in itertools.groupby(
                         records, operator.itemgetter(0)):
@@ -315,8 +318,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     for record in group:
                         loss += record['loss']
                     agg_losses.append((rup_id,) + tuple(loss))
-                self.agg_loss_table[r].extend(
-                    numpy.array(agg_losses, self.elt_dt))
+                array = numpy.array(agg_losses, self.elt_dt)
+                self.agg_loss_table[r].extend(array)
+                self.agg_bytes += array.nbytes
             self.datastore.hdf5.flush()
 
         return acc + result
@@ -328,6 +332,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param result:
             the dictionary returned by the .execute method
         """
+        self.datastore['asset_loss_table'].attrs['nbytes'] = self.ass_bytes
+        self.datastore['agg_loss_table'].attrs['nbytes'] = self.agg_bytes
         for rlz in self.realizations:
             elt = self.datastore['asset_loss_table/%s' % rlz['uid']]
             alt = self.datastore['agg_loss_table/%s' % rlz['uid']]
