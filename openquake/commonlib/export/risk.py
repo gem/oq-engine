@@ -233,20 +233,24 @@ def export_agg_losses_ebr(ekey, dstore):
     """
     agg_losses = dstore[ekey[0]]
     rlzs = dstore['rlzs_assoc'].realizations
-    loss_type_dt = dstore['riskmodel'].loss_type_dt
-    loss_types = loss_type_dt.names
+    loss_types = dstore['riskmodel'].loss_types
     tags = dstore['tags'].value
-    dt = numpy.dtype([('tag', (bytes, 100))] + [
-        (name, (numpy.float32, 2)) for name in loss_types])
+    loss_types = dstore['riskmodel'].loss_types
+    ext_loss_types = loss_types + [lt + '_ins' for lt in loss_types]
+    ext_dt = numpy.dtype(
+        [('tag', (bytes, 100))] +
+        [(elt, numpy.float32) for elt in ext_loss_types])
     fnames = []
     for rlz in rlzs:
-        array = agg_losses[rlz.uid].value
+        rows = agg_losses[rlz.uid]
         data = []
-        for row in array:
-            data.append((tags[row[0]],) + tuple(row[lt] for lt in loss_types))
+        for row in rows:
+            data.append((tags[row[0]],) +
+                        tuple(row[lt][0] for lt in loss_types) +
+                        tuple(row[lt][1] for lt in loss_types))
         data.sort()
         dest = dstore.export_path('agg_losses-rlz%03d.csv' % rlz.ordinal)
-        writers.write_csv(dest, numpy.array(data, dt), fmt='%10.6E')
+        writers.write_csv(dest, numpy.array(data, ext_dt), fmt='%10.6E')
         fnames.append(dest)
     return fnames
 
