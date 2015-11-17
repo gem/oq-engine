@@ -103,7 +103,7 @@ class CalculatorTestCase(unittest.TestCase):
         Make sure the expected and actual files have the same content.
         `make_comparable` is a function processing the lines of the
         files to make them comparable. By default it does nothing,
-        but in some tests sorting function is passed, because some
+        but in some tests a sorting function is passed, because some
         files can be equal only up to the ordering.
         """
         expected = os.path.join(self.testdir, fname1)
