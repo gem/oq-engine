@@ -1,3 +1,5 @@
+python-oq-engine (1.6.0-0~precise01) precise; urgency=low
+
   [Daniele Viganò]
   * Added the oq_reset_db script. It removes and recreates the database and
     the datastore
@@ -20,6 +22,8 @@
   * Removed the epsilon sampling "feature" from the scenario_risk calculator
   * Replaced the event based calculators based on Postgres with the new ones
     based on the HDF5 technology
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 17 Nov 2015 11:29:47 +0100
 
 python-oq-engine (1.5.1-0~precise01) precise; urgency=low
 
