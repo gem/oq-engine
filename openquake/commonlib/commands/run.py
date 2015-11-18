@@ -28,6 +28,7 @@ def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, monitor):
     Run both hazard and risk, one after the other
     """
     hcalc = base.calculators(readinput.get_oqparam(job_haz), monitor)
+    monitor.hdf5path = hcalc.datastore.hdf5path
     with monitor:
         hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports)
         hc_id = hcalc.datastore.calc_id
@@ -47,7 +48,8 @@ def run(job_ini, concurrent_tasks=None, pdb=None,
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
     job_inis = job_ini.split(',')
     assert len(job_inis) in (1, 2), job_inis
-    monitor = performance.PerformanceMonitor('total', measuremem=True)
+    monitor = performance.PerformanceMonitor(
+        'total runtime', hdf5path=None, measuremem=True)
 
     if len(job_inis) == 1:  # run hazard or risk
         oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc)
@@ -59,6 +61,7 @@ def run(job_ini, concurrent_tasks=None, pdb=None,
                 raise SystemExit('There are %d old calculations, cannot '
                                  'retrieve the %s' % (len(calc_ids), hc))
         calc = base.calculators(oqparam, monitor)
+        monitor.hdf5path = calc.datastore.hdf5path
         with monitor:
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports, hazard_calculation_id=hc)
@@ -69,6 +72,7 @@ def run(job_ini, concurrent_tasks=None, pdb=None,
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
     monitor.flush()
+    calc.performance = monitor.performance()
     print('See the output with hdfview %s' % calc.datastore.hdf5path)
     return calc
 

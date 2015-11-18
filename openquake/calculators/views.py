@@ -214,7 +214,7 @@ def get_data_transfer(dstore):
         num_gsims = num_gsims_by_trt.get(block[0].trt_model_id, 0)
         back = info['n_sites'] * info['n_levels'] * info['n_imts'] * num_gsims
         to_send_back += back * 8  # 8 bytes per float
-        args = (block, sitecol, gsims_assoc, PerformanceMonitor(''))
+        args = (block, sitecol, gsims_assoc, PerformanceMonitor('', None))
         to_send_forward += sum(len(p) for p in parallel.pickle_sequence(args))
         block_info.append((len(block), block.weight))
     return numpy.array(block_info, block_dt), to_send_forward, to_send_back

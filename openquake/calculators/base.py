@@ -81,6 +81,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.monitor = monitor
         if persistent:
             self.datastore = datastore.DataStore(calc_id)
+            self.monitor.hdf5path = self.datastore.hdf5path
         else:
             self.datastore = general.AccumDict()
             self.datastore.hdf5 = {}
@@ -99,6 +100,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore.attrs['oqlite_version'] = repr(__version__)
         self.datastore.hdf5.flush()
 
+    def mon(self, name):
+        """Return a children monitor with the given name"""
+        operation = '%s %s' % (self.__class__.__name__, name)
+        return self.monitor(operation, autoflush=True)
+
     def run(self, pre_execute=True, clean_up=True, concurrent_tasks=None,
             **kw):
         """
@@ -110,13 +116,13 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         exported = {}
         try:
             if pre_execute:
-                with self.monitor('pre_execute', autoflush=True):
+                with self.mon('pre_execute'):
                     self.pre_execute()
-            with self.monitor('execute', autoflush=True):
+            with self.mon('execute'):
                 result = self.execute()
-            with self.monitor('post_execute', autoflush=True):
+            with self.mon('post_execute'):
                 self.post_execute(result)
-            with self.monitor('export', autoflush=True):
+            with self.mon('export'):
                 exported = self.export()
         except:
             if kw.get('pdb'):  # post-mortem debug
@@ -190,9 +196,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             self.realizations = numpy.array(
                 [(r.uid, r.weight) for r in self.rlzs_assoc.realizations],
                 rlz_dt)
-        performance = self.monitor.collect_performance()
-        if performance is not None:
-            self.performance = performance
         # the datastore must not be closed, it will be closed automatically
 
 
