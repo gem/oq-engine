@@ -600,6 +600,3 @@ def context(fname, node):
         msg = 'node %s: %s, line %s of %s' % (
             striptag(node.tag), exc, node.lineno, fname)
         raise_(etype, msg, tb)
-
-if __name__ == '__main__':
-    print(node_from_xml(sys.argv[1]).to_str())
