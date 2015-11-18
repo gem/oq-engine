@@ -70,7 +70,6 @@ class OqParam(valid.ParamSet):
     description = valid.Param(valid.utf8_not_empty)
     distance_bin_width = valid.Param(valid.positivefloat)
     mag_bin_width = valid.Param(valid.positivefloat)
-    epsilon_sampling = valid.Param(valid.positiveint, 1000)
     export_dir = valid.Param(valid.utf8, None)
     export_multi_curves = valid.Param(valid.boolean, False)
     exports = valid.Param(valid.export_formats, ())
