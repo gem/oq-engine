@@ -42,8 +42,8 @@ def build_agg_curve(r_data, insured_losses, ses_ratio, curve_resolution,
 
     :param r_data:
         a list of pairs `(r, data)` where `r` is a realization index and `data`
-        is an array of pairs `(rupture_id, loss)` where loss is an array with
-        two values
+        is an array of pairs `(rupture_id, loss)` where loss is an array of
+        shape L, 2
     :param insured_losses:
         job.ini configuration parameter
     :param ses_ratio:
@@ -59,13 +59,12 @@ def build_agg_curve(r_data, insured_losses, ses_ratio, curve_resolution,
     for r, data in r_data:
         if len(data) == 0:  # realization with no losses
             continue
-        for l, ltype in enumerate(data.dtype.names[1:]):
-            data_lt = data[ltype]
+        E, L, I = data['loss'].shape
+        for l in range(L):
             for i in range(insured_losses + 1):
                 # if insured_losses is False, don't build them
-                the_losses = data_lt[:, i]
                 losses, poes = scientific.event_based(
-                    the_losses, ses_ratio, curve_resolution)
+                    data['loss'][:, l, i], ses_ratio, curve_resolution)
                 avg = scientific.average_loss((losses, poes))
                 result[l, r, i] = (losses, poes, avg)
     return result
@@ -114,35 +113,37 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     L, R = len(lti), len(rlzs_assoc.realizations)
     ela_dt = numpy.dtype([('rup_id', U32), ('ass_id', U32),
                           ('loss', (F32, (L, 2)))])
+    elt_dt = numpy.dtype([('rup_id', U32), ('loss', (F32, (L, 2)))])
 
     def zeroN2():
         return numpy.zeros((monitor.num_assets, 2))
-    result = dict(ASSLOSS=[], RC=square(L, R, list), IC=square(L, R, list))
+    result = dict(RC=square(L, R, list), IC=square(L, R, list))
     if monitor.avg_losses:
         result['AVGLOSS'] = square(L, R, zeroN2)
+    ass_losses = []
     for out_by_rlz in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor, assets_by_site):
         for out in out_by_rlz:
             l = lti[out.loss_type]
+            r = out.hid
             asset_ids = [a.idx for a in out.assets]
 
-            if monitor.asset_loss_table:
-                for rup_id, all_losses, ins_losses in zip(
-                        out.tags, out.event_loss_per_asset,
-                        out.insured_loss_per_asset):
-                    for aid, groundloss, insuredloss in zip(
-                            asset_ids, all_losses, ins_losses):
-                        if groundloss > 0:
-                            result['ASSLOSS'].append(
-                                (out.hid, rup_id, aid, l,
-                                 (groundloss, insuredloss)))
+            # aggregate losses per rupture
+            for rup_id, all_losses, ins_losses in zip(
+                    out.tags, out.event_loss_per_asset,
+                    out.insured_loss_per_asset):
+                for aid, groundloss, insuredloss in zip(
+                        asset_ids, all_losses, ins_losses):
+                    if groundloss > 0:
+                        loss2 = numpy.array([groundloss, insuredloss])
+                        ass_losses.append((r, rup_id, aid, l, loss2))
 
             # dictionaries asset_idx -> array of counts
             if riskmodel.curve_builders[l].user_provided:
-                result['RC'][l, out.hid].append(dict(
+                result['RC'][l, r].append(dict(
                     zip(asset_ids, out.counts_matrix)))
                 if out.insured_counts_matrix.sum():
-                    result['IC'][l, out.hid].append(dict(
+                    result['IC'][l, r].append(dict(
                         zip(asset_ids, out.insured_counts_matrix)))
 
             # average losses
@@ -157,18 +158,33 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
                     # the order in which the tasks are run, which is random
                     # i.e. at each run one may get different results!!
                     arr[aid] = [avgloss, ins_avgloss]
-                result['AVGLOSS'][l, out.hid] += arr
+                result['AVGLOSS'][l, r] += arr
 
+    ass_losses.sort()
+
+    # ASSLOSS
     items = [[] for _ in range(R)]
     for (r, rid, aid), group in itertools.groupby(
-            sorted(result['ASSLOSS']), operator.itemgetter(0, 1, 2)):
+            ass_losses, operator.itemgetter(0, 1, 2)):
         loss = numpy.zeros((L, 2), F32)
-        for i, row in enumerate(group):
-            loss[i] = row[4]
+        for _r, _rid, _aid, l, loss2 in group:
+            loss[l] = loss2
         items[r].append((rid, aid, loss))
     for r in range(R):
         items[r] = numpy.array(items[r], ela_dt)
     result['ASSLOSS'] = items
+
+    # AGGLOSS
+    items = [[] for _ in range(R)]
+    for (r, rid), group in itertools.groupby(
+            ass_losses, operator.itemgetter(0, 1)):
+        loss = numpy.zeros((L, 2), F32)
+        for _r, _rid, _aid, l, loss2 in group:
+            loss[l] += loss2
+        items[r].append((rid, loss))
+    for r in range(R):
+        items[r] = numpy.array(items[r], elt_dt)
+    result['AGGLOSS'] = items
 
     for (l, r), lst in numpy.ndenumerate(result['RC']):
         result['RC'][l, r] = sum(lst, AccumDict())
@@ -275,9 +291,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                               ('loss', (F32, (L, 2)))])
         self.asset_loss_table = [None] * R
         self.agg_loss_table = [None] * R
-        lst = [(name, (F32, 2)) for name in self.riskmodel.loss_type_dt.names]
-        self.elt_dt = numpy.dtype([('rup_id', U32)] + lst)
 
+        self.elt_dt = numpy.dtype([('rup_id', U32), ('loss', (F32, (L, 2)))])
         for rlz in self.rlzs_assoc.realizations:
             self.asset_loss_table[rlz.ordinal] = self.datastore.create_dset(
                 'asset_loss_table/%s' % rlz.uid, ela_dt)
@@ -307,20 +322,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param result: dictionary coming from event_based_risk
         """
         with self.monitor('saving event loss tables', autoflush=True):
-            items = result.pop('ASSLOSS')
-            for r, records in enumerate(items):
+            for r, records in enumerate(result.pop('ASSLOSS')):
                 self.asset_loss_table[r].extend(records)
                 self.ass_bytes += records.nbytes
-                agg_losses = []
-                for rup_id, group in itertools.groupby(
-                        records, operator.itemgetter(0)):
-                    loss = numpy.zeros((self.L, 2), F32)
-                    for record in group:
-                        loss += record['loss']
-                    agg_losses.append((rup_id,) + tuple(loss))
-                array = numpy.array(agg_losses, self.elt_dt)
-                self.agg_loss_table[r].extend(array)
-                self.agg_bytes += array.nbytes
+            for r, records in enumerate(result.pop('AGGLOSS')):
+                self.agg_loss_table[r].extend(records)
+                self.agg_bytes += records.nbytes
             self.datastore.hdf5.flush()
 
         return acc + result

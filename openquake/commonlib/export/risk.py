@@ -245,9 +245,9 @@ def export_agg_losses_ebr(ekey, dstore):
         rows = agg_losses[rlz.uid]
         data = []
         for row in rows:
-            data.append((tags[row[0]],) +
-                        tuple(row[lt][0] for lt in loss_types) +
-                        tuple(row[lt][1] for lt in loss_types))
+            loss = row['loss']  # matrix L x 2
+            data.append((tags[row['rup_id']],) +
+                        tuple(loss[:, 0]) + tuple(loss[:, 1]))
         data.sort()
         dest = dstore.export_path('agg_losses-rlz%03d.csv' % rlz.ordinal)
         writers.write_csv(dest, numpy.array(data, ext_dt), fmt='%10.6E')
