@@ -163,8 +163,10 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     for (r, rid, aid), group in itertools.groupby(
             sorted(result['ASSLOSS']), operator.itemgetter(0, 1, 2)):
         loss = numpy.zeros((L, 2), F32)
-        for i, row in enumerate(group):
-            loss[i] = row[4]
+        for row in group:
+            # row[3] is the loss type index
+            # row[4] is the pair of losses
+            loss[row[3]] = row[4]
         items[r].append((rid, aid, loss))
     for r in range(R):
         items[r] = numpy.array(items[r], ela_dt)
