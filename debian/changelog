@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed a spurious comma from the rupture tag
   * Removed the epsilon_sampling feature from event_based_risk
 
 python-oq-risklib (0.9.0-0~precise01) precise; urgency=low

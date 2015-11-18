@@ -131,7 +131,7 @@ def split_fault_source(src):
             # split on SingleRuptureSources
             for i, rupture in enumerate(s.iter_ruptures()):
                 yield SingleRuptureSource(
-                    rupture, '%s,%s' % (s.source_id, i),
+                    rupture, '%s-%s' % (s.source_id, i),
                     s.tectonic_region_type, s.trt_model_id)
 
 
