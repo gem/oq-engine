@@ -235,7 +235,6 @@ def export_agg_losses_ebr(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     loss_types = dstore['riskmodel'].loss_types
     tags = dstore['tags'].value
-    loss_types = dstore['riskmodel'].loss_types
     ext_loss_types = loss_types + [lt + '_ins' for lt in loss_types]
     ext_dt = numpy.dtype(
         [('tag', (bytes, 100))] +
