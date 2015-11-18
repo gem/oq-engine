@@ -20,4 +20,4 @@ install:
   - pip install https://github.com/gem/oq-hazardlib/archive/master.zip
 
 script:
-  - nosetests --nologcapture -vsx --with-doctest --with-xunit && python -m openquake.commonlib.node nosetests.xml
+  - python -m openquake.baselib.runtests openquake.risklib,openquake.commonlib,openquake.calculators
