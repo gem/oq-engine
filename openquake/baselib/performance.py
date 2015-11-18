@@ -71,6 +71,7 @@ def performance_view(dset):
             time += time_sec
             mem += memory_mb
         out.append((operation, time, mem, counts))
+    out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
     return numpy.array(out, perf_dt)
 
 
