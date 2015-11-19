@@ -18,8 +18,6 @@
 
 import os
 import time
-import operator
-import itertools
 from datetime import datetime
 
 import numpy
@@ -140,7 +138,7 @@ class PerformanceMonitor(object):
 
     def flush(self):
         """
-        Save the measurements on the performance file (or stdout)
+        Save the measurements on the performance file (or on stdout)
         """
         monitors = [self] + self.children
         data = [mon.get_data() for mon in monitors if mon.duration]
@@ -172,7 +170,7 @@ class PerformanceMonitor(object):
         del self_vars['operation']
         del self_vars['children']
         del self_vars['pid']
-        new = self.__class__(operation, self.hdf5path)
+        new = self.__class__(operation)
         vars(new).update(self_vars)
         vars(new).update(kw)
         self.children.append(new)

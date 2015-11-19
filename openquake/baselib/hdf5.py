@@ -16,25 +16,30 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import numpy
+
 
 class Hdf5Dataset(object):
     """
-    Little wrapper around a one-dimensional HDF5 dataset.
-
-    :param hdf5: a h5py.File object
-    :param name: an hdf5 key string
-    :param dtype: dtype of the dataset (usually composite)
-    :param shape: shape of the dataset (if None, the dataset is extendable)
-    :param compression: None or 'gzip' are recommended
+    Little wrapper around an (extendable) HDF5 dataset.
     """
     @classmethod
     def create(cls, hdf5, name, dtype, shape=None, compression=None):
+        """
+        :param hdf5: a h5py.File object
+        :param name: an hdf5 key string
+        :param dtype: dtype of the dataset (usually composite)
+        :param shape: shape of the dataset (if None, the dataset is extendable)
+        :param compression: None or 'gzip' are recommended
+        """
         if shape is None:  # extendable dataset
             dset = hdf5.create_dataset(
                 name, (0,), dtype, chunks=True, maxshape=(None,))
             dset.attrs['nbytes'] = 0
         else:  # fixed-shape dataset
             dset = hdf5.create_dataset(name, shape, dtype)
+            num_elems = numpy.prod(shape)
+            dset.attrs['nbytes'] = numpy.zeros(1, dtype).nbytes * num_elems
         return cls(dset)
 
     def __init__(self, dset):
