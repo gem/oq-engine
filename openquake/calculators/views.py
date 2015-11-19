@@ -390,11 +390,11 @@ def view_fullreport(token, dstore):
 
 
 @view.add('performance')
-def view_fullreport(token, dstore):
+def view_performance(token, dstore):
     """
     Display performance information
     """
-    data = sorted(dset, key=operator.itemgetter(0))
+    data = sorted(dstore['performance_data'], key=operator.itemgetter(0))
     out = []
     for operation, group in itertools.groupby(data, operator.itemgetter(0)):
         counts = 0
@@ -406,4 +406,4 @@ def view_fullreport(token, dstore):
             mem += memory_mb
         out.append((operation, time, mem, counts))
     out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
-    return numpy.array(out, perf_dt)
+    return rst_table(numpy.array(out, perf_dt), fmt='%s')

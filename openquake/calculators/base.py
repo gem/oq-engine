@@ -116,14 +116,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         exported = {}
         try:
             if pre_execute:
-                with self.mon('pre_execute'):
-                    self.pre_execute()
-            with self.mon('execute'):
-                result = self.execute()
-            with self.mon('post_execute'):
-                self.post_execute(result)
-            with self.mon('export'):
-                exported = self.export()
+                self.pre_execute()
+            result = self.execute()
+            self.post_execute(result)
         except:
             if kw.get('pdb'):  # post-mortem debug
                 tb = sys.exc_info()[2]
