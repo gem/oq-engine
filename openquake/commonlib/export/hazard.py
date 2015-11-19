@@ -318,7 +318,7 @@ def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
     for i, imt in enumerate(curves_by_imt.dtype.names, 1):
         for sid, curve in zip(range(nsites), curves_by_imt[imt]):
             rows[sid, i] = scientificformat(curve, fmt='%11.7E')
-    write_csv(dest, rows, header=('lon', 'lat') + curves_by_imt.dtype.names)
+    write_csv(dest, rows, header=('lon lat',) + curves_by_imt.dtype.names)
     return {dest: dest}
 
 
