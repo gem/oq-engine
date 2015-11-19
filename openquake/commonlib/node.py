@@ -147,7 +147,6 @@ import pprint as pp
 import io
 from contextlib import contextmanager
 from openquake.baselib.python3compat import raise_, exec_
-from openquake.baselib.slots import with_slots
 from openquake.commonlib.writers import StreamingXMLWriter
 from xml.etree import ElementTree
 
@@ -235,7 +234,6 @@ def striptag(tag):
     return tag
 
 
-@with_slots
 class Node(object):
     """
     A class to make it easy to edit hierarchical structures with attributes,
@@ -245,7 +243,7 @@ class Node(object):
     is that subnodes can be lazily generated and that they can be accessed
     with the dot notation.
     """
-    _slots_ = ('tag', 'attrib', 'text', 'nodes', 'lineno')
+    __slots__ = ('tag', 'attrib', 'text', 'nodes', 'lineno')
 
     def __init__(self, fulltag, attrib=None, text=None,
                  nodes=None, lineno=None):
@@ -357,6 +355,14 @@ class Node(object):
 
     if sys.version > '3':
         __bool__ = __nonzero__
+
+    def __getstate__(self):
+        return dict((slot, getattr(self, slot))
+                    for slot in self.__class__.__slots__)
+
+    def __setstate__(self, state):
+        for slot in self.__class__.__slots__:
+            setattr(self, slot, state[slot])
 
 
 class MetaLiteralNode(type):
