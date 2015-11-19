@@ -49,7 +49,7 @@ def run(job_ini, concurrent_tasks=None, pdb=None,
     job_inis = job_ini.split(',')
     assert len(job_inis) in (1, 2), job_inis
     monitor = performance.PerformanceMonitor(
-        'total runtime', hdf5path=None, measuremem=True)
+        'total runtime', measuremem=True)
 
     if len(job_inis) == 1:  # run hazard or risk
         oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc)
@@ -72,7 +72,6 @@ def run(job_ini, concurrent_tasks=None, pdb=None,
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
     monitor.flush()
-    calc.performance = monitor.performance()
     print('See the output with hdfview %s' % calc.datastore.hdf5path)
     return calc
 
