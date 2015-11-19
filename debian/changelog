@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * The performance info has been moved fully in the datastore
   * Removed the epsilon_sampling feature from event_based_risk
 
 python-oq-risklib (0.9.0-0~precise01) precise; urgency=low
