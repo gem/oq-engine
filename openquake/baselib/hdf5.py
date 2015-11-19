@@ -16,12 +16,11 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import numpy
-
 
 class Hdf5Dataset(object):
     """
-    Little wrapper around an (extendable) HDF5 dataset.
+    Little wrapper around an (extendable) HDF5 dataset. Extendable datasets
+    are useful for logging information incrementally into an HDF5 file.
     """
     @classmethod
     def create(cls, hdf5, name, dtype, shape=None, compression=None):
@@ -35,11 +34,8 @@ class Hdf5Dataset(object):
         if shape is None:  # extendable dataset
             dset = hdf5.create_dataset(
                 name, (0,), dtype, chunks=True, maxshape=(None,))
-            dset.attrs['nbytes'] = 0
         else:  # fixed-shape dataset
             dset = hdf5.create_dataset(name, shape, dtype)
-            num_elems = numpy.prod(shape)
-            dset.attrs['nbytes'] = numpy.zeros(1, dtype).nbytes * num_elems
         return cls(dset)
 
     def __init__(self, dset):
@@ -48,7 +44,7 @@ class Hdf5Dataset(object):
         self.name = dset.name
         self.dtype = dset.dtype
         self.attrs = dset.attrs
-        self.size = len(dset)
+        self.length = len(dset)
 
     def extend(self, array):
         """
@@ -56,8 +52,7 @@ class Hdf5Dataset(object):
         the expected dtype. This method will give an error if used
         with a fixed-shape dataset.
         """
-        newsize = self.size + len(array)
-        self.dset.resize((newsize,))
-        self.dset[self.size:newsize] = array
-        self.size = newsize
-        self.dset.attrs['nbytes'] += array.nbytes
+        newlength = self.length + len(array)
+        self.dset.resize((newlength,))
+        self.dset[self.length:newlength] = array
+        self.length = newlength
