@@ -364,6 +364,13 @@ class Node(object):
         for slot in self.__class__.__slots__:
             setattr(self, slot, state[slot])
 
+    def __eq__(self, other):
+        return all(getattr(self, slot) == getattr(other, slot)
+                   for slot in self.__class__.__slots__)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class MetaLiteralNode(type):
     """
