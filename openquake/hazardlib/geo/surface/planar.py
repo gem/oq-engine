@@ -65,7 +65,7 @@ class PlanarSurface(BaseQuadrilateralSurface):
     #: downdip perpendicular to top edge from top left corner, expressed
     #: as a fraction of the surface's area.
     #IMPERFECT_RECTANGLE_TOLERANCE = 0.0008
-    IMPERFECT_RECTANGLE_TOLERANCE = np.inf
+    IMPERFECT_RECTANGLE_TOLERANCE = numpy.inf
 
     _slots_ = ('mesh_spacing strike dip width length '
                'corner_lons corner_lats corner_depths '
