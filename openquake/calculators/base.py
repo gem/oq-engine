@@ -100,11 +100,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore.attrs['oqlite_version'] = repr(__version__)
         self.datastore.hdf5.flush()
 
-    def mon(self, name):
-        """Return a children monitor with the given name"""
-        operation = '%s %s' % (self.__class__.__name__, name)
-        return self.monitor(operation, autoflush=True)
-
     def run(self, pre_execute=True, clean_up=True, concurrent_tasks=None,
             **kw):
         """

@@ -403,7 +403,7 @@ def view_performance(token, dstore):
         for _operation, time_sec, memory_mb, _ in group:
             counts += 1
             time += time_sec
-            mem += memory_mb
+            mem = max(mem, memory_mb)
         out.append((operation, time, mem, counts))
     out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
     return rst_table(numpy.array(out, perf_dt), fmt='%s')
