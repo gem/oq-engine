@@ -53,7 +53,7 @@ def get_nbytes(dset):
         return dset.attrs['nbytes']
     elif hasattr(dset, 'value'):
         # else extract nbytes from the underlying array
-        return dset.value.nbytes
+        return dset.size * numpy.zeros(1, dset.dtype).nbytes
 
 
 class ByteCounter(object):
