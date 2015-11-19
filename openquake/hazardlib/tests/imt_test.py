@@ -26,7 +26,7 @@ class BaseIMTTestCase(unittest.TestCase):
             return imt_module._IMT.__new__(cls, foo, bar)
 
     def test_base(self):
-        self.assertEqual(getattr(self.TestIMT, '__slots__'), ())
+        self.assertEqual(getattr(self.TestIMT, '_slots_'), ())
         self.assertFalse(hasattr(self.TestIMT(1, 2), '__dict__'))
         imt = self.TestIMT(bar=2, foo=1)
         self.assertEqual(str(imt), 'TestIMT')

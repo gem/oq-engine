@@ -22,11 +22,11 @@ import numpy
 
 def with_slots(cls):
     """
-    Decorator for a class with __slots__. It automatically defines
+    Decorator for a class with _slots_. It automatically defines
     the methods __eq__, __ne__, assert_equal, __getstate__ and __setstate__
     """
     def _compare(self, other):
-        for slot in self.__class__.__slots__:
+        for slot in self.__class__._slots_:
             attr = operator.attrgetter(slot)
             source = attr(self)
             target = attr(other)
@@ -50,13 +50,13 @@ def with_slots(cls):
 
     def __getstate__(self):
         return dict((slot, getattr(self, slot))
-                    for slot in self.__class__.__slots__)
+                    for slot in self.__class__._slots_)
 
     def __setstate__(self, state):
-        for slot in self.__class__.__slots__:
+        for slot in self.__class__._slots_:
             setattr(self, slot, state[slot])
 
-    cls.__slots__  # raise an AttributeError for missing slots
+    cls._slots_  # raise an AttributeError for missing slots
     cls.__eq__ = __eq__
     cls.__ne__ = __ne__
     cls.assert_equal = assert_equal

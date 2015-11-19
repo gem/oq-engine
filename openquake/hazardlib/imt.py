@@ -50,9 +50,9 @@ def from_string(imt):
 
 
 class IMTMeta(type):
-    """Metaclass setting the __slots__ and the properties of IMT classes"""
+    """Metaclass setting the _slots_ and the properties of IMT classes"""
     def __new__(mcs, name, bases, dct):
-        dct['__slots__'] = ()
+        dct['_slots_'] = ()
         cls = type.__new__(mcs, name, bases, dct)
         for index, field in enumerate(cls._fields):
             setattr(cls, field, property(operator.itemgetter(index + 1)))

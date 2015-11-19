@@ -32,7 +32,7 @@ class CEUS2011(BaseMSR):
         - CEUS SSC Final Report - Chapter 5, page 5-57
 
     """
-    __slots__ = []
+    _slots_ = []
 
     def get_median_area(self, mag, rake):
         """
