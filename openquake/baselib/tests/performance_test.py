@@ -1,18 +1,14 @@
 import time
 import unittest
 import pickle
-import h5py
-import numpy
-from openquake.baselib.performance import PerformanceMonitor, perf_dt
-from openquake.baselib.hdf5 import Hdf5Dataset
+from openquake.baselib.performance import PerformanceMonitor
 
 
+# NB: tests for the HDF5 functionality are in risklib
 class MonitorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        fname = '/tmp/x.h5'
-        Hdf5Dataset.create(h5py.File(fname, 'w'), 'performance_data', perf_dt)
-        cls.mon = PerformanceMonitor('test', fname)
+        cls.mon = PerformanceMonitor('test')
 
     def test_no_mem(self):
         mon = self.mon('test_no_mem')
@@ -42,19 +38,6 @@ class MonitorTestCase(unittest.TestCase):
         with mon2:  # called twice on purpose
             time.sleep(0.1)
         self.mon.flush()
-        data = self.mon.performance()
-        total_time = data['time_sec'].sum()
-        self.assertGreaterEqual(total_time, 0.2)
 
     def test_pickleable(self):
         pickle.loads(pickle.dumps(self.mon))
-
-    @classmethod
-    def tearDownClass(cls):
-        data = cls.mon.performance()
-        numpy.testing.assert_equal(
-            data['operation'], ['child1', 'child2', 'test_mem', 'test_no_mem'])
-        numpy.testing.assert_equal(
-            data['counts'], [1, 2, 1, 1])
-        assert data['time_sec'].sum() > 0
-        assert data['memory_mb'].sum() > 0

@@ -55,26 +55,6 @@ perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
                        ('memory_mb', float), ('counts', int)])
 
 
-def performance_view(dset):
-    """
-    :param dset: a HDF5 dataset
-    :returns: an array of dtype perf_dt with performance info
-    """
-    data = sorted(dset, key=operator.itemgetter(0))
-    out = []
-    for operation, group in itertools.groupby(data, operator.itemgetter(0)):
-        counts = 0
-        time = 0
-        mem = 0
-        for _operation, time_sec, memory_mb, _ in group:
-            counts += 1
-            time += time_sec
-            mem += memory_mb
-        out.append((operation, time, mem, counts))
-    out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
-    return numpy.array(out, perf_dt)
-
-
 # this is not thread-safe
 class PerformanceMonitor(object):
     """
@@ -98,7 +78,7 @@ class PerformanceMonitor(object):
     and by overriding the method on_exit(), called at end and used to display
     or store the results of the analysis.
     """
-    def __init__(self, operation, hdf5path, pid=None,
+    def __init__(self, operation, hdf5path=None, pid=None,
                  autoflush=False, measuremem=False):
         self.operation = operation
         self.hdf5path = hdf5path
@@ -160,25 +140,29 @@ class PerformanceMonitor(object):
 
     def flush(self):
         """
-        Save the measurements on the performance file
+        Save the measurements on the performance file (or stdout)
         """
-        h5 = h5py.File(self.hdf5path)
-        try:
-            pd = Hdf5Dataset(h5['performance_data'])
-        except KeyError:
-            pd = Hdf5Dataset.create(h5, 'performance_data', perf_dt)
         monitors = [self] + self.children
         data = [mon.get_data() for mon in monitors if mon.duration]
-        if data:
-            pd.extend(numpy.array(data, perf_dt))
+        if not data:
+            return
+        if self.hdf5path:
+            h5 = h5py.File(self.hdf5path)
+            try:
+                pd = Hdf5Dataset(h5['performance_data'])
+            except KeyError:
+                pd = Hdf5Dataset.create(h5, 'performance_data', perf_dt)
+                pd.extend(numpy.array(data, perf_dt))
+            finally:
+                h5.close()
+        else:  # print on stddout
+            for row in data:
+                print(','.join(map(str, row)))
+
+        # reset monitors
         for mon in monitors:
             mon.duration = 0
             mon.mem = 0
-        h5.close()
-
-    def performance(self):
-        return performance_view(
-            h5py.File(self.hdf5path)['performance_data'])
 
     def __call__(self, operation, **kw):
         """
@@ -210,11 +194,8 @@ class DummyMonitor(PerformanceMonitor):
     """
     def __init__(self, operation='dummy', *args, **kw):
         self.operation = operation
-        self.monitor_dir = None
+        self.hdf5path = None
         self.pid = None
-
-    def write(self, row):
-        """Do nothing"""
 
     def __call__(self, operation, **kw):
         return self.__class__(operation)
@@ -226,11 +207,7 @@ class DummyMonitor(PerformanceMonitor):
         pass
 
     def flush(self):
-        """Do nothing"""
-
-    def performance(self):
-        """Do nothing"""
-        return []
+        pass
 
     def __repr__(self):
         return '<%s>' % self.__class__.__name__
