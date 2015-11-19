@@ -117,6 +117,8 @@ total     6.953005E+02 2.221170E+02
                             ground_motion_fields='false', exports='csv')
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles('expected/hazard_curve-mean.csv', fname)
+        [fname] = out['hmaps', 'csv']
+        self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):

@@ -315,10 +315,10 @@ def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
     rows = numpy.empty((nsites, len(imtls) + 1), dtype=object)
     for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
         rows[sid, 0] = '%s %s' % (lon, lat)
-    for i, imt in enumerate(sorted(curves_by_imt.dtype.fields), 1):
+    for i, imt in enumerate(curves_by_imt.dtype.names, 1):
         for sid, curve in zip(range(nsites), curves_by_imt[imt]):
             rows[sid, i] = scientificformat(curve, fmt='%11.7E')
-    write_csv(dest, rows)
+    write_csv(dest, rows, header=('lon', 'lat') + curves_by_imt.dtype.names)
     return {dest: dest}
 
 
