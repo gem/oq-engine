@@ -300,9 +300,9 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
         return
     if a == b:  # another shortcut
         return
-    if hasattr(a, '__slots__'):  # record-like objects
-        assert_close_seq(a.__slots__, b.__slots__, rtol, atol, a)
-        for x, y in zip(a.__slots__, b.__slots__):
+    if hasattr(a, '_slots_'):  # record-like objects
+        assert_close_seq(a._slots_, b._slots_, rtol, atol, a)
+        for x, y in zip(a._slots_, b._slots_):
             assert_close(getattr(a, x), getattr(b, y), rtol, atol, x)
         return
     if isinstance(a, collections.Mapping):  # dict-like objects
