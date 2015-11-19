@@ -147,12 +147,11 @@ class PerformanceMonitor(object):
         if self.hdf5path:
             h5 = h5py.File(self.hdf5path)
             try:
-                pd = Hdf5Dataset(h5['performance_data'])
+                pdata = Hdf5Dataset(h5['performance_data'])
             except KeyError:
-                pd = Hdf5Dataset.create(h5, 'performance_data', perf_dt)
-                pd.extend(numpy.array(data, perf_dt))
-            finally:
-                h5.close()
+                pdata = Hdf5Dataset.create(h5, 'performance_data', perf_dt)
+            pdata.extend(numpy.array(data, perf_dt))
+            h5.close()
         else:  # print on stddout
             for row in data:
                 print(','.join(map(str, row)))
