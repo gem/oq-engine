@@ -71,7 +71,8 @@ class Rupture(object):
     surface_nodes source_typology rupture_slip_direction'''.split()
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
-                 surface, source_typology, rupture_slip_direction=None, surface_nodes=()):
+                 surface, source_typology, rupture_slip_direction=None,
+                 surface_nodes=()):
         if not mag > 0:
             raise ValueError('magnitude must be positive')
         if not hypocenter.depth > 0:
