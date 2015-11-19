@@ -245,7 +245,7 @@ class Node(object):
     is that subnodes can be lazily generated and that they can be accessed
     with the dot notation.
     """
-    __slots__ = ('tag', 'attrib', 'text', 'nodes', 'lineno')
+    _slots_ = ('tag', 'attrib', 'text', 'nodes', 'lineno')
 
     def __init__(self, fulltag, attrib=None, text=None,
                  nodes=None, lineno=None):
