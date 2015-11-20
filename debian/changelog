@@ -2,6 +2,7 @@ python-oq-hazardlib (0.16.0-0~precise01) precise; urgency=low
 
   [Graeme Weatherill]
   * Adds methods for modifying the geometry configurations of the fault sources
+  * Adds Allen, Wald and Worden (2012) Intensity Prediction Equation
 
   [Michele Simionato]
   * Refactored atkinson_boore_2003 classes to avoid unneeded instantiation
