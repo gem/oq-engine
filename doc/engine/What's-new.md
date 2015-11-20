@@ -3,7 +3,7 @@ to OpenQuake 1.5. Everybody is invited to upgrade,
 by following the [usual procedure](Installing-the-OpenQuake-Engine.md).
 
 New features of the OpenQuake Engine, version 1.6
---------------------------------------------------
+---------------------------------------------------
 
 1. The following six calculators have been completely rewritten and now
   use the HDF5 technology that in previous versions was still experimental:
@@ -166,15 +166,15 @@ on the categories, both in the risk model files and in the exposure
 file. The check is disabled for NRML 0.4 files, so we are fully
 backward-compatible.
 
-5. If an user set the parameter `insured_losses=True` but the exposure
+3. If an user set the parameter `insured_losses=True` but the exposure
 does not have the attributes `deductible` and `insuredLimit`, a clear
 error is raised early.
 
-1. In very rare circumstances the region constraint was not honored,
+4. In very rare circumstances the region constraint was not honored,
 i.e.  assets very close to the border of region, but still outside, were
 taken in consideration by the risk calculators. This has been fixed.
 
-2. The engine had a self-termination feature: if the controller node
+5. The engine had a self-termination feature: if the controller node
 could not access the worker nodes, it assumed a failure in celery
 and committed suicide if the configuration parameter 
 `terminate_job_when_celery_is_down` was true. We removed such parameter
@@ -184,11 +184,11 @@ respond, due to an heavy load. Now if celery appears to not respond
 a warning is printed and that user has to see if celery is really dead
 and in that case she can kill the computation manually.
 
-3. We removed the epsilon sampling feature from the scenario_risk calculator:
+6. We removed the epsilon sampling feature from the scenario_risk calculator:
 it was a performance hack introducing a gratuitous seed dependency, now
 unneeded thanks to the recent performance improvements.
 
-4. We removed the `epsilon_sampling` parameter from the engine
+7. We removed the `epsilon_sampling` parameter from the engine
 configuration file `openquake.cfg`. Now the parameter can be managed
 directly by the users, on a calculation-specific base, by setting it
 in the `job.ini` file. This is only relevant for event based risk
@@ -196,13 +196,16 @@ calculations. In the future we will remove such parameter completely,
 but first further optimizations of the event based risk calculator
 are needed.
 
-5. The `specific_assets` feature has been removed from the
+8. The `specific_assets` feature has been removed from the
 `event_based_risk` calculator. It has become useless thanks to the
 recent performance improvements. Use `asset_loss_table=True` instead.
 
-8. The demos have been revisited and updated. Also their location has
+9. The demos have been revisited and updated. Also their location has
 changed for the users installing OpenQuake from the packages. Now they
 are installed in `/usr/share/openquake/risklib/demos`.
+
+10. In some cases the rupture tag was containing spurios commas, thus breaking
+a CSV importer in the Risk Modeler Toolkit. This has been fixed.
 
 12. When using a vulnerability function with a Probability Mass Function,
 now it is possible to set the seed by changing the `random_seed` parameter
