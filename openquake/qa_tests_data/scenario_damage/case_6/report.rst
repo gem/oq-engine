@@ -1,6 +1,8 @@
 oq-test03, depth=15km
 =====================
 
+num_sites = 1
+
 Parameters
 ----------
 ============================ ========
@@ -16,7 +18,7 @@ width_of_mfd_bin             None
 area_source_discretization   None    
 random_seed                  3       
 master_seed                  0       
-concurrent_tasks             64      
+concurrent_tasks             32      
 ============================ ========
 
 Input files
@@ -42,7 +44,6 @@ Exposure model
 --------------
 =========== =
 #assets     5
-#sites      1
 #taxonomies 5
 =========== =
 

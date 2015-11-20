@@ -1,6 +1,8 @@
 Scenario Calculation with Simple Fault Rupture
 ==============================================
 
+num_sites = 1
+
 Parameters
 ----------
 ============================ ========

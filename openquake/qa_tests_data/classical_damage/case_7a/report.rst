@@ -1,6 +1,8 @@
 Classical PSHA-Based Hazard
 ===========================
 
+num_sites = 7
+
 Parameters
 ----------
 ============================ =========
@@ -16,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   20.0     
 random_seed                  42       
 master_seed                  0        
-concurrent_tasks             64       
+concurrent_tasks             32       
 ============================ =========
 
 Input files
@@ -25,11 +27,11 @@ Input files
 Name                    File                                                        
 ======================= ============================================================
 exposure                `exposure_model.xml <exposure_model.xml>`_                  
-fragility               `fragility_model.xml <fragility_model.xml>`_                
 gsim_logic_tree         `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                
 job_ini                 `job_haz.ini <job_haz.ini>`_                                
 source                  `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
+structural_fragility    `fragility_model.xml <fragility_model.xml>`_                
 ======================= ============================================================
 
 Composite source model
@@ -60,7 +62,7 @@ Expected data transfer for the sources
 --------------------------------------
 ================================== ========
 Number of tasks to generate        14      
-Estimated sources to send          27.29 KB
+Estimated sources to send          27.11 KB
 Estimated hazard curves to receive 6 KB    
 ================================== ========
 
@@ -68,7 +70,6 @@ Exposure model
 --------------
 =========== =
 #assets     7
-#sites      7
 #taxonomies 3
 =========== =
 

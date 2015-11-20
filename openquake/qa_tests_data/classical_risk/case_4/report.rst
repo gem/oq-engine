@@ -1,6 +1,8 @@
 Classical Hazard-Risk QA test 4
 ===============================
 
+num_sites = 6
+
 Parameters
 ----------
 ============================ =========
@@ -49,10 +51,32 @@ Realizations per (TRT, GSIM)
   0,AkkarBommer2010: ['<0,b1,b1,w=0.4>']
   0,ChiouYoungs2008: ['<1,b1,b2,w=0.6>']>
 
+Number of ruptures per tectonic region type
+-------------------------------------------
+================ ====== ==================== =========== ============
+source_model     trt_id trt                  num_sources num_ruptures
+================ ====== ==================== =========== ============
+source_model.xml 0      Active Shallow Crust 501         6405        
+================ ====== ==================== =========== ============
+
 Expected data transfer for the sources
 --------------------------------------
 ================================== =========
 Number of tasks to generate        27       
-Estimated sources to send          152.88 KB
+Estimated sources to send          153.73 KB
 Estimated hazard curves to receive 48 KB    
 ================================== =========
+
+Exposure model
+--------------
+=========== =
+#assets     6
+#taxonomies 2
+=========== =
+
+======== =======
+Taxonomy #Assets
+======== =======
+A        1      
+W        5      
+======== =======

@@ -1,6 +1,8 @@
 Classical Hazard QA Test, Case 3
 ================================
 
+num_sites = 1
+
 Parameters
 ----------
 ============================ =========
@@ -16,7 +18,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   0.05     
 random_seed                  1066     
 master_seed                  0        
-concurrent_tasks             64       
+concurrent_tasks             32       
 ============================ =========
 
 Input files
@@ -57,7 +59,7 @@ source_model.xml 0      active shallow crust 31353       31353
 Expected data transfer for the sources
 --------------------------------------
 ================================== =======
-Number of tasks to generate        61     
-Estimated sources to send          6.87 MB
-Estimated hazard curves to receive 1 KB   
+Number of tasks to generate        32     
+Estimated sources to send          6.83 MB
+Estimated hazard curves to receive 768 B  
 ================================== =======
