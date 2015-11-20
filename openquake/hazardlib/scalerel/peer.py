@@ -28,7 +28,7 @@ class PeerMSR(BaseMSRSigma):
     See "Verification of Probabilistic Seismic Hazard Analysis Computer
     Programs", Patricia Thomas and Ivan Wong, PEER Report 2010/106, May 2010.
     """
-    __slots__ = []
+    _slots_ = []
 
     def get_median_area(self, mag, rake):
         """
