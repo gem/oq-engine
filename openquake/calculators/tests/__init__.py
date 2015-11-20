@@ -70,8 +70,7 @@ class CalculatorTestCase(unittest.TestCase):
         """
         inis = job_ini.split(',')
         assert len(inis) in (1, 2), inis
-        haz_kw = kw if len(inis) == 1 else {}
-        self.calc = self.get_calc(testfile, inis[0], **haz_kw)
+        self.calc = self.get_calc(testfile, inis[0], **kw)
         result = self.calc.run()
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
@@ -104,7 +103,7 @@ class CalculatorTestCase(unittest.TestCase):
         Make sure the expected and actual files have the same content.
         `make_comparable` is a function processing the lines of the
         files to make them comparable. By default it does nothing,
-        but in some tests sorting function is passed, because some
+        but in some tests a sorting function is passed, because some
         files can be equal only up to the ordering.
         """
         expected = os.path.join(self.testdir, fname1)

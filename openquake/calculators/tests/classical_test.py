@@ -6,6 +6,10 @@ from openquake.qa_tests_data.classical import (
     case_19, case_20, case_21)
 
 
+def skipheader(lines):
+    return lines[1:]
+
+
 class ClassicalTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None):
@@ -15,7 +19,8 @@ class ClassicalTestCase(CalculatorTestCase):
                out.get(('uhs', 'csv'), []))
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
-            self.assertEqualFiles('expected/%s' % fname, actual, delta=delta)
+            self.assertEqualFiles('expected/%s' % fname, actual,
+                                  skipheader, delta=delta)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_1(self):
