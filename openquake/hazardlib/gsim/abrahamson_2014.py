@@ -236,7 +236,7 @@ class AbrahamsonEtAl2014(GMPE):
             # Compute taper t1
             T1 = np.ones_like(dists.rx)
             T1 *= 60./45. if rup.dip <= 30. else (90.-rup.dip)/45.0
-            # Compute taper t2 (eq 12 at page 1039) - a2hw set to 0.2 as 
+            # Compute taper t2 (eq 12 at page 1039) - a2hw set to 0.2 as
             # indicated at page 1041
             T2 = np.zeros_like(dists.rx)
             a2hw = 0.2
