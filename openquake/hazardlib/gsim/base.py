@@ -278,7 +278,7 @@ class ContextMaker(object):
 
 
 @functools.total_ordering
-class GroundShakingIntensityModel(with_metaclass(MetaGSIM, ContextMaker)):
+class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     """
     Base class for all the ground shaking intensity models.
 
