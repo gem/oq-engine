@@ -182,8 +182,8 @@ def _parse_csv(datafile, debug):
     headers = [param_name.lower() for param_name in next(reader)]
     sctx, rctx, dctx, stddev_types, expected_results, result_type \
         = _parse_csv_line(headers, next(reader))
-    sattrs = [slot for slot in SitesContext.__slots__ if hasattr(sctx, slot)]
-    dattrs = [slot for slot in DistancesContext.__slots__
+    sattrs = [slot for slot in SitesContext._slots_ if hasattr(sctx, slot)]
+    dattrs = [slot for slot in DistancesContext._slots_
               if hasattr(dctx, slot)]
     for line in reader:
         (sctx2, rctx2, dctx2, stddev_types2, expected_results2, result_type2) \
@@ -192,7 +192,7 @@ def _parse_csv(datafile, debug):
                 and stddev_types2 == stddev_types \
                 and result_type2 == result_type \
                 and all(getattr(rctx2, slot, None) == getattr(rctx, slot, None)
-                        for slot in RuptureContext.__slots__):
+                        for slot in RuptureContext._slots_):
             for slot in sattrs:
                 setattr(sctx, slot, numpy.hstack((getattr(sctx, slot),
                                                   getattr(sctx2, slot))))

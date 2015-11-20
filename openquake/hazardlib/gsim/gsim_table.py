@@ -70,7 +70,7 @@ class AmplificationTable(object):
         Distance values for the tables
     :attr parameter:
         Parameter to which the amplification applies. Must be an element
-        inside the __slots__ defines in the :class: openquake.hazardlib.
+        inside the _slots_ defines in the :class: openquake.hazardlib.
         gsim.base.RuptureContext or the :class: openquake.hazardlib.gsim.base.
         SitesContext
     :attr values:
@@ -100,9 +100,9 @@ class AmplificationTable(object):
         self.values = numpy.array([float(key) for key in amplification_group])
         self.argidx = numpy.argsort(self.values)
         self.values = self.values[self.argidx]
-        if self.parameter in RuptureContext.__slots__:
+        if self.parameter in RuptureContext._slots_:
             self.element = "Rupture"
-        elif self.parameter in SitesContext.__slots__:
+        elif self.parameter in SitesContext._slots_:
             self.element = "Sites"
         else:
             raise ValueError("Amplification parameter %s not recognised!"

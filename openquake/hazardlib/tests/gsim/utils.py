@@ -30,7 +30,7 @@ class BaseGSIMTestCase(unittest.TestCase):
         att = inspect.getmembers(ctx, lambda a: not(inspect.isroutine(a)))
         att = [
             k for k, v in att if not ('_abc' in k)
-            and not ((k.startswith('__') and k.endswith('__')))
+            and not ((k.startswith('_') and k.endswith('_')))
         ]
 
         return set(att)

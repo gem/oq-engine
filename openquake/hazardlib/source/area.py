@@ -39,7 +39,7 @@ class AreaSource(PointSource):
     Other parameters (except ``location``) are the same as for
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
-    __slots__ = PointSource.__slots__ + 'polygon area_discretization'.split()
+    _slots_ = PointSource._slots_ + 'polygon area_discretization'.split()
 
     MODIFICATIONS = set(())
 

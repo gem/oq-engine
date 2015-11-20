@@ -66,15 +66,15 @@ class PlanarSurface(BaseQuadrilateralSurface):
     #: as a fraction of the surface's area.
     IMPERFECT_RECTANGLE_TOLERANCE = 0.0008
 
-    __slots__ = ('mesh_spacing strike dip width length '
-                 'corner_lons corner_lats corner_depths '
-                 'normal d uv1 uv2 zero_zero').split()
+    _slots_ = ('mesh_spacing strike dip width length '
+               'corner_lons corner_lats corner_depths '
+               'normal d uv1 uv2 zero_zero').split()
 
     def __init__(self, mesh_spacing, strike, dip,
                  top_left, top_right, bottom_right, bottom_left):
         super(PlanarSurface, self).__init__()
-        if not (top_left.depth == top_right.depth
-                and bottom_left.depth == bottom_right.depth):
+        if not (top_left.depth == top_right.depth and
+                bottom_left.depth == bottom_right.depth):
             raise ValueError("top and bottom edges must be parallel "
                              "to the earth surface")
 
@@ -112,8 +112,8 @@ class PlanarSurface(BaseQuadrilateralSurface):
         self.length = (length1 + length2) / 2.0
         # calculate the imperfect rectangle tolerance
         # relative to surface's area
-        tolerance = (self.width * self.length
-                     * self.IMPERFECT_RECTANGLE_TOLERANCE)
+        tolerance = (self.width * self.length *
+                     self.IMPERFECT_RECTANGLE_TOLERANCE)
         if numpy.max(numpy.abs(dists)) > tolerance:
             raise ValueError("corner points do not lie on the same plane")
         if length2 < 0:
@@ -315,10 +315,10 @@ class PlanarSurface(BaseQuadrilateralSurface):
         :return:
             Tuple of longitudes, latitudes and depths numpy arrays.
         """
-        vectors = (self.zero_zero
-                   + self.uv1 * xx.reshape(xx.shape + (1, ))
-                   + self.uv2 * yy.reshape(yy.shape + (1, ))
-                   + self.normal * dists.reshape(dists.shape + (1, )))
+        vectors = (self.zero_zero +
+                   self.uv1 * xx.reshape(xx.shape + (1, )) +
+                   self.uv2 * yy.reshape(yy.shape + (1, )) +
+                   self.normal * dists.reshape(dists.shape + (1, )))
         return geo_utils.cartesian_to_spherical(vectors)
 
     def get_min_distance(self, mesh):

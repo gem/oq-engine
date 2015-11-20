@@ -48,7 +48,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         fails or if rake value is invalid.
     """
 
-    __slots__ = ParametricSeismicSource.__slots__ + '''edges rake'''.split()
+    _slots_ = ParametricSeismicSource._slots_ + '''edges rake'''.split()
 
     MODIFICATIONS = set(('set_geometry',))
 

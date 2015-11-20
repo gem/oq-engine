@@ -741,12 +741,12 @@ class BaseContext(with_metaclass(abc.ABCMeta)):
         Return True if ``other`` has same attributes with same values.
         """
         if isinstance(other, self.__class__):
-            if self.__slots__ == other.__slots__:
+            if self._slots_ == other._slots_:
                 self_other = [
                     numpy.all(
                         getattr(self, s, None) == getattr(other, s, None)
                     )
-                    for s in self.__slots__
+                    for s in self._slots_
                 ]
                 return numpy.all(self_other)
 
@@ -765,7 +765,7 @@ class SitesContext(BaseContext):
     Only those required parameters are made available in a result context
     object.
     """
-    __slots__ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
+    _slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
         'lons', 'lats')
 
 
@@ -781,7 +781,7 @@ class DistancesContext(BaseContext):
     does it need. Only those required values are calculated and made available
     in a result context object.
     """
-    __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
+    _slots_ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
         'azimuth', 'hanging_wall')
 
 
@@ -797,7 +797,7 @@ class RuptureContext(BaseContext):
     Only those required parameters are made available in a result context
     object.
     """
-    __slots__ = (
+    _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
         'hypo_depth', 'width', 'hypo_loc'
     )
