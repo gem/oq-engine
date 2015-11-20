@@ -64,8 +64,9 @@ def show(calc_id, key=None, rlzs=None):
             return
         rows = []
         for calc_id in datastore.get_calc_ids(datastore.DATADIR):
+            ds = datastore.DataStore(calc_id)
             try:
-                oq = OqParam.from_(datastore.DataStore(calc_id).attrs)
+                oq = OqParam.from_(ds.attrs)
                 cmode, descr = oq.calculation_mode, oq.description
             except:
                 # invalid datastore file, or missing calculation_mode
@@ -78,7 +79,7 @@ def show(calc_id, key=None, rlzs=None):
         for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
             print('#%d %s: %s' % row)
         return
-    ds = datastore.DataStore(calc_id)
+    ds = datastore.DataStore(calc_id, mode='r')
     if key:
         if key in datastore.view:
             print(datastore.view(key, ds))
