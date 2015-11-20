@@ -111,9 +111,12 @@ class PerformanceMonitor(object):
         :returns:
             an array of dtype perf_dt, with the information of the monitor
             and its children (operation, time_sec, memory_mb, counts)
+
+        NB: at the moment only the direct children are retrieved, i.e.
+        get_data is not recursive.
         """
         data = []
-        monitors = [self] + self.children
+        monitors = [self] + self.children  # only direct children
         for mon in monitors:
             if mon.duration:
                 time_sec = mon.duration
