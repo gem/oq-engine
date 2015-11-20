@@ -93,10 +93,10 @@ parser.arg('job_ini', 'calculation configuration file '
            '(or files, comma-separated)')
 parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
            type=int)
-parser.flg('pdb', 'enable post mortem debugging')
+parser.flg('pdb', 'enable post mortem debugging', '-d')
 parser.opt('loglevel', 'logging level',
            choices='debug info warn error critical'.split())
 parser.opt('hc', 'previous calculation ID', type=int)
 parser.opt('exports', 'export formats as a comma-separated string',
            type=valid.export_formats)
-parser.flg('profile', 'enable profiling', '-P')
+parser.flg('profile', 'enable profiling')
