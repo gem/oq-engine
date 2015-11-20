@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 import logging
+import cProfile
 
 from openquake.baselib import performance, general
 from openquake.commonlib import sap, readinput, valid, datastore
@@ -38,12 +39,9 @@ def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, monitor):
     return rcalc
 
 
-def run(job_ini, concurrent_tasks=None, pdb=None,
-        loglevel='info', hc=None, exports=''):
-    """
-    Run a calculation. Optionally, set the number of concurrent_tasks
-    (0 to disable the parallelization).
-    """
+def _run(job_ini, concurrent_tasks=0, pdb=0, loglevel='info',
+         hc=0, exports=''):
+    global calc_path
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
     job_inis = job_ini.split(',')
     assert len(job_inis) in (1, 2), job_inis
@@ -71,7 +69,24 @@ def run(job_ini, concurrent_tasks=None, pdb=None,
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
     monitor.flush()
     print('See the output with hdfview %s' % calc.datastore.hdf5path)
+    calc_path = calc.datastore.calc_dir  # used to deduce the .pstat filename
     return calc
+
+
+def run(job_ini, concurrent_tasks=None, pdb=None,
+        loglevel='info', hc=None, exports='', profile=False):
+    """
+    Run a calculation. Optionally, set the number of concurrent_tasks
+    (0 to disable the parallelization).
+    """
+    if profile:
+        prof = cProfile.Profile()
+        stmt = '_run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports)'
+        prof.runctx(stmt, globals(), locals())
+        prof.dump_stats(calc_path + '.pstat')
+        print('Saved profiling info in %s' % calc_path + '.pstat')
+    else:
+        _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports)
 
 parser = sap.Parser(run)
 parser.arg('job_ini', 'calculation configuration file '
@@ -84,3 +99,4 @@ parser.opt('loglevel', 'logging level',
 parser.opt('hc', 'previous calculation ID', type=int)
 parser.opt('exports', 'export formats as a comma-separated string',
            type=valid.export_formats)
+parser.flg('profile', 'enable profiling', '-P')
