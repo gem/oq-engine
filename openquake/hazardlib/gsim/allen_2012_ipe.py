@@ -54,7 +54,7 @@ class AllenEtAl2012(IPE):
     ])
 
     #: No required site parameters (in the present version)
-    REQUIRES_SITES_PARAMETERS = set(())
+    REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameters are magnitude (ML is used)
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
