@@ -67,7 +67,7 @@ class TruncatedGRMFD(BaseMFD):
                          'increment_b',
                          'set_ab'))
 
-    __slots__ = 'min_mag max_mag bin_width a_val b_val'.split()
+    _slots_ = 'min_mag max_mag bin_width a_val b_val'.split()
 
     def __init__(self, min_mag, max_mag, bin_width, a_val, b_val):
         self.min_mag = min_mag

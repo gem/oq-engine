@@ -37,7 +37,7 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
 
-    __slots__ = ['source_id', 'name', 'tectonic_region_type',
+    _slots_ = ['source_id', 'name', 'tectonic_region_type',
                  'trt_model_id', 'weight', 'seed', 'id']
 
     MODIFICATIONS = abc.abstractproperty()
@@ -194,7 +194,7 @@ class ParametricSeismicSource(with_metaclass(abc.ABCMeta, BaseSeismicSource)):
         (if not None).
     """
 
-    __slots__ = BaseSeismicSource.__slots__ + '''mfd rupture_mesh_spacing
+    _slots_ = BaseSeismicSource._slots_ + '''mfd rupture_mesh_spacing
     magnitude_scaling_relationship rupture_aspect_ratio
     temporal_occurrence_model'''.split()
 

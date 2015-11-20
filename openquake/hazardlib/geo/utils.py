@@ -133,7 +133,7 @@ class OrthographicProjection(object):
     Callable object to compute orthographic projections. See the docstring
     of get_orthographic_projection.
     """
-    __slots__ = ('west east north south lambda0 phi0 '
+    _slots_ = ('west east north south lambda0 phi0 '
                  'cos_phi0 sin_phi0 sin_pi_over_4').split()
 
     def __init__(self, west, east, north, south):
