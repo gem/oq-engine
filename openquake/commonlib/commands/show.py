@@ -59,12 +59,12 @@ def show(calc_id, key=None, rlzs=None):
     :param key: key of the datastore
     :param rlzs: flag; if given, print out the realizations in order
     """
-    if not calc_id:
+    if calc_id == 0:  # show all
         if not os.path.exists(datastore.DATADIR):
             return
         rows = []
         for calc_id in datastore.get_calc_ids(datastore.DATADIR):
-            ds = datastore.DataStore(calc_id)
+            ds = datastore.DataStore(calc_id, mode='r')
             try:
                 oq = OqParam.from_(ds.attrs)
                 cmode, descr = oq.calculation_mode, oq.description
@@ -72,10 +72,12 @@ def show(calc_id, key=None, rlzs=None):
                 # invalid datastore file, or missing calculation_mode
                 # and description attributes, perhaps due to a manual kill
                 logging.warn('Removed invalid calculation %d', calc_id)
-                os.remove(os.path.join(
-                    datastore.DATADIR, 'calc_%s.hdf5' % calc_id))
+                os.remove(
+                    os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id))
             else:
                 rows.append((calc_id, cmode, descr))
+            finally:
+                ds.close()
         for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
             print('#%d %s: %s' % row)
         return
