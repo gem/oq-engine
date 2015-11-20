@@ -252,7 +252,7 @@ class HazardCalculator(BaseCalculator):
                 precalc = calculators[self.pre_calculator](
                     self.oqparam, self.monitor('precalculator'),
                     self.datastore.calc_id)
-                precalc.run(clean_up=False)
+                precalc.run()
                 if 'scenario' not in self.oqparam.calculation_mode:
                     self.csm = precalc.csm
             else:  # read previously computed data
