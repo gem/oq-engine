@@ -157,7 +157,7 @@ def _collect_bins_data(sources, site, imt, iml, gsims,
         try:
             tect_reg = source.tectonic_region_type
             gsim = gsims[tect_reg]
-            cmaker = ContextMaker.create([gsim])
+            cmaker = ContextMaker([gsim])
             if tect_reg not in trt_nums:
                 trt_nums[tect_reg] = _next_trt_num
                 _next_trt_num += 1

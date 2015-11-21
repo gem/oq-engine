@@ -114,18 +114,12 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    @classmethod
-    def create(cls, gsims):
-        """
-        Instantiate a ContextMaker with REQUIRES_ attributes obtained by
-        merging the corresponding attributes of the provided GSIMs.
-        """
-        for req in cls.REQUIRES:
+    def __init__(self, gsims):
+        for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
-            setattr(cls, 'REQUIRES_' + req, reqset)
-        return cls()
+            setattr(self, 'REQUIRES_' + req, reqset)
 
     def make_distances_context(self, site_collection, rupture):
         """

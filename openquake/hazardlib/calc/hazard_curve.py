@@ -175,7 +175,7 @@ def hazard_curves_per_trt(
         by the intensity measure types; the size of each field is given by the
         number of levels in ``imtls``.
     """
-    cmaker = ContextMaker.create(gsims)
+    cmaker = ContextMaker(gsims)
     gnames = list(map(str, gsims))
     imt_dt = numpy.dtype([(imt, float, len(imtls[imt]))
                           for imt in sorted(imtls)])

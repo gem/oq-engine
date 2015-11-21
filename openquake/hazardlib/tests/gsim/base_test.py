@@ -52,7 +52,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
         super(_FakeGSIMTestCase, self).setUp()
         self.gsim_class = FakeGSIM
         self.gsim = self.gsim_class()
-        self.cmaker = ContextMaker.create([self.gsim])
+        self.cmaker = ContextMaker([self.gsim])
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
             self.DEFAULT_COMPONENT
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES.add(self.DEFAULT_IMT)
@@ -422,7 +422,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.fake_surface = FakeSurface
 
     def make_contexts(self, site_collection, rupture):
-        return ContextMaker.create([self.gsim_class]).make_contexts(
+        return ContextMaker([self.gsim_class]).make_contexts(
             site_collection, rupture)
 
     def test_unknown_site_param_error(self):

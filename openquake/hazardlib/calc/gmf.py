@@ -86,7 +86,7 @@ class GmfComputer(object):
         self.gsims = gsims
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
-        cmaker = ContextMaker.create(gsims)
+        cmaker = ContextMaker(gsims)
         self.ctx = cmaker.make_contexts(sites, rupture)
         self.gmf_dt = gsim_imt_dt(gsims, imts)
 
