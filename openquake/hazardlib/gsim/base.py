@@ -780,7 +780,7 @@ class SitesContext(BaseContext):
     object.
     """
     _slots_ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5', 'backarc',
-        'lons', 'lats')
+               'lons', 'lats')
 
 
 class DistancesContext(BaseContext):
@@ -796,7 +796,7 @@ class DistancesContext(BaseContext):
     in a result context object.
     """
     _slots_ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi', 'ry0', 'rcdpp',
-        'azimuth', 'hanging_wall')
+               'azimuth', 'hanging_wall')
 
 
 class RuptureContext(BaseContext):
