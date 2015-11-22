@@ -153,6 +153,11 @@ class PerformanceMonitor(object):
         Save the measurements on the performance file (or on stdout)
         """
         data = self.get_data()
+        # reset monitors
+        for mon in ([self] + self.children):
+            mon.duration = 0
+            mon.mem = 0
+
         if len(data) == 0:  # no information
             return
         if self.hdf5path:
@@ -166,11 +171,6 @@ class PerformanceMonitor(object):
         else:  # print on stddout
             for rec in data:
                 print(rec)
-
-        # reset monitors
-        for mon in ([self] + self.children):
-            mon.duration = 0
-            mon.mem = 0
 
     def __call__(self, operation, **kw):
         """
