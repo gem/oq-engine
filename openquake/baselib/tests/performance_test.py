@@ -29,14 +29,18 @@ class MonitorTestCase(unittest.TestCase):
         mon.flush()
 
     def test_children(self):
-        mon1 = self.mon('child1', autoflush=True)
-        mon2 = self.mon('child2', autoflush=True)
+        mon1 = self.mon('child1')
+        mon2 = self.mon('child2')
         with mon1:
             time.sleep(0.1)
         with mon2:
             time.sleep(0.1)
         with mon2:  # called twice on purpose
             time.sleep(0.1)
+
+        data = self.mon.get_data()
+        total_time = data['time_sec'].sum()
+        self.assertGreaterEqual(total_time, 0.3)
         self.mon.flush()
 
     def test_pickleable(self):

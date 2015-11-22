@@ -108,11 +108,23 @@ class PerformanceMonitor(object):
 
     def get_data(self):
         """
-        Return a list of strings with the measured operation, time and memory
+        :returns:
+            an array of dtype perf_dt, with the information of the monitor
+            and its children (operation, time_sec, memory_mb, counts)
+
+        .. note::
+
+            at the moment only the direct children are retrieved, i.e.
+            get_data is not recursive.
         """
-        time_sec = self.duration
-        memory_mb = self.mem / 1024. / 1024. if self.measuremem else 0
-        return (self.operation, time_sec, memory_mb, 1)
+        data = []
+        monitors = [self] + self.children  # only direct children
+        for mon in monitors:
+            if mon.duration:
+                time_sec = mon.duration
+                memory_mb = mon.mem / 1024. / 1024. if mon.measuremem else 0
+                data.append((mon.operation, time_sec, memory_mb, 1))
+        return numpy.array(data, perf_dt)
 
     def __enter__(self):
         if self.pid is None:
@@ -140,9 +152,8 @@ class PerformanceMonitor(object):
         """
         Save the measurements on the performance file (or on stdout)
         """
-        monitors = [self] + self.children
-        data = [mon.get_data() for mon in monitors if mon.duration]
-        if not data:
+        data = self.get_data()
+        if len(data) == 0:  # no information
             return
         if self.hdf5path:
             h5 = h5py.File(self.hdf5path)
@@ -150,14 +161,14 @@ class PerformanceMonitor(object):
                 pdata = Hdf5Dataset(h5['performance_data'])
             except KeyError:
                 pdata = Hdf5Dataset.create(h5, 'performance_data', perf_dt)
-            pdata.extend(numpy.array(data, perf_dt))
+            pdata.extend(data)
             h5.close()
         else:  # print on stddout
-            for row in data:
-                print(','.join(map(str, row)))
+            for rec in data:
+                print(rec)
 
         # reset monitors
-        for mon in monitors:
+        for mon in ([self] + self.children):
             mon.duration = 0
             mon.mem = 0
 
