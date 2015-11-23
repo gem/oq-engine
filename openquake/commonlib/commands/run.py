@@ -47,7 +47,8 @@ def run(job_ini, concurrent_tasks=None, pdb=None,
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
     job_inis = job_ini.split(',')
     assert len(job_inis) in (1, 2), job_inis
-    monitor = performance.PerformanceMonitor('total', measuremem=True)
+    monitor = performance.PerformanceMonitor(
+        'total runtime', measuremem=True)
 
     if len(job_inis) == 1:  # run hazard or risk
         oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc)
