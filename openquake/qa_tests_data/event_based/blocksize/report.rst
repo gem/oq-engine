@@ -1,6 +1,8 @@
 QA test for blocksize independence (hazard)
 ===========================================
 
+num_sites = 2
+
 Parameters
 ----------
 ============================ ===========
@@ -16,7 +18,7 @@ width_of_mfd_bin             0.5
 area_source_discretization   10.0       
 random_seed                  1024       
 master_seed                  0          
-concurrent_tasks             64         
+concurrent_tasks             32         
 ============================ ===========
 
 Input files
@@ -63,8 +65,8 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ==========
-Number of tasks to generate        60        
-Estimated sources to send          1019.26 KB
-Estimated hazard curves to receive 3 KB      
-================================== ==========
+================================== =========
+Number of tasks to generate        32       
+Estimated sources to send          991.39 KB
+Estimated hazard curves to receive 2 KB     
+================================== =========

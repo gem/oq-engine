@@ -1,6 +1,8 @@
 Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per source + 3 Mmax per source
 ==========================================================================================================
 
+num_sites = 1
+
 Parameters
 ----------
 ============================ =========
@@ -16,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0     
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             64       
+concurrent_tasks             32       
 ============================ =========
 
 Input files
@@ -90,7 +92,7 @@ source_model.xml 9      Active Shallow Crust 135         2025
 Expected data transfer for the sources
 --------------------------------------
 ================================== =========
-Number of tasks to generate        70       
-Estimated sources to send          409.71 KB
-Estimated hazard curves to receive 1 KB     
+Number of tasks to generate        38       
+Estimated sources to send          362.58 KB
+Estimated hazard curves to receive 912 B    
 ================================== =========

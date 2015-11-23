@@ -1,6 +1,8 @@
 Classical PSHA with non-trivial logic tree (2 source models and 2 GMPEs per tectonic region type)
 =================================================================================================
 
+num_sites = 1
+
 Parameters
 ----------
 ============================ =========
@@ -16,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0      
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             64       
+concurrent_tasks             32       
 ============================ =========
 
 Input files
@@ -74,8 +76,8 @@ source_model_2.xml 3      Stable Continental Crust 296         5920
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =======
-Number of tasks to generate        65     
-Estimated sources to send          10.2 MB
-Estimated hazard curves to receive 19 KB  
-================================== =======
+================================== ========
+Number of tasks to generate        34      
+Estimated sources to send          10.16 MB
+Estimated hazard curves to receive 10 KB   
+================================== ========

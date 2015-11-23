@@ -1,6 +1,8 @@
 Classical PSHA QA test with sites_csv
 =====================================
 
+num_sites = 10
+
 Parameters
 ----------
 ============================ =========
@@ -16,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0     
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             64       
+concurrent_tasks             32       
 ============================ =========
 
 Input files
@@ -59,7 +61,7 @@ simple_fault.xml 0      Active Shallow Crust 15          447
 Expected data transfer for the sources
 --------------------------------------
 ================================== ========
-Number of tasks to generate        15      
-Estimated sources to send          31.48 KB
-Estimated hazard curves to receive 30 KB   
+Number of tasks to generate        13      
+Estimated sources to send          27.47 KB
+Estimated hazard curves to receive 26 KB   
 ================================== ========

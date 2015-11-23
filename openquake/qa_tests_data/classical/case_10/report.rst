@@ -1,6 +1,8 @@
 Classical Hazard QA Test, Case 10
 =================================
 
+num_sites = 1
+
 Parameters
 ----------
 ============================ =========
@@ -16,7 +18,7 @@ width_of_mfd_bin             0.001
 area_source_discretization   10.0     
 random_seed                  1066     
 master_seed                  0        
-concurrent_tasks             64       
+concurrent_tasks             32       
 ============================ =========
 
 Input files
@@ -67,6 +69,6 @@ Expected data transfer for the sources
 --------------------------------------
 ================================== =======
 Number of tasks to generate        2      
-Estimated sources to send          3.81 KB
+Estimated sources to send          3.79 KB
 Estimated hazard curves to receive 64 B   
 ================================== =======

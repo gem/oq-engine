@@ -352,7 +352,6 @@ def view_exposure_info(token, dstore):
         counts[tax_idx] += 1
     tbl = zip(taxonomies, counts)
     data = [('#assets', len(assetcol)),
-            ('#sites', len(set(assetcol['site_id']))),
             ('#taxonomies', len(taxonomies))]
     return rst_table(data) + '\n\n' + rst_table(
         tbl, header=['Taxonomy', '#Assets'])

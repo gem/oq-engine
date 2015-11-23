@@ -1,6 +1,8 @@
 Scenario Damage
 ===============
 
+num_sites = 7
+
 Parameters
 ----------
 ============================ ===============
@@ -43,7 +45,6 @@ Exposure model
 --------------
 =========== =
 #assets     1
-#sites      1
 #taxonomies 1
 =========== =
 
