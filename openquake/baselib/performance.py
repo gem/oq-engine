@@ -17,14 +17,15 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 import time
-import operator
-import tempfile
 from datetime import datetime
-import collections
 
 import numpy
+import h5py
+
+from openquake.baselib.general import humansize
+from openquake.baselib.hdf5 import Hdf5Dataset
+
 
 import psutil
 if psutil.__version__ > '2.0.0':  # Ubuntu 14.10
@@ -48,7 +49,8 @@ else:  # Ubuntu 12.04
     def memory_info(proc):
         return proc.get_memory_info()
 
-from openquake.baselib.general import humansize
+perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
+                       ('memory_mb', float), ('counts', int)])
 
 
 # this is not thread-safe
@@ -74,27 +76,28 @@ class PerformanceMonitor(object):
     and by overriding the method on_exit(), called at end and used to display
     or store the results of the analysis.
     """
-    def __init__(self, operation, pid=None, autoflush=False, measuremem=False):
+    def __init__(self, operation, hdf5path=None, pid=None,
+                 autoflush=False, measuremem=False):
         self.operation = operation
+        self.hdf5path = hdf5path
         self.pid = pid
         self.autoflush = autoflush
         self.measuremem = measuremem
-        self._proc = None
         self.mem = 0
         self.duration = 0
         self._start_time = time.time()
         self.children = []
-        self.perftemp = None
 
     def measure_mem(self):
         """A memory measurement (in bytes)"""
         try:
-            if self._proc:
-                return memory_info(self._proc).rss
+            if self.pid:
+                proc = psutil.Process(self.pid)
+                return memory_info(proc).rss
         except psutil.AccessDenied:
             # no access to information about this process
             # don't not try to check it anymore
-            self._proc = None
+            self.pid = 0
 
     @property
     def start_time(self):
@@ -103,27 +106,29 @@ class PerformanceMonitor(object):
         """
         return datetime.fromtimestamp(self._start_time)
 
-    # this is used by readinput.get_composite_source_model
-    def write(self, row):
-        """Write a row in the performance file, if any"""
-        if self.perftemp is None:
-            fd, self.perftemp = tempfile.mkstemp(suffix='.csv')
-            os.close(fd)
-        open(self.perftemp, 'a').write('\t'.join(row) + '\n')
-
     def get_data(self):
         """
-        Return a list of strings with the measured operation, time and memory
+        :returns:
+            an array of dtype perf_dt, with the information of the monitor
+            and its children (operation, time_sec, memory_mb, counts)
+
+        .. note::
+
+            at the moment only the direct children are retrieved, i.e.
+            get_data is not recursive.
         """
-        time_sec = str(self.duration)
-        memory_mb = (str(self.mem / 1024. / 1024.)
-                     if self.measuremem else '0')
-        return [self.operation, time_sec, memory_mb]
+        data = []
+        monitors = [self] + self.children  # only direct children
+        for mon in monitors:
+            if mon.duration:
+                time_sec = mon.duration
+                memory_mb = mon.mem / 1024. / 1024. if mon.measuremem else 0
+                data.append((mon.operation, time_sec, memory_mb, 1))
+        return numpy.array(data, perf_dt)
 
     def __enter__(self):
-        if not self.pid:
+        if self.pid is None:
             self.pid = os.getpid()
-            self._proc = psutil.Process(self.pid)
         self.exc = None  # exception
         self._start_time = time.time()
         if self.measuremem:
@@ -145,14 +150,27 @@ class PerformanceMonitor(object):
 
     def flush(self):
         """
-        Save the measurements on the performance file
+        Save the measurements on the performance file (or on stdout)
         """
-        monitors = [self] + self.children
-        for mon in monitors:
-            self.write(mon.get_data())
-        for mon in monitors:
+        data = self.get_data()
+        # reset monitors
+        for mon in ([self] + self.children):
             mon.duration = 0
             mon.mem = 0
+
+        if len(data) == 0:  # no information
+            return
+        if self.hdf5path:
+            h5 = h5py.File(self.hdf5path)
+            try:
+                pdata = Hdf5Dataset(h5['performance_data'])
+            except KeyError:
+                pdata = Hdf5Dataset.create(h5, 'performance_data', perf_dt)
+            pdata.extend(data)
+            h5.close()
+        else:  # print on stddout
+            for rec in data:
+                print(rec)
 
     def __call__(self, operation, **kw):
         """
@@ -176,24 +194,6 @@ class PerformanceMonitor(object):
         return '<%s %s, duration=%ss>' % (self.__class__.__name__,
                                           self.operation, self.duration)
 
-    def collect_performance(self):
-        """
-        :returns: a composite array (operation, time, memory, counts)
-        """
-        if self.perftemp is None:  # no monitoring info
-            return
-        data = collections.defaultdict(lambda: numpy.zeros(3))
-        for line in open(self.perftemp):
-            operation, time, memory = line.split('\t')
-            data[operation] += numpy.array([float(time), float(memory), 1])
-        perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
-                               ('memory_mb', float), ('counts', int)])
-        rows = []
-        for operation, rec in data.items():
-            rows.append((operation, rec[0], rec[1], rec[2]))
-        rows.sort(key=operator.itemgetter(1), reverse=True)
-        return numpy.array(rows, perf_dt)
-
 
 class DummyMonitor(PerformanceMonitor):
     """
@@ -202,11 +202,8 @@ class DummyMonitor(PerformanceMonitor):
     """
     def __init__(self, operation='dummy', *args, **kw):
         self.operation = operation
-        self.monitor_dir = None
+        self.hdf5path = None
         self.pid = None
-
-    def write(self, row):
-        """Do nothing"""
 
     def __call__(self, operation, **kw):
         return self.__class__(operation)
@@ -218,10 +215,7 @@ class DummyMonitor(PerformanceMonitor):
         pass
 
     def flush(self):
-        """Do nothing"""
-
-    def collect_performance(self):
-        """Do nothing"""
+        pass
 
     def __repr__(self):
         return '<%s>' % self.__class__.__name__

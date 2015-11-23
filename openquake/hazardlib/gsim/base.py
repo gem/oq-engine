@@ -132,7 +132,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
     DEFINED_FOR_TECTONIC_REGION_TYPE = abc.abstractproperty()
 
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
-    #this GSIM can
+    #: this GSIM can
     #: calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = abc.abstractproperty()
@@ -397,8 +397,8 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
                 # ... area of the portion of the bin containing ``iml``
                 # (the portion is limited on the left hand side by
                 # ``iml`` and on the right hand side by the bin edge),
-                [distribution.sf(standard_imls[i])
-                 - contribution_by_bands[idx:].sum()],
+                [distribution.sf(standard_imls[i]) -
+                 contribution_by_bands[idx:].sum()],
                 # ... and all bins on the right go unchanged.
                 contribution_by_bands[idx:]
             ))
