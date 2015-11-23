@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Optimized the case of multiple GSIMs by instantiating the
+    ruptures/sites/distances contexts only once
+
 python-oq-hazardlib (0.16.0-0~precise01) precise; urgency=low
 
   [Graeme Weatherill]
