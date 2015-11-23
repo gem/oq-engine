@@ -23,6 +23,8 @@ from openquake.baselib import performance, general
 from openquake.commonlib import sap, readinput, valid, datastore
 from openquake.calculators import base
 
+calc_path = None  # set only when the flag --profile is given
+
 
 def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, monitor):
     """
@@ -76,8 +78,22 @@ def _run(job_ini, concurrent_tasks=0, pdb=0, loglevel='info',
 def run(job_ini, concurrent_tasks=None, pdb=None,
         loglevel='info', hc=None, exports='', profile=False):
     """
-    Run a calculation. Optionally, set the number of concurrent_tasks
-    (0 to disable the parallelization).
+    Run a calculation.
+
+    :param job_ini:
+        the configuration file (or filew, comma-separated)
+    :param concurrent_tasks:
+        the number of concurrent tasks (0 to disable the parallelization).
+    :param pdb:
+        flag to enable pdb debugging on failing calculations
+    :param loglevel:
+        the logging level (default 'info')
+    :param hc:
+        ID of the previous calculation (or None)
+    :param exports:
+        export type, can be '', 'csv', 'xml', 'geojson' or combinations
+    :param profile:
+        when True, enable Python cProfile functionality
     """
     if profile:
         prof = cProfile.Profile()
