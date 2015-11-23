@@ -225,7 +225,7 @@ def export_agg_losses(ekey, dstore):
 
 
 # this is used by event_based_risk
-@export.add(('agg_losses', 'csv'))
+@export.add(('agg_loss_table', 'csv'))
 def export_agg_losses_ebr(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -233,20 +233,23 @@ def export_agg_losses_ebr(ekey, dstore):
     """
     agg_losses = dstore[ekey[0]]
     rlzs = dstore['rlzs_assoc'].realizations
-    tags = dstore['tags'].value
-    E = len(tags)
     loss_types = dstore['riskmodel'].loss_types
+    tags = dstore['tags'].value
     ext_loss_types = loss_types + [lt + '_ins' for lt in loss_types]
-    ext_dt = numpy.dtype([(elt, numpy.float32) for elt in ext_loss_types])
+    ext_dt = numpy.dtype(
+        [('tag', (bytes, 100))] +
+        [(elt, numpy.float32) for elt in ext_loss_types])
     fnames = []
     for rlz in rlzs:
-        array = numpy.empty(E, ext_dt)
-        for l, ltype in enumerate(loss_types):
-            array[ltype] = agg_losses[:, l, rlz.ordinal, 0]
-            array[ltype + '_ins'] = agg_losses[:, l, rlz.ordinal, 1]
+        rows = agg_losses[rlz.uid]
+        data = []
+        for row in rows:
+            loss = row['loss']  # matrix L x 2
+            data.append((tags[row['rup_id']],) +
+                        tuple(loss[:, 0]) + tuple(loss[:, 1]))
+        data.sort()
         dest = dstore.export_path('agg_losses-rlz%03d.csv' % rlz.ordinal)
-        data = compose_arrays(tags, array)
-        writers.write_csv(dest, data, fmt='%10.6E')
+        writers.write_csv(dest, numpy.array(data, ext_dt), fmt='%10.6E')
         fnames.append(dest)
     return fnames
 
