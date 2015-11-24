@@ -134,5 +134,5 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             avglosses = numpy.zeros((N, R), multi_stat_dt)
             for (l, r, aid, stat) in result['avg']:
                 avglosses[ltypes[l]][aid, r] = stat
-            self.datastore['avglosses-rlzs'] = avglosses
+            self.datastore['loss_map-rlzs'] = avglosses
             self.datastore['agglosses-rlzs'] = agglosses
