@@ -399,8 +399,8 @@ def view_performance(token, dstore):
         counts = 0
         time = 0
         mem = 0
-        for _operation, time_sec, memory_mb, _ in group:
-            counts += 1
+        for _operation, time_sec, memory_mb, counts_ in group:
+            counts += counts_
             time += time_sec
             mem = max(mem, memory_mb)
         out.append((operation, time, mem, counts))
