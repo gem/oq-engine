@@ -335,7 +335,7 @@ def hazard_curve_name(dstore, ekey, kind, rlzs_assoc, sampling):
     prefix = {'hcurves': 'hazard_curve', 'hmaps': 'hazard_map',
               'uhs': 'hazard_uhs'}[key]
     if kind.startswith('rlz-'):
-        rlz_no, suffix = re.match('rlz-(\d+)(.+)', kind).groups()
+        rlz_no, suffix = re.match('rlz-(\d+)(.*)', kind).groups()
         rlz = rlzs_assoc.realizations[int(rlz_no)]
         fname = build_name(dstore, rlz, prefix + suffix, fmt, sampling)
     elif kind.startswith('mean'):
