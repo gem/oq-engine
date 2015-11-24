@@ -274,6 +274,8 @@ class DataStore(collections.MutableMapping):
         del self.hdf5[key]
 
     def __iter__(self):
+        if not self.hdf5:
+            raise RuntimeError('%s is closed' % self)
         for path in sorted(self.hdf5):
             yield path
 

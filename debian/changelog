@@ -2,6 +2,7 @@
   * Added `--profile` flag to oq-lite run
   * The performance info has been moved fully in the datastore
   * Saved one loss table per realization in the datastore
+  * Fixed a bug in the oq-lite exporter of the hazard maps
   * Removed a spurious comma from the rupture tag
   * Removed the epsilon_sampling feature from event_based_risk
 
