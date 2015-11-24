@@ -727,7 +727,7 @@ class ClassicalHazardCase19TestCase(qa_utils.BaseQATestCase):
         # NB: the format of the expected file is lon lat, poe1 ... poeN, ...
         # we extract the poes
         # TODO: unify the engine and oq-lite export formats
-        expected = [line.split(',')[1] for line in open(fname)]
+        expected = [line.split(',')[1] for line in open(fname)][1:]
         self.assertEqual(actual, expected)
 
         shutil.rmtree(result_dir)
