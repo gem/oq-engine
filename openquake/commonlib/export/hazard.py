@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import logging
 import operator
 import collections
@@ -334,7 +335,7 @@ def hazard_curve_name(dstore, ekey, kind, rlzs_assoc, sampling):
     prefix = {'hcurves': 'hazard_curve', 'hmaps': 'hazard_map',
               'uhs': 'hazard_uhs'}[key]
     if kind.startswith('rlz-'):
-        rlz_no = int(kind[4:])
+        rlz_no = int(re.match('rlz-(\d+)', kind).group(1))
         rlz = rlzs_assoc.realizations[rlz_no]
         fname = build_name(dstore, rlz, prefix, fmt, sampling)
     elif kind.startswith('mean'):
