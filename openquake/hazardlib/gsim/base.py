@@ -433,7 +433,7 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
 
             All three contexts (``sctx``, ``rctx`` and ``dctx``) must conform
             to each other. The easiest way to get them is to call
-            :meth:`make_contexts`.
+            ContextMaker.make_contexts.
         :param imt:
             An intensity measure type object (that is, an instance of one
             of classes from :mod:`openquake.hazardlib.imt`).
