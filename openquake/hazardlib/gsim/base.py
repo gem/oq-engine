@@ -115,6 +115,7 @@ class ContextMaker(object):
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
     def __init__(self, gsims):
+        self.gsims = gsims
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
