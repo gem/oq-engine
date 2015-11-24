@@ -86,6 +86,7 @@ class PerformanceMonitor(object):
         self.duration = 0
         self._start_time = time.time()
         self.children = []
+        self.counts = 0
 
     def measure_mem(self):
         """A memory measurement (in bytes)"""
@@ -117,10 +118,10 @@ class PerformanceMonitor(object):
         data = []
         monitors = [self] + self.children  # only direct children
         for mon in monitors:
-            if mon.duration:
+            if mon.counts:
                 time_sec = mon.duration
                 memory_mb = mon.mem / 1024. / 1024. if mon.measuremem else 0
-                data.append((mon.operation, time_sec, memory_mb, 1))
+                data.append((mon.operation, time_sec, memory_mb, mon.counts))
         return numpy.array(data, perf_dt)
 
     def __enter__(self):
@@ -136,6 +137,7 @@ class PerformanceMonitor(object):
             self.stop_mem = self.measure_mem()
             self.mem += self.stop_mem - self.start_mem
         self.duration += time.time() - self._start_time
+        self.counts += 1
         self.on_exit()
 
     def on_exit(self):
@@ -152,6 +154,7 @@ class PerformanceMonitor(object):
         for mon in ([self] + self.children):
             mon.duration = 0
             mon.mem = 0
+            mon.counts = 0
 
         if len(data) == 0:  # no information
             return
@@ -174,6 +177,7 @@ class PerformanceMonitor(object):
         self_vars = vars(self).copy()
         del self_vars['operation']
         del self_vars['children']
+        del self_vars['counts']
         new = self.__class__(operation)
         vars(new).update(self_vars)
         vars(new).update(kw)
