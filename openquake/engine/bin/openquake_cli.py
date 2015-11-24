@@ -558,8 +558,8 @@ def main():
     elif args.list_risk_calculations:
         list_calculations('risk')
     elif args.run_risk is not None:
-        if (args.hazard_output_id is None
-                and args.hazard_calculation_id is None):
+        if (args.hazard_output_id is None and
+                args.hazard_calculation_id is None):
             sys.exit(MISSING_HAZARD_MSG)
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
