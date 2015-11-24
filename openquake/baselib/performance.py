@@ -76,11 +76,10 @@ class PerformanceMonitor(object):
     and by overriding the method on_exit(), called at end and used to display
     or store the results of the analysis.
     """
-    def __init__(self, operation, hdf5path=None, pid=None,
+    def __init__(self, operation, hdf5path=None,
                  autoflush=False, measuremem=False):
         self.operation = operation
         self.hdf5path = hdf5path
-        self.pid = pid
         self.autoflush = autoflush
         self.measuremem = measuremem
         self.mem = 0
@@ -90,14 +89,12 @@ class PerformanceMonitor(object):
 
     def measure_mem(self):
         """A memory measurement (in bytes)"""
+        proc = psutil.Process(os.getpid())
         try:
-            if self.pid:
-                proc = psutil.Process(self.pid)
-                return memory_info(proc).rss
+            return memory_info(proc).rss
         except psutil.AccessDenied:
             # no access to information about this process
-            # don't not try to check it anymore
-            self.pid = 0
+            pass
 
     @property
     def start_time(self):
@@ -127,8 +124,6 @@ class PerformanceMonitor(object):
         return numpy.array(data, perf_dt)
 
     def __enter__(self):
-        if self.pid is None:
-            self.pid = os.getpid()
         self.exc = None  # exception
         self._start_time = time.time()
         if self.measuremem:
@@ -179,7 +174,6 @@ class PerformanceMonitor(object):
         self_vars = vars(self).copy()
         del self_vars['operation']
         del self_vars['children']
-        del self_vars['pid']
         new = self.__class__(operation)
         vars(new).update(self_vars)
         vars(new).update(kw)
@@ -203,7 +197,6 @@ class DummyMonitor(PerformanceMonitor):
     def __init__(self, operation='dummy', *args, **kw):
         self.operation = operation
         self.hdf5path = None
-        self.pid = None
 
     def __call__(self, operation, **kw):
         return self.__class__(operation)
