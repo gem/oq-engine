@@ -50,6 +50,8 @@ class TestResult(unittest.TextTestResult):
                 f.write('%s %s\n' % (name, value))
         print(''.join(open(fname).readlines()[:20]))
         print('Saved times in ' + fname)
+        if self.errors or self.failures:
+            raise SystemExit(len(self.errors) + len(self.failures))
 
 unittest.TextTestRunner.resultclass = TestResult
 
