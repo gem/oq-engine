@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Ported the --load-curve functionality from the engine to oq-lite
   * Added `--profile` flag to oq-lite run
   * The performance info has been moved fully in the datastore
   * Saved one loss table per realization in the datastore
