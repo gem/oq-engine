@@ -458,7 +458,7 @@ def export_hmaps_xml_json(ekey, dstore):
                         for site, poes in zip(sitemesh, maps)]
                 writer = writercls(
                     fname, investigation_time=oq.investigation_time,
-                    imls=oq.imtls[imt], poe=poe,
+                    imt=imt, poe=poe,
                     smlt_path='_'.join(rlz.sm_lt_path),
                     gsimlt_path=rlz.gsim_rlz.uid)
                 writer.serialize(data)
