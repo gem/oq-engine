@@ -76,7 +76,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 haz_sitecol)
             curves_by_trt_gsim = {(0, 'FromFile'): haz_curves}
             self.read_riskmodel()
-            self.rlzs_assoc = logictree.fake_rlzs_assoc()
+            self.rlzs_assoc = logictree.trivial_rlzs_assoc()
         else:  # compute hazard
             super(ClassicalRiskCalculator, self).pre_execute()
             logging.info('Preparing the risk input')

@@ -114,7 +114,7 @@ class RlzsAssoc(collections.Mapping):
                                  '\n'.join('%s: %s' % pair for pair in pairs))
 
 
-def fake_rlzs_assoc():
+def trivial_rlzs_assoc():
     """
     Return a fake RlzsAssoc instance. Used by the risk calculators when
     reading the hazard from a file.

@@ -485,7 +485,7 @@ def get_gmfs(calc):
             gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
 
         logging.info('Preparing the risk input')
-        calc.rlzs_assoc = logictree.fake_rlzs_assoc()
+        calc.rlzs_assoc = logictree.trivial_rlzs_assoc()
         return sitecol, {(0, 'FromFile'): gmfs_by_imt}
 
     # else from rupture
