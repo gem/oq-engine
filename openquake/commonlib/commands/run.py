@@ -17,10 +17,13 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 import logging
+import cProfile
 
 from openquake.baselib import performance, general
 from openquake.commonlib import sap, readinput, valid, datastore
 from openquake.calculators import base
+
+calc_path = None  # set only when the flag --profile is given
 
 
 def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, monitor):
@@ -38,16 +41,14 @@ def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, monitor):
     return rcalc
 
 
-def run(job_ini, concurrent_tasks=None, pdb=None,
-        loglevel='info', hc=None, exports=''):
-    """
-    Run a calculation. Optionally, set the number of concurrent_tasks
-    (0 to disable the parallelization).
-    """
+def _run(job_ini, concurrent_tasks=0, pdb=0, loglevel='info',
+         hc=0, exports=''):
+    global calc_path
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
     job_inis = job_ini.split(',')
     assert len(job_inis) in (1, 2), job_inis
-    monitor = performance.PerformanceMonitor('total', measuremem=True)
+    monitor = performance.PerformanceMonitor(
+        'total runtime', measuremem=True)
 
     if len(job_inis) == 1:  # run hazard or risk
         oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc)
@@ -70,16 +71,48 @@ def run(job_ini, concurrent_tasks=None, pdb=None,
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
     monitor.flush()
     print('See the output with hdfview %s' % calc.datastore.hdf5path)
+    calc_path = calc.datastore.calc_dir  # used to deduce the .pstat filename
     return calc
+
+
+def run(job_ini, concurrent_tasks=None, pdb=None,
+        loglevel='info', hc=None, exports='', profile=False):
+    """
+    Run a calculation.
+
+    :param job_ini:
+        the configuration file (or filew, comma-separated)
+    :param concurrent_tasks:
+        the number of concurrent tasks (0 to disable the parallelization).
+    :param pdb:
+        flag to enable pdb debugging on failing calculations
+    :param loglevel:
+        the logging level (default 'info')
+    :param hc:
+        ID of the previous calculation (or None)
+    :param exports:
+        export type, can be '', 'csv', 'xml', 'geojson' or combinations
+    :param profile:
+        when True, enable Python cProfile functionality
+    """
+    if profile:
+        prof = cProfile.Profile()
+        stmt = '_run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports)'
+        prof.runctx(stmt, globals(), locals())
+        prof.dump_stats(calc_path + '.pstat')
+        print('Saved profiling info in %s' % calc_path + '.pstat')
+    else:
+        _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports)
 
 parser = sap.Parser(run)
 parser.arg('job_ini', 'calculation configuration file '
            '(or files, comma-separated)')
 parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
            type=int)
-parser.flg('pdb', 'enable post mortem debugging')
+parser.flg('pdb', 'enable post mortem debugging', '-d')
 parser.opt('loglevel', 'logging level',
            choices='debug info warn error critical'.split())
 parser.opt('hc', 'previous calculation ID', type=int)
 parser.opt('exports', 'export formats as a comma-separated string',
            type=valid.export_formats)
+parser.flg('profile', 'enable profiling')

@@ -20,10 +20,11 @@ import io
 import os.path
 import numbers
 import operator
+import itertools
 import numpy
 
 from openquake.baselib.general import groupby, split_in_blocks, humansize
-from openquake.baselib.performance import PerformanceMonitor
+from openquake.baselib.performance import PerformanceMonitor, perf_dt
 from openquake.commonlib import parallel
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.datastore import view
@@ -284,7 +285,7 @@ def view_totlosses(token, dstore):
     all assets are indeed equal to the aggregate losses. This is a
     sanity check for the correctness of the implementation.
     """
-    avglosses = dstore['avglosses-rlzs'].value
+    avglosses = dstore['loss_map-rlzs'].value
     dtlist = [('%s-%s' % (name, stat), float)
               for name in avglosses.dtype.names
               for stat in ('mean', 'mean_ins')]
@@ -351,7 +352,6 @@ def view_exposure_info(token, dstore):
         counts[tax_idx] += 1
     tbl = zip(taxonomies, counts)
     data = [('#assets', len(assetcol)),
-            ('#sites', len(set(assetcol['site_id']))),
             ('#taxonomies', len(taxonomies))]
     return rst_table(data) + '\n\n' + rst_table(
         tbl, header=['Taxonomy', '#Assets'])
@@ -386,3 +386,23 @@ def view_fullreport(token, dstore):
     # avoid circular imports
     from openquake.commonlib.reportwriter import ReportWriter
     return ReportWriter(dstore).make_report()
+
+
+@view.add('performance')
+def view_performance(token, dstore):
+    """
+    Display performance information
+    """
+    data = sorted(dstore['performance_data'], key=operator.itemgetter(0))
+    out = []
+    for operation, group in itertools.groupby(data, operator.itemgetter(0)):
+        counts = 0
+        time = 0
+        mem = 0
+        for _operation, time_sec, memory_mb, counts_ in group:
+            counts += counts_
+            time += time_sec
+            mem = max(mem, memory_mb)
+        out.append((operation, time, mem, counts))
+    out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
+    return rst_table(numpy.array(out, perf_dt), fmt='%s')

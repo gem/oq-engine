@@ -81,6 +81,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.monitor = monitor
         if persistent:
             self.datastore = datastore.DataStore(calc_id)
+            self.monitor.hdf5path = self.datastore.hdf5path
         else:
             self.datastore = general.AccumDict()
             self.datastore.hdf5 = {}
@@ -110,14 +111,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         exported = {}
         try:
             if pre_execute:
-                with self.monitor('pre_execute', autoflush=True):
-                    self.pre_execute()
-            with self.monitor('execute', autoflush=True):
-                result = self.execute()
-            with self.monitor('post_execute', autoflush=True):
-                self.post_execute(result)
-            with self.monitor('export', autoflush=True):
-                exported = self.export()
+                self.pre_execute()
+            result = self.execute()
+            self.post_execute(result)
+            exported = self.export()
         except:
             if kw.get('pdb'):  # post-mortem debug
                 tb = sys.exc_info()[2]
@@ -190,9 +187,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             self.realizations = numpy.array(
                 [(r.uid, r.weight) for r in self.rlzs_assoc.realizations],
                 rlz_dt)
-        performance = self.monitor.collect_performance()
-        if performance is not None:
-            self.performance = performance
         # the datastore must not be closed, it will be closed automatically
 
 
@@ -252,7 +246,7 @@ class HazardCalculator(BaseCalculator):
                 precalc = calculators[self.pre_calculator](
                     self.oqparam, self.monitor('precalculator'),
                     self.datastore.calc_id)
-                precalc.run(clean_up=False)
+                precalc.run()
                 if 'scenario' not in self.oqparam.calculation_mode:
                     self.csm = precalc.csm
             else:  # read previously computed data

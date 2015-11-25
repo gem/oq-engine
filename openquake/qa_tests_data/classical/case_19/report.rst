@@ -1,6 +1,8 @@
 SHARE OpenQuake Computational Settings
 ======================================
 
+num_sites = 1
+
 Parameters
 ----------
 ============================ =========
@@ -16,7 +18,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   10.0     
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             64       
+concurrent_tasks             32       
 ============================ =========
 
 Input files
@@ -69,8 +71,8 @@ simple_area_source_model.xml 4      Subduction Inslab    370         7770
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =========
-Number of tasks to generate        53       
-Estimated sources to send          186.14 KB
-Estimated hazard curves to receive 129 KB   
-================================== =========
+================================== ========
+Number of tasks to generate        29      
+Estimated sources to send          133.5 KB
+Estimated hazard curves to receive 70 KB   
+================================== ========

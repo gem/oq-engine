@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import logging
 import operator
 import collections
@@ -315,10 +316,10 @@ def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
     rows = numpy.empty((nsites, len(imtls) + 1), dtype=object)
     for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
         rows[sid, 0] = '%s %s' % (lon, lat)
-    for i, imt in enumerate(sorted(curves_by_imt.dtype.fields), 1):
+    for i, imt in enumerate(curves_by_imt.dtype.names, 1):
         for sid, curve in zip(range(nsites), curves_by_imt[imt]):
             rows[sid, i] = scientificformat(curve, fmt='%11.7E')
-    write_csv(dest, rows)
+    write_csv(dest, rows, header=('lon lat',) + curves_by_imt.dtype.names)
     return {dest: dest}
 
 
@@ -334,11 +335,11 @@ def hazard_curve_name(dstore, ekey, kind, rlzs_assoc, sampling):
     prefix = {'hcurves': 'hazard_curve', 'hmaps': 'hazard_map',
               'uhs': 'hazard_uhs'}[key]
     if kind.startswith('rlz-'):
-        rlz_no = int(kind[4:])
-        rlz = rlzs_assoc.realizations[rlz_no]
-        fname = build_name(dstore, rlz, prefix, fmt, sampling)
-    elif kind == 'mean':
-        fname = dstore.export_path('%s-mean.csv' % prefix)
+        rlz_no, suffix = re.match('rlz-(\d+)(.*)', kind).groups()
+        rlz = rlzs_assoc.realizations[int(rlz_no)]
+        fname = build_name(dstore, rlz, prefix + suffix, fmt, sampling)
+    elif kind.startswith('mean'):
+        fname = dstore.export_path('%s-%s.%s' % (prefix, kind, ekey[1]))
     elif kind.startswith('quantile-'):
         # strip the 7 characters 'hazard_'
         fname = dstore.export_path(
@@ -402,10 +403,10 @@ class Location(object):
         self.wkt = 'POINT(%s %s)' % tuple(xy)
 
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
+HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 
 
-@export.add(('hcurves', 'xml'), ('hcurves', 'geojson'),
-            ('hmaps', 'xml'), ('hmaps', 'geojson'))
+@export.add(('hcurves', 'xml'), ('hcurves', 'geojson'))
 def export_hcurves_xml_json(ekey, dstore):
     export_type = ekey[1]
     len_ext = len(export_type) + 1
@@ -431,6 +432,37 @@ def export_hcurves_xml_json(ekey, dstore):
                                gsimlt_path=rlz.gsim_rlz.uid)
             writer.serialize(data)
             fnames.append(fname)
+    return sorted(fnames)
+
+
+@export.add(('hmaps', 'xml'), ('hmaps', 'geojson'))
+def export_hmaps_xml_json(ekey, dstore):
+    export_type = ekey[1]
+    oq = OqParam.from_(dstore.attrs)
+    sitemesh = dstore['sitemesh'].value
+    rlzs_assoc = dstore['rlzs_assoc']
+    fnames = []
+    writercls = (hazard_writers.HazardMapGeoJSONWriter
+                 if export_type == 'geojson' else
+                 hazard_writers.HazardMapXMLWriter)
+    rlzs = iter(rlzs_assoc.realizations)
+    for kind, maps in dstore[ekey[0]].items():
+        rlz = next(rlzs)
+        for imt in oq.imtls:
+            for i, poe in enumerate(oq.poes):
+                suffix = '-%s-%s' % (poe, imt)
+                fname = hazard_curve_name(
+                    dstore, ekey, kind + suffix, rlzs_assoc,
+                    oq.number_of_logic_tree_samples)
+                data = [HazardMap(site[0], site[1], poes[imt][i])
+                        for site, poes in zip(sitemesh, maps)]
+                writer = writercls(
+                    fname, investigation_time=oq.investigation_time,
+                    imt=imt, poe=poe,
+                    smlt_path='_'.join(rlz.sm_lt_path),
+                    gsimlt_path=rlz.gsim_rlz.uid)
+                writer.serialize(data)
+                fnames.append(fname)
     return sorted(fnames)
 
 

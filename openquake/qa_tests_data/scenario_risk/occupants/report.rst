@@ -1,6 +1,8 @@
 Scenario QA Test for occupants
 ==============================
 
+num_sites = 3
+
 Parameters
 ----------
 ============================ ========
@@ -37,3 +39,18 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(1)
   0,ChiouYoungs2008: ['ChiouYoungs2008']>
+
+Exposure model
+--------------
+=========== =
+#assets     3
+#taxonomies 3
+=========== =
+
+======== =======
+Taxonomy #Assets
+======== =======
+RC       1      
+RM       1      
+W        1      
+======== =======

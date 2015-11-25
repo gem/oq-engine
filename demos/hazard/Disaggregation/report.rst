@@ -1,6 +1,8 @@
 Disaggregation calculation with Source Model containing an Area Source and a Simple Fault Source belonging to different tectonic region types
 =============================================================================================================================================
 
+num_sites = 1
+
 Parameters
 ----------
 ============================ ==============
@@ -16,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0           
 random_seed                  23            
 master_seed                  0             
-concurrent_tasks             64            
+concurrent_tasks             32            
 ============================ ==============
 
 Input files

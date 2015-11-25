@@ -35,6 +35,7 @@ class ReportWriter(object):
         self.dstore = dstore
         self.oq = oq = OqParam.from_(dstore.attrs)
         self.text = oq.description + '\n' + '=' * len(oq.description)
+        self.text += '\n\nnum_sites = %d' % len(dstore['sitemesh'])
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""

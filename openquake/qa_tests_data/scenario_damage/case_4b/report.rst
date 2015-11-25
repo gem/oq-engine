@@ -1,6 +1,8 @@
 scenario hazard
 ===============
 
+num_sites = 7
+
 Parameters
 ----------
 ============================ ========
@@ -16,7 +18,7 @@ width_of_mfd_bin             None
 area_source_discretization   None    
 random_seed                  42      
 master_seed                  0       
-concurrent_tasks             64      
+concurrent_tasks             32      
 ============================ ========
 
 Input files
@@ -43,7 +45,6 @@ Exposure model
 --------------
 =========== =
 #assets     7
-#sites      7
 #taxonomies 3
 =========== =
 

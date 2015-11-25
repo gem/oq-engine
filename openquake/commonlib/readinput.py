@@ -506,8 +506,8 @@ def get_composite_source_model(
     csm = source.CompositeSourceModel(source_model_lt, smodels)
     if sitecol is not None and hasattr(processor, 'process'):
         seqtime, partime = processor.process(csm, no_distribute)
-        monitor.write(['fast sources filtering/splitting', str(seqtime), '0'])
-        monitor.write(['slow sources filtering/splitting', str(partime), '0'])
+        logging.info('fast sources filtering/splitting: %s', seqtime)
+        logging.info('slow sources filtering/splitting: %s', partime)
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away')
     csm.count_ruptures()

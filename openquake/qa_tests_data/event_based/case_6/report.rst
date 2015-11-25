@@ -1,6 +1,8 @@
 Event-based PSHA producing hazard curves only
 =============================================
 
+num_sites = 1
+
 Parameters
 ----------
 ============================ ===========
@@ -16,7 +18,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   20.0       
 random_seed                  23         
 master_seed                  0          
-concurrent_tasks             64         
+concurrent_tasks             32         
 ============================ ===========
 
 Input files
@@ -73,7 +75,7 @@ Collections Realizations
 Expected data transfer for the sources
 --------------------------------------
 ================================== =========
-Number of tasks to generate        62       
-Estimated sources to send          246.61 KB
-Estimated hazard curves to receive 7 KB     
+Number of tasks to generate        34       
+Estimated sources to send          189.74 KB
+Estimated hazard curves to receive 3 KB     
 ================================== =========

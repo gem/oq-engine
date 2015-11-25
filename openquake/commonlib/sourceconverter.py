@@ -121,9 +121,6 @@ def split_fault_source(src):
     # take advantage of the multiple cores; if you split too much,
     # the data transfer will kill you, i.e. multiprocessing/celery
     # will fail to transmit to the workers the generated sources.
-    # Heere I (MS) have set MAX_RUPTURE_SPLITTING to 100, meaning that
-    # at worse the data transfer will increase by a factor of 100 and at
-    # most 100 cores will be used for a source of large enough magnitude
     for s in split_fault_source_by_magnitude(src):
         if s.mfd.min_mag < MAGNITUDE_FOR_RUPTURE_SPLITTING:
             yield s  # don't split, there would too many ruptures
@@ -131,7 +128,7 @@ def split_fault_source(src):
             # split on SingleRuptureSources
             for i, rupture in enumerate(s.iter_ruptures()):
                 yield SingleRuptureSource(
-                    rupture, '%s,%s' % (s.source_id, i),
+                    rupture, '%s-%s' % (s.source_id, i),
                     s.tectonic_region_type, s.trt_model_id)
 
 

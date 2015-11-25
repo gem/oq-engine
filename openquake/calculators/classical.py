@@ -132,6 +132,7 @@ class ClassicalCalculator(base.HazardCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
+        monitor.flush()  # this is needed for the sequential case
         if self.persistent:
             store_source_chunks(self.datastore)
         return curves_by_trt_gsim

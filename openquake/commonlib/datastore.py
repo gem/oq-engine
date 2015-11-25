@@ -32,6 +32,7 @@ except ImportError:
             raise ImportError('Could not import h5py.%s' % name)
     h5py = mock_h5py()
 
+from openquake.baselib.hdf5 import Hdf5Dataset
 from openquake.baselib.general import CallableDict
 from openquake.commonlib.writers import write_csv
 
@@ -52,7 +53,7 @@ def get_nbytes(dset):
         return dset.attrs['nbytes']
     elif hasattr(dset, 'value'):
         # else extract nbytes from the underlying array
-        return dset.value.nbytes
+        return dset.size * numpy.zeros(1, dset.dtype).nbytes
 
 
 class ByteCounter(object):
@@ -104,49 +105,6 @@ def get_last_calc_id(datadir):
     return calcs[-1]
 
 
-class Hdf5Dataset(object):
-    """
-    Little wrapper around a one-dimensional HDF5 dataset.
-
-    :param hdf5: a h5py.File object
-    :param key: an hdf5 key string
-    :param dtype: dtype of the dataset (usually composite)
-    :param shape: shape of the dataset (if None, the dataset is extendable)
-    :param compression: None or 'gzip' are recommended
-    """
-    def __init__(self, hdf5, key, dtype, shape, compression=None):
-        self.hdf5 = hdf5
-        self.key = key
-        self.dtype = dtype
-        if shape is None:  # extendable dataset
-            self.dset = self.hdf5.create_dataset(
-                key, (0,), dtype, chunks=True, maxshape=(None,))
-            self.size = 0
-            self.dset.attrs['nbytes'] = 0
-        else:  # fixed-shape dataset
-            if isinstance(shape, tuple):
-                n = numpy.prod(shape)
-            else:  # integer shape
-                n = shape
-                shape = (n,)
-            self.dset = self.hdf5.create_dataset(key, shape, dtype)
-            self.size = n
-            self.dset.attrs['nbytes'] = n * numpy.zeros(1, dtype).nbytes
-        self.attrs = self.dset.attrs
-
-    def extend(self, array):
-        """
-        Extend the dataset with the given array, which must have
-        the expected dtype. This method will give an error if used
-        with a fixed-shape dataset.
-        """
-        newsize = self.size + len(array)
-        self.dset.resize((newsize,))
-        self.dset[self.size:newsize] = array
-        self.size = newsize
-        self.dset.attrs['nbytes'] += array.nbytes
-
-
 class DataStore(collections.MutableMapping):
     """
     DataStore class to store the inputs/outputs of each calculation on the
@@ -164,7 +122,7 @@ class DataStore(collections.MutableMapping):
     items will be ordered lexicographically according to their name.
     """
     def __init__(self, calc_id=None, datadir=DATADIR, parent=(),
-                 export_dir='.', params=()):
+                 export_dir='.', params=(), mode=None):
         if not os.path.exists(datadir):
             os.makedirs(datadir)
         if calc_id is None:  # use a new datastore
@@ -183,7 +141,7 @@ class DataStore(collections.MutableMapping):
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         self.export_dir = export_dir
         self.hdf5path = self.calc_dir + '.hdf5'
-        mode = 'r+' if os.path.exists(self.hdf5path) else 'w'
+        mode = mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
         self.hdf5 = h5py.File(self.hdf5path, mode, libver='latest')
         self.attrs = self.hdf5.attrs
         for name, value in params:
@@ -212,7 +170,7 @@ class DataStore(collections.MutableMapping):
         :param dtype: dtype of the dataset (usually composite)
         :param size: size of the dataset (if None, the dataset is extendable)
         """
-        return Hdf5Dataset(self.hdf5, key, dtype, size, compression)
+        return Hdf5Dataset.create(self.hdf5, key, dtype, size, compression)
 
     def export_path(self, relname, export_dir=None):
         """
@@ -316,6 +274,8 @@ class DataStore(collections.MutableMapping):
         del self.hdf5[key]
 
     def __iter__(self):
+        if not self.hdf5:
+            raise RuntimeError('%s is closed' % self)
         for path in sorted(self.hdf5):
             yield path
 

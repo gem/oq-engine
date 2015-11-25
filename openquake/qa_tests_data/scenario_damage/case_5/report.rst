@@ -1,6 +1,8 @@
 Calculation of the ground motion fields for a scenario
 ======================================================
 
+num_sites = 11
+
 Parameters
 ----------
 ============================ ========
@@ -16,7 +18,7 @@ width_of_mfd_bin             None
 area_source_discretization   None    
 random_seed                  3       
 master_seed                  0       
-concurrent_tasks             64      
+concurrent_tasks             32      
 ============================ ========
 
 Input files
@@ -41,7 +43,6 @@ Exposure model
 --------------
 =========== ==
 #assets     11
-#sites      11
 #taxonomies 4 
 =========== ==
 
