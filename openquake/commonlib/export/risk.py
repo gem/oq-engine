@@ -148,7 +148,7 @@ def compactify(array):
     """
     if array.shape[-1] != 2:
         raise ValueError('You can only compactify an array which last '
-                         'dimension is 2, got shape %s' % array.shape)
+                         'dimension is 2, got shape %s' % str(array.shape))
     dtype = array.dtype
     pairs = []
     for name in dtype.names:
@@ -531,6 +531,7 @@ class Location(object):
         self.wkt = 'POINT(%s %s)' % tuple(xy)
 
 
+# used by event_based_risk and classical_risk
 @export.add(('loss_maps-rlzs', 'xml'), ('loss_maps-rlzs', 'geojson'))
 def export_loss_maps_xml_geojson(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
@@ -759,11 +760,13 @@ def export_agg_curve(ekey, dstore):
     agg_curve = dstore[ekey[0]]
     loss_types = dstore['riskmodel'].loss_types
     fnames = []
-    for writer, (loss_type, r, ins) in _gen_writers(
+    for writer, (loss_type, r, insflag) in _gen_writers(
             dstore, risk_writers.AggregateLossCurveXMLWriter, ekey[0]):
+        ins = '_ins' if insflag else ''
         l = loss_types.index(loss_type)
-        rec = agg_curve[l, r, ins]
-        curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
+        rec = agg_curve[l, r]
+        curve = AggCurve(rec['losses' + ins], rec['poes' + ins],
+                         rec['avg' + ins], None)
         writer.serialize(curve)
         fnames.append(writer._dest)
     return sorted(fnames)
@@ -774,10 +777,12 @@ def export_agg_curve(ekey, dstore):
 def export_agg_curve_stats(ekey, dstore):
     agg_curve = dstore[ekey[0]]
     fnames = []
-    for writer, (loss_type, statname, ins) in _gen_writers(
+    for writer, (loss_type, statname, insflag) in _gen_writers(
             dstore, risk_writers.AggregateLossCurveXMLWriter, ekey[0]):
-        rec = agg_curve[loss_type][statname][ins]
-        curve = AggCurve(rec['losses'], rec['poes'], rec['avg'], None)
+        ins = '_ins' if insflag else ''
+        rec, = agg_curve[loss_type][statname]  # there is a single record
+        curve = AggCurve(rec['losses' + ins], rec['poes' + ins],
+                         rec['avg' + ins], None)
         writer.serialize(curve)
         fnames.append(writer._dest)
     return sorted(fnames)

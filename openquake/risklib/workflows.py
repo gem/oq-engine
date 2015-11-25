@@ -207,7 +207,7 @@ def get_values(loss_type, assets, time_event=None):
 
 
 class List(list):
-    """List subclass to which you can add attribute"""
+    """List subclass to which you can add attributes"""
     # this is ugly, but we already did that, and there is no other easy way
 
 
@@ -222,6 +222,8 @@ def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
     Yield lists out_by_rlz
     """
     out_by_rlz = List()
+    out_by_rlz.loss_type = loss_type
+    out_by_rlz.assets = assets
     # extract the realizations from the first asset
     for rlz in sorted(hazards[0]):
         hazs = [haz[rlz] for haz in hazards]  # hazard per each asset
@@ -414,7 +416,8 @@ class Classical(Workflow):
             average_insured_losses=average_insured_losses,
             loss_maps=maps, loss_fractions=fractions)
 
-    def statistics(self, all_outputs, quantiles):
+    # FIXME: remove this after removal of the old calculator
+    def statistics(self, all_outputs, quantiles=()):
         """
         :param quantiles:
             quantile levels used to compute quantile outputs
