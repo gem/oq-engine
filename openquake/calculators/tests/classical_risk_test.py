@@ -10,7 +10,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_1(self):
-        raise unittest.SkipTest
+        out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='xml')
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_2(self):
