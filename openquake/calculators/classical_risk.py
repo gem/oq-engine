@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import general
 from openquake.risklib import workflows, riskinput
-from openquake.commonlib import readinput, parallel, datastore
+from openquake.commonlib import readinput, parallel, datastore, logictree
 from openquake.calculators import base
 
 
@@ -69,20 +69,22 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         """
         Associate the assets to the sites and build the riskinputs.
         """
-        super(ClassicalRiskCalculator, self).pre_execute()
-        hazard_from_csv = 'hazard_curves' in self.oqparam.inputs
-        if hazard_from_csv:
-            self.sitecol, hcurves_by_imt = readinput.get_sitecol_hcurves(
-                self.oqparam)
-            self.sitecol, self.assets_by_site = \
-                self.assoc_assets_sites(self.sitecol)
-
-        logging.info('Preparing the risk input')
-        curves_by_trt_gsim = {}
-        for dset in self.datastore['curves_by_sm'].values():
-            for key, curves in dset.items():
-                trt_id, gsim = key.split('-')
-                curves_by_trt_gsim[int(trt_id), gsim] = curves.value
+        if 'hazard_curves' in self.oqparam.inputs:  # read hazard from file
+            haz_sitecol, haz_curves = readinput.get_hcurves(self.oqparam)
+            self.read_exposure()  # define .assets_by_site
+            self.sitecol, self.assets_by_site = self.assoc_assets_sites(
+                haz_sitecol)
+            curves_by_trt_gsim = {(0, 'FromFile'): haz_curves}
+            self.read_riskmodel()
+            self.rlzs_assoc = logictree.fake_rlzs_assoc()
+        else:  # compute hazard
+            super(ClassicalRiskCalculator, self).pre_execute()
+            logging.info('Preparing the risk input')
+            curves_by_trt_gsim = {}
+            for dset in self.datastore['curves_by_sm'].values():
+                for key, curves in dset.items():
+                    trt_id, gsim = key.split('-')
+                    curves_by_trt_gsim[int(trt_id), gsim] = curves.value
         self.riskinputs = self.build_riskinputs(curves_by_trt_gsim)
 
     def post_execute(self, result):

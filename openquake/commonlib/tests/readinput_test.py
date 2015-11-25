@@ -731,10 +731,10 @@ class TestLoadCurvesTestCase(unittest.TestCase):
 </nrml>
 ''', suffix='.xml')
         oqparam = mock.Mock()
-        oqparam.inputs = dict(hcurves=fname)
-        mesh, imtls, hcurves = readinput.get_hcurves(oqparam)
-        self.assertEqual(len(mesh), 2)
-        self.assertEqual(imtls.items(),
+        oqparam.inputs = dict(hazard_curves=fname)
+        sitecol, hcurves = readinput.get_hcurves(oqparam)
+        self.assertEqual(len(sitecol), 2)
+        self.assertEqual(sorted(oqparam.hazard_imtls.items()),
                          [('PGA', [0.005, 0.007, 0.0137, 0.0337]),
                           ('SA(0.025)', [0.005, 0.007, 0.0137])])
         self.assertEqual(str(hcurves), '''\
