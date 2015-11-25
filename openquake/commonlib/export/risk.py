@@ -278,12 +278,15 @@ def export_avglosses_csv(ekey, dstore):
 
 
 @export.add(('loss_curves-rlzs', 'csv'))
-def export_ebr_curves(ekey, dstore):
+def export_loss_curves(ekey, dstore):
+    oq = OqParam.from_(dstore.attrs)
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets_sites(dstore)
-    curves = compactify(dstore[ekey[0]].value)
+    curves = dstore[ekey[0]].value
+    name = ekey[0].split('-')[0]
     paths = []
-    name = ekey[0].split('-')[0]  # rcurves, rmaps
+    if oq.calculation_mode == 'event_based_risk':
+        curves = compactify(curves)  # else classical_risk
     for rlz in rlzs:
         array = compose_arrays(assets, curves[:, rlz.ordinal])
         path = dstore.export_path('%s-%s.csv' % (name, rlz.uid))
@@ -721,6 +724,17 @@ AggCurve = collections.namedtuple(
     'AggCurve', ['losses', 'poes', 'average_loss', 'stddev_loss'])
 
 
+def get_paths(rlz):
+    dic = {}
+    if hasattr(rlz, 'sm_lt_path'):
+        dic['source_model_tree_path'] = '_'.join(rlz.sm_lt_path)
+        dic['gsim_tree_path'] = '_'.join(rlz.sm_lt_path)
+    else:
+        dic['source_model_tree_path'] = ''
+        dic['gsim_tree_path'] = '_'.join(rlz.lt_path)
+    return dic
+
+
 def _gen_writers(dstore, writercls, root):
     # build XMLWriter instances
     oq = OqParam.from_(dstore.attrs)
@@ -738,9 +752,8 @@ def _gen_writers(dstore, writercls, root):
                         root[:-5], suffix, '_ins' if ins else ''))
                     yield writercls(
                         dest, oq.investigation_time, loss_type,
-                        source_model_tree_path='_'.join(rlz.sm_lt_path),
-                        gsim_tree_path='_'.join(rlz.gsim_lt_path),
-                        unit=ct['unit']), (loss_type, rlz.ordinal, ins)
+                        unit=ct['unit'], **get_paths(rlz)), (
+                            loss_type, rlz.ordinal, ins)
             elif root.endswith('-stats'):
                 pairs = [('mean', None)] + [
                     ('quantile-%s' % q, q) for q in oq.quantile_loss_curves]
@@ -821,9 +834,9 @@ def export_loss_curves_stats(ekey, dstore):
 
 
 # this is used by event_based_risk
-@export.add(('loss_curves-rlzs', 'xml'),
-            ('loss_curves-rlzs', 'geojson'))
-def export_loss_curves_rlzs(ekey, dstore):
+@export.add(('rcurves-rlzs', 'xml'),
+            ('rcurves-rlzs', 'geojson'))
+def export_rcurves_rlzs(ekey, dstore):
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
     rcurves = dstore['loss_curves-rlzs']
@@ -845,6 +858,36 @@ def export_loss_curves_rlzs(ekey, dstore):
             loc = Location(sitemesh[ass['site_id']])
             losses = cb.ratios * ass[cb.loss_type]
             avg = scientific.average_loss((losses, poes))
+            curve = LossCurve(loc, ass['asset_ref'], poes,
+                              losses, loss_ratios, avg, None)
+            curves.append(curve)
+        writer.serialize(curves)
+        fnames.append(writer._dest)
+    return sorted(fnames)
+
+
+# this is used by classical_risk
+@export.add(('loss_curves-rlzs', 'xml'),
+            ('loss_curves-rlzs', 'geojson'))
+def export_loss_curves_rlzs(ekey, dstore):
+    assetcol = dstore['assetcol']
+    sitemesh = dstore['sitemesh']
+    lti = dstore['riskmodel'].lti
+    loss_curves = dstore['loss_curves-rlzs']
+    fnames = []
+    writercls = (risk_writers.LossCurveGeoJSONWriter
+                 if ekey[0] == 'geojson' else
+                 risk_writers.LossCurveXMLWriter)
+    for writer, (lt, r, insflag) in _gen_writers(dstore, writercls, ekey[0]):
+        ins = '_ins' if insflag else ''
+        array = loss_curves[lti[lt], r]
+        curves = []
+        for ass, data in zip(assetcol, array):
+            loc = Location(sitemesh[ass['site_id']])
+            losses = data['losses' + ins]
+            poes = data['poes' + ins]
+            avg = data['avg' + ins]
+            loss_ratios = losses / assetcol[lt]
             curve = LossCurve(loc, ass['asset_ref'], poes,
                               losses, loss_ratios, avg, None)
             curves.append(curve)

@@ -120,7 +120,7 @@ def trivial_rlzs_assoc():
     reading the hazard from a file.
     """
     fake_rlz = Realization(
-        value=('FromFile',), weight=1, lt_path=('',), ordinal=0, lt_uid=('*',))
+        value=('FromFile',), weight=1, lt_path=('',), ordinal=0, lt_uid=('@',))
     return RlzsAssoc([fake_rlz])
 
 
