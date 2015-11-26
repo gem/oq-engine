@@ -626,8 +626,8 @@ def get_risk_model(oqparam):
     taxonomies = set()
     curve_resolution = {}  # wf -> C
     for imt_taxo, workflow in wfs.items():
-        if hasattr(workflow, 'get_mean_loss_ratios'):
-            curve_resolution[imt_taxo] = len(workflow.get_mean_loss_ratios())
+        if hasattr(workflow, 'get_num_loss_ratios'):
+            curve_resolution[imt_taxo] = workflow.get_num_loss_ratios()
         taxonomies.add(imt_taxo[1])
         workflow.riskmodel = riskmodel
         # save the number of nonzero coefficients of variation

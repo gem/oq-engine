@@ -379,18 +379,18 @@ class Classical(Workflow):
         self.poes_disagg = poes_disagg
         self.insured_losses = insured_losses
 
-    def get_mean_loss_ratios(self):
+    def get_num_loss_ratios(self):
         """
         Return the mean loss ratios by looking at all the vulnerability
         functions. Raise a ValueError if the loss ratios are not all equal.
         """
-        mean_loss_ratios = [
-            tuple(vf.mean_loss_ratios_with_steps(self.lrem_steps_per_interval))
+        num_loss_ratios = [
+            len(vf.mean_loss_ratios_with_steps(self.lrem_steps_per_interval))
             for vf in self.risk_functions.values()]
-        if len(set(mean_loss_ratios)) > 1:
-            raise ValueError('Inconsistent mean loss ratios in %s' %
+        if len(set(num_loss_ratios)) > 1:
+            raise ValueError('Inconsistent num loss ratios in %s' %
                              self.risk_functions)
-        return mean_loss_ratios[0]
+        return num_loss_ratios[0]
 
     def __call__(self, loss_type, assets, hazard_curves, _epsilons=None,
                  _tags=None):
