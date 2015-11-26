@@ -68,12 +68,12 @@ def build_agg_curve(r_data, insured_losses, ses_ratio, curve_resolution,
             result[l, r, 'poes'] = poes
             result[l, r, 'avg'] = avg
             if insured_losses:
-                losses, poes = scientific.event_based(
+                losses_ins, poes_ins = scientific.event_based(
                     data['loss'][:, l, 1], ses_ratio, curve_resolution)
-                avg = scientific.average_loss((losses, poes))
-                result[l, r, 'losses_ins'] = losses
-                result[l, r, 'poes_ins'] = poes
-                result[l, r, 'avg_ins'] = avg
+                avg_ins = scientific.average_loss((losses_ins, poes_ins))
+                result[l, r, 'losses_ins'] = losses_ins
+                result[l, r, 'poes_ins'] = poes_ins
+                result[l, r, 'avg_ins'] = avg_ins
     return result
 
 
