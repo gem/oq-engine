@@ -637,7 +637,8 @@ def get_risk_model(oqparam):
         raise ValueError(
             'Inconsistent mean loss ratios:\n%s' % '\n'.join(lines))
     riskmodel.taxonomies = sorted(taxonomies)
-    riskmodel.curve_resolution = curve_resolution[imt_taxo]
+    if curve_resolution:  # defined only for classical_risk
+        riskmodel.curve_resolution = curve_resolution[imt_taxo]
     return riskmodel
 
 # ########################### exposure ############################ #
