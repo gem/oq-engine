@@ -305,7 +305,7 @@ def export_loss_curves(ekey, dstore):
         for l, ltype in enumerate(loss_types):
             array = compose_arrays(assets, curves[:, l, rlz.ordinal])
             path = dstore.export_path('%s-%s-%s.csv' % (name, ltype, rlz.uid))
-            writers.write_csv(path, array, fmt='%9.7E')
+            writers.write_csv(path, sorted(array), fmt='%9.7E')
             paths.append(path)
     return paths
 
