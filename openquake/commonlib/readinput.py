@@ -591,7 +591,8 @@ def get_risk_model(oqparam):
 
     if oqparam.calculation_mode not in workflows.registry:
         # classical calculator: the riskmodel must be left empty
-        pass
+        riskmodel.taxonomies = []
+        return riskmodel
     elif oqparam.calculation_mode.endswith('_damage'):
         # scenario damage calculator
         riskmodel.damage_states = ['no_damage'] + oqparam.limit_states
