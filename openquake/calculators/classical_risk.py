@@ -112,10 +112,10 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         if 'hazard_curves' in self.oqparam.inputs:  # read hazard from file
             haz_sitecol, haz_curves = readinput.get_hcurves(self.oqparam)
             self.read_exposure()  # define .assets_by_site
+            self.read_riskmodel()
             self.sitecol, self.assets_by_site = self.assoc_assets_sites(
                 haz_sitecol)
             curves_by_trt_gsim = {(0, 'FromFile'): haz_curves}
-            self.read_riskmodel()
             self.rlzs_assoc = logictree.trivial_rlzs_assoc()
             self.save_mesh()
         else:  # compute hazard
@@ -135,7 +135,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         """
         Save the losses in a compact form.
         """
-        C = len(result['loss_curves'][0][3][1])  # len of losses
+        C = self.riskmodel.curve_resolution
         N = sum(len(assets) for assets in self.assets_by_site)
         L = len(self.riskmodel.loss_types)
         R = len(self.rlzs_assoc.realizations)

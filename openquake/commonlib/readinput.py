@@ -589,7 +589,10 @@ def get_risk_model(oqparam):
     wfs = {}  # (imt, taxonomy) -> workflow
     riskmodel = riskinput.RiskModel(wfs)
 
-    if oqparam.calculation_mode.endswith('_damage'):
+    if oqparam.calculation_mode not in workflows.registry:
+        # classical calculator: the riskmodel must be left empty
+        pass
+    elif oqparam.calculation_mode.endswith('_damage'):
         # scenario damage calculator
         riskmodel.damage_states = ['no_damage'] + oqparam.limit_states
         delattr(oqparam, 'limit_states')
