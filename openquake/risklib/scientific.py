@@ -1134,8 +1134,8 @@ def classical_damage(
         frequency_of_exceedence_per_damage_state = numpy.dot(
             annual_frequency_of_occurrence, list(map(ff, imls)))
         poe_per_damage_state = 1. - numpy.exp(
-            - frequency_of_exceedence_per_damage_state
-            * risk_investigation_time)
+            - frequency_of_exceedence_per_damage_state *
+            risk_investigation_time)
         poes_per_damage_state.append(poe_per_damage_state)
     poos = pairwise_diff([1] + poes_per_damage_state + [0])
     return poos

@@ -22,13 +22,16 @@ class ClassicalRiskTestCase(CalculatorTestCase):
     def test_case_3(self):
         out = self.run_calc(case_3.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
-        [fname] = out['avg_losses-rlzs', 'csv']
-        self.assertEqualFiles('expected/rlz-000-avg_loss.csv', fname)
+        [fname] = out['loss_curves-rlzs', 'csv']
+        self.assertEqualFiles('expected/loss_curves-000.csv', fname)
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
-        fnames = out['avg_losses-rlzs', 'csv']
-        self.assertEqualFiles('expected/rlz-000-avg_loss.csv', fnames[0])
-        self.assertEqualFiles('expected/rlz-001-avg_loss.csv', fnames[1])
+        fnames = out['loss_curves-rlzs', 'csv']
+        self.assertEqualFiles('expected/loss_curves-000.csv', fnames[0])
+        self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
+
+    # TODO: tests with more than a loss type
+    # tests with more than one pair IMT, taxo

@@ -42,8 +42,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         ekeys = [
             ('loss_curves-stats', 'xml'),
             ('loss_curves-stats', 'geojson'),
-            ('loss_curves-rlzs', 'xml'),
-            ('loss_curves-rlzs', 'geojson'),
+            ('rcurves-rlzs', 'xml'),
+            ('rcurves-rlzs', 'geojson'),
 
             ('loss_maps-stats', 'xml'),
             ('loss_maps-stats', 'geojson'),

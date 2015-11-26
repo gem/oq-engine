@@ -277,21 +277,36 @@ def export_avglosses_csv(ekey, dstore):
     return [out.path for out in outs]
 
 
-@export.add(('loss_curves-rlzs', 'csv'))
-def export_loss_curves(ekey, dstore):
-    oq = OqParam.from_(dstore.attrs)
+@export.add(('rcurves-rlzs', 'csv'))
+def export_rcurves(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets_sites(dstore)
-    curves = dstore[ekey[0]].value
+    curves = compactify(dstore[ekey[0]].value)
     name = ekey[0].split('-')[0]
     paths = []
-    if oq.calculation_mode == 'event_based_risk':
-        curves = compactify(curves)  # else classical_risk
     for rlz in rlzs:
         array = compose_arrays(assets, curves[:, rlz.ordinal])
         path = dstore.export_path('%s-%s.csv' % (name, rlz.uid))
         writers.write_csv(path, array, fmt='%9.7E')
         paths.append(path)
+    return paths
+
+
+# this is used by classical_risk
+@export.add(('loss_curves-rlzs', 'csv'))
+def export_loss_curves(ekey, dstore):
+    rlzs = dstore['rlzs_assoc'].realizations
+    loss_types = dstore['riskmodel'].loss_types
+    assets = get_assets_sites(dstore)
+    curves = dstore[ekey[0]].value
+    name = ekey[0].split('-')[0]
+    paths = []
+    for rlz in rlzs:
+        for l, ltype in enumerate(loss_types):
+            array = compose_arrays(assets, curves[:, l, rlz.ordinal])
+            path = dstore.export_path('%s-%s-%s.csv' % (name, ltype, rlz.uid))
+            writers.write_csv(path, array, fmt='%9.7E')
+            paths.append(path)
     return paths
 
 
@@ -839,7 +854,7 @@ def export_loss_curves_stats(ekey, dstore):
 def export_rcurves_rlzs(ekey, dstore):
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
-    rcurves = dstore['loss_curves-rlzs']
+    rcurves = dstore[ekey[0]]
     cbuilders = dstore['riskmodel'].curve_builders
     fnames = []
     writercls = (risk_writers.LossCurveGeoJSONWriter
@@ -873,7 +888,7 @@ def export_loss_curves_rlzs(ekey, dstore):
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
     lti = dstore['riskmodel'].lti
-    loss_curves = dstore['loss_curves-rlzs']
+    loss_curves = dstore[ekey[0]]
     fnames = []
     writercls = (risk_writers.LossCurveGeoJSONWriter
                  if ekey[0] == 'geojson' else

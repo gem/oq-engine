@@ -45,7 +45,9 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     lti = riskmodel.lti
     oq = monitor.oqparam
     ins = oq.insured_losses
-    result = dict(loss_curves=[], loss_maps=[], loss_fractions=[])
+    result = dict(loss_curves=[], loss_maps=[], loss_fractions=[],
+                  stat_curves=[], stat_maps=[],
+                  stat_curves_ins=[], stat_maps_ins=[])
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         l = lti[out_by_rlz.loss_type]
         values = workflows.get_values(out_by_rlz.loss_type, out_by_rlz.assets)
@@ -67,22 +69,29 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                 else:
                     lcurve += (None, None, None)
                 result['loss_curves'].append((l, r, aid, lcurve))
-                result['loss_maps'].append((l, r, aid, out.loss_maps[i]))
-                if len(out.loss_fractions):
+                result['loss_maps'].append((l, r, aid, out.loss_maps[:, i]))
+                # shape (P, N)
+                if len(out.loss_fractions):  # shape (D, N)
                     result['loss_fractions'].append(
-                        (l, r, aid, out.loss_fractions[i]))
+                        (l, r, aid, out.loss_fractions[:, i]))
 
         # compute statistics
         if len(out_by_rlz) > 1:
             statsbuilder = scientific.StatsBuilder(
                 oq.quantile_loss_curves,
-                oq.conditional_loss_poes, oq.poes_disagg)
+                oq.conditional_loss_poes, oq.poes_disagg,
+                riskmodel.curve_resolution)
             stats = statsbuilder.build(out_by_rlz)
             stat_curves, stat_maps = statsbuilder.get_curves_maps(stats)
             for asset, stat_curve, stat_map in zip(
-                    out_by_rlz.assets, stat_curves, stat_maps):
+                    out_by_rlz.assets, stat_curves[0], stat_maps[0]):
                 result['stat_curves'].append((l, asset.idx, stat_curve))
                 result['stat_maps'].append((l, asset.idx, stat_map))
+            if ins:
+                for ass, stat_curve, stat_map in zip(
+                        out_by_rlz.assets, stat_curves[1], stat_maps[1]):
+                    result['stat_curves_ins'].append((l, ass.idx, stat_curve))
+                    result['stat_maps_ins'].append((l, ass.idx, stat_map))
 
     return result
 
