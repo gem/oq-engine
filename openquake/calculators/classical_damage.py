@@ -66,8 +66,8 @@ class ClassicalDamageCalculator(base.RiskCalculator):
         """
         super(ClassicalDamageCalculator, self).pre_execute()
 
-        logging.info('Reading hazard curves from CSV')
-        sites, hcurves_by_imt = readinput.get_sitecol_hcurves(self.oqparam)
+        logging.info('Reading hazard curves from file')
+        sites, hcurves_by_imt = readinput.get_hcurves(self.oqparam)
 
         with self.monitor('assoc_assets_sites'):
             sitecol, assets_by_site = self.assoc_assets_sites(sites)

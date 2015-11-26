@@ -260,6 +260,21 @@ class HazardCalculator(BaseCalculator):
             self.read_sources()
         self.datastore.hdf5.flush()
 
+    def read_exposure(self):
+        """
+        Read the exposure and update the attributes .exposure, .sitecol,
+        .assets_by_site, .cost_types, .taxonomies
+        """
+        logging.info('Reading the exposure')
+        with self.monitor('reading exposure', autoflush=True):
+            self.exposure = readinput.get_exposure(self.oqparam)
+            self.sitecol, self.assets_by_site = (
+                readinput.get_sitecol_assets(self.oqparam, self.exposure))
+            if len(self.exposure.cost_types):
+                self.cost_types = self.exposure.cost_types
+            self.taxonomies = numpy.array(
+                sorted(self.exposure.taxonomies), '|S100')
+
     def read_exposure_sitecol(self):
         """
         Read the exposure (if any) and then the site collection, possibly
@@ -270,15 +285,7 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(self.oqparam)
         inputs = self.oqparam.inputs
         if 'exposure' in inputs:
-            logging.info('Reading the exposure')
-            with self.monitor('reading exposure', autoflush=True):
-                self.exposure = readinput.get_exposure(self.oqparam)
-                self.sitecol, self.assets_by_site = (
-                    readinput.get_sitecol_assets(self.oqparam, self.exposure))
-                if len(self.exposure.cost_types):
-                    self.cost_types = self.exposure.cost_types
-                self.taxonomies = numpy.array(
-                    sorted(self.exposure.taxonomies), '|S100')
+            self.read_exposure()
             num_assets = self.count_assets()
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
@@ -424,9 +431,15 @@ class RiskCalculator(HazardCalculator):
 
     def pre_execute(self):
         """
-        Set the attributes .riskmodel, .sitecol, .assets_by_site
+        Perform hazard pre_execute and read the riskmodel
         """
         HazardCalculator.pre_execute(self)
+        self.read_riskmodel()
+
+    def read_riskmodel(self):
+        """
+        Check the taxonomies and set the attribute .riskmodel
+        """
         self.riskmodel = readinput.get_risk_model(self.oqparam)
         if hasattr(self, 'exposure'):
             missing = self.exposure.taxonomies - set(self.riskmodel.taxonomies)
@@ -472,10 +485,7 @@ def get_gmfs(calc):
             gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
 
         logging.info('Preparing the risk input')
-        fake_rlz = logictree.Realization(
-            value=('FromFile',), weight=1, lt_path=('',),
-            ordinal=0, lt_uid=('*',))
-        calc.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
+        calc.rlzs_assoc = logictree.trivial_rlzs_assoc()
         return sitecol, {(0, 'FromFile'): gmfs_by_imt}
 
     # else from rupture
