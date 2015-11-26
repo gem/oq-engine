@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Ported the --load-curve functionality from the engine to oq-lite
+  * Fully ported the classical_risk calculator to oq-lite
+  * Fixed the check for missing taxonomies in the risk model
   * Added `--profile` flag to oq-lite run
   * The performance info has been moved fully in the datastore
   * Saved one loss table per realization in the datastore

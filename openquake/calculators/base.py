@@ -255,10 +255,10 @@ class HazardCalculator(BaseCalculator):
                 self.datastore.set_parent(datastore.DataStore(precalc_id))
                 # update oqparam with the attributes saved in the datastore
                 self.oqparam = OqParam.from_(self.datastore.attrs)
-                self.read_exposure_sitecol()
+                self.read_risk_data()
 
         else:  # we are in a basic calculator
-            self.read_exposure_sitecol()
+            self.read_risk_data()
             self.read_sources()
         self.datastore.hdf5.flush()
 
@@ -288,10 +288,10 @@ class HazardCalculator(BaseCalculator):
             raise RuntimeError('The exposure contains the taxonomies %s '
                                'which are not in the risk model' % missing)
 
-    def read_exposure_sitecol(self):
+    def read_risk_data(self):
         """
-        Read the exposure (if any) and then the site collection, possibly
-        extracted from the exposure.
+        Read the exposure (if any), the risk model (if any) and then the
+        site collection, possibly extracted from the exposure.
         """
         logging.info('Reading the site collection')
         with self.monitor('reading site collection', autoflush=True):
@@ -343,7 +343,7 @@ class HazardCalculator(BaseCalculator):
     def read_sources(self):
         """
         Read the composite source model (if any).
-        This method must be called after read_exposure_sitecol, to be able
+        This method must be called after read_risk_data, to be able
         to filter to sources according to the site collection.
         """
         if 'source' in self.oqparam.inputs:

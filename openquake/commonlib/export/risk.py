@@ -740,11 +740,17 @@ AggCurve = collections.namedtuple(
 
 
 def get_paths(rlz):
+    """
+    :param rlz:
+        a logic tree realization (composite or simple)
+    :returns:
+        a dict {'source_model_tree_path': string, 'gsim_tree_path': string}
+    """
     dic = {}
-    if hasattr(rlz, 'sm_lt_path'):
+    if hasattr(rlz, 'sm_lt_path'):  # composite realization
         dic['source_model_tree_path'] = '_'.join(rlz.sm_lt_path)
         dic['gsim_tree_path'] = '_'.join(rlz.sm_lt_path)
-    else:
+    else:  # simple GSIM realization
         dic['source_model_tree_path'] = ''
         dic['gsim_tree_path'] = '_'.join(rlz.lt_path)
     return dic
