@@ -259,3 +259,17 @@ def build_loss_curves(shape, curve_resolution, insured=False):
     if insured:
         lst += [(name + '_ins', pair) for name, pair in lst]
     return numpy.zeros(shape, numpy.dtype(lst))
+
+
+def build_loss_maps(shape, conditional_loss_poes, insured=False):
+    """
+    Returns a zero matrix of loss maps with the appropriate dtype.
+
+    :param shape: the shape of the matrix
+    :param conditional_loss_poes: the conditional loss poes
+    :param insured: flag used to extend the loss map dtype
+    """
+    lst = [('poe~%s' % poe, F32) for poe in conditional_loss_poes]
+    if insured:
+        lst += [(name + '_ins', pair) for name, pair in lst]
+    return numpy.zeros(shape, numpy.dtype(lst))
