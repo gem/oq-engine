@@ -354,11 +354,21 @@ class Classical(Workflow):
                  conditional_loss_poes, poes_disagg,
                  insured_losses=False):
         """
-        :param float poes_disagg:
+        :param imt:
+            Intensity Measure Type for this workflow
+        :param taxonomy:
+            Taxonomy for this workflow
+        :param vulnerability_functions:
+            Dictionary of vulnerability functions by loss type
+        :param hazard_imtls:
+            The intensity measure types and levels of the hazard computation
+        :param lrem_steps_per_interval:
+            Configuration parameter
+        :param poes_disagg:
+            Configuration parameter
+        :param poes_disagg:
             Probability of Exceedance levels used for disaggregate losses by
             taxonomy.
-        :param hazard_imtls:
-            the intensity measure type and levels of the hazard computation
         :param bool insured_losses:
             True if insured loss curves should be computed
 
@@ -381,14 +391,14 @@ class Classical(Workflow):
 
     def get_num_loss_ratios(self):
         """
-        Return the mean loss ratios by looking at all the vulnerability
-        functions. Raise a ValueError if the loss ratios are not all equal.
+        Return the mean loss ratios by looking at the vulnerability functions
+        per loss type. Raise a ValueError if the loss ratios are not all equal.
         """
         num_loss_ratios = [
             len(vf.mean_loss_ratios_with_steps(self.lrem_steps_per_interval))
             for vf in self.risk_functions.values()]
         if len(set(num_loss_ratios)) > 1:
-            raise ValueError('Inconsistent num loss ratios in %s' %
+            raise ValueError('Inconsistent number of loss ratios in %s' %
                              self.risk_functions)
         return num_loss_ratios[0]
 
