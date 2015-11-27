@@ -522,16 +522,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 continue
             sb = scientific.StatsBuilder(
                 oq.quantile_loss_curves, oq.conditional_loss_poes, [],
-                len(cb.ratios), scientific.normalize_curves_eb)
+                len(cb.ratios), scientific.normalize_curves_eb,
+                oq.insured_losses)
             curves, maps = sb.get_curves_maps(stats)
             for i, path in enumerate(stats.paths):
-                # there are paths like
-                # %s-stats/structural/mean
-                # %s-stats/structural/quantile-0.1
-                # ...
-                lcs = numpy.zeros((N, 2), sb.loss_curve_dt)
-                lms = numpy.zeros((N, 2), sb.loss_map_dt)
-                for ins in 0, 1:
+                lcs = numpy.zeros(N, sb.loss_curve_dt)
+                lms = numpy.zeros(N, sb.loss_map_dt)
+                for ins in range(self.I):
                     for aid in range(N):
                         lcs[aid, ins] = curves[ins][i, aid]
                         lms[aid, ins] = maps[ins][i, aid]
