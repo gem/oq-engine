@@ -11,7 +11,6 @@ class ClassicalRiskTestCase(CalculatorTestCase):
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='xml')
         [fname] = out['loss_curves-rlzs', 'xml']
-        import pdb; pdb.set_trace()
         self.assertEqualFiles('expected/loss_curves.xml', fname)
 
     @attr('qa', 'risk', 'classical_risk')
