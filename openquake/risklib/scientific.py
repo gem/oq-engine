@@ -37,8 +37,7 @@ from openquake.baselib.python3compat import with_metaclass
 F32 = numpy.float32
 
 
-def build_loss_dtypes(loss_types, curve_resolution,
-                      conditional_loss_poes, insured=False):
+def build_dtypes(curve_resolution, conditional_loss_poes, insured=False):
     """
     Returns loss_curve_dt and loss_maps_dt
     """
@@ -47,16 +46,11 @@ def build_loss_dtypes(loss_types, curve_resolution,
              ('avg', F32)]
     if insured:
         pairs += [(name + '_ins', pair) for name, pair in pairs]
-    lc_dt = numpy.dtype(pairs)
-    loss_curve_dt = numpy.dtype(
-        [(lt, lc_dt) for lt in loss_types]) if loss_types else lc_dt
-
+    loss_curve_dt = numpy.dtype(pairs)
     lst = [('poe~%s' % poe, F32) for poe in conditional_loss_poes]
     if insured:
         lst += [(name + '_ins', pair) for name, pair in lst]
-    lm_dt = numpy.dtype(lst)
-    loss_maps_dt = numpy.dtype(
-        [(lt, lm_dt) for lt in loss_types]) if loss_types else lm_dt
+    loss_maps_dt = numpy.dtype(lst)
     return loss_curve_dt, loss_maps_dt
 
 
@@ -971,8 +965,8 @@ class CurveBuilder(object):
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
         self.I = insured_losses + 1
-        self.loss_curve_dt, self.loss_maps_dt = build_loss_dtypes(
-            [], C, conditional_loss_poes, insured_losses)
+        self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
+            C, conditional_loss_poes, insured_losses)
 
     def get_counts(self, N, count_dicts):
         """
@@ -1676,8 +1670,8 @@ class StatsBuilder(object):
         for q in quantiles:
             self.mean_quantiles.append('quantile-%s' % q)
 
-        self.loss_curve_dt, self.loss_maps_dt = build_loss_dtypes(
-            [], C, conditional_loss_poes, insured_losses)
+        self.loss_curve_dt, self.loss_maps_dt = build_dtypes(
+            C, conditional_loss_poes, insured_losses)
 
     def normalize(self, loss_curves):
         """
@@ -1792,7 +1786,10 @@ class StatsBuilder(object):
         Q1 = len(self.mean_quantiles)
         N = len(stats.assets)
         curves = numpy.zeros((Q1, N), self.loss_curve_dt)
-        maps = numpy.zeros((Q1, N), self.loss_maps_dt)
+        if self.conditional_loss_poes:
+            maps = numpy.zeros((Q1, N), self.loss_maps_dt)
+        else:
+            maps = []
         poenames = [n for n in self.loss_maps_dt.names
                     if not n.endswith('_ins')]
         for i in range(self.insured_losses + 1):  # insured index
@@ -1808,7 +1805,7 @@ class StatsBuilder(object):
                     curves['poes' + ins][s, aid] = losses_poes[1]
                     curves['avg' + ins][s, aid] = avg
 
-            if stats.conditional_loss_poes:
+            if self.conditional_loss_poes:
                 mq = _combine_mq(stats.mean_maps[i], stats.quantile_maps[i])
                 for aid, maps_ in enumerate(mq):
                     for name, map_ in zip(poenames, maps_):

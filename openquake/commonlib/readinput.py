@@ -624,25 +624,14 @@ def get_risk_model(oqparam):
 
     riskmodel.make_curve_builders(oqparam)
     taxonomies = set()
-    curve_resolution = {}  # wf -> C
     for imt_taxo, workflow in wfs.items():
-        if hasattr(workflow, 'get_num_loss_ratios'):
-            curve_resolution[imt_taxo] = workflow.get_num_loss_ratios()
         taxonomies.add(imt_taxo[1])
         workflow.riskmodel = riskmodel
         # save the number of nonzero coefficients of variation
         for vf in workflow.risk_functions.values():
             if hasattr(vf, 'covs') and vf.covs.any():
                 riskmodel.covs += 1
-    if len(set(curve_resolution.values())) > 1:
-        lines = []
-        for imt_taxo, num_loss_ratios in sorted(curve_resolution.items()):
-            lines.append('%s %s' % (workflow, num_loss_ratios))
-        raise ValueError(
-            'Inconsistent mean loss ratios:\n%s' % '\n'.join(lines))
     riskmodel.taxonomies = sorted(taxonomies)
-    if curve_resolution:  # defined only for classical_risk
-        riskmodel.curve_resolution = curve_resolution[imt_taxo]
     return riskmodel
 
 # ########################### exposure ############################ #

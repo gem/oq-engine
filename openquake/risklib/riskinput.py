@@ -29,6 +29,8 @@ from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.commonlib import riskmodels
 from openquake.risklib import scientific
 
+F32 = numpy.float32
+
 
 def sorted_assets(assets_by_site):
     """
@@ -129,25 +131,95 @@ class RiskModel(collections.Mapping):
         """
         return numpy.dtype([(lt, dtype) for lt in self.loss_types])
 
+    def build_loss_dtypes(self, conditional_loss_poes, insured_losses=False):
+        """
+        :param conditional_loss_poes:
+            configuration parameter
+        :param insured_losses:
+            configuration parameter
+        :returns:
+           loss_curve_dt and loss_maps_dt
+        """
+        lst = [('poe~%s' % poe, F32) for poe in conditional_loss_poes]
+        if insured_losses:
+            lst += [(name + '_ins', pair) for name, pair in lst]
+        lm_dt = numpy.dtype(lst)
+        lc_list = []
+        lm_list = []
+        for cb in (b for b in self.curve_builders if b.user_provided):
+            pairs = [('losses', (F32, cb.curve_resolution)),
+                     ('poes', (F32, cb.curve_resolution)),
+                     ('avg', F32)]
+            if insured_losses:
+                pairs += [(name + '_ins', pair) for name, pair in pairs]
+            lc_list.append((cb.loss_type, numpy.dtype(pairs)))
+            lm_list.append((cb.loss_type, lm_dt))
+        loss_curve_dt = numpy.dtype(lc_list)
+        loss_maps_dt = numpy.dtype(lm_list)
+        return loss_curve_dt, loss_maps_dt
+
+    def build_all_loss_dtypes(self, curve_resolution, conditional_loss_poes,
+                              insured_losses=False):
+        """
+        :param conditional_loss_poes:
+            configuration parameter
+        :param insured_losses:
+            configuration parameter
+        :returns:
+           loss_curve_dt and loss_maps_dt
+        """
+        lst = [('poe~%s' % poe, F32) for poe in conditional_loss_poes]
+        if insured_losses:
+            lst += [(name + '_ins', pair) for name, pair in lst]
+        lm_dt = numpy.dtype(lst)
+        lc_list = []
+        lm_list = []
+        for loss_type in self.loss_types:
+            pairs = [('losses', (F32, curve_resolution)),
+                     ('poes', (F32, curve_resolution)),
+                     ('avg', F32)]
+            if insured_losses:
+                pairs += [(name + '_ins', pair) for name, pair in pairs]
+            lc_list.append((loss_type, numpy.dtype(pairs)))
+            lm_list.append((loss_type, lm_dt))
+        loss_curve_dt = numpy.dtype(lc_list)
+        loss_maps_dt = numpy.dtype(lm_list)
+        return loss_curve_dt, loss_maps_dt
+
     def make_curve_builders(self, oqparam):
         """
         Populate the inner lists .loss_types, .curve_builders.
         """
         default_loss_ratios = numpy.linspace(
             0, 1, oqparam.loss_curve_resolution + 1)[1:]
-        for i, loss_type in enumerate(self._get_loss_types()):
+        loss_types = self._get_loss_types()
+        for l, loss_type in enumerate(loss_types):
             cost_type = riskmodels.loss_type_to_cost_type(loss_type)
-            if cost_type in oqparam.loss_ratios:
+            if oqparam.calculation_mode == 'classical_risk':
+                all_ratios = [self[key].loss_ratios[loss_type]
+                              for key in sorted(self)]
+                curve_resolutions = map(len, all_ratios)
+                if len(set(curve_resolutions)) > 1:
+                    lines = []
+                    for wf, cr in zip(self.values(), curve_resolutions):
+                        lines.append(
+                            '%s %s' % (wf.risk_functions[loss_type], cr))
+                    raise ValueError(
+                        'Inconsistent num_loss_ratios:\n%s' % '\n'.join(lines))
+                cb = scientific.CurveBuilder(
+                    loss_type, all_ratios[0], True,
+                    oqparam.conditional_loss_poes, oqparam.insured_losses)
+            elif cost_type in oqparam.loss_ratios:  # loss_ratios provided
                 cb = scientific.CurveBuilder(
                     loss_type, oqparam.loss_ratios[cost_type], True,
                     oqparam.conditional_loss_poes, oqparam.insured_losses)
-            else:
+            else:  # no loss_ratios provided
                 cb = scientific.CurveBuilder(
                     loss_type, default_loss_ratios, False,
                     oqparam.conditional_loss_poes, oqparam.insured_losses)
             self.curve_builders.append(cb)
             self.loss_types.append(loss_type)
-            self.lti[loss_type] = i
+            self.lti[loss_type] = l
 
     def _get_loss_types(self):
         """
