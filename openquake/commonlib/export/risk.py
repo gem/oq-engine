@@ -298,12 +298,12 @@ def export_loss_curves(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     loss_types = dstore['riskmodel'].loss_types
     assets = get_assets_sites(dstore)
-    curves = dstore[ekey[0]].value
+    curves = dstore[ekey[0]]
     name = ekey[0].split('-')[0]
     paths = []
     for rlz in rlzs:
-        for l, ltype in enumerate(loss_types):
-            array = compose_arrays(assets, curves[:, l, rlz.ordinal])
+        for ltype in loss_types:
+            array = compose_arrays(assets, curves[ltype][:, rlz.ordinal])
             path = dstore.export_path('%s-%s-%s.csv' % (name, ltype, rlz.uid))
             writers.write_csv(path, array, fmt='%9.6E')
             paths.append(path)
@@ -549,7 +549,7 @@ class Location(object):
         self.wkt = 'POINT(%s %s)' % tuple(xy)
 
 
-# used by event_based_risk and classical_risk
+# used by event_based_risk
 @export.add(('loss_maps-rlzs', 'xml'), ('loss_maps-rlzs', 'geojson'))
 def export_loss_maps_xml_geojson(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
@@ -893,7 +893,6 @@ def export_rcurves_rlzs(ekey, dstore):
 def export_loss_curves_rlzs(ekey, dstore):
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
-    lti = dstore['riskmodel'].lti
     loss_curves = dstore[ekey[0]]
     fnames = []
     writercls = (risk_writers.LossCurveGeoJSONWriter
@@ -901,7 +900,7 @@ def export_loss_curves_rlzs(ekey, dstore):
                  risk_writers.LossCurveXMLWriter)
     for writer, (lt, r, insflag) in _gen_writers(dstore, writercls, ekey[0]):
         ins = '_ins' if insflag else ''
-        array = loss_curves[lti[lt], r]
+        array = loss_curves[lt][r]
         curves = []
         for ass, data in zip(assetcol, array):
             loc = Location(sitemesh[ass['site_id']])

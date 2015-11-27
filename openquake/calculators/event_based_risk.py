@@ -24,7 +24,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import AccumDict, humansize
-from openquake.calculators import base, calc
+from openquake.calculators import base
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import apply_reduce
@@ -360,6 +360,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         R = len(self.rlzs_assoc.realizations)
         ltypes = self.riskmodel.loss_types
 
+        self.loss_curve_dt, self.loss_maps_dt = scientific.build_loss_dtypes(
+            ltypes, self.C, self.oqparam.conditional_loss_poes, self.I)
+
         # loss curves
         multi_lr_dt = numpy.dtype(
             [(ltype, (F32, cbuilder.curve_resolution))
@@ -417,17 +420,19 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             pass  # TODO: build specific loss curves
 
         rlzs = self.rlzs_assoc.realizations
-
         with self.monitor('building loss_maps-rlzs'):
             if (self.oqparam.conditional_loss_poes and
                     'rcurves-rlzs' in self.datastore):
+                loss_maps = numpy.zeros((R, N), self.loss_maps_dt)
                 rcurves = self.datastore['rcurves-rlzs']
                 for cb in self.riskmodel.curve_builders:
-                    for r, loss_maps in cb.build_loss_maps(
+                    lm = loss_maps[cb.loss_type]
+                    for r, lmaps in cb.build_loss_maps(
                             self.assetcol, rcurves):
-                        key = 'loss_maps-rlzs/%s/%s' % (
-                            cb.loss_type, rlzs[r].uid)
-                        self.datastore[key] = loss_maps
+                        lm[r, :] = lmaps
+                for rlz in rlzs:
+                    self.datastore['loss_maps-rlzs/%s' % rlz.uid] = (
+                        loss_maps[rlz.ordinal])
 
         if len(rlzs) > 1:
             with self.monitor('computing stats'):
@@ -440,15 +445,16 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         generating the loss curves, directly from the the aggregate losses.
         """
         C = self.oqparam.loss_curve_resolution
+        lts = self.riskmodel.loss_types
         r_data = [(r, dset.value) for r, dset in enumerate(
             self.datastore['agg_loss_table'].values())]
         ses_ratio = self.oqparam.ses_ratio
         result = parallel.apply_reduce(
             build_agg_curve, (r_data, self.I, ses_ratio, C, self.monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks)
-        agg_curve = calc.build_loss_curves((self.L, self.R), C, self.I)
+        agg_curve = numpy.zeros(self.R, self.loss_curve_dt)
         for l, r, name in result:
-            agg_curve[name][l, r] = result[l, r, name]
+            agg_curve[lts[l]][name][r] = result[l, r, name]
         self.datastore['agg_curve-rlzs'] = agg_curve
         self.saved['agg_curve-rlzs'] = agg_curve.nbytes
 
@@ -548,12 +554,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param builder:
             :class:`openquake.risklib.scientific.StatsBuilder` instance
         """
+        loss_types = self.riskmodel.loss_types
         rlzs = self.datastore['rlzs_assoc'].realizations
         agg_curve = self.datastore['agg_curve-rlzs']
-        for l, loss_type in enumerate(self.riskmodel.loss_types):
+        S = len(builder.mean_quantiles)
+        agg_curve_stats = numpy.zeros(S, self.loss_curve_dt)
+        for l, loss_type in enumerate(loss_types):
             outputs = []
             for rlz in rlzs:
-                curve = agg_curve[l, rlz.ordinal]
+                curve = agg_curve[loss_type][rlz.ordinal]
                 average_loss = curve['avg']
                 loss_curve = (curve['losses'], curve['poes'])
                 if self.oqparam.insured_losses:
@@ -571,16 +580,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 outputs.append(out)
             stats = builder.build(outputs)
             curves, _maps = builder.get_curves_maps(stats)
-            # curves[0] and curves[1] are arrays of shape (Q1, N)
+            # curves[0] and curves[1] are arrays of shape (Q1, N) with N=1
 
+            acs = agg_curve_stats[loss_type]
             for i, statname in enumerate(builder.mean_quantiles):
-                agg_curve_stats = calc.build_loss_curves(
-                    1, self.C, self.I)
-                for name in agg_curve_stats.dtype.names:
+                for name in acs.dtype.names:
                     if name.endswith('_ins'):
-                        agg_curve_stats[name][:] = curves[1][name[:-4]][i]
+                        acs[name][i] = curves[1][name[:-4]][i, 0]
                     else:
-                        agg_curve_stats[name][:] = curves[0][name][i]
-                key = 'agg_curve-stats/%s/%s' % (loss_type, statname)
-                self.datastore[key] = agg_curve_stats
-                self.datastore[key].attrs['nbytes'] = agg_curve_stats.nbytes
+                        acs[name][i] = curves[0][name][i, 0]
+
+        # saving agg_curve_stats
+        self.datastore['agg_curve-stats'] = agg_curve_stats
