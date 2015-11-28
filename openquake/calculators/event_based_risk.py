@@ -585,9 +585,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     average_insured_losses=[average_insured_loss])
                 outputs.append(out)
             stats = builder.build(outputs)
-            curves, _maps = builder.get_curves_maps(stats)
-            # curves[0] and curves[1] are arrays of shape (Q1, N) with N=1
-
+            curves, _maps = builder.get_curves_maps(stats)  # shape (Q1, 1)
             acs = agg_curve_stats[loss_type]
             for i, statname in enumerate(builder.mean_quantiles):
                 for name in acs.dtype.names:

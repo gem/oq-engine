@@ -8,6 +8,7 @@ xmlns:gml="http://www.opengis.net/gml"
     investigationTime="10000.0"
     lossType="fatalities"
     poE="0.01"
+    sourceModelTreePath="b1"
     unit="people"
     >
         <node>
