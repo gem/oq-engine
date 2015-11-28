@@ -846,14 +846,14 @@ def export_loss_curves_rlzs(ekey, dstore):
                  risk_writers.LossCurveXMLWriter)
     for writer, (lt, r, insflag) in _gen_writers(dstore, writercls, ekey[0]):
         ins = '_ins' if insflag else ''
-        array = loss_curves[lt][r]
+        array = loss_curves[lt][:, r]
         curves = []
         for ass, data in zip(assetcol, array):
             loc = Location(sitemesh[ass['site_id']])
             losses = data['losses' + ins]
             poes = data['poes' + ins]
             avg = data['avg' + ins]
-            loss_ratios = losses / assetcol[lt]
+            loss_ratios = losses / ass[lt]
             curve = LossCurve(loc, ass['asset_ref'], poes,
                               losses, loss_ratios, avg, None)
             curves.append(curve)
