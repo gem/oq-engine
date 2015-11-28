@@ -414,7 +414,9 @@ def export_damage_total(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('csq_by_asset', 'csv'), ('csq_by_taxon', 'csv'))
+@export.add(
+    ('loss_maps-rlzs', 'csv'),
+    ('csq_by_asset', 'csv'), ('csq_by_taxon', 'csv'))
 def export_csq_csv(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     R = len(rlzs)
@@ -428,7 +430,7 @@ def export_csq_csv(ekey, dstore):
     return fnames
 
 
-@export.add(('csq_total', 'csv'))
+@export.add(('loss_maps-stats', 'csv'), ('csq_total', 'csv'))
 def export_csq_total_csv(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     R = len(rlzs)
@@ -436,14 +438,17 @@ def export_csq_total_csv(ekey, dstore):
     fnames = []
     for rlz, values in zip(rlzs, value):
         suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
-        fname = dstore.export_path(ekey[0] + suffix)
+        fname = dstore.export_path(ekey[0][:-6] + suffix)
         writers.write_csv(fname, numpy.array([values], value.dtype))
         fnames.append(fname)
     return fnames
 
 
-export.add(('dmg_by_asset', 'csv'), ('dmg_by_taxon', 'csv'),
-           ('dmg_total', 'csv'))(export_csv)
+export.add(
+    ('dmg_by_asset', 'csv'),
+    ('dmg_by_taxon', 'csv'),
+    ('dmg_total', 'csv'),
+)(export_csv)
 
 
 def export_dmg_xml(key, dstore, damage_states, dmg_data, suffix):
