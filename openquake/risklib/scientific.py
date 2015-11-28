@@ -1788,10 +1788,10 @@ class StatsBuilder(object):
         curves = numpy.zeros((Q1, N), self.loss_curve_dt)
         if self.conditional_loss_poes:
             maps = numpy.zeros((Q1, N), self.loss_maps_dt)
+            poenames = [n for n in self.loss_maps_dt.names
+                        if not n.endswith('_ins')]
         else:
             maps = []
-        poenames = [n for n in self.loss_maps_dt.names
-                    if not n.endswith('_ins')]
         for i in range(self.insured_losses + 1):  # insured index
             ins = '_ins' if i else ''
             curves_by_stat = self._loss_curves(
