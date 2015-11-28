@@ -50,7 +50,7 @@ def build_dtypes(curve_resolution, conditional_loss_poes, insured=False):
     lst = [('poe~%s' % poe, F32) for poe in conditional_loss_poes]
     if insured:
         lst += [(name + '_ins', pair) for name, pair in lst]
-    loss_maps_dt = numpy.dtype(lst)
+    loss_maps_dt = numpy.dtype(lst) if lst else None
     return loss_curve_dt, loss_maps_dt
 
 
