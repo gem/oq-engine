@@ -72,7 +72,8 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                 result['loss_curves'].append((l, r, aid, lcurve))
 
                 # no insured, shape (P, N)
-                result['loss_maps'].append((l, r, aid, out.loss_maps[:, i]))
+                result['loss_maps'].append(
+                    (l, r, aid, out.loss_maps[:, i] * val))
 
                 # no insured, shape (D, N)
                 if len(out.loss_fractions):

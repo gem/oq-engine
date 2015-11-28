@@ -13,11 +13,23 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         [fname] = out['loss_curves-rlzs', 'xml']
         self.assertEqualFiles('expected/loss_curves.xml', fname)
 
+        clp = self.calc.oqparam.conditional_loss_poes
+        fnames = out['loss_maps-rlzs', 'xml']
+        self.assertEqual(len(fnames), 3)  # for 3 conditional loss poes
+        for poe, fname in zip(clp, fnames):
+            self.assertEqualFiles('expected/loss_map-poe-%s.xml' % poe, fname)
+
     @attr('qa', 'risk', 'classical_risk')
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_risk.ini', exports='xml')
         [fname] = out['loss_curves-rlzs', 'xml']
         self.assertEqualFiles('expected/loss_curves.xml', fname)
+
+        clp = self.calc.oqparam.conditional_loss_poes
+        fnames = out['loss_maps-rlzs', 'xml']
+        self.assertEqual(len(fnames), 1)  # for 1 conditional loss poe
+        for poe, fname in zip(clp, fnames):
+            self.assertEqualFiles('expected/loss_map-poe-%s.xml' % poe, fname)
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_3(self):
