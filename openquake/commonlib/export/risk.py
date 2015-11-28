@@ -430,7 +430,8 @@ def export_csq_csv(ekey, dstore):
     return fnames
 
 
-@export.add(('loss_maps-stats', 'csv'), ('csq_total', 'csv'))
+# TODO: export loss_maps-stats csv
+@export.add(('csq_total', 'csv'))
 def export_csq_total_csv(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     R = len(rlzs)
@@ -438,7 +439,7 @@ def export_csq_total_csv(ekey, dstore):
     fnames = []
     for rlz, values in zip(rlzs, value):
         suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
-        fname = dstore.export_path(ekey[0][:-6] + suffix)
+        fname = dstore.export_path(ekey[0] + suffix)
         writers.write_csv(fname, numpy.array([values], value.dtype))
         fnames.append(fname)
     return fnames
@@ -577,8 +578,9 @@ def export_loss_maps_xml_geojson(ekey, dstore):
     loss_types = [cb.loss_type for cb in riskmodel.curve_builders
                   if cb.user_provided]
     for lt in loss_types:
-        alosses = loss_maps[lt]
-        for r, lmaps in enumerate(alosses):
+        loss_maps_lt = loss_maps[lt]
+        for r in range(R):
+            lmaps = loss_maps_lt[:, r]
             for p, poe in enumerate(oq.conditional_loss_poes):
                 for insflag in range(oq.insured_losses + 1):
                     ins = '_ins' if insflag else ''
