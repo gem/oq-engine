@@ -277,16 +277,28 @@ class HazardCalculator(BaseCalculator):
             self.taxonomies = numpy.array(
                 sorted(self.exposure.taxonomies), '|S100')
 
-    def read_riskmodel(self):
+    def load_riskmodel(self):
         """
         Read the risk model and set the attribute .riskmodel.
         The riskmodel can be empty for hazard calculations.
+        Save the loss ratios (if any) in the datastore.
         """
         self.riskmodel = readinput.get_risk_model(self.oqparam)
         missing = set(self.taxonomies) - set(self.riskmodel.taxonomies)
         if self.riskmodel and missing:
             raise RuntimeError('The exposure contains the taxonomies %s '
                                'which are not in the risk model' % missing)
+
+        # save the loss ratios in the datastore
+        pairs, all_ratios = [], []
+        for cb in self.riskmodel.curve_builders:
+            if cb.user_provided:
+                num_ratios = len(cb.ratios)
+                pairs.append((cb.loss_type, (numpy.float32, num_ratios)))
+                all_ratios.append(cb.ratios)
+        if pairs:
+            loss_ratios = numpy.array([tuple(all_ratios)], numpy.dtype(pairs))
+            self.datastore['loss_ratios'] = loss_ratios
 
     def read_risk_data(self):
         """
@@ -299,7 +311,7 @@ class HazardCalculator(BaseCalculator):
         inputs = self.oqparam.inputs
         if 'exposure' in inputs:
             self.read_exposure()
-            self.read_riskmodel()  # must be called *after* read_exposure
+            self.load_riskmodel()  # must be called *after* read_exposure
             num_assets = self.count_assets()
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
@@ -315,7 +327,7 @@ class HazardCalculator(BaseCalculator):
               OqParam.from_(self.datastore.parent.attrs).inputs):
             logging.info('Re-using the already imported exposure')
             if not self.riskmodel:
-                self.read_riskmodel()
+                self.load_riskmodel()
         else:  # no exposure
             self.sitecol = haz_sitecol
 

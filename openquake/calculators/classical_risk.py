@@ -113,7 +113,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         if 'hazard_curves' in self.oqparam.inputs:  # read hazard from file
             haz_sitecol, haz_curves = readinput.get_hcurves(self.oqparam)
             self.read_exposure()  # define .assets_by_site
-            self.read_riskmodel()
+            self.load_riskmodel()
             self.sitecol, self.assets_by_site = self.assoc_assets_sites(
                 haz_sitecol)
             curves_by_trt_gsim = {(0, 'FromFile'): haz_curves}
