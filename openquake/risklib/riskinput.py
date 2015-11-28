@@ -154,10 +154,12 @@ class RiskModel(collections.Mapping):
                 pairs += [(name + '_ins', pair) for name, pair in pairs]
             lc_list.append((cb.loss_type, numpy.dtype(pairs)))
             lm_list.append((cb.loss_type, lm_dt))
-        loss_curve_dt = numpy.dtype(lc_list)
-        loss_maps_dt = numpy.dtype(lm_list)
+        loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
+        loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
         return loss_curve_dt, loss_maps_dt
 
+    # TODO: scheduled for removal once we change agg_curve to be built from
+    # the user-provided loss ratios
     def build_all_loss_dtypes(self, curve_resolution, conditional_loss_poes,
                               insured_losses=False):
         """
@@ -182,8 +184,8 @@ class RiskModel(collections.Mapping):
                 pairs += [(name + '_ins', pair) for name, pair in pairs]
             lc_list.append((loss_type, numpy.dtype(pairs)))
             lm_list.append((loss_type, lm_dt))
-        loss_curve_dt = numpy.dtype(lc_list)
-        loss_maps_dt = numpy.dtype(lm_list)
+        loss_curve_dt = numpy.dtype(lc_list) if lc_list else None
+        loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
         return loss_curve_dt, loss_maps_dt
 
     def make_curve_builders(self, oqparam):
