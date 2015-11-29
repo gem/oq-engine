@@ -205,7 +205,7 @@ class RiskModel(collections.Mapping):
                     lines = []
                     for wf, cr in zip(self.values(), curve_resolutions):
                         lines.append(
-                            '%s %s' % (wf.risk_functions[loss_type], cr))
+                            '%s %d' % (wf.risk_functions[loss_type], cr))
                     raise ValueError(
                         'Inconsistent num_loss_ratios:\n%s' % '\n'.join(lines))
                 cb = scientific.CurveBuilder(
