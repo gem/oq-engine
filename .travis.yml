@@ -20,4 +20,4 @@ install:
   - pip install https://github.com/gem/oq-hazardlib/archive/master.zip
 
 script:
-  - PYTHONPATH=. nosetests -vsx -a'!slow' --with-xunit --nologcapture --with-doctest; PYTHONPATH=. bin/slowtests nosetests.xml
+  - PYTHONPATH=. nosetests -vsx -a'!slow' --with-xunit --nologcapture --with-doctest && bin/slowtests nosetests.xml
