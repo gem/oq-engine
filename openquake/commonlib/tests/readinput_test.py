@@ -410,6 +410,23 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
             readinput.get_exposure(oqparam)
         self.assertIn("node cost: 'deductible', line 14", str(ctx.exception))
 
+    def test_exposure_no_assets(self):
+        oqparam = mock.Mock()
+        oqparam.base_path = '/'
+        oqparam.calculation_mode = 'scenario_risk'
+        oqparam.all_cost_types = ['structural']
+        oqparam.insured_losses = True
+        oqparam.inputs = {'exposure': self.exposure,
+                          'structural_vulnerability': None}
+        oqparam.region_constraint = '''\
+POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
+        oqparam.time_event = None
+        oqparam.ignore_missing_costs = []
+        with self.assertRaises(RuntimeError) as ctx:
+            readinput.get_exposure(oqparam)
+        self.assertIn('Could not find any asset within the region!',
+                      str(ctx.exception))
+
 
 class ReadCsvTestCase(unittest.TestCase):
     def test_get_mesh_csvdata_ok(self):
