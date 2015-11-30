@@ -18,7 +18,6 @@
 
 import numpy
 
-from openquake.baselib import general
 from openquake.commonlib import parallel
 from openquake.calculators import base
 
@@ -43,12 +42,11 @@ def classical_bcr(riskinputs, riskmodel, rlzs_assoc, monitor):
         :class:`openquake.baselib.performance.PerformanceMonitor` instance
     """
     result = {}  # (N, R) -> data
-    lti = riskmodel.lti  # loss_type -> index
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:
             for asset, (eal_orig, eal_retro, bcr) in zip(out.assets, out.data):
                 aval = asset.value(out.loss_type)
-                result[asset.aid, lti[out.loss_type], out.hid] = numpy.array([
+                result[asset.aid, out.loss_type, out.hid] = numpy.array([
                     (eal_orig * aval, eal_retro * aval, bcr)], bcr_dt)
     return result
 
@@ -61,7 +59,8 @@ class ClassicalBCRCalculator(base.calculators['classical_risk']):
     core_func = classical_bcr
 
     def post_execute(self, result):
-        zeros = numpy.zeros((self.N, self.L, self.R), bcr_dt)
-        for nlr, data in result.items():
-            zeros[nlr] = data
-        self.datastore['bcr-rlzs'] = zeros
+        bcr_data = numpy.zeros(
+            (self.N, self.R), self.riskmodel.loss_type_dt(bcr_dt))
+        for (aid, lt, r), data in result.items():
+            bcr_data[lt][aid, r] = data
+        self.datastore['bcr-rlzs'] = bcr_data
