@@ -28,7 +28,7 @@ bcr_dt = numpy.dtype([('annual_loss_orig', F32), ('annual_loss_retro', F32),
 
 
 @parallel.litetask
-def classical_bcr(riskinputs, riskmodel, rlzs_assoc, monitor):
+def classical_bcr(riskinputs, riskmodel, rlzs_assoc, bcr_dt, monitor):
     """
     Compute and return the average losses for each asset.
 
@@ -38,6 +38,8 @@ def classical_bcr(riskinputs, riskmodel, rlzs_assoc, monitor):
         a :class:`openquake.risklib.riskinput.RiskModel` instance
     :param rlzs_assoc:
         associations (trt_id, gsim) -> realizations
+    :param bcr_dt:
+        data type with fields annual_loss_orig, annual_loss_retro, bcr
     :param monitor:
         :class:`openquake.baselib.performance.PerformanceMonitor` instance
     """
@@ -46,7 +48,7 @@ def classical_bcr(riskinputs, riskmodel, rlzs_assoc, monitor):
         for out in out_by_rlz:
             for asset, (eal_orig, eal_retro, bcr) in zip(out.assets, out.data):
                 aval = asset.value(out.loss_type)
-                result[asset.aid, out.loss_type, out.hid] = numpy.array([
+                result[asset.idx, out.loss_type, out.hid] = numpy.array([
                     (eal_orig * aval, eal_retro * aval, bcr)], bcr_dt)
     return result
 
@@ -57,6 +59,10 @@ class ClassicalBCRCalculator(base.calculators['classical_risk']):
     Classical BCR Risk calculator
     """
     core_func = classical_bcr
+
+    def pre_execute(self):
+        super(ClassicalBCRCalculator, self).pre_execute()
+        self.extra_args = (bcr_dt,)
 
     def post_execute(self, result):
         bcr_data = numpy.zeros(

@@ -394,6 +394,7 @@ class RiskCalculator(HazardCalculator):
     .riskinputs in the pre_execute phase.
     """
     specific_assets = datastore.persistent_attribute('specific_assets')
+    extra_args = ()  # to be overridden in subclasses
 
     def make_eps(self, num_ruptures):
         """
@@ -472,9 +473,10 @@ class RiskCalculator(HazardCalculator):
         if self.pre_calculator == 'event_based_rupture':
             self.monitor.assets_by_site = self.assets_by_site
             self.monitor.num_assets = self.count_assets()
+        all_args = ((self.riskinputs, self.riskmodel, self.rlzs_assoc) +
+                    self.extra_args + (self.monitor,))
         res = apply_reduce(
-            self.core_func.__func__,
-            (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
+            self.core_func.__func__, all_args,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=get_weight, key=self.riskinput_key)
         return res

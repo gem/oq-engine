@@ -765,6 +765,9 @@ def get_exposure(oqparam):
                 cost_type = cost['type']
                 if cost_type in relevant_cost_types:
                     values[cost_type] = cost['value']
+                    retrovalue = cost.attrib.get('retrofitted')
+                    if retrovalue is not None:
+                        retrofitting_values[cost_type] = retrovalue
                     if oqparam.insured_losses:
                         deductibles[cost_type] = cost['deductible']
                         insurance_limits[cost_type] = cost['insuranceLimit']

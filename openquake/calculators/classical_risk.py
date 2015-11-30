@@ -132,16 +132,16 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         self.riskinputs = self.build_riskinputs(curves_by_trt_gsim)
         self.monitor.oqparam = self.oqparam
 
-    def post_execute(self, result):
-        """
-        Save the losses in a compact form.
-        """
         self.N = sum(len(assets) for assets in self.assets_by_site)
         self.L = len(self.riskmodel.loss_types)
         self.R = len(self.rlzs_assoc.realizations)
         self.I = self.oqparam.insured_losses
         self.Q1 = len(self.oqparam.quantile_loss_curves) + 1
 
+    def post_execute(self, result):
+        """
+        Save the losses in a compact form.
+        """
         self.loss_curve_dt, self.loss_maps_dt = (
             self.riskmodel.build_loss_dtypes(
                 self.oqparam.conditional_loss_poes, self.I))
