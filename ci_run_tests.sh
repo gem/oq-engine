@@ -278,7 +278,7 @@ fi
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "export PYTHONPATH="\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-nrmllib" ; cd $GEM_GIT_PACKAGE ; nosetests --with-xunit -v --with-coverage || true"
+    ssh $lxc_ip "export DISPLAY=:1 ; export PYTHONPATH="\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-nrmllib" ; cd $GEM_GIT_PACKAGE ; nosetests --with-xunit -v --with-coverage || true"
 
     trap ERR
 
