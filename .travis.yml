@@ -21,4 +21,5 @@ install:
   - python setup.py develop
 
 script:
-  - nosetests -vsx -a'!slow' --with-xunit --nologcapture --with-doctest && python bin/slowtests nosetests.xml
+  - nosetests -vsx -a'!slow' --with-xunit --nologcapture --with-doctest
+  - PYTHONPATH=. python bin/slowtests nosetests.xml
