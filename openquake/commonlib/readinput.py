@@ -799,6 +799,8 @@ def get_exposure(oqparam):
         logging.info('Read %d assets within the region_constraint '
                      'and discarded %d assets outside the region',
                      len(exposure.assets), out_of_region)
+        if len(exposure.assets) == 0:
+            raise RuntimeError('Could not find any asset within the region!')
     else:
         logging.info('Read %d assets', len(exposure.assets))
 
