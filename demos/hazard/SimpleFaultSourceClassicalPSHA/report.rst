@@ -1,6 +1,8 @@
 Classical PSHA with Simple Fault Source
 =======================================
 
+num_sites = 1369
+
 Parameters
 ----------
 ============================ =========
@@ -16,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0      
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             64       
+concurrent_tasks             32       
 ============================ =========
 
 Input files
@@ -57,7 +59,7 @@ source_model.xml 0      Active Shallow Crust 548         548
 Expected data transfer for the sources
 --------------------------------------
 ================================== =======
-Number of tasks to generate        61     
-Estimated sources to send          3.67 MB
-Estimated hazard curves to receive 120 MB 
+Number of tasks to generate        31     
+Estimated sources to send          2.68 MB
+Estimated hazard curves to receive 61 MB  
 ================================== =======

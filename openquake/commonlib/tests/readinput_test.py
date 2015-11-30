@@ -681,3 +681,62 @@ PGV:float64:,PGA:float64:
         with self.assertRaises(readinput.InvalidFile) as ctx:
             readinput.get_scenario_from_nrml(self.oqparam, fname)
         self.assertIn("Expected 4 sites, got 3 in", str(ctx.exception))
+
+
+class TestLoadCurvesTestCase(unittest.TestCase):
+    """
+    Read the hazard curves from a NRML file
+    """
+    def test(self):
+        fname = general.writetmp('''\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <!-- Spectral Acceleration (SA) example -->
+    <hazardCurves sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b2" investigationTime="50.0" IMT="SA" saPeriod="0.025" saDamping="5.0">
+        <IMLs>5.0000e-03 7.0000e-03 1.3700e-02</IMLs>
+
+        <hazardCurve>
+            <gml:Point>
+                <gml:pos>-122.5000 37.5000</gml:pos>
+            </gml:Point>
+            <poEs>9.8728e-01 9.8266e-01 9.4957e-01</poEs>
+        </hazardCurve>
+        <hazardCurve>
+            <gml:Point>
+                <gml:pos>-123.5000 37.5000</gml:pos>
+            </gml:Point>
+            <poEs>9.8727e-02 9.8265e-02 9.4956e-02</poEs>
+        </hazardCurve>
+    </hazardCurves>
+
+    <!-- Basic example, using PGA as IMT -->
+    <hazardCurves sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b7" investigationTime="50.0" IMT="PGA">
+        <IMLs>5.0000e-03 7.0000e-03 1.3700e-02 3.3700e-02</IMLs>
+
+        <hazardCurve>
+            <gml:Point>
+                <gml:pos>-122.5000 37.5000</gml:pos>
+            </gml:Point>
+            <poEs>9.8728e-01 9.8226e-01 9.4947e-01 9.2947e-01</poEs>
+        </hazardCurve>
+        <hazardCurve>
+            <gml:Point>
+                <gml:pos>-123.5000 37.5000</gml:pos>
+            </gml:Point>
+            <poEs>9.8728e-02 9.8216e-02 9.4945e-02 9.2947e-02</poEs>
+        </hazardCurve>
+    </hazardCurves>
+</nrml>
+''', suffix='.xml')
+        oqparam = mock.Mock()
+        oqparam.inputs = dict(hazard_curves=fname)
+        sitecol, hcurves = readinput.get_hcurves(oqparam)
+        self.assertEqual(len(sitecol), 2)
+        self.assertEqual(sorted(oqparam.hazard_imtls.items()),
+                         [('PGA', [0.005, 0.007, 0.0137, 0.0337]),
+                          ('SA(0.025)', [0.005, 0.007, 0.0137])])
+        self.assertEqual(str(hcurves), '''\
+[([0.098727, 0.098265, 0.094956], [0.098728, 0.098216, 0.094945, 0.092947])
+ ([0.98728, 0.98266, 0.94957], [0.98728, 0.98226, 0.94947, 0.92947])]''')

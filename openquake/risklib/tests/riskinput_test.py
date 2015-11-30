@@ -93,10 +93,9 @@ a4,3,1,50,500000,2.0,6.0
 
         [ri] = self.riskmodel.build_inputs_from_ruptures(
             self.sitecol, ses_ruptures, gsims_by_trt_id, oq.truncation_level,
-            correl_model, eps, 1)
+            correl_model, eps, hint=1)
 
-        assets, hazards, epsilons = ri.get_all(
-            rlzs_assoc, self.assets_by_site, eps)
+        assets, hazards, epsilons = ri.get_all(rlzs_assoc, self.assets_by_site)
         self.assertEqual([a.id for a in assets],
                          [b'a0', b'a1', b'a2', b'a3', b'a4'])
         self.assertEqual(set(a.taxonomy for a in assets),

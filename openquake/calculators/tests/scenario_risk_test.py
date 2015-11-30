@@ -1,4 +1,3 @@
-import os
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario_risk import (
@@ -26,7 +25,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_3(self):
         out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
 
-        [fname] = out['avglosses-rlzs', 'csv']
+        [fname] = out['loss_map-rlzs', 'csv']
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
         [fname] = out['agglosses-rlzs', 'csv']
@@ -35,8 +34,12 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'scenario_risk')
     def test_occupants(self):
         out = self.run_calc(occupants.__file__, 'job_haz.ini,job_risk.ini',
-                            exports='csv')
-        [fname] = out['avglosses-rlzs', 'csv']
+                            exports='csv,xml')
+
+        [fname] = out['loss_map-rlzs', 'xml']
+        self.assertEqualFiles('expected/loss_map.xml', fname)
+
+        [fname] = out['loss_map-rlzs', 'csv']
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
         [fname] = out['agglosses-rlzs', 'csv']

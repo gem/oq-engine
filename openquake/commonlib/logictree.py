@@ -42,9 +42,8 @@ from openquake.baselib.python3compat import raise_
 import openquake.hazardlib
 from openquake.hazardlib import geo
 from openquake.commonlib import nrml, valid
-from openquake.commonlib.sourceconverter import (RuptureConverter,
-                                                 split_coords_2d,
-                                                 split_coords_3d)
+from openquake.commonlib.sourceconverter import (
+    split_coords_2d, split_coords_3d)
 
 from openquake.commonlib.node import (node_from_xml,
                                       parse,
@@ -113,6 +112,16 @@ class RlzsAssoc(collections.Mapping):
             pairs.append(('%s,%s' % key, rlzs))
         return '<%s(%d)\n%s>' % (self.__class__.__name__, len(self),
                                  '\n'.join('%s: %s' % pair for pair in pairs))
+
+
+def trivial_rlzs_assoc():
+    """
+    Return a fake RlzsAssoc instance. Used by the risk calculators when
+    reading the hazard from a file.
+    """
+    fake_rlz = Realization(
+        value=('FromFile',), weight=1, lt_path=('',), ordinal=0, lt_uid=('@',))
+    return RlzsAssoc([fake_rlz])
 
 
 def get_effective_rlzs(rlzs):

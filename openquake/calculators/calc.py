@@ -34,6 +34,9 @@ MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 # in this way even on 32 bit machines Python will not have to convert
 # the generated seed into a long integer
 
+F32 = numpy.float32
+
+
 # ############## utilities for the classical calculator ############### #
 
 SourceRuptureSites = collections.namedtuple(

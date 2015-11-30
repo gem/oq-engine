@@ -1,6 +1,8 @@
 PEB QA test 1
 =============
 
+num_sites = 3
+
 Parameters
 ----------
 ============================ ===========
@@ -8,7 +10,7 @@ calculation_mode             event_based
 number_of_logic_tree_samples 0          
 maximum_distance             100.0      
 investigation_time           50.0       
-ses_per_logic_tree_path      2000       
+ses_per_logic_tree_path      20         
 truncation_level             3.0        
 rupture_mesh_spacing         5.0        
 complex_fault_mesh_spacing   5.0        
@@ -16,7 +18,7 @@ width_of_mfd_bin             0.3
 area_source_discretization   10.0       
 random_seed                  23         
 master_seed                  0          
-concurrent_tasks             64         
+concurrent_tasks             32         
 ============================ ===========
 
 Input files
@@ -55,7 +57,7 @@ Non-empty rupture collections
 === ========= ==================== ============
 col smlt_path TRT                  num_ruptures
 === ========= ==================== ============
-0   b1        Active Shallow Crust 2284        
+0   b1        Active Shallow Crust 20          
 === ========= ==================== ============
 
 Collections <-> realizations
@@ -69,6 +71,6 @@ Expected data transfer for the sources
 --------------------------------------
 ================================== =======
 Number of tasks to generate        1      
-Estimated sources to send          2.76 KB
+Estimated sources to send          2.74 KB
 Estimated hazard curves to receive 1 KB   
 ================================== =======

@@ -28,6 +28,7 @@ import numpy
 from shapely import wkt, geometry
 
 from openquake.hazardlib import geo, site, correlation, imt
+from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import workflows, riskinput
 
 from openquake.commonlib.datastore import DataStore
@@ -505,8 +506,8 @@ def get_composite_source_model(
     csm = source.CompositeSourceModel(source_model_lt, smodels)
     if sitecol is not None and hasattr(processor, 'process'):
         seqtime, partime = processor.process(csm, no_distribute)
-        monitor.write(['fast sources filtering/splitting', str(seqtime), '0'])
-        monitor.write(['slow sources filtering/splitting', str(partime), '0'])
+        logging.info('fast sources filtering/splitting: %s', seqtime)
+        logging.info('slow sources filtering/splitting: %s', partime)
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away')
     csm.count_ruptures()
@@ -585,15 +586,19 @@ def get_risk_model(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    risk_models = {}  # (imt, taxonomy) -> workflow
-    riskmodel = riskinput.RiskModel(risk_models)
+    wfs = {}  # (imt, taxonomy) -> workflow
+    riskmodel = riskinput.RiskModel(wfs)
 
-    if oqparam.calculation_mode.endswith('_damage'):
+    if oqparam.calculation_mode not in workflows.registry:
+        # classical calculator: the riskmodel must be left empty
+        riskmodel.taxonomies = []
+        return riskmodel
+    elif oqparam.calculation_mode.endswith('_damage'):
         # scenario damage calculator
         riskmodel.damage_states = ['no_damage'] + oqparam.limit_states
         delattr(oqparam, 'limit_states')
         for imt_taxo, ffs_by_lt in rmdict.items():
-            risk_models[imt_taxo] = workflows.get_workflow(
+            wfs[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 fragility_functions=ffs_by_lt)
     elif oqparam.calculation_mode.endswith('_bcr'):
@@ -602,7 +607,7 @@ def get_risk_model(oqparam):
         for (imt_taxo, vf_orig), (imt_taxo_, vf_retro) in \
                 zip(rmdict.items(), retro.items()):
             assert imt_taxo == imt_taxo_  # same imt and taxonomy
-            risk_models[imt_taxo] = workflows.get_workflow(
+            wfs[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 vulnerability_functions_orig=vf_orig,
                 vulnerability_functions_retro=vf_retro)
@@ -613,13 +618,13 @@ def get_risk_model(oqparam):
                 # set the seed; this is important for the case of
                 # VulnerabilityFunctionWithPMF
                 vf.seed = oqparam.random_seed
-            risk_models[imt_taxo] = workflows.get_workflow(
+            wfs[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 vulnerability_functions=vfs)
 
     riskmodel.make_curve_builders(oqparam)
     taxonomies = set()
-    for imt_taxo, workflow in risk_models.items():
+    for imt_taxo, workflow in wfs.items():
         taxonomies.add(imt_taxo[1])
         workflow.riskmodel = riskmodel
         # save the number of nonzero coefficients of variation
@@ -891,23 +896,6 @@ def get_mesh_csvdata(csvfile, imts, num_values, validvalues):
     return mesh, {imt: numpy.array(lst) for imt, lst in data.items()}
 
 
-def get_sitecol_hcurves(oqparam):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :returns:
-        the site collection and the hazard curves, by reading
-        a CSV file with format `IMT lon lat poe1 ... poeN`
-    """
-    imts = list(oqparam.imtls)
-    num_values = list(map(len, list(oqparam.imtls.values())))
-    with open(oqparam.inputs['hazard_curves']) as csvfile:
-        mesh, hcurves_by_imt = get_mesh_csvdata(
-            csvfile, imts, num_values, valid.decreasing_probabilities)
-    sitecol = get_site_collection(oqparam, mesh)
-    return sitecol, hcurves_by_imt
-
-
 def get_gmfs(oqparam):
     """
     :param oqparam:
@@ -921,7 +909,80 @@ def get_gmfs(oqparam):
     elif fname.endswith('.xml'):
         return get_scenario_from_nrml(oqparam, fname)
     else:
-        raise InvalidFile(fname)
+        raise NotImplemented('Reading from %s' % fname)
+
+
+def get_hcurves(oqparam):
+    """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns:
+        sitecol, imtls, curve array
+    """
+    fname = oqparam.inputs['hazard_curves']
+    if fname.endswith('.csv'):
+        return get_hcurves_from_csv(oqparam, fname)
+    elif fname.endswith('.xml'):
+        return get_hcurves_from_xml(oqparam, fname)
+    else:
+        raise NotImplemented('Reading from %s' % fname)
+
+
+def get_hcurves_from_csv(oqparam, fname):
+    """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param fname:
+        a .txt file with format `IMT lon lat poe1 ... poeN`
+    :returns:
+        the site collection and the hazard curves read by the .txt file
+    """
+    imts = list(oqparam.imtls)
+    if not imts:
+        raise ValueError('Missing intensity_measure_types_and_levels in %s',
+                         oqparam.inputs['job_ini'])
+    num_values = list(map(len, list(oqparam.imtls.values())))
+    with open(oqparam.inputs['hazard_curves']) as csvfile:
+        mesh, hcurves_by_imt = get_mesh_csvdata(
+            csvfile, imts, num_values, valid.decreasing_probabilities)
+    sitecol = get_site_collection(oqparam, mesh)
+    return sitecol, hcurves_by_imt
+
+
+def get_hcurves_from_xml(oqparam, fname):
+    """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param fname:
+        an XML file containing hazard curves
+    :returns:
+        sitecol, curve array
+    """
+    hcurves_by_imt = {}
+    oqparam.hazard_imtls = imtls = {}
+    for hcurves in nrml.read(fname):
+        imt = hcurves['IMT']
+        if imt == 'SA':
+            imt += '(%s)' % hcurves['saPeriod']
+        imtls[imt] = ~hcurves.IMLs
+        data = []
+        for node in hcurves[1:]:
+            xy = ~node.Point.pos
+            poes = ~node.poEs
+            data.append((xy, poes))
+        data.sort()
+        hcurves_by_imt[imt] = numpy.array([d[1] for d in data])
+    n = len(hcurves_by_imt[imt])
+    curves = zero_curves(n, imtls)
+    for imt in imtls:
+        curves[imt] = hcurves_by_imt[imt]
+    lons, lats = [], []
+    for xy, poes in data:
+        lons.append(xy[0])
+        lats.append(xy[1])
+    mesh = geo.Mesh(numpy.array(lons), numpy.array(lats))
+    sitecol = get_site_collection(oqparam, mesh)
+    return sitecol, curves
 
 
 def get_gmfs_from_txt(oqparam, fname):

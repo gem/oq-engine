@@ -18,7 +18,7 @@ Vendor: GEM Foundation <devops@openquake.org>
 Url: http://github.com/gem/oq-risklib
 
 %define common_deps python numpy scipy python-shapely python-psutil python-futures python-decorator python-mock h5py
-%define oqlib_deps python-oq-hazardlib >= 0.15.0
+%define oqlib_deps python-oq-hazardlib >= 0.17.0
 %define dev_deps python-nose python-coverage
 
 Requires: %{common_deps}

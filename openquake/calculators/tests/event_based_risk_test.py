@@ -31,6 +31,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                     all_csv.append(fname)
         assert all_csv, 'Could not find any CSV file??'
         for fname in all_csv:
+            print fname, 'expected/%s' % strip_calc_id(fname)
             self.assertEqualFiles(
                 'expected/%s' % strip_calc_id(fname), fname)
 
@@ -42,8 +43,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         ekeys = [
             ('loss_curves-stats', 'xml'),
             ('loss_curves-stats', 'geojson'),
-            ('loss_curves-rlzs', 'xml'),
-            ('loss_curves-rlzs', 'geojson'),
+            ('rcurves-rlzs', 'xml'),
+            ('rcurves-rlzs', 'geojson'),
 
             ('loss_maps-stats', 'xml'),
             ('loss_maps-stats', 'geojson'),
@@ -77,7 +78,7 @@ total     6.953005E+02 2.221170E+02
         out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
                             concurrent_tasks=0)
         # this also tests that concurrent_tasks=0 does not give issues
-        [fname] = out['agg_losses', 'csv']
+        [fname] = out['agg_loss_table', 'csv']
         self.assertEqualFiles(
             'expected/agg_losses-b1,b1-structural.csv', fname)
 
@@ -94,7 +95,7 @@ total     6.953005E+02 2.221170E+02
         # Turkey with SHARE logic tree
         out = self.run_calc(case_4.__file__, 'job_h.ini,job_r.ini',
                             exports='csv', individual_curves='true')
-        fnames = out['agg_losses', 'csv']
+        fnames = out['agg_loss_table', 'csv']
         assert fnames, 'No agg_losses exported??'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
@@ -117,6 +118,11 @@ total     6.953005E+02 2.221170E+02
                             ground_motion_fields='false', exports='csv')
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles('expected/hazard_curve-mean.csv', fname)
+        [fname] = out['hmaps', 'csv']
+        self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
+
+        fnames = export(('hmaps', 'xml'), self.calc.datastore)
+        self.assertEqual(len(fnames), 4)  # 2 IMT x 2 poes
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):

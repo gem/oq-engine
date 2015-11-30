@@ -1,3 +1,15 @@
+  [Michele Simionato]
+  * Fully ported the classical_risk calculator to oq-lite
+  * Fixed the check for missing taxonomies in the risk model
+  * Added `--profile` flag to oq-lite run
+  * The performance info has been moved fully in the datastore
+  * Saved one loss table per realization in the datastore
+  * Fixed a bug in the oq-lite exporter of the hazard maps
+  * Removed a spurious comma from the rupture tag
+  * Removed the epsilon_sampling feature from event_based_risk
+
+python-oq-risklib (0.9.0-0~precise01) precise; urgency=low
+
   [Graeme Weatherill]
   * Added fault geometry epistemic uncertainties to the source model logic tree
 
@@ -55,6 +67,8 @@
   * Added a test with multiple assets on the same site
   * Improved the error message for invalid exposures
   * Fixed a few tests on Windows
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 17 Nov 2015 10:57:39 +0100
 
 python-oq-risklib (0.8.0-0~precise01) precise; urgency=low
 

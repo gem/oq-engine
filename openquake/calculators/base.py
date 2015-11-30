@@ -81,6 +81,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.monitor = monitor
         if persistent:
             self.datastore = datastore.DataStore(calc_id)
+            self.monitor.hdf5path = self.datastore.hdf5path
         else:
             self.datastore = general.AccumDict()
             self.datastore.hdf5 = {}
@@ -110,14 +111,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         exported = {}
         try:
             if pre_execute:
-                with self.monitor('pre_execute', autoflush=True):
-                    self.pre_execute()
-            with self.monitor('execute', autoflush=True):
-                result = self.execute()
-            with self.monitor('post_execute', autoflush=True):
-                self.post_execute(result)
-            with self.monitor('export', autoflush=True):
-                exported = self.export()
+                self.pre_execute()
+            result = self.execute()
+            self.post_execute(result)
+            exported = self.export()
         except:
             if kw.get('pdb'):  # post-mortem debug
                 tb = sys.exc_info()[2]
@@ -190,9 +187,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             self.realizations = numpy.array(
                 [(r.uid, r.weight) for r in self.rlzs_assoc.realizations],
                 rlz_dt)
-        performance = self.monitor.collect_performance()
-        if performance is not None:
-            self.performance = performance
         # the datastore must not be closed, it will be closed automatically
 
 
@@ -200,6 +194,8 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
+    riskmodel = datastore.persistent_attribute('riskmodel')
+
     mean_curves = None  # to be overridden
     SourceProcessor = source.SourceFilterSplitter
 
@@ -252,39 +248,74 @@ class HazardCalculator(BaseCalculator):
                 precalc = calculators[self.pre_calculator](
                     self.oqparam, self.monitor('precalculator'),
                     self.datastore.calc_id)
-                precalc.run(clean_up=False)
+                precalc.run()
                 if 'scenario' not in self.oqparam.calculation_mode:
                     self.csm = precalc.csm
             else:  # read previously computed data
                 self.datastore.set_parent(datastore.DataStore(precalc_id))
                 # update oqparam with the attributes saved in the datastore
                 self.oqparam = OqParam.from_(self.datastore.attrs)
-                self.read_exposure_sitecol()
+                self.read_risk_data()
 
         else:  # we are in a basic calculator
-            self.read_exposure_sitecol()
+            self.read_risk_data()
             self.read_sources()
         self.datastore.hdf5.flush()
 
-    def read_exposure_sitecol(self):
+    def read_exposure(self):
         """
-        Read the exposure (if any) and then the site collection, possibly
-        extracted from the exposure.
+        Read the exposure, the riskmodel and update the attributes .exposure,
+        .sitecol, .assets_by_site, .cost_types, .taxonomies.
+        """
+        logging.info('Reading the exposure')
+        with self.monitor('reading exposure', autoflush=True):
+            self.exposure = readinput.get_exposure(self.oqparam)
+            self.sitecol, self.assets_by_site = (
+                readinput.get_sitecol_assets(self.oqparam, self.exposure))
+            if len(self.exposure.cost_types):
+                self.cost_types = self.exposure.cost_types
+            self.taxonomies = numpy.array(
+                sorted(self.exposure.taxonomies), '|S100')
+
+    def load_riskmodel(self):
+        """
+        Read the risk model and set the attribute .riskmodel.
+        The riskmodel can be empty for hazard calculations.
+        Save the loss ratios (if any) in the datastore.
+        """
+        self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
+        missing = set(self.taxonomies) - set(rm.taxonomies)
+        if rm and missing:
+            raise RuntimeError('The exposure contains the taxonomies %s '
+                               'which are not in the risk model' % missing)
+
+        # save the loss ratios in the datastore
+        pairs = [(cb.loss_type, (numpy.float64, len(cb.ratios)))
+                 for cb in rm.curve_builders if cb.user_provided]
+        if not pairs:
+            return
+        loss_ratios = numpy.zeros(len(rm), numpy.dtype(pairs))
+        for cb in rm.curve_builders:
+            if cb.user_provided:
+                loss_ratios_lt = loss_ratios[cb.loss_type]
+                for i, imt_taxo in enumerate(sorted(rm)):
+                    loss_ratios_lt[i] = rm[imt_taxo].loss_ratios[cb.loss_type]
+        self.datastore['loss_ratios'] = loss_ratios
+        self.datastore['loss_ratios'].attrs['imt_taxos'] = sorted(rm)
+        self.datastore['loss_ratios'].attrs['nbytes'] = loss_ratios.nbytes
+
+    def read_risk_data(self):
+        """
+        Read the exposure (if any), the risk model (if any) and then the
+        site collection, possibly extracted from the exposure.
         """
         logging.info('Reading the site collection')
         with self.monitor('reading site collection', autoflush=True):
             haz_sitecol = readinput.get_site_collection(self.oqparam)
         inputs = self.oqparam.inputs
         if 'exposure' in inputs:
-            logging.info('Reading the exposure')
-            with self.monitor('reading exposure', autoflush=True):
-                self.exposure = readinput.get_exposure(self.oqparam)
-                self.sitecol, self.assets_by_site = (
-                    readinput.get_sitecol_assets(self.oqparam, self.exposure))
-                if len(self.exposure.cost_types):
-                    self.cost_types = self.exposure.cost_types
-                self.taxonomies = numpy.array(
-                    sorted(self.exposure.taxonomies), '|S100')
+            self.read_exposure()
+            self.load_riskmodel()  # must be called *after* read_exposure
             num_assets = self.count_assets()
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
@@ -299,6 +330,8 @@ class HazardCalculator(BaseCalculator):
         elif (self.datastore.parent and 'exposure' in
               OqParam.from_(self.datastore.parent.attrs).inputs):
             logging.info('Re-using the already imported exposure')
+            if not self.riskmodel:
+                self.load_riskmodel()
         else:  # no exposure
             self.sitecol = haz_sitecol
 
@@ -326,7 +359,7 @@ class HazardCalculator(BaseCalculator):
     def read_sources(self):
         """
         Read the composite source model (if any).
-        This method must be called after read_exposure_sitecol, to be able
+        This method must be called after read_risk_data, to be able
         to filter to sources according to the site collection.
         """
         if 'source' in self.oqparam.inputs:
@@ -360,8 +393,6 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-
-    riskmodel = datastore.persistent_attribute('riskmodel')
     specific_assets = datastore.persistent_attribute('specific_assets')
 
     def make_eps(self, num_ruptures):
@@ -428,18 +459,6 @@ class RiskCalculator(HazardCalculator):
         """
         return ri.imt
 
-    def pre_execute(self):
-        """
-        Set the attributes .riskmodel, .sitecol, .assets_by_site
-        """
-        HazardCalculator.pre_execute(self)
-        self.riskmodel = readinput.get_risk_model(self.oqparam)
-        if hasattr(self, 'exposure'):
-            missing = self.exposure.taxonomies - set(self.riskmodel.taxonomies)
-            if missing:
-                raise RuntimeError('The exposure contains the taxonomies %s '
-                                   'which are not in the risk model' % missing)
-
     def execute(self):
         """
         Parallelize on the riskinputs and returns a dictionary of results.
@@ -478,10 +497,7 @@ def get_gmfs(calc):
             gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
 
         logging.info('Preparing the risk input')
-        fake_rlz = logictree.Realization(
-            value=('FromFile',), weight=1, lt_path=('',),
-            ordinal=0, lt_uid=('*',))
-        calc.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
+        calc.rlzs_assoc = logictree.trivial_rlzs_assoc()
         return sitecol, {(0, 'FromFile'): gmfs_by_imt}
 
     # else from rupture
