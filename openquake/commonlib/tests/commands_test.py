@@ -138,7 +138,7 @@ class ReduceTestCase(unittest.TestCase):
         shutil.copy(os.path.join(self.TESTDIR, 'exposure_model.xml'), dest)
         with Print.patch() as p:
             reduce(dest, 0.5)
-        self.assertIn('Extracted 182 nodes out of 375', str(p))
+        self.assertIn('Extracted 8 nodes out of 13', str(p))
         shutil.rmtree(tempdir)
 
     def test_source_model(self):

@@ -31,17 +31,6 @@ from openquake.risklib import scientific
 F32 = numpy.float32
 
 
-def sorted_assets(assets_by_site):
-    """
-    :param assets_by_site: a list of lists of disjoint assets
-    :returns: the assets sorted by .id
-    """
-    all_assets = []
-    for assets in assets_by_site:
-        all_assets.extend(assets)
-    return sorted(all_assets, key=operator.attrgetter('id'))
-
-
 def build_asset_collection(assets_by_site, time_event=None):
     """
     :param assets_by_site: a list of lists of assets
