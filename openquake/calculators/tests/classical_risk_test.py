@@ -49,8 +49,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_3(self):
-        out = self.run_calc(case_3.__file__, 'job_haz.ini,job_risk.ini',
-                            exports='csv')
+        out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
         [fname] = out['loss_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/loss_curves-000.csv', fname)
 
