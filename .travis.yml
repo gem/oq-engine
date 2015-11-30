@@ -22,4 +22,4 @@ install:
 
 script:
   - nosetests -vsx -a'!slow' --with-xunit --nologcapture --with-doctest
-  - PYTHONPATH=$VIRTUAL_ENV/oq-hazardlib:$VIRTUAL_ENV/oq-risklib python bin/slowtests nosetests.xml
+  - PYTHONPATH=$HOME/gem/oq-hazardlib:$HOME/gem/oq-risklib python bin/slowtests nosetests.xml
