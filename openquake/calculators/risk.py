@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2014-2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -15,15 +15,3 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
-from openquake.calculators import base
-
-
-@base.calculators.add('classical_bcr')
-class ClassicalBCRCalculator(base.RiskCalculator):
-    pass
-
-
-@base.calculators.add('event_based_bcr')
-class EventBasedBCRCalculator(base.RiskCalculator):
-    pass
