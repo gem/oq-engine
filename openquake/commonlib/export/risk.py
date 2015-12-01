@@ -16,7 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import csv
 import operator
 import itertools
 import collections
@@ -27,7 +26,6 @@ from openquake.baselib.general import AccumDict
 from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers, riskmodels
-from openquake.commonlib.writers import scientificformat
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.export import export_csv
 from openquake.commonlib.risk_writers import (
@@ -35,6 +33,8 @@ from openquake.commonlib.risk_writers import (
     ExposureData, Site)
 
 Output = collections.namedtuple('Output', 'ltype path array')
+
+F32 = numpy.float32
 
 
 # ########################## utility functions ############################## #
@@ -69,8 +69,7 @@ def compose_arrays(a1, a2):
         composite[f2] = a2[f2]
     return composite
 
-asset_dt = numpy.dtype(
-    [('asset_ref', bytes, 20), ('lon', float), ('lat', float)])
+asset_dt = numpy.dtype([('asset_ref', bytes, 20), ('lon', F32), ('lat', F32)])
 
 
 def get_assets(dstore):
@@ -415,12 +414,27 @@ def export_damage_total(ekey, dstore):
 
 
 @export.add(
-    ('loss_maps-rlzs', 'csv'),
-    ('csq_by_asset', 'csv'), ('csq_by_taxon', 'csv'))
-def export_csq_csv(ekey, dstore):
+    ('loss_maps-rlzs', 'csv'), ('damages-rlzs', 'csv'),
+    ('csq_by_asset', 'csv'))
+def export_rlzs_by_asset_csv(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
+    assets = get_assets(dstore)
     R = len(rlzs)
     value = dstore[ekey[0]].value  # matrix N x R or T x R
+    fnames = []
+    for rlz, values in zip(rlzs, value.T):
+        suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
+        fname = dstore.export_path(ekey[0] + suffix)
+        writers.write_csv(fname, compose_arrays(assets, values), fmt='%9.6E')
+        fnames.append(fname)
+    return fnames
+
+
+@export.add(('csq_by_taxon', 'csv'))
+def export_csq_by_taxon_csv(ekey, dstore):
+    rlzs = dstore['rlzs_assoc'].realizations
+    R = len(rlzs)
+    value = dstore[ekey[0]].value  # matrix T x R
     fnames = []
     for rlz, values in zip(rlzs, value.T):
         suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
@@ -470,41 +484,6 @@ def export_dmg_xml(key, dstore, damage_states, dmg_data, suffix):
     dest = dstore.export_path('%s%s.%s' % (key[0], suffix, key[1]))
     risk_writers.DamageWriter(damage_states).to_nrml(key[0], dmg_data, dest)
     return AccumDict({key: [dest]})
-
-
-@export.add(('damages_by_rlz', 'csv'))
-def export_classical_damage_csv(ekey, dstore):
-    damages_by_rlz = dstore['damages_by_rlz']
-    rlzs = dstore['rlzs_assoc'].realizations
-    damage_states = dstore['riskmodel'].damage_states
-    dmg_states = [DmgState(s, i) for i, s in enumerate(damage_states)]
-    fnames = []
-    for rlz in rlzs:
-        damages = damages_by_rlz[rlz.ordinal]
-        fname = 'damage_%d.csv' % rlz.ordinal
-        fnames.append(
-            _export_classical_damage_csv(dstore, fname, dmg_states, damages))
-    return fnames
-
-
-def _export_classical_damage_csv(dstore, fname, damage_states,
-                                 fractions_by_asset):
-    """
-    Export damage fractions in CSV.
-
-    :param dstore: the datastore
-    :param fname: the name of the exported file
-    :param damage_states: the damage states
-    :fractions_by_asset: a dictionary with the fractions by asset
-    """
-    dest = dstore.export_path(fname)
-    with open(dest, 'w') as csvfile:
-        writer = csv.writer(csvfile, delimiter='|', lineterminator='\n')
-        writer.writerow(['asset_ref'] + [ds.dmg_state for ds in damage_states])
-        for asset_ref in sorted(fractions_by_asset):
-            data = fractions_by_asset[asset_ref]
-            writer.writerow([asset_ref] + list(map(scientificformat, data)))
-    return dest
 
 
 # exports for scenario_risk

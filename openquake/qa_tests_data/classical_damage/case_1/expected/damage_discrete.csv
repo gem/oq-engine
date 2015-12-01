@@ -1,2 +1,2 @@
-asset_ref|no_damage|slight|moderate|extreme|complete
-a1|1.041374764E-09|1.457594127E-06|1.958495367E-03|6.967635903E-02|9.283636870E-01
+asset_ref:|S20:,lon:float32:,lat:float32:,no_damage:float32:,slight:float32:,moderate:float32:,extreme:float32:,complete:float32:
+a1,8.331382E+01,2.946117E+01,1.041375E-09,1.457594E-06,1.958495E-03,6.967636E-02,9.283637E-01

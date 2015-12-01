@@ -19,9 +19,11 @@
 import os
 import logging
 
+import numpy
+
 from openquake.baselib.general import AccumDict
-from openquake.commonlib import readinput, parallel, logictree, datastore
-from openquake.calculators import base
+from openquake.commonlib import parallel, datastore
+from openquake.calculators import base, classical_risk
 
 
 @parallel.litetask
@@ -48,40 +50,18 @@ def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
         for out_by_rlz in riskmodel.gen_outputs(
                 riskinputs, rlzs_assoc, monitor):
             for out in out_by_rlz:
-                result[out.hid] += dict(zip(out.assets, out.damages))
+                asset_ids = [a.idx for a in out.assets]
+                result[out.hid] += dict(zip(asset_ids, out.damages))
     return result
 
 
 @base.calculators.add('classical_damage')
-class ClassicalDamageCalculator(base.RiskCalculator):
+class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
     """
     Scenario damage calculator
     """
     core_func = classical_damage
-    damages_by_rlz = datastore.persistent_attribute('damages_by_rlz')
-
-    def pre_execute(self):
-        """
-        Read the curves and build the riskinputs.
-        """
-        super(ClassicalDamageCalculator, self).pre_execute()
-
-        logging.info('Reading hazard curves from file')
-        sites, hcurves_by_imt = readinput.get_hcurves(self.oqparam)
-
-        with self.monitor('assoc_assets_sites'):
-            sitecol, assets_by_site = self.assoc_assets_sites(sites)
-        num_assets = sum(len(assets) for assets in assets_by_site)
-        num_sites = len(sitecol)
-        logging.info('Associated %d assets to %d sites', num_assets, num_sites)
-
-        logging.info('Preparing the risk input')
-        self.riskinputs = self.build_riskinputs(
-            {(0, 'FromFile'): hcurves_by_imt})
-        fake_rlz = logictree.Realization(
-            value=('FromFile',), weight=1, lt_path=('',),
-            ordinal=0, lt_uid=('*',))
-        self.rlzs_assoc = logictree.RlzsAssoc([fake_rlz])
+    damages = datastore.persistent_attribute('damages-rlzs')
 
     def post_execute(self, result):
         """
@@ -90,4 +70,10 @@ class ClassicalDamageCalculator(base.RiskCalculator):
         :param result:
             a dictionary asset -> fractions per damage state
         """
-        self.damages_by_rlz = result
+        damages_dt = numpy.dtype([(ds, numpy.float32)
+                                  for ds in self.riskmodel.damage_states])
+        damages = numpy.zeros((self.N, self.R), damages_dt)
+        for r in result:
+            for aid, fractions in result[r].items():
+                damages[aid, r] = tuple(fractions)
+        self.damages = damages
