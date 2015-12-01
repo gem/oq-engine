@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed an encoding bug in --lhc
   * Fixed an export bug: it is now possible to export the outputs generated
     by another user, if the read permissions are set correctly
 
