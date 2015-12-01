@@ -326,8 +326,8 @@ def list_calculations(job_type):
             last_update = latest_job.last_update.strftime(
                 '%Y-%m-%d %H:%M:%S %Z'
             )
-            print '%6d | %10s | %s| %s' % (
-                job.id, status, last_update, descr)
+            print ('%6d | %10s | %s| %s' % (
+                job.id, status, last_update, descr)).encode('utf-8')
 
 
 # TODO: the command-line switches are not tested, included this one
