@@ -1,190 +1,256 @@
-OpenQuake 1.5 is a major release and a big improvement with respect
-to OpenQuake 1.4. More than 115 bugs/feature
-requests were fixed/implemented. Everybody is invited to upgrade,
+OpenQuake 1.6 is a major release and a big improvement with respect
+to OpenQuake 1.5. Everybody is invited to upgrade,
 by following the [usual procedure](Installing-the-OpenQuake-Engine.md).
 
-New features of the OpenQuake Engine, version 1.5
---------------------------------------------------
+New features of the OpenQuake Engine, version 1.6
+---------------------------------------------------
 
-1. The most important new feature is the *support for the HDF5
-technology*. Starting from this release some of the scientific
-calculators are saving their inputs and outputs in a single HDF5 file,
-called the datastore. The HDF5 format is a well known standard in
-the scientific community, can be read/written by a variety of
-programming languages and with different tools and it is a
-state-of-the-art technology when it comes to managing large numeric
-datasets. The change to the HDF5 technology provides *huge*
-performance benefits compared to the earlier approach used by the
-engine, which involved storing arrays in PostgreSQL.
+1. The following six calculators have been completely rewritten and now
+  use the HDF5 technology that in previous versions was still experimental:
+  
+  1. `scenario`
+  2. `scenario_risk`
+  3. `scenario_damage`
+  4. `event_based_rupture`
+  5. `event_based`
+  6. `event_based_risk`
 
-2. Related to the first point, in OpenQuake 1.5 *the event based
-calculators based on Postgres (both hazard and risk) are officially 
-deprecated*. They are still present and work as before, but they are 
-being replaced with new versions of the calculators based on the 
-HDF5 technology.  The actual removal of the old calculators
-is scheduled for OpenQuake 1.6. The change will have no impact 
-on regular users, who will simply notice a definite improvement in
-erformance. Nonetheless, the change will affect power users who are 
-performing queries on the OpenQuake database, since there will be nothing 
-left in the database once we remove the old calculators.
+  As a consequence all such calculators are much faster and use a lot
+  less memory than before. Even the disk space occupation has been
+  drastically reduced, and large event based computations that before
+  took terabytes of disk space now requires few gigabytes. The new
+  calculators do not store their outputs in the
+  database, but in an HDF5 file, named the datastore, located by
+  default in ``$HOME/oqdata/calc_XXX.hdf5``.
 
-3. In order to make the transition easier, OpenQuake 1.5 already includes 
-the new versions of the event based calculators based on HDF5, so it 
-is possible to use them right now. The new calculators can be run in 
-OpenQuake 1.5 with the command
-``$ oq-engine --lite --run job_haz.ini,job_risk.ini``.
-If you do not pass the ``--lite`` flag the old calculators will be
-run by default. In future releases of the engine, the remaining
-calculators based on Postgres will be 
-progressively replaced by the new calculators based on HDF5. At the end of 
-this process, which will be spread over several upcoming releases, 
-the ``--lite`` flag will be removed. All of the old calculators 
-relying on the database will be replaced internally by the newer 
-"lite" versions based on HDF5 and the old calculators
-will not be available anymore. The OpenQuake database will only contain 
-accessory information (essentially a table with the users and references 
-to the outputs of each user) but nothing relevant for the scientific 
-computation.
+2. The other calculators are unchanged; they are still using PostgreSQL.
+  They will be replaced with HDF5-based versions in future releases of the
+  OpenQuake Engine. For some calculator the HDF5-based implementation is
+  already available in the engine and can be accessed by using the ``--lite``
+  flag. For instance the classical hazard calculator is supported and can be
+  run with
+  
+  ``$ oq-engine --lite --run job.ini``
+  
+  However the calculators accessible with the ``--lite`` flag should be
+  considered experimental, previews of things to come, and they are still
+  subject to change.
 
-4. At the moment, the ``--lite`` flag does not work for all calculators.
-For instance, among the hazard calculators, 
-the disaggregation ``--lite`` calculator is absent in OpenQuake 1.5. 
-Work on this calculator is in progress, and it will be added in a 
-future release; for the the time being, you will have 
-to use the old calculator, which is not deprecated in OpenQuake 1.5.
-The ``--lite`` versions of the other hazard calculators 
-(scenario hazard, classical hazard, and event based hazard) are complete. 
-The ``--lite`` version of the classical_tiling calculator is also complete 
-but relatively new and has not been battle tested yet. The ``--lite`` 
-versions of the risk calculators are at different levels of completion; 
-the only ``--lite`` risk calculator we recommend using in this release 
-is the event based risk calculator.
+3. The new calculators can run with a single configuration file containing both
+the hazard and the risk parameters. This is actually the recommended way to
+run such calculators.
 
-5. Internally, the ``--lite`` calculators are implemented very 
-differently compared to the old calculators based on Postgres, 
-*however they produce identical results*. They implement the same 
-science and any noticable differences should be reported as a bug. 
-There could be minimal discrepancies due to numerical errors, and 
-changes in rounding, but nothing more than that. The
-event based ``--lite`` calculators are faster by orders of magnitudes,
-especially for large calculations, both because of the HDF5 technology
-and also because they compute the ground motion fields on the fly,
-thus avoiding the time wasted in saving/reading 
-large amounts of data, as the old calculators did. It is recommended 
-that you start using the ``--lite`` versions of the event based 
-calculators in preference to the engine ones.
+6. The `scenario_risk` and `scenario_damage` calculators now support multiple
+GSIMs at the same time. This new functionality is documented in the [manual]
+(http://www.globalquakemodel.org/openquake/support/documentation/engine/).
 
-6. OpenQuake 1.5, as a special preview of the future, is able to
-manage a new kind of vulnerability function, in which you can
-specify the discrete Probability Mass Function (PMF) of the loss ratio at 
-different ground motion intensity levels numerically. This is a
-feature that will be officially introduced in the new version of our 
-XML data format, NRML 0.5, but it is already available unofficially. 
-For the moment NRML 0.4 is not deprecated. In OpenQuake 1.6 we will support
-other kinds of vulnerability and fragility functions in the new format
-NRML 0.5, and NRML 0.4 may be deprecated. In that case a conversion
-script to convert input files from NRML 0.4 to NRML 0.5 will be provided.
+8. The `scenario_damage` calculator now supports multiple loss types at
+the same time, just as the `scenario_risk` calculator. Again, see the [manual]
+(http://www.globalquakemodel.org/openquake/support/documentation/engine/) for
+the details.
 
-7. For the first time, *hazardlib supports Python 3*.  The support is
-at the beginning and the C-level speedups do not work yet. However,
-we are already testing hazardlib with Python 3.4 by using the Travis
-continuous integration system and we are committed to keep it
-compatible both with Python 2.7 and Python 3.4+ for the
-foreseeable future. There is no plan to abandon Python 2.7 any time
-soon, but there is a plan to extend the support for
-Python 3.4+ to risklib and the engine. However, this will be a
-long term and low priority process: do not expect anything definitive
-before 2016.
+7. The `event_based_risk` calculator has been optimized and enhanced. Now it
+is possible to generate the full event loss table for each
+asset and for each realization. Just set the configuration parameter
+`asset_loss_table=True` (the default is False).
 
-8. It is now possible to pass string parameters to GSIM classes,
-directly from the XML representation of the logic tree. This is
-of interest only to users writing GSIMs, and they can 
-read the related pull request for the relevant details:
-https://github.com/gem/oq-risklib/pull/346
+3. OpenQuake 1.6 supports officially the format NRML 0.5 for all risk
+models. In OpenQuake 1.5 it was supported in a limited and experimental way
+only for a subset of the vulnerability functions. Now all kind of risk
+models are supported: vulnerability models, fragility risk models and
+consequence models. Consequence models are brand new, introduced for
+the first time in this release. All of that is documented in the [manual]
+(http://www.globalquakemodel.org/openquake/support/documentation/engine/).
+The new format is simpler than before
+and more convenient to use, since the OpenQuake platform offers a web
+tool to prepare risk models in NRML 0.5. Beware that the web tool does
+not support validation of the risk models yet.
 
-9. The passing-parameters-to-GSIMs feature has been used to implement
-support for the definition of ground motion prediction equations using
-interpolation ('look up') tables. These allow the user to input
-arbitrary GMPEs in the form of tables, rather than the parametric
-equations currently supported. The tables, in HDF5 format, provide the
-expected ground motion values for given magnitudes and distances, with
-the additional option of amplifying the ground motions based on source
-or site attributes. To use this option the user need only specify
-`GMPETable(gmpe_table=path/to/table.hdf5)` in place of the
-conventional GMPE. Further guidance regarding the construction of the
-HDF5 files will be provided in the documentation in due course.
+4. The validation of the risk models in the engine has been
+improved. In particular now an user confusing a fragility model with a
+vulnerability model or a consequence model or any other combination
+will get a clear error message. Moreover, each risk model has a
+`lossCategory` attribute which must be set consistently with the name
+of the key in the job.ini file (see the [manual]
+(http://www.globalquakemodel.org/openquake/support/documentation/engine/)
+for the details).
 
-10. Near-fault directivity probabilistic seismic hazard
-analysis for classical PSHA calculations with simple fault
-sources was added to hazardlib. We implemented the most recent NGA-WEST2
-directivity model and the associated GMPE which is, up to now,
-the only GMPE model explicitly including the effect. More details
-can be found in the manual.
+6. Some work has been going on hazardlib, as usual, and you can have a
+look at the [changelog]
+(https://github.com/gem/oq-hazardlib/blob/engine-1.6/debian/changelog). The
+most prominent feature is the introduction of new epistemic
+uncertainties in the Source Model Logic Tree. Users are now able to
+represent alternative geometries for the fault source typologies using
+the following uncertainty model definitions:
 
-11. Several other features have been implemented in hazard and you can
-have a look at the [changelog](https://github.com/gem/oq-hazardlib/blob/engine-1.5/debian/changelog).
+  1. simpleFaultGeometryAbsolute - Replaces the simple fault geometry with the specified simple fault surface.
+  2. complexFaultGeometryAbsolute - Replaces the complex fault geometry with the specified complex fault surface.
+  3. characteristicFaultGeometryAbsolute - Replaces the characteristic fault geometry with the specified surface.
+  4. simpleFaultDipRelative - Increases or decreases the fault dip with the specified value.
+  5. simpleFaultDipAbsolute - Replaces the simple fault dip with the specified value.
 
-12. The ``oq-lite`` command-tool has been enhanced; it is possible to use
-it to execute the same calculations that you would run with the command
-``oq-engine --lite``. The difference is that ``oq-lite`` only works
-on a single machine, not on a cluster. On the plus side, it does
-not require having a celery instance up and running.
+  Also added is the ability to replace a given evenly discretised magnitude
+  frequency distribution of a source in the logic tree using the
+  `incrementalMFDAbsolute` option.
 
-13. ``oq-lite`` is especially useful to perform preliminary analysis before you 
-run a large computation on the engine. Running
-``$ oq-lite info --report <my_job.ini>``
-will generate a text report on the expected size
-of the computation. It is recommended to generate such report
-before you start anything large. Currently
-the functionality only works for hazard calculations
-but it is expected to grow in the future.
+  Documentation on the usage of these features will be added in the forthcoming
+  version of the manual.
 
-14. Several other improvements have been made to oq-lite, too many to list
-them all; please see the [changelog](https://raw.githubusercontent.com/gem/oq-risklib/engine-1.5/debian/changelog) for the complete list.
+7. We added an optional attribute `discretization` to the
+area source geometry XML description: this means that it is possible to
+specify a source-specific discretization step. This is useful in site specific
+analysis: area sources with little impact on the site of interest can use
+a large discretization step whereas the important area sources can use a
+finer discretization step.
 
-15. We added a functionality `write_source_model` to serialize sources in XML.
-Also we improved the reading of XML files and the error message in case of
-invalid files. Finally, we have removed the dependency on lxml, thus making
-the OpenQuake suite more portable across different platforms and easier
-to install.
+10. Two new GMPEs have been added to hazardlib: *Montalva et al. (2015)*
+and *Tusa and Langer (2015)*.
 
-16. We added a check on the site parameters distance. If a site model
-file is provided in a hazard calculation, and if no site parameters are
-available within a radius of 5 km for a particular site, a
-warning is raised. The goal is to signal the user if she used an
-incorrect site model file with respect to the sites she is using. The
-calculation still runs and complete, since sometimes you may not have
-site parameters data close enough to the sites of interests.
+11. The .rst report of a calculation has been improved. Now you can run
+  
+  ```bash
+  $ oq-lite show <calc_id> fullreport
+  ```
+  
+  to get information about a given calculation. This only works for the lite
+  calculators.
 
-17. We have parallelized the source splitting procedure with a good
-performance boost. There is also a flag
-`parallel_source_splitting` in openquake.cfg to disable this
-feature, should the need arise (default: true).
+12. Some small improvements to the Engine Web User Interface have been
+made and this feature, first introduced in OpenQuake Engine 1.4, is
+[now finally documented](https://github.com/gem/oq-engine/blob/engine-1.6/doc/server/OpenQuake-engine-webui.md).
+
+11. We added a script `oq_reset_db` to drop and recreate the engine
+database, as well as removing the datastore directories of all users.
+This is meant to be used with care by system administrators. See the
+instructions printed at the moment of running the script.
+
+9. Countless small improvements and additional validations have been
+added. This release has seen more than 150 pull requests reviewed and
+merged.
+
+Bug fixes and changes with respect to OpenQuake 1.5
+----------------------------------------------------
+
+1. The most important change is the support for NRML 0.5. A
+  deprecation warning is printed every time you use a risk model in
+  the NRML 0.4 format. To get rid of the warning you must upgrade the
+  risk model files to NRML 0.5. There is a command to do that
+  recursively on a directory.  Just write
+  
+  ``$ oq-lite upgrade_nrml <some-directory>``
+  
+  and all of your risk models will be upgraded. The original files
+  will be kept, but with a `.bak` extension appended. Notice that you
+  will need to set the `lossCategory` attribute to its correct value
+  manually. This is easy to do, since if you try to run a computation
+  you will get a clear error message telling which is the expected
+  value for the `lossCategory` for each risk model file. For instance,
+  you may get an error like this:
+
+   ```python
+   ValueError: Error in the file "structural_vulnerability_file=/home/.../vulnerability_model.xml": lossCategory is of type "economic_loss", expected "structural"
+  ```
+  
+  The reason is that in NRML 0.4 the `lossCategory` attribute had no
+  special meaning (actually it was ignored by the engine) whereas now
+  there is a check on it. It must be consistent with the name of the
+  variable used in the configuration file. In this example in the
+  job_risk.ini file there was a line `structural_vulnerability_file=`,
+  so the `lossCategory` is expected to be of kind `structural`. Edit the
+  "vulnerability_model.xml" file and set the `lossCategory` attribute to
+  the expected value. 
+
+2. Valid loss categories are `structural`, `nonstructural`, `contents`,
+`business_interruption` and `fatalities`.  There is now a strict check
+on the categories, both in the risk model files and in the exposure
+file. The check is disabled for NRML 0.4 files, so we are fully
+backward-compatible.
+
+3. If an user set the parameter `insured_losses=True` but the exposure
+does not have the attributes `deductible` and `insuredLimit`, a clear
+error is raised early.
+
+4. In very rare circumstances the region constraint was not honored,
+i.e.  assets very close to the border of region, but still outside, were
+taken in consideration by the risk calculators. This has been fixed.
+
+5. The engine had a self-termination feature: if the controller node
+could not access the worker nodes, it assumed a failure in celery
+and committed suicide if the configuration parameter 
+`terminate_job_when_celery_is_down` was true. We removed such parameter
+and such feature because it was too dangerous: sometimes celery was
+up and running but incorrectly reported down because too slow to
+respond, due to an heavy load. Now if celery appears to not respond
+a warning is printed and that user has to see if celery is really dead
+and in that case she can kill the computation manually.
+
+6. We removed the epsilon sampling feature from the scenario_risk calculator:
+it was a performance hack introducing a gratuitous seed dependency, now
+unneeded thanks to the recent performance improvements.
+
+7. We removed the `epsilon_sampling` parameter from the engine
+configuration file `openquake.cfg`. Now the parameter can be managed
+directly by the users, on a calculation-specific base, by setting it
+in the `job.ini` file. This is only relevant for event based risk
+calculations. In the future we will remove such parameter completely,
+but first further optimizations of the event based risk calculator
+are needed.
+
+8. The `specific_assets` feature has been removed from the
+`event_based_risk` calculator. It has become useless thanks to the
+recent performance improvements. Use `asset_loss_table=True` instead.
+
+9. The demos have been revisited and updated. Also their location has
+changed for the users installing OpenQuake from the packages. Now they
+are installed in `/usr/share/openquake/risklib/demos`.
+
+10. In some cases the rupture tag was containing spurios commas, thus breaking
+a CSV importer in the Risk Modeler Toolkit. This has been fixed.
+
+12. When using a vulnerability function with a Probability Mass Function,
+now it is possible to set the seed by changing the `random_seed` parameter
+in the configuration file. Before the seed was hard-coded.
+
+13. We introduced the concept of composite outputs, i.e. outputs that
+can be exported to a zip file containing a set of output files. For
+instance an event based risk calculation with two realizations and
+four loss types in the past could print something like the following:
+
+```
+  id | output_type | name
+ 515 | Aggregate Loss Curve | aggregate loss curves. loss_type=contents hazard=430||gmf||GMF rlz-332
+ 514 | Aggregate Loss Curve | aggregate loss curves. loss_type=contents hazard=431||gmf||GMF rlz-333
+ 519 | Aggregate Loss Curve | aggregate loss curves. loss_type=fatalities hazard=430||gmf||GMF rlz-332
+ 518 | Aggregate Loss Curve | aggregate loss curves. loss_type=fatalities hazard=431||gmf||GMF rlz-333
+ 512 | Aggregate Loss Curve | aggregate loss curves. loss_type=nonstructural hazard=430||gmf||GMF rlz-332
+ 513 | Aggregate Loss Curve | aggregate loss curves. loss_type=nonstructural hazard=431||gmf||GMF rlz-333
+ 516 | Aggregate Loss Curve | aggregate loss curves. loss_type=structural hazard=430||gmf||GMF rlz-332
+ 517 | Aggregate Loss Curve | aggregate loss curves. loss_type=structural hazard=431||gmf||GMF rlz-333
+```
+
+Now it will print only one line:
+
+```
+  id | output_type | name
+ 419 | datastore | agg_curve-rlzs
+```
+
+When exporting the composite output, 8 XML files will be generated, in
+the same format as before, plus a zip file containing all of them.
+When using the Web UI the zip file will be available for download.
 
 Support for different platforms
 ----------------------------------------------------
 
-OpenQuake 1.5 fully supports both Ubuntu 12.04 and Ubuntu 14.04
-and we provide packages for both platforms. However,
-starting from OpenQuake 1.6 *we will release packages only for Ubuntu 14.04*.
-Ubuntu 12.04 will still be supported but you will have to install manually some
-dependencies which are not in the repositories of Ubuntu 12.04. The reason
-for the change is that the HDF5 libraries for Ubuntu 12.04 are
-too old (over 4 year old), buggy and less efficient compared to 
-the ones for Ubuntu 14.04, which is now our official development platform.
-It is too expensive for us to mantain compatibility with such ancient
-software, so users wishing to use OpenQuake 1.6 on Ubuntu 12.04
-will have to install manually the library h5py (version 2.2.1)
-and its dependencies. We will provide instructions for that in
-the next release, since for the moment this is not necessary.
+OpenQuake 1.6 supports Ubuntu from release 12.04 up to 15.10. 
+We provide official packages for the long term releases 12.04 and 14.04.
+We were able to extend the support to
+Ubuntu 12.04 by backporting the package `python-h5py` from Ubuntu 14.04.
+So *Ubuntu 12.04 is still supported, even if it is deprecated*.
 
-We have detailed instructions for installing the engine on CentOS 7
-and Fedora and in general on [Red Hat Enterprise Linux clones]
+We have official packages also for CentOS 7
+and in general for [Red Hat Enterprise Linux clones].
 (Installing-the-OpenQuake-Engine-from-source-code-on-Fedora-and-RHEL.md)
-The engine works on several Linux distributions, even recent ones
-like Ubuntu 15.04. It has less dependencies than it used to have in
-the past and it is easier to install, so it should be relatively
-simple to install it on any modern Linux distribution.
 
 While the engine is not supported on Windows and Mac OS X, we are
 happy to report that the underlying libraries and the
@@ -194,88 +260,28 @@ a [guide for Windows](Installing-OQ-Lite-on-Windows.md) and
 a [guide for Mac OS X](Installing-OQ-Lite-on-MacOS.md) to help you
 to install the necessary dependencies.
 
-Bug fixes and changes with respect to OpenQuake 1.4
-----------------------------------------------------
+Other
+------
 
-0. The database schema has changed in a destructive way, by removing
-a column in the ``hzrdi.hazard_site`` table and a column in the
-``riskr.epsilon`` table. If your database contains important
-data, export them or dump the database. You will not be able
-to user OpenQuake 1.5 with an OpenQuake 1.4 database. The
-upgrade procedure is the usual one ``oq-engine --upgrade-db``.
+The OpenQuake project is even
+more open than before. From this release we are using
+[GitHub](https://github.com/gem) as our
+official bug tracker, which makes it easier to follow the development
+process (before the bug tracker was Launchpad, which is less popular
+than GitHub and not integrated with the code base). Moreover from this
+release our libraries (both [oq-hazardlib](https://github.com/gem/oq-hazardlib)
+and [oq-risklib](https://github.com/gem/oq-risklib)) are tested by
+using a public Continuous Integration system,
+[Travis](https://travis-ci.org/gem/). Before our
+builds were internal on Jenkins and visible only to our staff.
+The engine is still built with Jenkins for various technical reasons.
 
-1. Over 30 new tests have been added for the event based risk
-calculator, and a few new tests have been added also for the event
-based hazard calculator. It was a **huge** effort on the part of
-both our scientific team and IT team. The net result is that
-a lot of subtle and hard-to-find bugs have been discovered and
-fixed. The list of bug-fixes is so long that is has been moved to a separated
-document that you can find [here](event-based-bugs.md).
+Finally, depending on the version of the HDF5 libraries you are using,
+you may get a warning like the following:
 
-2. The algorithm to compute average losses and average insured losses
-in the event based risk calculator has been changed: it is now
-more robust since it does not rely on the discretization of
-the loss curves, but directly on the underlying loss tables. As a
-consequence the numbers for the average losses are different than in previous
-versions of OpenQuake. The difference is compatible with the error
-that we had before.
+```
+HDF5: infinite loop closing library
+      D,G,A,S,T,F,D,A,S,T,F,FD,P,FD,P,FD,P,E,E,SL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL,FL
+```
 
-3. The event-based disaggregation feature has been removed; same for
-event-based Benefit-Cost Ratio calculator. They were buggy and
-they will be reintroduced in the future within the new system, in
-the engine codebase or as part of the Risk Modeller's Toolkit.
-
-4. Longitude and latitude are now rounded to 5 digits after the
-decimal point directly from Python; earlier the rounding happened
-inside PostGIS. As a consequence, if the locations of your assets have
-more than 5 digits after the decimal point, there will be small 
-differences in the numbers produced by the engine, 
-compared to previous versions.
-
-5. The parameter `investigation_time` has been replaced by
-`risk_investigation_time` in risk configuration files
-
-6. The `bin/openquake` wrapper, which has been deprecated
-for ages, is now removed. Now only `bin/oq-engine` is available
-
-7. The parameter `concurrent_tasks` is read from the .ini file and
-honored; in earlier versions it was read from the *openquake.cfg* file, 
-but was being ignored by the risk calculators.
-
-8. We changed the convention used to generate the rupture tags; now
-the tags do not contain pipes "|" as the tag separators. 
-This character caused problems on Windows, since one of the NRML 
-converters was using the tag to generate a file with the same name 
-containing the corresponding ground motion field.
-
-9. We changed the export order of the event loss table. Earlier, the values
-were ordered by loss size, in decreasing order. Now they are first ordered
-by rupture tag, and then by increasing loss size. We feel that this ordering
-is more useful.
-
-9. We have added some checks on source IDs and asset IDs, to avoid
-having issues such as nonprintable characters or non-ASCII
-characters in there. Also, we have limited the maximum length of
-an identifier to 100 characters. Notice that descriptions are
-unconstrained, as before, so there are no problems if you
-want to name your sources using Chinese characters or in any 
-other character set. The only restriction is that the XML file 
-must be UTF8-encoded, according to the XML standard.
-
-10. If you don't have a site model file, you need to provide values in
-the *job.ini* file only for those site parameters that are actually used
-by your calculation. In earlier versions, users were asked to specify 
-site parameters even if they weren't required for the calculation.
-
-11. We fixed a bug with the ``oq-engine --load-curve`` command, such
-that is was impossible to load a hazard curve.
-
-12. We improved the error reporting on the engine; earlier, an error in
-the cleanup phase could hide the real underlying error.
-
-13. We fixed an error for the degenerate case of hazard curves
-containing all zeros, as this corner case was reported by some users 
-on the OpenQuake users group.
-
-14. Now the sites are ordered by longitude, latitude even when they
-are extracted from a region, consistently with all other cases.
+Please ignore it. The engine is working correctly.

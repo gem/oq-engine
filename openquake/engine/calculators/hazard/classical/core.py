@@ -57,6 +57,7 @@ import itertools
 import numpy
 
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -161,8 +162,8 @@ class BoundingBox(object):
         """
         True if the bounding box is non empty.
         """
-        return (self.min_dist is not None and self.west is not None
-                and self.south is not None)
+        return (self.min_dist is not None and self.west is not None and
+                self.south is not None)
 
 
 def _calc_pnes(gsim, r_sites, rupture, imts, imls, truncation_level,
@@ -171,7 +172,7 @@ def _calc_pnes(gsim, r_sites, rupture, imts, imls, truncation_level,
     # for the given gsim and rupture; returns a list of pairs
     # [(imt, pnes), ...]
     with make_ctxt_mon:
-        sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
+        sctx, rctx, dctx = ContextMaker([gsim]).make_contexts(r_sites, rupture)
     with calc_poes_mon:
         for imt, levels in itertools.izip(imts, imls):
             poes = gsim.get_poes(
