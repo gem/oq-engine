@@ -17,10 +17,6 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     method; it is automatically called for you by the oqtask decorator;
     it is also called at the end of the main engine process.
     """
-    # the monitor can also be used to measure the memory in postgres;
-    # to that aim extract the pid with
-    # connections['job_init'].cursor().connection.get_backend_pid()
-
     @classmethod
     def monitor(cls, method):
         """
