@@ -66,8 +66,8 @@ source_model.xml 1      stable continental   1           1
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =======
-Number of tasks to generate        2      
-Estimated sources to send          3.89 KB
-Estimated hazard curves to receive 48 B   
-================================== =======
+================================== ======
+Number of tasks to generate        2     
+Estimated sources to send          3.9 KB
+Estimated hazard curves to receive 48 B  
+================================== ======
