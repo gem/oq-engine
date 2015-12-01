@@ -19,7 +19,7 @@
 import numpy
 
 from openquake.commonlib import parallel
-from openquake.calculators import base
+from openquake.calculators import base, classical_risk
 
 F32 = numpy.float32
 
@@ -54,7 +54,7 @@ def classical_bcr(riskinputs, riskmodel, rlzs_assoc, bcr_dt, monitor):
 
 
 @base.calculators.add('classical_bcr')
-class ClassicalBCRCalculator(base.calculators['classical_risk']):
+class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
     """
     Classical BCR Risk calculator
     """
