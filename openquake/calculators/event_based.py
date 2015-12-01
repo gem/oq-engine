@@ -168,8 +168,7 @@ def get_geom(surface, is_from_fault_source, is_multi_surface):
     will contain one or more sets of 4 points, similar to how
     planar surface geometry is stored (see above).
 
-    :param rupture: an instance of :class:
-    `openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
+    :param rupture: an instance of :class:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
     :param is_from_fault_source: a boolean
     :param is_multi_surface: a boolean
     """
