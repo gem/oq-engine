@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Fully ported the classical_risk calculator to oq-lite
+  * Added a check for the case of no assets within the region
   * Fixed the check for missing taxonomies in the risk model
   * Added `--profile` flag to oq-lite run
   * The performance info has been moved fully in the datastore
