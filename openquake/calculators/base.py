@@ -100,11 +100,19 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore.attrs['oqlite_version'] = repr(__version__)
         self.datastore.hdf5.flush()
 
+    def set_log_format(self):
+        """Set the format of the root logger"""
+        fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(
+                self.datastore.calc_id)
+        for handler in logging.root.handlers:
+            handler.setFormatter(logging.Formatter(fmt))
+
     def run(self, pre_execute=True, clean_up=True, concurrent_tasks=None,
             **kw):
         """
         Run the calculation and return the exported outputs.
         """
+        self.set_log_format()
         if concurrent_tasks is not None:
             self.oqparam.concurrent_tasks = concurrent_tasks
         self.save_params(**kw)
