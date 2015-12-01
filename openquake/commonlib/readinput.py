@@ -638,8 +638,7 @@ def get_risk_model(oqparam):
         lines = []
         for imt_taxo, num_loss_ratios in sorted(curve_resolution.items()):
             lines.append('%s %s' % (workflow, num_loss_ratios))
-        raise ValueError(
-            'Inconsistent mean loss ratios:\n%s' % '\n'.join(lines))
+        logging.warn('Inconsistent mean loss ratios:\n%s', '\n'.join(lines))
     riskmodel.taxonomies = sorted(taxonomies)
     if curve_resolution:  # defined only for classical_risk
         riskmodel.curve_resolution = curve_resolution[imt_taxo]
