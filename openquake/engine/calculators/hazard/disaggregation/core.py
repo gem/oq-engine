@@ -26,6 +26,7 @@ import numpy
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import SiteCollection
+from openquake.hazardlib.gsim.base import ContextMaker
 
 from openquake.baselib.general import groupby
 from openquake.calculators.calc import gen_ruptures_for_site
@@ -61,6 +62,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves,
     disagg_poe = mon('disaggregate_poe', measuremem=False)
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
     rlzs = trt_model.get_rlzs_by_gsim()
+    cmaker = ContextMaker(gsims)
     for source, ruptures in source_ruptures:
         try:
             tect_reg = trt_num[source.tectonic_region_type]
@@ -79,9 +81,10 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves,
 
                 pne_dict = {}
                 # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
+
+                with make_ctxt:
+                    sctx, rctx, dctx = cmaker.make_contexts(sitecol, rupture)
                 for gsim in gsims:
-                    with make_ctxt:
-                        sctx, rctx, dctx = gsim.make_contexts(sitecol, rupture)
                     for imt_str, imls in imtls.iteritems():
                         imt = from_string(imt_str)
                         imls = numpy.array(imls[::-1])
