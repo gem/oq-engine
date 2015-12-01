@@ -586,15 +586,19 @@ def get_risk_model(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    risk_models = {}  # (imt, taxonomy) -> workflow
-    riskmodel = riskinput.RiskModel(risk_models)
+    wfs = {}  # (imt, taxonomy) -> workflow
+    riskmodel = riskinput.RiskModel(wfs)
 
-    if oqparam.calculation_mode.endswith('_damage'):
+    if oqparam.calculation_mode not in workflows.registry:
+        # classical calculator: the riskmodel must be left empty
+        riskmodel.taxonomies = []
+        return riskmodel
+    elif oqparam.calculation_mode.endswith('_damage'):
         # scenario damage calculator
         riskmodel.damage_states = ['no_damage'] + oqparam.limit_states
         delattr(oqparam, 'limit_states')
         for imt_taxo, ffs_by_lt in rmdict.items():
-            risk_models[imt_taxo] = workflows.get_workflow(
+            wfs[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 fragility_functions=ffs_by_lt)
     elif oqparam.calculation_mode.endswith('_bcr'):
@@ -603,7 +607,7 @@ def get_risk_model(oqparam):
         for (imt_taxo, vf_orig), (imt_taxo_, vf_retro) in \
                 zip(rmdict.items(), retro.items()):
             assert imt_taxo == imt_taxo_  # same imt and taxonomy
-            risk_models[imt_taxo] = workflows.get_workflow(
+            wfs[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 vulnerability_functions_orig=vf_orig,
                 vulnerability_functions_retro=vf_retro)
@@ -614,20 +618,31 @@ def get_risk_model(oqparam):
                 # set the seed; this is important for the case of
                 # VulnerabilityFunctionWithPMF
                 vf.seed = oqparam.random_seed
-            risk_models[imt_taxo] = workflows.get_workflow(
+            wfs[imt_taxo] = workflows.get_workflow(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 vulnerability_functions=vfs)
 
     riskmodel.make_curve_builders(oqparam)
     taxonomies = set()
-    for imt_taxo, workflow in risk_models.items():
+    curve_resolution = {}  # wf -> C
+    for imt_taxo, workflow in wfs.items():
+        if hasattr(workflow, 'get_num_loss_ratios'):
+            curve_resolution[imt_taxo] = workflow.get_num_loss_ratios()
         taxonomies.add(imt_taxo[1])
         workflow.riskmodel = riskmodel
         # save the number of nonzero coefficients of variation
         for vf in workflow.risk_functions.values():
             if hasattr(vf, 'covs') and vf.covs.any():
                 riskmodel.covs += 1
+    if len(set(curve_resolution.values())) > 1:
+        lines = []
+        for imt_taxo, num_loss_ratios in sorted(curve_resolution.items()):
+            lines.append('%s %s' % (workflow, num_loss_ratios))
+        raise ValueError(
+            'Inconsistent mean loss ratios:\n%s' % '\n'.join(lines))
     riskmodel.taxonomies = sorted(taxonomies)
+    if curve_resolution:  # defined only for classical_risk
+        riskmodel.curve_resolution = curve_resolution[imt_taxo]
     return riskmodel
 
 # ########################### exposure ############################ #

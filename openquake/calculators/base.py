@@ -194,6 +194,8 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
+    riskmodel = datastore.persistent_attribute('riskmodel')
+
     mean_curves = None  # to be overridden
     SourceProcessor = source.SourceFilterSplitter
 
@@ -253,17 +255,17 @@ class HazardCalculator(BaseCalculator):
                 self.datastore.set_parent(datastore.DataStore(precalc_id))
                 # update oqparam with the attributes saved in the datastore
                 self.oqparam = OqParam.from_(self.datastore.attrs)
-                self.read_exposure_sitecol()
+                self.read_risk_data()
 
         else:  # we are in a basic calculator
-            self.read_exposure_sitecol()
+            self.read_risk_data()
             self.read_sources()
         self.datastore.hdf5.flush()
 
     def read_exposure(self):
         """
-        Read the exposure and update the attributes .exposure, .sitecol,
-        .assets_by_site, .cost_types, .taxonomies
+        Read the exposure, the riskmodel and update the attributes .exposure,
+        .sitecol, .assets_by_site, .cost_types, .taxonomies.
         """
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
@@ -275,10 +277,21 @@ class HazardCalculator(BaseCalculator):
             self.taxonomies = numpy.array(
                 sorted(self.exposure.taxonomies), '|S100')
 
-    def read_exposure_sitecol(self):
+    def read_riskmodel(self):
         """
-        Read the exposure (if any) and then the site collection, possibly
-        extracted from the exposure.
+        Read the risk model and set the attribute .riskmodel.
+        The riskmodel can be empty for hazard calculations.
+        """
+        self.riskmodel = readinput.get_risk_model(self.oqparam)
+        missing = set(self.taxonomies) - set(self.riskmodel.taxonomies)
+        if self.riskmodel and missing:
+            raise RuntimeError('The exposure contains the taxonomies %s '
+                               'which are not in the risk model' % missing)
+
+    def read_risk_data(self):
+        """
+        Read the exposure (if any), the risk model (if any) and then the
+        site collection, possibly extracted from the exposure.
         """
         logging.info('Reading the site collection')
         with self.monitor('reading site collection', autoflush=True):
@@ -286,6 +299,7 @@ class HazardCalculator(BaseCalculator):
         inputs = self.oqparam.inputs
         if 'exposure' in inputs:
             self.read_exposure()
+            self.read_riskmodel()  # must be called *after* read_exposure
             num_assets = self.count_assets()
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
@@ -300,6 +314,8 @@ class HazardCalculator(BaseCalculator):
         elif (self.datastore.parent and 'exposure' in
               OqParam.from_(self.datastore.parent.attrs).inputs):
             logging.info('Re-using the already imported exposure')
+            if not self.riskmodel:
+                self.read_riskmodel()
         else:  # no exposure
             self.sitecol = haz_sitecol
 
@@ -327,7 +343,7 @@ class HazardCalculator(BaseCalculator):
     def read_sources(self):
         """
         Read the composite source model (if any).
-        This method must be called after read_exposure_sitecol, to be able
+        This method must be called after read_risk_data, to be able
         to filter to sources according to the site collection.
         """
         if 'source' in self.oqparam.inputs:
@@ -361,8 +377,6 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-
-    riskmodel = datastore.persistent_attribute('riskmodel')
     specific_assets = datastore.persistent_attribute('specific_assets')
 
     def make_eps(self, num_ruptures):
@@ -428,24 +442,6 @@ class RiskCalculator(HazardCalculator):
         :returns: the IMT associated to it
         """
         return ri.imt
-
-    def pre_execute(self):
-        """
-        Perform hazard pre_execute and read the riskmodel
-        """
-        HazardCalculator.pre_execute(self)
-        self.read_riskmodel()
-
-    def read_riskmodel(self):
-        """
-        Check the taxonomies and set the attribute .riskmodel
-        """
-        self.riskmodel = readinput.get_risk_model(self.oqparam)
-        if hasattr(self, 'exposure'):
-            missing = self.exposure.taxonomies - set(self.riskmodel.taxonomies)
-            if missing:
-                raise RuntimeError('The exposure contains the taxonomies %s '
-                                   'which are not in the risk model' % missing)
 
     def execute(self):
         """

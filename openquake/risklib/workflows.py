@@ -207,7 +207,7 @@ def get_values(loss_type, assets, time_event=None):
 
 
 class List(list):
-    """List subclass to which you can add attribute"""
+    """List subclass to which you can add attributes"""
     # this is ugly, but we already did that, and there is no other easy way
 
 
@@ -222,6 +222,8 @@ def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
     Yield lists out_by_rlz
     """
     out_by_rlz = List()
+    out_by_rlz.loss_type = loss_type
+    out_by_rlz.assets = assets
     # extract the realizations from the first asset
     for rlz in sorted(hazards[0]):
         hazs = [haz[rlz] for haz in hazards]  # hazard per each asset
@@ -297,13 +299,13 @@ class Classical(Workflow):
     :attr assets:
       an iterable over N assets the outputs refer to
     :attr loss_curves:
-      a numpy array of N loss curves. If the curve resolution is R, the final
-      shape of the array will be (N, 2, R), where the `two` accounts for
+      a numpy array of N loss curves. If the curve resolution is C, the final
+      shape of the array will be (N, 2, C), where the `two` accounts for
       the losses/poes dimensions
     :attr average_losses:
       a numpy array of N average loss values
     :attr insured_curves:
-      a numpy array of N insured loss curves, shaped (N, 2, R)
+      a numpy array of N insured loss curves, shaped (N, 2, C)
     :attr average_insured_losses:
       a numpy array of N average insured loss values
     :attr loss_maps:
@@ -330,7 +332,7 @@ class Classical(Workflow):
        used for disaggregation. Shape: (F, N)
     :attr quantile_curves:
        A numpy array with Q quantile curves (Q = number of quantiles).
-       Shape: (Q, N, 2, R)
+       Shape: (Q, N, 2, C)
     :attr quantile_average_losses:
        A numpy array shaped (Q, N) with average losses
     :attr quantile_maps:
@@ -343,7 +345,7 @@ class Classical(Workflow):
        A numpy array with N mean average insured loss values
     :attr quantile_insured_curves:
        A numpy array with Q quantile insured curves (Q = number of quantiles).
-       Shape: (Q, N, 2, R)
+       Shape: (Q, N, 2, C)
     :attr quantile_average_insured_losses:
        A numpy array shaped (Q, N) with average insured losses
     """
@@ -352,11 +354,21 @@ class Classical(Workflow):
                  conditional_loss_poes, poes_disagg,
                  insured_losses=False):
         """
-        :param float poes_disagg:
+        :param imt:
+            Intensity Measure Type for this workflow
+        :param taxonomy:
+            Taxonomy for this workflow
+        :param vulnerability_functions:
+            Dictionary of vulnerability functions by loss type
+        :param hazard_imtls:
+            The intensity measure types and levels of the hazard computation
+        :param lrem_steps_per_interval:
+            Configuration parameter
+        :param poes_disagg:
+            Configuration parameter
+        :param poes_disagg:
             Probability of Exceedance levels used for disaggregate losses by
             taxonomy.
-        :param hazard_imtls:
-            the intensity measure type and levels of the hazard computation
         :param bool insured_losses:
             True if insured loss curves should be computed
 
@@ -372,9 +384,23 @@ class Classical(Workflow):
              functools.partial(scientific.classical, vf, imls,
                                steps=lrem_steps_per_interval))
             for loss_type, vf in vulnerability_functions.items())
+        self.lrem_steps_per_interval = lrem_steps_per_interval
         self.conditional_loss_poes = conditional_loss_poes
         self.poes_disagg = poes_disagg
         self.insured_losses = insured_losses
+
+    def get_num_loss_ratios(self):
+        """
+        Return the mean loss ratios by looking at the vulnerability functions
+        per loss type. Raise a ValueError if the loss ratios are not all equal.
+        """
+        num_loss_ratios = [
+            len(vf.mean_loss_ratios_with_steps(self.lrem_steps_per_interval))
+            for vf in self.risk_functions.values()]
+        if len(set(num_loss_ratios)) > 1:
+            raise ValueError('Inconsistent number of loss ratios in %s' %
+                             self.risk_functions)
+        return num_loss_ratios[0]
 
     def __call__(self, loss_type, assets, hazard_curves, _epsilons=None,
                  _tags=None):
@@ -414,7 +440,8 @@ class Classical(Workflow):
             average_insured_losses=average_insured_losses,
             loss_maps=maps, loss_fractions=fractions)
 
-    def statistics(self, all_outputs, quantiles):
+    # FIXME: remove this after removal of the old calculator
+    def statistics(self, all_outputs, quantiles=()):
         """
         :param quantiles:
             quantile levels used to compute quantile outputs

@@ -286,13 +286,13 @@ class RiskInput(object):
         self.assets_by_site = [
             [a for a in assets if a.taxonomy in taxonomies]
             for assets in assets_by_site]
-        taxonomies = set()
+        taxonomies_set = set()
         self.weight = 0
         for assets in self.assets_by_site:
             for asset in assets:
-                taxonomies.add(asset.taxonomy)
+                taxonomies_set.add(asset.taxonomy)
             self.weight += len(assets)
-        self.taxonomies = sorted(taxonomies)
+        self.taxonomies = sorted(taxonomies_set)
         self.tags = None  # for API compatibility with RiskInputFromRuptures
         self.eps_dict = eps_dict
 
