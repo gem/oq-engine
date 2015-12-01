@@ -54,7 +54,8 @@ def export_from_datastore(output_key, output, target):
     """
     ds_key, fmt = output_key
     assert ds_key == output.ds_key, (ds_key, output.ds_key)
-    dstore = DataStore(output.oq_job.id)
+    datadir = os.path.dirname(output.oq_job.ds_calc_dir)
+    dstore = DataStore(output.oq_job.id, datadir, mode='r')
     dstore.export_dir = target
     try:
         exported = ds_export((output.ds_key, fmt), dstore)
