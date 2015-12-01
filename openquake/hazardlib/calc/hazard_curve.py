@@ -18,16 +18,16 @@
 :mod:`openquake.hazardlib.calc.hazard_curve` implements
 :func:`hazard_curves`.
 """
-from openquake.baselib.python3compat import range
-from openquake.baselib.python3compat import raise_
 import sys
 import time
 import collections
 
 import numpy
 
+from openquake.baselib.python3compat import range, raise_
 from openquake.baselib.performance import DummyMonitor
 from openquake.hazardlib.calc import filters
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 from openquake.baselib.general import deprecated
 
@@ -175,6 +175,7 @@ def hazard_curves_per_trt(
         by the intensity measure types; the size of each field is given by the
         number of levels in ``imtls``.
     """
+    cmaker = ContextMaker(gsims)
     gnames = list(map(str, gsims))
     imt_dt = numpy.dtype([(imt, float, len(imtls[imt]))
                           for imt in sorted(imtls)])
@@ -192,9 +193,9 @@ def hazard_curves_per_trt(
                 rupture_sites = list(rupture_site_filter(
                     (rupture, s_sites) for rupture in source.iter_ruptures()))
             for rupture, r_sites in rupture_sites:
+                with ctx_mon:
+                    sctx, rctx, dctx = cmaker.make_contexts(r_sites, rupture)
                 for i, gsim in enumerate(gsims):
-                    with ctx_mon:
-                        sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
                     with pne_mon:
                         for imt in imts:
                             poes = gsim.get_poes(
