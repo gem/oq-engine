@@ -16,14 +16,43 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
+import collections
 import logging
 import cProfile
+import pstats
+import io
 
 from openquake.baselib import performance, general
 from openquake.commonlib import sap, readinput, valid, datastore
-from openquake.calculators import base
+from openquake.calculators import base, views
 
 calc_path = None  # set only when the flag --profile is given
+
+PStatData = collections.namedtuple(
+    'PStatData', 'ncalls tottime percall cumtime percall2 path')
+
+
+def get_pstats(pstatfile, n=20):
+    """
+    Return profiling information as an RST table.
+
+    :param pstatfile: path to a .pstat file
+    :param n: the maximum number of stats to retrieve
+    """
+    s = io.BytesIO()
+    ps = pstats.Stats(pstatfile, stream=s)
+    ps.sort_stats('cumtime')
+    ps.print_stats(n)
+    lines = s.getvalue().splitlines()
+    for i, line in enumerate(lines):
+        if line.startswith('   ncalls'):
+            break
+    data = []
+    for line in lines[i + 2:]:
+        if line:
+            data.append(PStatData(*line.split()))
+    rows = [(rec.ncalls, rec.cumtime, rec.path) for rec in data]
+    return views.rst_table(rows, header='ncalls cumtime path'.split())
 
 
 def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, monitor):
@@ -99,8 +128,10 @@ def run(job_ini, concurrent_tasks=None, pdb=None,
         prof = cProfile.Profile()
         stmt = '_run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports)'
         prof.runctx(stmt, globals(), locals())
-        prof.dump_stats(calc_path + '.pstat')
-        print('Saved profiling info in %s' % calc_path + '.pstat')
+        pstat = calc_path + '.pstat'
+        prof.dump_stats(pstat)
+        print('Saved profiling info in %s' % pstat)
+        print(get_pstats(pstat, 20))
     else:
         _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports)
 
