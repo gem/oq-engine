@@ -98,7 +98,7 @@ def view_csm_info(token, dstore):
     rlzs_assoc = dstore['rlzs_assoc']
     csm_info = rlzs_assoc.csm_info
     header = ['smlt_path', 'weight', 'source_model_file',
-              'gsim_logic_tree', 'num_realizations', 'num_sources']
+              'gsim_logic_tree', 'num_realizations']
     rows = []
     for sm in csm_info.source_models:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm.ordinal]
@@ -106,8 +106,7 @@ def view_csm_info(token, dstore):
         num_paths = sm.gsim_lt.get_num_paths()
         link = "`%s <%s>`_" % (sm.name, sm.name)
         row = ('_'.join(sm.path), sm.weight, link,
-               classify_gsim_lt(sm.gsim_lt),
-               '%d/%d' % (num_rlzs, num_paths), sm.num_sources)
+               classify_gsim_lt(sm.gsim_lt), '%d/%d' % (num_rlzs, num_paths))
         rows.append(row)
     return rst_table(rows, header)
 
