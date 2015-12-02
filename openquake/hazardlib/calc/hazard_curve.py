@@ -203,7 +203,7 @@ def hazard_curves_per_trt(
                                 sctx, rctx, dctx, imt, imts[imt],
                                 truncation_level)
                             pno = rupture.get_probability_no_exceedance(poes)
-                            expanded_pno = r_sites.expand(pno, placeholder=1)
+                            expanded_pno = sctx.sites.expand(pno, 1.0)
                             curves[i][str(imt)] *= expanded_pno
         except Exception as err:
             etype, err, tb = sys.exc_info()

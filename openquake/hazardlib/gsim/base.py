@@ -200,6 +200,7 @@ class ContextMaker(object):
 
         """
         sctx = SitesContext()
+        sctx.sites = site_collection
         for param in self.REQUIRES_SITES_PARAMETERS:
             try:
                 value = getattr(site_collection, param)
@@ -277,17 +278,18 @@ class ContextMaker(object):
             If any of declared required parameters (that includes site, rupture
             and distance parameters) is unknown.
         """
-        kind = ('rjb' if 'rjb' in self.REQUIRES_DISTANCES
-                else sorted(self.REQUIRES_DISTANCES)[0])
-        distances = get_distances(rupture, site_collection.mesh, kind)
+        rctx = self.make_rupture_context(rupture)
+        distances = get_distances(rupture, site_collection.mesh, 'rjb')
+        sites = site_collection
         if self.maximum_distance:
-            sites = site_collection.filter(distances <= self.maximum_distance)
-            distances = distances[sites.indices]
-        else:
-            sites = site_collection
-        return (self.make_sites_context(sites),
-                self.make_rupture_context(rupture),
-                self.make_distances_context(sites, rupture, {kind: distances}))
+            mask = distances <= self.maximum_distance
+            r_sites = site_collection.filter(mask)
+            if r_sites is not None:
+                sites = r_sites
+                distances = distances[mask]
+        sctx = self.make_sites_context(sites)
+        dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
+        return (sctx, rctx, dctx)
 
 
 @functools.total_ordering
