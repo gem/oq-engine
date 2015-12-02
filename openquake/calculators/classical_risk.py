@@ -47,8 +47,7 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     ins = oq.insured_losses
 
     result = dict(
-        loss_curves=[], loss_maps=[], loss_fractions=[],
-        stat_curves=[], stat_maps=[])
+        loss_curves=[], loss_maps=[], stat_curves=[], stat_maps=[])
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         l = lti[out_by_rlz.loss_type]
         values = workflows.get_values(out_by_rlz.loss_type, out_by_rlz.assets)
@@ -74,11 +73,6 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                 # no insured, shape (P, N)
                 result['loss_maps'].append(
                     (l, r, aid, out.loss_maps[:, i] * val))
-
-                # no insured, shape (D, N)
-                if len(out.loss_fractions):
-                    result['loss_fractions'].append(
-                        (l, r, aid, out.loss_fractions[:, i]))
 
         # compute statistics
         if len(out_by_rlz) > 1:
@@ -148,7 +142,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         self.save_loss_curves(result)
         if self.oqparam.conditional_loss_poes:
-            self.save_loss_maps_and_fractions(result)
+            self.save_loss_maps(result)
 
     def save_loss_curves(self, result):
         """
@@ -174,9 +168,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                         stat_curves_lt[name][s, aid] = statcurve[name][s]
             self.datastore['loss_curves-stats'] = stat_curves
 
-    def save_loss_maps_and_fractions(self, result):
+    def save_loss_maps(self, result):
         """
-        Saving loss maps and fractions in the datastore.
+        Saving loss maps in the datastore.
 
         :param result: aggregated result of the task classical_risk
         """
@@ -197,18 +191,3 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                     for s in range(self.Q1):
                         statmaps_lt[name][s, aid] = statmaps[name][s]
             self.datastore['loss_maps-stats'] = stat_maps
-
-        # loss fractions (no insured)
-        # poes_disagg = self.oqparam.poes_disagg
-        # if poes_disagg:
-
-        #     loss_fractions = numpy.zeros(
-        #         (self.N, self.R), self.loss_fractions_dt)
-        #     for i, name in enumerate(loss_fractions.dtype.names):
-        #         lmap = loss_fractions[name]
-        #         for l, r, aid, lfractions in result['loss_fractions']:
-        #             lmap[ltypes[l]][aid, r] = lfractions[i]
-        #     self.datastore['loss_fractions-rlzs'] = loss_fractions
-
-        # TODO: should I add the loss_fractions-stats?
-        # should I remove the loss fractions at all?

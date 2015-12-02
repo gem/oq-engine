@@ -1,6 +1,8 @@
 QA test for disaggregation case_2
 =================================
 
+num_sites = 2
+
 Parameters
 ----------
 ============================ ==============
@@ -16,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0          
 random_seed                  23            
 master_seed                  0             
-concurrent_tasks             64            
+concurrent_tasks             32            
 ============================ ==============
 
 Input files

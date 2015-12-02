@@ -60,8 +60,8 @@ simple_fault.xml 0      Active Shallow Crust 15          447
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ========
-Number of tasks to generate        13      
-Estimated sources to send          27.47 KB
-Estimated hazard curves to receive 26 KB   
-================================== ========
+================================== =======
+Number of tasks to generate        13     
+Estimated sources to send          27.5 KB
+Estimated hazard curves to receive 26 KB  
+================================== =======

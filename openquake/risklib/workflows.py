@@ -284,6 +284,7 @@ class Workflow(object):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
 
 
+# FIXME: remove the loss fractions after replacing the engine calculator
 @registry.add('classical_risk')
 class Classical(Workflow):
     """

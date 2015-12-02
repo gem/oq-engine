@@ -1,6 +1,8 @@
 QA test for disaggregation case_1, taken from the disagg demo
 =============================================================
 
+num_sites = 2
+
 Parameters
 ----------
 ============================ ==============
@@ -16,7 +18,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   10.0          
 random_seed                  9000          
 master_seed                  0             
-concurrent_tasks             64            
+concurrent_tasks             32            
 ============================ ==============
 
 Input files

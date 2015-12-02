@@ -1,6 +1,8 @@
 PEB QA test 2
 =============
 
+num_sites = 3
+
 Parameters
 ----------
 ============================ ===========
@@ -16,7 +18,7 @@ width_of_mfd_bin             0.3
 area_source_discretization   10.0       
 random_seed                  23         
 master_seed                  0          
-concurrent_tasks             64         
+concurrent_tasks             32         
 ============================ ===========
 
 Input files
@@ -66,6 +68,6 @@ Expected data transfer for the sources
 --------------------------------------
 ================================== =======
 Number of tasks to generate        1      
-Estimated sources to send          2.68 KB
+Estimated sources to send          2.66 KB
 Estimated hazard curves to receive 360 B  
 ================================== =======

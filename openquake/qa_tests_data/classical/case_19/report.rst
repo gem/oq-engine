@@ -71,8 +71,8 @@ simple_area_source_model.xml 4      Subduction Inslab    370         7770
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ========
-Number of tasks to generate        29      
-Estimated sources to send          133.5 KB
-Estimated hazard curves to receive 70 KB   
-================================== ========
+================================== =========
+Number of tasks to generate        29       
+Estimated sources to send          132.17 KB
+Estimated hazard curves to receive 70 KB    
+================================== =========

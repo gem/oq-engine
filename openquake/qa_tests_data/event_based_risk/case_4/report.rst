@@ -1,6 +1,8 @@
 Event Based Hazard for Turkey reduced
 =====================================
 
+num_sites = 14
+
 Parameters
 ----------
 ============================ ===========
@@ -81,7 +83,7 @@ Expected data transfer for the sources
 --------------------------------------
 ================================== ========
 Number of tasks to generate        22      
-Estimated sources to send          30.56 MB
+Estimated sources to send          30.54 MB
 Estimated hazard curves to receive 866 KB  
 ================================== ========
 
@@ -89,7 +91,6 @@ Exposure model
 --------------
 =========== ==
 #assets     14
-#sites      14
 #taxonomies 9 
 =========== ==
 

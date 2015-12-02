@@ -61,11 +61,11 @@ source_model.xml 0      Active Shallow Crust 15          1694
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ========
-Number of tasks to generate        14      
-Estimated sources to send          26.17 KB
-Estimated hazard curves to receive 1 KB    
-================================== ========
+================================== =======
+Number of tasks to generate        14     
+Estimated sources to send          26.2 KB
+Estimated hazard curves to receive 1 KB   
+================================== =======
 
 Exposure model
 --------------

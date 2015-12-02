@@ -305,7 +305,8 @@ _devtest_innervm_run () {
 
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-risklib:\$PWD/oq-hazardlib\" ;
                  cd $GEM_GIT_PACKAGE ;
-                 nosetests -a '${skip_tests}' -v --with-doctest --with-coverage --cover-package=openquake.baselib --cover-package=openquake.risklib --cover-package=openquake.commonlib --with-xunit"
+                 nosetests -a '${skip_tests}' -v --with-doctest --with-coverage --cover-package=openquake.baselib --cover-package=openquake.risklib --cover-package=openquake.commonlib --with-xunit ;
+                 bin/slowtests nosetests.xml"
         scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" "out_${BUILD_UBUVER}/"
     else
         if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
