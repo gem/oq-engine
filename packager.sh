@@ -444,6 +444,12 @@ _pkgtest_innervm_run () {
         oq-lite export -1 loss_maps-rlzs xml /tmp
         oq-lite show -1 performance
 
+        echo 'running ClassicalRisk...'
+        oq-lite run ClassicalRisk/job_hazard.ini,ClassicalRisk/job_risk.ini
+
+        echo 'running ClassicalBCR...'
+        oq-lite run ClassicalBCR/job_hazard.ini,ClassicalBCR/job_risk.ini
+
         cd ../hazard
         echo 'running LogicTreeCase1ClassicalPSHA'
         oq-lite run LogicTreeCase1ClassicalPSHA/job.ini
