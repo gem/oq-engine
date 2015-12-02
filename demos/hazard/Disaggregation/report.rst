@@ -40,6 +40,15 @@ smlt_path weight source_model_file                      gsim_logic_tree num_real
 b11       1.00   `source_model.xml <source_model.xml>`_ trivial(1,1)    1/1              1539       
 ========= ====== ====================================== =============== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== =============== =========== ======================= =================
+trt_id gsims           distances   siteparams              ruptparams       
+====== =============== =========== ======================= =================
+0      ChiouYoungs2008 rx rjb rrup vs30measured vs30 z1pt0 rake dip ztor mag
+1      ToroEtAl2002    rjb                                 mag              
+====== =============== =========== ======================= =================
+
 Realizations per (TRT, GSIM)
 ----------------------------
 

@@ -47,6 +47,15 @@ FaultSourceAndBackground 0.200  `models/src/fsbg_model.xml <models/src/fsbg_mode
 SeiFaCrust               0.300  `models/src/ss_model.xml <models/src/ss_model.xml>`_     trivial(0,0,0,0,0,0,0) 0/0              0          
 ======================== ====== ======================================================== ====================== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================================================================== ================= ======================= ============================
+trt_id gsims                                                              distances         siteparams              ruptparams                  
+====== ================================================================== ================= ======================= ============================
+5      AkkarBommer2010 CauzziFaccioli2008 ChiouYoungs2008 ZhaoEtAl2006Asc rhypo rx rjb rrup vs30measured z1pt0 vs30 ztor mag hypo_depth rake dip
+9      AkkarBommer2010 CauzziFaccioli2008 ChiouYoungs2008 ZhaoEtAl2006Asc rhypo rx rjb rrup vs30measured z1pt0 vs30 ztor mag hypo_depth rake dip
+====== ================================================================== ================= ======================= ============================
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
