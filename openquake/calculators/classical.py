@@ -23,6 +23,7 @@ import collections
 from functools import partial
 
 from openquake.hazardlib.site import SiteCollection
+from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
 from openquake.risklib import scientific
@@ -57,6 +58,7 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     gsims = gsims_assoc[trt_model_id]
     curves_by_gsim = hazard_curves_per_trt(
         sources, sitecol, imtls, gsims, truncation_level,
+        source_site_filter=source_site_distance_filter(max_dist),
         maximum_distance=max_dist, monitor=monitor)
     dic = dict(monitor=monitor)
     for gsim, curves in zip(gsims, curves_by_gsim):
