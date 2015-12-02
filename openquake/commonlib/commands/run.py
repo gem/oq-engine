@@ -32,25 +32,26 @@ PStatData = collections.namedtuple(
     'PStatData', 'ncalls tottime percall cumtime percall2 path')
 
 
-def get_pstats(pstatfile, n=20):
+def get_pstats(pstatfile, n):
     """
     Return profiling information as an RST table.
 
     :param pstatfile: path to a .pstat file
     :param n: the maximum number of stats to retrieve
     """
-    s = io.BytesIO()
-    ps = pstats.Stats(pstatfile, stream=s)
+    stream = io.BytesIO()
+    ps = pstats.Stats(pstatfile, stream=stream)
     ps.sort_stats('cumtime')
     ps.print_stats(n)
-    lines = s.getvalue().splitlines()
+    lines = stream.getvalue().splitlines()
     for i, line in enumerate(lines):
         if line.startswith('   ncalls'):
             break
     data = []
     for line in lines[i + 2:]:
-        if line:
-            data.append(PStatData(*line.split()))
+        columns = line.split()
+        if len(columns) == 6:
+            data.append(PStatData(*columns))
     rows = [(rec.ncalls, rec.cumtime, rec.path) for rec in data]
     return views.rst_table(rows, header='ncalls cumtime path'.split())
 
@@ -105,7 +106,7 @@ def _run(job_ini, concurrent_tasks=0, pdb=0, loglevel='info',
 
 
 def run(job_ini, concurrent_tasks=None, pdb=None,
-        loglevel='info', hc=None, exports='', profile=False):
+        loglevel='info', hc=None, exports='', profile=0):
     """
     Run a calculation.
 
@@ -122,7 +123,7 @@ def run(job_ini, concurrent_tasks=None, pdb=None,
     :param exports:
         export type, can be '', 'csv', 'xml', 'geojson' or combinations
     :param profile:
-        when True, enable Python cProfile functionality
+        enable Python cProfile functionality
     """
     if profile:
         prof = cProfile.Profile()
@@ -131,7 +132,7 @@ def run(job_ini, concurrent_tasks=None, pdb=None,
         pstat = calc_path + '.pstat'
         prof.dump_stats(pstat)
         print('Saved profiling info in %s' % pstat)
-        print(get_pstats(pstat, 20))
+        print(get_pstats(pstat, profile))
     else:
         _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports)
 
@@ -146,4 +147,4 @@ parser.opt('loglevel', 'logging level',
 parser.opt('hc', 'previous calculation ID', type=int)
 parser.opt('exports', 'export formats as a comma-separated string',
            type=valid.export_formats)
-parser.flg('profile', 'enable profiling')
+parser.opt('profile', 'enable profiling', type=int)
