@@ -42,6 +42,16 @@ b1_b3     0.300  `source_model.xml <source_model.xml>`_ trivial(1)      1/1     
 b1_b4     0.400  `source_model.xml <source_model.xml>`_ trivial(1)      1/1              1          
 ========= ====== ====================================== =============== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ============== ========= ========== ==========
+trt_id gsims          distances siteparams ruptparams
+====== ============== ========= ========== ==========
+0      SadighEtAl1997 rrup      vs30       rake mag  
+1      SadighEtAl1997 rrup      vs30       rake mag  
+2      SadighEtAl1997 rrup      vs30       rake mag  
+====== ============== ========= ========== ==========
+
 Realizations per (TRT, GSIM)
 ----------------------------
 

@@ -22,9 +22,10 @@ class ReportWriter(object):
         params='Parameters',
         inputs='Input files',
         csm_info='Composite source model',
+        required_params_per_trt='Required parameters per tectonic region type',
         rupture_collections='Non-empty rupture collections',
         col_rlz_assocs='Collections <-> realizations',
-        ruptures_by_trt='Number of ruptures per tectonic region type',
+        ruptures_per_trt='Number of ruptures per tectonic region type',
         rlzs_assoc='Realizations per (TRT, GSIM)',
         source_data_transfer='Expected data transfer for the sources',
         avglosses_data_transfer='Estimated data transfer for the avglosses',
@@ -55,14 +56,15 @@ class ReportWriter(object):
         oq, ds = self.oq, self.dstore
         for name in ('params', 'inputs'):
             self.add(name)
-        if 'scenario' not in oq.calculation_mode:
+        if 'composite_source_model' in ds:
             self.add('csm_info')
+            self.add('required_params_per_trt')
         self.add('rlzs_assoc', ds['rlzs_assoc'])
         if 'num_ruptures' in ds:
             self.add('rupture_collections')
             self.add('col_rlz_assocs')
-        elif 'scenario' not in oq.calculation_mode:
-            self.add('ruptures_by_trt')
+        elif 'composite_source_model' in ds:
+            self.add('ruptures_per_trt')
         if oq.calculation_mode in ('classical', 'event_based',
                                    'event_based_risk'):
             self.add('source_data_transfer')

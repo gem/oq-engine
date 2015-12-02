@@ -66,6 +66,40 @@ b1_mfd3_mid_dip_dip45  0.118800 `source_model.xml <source_model.xml>`_ trivial(1
 b1_mfd3_mid_dip_dip60  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              90         
 ====================== ======== ====================================== =============== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ============== ========= ========== ==========
+trt_id gsims          distances siteparams ruptparams
+====== ============== ========= ========== ==========
+0      SadighEtAl1997 rrup      vs30       rake mag  
+1      SadighEtAl1997 rrup      vs30       rake mag  
+2      SadighEtAl1997 rrup      vs30       rake mag  
+3      SadighEtAl1997 rrup      vs30       rake mag  
+4      SadighEtAl1997 rrup      vs30       rake mag  
+5      SadighEtAl1997 rrup      vs30       rake mag  
+6      SadighEtAl1997 rrup      vs30       rake mag  
+7      SadighEtAl1997 rrup      vs30       rake mag  
+8      SadighEtAl1997 rrup      vs30       rake mag  
+9      SadighEtAl1997 rrup      vs30       rake mag  
+10     SadighEtAl1997 rrup      vs30       rake mag  
+11     SadighEtAl1997 rrup      vs30       rake mag  
+12     SadighEtAl1997 rrup      vs30       rake mag  
+13     SadighEtAl1997 rrup      vs30       rake mag  
+14     SadighEtAl1997 rrup      vs30       rake mag  
+15     SadighEtAl1997 rrup      vs30       rake mag  
+16     SadighEtAl1997 rrup      vs30       rake mag  
+17     SadighEtAl1997 rrup      vs30       rake mag  
+18     SadighEtAl1997 rrup      vs30       rake mag  
+19     SadighEtAl1997 rrup      vs30       rake mag  
+20     SadighEtAl1997 rrup      vs30       rake mag  
+21     SadighEtAl1997 rrup      vs30       rake mag  
+22     SadighEtAl1997 rrup      vs30       rake mag  
+23     SadighEtAl1997 rrup      vs30       rake mag  
+24     SadighEtAl1997 rrup      vs30       rake mag  
+25     SadighEtAl1997 rrup      vs30       rake mag  
+26     SadighEtAl1997 rrup      vs30       rake mag  
+====== ============== ========= ========== ==========
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
