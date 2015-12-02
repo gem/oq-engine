@@ -25,8 +25,6 @@ from functools import partial
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
-from openquake.hazardlib.calc.filters import source_site_distance_filter, \
-    rupture_site_distance_filter
 from openquake.risklib import scientific
 from openquake.commonlib import parallel, source, datastore
 from openquake.calculators.views import get_data_transfer
