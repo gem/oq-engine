@@ -45,6 +45,14 @@ b2        0.200  `source_models/fs_bg_source_model.xml <source_models/fs_bg_sour
 b3        0.300  `source_models/ss_model_final_250km_Buffer.xml <source_models/ss_model_final_250km_Buffer.xml>`_ trivial(0,0,0,0) 0/0              36         
 ========= ====== ================================================================================================ ================ ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ====================================================================================== ================= ======================= =================
+trt_id gsims                                                                                  distances         siteparams              ruptparams       
+====== ====================================================================================== ================= ======================= =================
+4      AkkarBommer2010 Campbell2003SHARE CauzziFaccioli2008 ChiouYoungs2008 ToroEtAl2002SHARE rhypo rjb rx rrup vs30measured z1pt0 vs30 ztor mag rake dip
+====== ====================================================================================== ================= ======================= =================
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -76,6 +84,6 @@ Expected data transfer for the sources
 --------------------------------------
 ================================== =======
 Number of tasks to generate        35     
-Estimated sources to send          6.29 MB
+Estimated sources to send          6.05 MB
 Estimated hazard curves to receive 0 B    
 ================================== =======

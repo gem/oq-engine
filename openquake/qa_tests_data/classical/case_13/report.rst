@@ -43,6 +43,15 @@ aFault_aPriori_D2.1       0.50   `aFault_aPriori_D2.1.xml <aFault_aPriori_D2.1.x
 bFault_stitched_D2.1_Char 0.50   `bFault_stitched_D2.1_Char.xml <bFault_stitched_D2.1_Char.xml>`_ simple(2)       2/2              186        
 ========================= ====== ================================================================ =============== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================================= =========== ======================= =================
+trt_id gsims                             distances   siteparams              ruptparams       
+====== ================================= =========== ======================= =================
+0      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+1      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+====== ================================= =========== ======================= =================
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -73,6 +82,6 @@ Expected data transfer for the sources
 --------------------------------------
 ================================== =======
 Number of tasks to generate        33     
-Estimated sources to send          1.28 MB
+Estimated sources to send          1.27 MB
 Estimated hazard curves to receive 281 KB 
 ================================== =======

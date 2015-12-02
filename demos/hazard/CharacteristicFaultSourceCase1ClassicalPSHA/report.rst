@@ -40,6 +40,14 @@ smlt_path weight source_model_file                      gsim_logic_tree num_real
 b1        1.00   `source_model.xml <source_model.xml>`_ trivial(1)      1/1              1          
 ========= ====== ====================================== =============== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================= ========= ========== ==========
+trt_id gsims             distances siteparams ruptparams
+====== ================= ========= ========== ==========
+0      BooreAtkinson2008 rjb       vs30       rake mag  
+====== ================= ========= ========== ==========
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -60,6 +68,6 @@ Expected data transfer for the sources
 --------------------------------------
 ================================== =========
 Number of tasks to generate        1        
-Estimated sources to send          218.84 KB
+Estimated sources to send          218.85 KB
 Estimated hazard curves to receive 13 MB    
 ================================== =========
