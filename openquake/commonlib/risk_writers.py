@@ -173,7 +173,7 @@ class LossCurveXMLWriter(object):
                     loss_ratios = et.SubElement(loss_curve, "lossRatios")
 
                     loss_ratios.text = " ".join(
-                        [str(p) for p in curve.loss_ratios])
+                        ['%.3f' % p for p in curve.loss_ratios])
 
                 losses = et.SubElement(loss_curve, "averageLoss")
                 losses.text = "%.4e" % curve.average_loss

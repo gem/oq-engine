@@ -200,7 +200,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
       </gml:Point>
       <poEs>1.0 0.5 0.1</poEs>
       <losses>10.0 20.0 30.0</losses>
-      <lossRatios>0.4 0.6 1.8</lossRatios>
+      <lossRatios>0.400 0.600 1.800</lossRatios>
       <averageLoss>0.0000e+00</averageLoss>
       <stdDevLoss>9.0000e-01</stdDevLoss>
     </lossCurve>
