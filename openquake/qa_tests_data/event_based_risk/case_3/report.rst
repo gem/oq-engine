@@ -1,6 +1,8 @@
 Event Based PSHA for Lisbon
 ===========================
 
+num_sites = 1
+
 Parameters
 ----------
 ============================ ===========
@@ -77,7 +79,7 @@ Expected data transfer for the sources
 --------------------------------------
 ================================== =======
 Number of tasks to generate        18     
-Estimated sources to send          4.51 MB
+Estimated sources to send          4.32 MB
 Estimated hazard curves to receive 9 KB   
 ================================== =======
 
@@ -85,7 +87,6 @@ Exposure model
 --------------
 =========== =
 #assets     1
-#sites      1
 #taxonomies 1
 =========== =
 

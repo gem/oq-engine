@@ -1,6 +1,8 @@
 Scenario QA Test with Spatial Correlation - Case 2
 ==================================================
 
+num_sites = 2
+
 Parameters
 ----------
 ============================ ========
@@ -16,7 +18,7 @@ width_of_mfd_bin             None
 area_source_discretization   None    
 random_seed                  3       
 master_seed                  0       
-concurrent_tasks             64      
+concurrent_tasks             32      
 ============================ ========
 
 Input files
