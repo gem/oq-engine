@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Ported the classical_bcr calculator to oq-lite
   * Added a check on the uniform_hazard_spectra parameter depending on the IMTs
   * Fixed a sorting error in the CSV exporters by asset
   * Fully ported the classical_risk calculator to oq-lite

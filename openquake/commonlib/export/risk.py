@@ -861,3 +861,41 @@ def export_loss_curves_rlzs(ekey, dstore):
         writer.serialize(curves)
         fnames.append(writer._dest)
     return sorted(fnames)
+
+BcrData = collections.namedtuple(
+    'BcrData', ['location', 'asset_ref', 'average_annual_loss_original',
+                'average_annual_loss_retrofitted', 'bcr'])
+
+
+# this is used by classical_bcr
+@export.add(('bcr-rlzs', 'xml'))
+def export_bcr_map_rlzs(ekey, dstore):
+    assetcol = dstore['assetcol']
+    sitemesh = dstore['sitemesh']
+    bcr_data = dstore['bcr-rlzs']
+    N, R = bcr_data.shape
+    oq = OqParam.from_(dstore.attrs)
+    realizations = dstore['rlzs_assoc'].realizations
+    loss_types = dstore['riskmodel'].loss_types
+    writercls = risk_writers.BCRMapXMLWriter
+    fnames = []
+    for rlz in realizations:
+        suffix = '.xml' if R == 1 else '-gsimltp_%s.xml' % rlz.uid
+        for l, loss_type in enumerate(loss_types):
+            rlz_data = bcr_data[loss_type][:, rlz.ordinal]
+            path = dstore.export_path('bcr-%s%s' % (loss_type, suffix))
+            writer = writercls(
+                path, oq.interest_rate, oq.asset_life_expectancy, loss_type,
+                **get_paths(rlz))
+            data = []
+            for ass, value in zip(assetcol, rlz_data):
+                loc = Location(sitemesh[ass['site_id']])
+                data.append(BcrData(loc, ass['asset_ref'],
+                                    value['annual_loss_orig'],
+                                    value['annual_loss_retro'],
+                                    value['bcr']))
+            writer.serialize(data)
+            fnames.append(path)
+    return sorted(fnames)
+
+# TODO: add export_bcr_map_stats
