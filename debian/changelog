@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Avoided doing the rupture filtering twice
   * Optimized the case of multiple GSIMs by instantiating the
     ruptures/sites/distances contexts only once
 
