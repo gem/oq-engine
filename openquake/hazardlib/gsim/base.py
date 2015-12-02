@@ -134,6 +134,10 @@ def get_distances(rupture, mesh, param='rjb'):
     return dist
 
 
+class FarAwayRupture(Exception):
+    """Raised if the rupture is outside the maximum distance for all sites"""
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
@@ -283,10 +287,12 @@ class ContextMaker(object):
         sites = site_collection
         if self.maximum_distance:
             mask = distances <= self.maximum_distance
-            r_sites = site_collection.filter(mask)
-            if r_sites is not None:
-                sites = r_sites
+            if mask.any():
+                sites = site_collection.filter(mask)
                 distances = distances[mask]
+            else:
+                raise FarAwayRupture
+
         sctx = self.make_sites_context(sites)
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)

@@ -27,7 +27,7 @@ import numpy
 from openquake.baselib.python3compat import range, raise_
 from openquake.baselib.performance import DummyMonitor
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 from openquake.baselib.general import deprecated
 
@@ -195,7 +195,11 @@ def hazard_curves_per_trt(
                     (rupture, s_sites) for rupture in source.iter_ruptures()))
             for rupture, r_sites in rupture_sites:
                 with ctx_mon:
-                    sctx, rctx, dctx = cmaker.make_contexts(r_sites, rupture)
+                    try:
+                        sctx, rctx, dctx = cmaker.make_contexts(
+                            r_sites, rupture)
+                    except FarAwayRupture:
+                        continue
                 for i, gsim in enumerate(gsims):
                     with pne_mon:
                         for imt in imts:
