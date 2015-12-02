@@ -285,16 +285,32 @@ class HazardCalculator(BaseCalculator):
             self.taxonomies = numpy.array(
                 sorted(self.exposure.taxonomies), '|S100')
 
-    def read_riskmodel(self):
+    def load_riskmodel(self):
         """
         Read the risk model and set the attribute .riskmodel.
         The riskmodel can be empty for hazard calculations.
+        Save the loss ratios (if any) in the datastore.
         """
-        self.riskmodel = readinput.get_risk_model(self.oqparam)
-        missing = set(self.taxonomies) - set(self.riskmodel.taxonomies)
-        if self.riskmodel and missing:
+        self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
+        missing = set(self.taxonomies) - set(rm.taxonomies)
+        if rm and missing:
             raise RuntimeError('The exposure contains the taxonomies %s '
                                'which are not in the risk model' % missing)
+
+        # save the loss ratios in the datastore
+        pairs = [(cb.loss_type, (numpy.float64, len(cb.ratios)))
+                 for cb in rm.curve_builders if cb.user_provided]
+        if not pairs:
+            return
+        loss_ratios = numpy.zeros(len(rm), numpy.dtype(pairs))
+        for cb in rm.curve_builders:
+            if cb.user_provided:
+                loss_ratios_lt = loss_ratios[cb.loss_type]
+                for i, imt_taxo in enumerate(sorted(rm)):
+                    loss_ratios_lt[i] = rm[imt_taxo].loss_ratios[cb.loss_type]
+        self.datastore['loss_ratios'] = loss_ratios
+        self.datastore['loss_ratios'].attrs['imt_taxos'] = sorted(rm)
+        self.datastore['loss_ratios'].attrs['nbytes'] = loss_ratios.nbytes
 
     def read_risk_data(self):
         """
@@ -307,7 +323,7 @@ class HazardCalculator(BaseCalculator):
         inputs = self.oqparam.inputs
         if 'exposure' in inputs:
             self.read_exposure()
-            self.read_riskmodel()  # must be called *after* read_exposure
+            self.load_riskmodel()  # must be called *after* read_exposure
             num_assets = self.count_assets()
             if self.datastore.parent:
                 haz_sitecol = self.datastore.parent['sitecol']
@@ -323,7 +339,7 @@ class HazardCalculator(BaseCalculator):
               OqParam.from_(self.datastore.parent.attrs).inputs):
             logging.info('Re-using the already imported exposure')
             if not self.riskmodel:
-                self.read_riskmodel()
+                self.load_riskmodel()
         else:  # no exposure
             self.sitecol = haz_sitecol
 
@@ -386,6 +402,7 @@ class RiskCalculator(HazardCalculator):
     .riskinputs in the pre_execute phase.
     """
     specific_assets = datastore.persistent_attribute('specific_assets')
+    extra_args = ()  # to be overridden in subclasses
 
     def make_eps(self, num_ruptures):
         """
@@ -464,9 +481,10 @@ class RiskCalculator(HazardCalculator):
         if self.pre_calculator == 'event_based_rupture':
             self.monitor.assets_by_site = self.assets_by_site
             self.monitor.num_assets = self.count_assets()
+        all_args = ((self.riskinputs, self.riskmodel, self.rlzs_assoc) +
+                    self.extra_args + (self.monitor,))
         res = apply_reduce(
-            self.core_func.__func__,
-            (self.riskinputs, self.riskmodel, self.rlzs_assoc, self.monitor),
+            self.core_func.__func__, all_args,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=get_weight, key=self.riskinput_key)
         return res

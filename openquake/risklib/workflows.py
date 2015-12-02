@@ -284,6 +284,7 @@ class Workflow(object):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
 
 
+# FIXME: remove the loss fractions after replacing the engine calculator
 @registry.add('classical_risk')
 class Classical(Workflow):
     """
@@ -388,19 +389,9 @@ class Classical(Workflow):
         self.conditional_loss_poes = conditional_loss_poes
         self.poes_disagg = poes_disagg
         self.insured_losses = insured_losses
-
-    def get_num_loss_ratios(self):
-        """
-        Return the mean loss ratios by looking at the vulnerability functions
-        per loss type. Raise a ValueError if the loss ratios are not all equal.
-        """
-        num_loss_ratios = [
-            len(vf.mean_loss_ratios_with_steps(self.lrem_steps_per_interval))
-            for vf in self.risk_functions.values()]
-        if len(set(num_loss_ratios)) > 1:
-            raise ValueError('Inconsistent number of loss ratios in %s' %
-                             self.risk_functions)
-        return num_loss_ratios[0]
+        self.loss_ratios = {
+            lt: vf.mean_loss_ratios_with_steps(lrem_steps_per_interval)
+            for lt, vf in vulnerability_functions.items()}
 
     def __call__(self, loss_type, assets, hazard_curves, _epsilons=None,
                  _tags=None):
@@ -686,7 +677,7 @@ class ClassicalBCR(Workflow):
                                steps=lrem_steps_per_interval))
             for loss_type, vf in vulnerability_functions_retro.items())
 
-    def __call__(self, loss_type, assets, hazard):
+    def __call__(self, loss_type, assets, hazard, _eps, _tags):
         self.assets = assets
 
         original_loss_curves = utils.numpy_map(

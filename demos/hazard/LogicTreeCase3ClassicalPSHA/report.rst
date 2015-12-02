@@ -48,6 +48,31 @@ b11_b23_b32 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/
 b11_b23_b33 0.11155600 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1549       
 =========== ========== ====================================== =============== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================================= =========== ======================= =================
+trt_id gsims                             distances   siteparams              ruptparams       
+====== ================================= =========== ======================= =================
+0      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+1      Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+2      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+3      Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+4      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+5      Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+6      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+7      Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+8      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+9      Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+10     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+11     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+12     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+13     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+14     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+15     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+16     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+17     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+====== ================================= =========== ======================= =================
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -124,8 +149,8 @@ source_model.xml 17     Stable Continental Crust 205         6150
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ========
-Number of tasks to generate        45      
-Estimated sources to send          46.92 MB
-Estimated hazard curves to receive 13 KB   
-================================== ========
+================================== =======
+Number of tasks to generate        45     
+Estimated sources to send          46.9 MB
+Estimated hazard curves to receive 13 KB  
+================================== =======

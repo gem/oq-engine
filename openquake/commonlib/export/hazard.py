@@ -502,6 +502,7 @@ def export_gmf(ekey, dstore):
     return fnames
 
 
+# not used right now
 def export_hazard_curves_xml(key, dest, sitecol, curves_by_imt,
                              imtls, investigation_time):
     """
