@@ -93,7 +93,8 @@ def hazard_curves(
 def calc_hazard_curves(
         sources, sites, imtls, gsim_by_trt, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
-        rupture_site_filter=filters.rupture_site_noop_filter):
+        rupture_site_filter=filters.rupture_site_noop_filter,
+        maximum_distance=None):
     """
     Compute hazard curves on a list of sites, given a set of seismic sources
     and a set of ground shaking intensity models (one per tectonic region type
@@ -162,7 +163,7 @@ def hazard_curves_per_trt(
         sources, sites, imtls, gsims, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter,
-        monitor=DummyMonitor()):
+        maximum_distance=None, monitor=DummyMonitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -175,7 +176,7 @@ def hazard_curves_per_trt(
         by the intensity measure types; the size of each field is given by the
         number of levels in ``imtls``.
     """
-    cmaker = ContextMaker(gsims)
+    cmaker = ContextMaker(gsims, maximum_distance)
     gnames = list(map(str, gsims))
     imt_dt = numpy.dtype([(imt, float, len(imtls[imt]))
                           for imt in sorted(imtls)])

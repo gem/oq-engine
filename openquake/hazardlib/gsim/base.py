@@ -108,21 +108,48 @@ class MetaGSIM(abc.ABCMeta):
             cls.instantiable = True
 
 
+def get_distances(rupture, mesh, param='rjb'):
+    """
+    :param rupture: a rupture
+    :param mesh: a mesh of points
+    :param param: the kind of distance to compute (default rjb)
+    :returns: an array of distances from the given mesh
+    """
+    if param == 'rrup':
+        dist = rupture.surface.get_min_distance(mesh)
+    elif param == 'rx':
+        dist = rupture.surface.get_rx_distance(mesh)
+    elif param == 'ry0':
+        dist = rupture.surface.get_ry0_distance(mesh)
+    elif param == 'rjb':
+        dist = rupture.surface.get_joyner_boore_distance(mesh)
+    elif param == 'rhypo':
+        dist = rupture.hypocenter.distance_to_mesh(mesh)
+    elif param == 'repi':
+        dist = rupture.hypocenter.distance_to_mesh(mesh, with_depths=False)
+    elif param == 'rcdpp':
+        dist = rupture.get_cdppvalue(mesh)
+    else:
+        raise ValueError('Unknown distance measure %r' % param)
+    return dist
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, gsims):
+    def __init__(self, gsims, maximum_distance=None):
         self.gsims = gsims
+        self.maximum_distance = maximum_distance
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
 
-    def make_distances_context(self, site_collection, rupture):
+    def make_distances_context(self, site_collection, rupture, dist_dict=()):
         """
         Create distances context object for given site collection and rupture.
 
@@ -136,6 +163,9 @@ class ContextMaker(object):
             :class:
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`).
 
+        :param dist_dict:
+             A dictionary of already computed distances, keyed by distance name
+
         :returns:
             Source to site distances as instance of :class:
             `DistancesContext()`. Only those  values that are required by GSIM
@@ -146,30 +176,11 @@ class ContextMaker(object):
         """
         dctx = DistancesContext()
         for param in self.REQUIRES_DISTANCES:
-            if param == 'rrup':
-                dist = rupture.surface.get_min_distance(site_collection.mesh)
-            elif param == 'rx':
-                dist = rupture.surface.get_rx_distance(site_collection.mesh)
-            elif param == 'ry0':
-                dist = rupture.surface.get_ry0_distance(site_collection.mesh)
-            elif param == 'rjb':
-                dist = rupture.surface.get_joyner_boore_distance(
-                    site_collection.mesh
-                )
-            elif param == 'rhypo':
-                dist = rupture.hypocenter.distance_to_mesh(
-                    site_collection.mesh
-                )
-            elif param == 'repi':
-                dist = rupture.hypocenter.distance_to_mesh(
-                    site_collection.mesh, with_depths=False
-                )
-            elif param == 'rcdpp':
-                dist = rupture.get_cdppvalue(site_collection.mesh)
+            if param in dist_dict:  # already computed distances
+                distances = dist_dict[param]
             else:
-                raise ValueError('%s requires unknown distance measure %r' %
-                                 (type(self).__name__, param))
-            setattr(dctx, param, dist)
+                distances = get_distances(rupture, site_collection.mesh, param)
+            setattr(dctx, param, distances)
         return dctx
 
     def make_sites_context(self, site_collection):
@@ -204,9 +215,8 @@ class ContextMaker(object):
 
         :param rupture:
             Instance of
-            :class:`~openquake.hazardlib.source.rupture.Rupture` (or
-            subclass of
-            :class:`~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`).
+            :class:`openquake.hazardlib.source.rupture.Rupture` or subclass of
+            :class:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
 
         :returns:
             Rupture parameters as instance of :class:
@@ -244,16 +254,16 @@ class ContextMaker(object):
 
     def make_contexts(self, site_collection, rupture):
         """
-        Create context objects for given site collection and rupture.
+        Filter the site collection with respect to the rupture and
+        create context objects.
 
         :param site_collection:
             Instance of :class:`openquake.hazardlib.site.SiteCollection`.
 
         :param rupture:
             Instance of
-            :class:`~openquake.hazardlib.source.rupture.Rupture` (or
-            subclass of
-            :class:`~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`).
+            :class:`openquake.hazardlib.source.rupture.Rupture` or subclass of
+            :class:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
 
         :returns:
             Tuple of three items: sites context, rupture context and
@@ -267,9 +277,17 @@ class ContextMaker(object):
             If any of declared required parameters (that includes site, rupture
             and distance parameters) is unknown.
         """
-        return (self.make_sites_context(site_collection),
+        kind = ('rjb' if 'rjb' in self.REQUIRES_DISTANCES
+                else sorted(self.REQUIRES_DISTANCES)[0])
+        distances = get_distances(rupture, site_collection.mesh, kind)
+        if self.maximum_distance:
+            sites = site_collection.filter(distances <= self.maximum_distance)
+            distances = distances[sites.indices]
+        else:
+            sites = site_collection
+        return (self.make_sites_context(sites),
                 self.make_rupture_context(rupture),
-                self.make_distances_context(site_collection, rupture))
+                self.make_distances_context(sites, rupture, {kind: distances}))
 
 
 @functools.total_ordering
