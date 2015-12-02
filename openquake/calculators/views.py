@@ -25,6 +25,7 @@ import numpy
 
 from openquake.baselib.general import groupby, split_in_blocks, humansize
 from openquake.baselib.performance import PerformanceMonitor, perf_dt
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import parallel
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.datastore import view
@@ -97,7 +98,7 @@ def view_csm_info(token, dstore):
     rlzs_assoc = dstore['rlzs_assoc']
     csm_info = rlzs_assoc.csm_info
     header = ['smlt_path', 'weight', 'source_model_file',
-              'gsim_logic_tree', 'num_realizations', 'num_sources']
+              'gsim_logic_tree', 'num_realizations']
     rows = []
     for sm in csm_info.source_models:
         rlzs = rlzs_assoc.rlzs_by_smodel[sm.ordinal]
@@ -105,8 +106,7 @@ def view_csm_info(token, dstore):
         num_paths = sm.gsim_lt.get_num_paths()
         link = "`%s <%s>`_" % (sm.name, sm.name)
         row = ('_'.join(sm.path), sm.weight, link,
-               classify_gsim_lt(sm.gsim_lt),
-               '%d/%d' % (num_rlzs, num_paths), sm.num_sources)
+               classify_gsim_lt(sm.gsim_lt), '%d/%d' % (num_rlzs, num_paths))
         rows.append(row)
     return rst_table(rows, header)
 
@@ -128,8 +128,8 @@ def view_rupture_collections(token, dstore):
     return rst_table(rows, ['col', 'smlt_path', 'TRT', 'num_ruptures'])
 
 
-@view.add('ruptures_by_trt')
-def view_ruptures_by_trt(token, dstore):
+@view.add('ruptures_per_trt')
+def view_ruptures_per_trt(token, dstore):
     tbl = []
     header = 'source_model trt_id trt num_sources num_ruptures'.split()
     num_trts = 0
@@ -162,7 +162,7 @@ def view_params(token, dstore):
               'random_seed', 'master_seed', 'concurrent_tasks']
     if 'risk' in oq.calculation_mode:
         params.append('avg_losses')
-    return rst_table([(param, getattr(oq, param)) for param in params])
+    return rst_table([(param, getattr(oq, param, None)) for param in params])
 
 
 def build_links(items):
@@ -406,3 +406,20 @@ def view_performance(token, dstore):
         out.append((operation, time, mem, counts))
     out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
     return rst_table(numpy.array(out, perf_dt), fmt='%s')
+
+
+@view.add('required_params_per_trt')
+def view_required_params_per_trt(token, dstore):
+    """
+    Display the parameters needed by each tectonic region type
+    """
+    gsims_per_trt_id = sorted(dstore['rlzs_assoc'].gsims_by_trt_id.items())
+    tbl = []
+    for trt_id, gsims in gsims_per_trt_id:
+        maker = ContextMaker(gsims)
+        distances = maker.REQUIRES_DISTANCES
+        siteparams = maker.REQUIRES_SITES_PARAMETERS
+        ruptparams = maker.REQUIRES_RUPTURE_PARAMETERS
+        tbl.append((trt_id, gsims, distances, siteparams, ruptparams))
+    return rst_table(
+        tbl, header='trt_id gsims distances siteparams ruptparams'.split())

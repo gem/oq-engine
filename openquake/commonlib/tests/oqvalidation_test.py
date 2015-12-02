@@ -223,3 +223,19 @@ class OqParamTestCase(unittest.TestCase):
         self.assertIn("Please set a value for 'reference_vs30_value', this is"
                       " required by the GSIM AbrahamsonSilva1997",
                       str(ctx.exception))
+
+    def test_uniform_hazard_spectra(self):
+        with self.assertRaises(ValueError) as ctx:
+            OqParam(
+                calculation_mode='classical',
+                gsim='BooreAtkinson2008',
+                reference_vs30_value=200,
+                sites='0.1 0.2',
+                poes='0.2',
+                maximum_distance=400,
+                intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
+                uniform_hazard_spectra='1',
+            ).validate()
+        self.assertIn("The `uniform_hazard_spectra` can be True only if "
+                      "the IMT set contains\nSA(...) or PGA",
+                      str(ctx.exception))

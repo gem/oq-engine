@@ -42,6 +42,16 @@ source_model_1 0.50   `source_model_1.xml <source_model_1.xml>`_ simple(2,1)    
 source_model_2 0.50   `source_model_2.xml <source_model_2.xml>`_ simple(2,0)     2/2              15         
 ============== ====== ========================================== =============== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================================= =========== ======================= =================
+trt_id gsims                             distances   siteparams              ruptparams       
+====== ================================= =========== ======================= =================
+0      YoungsEtAl1997SSlab               rrup        vs30                    hypo_depth mag   
+1      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+2      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+====== ================================= =========== ======================= =================
+
 Realizations per (TRT, GSIM)
 ----------------------------
 

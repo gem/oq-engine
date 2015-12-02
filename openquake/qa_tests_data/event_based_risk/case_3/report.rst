@@ -44,6 +44,16 @@ b1        0.60   `SA_RA_CATAL1_00.xml <SA_RA_CATAL1_00.xml>`_ simple(2,0)     2/
 b2        0.40   `SA_RA_CATAL2_00.xml <SA_RA_CATAL2_00.xml>`_ complex(2,2)    4/4              10191      
 ========= ====== ============================================ =============== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================================= ========= ========== ==========
+trt_id gsims                             distances siteparams ruptparams
+====== ================================= ========= ========== ==========
+0      AkkarBommer2010 AtkinsonBoore2006 rjb rrup  vs30       rake mag  
+2      AkkarBommer2010 AtkinsonBoore2006 rjb rrup  vs30       rake mag  
+3      AkkarBommer2010 AtkinsonBoore2006 rjb rrup  vs30       rake mag  
+====== ================================= ========= ========== ==========
+
 Realizations per (TRT, GSIM)
 ----------------------------
 

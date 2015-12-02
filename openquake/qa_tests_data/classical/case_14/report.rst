@@ -41,6 +41,14 @@ smlt_path    weight source_model_file                      gsim_logic_tree num_r
 simple_fault 1.00   `simple_fault.xml <simple_fault.xml>`_ simple(2)       2/2              15         
 ============ ====== ====================================== =============== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ========================================= =========== ============================= =======================
+trt_id gsims                                     distances   siteparams                    ruptparams             
+====== ========================================= =========== ============================= =======================
+0      AbrahamsonSilva2008 CampbellBozorgnia2008 rx rjb rrup vs30measured vs30 z2pt5 z1pt0 rake width ztor mag dip
+====== ========================================= =========== ============================= =======================
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
