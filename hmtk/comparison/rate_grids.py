@@ -233,7 +233,7 @@ class RateGrid(object):
             Area source as instance of :class:
             openquake.hazardlib.source.area.AreaSource
         """
-        points = list(area_to_point_sources(source, self.area_discretisation))
+        points = list(area_to_point_sources(source))
         for point in points:
             self._get_point_rates(point, mmin, mmax)
 
