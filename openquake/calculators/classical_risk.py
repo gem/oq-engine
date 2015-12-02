@@ -22,7 +22,7 @@ import numpy
 
 from openquake.risklib import workflows, scientific, riskinput
 from openquake.commonlib import readinput, parallel, datastore, logictree
-from openquake.calculators import base, calc
+from openquake.calculators import base
 
 
 F32 = numpy.float32
@@ -45,9 +45,9 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     lti = riskmodel.lti
     oq = monitor.oqparam
     ins = oq.insured_losses
-    result = dict(loss_curves=[], loss_maps=[], loss_fractions=[],
-                  stat_curves=[], stat_maps=[],
-                  stat_curves_ins=[], stat_maps_ins=[])
+
+    result = dict(
+        loss_curves=[], loss_maps=[], stat_curves=[], stat_maps=[])
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         l = lti[out_by_rlz.loss_type]
         values = workflows.get_values(out_by_rlz.loss_type, out_by_rlz.assets)
@@ -69,29 +69,24 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                 else:
                     lcurve += (None, None, None)
                 result['loss_curves'].append((l, r, aid, lcurve))
-                result['loss_maps'].append((l, r, aid, out.loss_maps[:, i]))
-                # shape (P, N)
-                if len(out.loss_fractions):  # shape (D, N)
-                    result['loss_fractions'].append(
-                        (l, r, aid, out.loss_fractions[:, i]))
+
+                # no insured, shape (P, N)
+                result['loss_maps'].append(
+                    (l, r, aid, out.loss_maps[:, i] * val))
 
         # compute statistics
         if len(out_by_rlz) > 1:
+            cb = riskmodel.curve_builders[l]
             statsbuilder = scientific.StatsBuilder(
                 oq.quantile_loss_curves,
                 oq.conditional_loss_poes, oq.poes_disagg,
-                riskmodel.curve_resolution)
+                cb.curve_resolution, insured_losses=oq.insured_losses)
             stats = statsbuilder.build(out_by_rlz)
             stat_curves, stat_maps = statsbuilder.get_curves_maps(stats)
             for asset, stat_curve, stat_map in zip(
-                    out_by_rlz.assets, stat_curves[0], stat_maps[0]):
+                    out_by_rlz.assets, stat_curves, stat_maps):
                 result['stat_curves'].append((l, asset.idx, stat_curve))
                 result['stat_maps'].append((l, asset.idx, stat_map))
-            if ins:
-                for ass, stat_curve, stat_map in zip(
-                        out_by_rlz.assets, stat_curves[1], stat_maps[1]):
-                    result['stat_curves_ins'].append((l, ass.idx, stat_curve))
-                    result['stat_maps_ins'].append((l, ass.idx, stat_map))
 
     return result
 
@@ -112,7 +107,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         if 'hazard_curves' in self.oqparam.inputs:  # read hazard from file
             haz_sitecol, haz_curves = readinput.get_hcurves(self.oqparam)
             self.read_exposure()  # define .assets_by_site
-            self.read_riskmodel()
+            self.load_riskmodel()
             self.sitecol, self.assets_by_site = self.assoc_assets_sites(
                 haz_sitecol)
             curves_by_trt_gsim = {(0, 'FromFile'): haz_curves}
@@ -135,13 +130,64 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         """
         Save the losses in a compact form.
         """
-        C = self.riskmodel.curve_resolution
-        N = sum(len(assets) for assets in self.assets_by_site)
-        L = len(self.riskmodel.loss_types)
-        R = len(self.rlzs_assoc.realizations)
-        I = self.oqparam.insured_losses
-        loss_curves = calc.build_loss_curves((N, L, R), C, I)
+        self.N = sum(len(assets) for assets in self.assets_by_site)
+        self.L = len(self.riskmodel.loss_types)
+        self.R = len(self.rlzs_assoc.realizations)
+        self.I = self.oqparam.insured_losses
+        self.Q1 = len(self.oqparam.quantile_loss_curves) + 1
+
+        self.loss_curve_dt, self.loss_maps_dt = (
+            self.riskmodel.build_loss_dtypes(
+                self.oqparam.conditional_loss_poes, self.I))
+
+        self.save_loss_curves(result)
+        if self.oqparam.conditional_loss_poes:
+            self.save_loss_maps(result)
+
+    def save_loss_curves(self, result):
+        """
+        Saving loss curves in the datastore.
+
+        :param result: aggregated result of the task classical_risk
+        """
+        ltypes = self.riskmodel.loss_types
+        loss_curves = numpy.zeros((self.N, self.R), self.loss_curve_dt)
         for l, r, aid, lcurve in result['loss_curves']:
-            for i, name in enumerate(loss_curves.dtype.names):
-                loss_curves[name][aid, l, r] = lcurve[i]
+            loss_curves_lt = loss_curves[ltypes[l]]
+            for i, name in enumerate(loss_curves_lt.dtype.names):
+                loss_curves_lt[name][aid, r] = lcurve[i]
         self.datastore['loss_curves-rlzs'] = loss_curves
+
+        # loss curves stats
+        if self.R > 1:
+            stat_curves = numpy.zeros((self.Q1, self.N), self.loss_curve_dt)
+            for l, aid, statcurve in result['stat_curves']:
+                stat_curves_lt = stat_curves[ltypes[l]]
+                for name in stat_curves_lt.dtype.names:
+                    for s in range(self.Q1):
+                        stat_curves_lt[name][s, aid] = statcurve[name][s]
+            self.datastore['loss_curves-stats'] = stat_curves
+
+    def save_loss_maps(self, result):
+        """
+        Saving loss maps in the datastore.
+
+        :param result: aggregated result of the task classical_risk
+        """
+        ltypes = self.riskmodel.loss_types
+        loss_maps = numpy.zeros((self.N, self.R), self.loss_maps_dt)
+        for l, r, aid, lmaps in result['loss_maps']:
+            loss_maps_lt = loss_maps[ltypes[l]]
+            for i, name in enumerate(loss_maps_lt.dtype.names):
+                loss_maps_lt[name][aid, r] = lmaps[i]
+        self.datastore['loss_maps-rlzs'] = loss_maps
+
+        # loss maps stats
+        if self.R > 1:
+            stat_maps = numpy.zeros((self.Q1, self.N), self.loss_maps_dt)
+            for l, aid, statmaps in result['stat_maps']:
+                statmaps_lt = stat_maps[ltypes[l]]
+                for name in statmaps_lt.dtype.names:
+                    for s in range(self.Q1):
+                        statmaps_lt[name][s, aid] = statmaps[name][s]
+            self.datastore['loss_maps-stats'] = stat_maps

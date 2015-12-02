@@ -243,19 +243,3 @@ def make_uhs(maps):
         if imt.startswith('SA') or imt == 'PGA')))
     hmaps = numpy.array([maps[imt] for imt in sorted_imts])  # I * N * P
     return hmaps.transpose(1, 0, 2)  # N * I * P
-
-
-def build_loss_curves(shape, curve_resolution, insured=False):
-    """
-    Returns a zero matrix of loss curves with the appropriate dtype.
-
-    :param shape: the shape of the matrix
-    :param curve_resolution: the curve resolution
-    :param insured: flag used to extend the loss curve dtype
-    """
-    lst = [('losses', (F32, curve_resolution)),
-           ('poes', (F32, curve_resolution)),
-           ('avg', F32)]
-    if insured:
-        lst += [(name + '_ins', pair) for name, pair in lst]
-    return numpy.zeros(shape, numpy.dtype(lst))

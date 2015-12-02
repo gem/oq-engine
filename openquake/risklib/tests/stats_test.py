@@ -207,7 +207,7 @@ class StatsTestCase(unittest.TestCase):
             out = scientific.Output(
                 asset_refs, 'structural', weight=w,
                 loss_curves=lc, insured_curves=None,
-                average_losses=[.1, .12], average_insured_losses=None)
+                average_losses=[.1, .12, .13, .9], average_insured_losses=None)
             outputs.append(out)
         cls.builder = scientific.StatsBuilder(
             quantiles=[0.1, 0.9],
@@ -218,9 +218,8 @@ class StatsTestCase(unittest.TestCase):
     # TODO: add a test for insured curves and maps
     def test_get_stat_curves_maps(self):
         tempdir = tempfile.mkdtemp()
-        [curves, _curves], [maps, _maps] = self.builder.get_curves_maps(
-            self.stats)
-
+        curves, maps = self.builder.get_curves_maps(self.stats)
+        # expecting arrays of shape (Q1, N) with Q1=3, N=4
         actual = os.path.join(tempdir, 'expected_loss_curves.csv')
         writers.write_csv(actual, curves, fmt='%05.2f')
 
