@@ -23,6 +23,7 @@ import collections
 from functools import partial
 
 from openquake.hazardlib.site import SiteCollection
+from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
 from openquake.risklib import scientific
@@ -55,8 +56,12 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     imtls = monitor.oqparam.imtls
     trt_model_id = sources[0].trt_model_id
     gsims = gsims_assoc[trt_model_id]
+    # NB: the source_site_filter below is ESSENTIAL for performance inside
+    # hazard_curves_per_trt, since it reduces the full site collection
+    # to a filtered one *before* doing the rupture filtering
     curves_by_gsim = hazard_curves_per_trt(
         sources, sitecol, imtls, gsims, truncation_level,
+        source_site_filter=source_site_distance_filter(max_dist),
         maximum_distance=max_dist, monitor=monitor)
     dic = dict(monitor=monitor)
     for gsim, curves in zip(gsims, curves_by_gsim):
