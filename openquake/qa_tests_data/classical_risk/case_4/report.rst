@@ -18,7 +18,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   10.0     
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             32       
+concurrent_tasks             64       
 ============================ =========
 
 Input files
@@ -36,11 +36,19 @@ structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================ ===========
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations num_sources
-========= ====== ====================================== =============== ================ ===========
-b1        1.00   `source_model.xml <source_model.xml>`_ simple(2)       2/2              501        
-========= ====== ====================================== =============== ================ ===========
+========= ====== ====================================== =============== ================
+smlt_path weight source_model_file                      gsim_logic_tree num_realizations
+========= ====== ====================================== =============== ================
+b1        1.00   `source_model.xml <source_model.xml>`_ simple(2)       2/2             
+========= ====== ====================================== =============== ================
+
+Required parameters per tectonic region type
+--------------------------------------------
+====== =============================== =========== ======================= =================
+trt_id gsims                           distances   siteparams              ruptparams       
+====== =============================== =========== ======================= =================
+0      AkkarBommer2010 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+====== =============================== =========== ======================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -61,11 +69,11 @@ source_model.xml 0      Active Shallow Crust 501         6405
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =========
-Number of tasks to generate        27       
-Estimated sources to send          153.73 KB
-Estimated hazard curves to receive 48 KB    
-================================== =========
+================================== ========
+Number of tasks to generate        54      
+Estimated sources to send          205.4 KB
+Estimated hazard curves to receive 96 KB   
+================================== ========
 
 Exposure model
 --------------

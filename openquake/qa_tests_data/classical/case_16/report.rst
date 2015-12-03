@@ -49,6 +49,23 @@ b11_b24_b32_b41_b51_b62_b71_b84_b93_b101_b111 0.1    `source_model.xml <source_m
 b11_b24_b33_b40_b52_b62_b72_b81_b91_b102_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1              135        
 ============================================= ====== ====================================== =============== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================= ========= ========== ==========
+trt_id gsims             distances siteparams ruptparams
+====== ================= ========= ========== ==========
+0      BooreAtkinson2008 rjb       vs30       rake mag  
+1      BooreAtkinson2008 rjb       vs30       rake mag  
+2      BooreAtkinson2008 rjb       vs30       rake mag  
+3      BooreAtkinson2008 rjb       vs30       rake mag  
+4      BooreAtkinson2008 rjb       vs30       rake mag  
+5      BooreAtkinson2008 rjb       vs30       rake mag  
+6      BooreAtkinson2008 rjb       vs30       rake mag  
+7      BooreAtkinson2008 rjb       vs30       rake mag  
+8      BooreAtkinson2008 rjb       vs30       rake mag  
+9      BooreAtkinson2008 rjb       vs30       rake mag  
+====== ================= ========= ========== ==========
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -93,6 +110,6 @@ Expected data transfer for the sources
 --------------------------------------
 ================================== =========
 Number of tasks to generate        38       
-Estimated sources to send          362.58 KB
+Estimated sources to send          346.89 KB
 Estimated hazard curves to receive 912 B    
 ================================== =========

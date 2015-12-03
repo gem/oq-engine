@@ -40,6 +40,14 @@ smlt_path weight         source_model_file                      gsim_logic_tree 
 b1        0.333333333333 `source_model.xml <source_model.xml>`_ simple(3)       3/3              1          
 ========= ============== ====================================== =============== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================================== ========= ========== ==========
+trt_id gsims                              distances siteparams ruptparams
+====== ================================== ========= ========== ==========
+0      AkkarBommer2010 CauzziFaccioli2008 rhypo rjb vs30       rake mag  
+====== ================================== ========= ========== ==========
+
 Realizations per (TRT, GSIM)
 ----------------------------
 

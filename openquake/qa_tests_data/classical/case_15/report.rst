@@ -43,6 +43,17 @@ SM2_a3b1       0.250  `source_model_2.xml <source_model_2.xml>`_ simple(2,0)    
 SM2_a3pt2b0pt8 0.250  `source_model_2.xml <source_model_2.xml>`_ simple(2,0)     2/2              16         
 ============== ====== ========================================== =============== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ======================================= ========= ========== =================
+trt_id gsims                                   distances siteparams ruptparams       
+====== ======================================= ========= ========== =================
+0      BooreAtkinson2008 CampbellBozorgnia2008 rjb rrup  z2pt5 vs30 ztor mag rake dip
+1      Campbell2003 ToroEtAl2002               rjb rrup             mag              
+2      BooreAtkinson2008 CampbellBozorgnia2008 rjb rrup  z2pt5 vs30 ztor mag rake dip
+3      BooreAtkinson2008 CampbellBozorgnia2008 rjb rrup  z2pt5 vs30 ztor mag rake dip
+====== ======================================= ========= ========== =================
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -79,6 +90,6 @@ Expected data transfer for the sources
 --------------------------------------
 ================================== ========
 Number of tasks to generate        18      
-Estimated sources to send          44.62 KB
+Estimated sources to send          44.56 KB
 Estimated hazard curves to receive 13 KB   
 ================================== ========

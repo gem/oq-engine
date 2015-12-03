@@ -40,6 +40,14 @@ smlt_path weight source_model_file                                              
 b1        1.0    `simple_area_source_model.xml <simple_area_source_model.xml>`_ simple(0,4,0,0,0,0,0) 4/4              370        
 ========= ====== ============================================================== ===================== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ============================================================================ ========== ========== ==============
+trt_id gsims                                                                        distances  siteparams ruptparams    
+====== ============================================================================ ========== ========== ==============
+4      AtkinsonBoore2003SSlab LinLee2008SSlab YoungsEtAl1997SSlab ZhaoEtAl2006SSlab rhypo rrup vs30       hypo_depth mag
+====== ============================================================================ ========== ========== ==============
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -71,8 +79,8 @@ simple_area_source_model.xml 4      Subduction Inslab    370         7770
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ========
-Number of tasks to generate        29      
-Estimated sources to send          133.5 KB
-Estimated hazard curves to receive 70 KB   
-================================== ========
+================================== =========
+Number of tasks to generate        29       
+Estimated sources to send          132.17 KB
+Estimated hazard curves to receive 70 KB    
+================================== =========

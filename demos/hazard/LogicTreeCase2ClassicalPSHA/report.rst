@@ -120,6 +120,175 @@ b11_b23_b33_b43_b52 0.01240748143200 `source_model.xml <source_model.xml>`_ comp
 b11_b23_b33_b43_b53 0.01244474113600 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
 =================== ================ ====================================== =============== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================================= =========== ======================= =================
+trt_id gsims                             distances   siteparams              ruptparams       
+====== ================================= =========== ======================= =================
+0      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+1      Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+2      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+3      Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+4      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+5      Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+6      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+7      Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+8      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+9      Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+10     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+11     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+12     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+13     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+14     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+15     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+16     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+17     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+18     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+19     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+20     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+21     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+22     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+23     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+24     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+25     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+26     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+27     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+28     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+29     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+30     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+31     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+32     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+33     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+34     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+35     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+36     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+37     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+38     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+39     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+40     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+41     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+42     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+43     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+44     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+45     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+46     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+47     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+48     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+49     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+50     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+51     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+52     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+53     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+54     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+55     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+56     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+57     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+58     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+59     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+60     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+61     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+62     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+63     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+64     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+65     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+66     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+67     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+68     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+69     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+70     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+71     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+72     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+73     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+74     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+75     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+76     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+77     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+78     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+79     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+80     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+81     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+82     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+83     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+84     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+85     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+86     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+87     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+88     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+89     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+90     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+91     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+92     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+93     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+94     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+95     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+96     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+97     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+98     BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+99     Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+100    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+101    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+102    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+103    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+104    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+105    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+106    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+107    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+108    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+109    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+110    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+111    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+112    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+113    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+114    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+115    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+116    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+117    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+118    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+119    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+120    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+121    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+122    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+123    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+124    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+125    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+126    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+127    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+128    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+129    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+130    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+131    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+132    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+133    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+134    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+135    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+136    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+137    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+138    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+139    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+140    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+141    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+142    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+143    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+144    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+145    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+146    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+147    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+148    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+149    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+150    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+151    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+152    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+153    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+154    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+155    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+156    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+157    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+158    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+159    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+160    BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+161    Campbell2003 ToroEtAl2002         rjb rrup                            mag              
+====== ================================= =========== ======================= =================
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -630,6 +799,6 @@ Expected data transfer for the sources
 --------------------------------------
 ================================== =========
 Number of tasks to generate        162      
-Estimated sources to send          420.12 MB
+Estimated sources to send          419.96 MB
 Estimated hazard curves to receive 48 KB    
 ================================== =========

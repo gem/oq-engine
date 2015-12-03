@@ -77,8 +77,9 @@ def get_assets(dstore):
     :param dstore: a datastore with a key `specific_assets`
     :returns: an ordered array of records (asset_ref, lon, lat)
     """
-    assets = sorted(sum(map(list, dstore['assets_by_site']), []),
-                    key=operator.attrgetter('id'))
+    assets = []
+    for assets_by_site in dstore['assets_by_site']:
+        assets.extend(sorted(assets_by_site, key=operator.attrgetter('id')))
     asset_data = numpy.array(
         [(asset.id, asset.location[0], asset.location[1])
          for asset in assets], asset_dt)
@@ -845,7 +846,8 @@ BcrData = collections.namedtuple(
                 'average_annual_loss_retrofitted', 'bcr'])
 
 
-# this is used by classical_br
+# this is used by classical_bcr
+@export.add(('bcr-rlzs', 'xml'))
 def export_bcr_map_rlzs(ekey, dstore):
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
@@ -859,14 +861,13 @@ def export_bcr_map_rlzs(ekey, dstore):
     for rlz in realizations:
         suffix = '.xml' if R == 1 else '-gsimltp_%s.xml' % rlz.uid
         for l, loss_type in enumerate(loss_types):
-            rlz_data = bcr_data[:, l, rlz.ordinal]
+            rlz_data = bcr_data[loss_type][:, rlz.ordinal]
             path = dstore.export_path('bcr-%s%s' % (loss_type, suffix))
             writer = writercls(
                 path, oq.interest_rate, oq.asset_life_expectancy, loss_type,
-                source_model_tree_path='_'.join(rlz.sm_lt_path),
-                gsim_tree_path='_'.join(rlz.gsim_lt_path))
+                **get_paths(rlz))
             data = []
-            for ass, value in zip(assetcol[loss_type], rlz_data):
+            for ass, value in zip(assetcol, rlz_data):
                 loc = Location(sitemesh[ass['site_id']])
                 data.append(BcrData(loc, ass['asset_ref'],
                                     value['annual_loss_orig'],

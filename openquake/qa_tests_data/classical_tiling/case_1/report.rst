@@ -1,6 +1,8 @@
 Classical PSHA using Area Source
 ================================
 
+num_sites = 6
+
 Parameters
 ----------
 ============================ ================
@@ -38,6 +40,14 @@ smlt_path weight source_model_file                      gsim_logic_tree num_real
 b1        1.00   `source_model.xml <source_model.xml>`_ simple(2)       2/2              1          
 ========= ====== ====================================== =============== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ================================= =========== ======================= =================
+trt_id gsims                             distances   siteparams              ruptparams       
+====== ================================= =========== ======================= =================
+0      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+====== ================================= =========== ======================= =================
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -46,3 +56,11 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(2)
   0,BooreAtkinson2008: ['<0,b1,b1,w=0.6>']
   0,ChiouYoungs2008: ['<1,b1,b2,w=0.4>']>
+
+Number of ruptures per tectonic region type
+-------------------------------------------
+================ ====== ==================== =========== ============
+source_model     trt_id trt                  num_sources num_ruptures
+================ ====== ==================== =========== ============
+source_model.xml 0      Active Shallow Crust 1           1640        
+================ ====== ==================== =========== ============

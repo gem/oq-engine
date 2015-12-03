@@ -51,6 +51,25 @@ sm1_sg2_cog2_char_plane   0.04500 `source_model.xml <source_model.xml>`_ trivial
 sm1_sg2_cog2_char_simple  0.07500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              121        
 ========================= ======= ====================================== =============== ================ ===========
 
+Required parameters per tectonic region type
+--------------------------------------------
+====== ============== ========= ========== ==========
+trt_id gsims          distances siteparams ruptparams
+====== ============== ========= ========== ==========
+0      SadighEtAl1997 rrup      vs30       rake mag  
+1      SadighEtAl1997 rrup      vs30       rake mag  
+2      SadighEtAl1997 rrup      vs30       rake mag  
+3      SadighEtAl1997 rrup      vs30       rake mag  
+4      SadighEtAl1997 rrup      vs30       rake mag  
+5      SadighEtAl1997 rrup      vs30       rake mag  
+6      SadighEtAl1997 rrup      vs30       rake mag  
+7      SadighEtAl1997 rrup      vs30       rake mag  
+8      SadighEtAl1997 rrup      vs30       rake mag  
+9      SadighEtAl1997 rrup      vs30       rake mag  
+10     SadighEtAl1997 rrup      vs30       rake mag  
+11     SadighEtAl1997 rrup      vs30       rake mag  
+====== ============== ========= ========== ==========
+
 Realizations per (TRT, GSIM)
 ----------------------------
 
@@ -99,6 +118,6 @@ Expected data transfer for the sources
 --------------------------------------
 ================================== =======
 Number of tasks to generate        42     
-Estimated sources to send          3.58 MB
+Estimated sources to send          3.57 MB
 Estimated hazard curves to receive 1 KB   
 ================================== =======
