@@ -159,6 +159,8 @@ def calc_hazard_curves(
     return curves
 
 
+# TODO: remove the rupture_site_filter, since its work is now done by the
+# maximum_distance parameter; see what would break
 def hazard_curves_per_trt(
         sources, sites, imtls, gsims, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
