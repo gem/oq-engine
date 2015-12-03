@@ -271,29 +271,6 @@ def get_vulnerability_functions_05(node, fname):
     return vmodel
 
 
-def get_imtls(ddict):
-    """
-    :param ddict:
-        a dictionary (imt, taxo) -> loss_type -> risk_function
-    :returns:
-        a dictionary imt_str -> imls
-    """
-    # NB: different loss types may have different IMLs for the same IMT
-    # in that case we merge the IMLs
-    imtls = {}
-    for (imt, taxonomy), dic in ddict.items():
-        for loss_type, rf in dic.items():
-            imls = list(rf.imls)
-            if imt in imtls and imtls[imt] != imls:
-                logging.info(
-                    'Different levels for IMT %s: got %s, expected %s',
-                    imt, imls, imtls[imt])
-                imtls[imt] = sorted(set(imls + imtls[imt]))
-            else:
-                imtls[imt] = imls
-    return imtls
-
-
 # ########################### fragility ############################### #
 
 def ffconvert(fname, limit_states, ff):
