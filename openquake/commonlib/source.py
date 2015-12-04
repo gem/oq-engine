@@ -755,17 +755,18 @@ class BaseSourceProcessor(object):
     Do nothing source processor.
 
     :param sitecol:
-        a SiteCollection instance
+        a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param maxdist:
         maximum distance for the filtering
-    :param area_source_discretization:
-        area source discretization
+    :param monitor:
+        a PerformanceMonitor instance
     """
     weight = False  # when True, set the weight on each source
 
-    def __init__(self, sitecol, maxdist):
+    def __init__(self, sitecol, maxdist, monitor):
         self.sitecol = sitecol
         self.maxdist = maxdist
+        self.monitor = monitor
 
 
 class SourceFilter(BaseSourceProcessor):
@@ -804,9 +805,10 @@ class SourceFilter(BaseSourceProcessor):
                        info.weight_time, info.split_time))
         return acc + {info.trt_model_id: info.sources}
 
-    def process(self, csm, dummy=None):
+    def process(self, csm, dstore, dummy=None):
         """
         :param csm: a CompositeSourceModel instance
+        :param dstore: a DataStore instance
         :returns: the times spent in sequential and parallel processing
         """
         sources = csm.get_sources()
@@ -821,7 +823,8 @@ class SourceFilter(BaseSourceProcessor):
                 sources_by_trt, self.filter(src))
         seqtime = time.time() - t1
         self.update(csm, sources_by_trt)
-        return seqtime, partime
+        logging.info('fast sources filtering/splitting: %s', seqtime)
+        logging.info('slow sources filtering/splitting: %s', partime)
 
     def update(self, csm, sources_by_trt):
         """
@@ -867,11 +870,11 @@ class SourceFilterSplitter(SourceFilterWeighter):
 
     :param sitecol: a SiteCollection instance
     :param maxdist: maximum distance for the filtering
-    :param area_source_discretization: area source discretization
     """
-    def process(self, csm, no_distribute=False):
+    def process(self, csm, dstore, no_distribute=False):
         """
         :param csm: a CompositeSourceModel instance
+        :param dstore: a DataStore instance
         :param no_distribute: flag to disable parallel processing
         :returns: the times spent in sequential and parallel processing
         """
