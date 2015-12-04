@@ -31,7 +31,7 @@ from openquake.hazardlib import geo, site, correlation, imt
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import workflows, riskinput
 
-from openquake.commonlib.datastore import DataStore
+from openquake.commonlib.datastore import DataStore, Fake
 from openquake.commonlib.oqvalidation import OqParam, rmdict
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
@@ -474,7 +474,8 @@ def get_source_models(oqparam, source_model_lt, sitecol=None, in_memory=True):
 
 def get_composite_source_model(
         oqparam, sitecol=None, SourceProcessor=source.SourceFilterSplitter,
-        monitor=DummyMonitor(), no_distribute=parallel.no_distribute()):
+        monitor=DummyMonitor(), no_distribute=parallel.no_distribute(),
+        dstore=Fake()):
     """
     Build the source models by splitting the sources. If prefiltering is
     enabled, also reduce the GSIM logic trees in the underlying source models.
@@ -489,10 +490,12 @@ def get_composite_source_model(
         a monitor instance
     :param no_distribute:
         used to disable parallel splitting of the sources
+    :param dstore:
+        a DataStore instance (possibly fake)
     :returns:
         an iterator over :class:`openquake.commonlib.source.SourceModel`
     """
-    processor = SourceProcessor(sitecol, oqparam.maximum_distance)
+    processor = SourceProcessor(sitecol, oqparam.maximum_distance, monitor)
     source_model_lt = get_source_model_lt(oqparam)
     smodels = []
     trt_id = 0
@@ -505,9 +508,7 @@ def get_composite_source_model(
         smodels.append(source_model)
     csm = source.CompositeSourceModel(source_model_lt, smodels)
     if sitecol is not None and hasattr(processor, 'process'):
-        seqtime, partime = processor.process(csm, no_distribute)
-        logging.info('fast sources filtering/splitting: %s', seqtime)
-        logging.info('slow sources filtering/splitting: %s', partime)
+        processor.process(csm, dstore, no_distribute)
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away')
     csm.count_ruptures()

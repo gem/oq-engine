@@ -677,7 +677,7 @@ class ClassicalBCR(Workflow):
                                steps=lrem_steps_per_interval))
             for loss_type, vf in vulnerability_functions_retro.items())
 
-    def __call__(self, loss_type, assets, hazard, _eps, _tags):
+    def __call__(self, loss_type, assets, hazard, _eps=None, _tags=None):
         self.assets = assets
 
         original_loss_curves = utils.numpy_map(

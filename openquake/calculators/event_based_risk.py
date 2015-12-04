@@ -315,7 +315,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         return apply_reduce(
             self.core_func.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc,
-             self.assets_by_site, self.monitor),
+             self.assets_by_site, self.monitor.new('task')),
             concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('col_id'))
@@ -458,7 +458,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.datastore['agg_loss_table'].values())]
         ses_ratio = self.oqparam.ses_ratio
         result = parallel.apply_reduce(
-            build_agg_curve, (r_data, self.I, ses_ratio, C, self.monitor),
+            build_agg_curve, (r_data, self.I, ses_ratio, C, self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks)
         agg_curve = numpy.zeros(self.R, loss_curve_dt)
         for l, r, name in result:

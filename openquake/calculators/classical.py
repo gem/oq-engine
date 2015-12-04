@@ -119,7 +119,7 @@ class ClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        monitor = self.monitor(self.core_func.__name__)
+        monitor = self.monitor.new(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         sources = self.csm.get_sources()
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
@@ -133,7 +133,7 @@ class ClassicalCalculator(base.HazardCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
-        monitor.flush()  # this is needed for the sequential case
+        monitor.flush()
         if self.persistent:
             store_source_chunks(self.datastore)
         return curves_by_trt_gsim

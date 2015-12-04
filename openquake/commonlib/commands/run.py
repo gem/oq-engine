@@ -53,6 +53,16 @@ def get_pstats(pstatfile, n):
         if len(columns) == 6:
             data.append(PStatData(*columns))
     rows = [(rec.ncalls, rec.cumtime, rec.path) for rec in data]
+    # here is an example of the expected output table:
+    # ====== ======= ========================================================
+    # ncalls cumtime path
+    # ====== ======= ========================================================
+    # 1      33.502  commonlib/commands/run.py:77(_run)
+    # 1      33.483  calculators/base.py:110(run)
+    # 1      25.166  calculators/classical.py:115(execute)
+    # 1      25.104  commonlib/parallel.py:249(apply_reduce)
+    # 1      25.099  calculators/classical.py:41(classical)
+    # 1      25.099  hazardlib/calc/hazard_curve.py:164(hazard_curves_per_trt)
     return views.rst_table(rows, header='ncalls cumtime path'.split())
 
 
