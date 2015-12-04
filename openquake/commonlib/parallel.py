@@ -420,6 +420,15 @@ class NoFlush(object):
                            'by %s!' % (self.monitor.operation, self.taskname))
 
 
+def rec_delattr(mon, name):
+    """
+    Delete attribute from a monitor recursively
+    """
+    for child in mon.children:
+        rec_delattr(child, name)
+    delattr(mon, name)
+
+
 def litetask(func):
     """
     Add monitoring support to the decorated function. The last argument
@@ -428,10 +437,9 @@ def litetask(func):
     def wrapper(*args):
         monitor = args[-1]
         monitor.flush = NoFlush(monitor, func.__name__)
-        with monitor('total ' + func.__name__, measuremem=True) as mon:
+        with monitor('total ' + func.__name__, measuremem=True):
             result = func(*args)
-        delattr(monitor, 'flush')
-        delattr(mon, 'flush')
+        rec_delattr(monitor, 'flush')
         return result
     # NB: we need pickle=True because celery is using the worst possible
     # protocol; once we remove celery we can try to remove pickle=True
