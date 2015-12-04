@@ -16,14 +16,54 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
+import collections
 import logging
 import cProfile
+import pstats
+import io
 
 from openquake.baselib import performance, general
 from openquake.commonlib import sap, readinput, valid, datastore
-from openquake.calculators import base
+from openquake.calculators import base, views
 
 calc_path = None  # set only when the flag --profile is given
+
+PStatData = collections.namedtuple(
+    'PStatData', 'ncalls tottime percall cumtime percall2 path')
+
+
+def get_pstats(pstatfile, n):
+    """
+    Return profiling information as an RST table.
+
+    :param pstatfile: path to a .pstat file
+    :param n: the maximum number of stats to retrieve
+    """
+    stream = io.BytesIO()
+    ps = pstats.Stats(pstatfile, stream=stream)
+    ps.sort_stats('cumtime')
+    ps.print_stats(n)
+    lines = stream.getvalue().splitlines()
+    for i, line in enumerate(lines):
+        if line.startswith('   ncalls'):
+            break
+    data = []
+    for line in lines[i + 2:]:
+        columns = line.split()
+        if len(columns) == 6:
+            data.append(PStatData(*columns))
+    rows = [(rec.ncalls, rec.cumtime, rec.path) for rec in data]
+    # here is an example of the expected output table:
+    # ====== ======= ========================================================
+    # ncalls cumtime path
+    # ====== ======= ========================================================
+    # 1      33.502  commonlib/commands/run.py:77(_run)
+    # 1      33.483  calculators/base.py:110(run)
+    # 1      25.166  calculators/classical.py:115(execute)
+    # 1      25.104  commonlib/parallel.py:249(apply_reduce)
+    # 1      25.099  calculators/classical.py:41(classical)
+    # 1      25.099  hazardlib/calc/hazard_curve.py:164(hazard_curves_per_trt)
+    return views.rst_table(rows, header='ncalls cumtime path'.split())
 
 
 def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, monitor):
@@ -76,7 +116,7 @@ def _run(job_ini, concurrent_tasks=0, pdb=0, loglevel='info',
 
 
 def run(job_ini, concurrent_tasks=None, pdb=None,
-        loglevel='info', hc=None, exports='', profile=False):
+        loglevel='info', hc=None, exports='', profile=0):
     """
     Run a calculation.
 
@@ -93,14 +133,16 @@ def run(job_ini, concurrent_tasks=None, pdb=None,
     :param exports:
         export type, can be '', 'csv', 'xml', 'geojson' or combinations
     :param profile:
-        when True, enable Python cProfile functionality
+        enable Python cProfile functionality
     """
     if profile:
         prof = cProfile.Profile()
         stmt = '_run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports)'
         prof.runctx(stmt, globals(), locals())
-        prof.dump_stats(calc_path + '.pstat')
-        print('Saved profiling info in %s' % calc_path + '.pstat')
+        pstat = calc_path + '.pstat'
+        prof.dump_stats(pstat)
+        print('Saved profiling info in %s' % pstat)
+        print(get_pstats(pstat, profile))
     else:
         _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports)
 
@@ -115,4 +157,4 @@ parser.opt('loglevel', 'logging level',
 parser.opt('hc', 'previous calculation ID', type=int)
 parser.opt('exports', 'export formats as a comma-separated string',
            type=valid.export_formats)
-parser.flg('profile', 'enable profiling')
+parser.opt('profile', 'enable profiling', type=int)
