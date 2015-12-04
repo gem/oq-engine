@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (c) 2010-2015, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -75,17 +75,16 @@ class CsvCatalogueParser(BaseCatalogueParser):
                 valid_key_list = self._header_check(
                     row.keys(),
                     catalogue.TOTAL_ATTRIBUTE_LIST)
-            for key in valid_key_list:
-                if key in catalogue.FLOAT_ATTRIBUTE_LIST:
-                    catalogue.data[key] = self._float_check(
-                        catalogue.data[key],
-                        row[key])
-                elif key in catalogue.INT_ATTRIBUTE_LIST:
-                    catalogue.data[key] = self._int_check(
-                        catalogue.data[key],
-                        row[key])
-                else:
-                    catalogue.data[key].append(row[key])
+            else:
+                for key in valid_key_list:
+                    if key in catalogue.FLOAT_ATTRIBUTE_LIST:
+                        catalogue.data[key] = self._float_check(
+                            catalogue.data[key], row[key], irow, key)
+                    elif key in catalogue.INT_ATTRIBUTE_LIST:
+                        catalogue.data[key] = self._int_check(
+                            catalogue.data[key], row[key], irow, key)
+                    else:
+                        catalogue.data[key].append(row[key])
         if start_year:
             catalogue.start_year = start_year
         else:
@@ -110,27 +109,38 @@ class CsvCatalogueParser(BaseCatalogueParser):
                 valid_key_list.append(element)
             else:
                 print ('Catalogue Attribute %s is not '
-                       'a recognised catalogue key' % element)
+                    'a recognised catalogue key' % element)
         return valid_key_list
 
-    def _float_check(self, attribute_array, value):
+    def _float_check(self, attribute_array, value, irow, key):
         '''Checks if value is valid float, appends to array if valid, appends
         nan if not'''
         value = value.strip(' ')
-        if value:
-            attribute_array = np.hstack([attribute_array, float(value)])
-        else:
-            attribute_array = np.hstack([attribute_array, np.nan])
+        try: 
+            if value:
+                attribute_array = np.hstack([attribute_array, float(value)])
+            else:
+                attribute_array = np.hstack([attribute_array, np.nan])
+        except:
+            print irow, key
+            msg = 'Input file format error at line: %d' % (irow+2)
+            msg += ' key: %s' % (key)
+            raise ValueError(msg)
         return attribute_array
 
-    def _int_check(self, attribute_array, value):
+    def _int_check(self, attribute_array, value, irow, key):
         '''Checks if value is valid integer, appends to array if valid, appends
         nan if not'''
         value = value.strip(' ')
-        if value:
-            attribute_array = np.hstack([attribute_array, int(value)])
-        else:
-            attribute_array = np.hstack([attribute_array, np.nan])
+        try:
+            if value:
+                attribute_array = np.hstack([attribute_array, int(value)])
+            else:
+                attribute_array = np.hstack([attribute_array, np.nan])
+        except:
+            msg = 'Input file format error at line: %d' % (irow+2)
+            msg += ' key: %s' % (key)
+            raise ValueError(msg)
         return attribute_array
 
 
