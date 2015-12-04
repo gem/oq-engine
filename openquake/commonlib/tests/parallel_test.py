@@ -56,6 +56,7 @@ class TaskManagerTestCase(unittest.TestCase):
         res = get_len(*pik_args).unpickle()
 
         # flushing error
-        self.assertIn('PerformanceMonitor.flush() must not be called', res[0])
+        self.assertIn('PerformanceMonitor(\'test\').flush() must not be called'
+                      ' by get_len!', res[0])
         self.assertEqual(res[1], RuntimeError)
         self.assertEqual(res[2].operation, mon.operation)

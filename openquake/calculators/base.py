@@ -70,7 +70,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     taxonomies = datastore.persistent_attribute('taxonomies')
     job_info = datastore.persistent_attribute('job_info')
     source_chunks = datastore.persistent_attribute('source_chunks')
-    source_pre_info = datastore.persistent_attribute('source_pre_info')
     performance = datastore.persistent_attribute('performance')
     csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
@@ -376,9 +375,8 @@ class HazardCalculator(BaseCalculator):
                     'reading composite source model', autoflush=True):
                 self.csm = readinput.get_composite_source_model(
                     self.oqparam, self.sitecol, self.SourceProcessor,
-                    self.monitor)
+                    self.monitor, dstore=self.datastore)
                 # we could manage limits here
-                self.source_pre_info = self.csm.source_info
                 self.job_info = readinput.get_job_info(
                     self.oqparam, self.csm, self.sitecol)
                 self.csm.count_ruptures()
