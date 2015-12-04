@@ -409,10 +409,25 @@ def do_not_aggregate(acc, value):
     return acc
 
 
-def noflush():
-    # this is set by the litetask decorator
-    raise RuntimeError('PerformanceMonitor.flush() must not be called '
-                       'by a worker!')
+class NoFlush(object):
+    # this is instantiated by the litetask decorator
+    def __init__(self, monitor, taskname):
+        self.monitor = monitor
+        self.taskname = taskname
+
+    def __call__(self):
+        raise RuntimeError('PerformanceMonitor(%r).flush() must not be called '
+                           'by %s!' % (self.monitor.operation, self.taskname))
+
+
+def rec_delattr(mon, name):
+    """
+    Delete attribute from a monitor recursively
+    """
+    for child in mon.children:
+        rec_delattr(child, name)
+    if name in vars(mon):
+        delattr(mon, name)
 
 
 def litetask(func):
@@ -422,10 +437,10 @@ def litetask(func):
     """
     def wrapper(*args):
         monitor = args[-1]
-        monitor.flush = noflush
+        monitor.flush = NoFlush(monitor, func.__name__)
         with monitor('total ' + func.__name__, measuremem=True):
             result = func(*args)
-        delattr(monitor, 'flush')
+        rec_delattr(monitor, 'flush')
         return result
     # NB: we need pickle=True because celery is using the worst possible
     # protocol; once we remove celery we can try to remove pickle=True
