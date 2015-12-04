@@ -375,7 +375,7 @@ class HazardCalculator(BaseCalculator):
                     'reading composite source model', autoflush=True):
                 self.csm = readinput.get_composite_source_model(
                     self.oqparam, self.sitecol, self.SourceProcessor,
-                    self.monitor)
+                    self.monitor, dstore=self.datastore)
                 # we could manage limits here
                 self.job_info = readinput.get_job_info(
                     self.oqparam, self.csm, self.sitecol)
