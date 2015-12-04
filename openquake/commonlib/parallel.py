@@ -426,7 +426,8 @@ def rec_delattr(mon, name):
     """
     for child in mon.children:
         rec_delattr(child, name)
-    delattr(mon, name)
+    if hasattr(mon, name):
+        delattr(mon, name)
 
 
 def litetask(func):
