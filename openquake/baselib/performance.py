@@ -107,21 +107,15 @@ class PerformanceMonitor(object):
     def get_data(self):
         """
         :returns:
-            an array of dtype perf_dt, with the information of the monitor
-            and its children (operation, time_sec, memory_mb, counts)
-
-        .. note::
-
-            at the moment only the direct children are retrieved, i.e.
-            get_data is not recursive.
+            an array of dtype perf_dt, with the information
+            of the monitor (operation, time_sec, memory_mb, counts);
+            the lenght of the array can be 0 (for counts=0) or 1 (otherwise).
         """
         data = []
-        monitors = [self] + self.children  # only direct children
-        for mon in monitors:
-            if mon.counts:
-                time_sec = mon.duration
-                memory_mb = mon.mem / 1024. / 1024. if mon.measuremem else 0
-                data.append((mon.operation, time_sec, memory_mb, mon.counts))
+        if self.counts:
+            time_sec = self.duration
+            memory_mb = self.mem / 1024. / 1024. if self.measuremem else 0
+            data.append((self.operation, time_sec, memory_mb, self.counts))
         return numpy.array(data, perf_dt)
 
     def __enter__(self):
@@ -149,15 +143,17 @@ class PerformanceMonitor(object):
         """
         Save the measurements on the performance file (or on stdout)
         """
+        for child in self.children:
+            child.flush()
         data = self.get_data()
-        # reset monitors
-        for mon in ([self] + self.children):
-            mon.duration = 0
-            mon.mem = 0
-            mon.counts = 0
-
         if len(data) == 0:  # no information
             return
+
+        # reset monitor
+        self.duration = 0
+        self.mem = 0
+        self.counts = 0
+
         if self.hdf5path:
             h5 = h5py.File(self.hdf5path)
             try:
@@ -167,12 +163,20 @@ class PerformanceMonitor(object):
             pdata.extend(data)
             h5.close()
         else:  # print on stddout
-            for rec in data:
-                print(rec)
+            print(data[0])
 
+    # TODO: rename this as spawn; see what will break
     def __call__(self, operation, **kw):
         """
         Return a child of the monitor usable for a different operation.
+        """
+        child = self.new(operation, **kw)
+        self.children.append(child)
+        return child
+
+    def new(self, operation, **kw):
+        """
+        Return a copy of the monitor usable for a different operation.
         """
         self_vars = vars(self).copy()
         del self_vars['operation']
@@ -181,7 +185,6 @@ class PerformanceMonitor(object):
         new = self.__class__(operation)
         vars(new).update(self_vars)
         vars(new).update(kw)
-        self.children.append(new)
         return new
 
     def __repr__(self):
