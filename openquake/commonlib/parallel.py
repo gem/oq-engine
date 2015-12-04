@@ -426,7 +426,7 @@ def rec_delattr(mon, name):
     """
     for child in mon.children:
         rec_delattr(child, name)
-    if hasattr(mon, name):
+    if name in vars(mon):
         delattr(mon, name)
 
 
