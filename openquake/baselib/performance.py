@@ -204,9 +204,8 @@ class DummyMonitor(PerformanceMonitor):
     def __init__(self, operation='dummy', *args, **kw):
         self.operation = operation
         self.hdf5path = None
-
-    def __call__(self, operation, **kw):
-        return self.__class__(operation)
+        self.children = []
+        self.counts = 0
 
     def __enter__(self):
         return self
