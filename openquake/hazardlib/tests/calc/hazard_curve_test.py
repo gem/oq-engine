@@ -26,6 +26,12 @@ from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.gsim.base import ContextMaker
 
 
+class FakeSiteContext(object):
+    def __init__(self, sites):
+        self.sites = sites
+        self.mesh = sites.mesh
+
+
 class HazardCurvesTestCase(unittest.TestCase):
     class FakeRupture(object):
         def __init__(self, probability, tectonic_region_type):
@@ -71,7 +77,7 @@ class HazardCurvesTestCase(unittest.TestCase):
     def setUp(self):
         self.orig_make_contexts = ContextMaker.make_contexts
         ContextMaker.make_contexts = lambda self, sites, rupture: (
-            sites, rupture, None)
+            FakeSiteContext(sites), rupture, None)
         self.truncation_level = 3.4
         self.imts = {'PGA': [1, 2, 3], 'PGD': [2, 4]}
         self.time_span = 49.2
