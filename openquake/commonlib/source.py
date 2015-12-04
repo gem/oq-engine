@@ -822,21 +822,22 @@ class SourceFilter(BaseSourceProcessor):
             sources_by_trt = self.agg_source_info(
                 sources_by_trt, self.filter(src))
         seqtime = time.time() - t1
-        self.update(csm, sources_by_trt)
+        self.update(csm, dstore, sources_by_trt)
         logging.info('fast sources filtering/splitting: %s', seqtime)
         logging.info('slow sources filtering/splitting: %s', partime)
 
-    def update(self, csm, sources_by_trt):
+    def update(self, csm, dstore, sources_by_trt):
         """
         Store the `source_info` array in the composite source model.
 
         :param csm: a CompositeSourceModel instance
+        :param dstore: a DataStore instance
         :param sources_by_trt: a dictionary trt_model_id -> sources
         """
         self.infos.sort(
             key=lambda info: info.filter_time + info.weight_time +
             info.split_time, reverse=True)
-        csm.source_info = numpy.array(self.infos, source_info_dt)
+        dstore['pre_source_info'] = numpy.array(self.infos, source_info_dt)
         del self.infos[:]
 
         # update trt_model.sources
@@ -913,6 +914,6 @@ class SourceFilterSplitter(SourceFilterWeighter):
         if slow_sources:
             partime = time.time() - t0
 
-        self.update(csm, sources_by_trt)
+        self.update(csm, dstore, sources_by_trt)
 
         return seqtime, partime
