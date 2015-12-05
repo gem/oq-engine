@@ -196,7 +196,7 @@ def plot_magnitude_time_scatter(catalogue, plot_error=False, filename=None,
 
 def plot_magnitude_time_density(catalogue, mag_int, time_int,
         normalisation=False, bootstrap=None, filename=None, filetype='png',
-        dpi=300, completeness=[]):
+        dpi=300, completeness=None):
     """
     Creates a plot of magnitude-time density
     :param catalogue:
@@ -246,10 +246,10 @@ def plot_magnitude_time_density(catalogue, mag_int, time_int,
     plt.xlim(time_bins[0], time_bins[-1])
     plt.colorbar()
     # Plot completeness
-    if completeness:
-        _plot_completeness(comw)
+    if completeness is not None:
+        _plot_completeness(completeness)
     # Fix the title
-    if normalisation:
+    if normalisation is True:
         plt.title('Magnitude-Time Density', fontsize='large')
     else:
         plt.title('Magnitude-Time Count', fontsize='large')
@@ -261,12 +261,14 @@ def plot_magnitude_time_density(catalogue, mag_int, time_int,
 def _plot_completeness(comw):
     x = []
     y = []
-    for idx in enumerate(comw):
-        x.append(comw[i])
-        y.append(comw[i])
-        x.append(comw[i+1])
-        x.append(comw[i])
-    plt.plot(x,y, '--')
+    for idx in range(0, len(comw)-2):
+        x.append(comw[idx,0])
+        y.append(comw[idx,1])
+        x.append(comw[idx+1,0])
+        y.append(comw[idx,1])
+    print x
+    print y
+    plt.plot(x, y, '--', linewidth=3, color='brown')
 
 def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
     """
