@@ -147,12 +147,12 @@ Some outputs where not shown. You can see the full list with the command
 From the directory `/usr/share/openquake/engine`, launch celery worker processes like so:
 ##### Ubuntu 12.04 / Celery 2
 <pre>
-celeryd --purge &
+cd /usr/share/openquake/engine && celeryd --purge &
 </pre>
 
 ##### Ubuntu 14.04 / Celery 3
 <pre>
-celery worker --purge -Ofair &
+cd /usr/share/openquake/engine && celery worker --purge -Ofair &
 </pre>
 
 Then run `oq-engine` without the `--no-distribute` option:
