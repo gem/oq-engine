@@ -639,7 +639,7 @@ class ConsequenceModel(dict):
 
 
 def build_imls(ff, continuous_fragility_discretization,
-               steps_per_interval=None):
+               steps_per_interval):
     """
     Build intensity measure levels from a fragility function. If the function
     is continuous, they are produced simply as a linear space between minIML
@@ -708,15 +708,15 @@ class FragilityModel(dict):
             # TODO: this is complicated and perhaps wrong: check with Anirudh
             add_zero = (ff.format == 'discrete' and
                         ff.nodamage is not None and ff.nodamage < ff.imls[0])
-            imls = build_imls(new, continuous_fragility_discretization)
-            new.imls = build_imls(
+            new.imls = build_imls(  # passed to classical_damage function
                 new, continuous_fragility_discretization, steps_per_interval)
             range_ls = range(len(ff))
             for i, ls, data in zip(range_ls, self.limitStates, ff):
                 if ff.format == 'discrete':
                     if add_zero:
                         new[i] = FragilityFunctionDiscrete(
-                            ls, imls, numpy.concatenate([[0.], data]),
+                            ls, [ff.nodamage] + ff.imls,
+                            numpy.concatenate([[0.], data]),
                             ff.nodamage)
                     else:
                         new[i] = FragilityFunctionDiscrete(
