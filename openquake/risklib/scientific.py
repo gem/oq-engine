@@ -582,8 +582,8 @@ class FragilityFunctionDiscrete(object):
                     no_damage_limit=self.no_damage_limit)
 
     def __eq__(self, other):
-        return (self.poes == other.poes and self.imls == other.imls
-                and self.no_damage_limit == other.no_damage_limit)
+        return (self.poes == other.poes and self.imls == other.imls and
+                self.no_damage_limit == other.no_damage_limit)
 
     def __ne__(self, other):
         return not self == other
@@ -639,7 +639,7 @@ class ConsequenceModel(dict):
 
 
 def build_imls(ff, continuous_fragility_discretization,
-               steps_per_interval):
+               steps_per_interval=0):
     """
     Build intensity measure levels from a fragility function. If the function
     is continuous, they are produced simply as a linear space between minIML
@@ -656,7 +656,7 @@ def build_imls(ff, continuous_fragility_discretization,
         imls = ff.imls
         if ff.nodamage is not None and ff.nodamage < imls[0]:
             imls = [ff.nodamage] + imls
-        if steps_per_interval:
+        if steps_per_interval > 1:
             gen_imls = fine_graining(imls, steps_per_interval)
         else:
             gen_imls = imls
@@ -708,7 +708,8 @@ class FragilityModel(dict):
             # TODO: this is complicated: check with Anirudh
             add_zero = (ff.format == 'discrete' and
                         ff.nodamage is not None and ff.nodamage < ff.imls[0])
-            new.imls = build_imls(  # passed to classical_damage function
+            new.imls = build_imls(new, continuous_fragility_discretization)
+            new.interp_imls = build_imls(  # passed to classical_damage
                 new, continuous_fragility_discretization, steps_per_interval)
             range_ls = range(len(ff))
             for i, ls, data in zip(range_ls, self.limitStates, ff):
@@ -1152,7 +1153,7 @@ def classical_damage(
         an array of M probabilities of occurrence where M is the numbers
         of damage states.
     """
-    imls = numpy.array(fragility_functions.imls)
+    imls = numpy.array(fragility_functions.interp_imls)
     if fragility_functions.steps_per_interval:  # interpolate
         min_val, max_val = hazard_imls[0], hazard_imls[-1]
         numpy.putmask(imls, imls < min_val, min_val)

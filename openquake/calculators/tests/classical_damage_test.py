@@ -76,4 +76,5 @@ class ClassicalDamageTestCase(CalculatorTestCase):
     def test_case_1c(self):
         self.run_calc(case_1c.__file__, 'job_haz.ini,job_risk.ini')
         damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.971829, 0.005068, 0.00682, 0.005172, 0.011111], 6)
+        expected = [0.971993, 0.0047832, 0.006618, 0.0051539, 0.0114523]
+        aae(damages, expected, 5)
