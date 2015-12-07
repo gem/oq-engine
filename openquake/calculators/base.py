@@ -259,17 +259,10 @@ class HazardCalculator(BaseCalculator):
                 if 'scenario' not in self.oqparam.calculation_mode:
                     self.csm = precalc.csm
             else:  # read previously computed data
-                parent = datastore.DataStore(precalc_id, mode='r')
+                parent = datastore.DataStore(precalc_id)
                 self.datastore.set_parent(parent)
-                pparam = OqParam.from_(parent.attrs)
                 # update oqparam with the attributes saved in the datastore
                 self.oqparam = OqParam.from_(self.datastore.attrs)
-                haz_spi = pparam.steps_per_interval
-                risk_spi = self.oqparam.steps_per_interval
-                if risk_spi != haz_spi:
-                    raise ValueError(
-                        'different values:\nhazard steps_per_interval: %d\n'
-                        'risk steps_per_interval: %d' % (haz_spi, risk_spi))
                 self.read_risk_data()
 
         else:  # we are in a basic calculator

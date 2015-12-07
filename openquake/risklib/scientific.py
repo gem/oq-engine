@@ -705,7 +705,7 @@ class FragilityModel(dict):
         newfm = copy.copy(self)
         for imt_taxo, ff in self.items():
             newfm[imt_taxo] = new = copy.copy(ff)
-            # TODO: this is complicated and perhaps wrong: check with Anirudh
+            # TODO: this is complicated: check with Anirudh
             add_zero = (ff.format == 'discrete' and
                         ff.nodamage is not None and ff.nodamage < ff.imls[0])
             new.imls = build_imls(  # passed to classical_damage function
