@@ -25,7 +25,7 @@ $ sudo port select --set ipython py27-ipython
 
 ## Clone the OpenQuake repos and configure them
 
-Clone the OpenQuake Hzardlib and Risklib repositories. In this example they will be cloned in a 'GEM' folder in the user home directory
+Clone the OpenQuake Hazardlib and Risklib repositories. In this example they will be cloned into a folder called 'GEM' in the user's home directory
 ```bash
 $ mkdir $HOME/GEM && cd $HOME/GEM
 $ git clone --depth=1 https://github.com/gem/oq-hazardlib.git
@@ -46,7 +46,7 @@ $ ln -s ../../../build/lib.*/openquake/hazardlib/geo/*.so .
 
 ### Set the PYTHONPATH and the PATH
 
-The PYTHONPATH must be set; also the system PATH must be fix to include the oq-lite entry point
+The PYTHONPATH must be updated to include the Hazardlib and Risklib directories. The system PATH must also be updated to include the oq-lite entry point.
 ```bash
 $ echo 'export PYTHONPATH="$HOME/GEM/oq-hazardlib:$HOME/GEM/oq-risklib:$PYTHONPATH"' >> $HOME/.profile
 $ echo 'export PATH="$HOME/GEM/oq-risklib/bin:$PATH"' >> $HOME/.profile
