@@ -709,8 +709,10 @@ class FragilityModel(dict):
             add_zero = (ff.format == 'discrete' and
                         ff.nodamage is not None and ff.nodamage < ff.imls[0])
             new.imls = build_imls(new, continuous_fragility_discretization)
-            new.interp_imls = build_imls(  # passed to classical_damage
-                new, continuous_fragility_discretization, steps_per_interval)
+            if steps_per_interval > 1:
+                new.interp_imls = build_imls(  # passed to classical_damage
+                    new, continuous_fragility_discretization,
+                    steps_per_interval)
             range_ls = range(len(ff))
             for i, ls, data in zip(range_ls, self.limitStates, ff):
                 if ff.format == 'discrete':
@@ -1153,13 +1155,14 @@ def classical_damage(
         an array of M probabilities of occurrence where M is the numbers
         of damage states.
     """
-    imls = numpy.array(fragility_functions.interp_imls)
     if fragility_functions.steps_per_interval:  # interpolate
+        imls = numpy.array(fragility_functions.interp_imls)
         min_val, max_val = hazard_imls[0], hazard_imls[-1]
         numpy.putmask(imls, imls < min_val, min_val)
         numpy.putmask(imls, imls > max_val, max_val)
         poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
     else:
+        imls = fragility_functions.imls
         poes = numpy.array(hazard_poes)
     afe = annual_frequency_of_exceedence(poes, investigation_time)
     annual_frequency_of_occurrence = pairwise_diff(
