@@ -23,8 +23,10 @@ import pstats
 import io
 
 from openquake.baselib import performance, general
-from openquake.commonlib import sap, readinput, valid, datastore
+from openquake.commonlib import sap, readinput, valid, datastore, oqvalidation
 from openquake.calculators import base, views
+
+CT = oqvalidation.OqParam.concurrent_tasks.default
 
 calc_path = None  # set only when the flag --slowest is given
 
@@ -114,7 +116,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports):
     return calc
 
 
-def run(job_ini, slowest, concurrent_tasks, hc, exports='',
+def run(job_ini, slowest, hc, concurrent_tasks=CT, exports='',
         loglevel='info', pdb=None):
     """
     Run a calculation.
@@ -123,10 +125,10 @@ def run(job_ini, slowest, concurrent_tasks, hc, exports='',
         the configuration file (or filew, comma-separated)
     :param slowest:
         enable Python cProfile functionality
-    :param concurrent_tasks:
-        the number of concurrent tasks (0 to disable the parallelization)
     :param hc:
         ID of the previous calculation (or None)
+    :param concurrent_tasks:
+        the number of concurrent tasks (0 to disable the parallelization)
     :param loglevel:
         the logging level (default 'info')
     :param exports:
@@ -149,9 +151,9 @@ parser = sap.Parser(run)
 parser.arg('job_ini', 'calculation configuration file '
            '(or files, comma-separated)')
 parser.opt('slowest', 'profile and show the slowest operations', type=int)
+parser.opt('hc', 'previous calculation ID', type=int)
 parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
            type=int)
-parser.opt('hc', 'previous calculation ID', type=int)
 parser.opt('exports', 'export formats as a comma-separated string',
            type=valid.export_formats)
 parser.opt('loglevel', 'logging level',
