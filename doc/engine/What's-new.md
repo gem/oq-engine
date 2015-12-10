@@ -55,22 +55,18 @@ asset and for each realization. Just set the configuration parameter
 `asset_loss_table=True` (the default is False).
 
 19. The `--load-gmf` option has been removed from the engine; now in order
-to load an XML file containing ground motion fields you need to change
-the `job.ini` file and add a line like the following:
-
-```
-gmfs_file = <path-to-file-gmfs.xml>
-```
-
-In the next release the ``--load-curve`` option will be removed and in
-order to load an XML containing hazard curves you will need to change
-the `job.ini` file and to add a line like the following:
-
-```
-hazard_curves_file = <path-to-file-hazard-curve.xml>
-```
-
-This already works if you use the `--lite` version of the classical calculators.
+  to load an XML file containing ground motion fields you need to change
+  the `job.ini` file and add a line like the following:
+  ```
+  gmfs_file = <path-to-file-gmfs.xml>
+  ```
+  In the next release the ``--load-curve`` option will be removed and in
+  order to load an XML containing hazard curves you will need to change
+  the `job.ini` file and to add a line like the following:
+  ```
+  hazard_curves_file = <path-to-file-hazard-curve.xml>
+  ```
+  This already works if you use the `--lite` version of the classical calculators.
 
 3. OpenQuake 1.7 supports officially the format NRML 0.5 for all risk
 models. In OpenQuake 1.5 it was supported in a limited and experimental way
