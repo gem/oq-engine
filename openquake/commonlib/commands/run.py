@@ -26,7 +26,7 @@ from openquake.baselib import performance, general
 from openquake.commonlib import sap, readinput, valid, datastore
 from openquake.calculators import base, views
 
-calc_path = None  # set only when the flag --profile is given
+calc_path = None  # set only when the flag --slowest is given
 
 PStatData = collections.namedtuple(
     'PStatData', 'ncalls tottime percall cumtime percall2 path')
@@ -81,8 +81,7 @@ def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, monitor):
     return rcalc
 
 
-def _run(job_ini, concurrent_tasks=0, pdb=0, loglevel='info',
-         hc=0, exports=''):
+def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports):
     global calc_path
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
     job_inis = job_ini.split(',')
@@ -115,46 +114,46 @@ def _run(job_ini, concurrent_tasks=0, pdb=0, loglevel='info',
     return calc
 
 
-def run(job_ini, concurrent_tasks=None, pdb=None,
-        loglevel='info', hc=None, exports='', profile=0):
+def run(job_ini, slowest, concurrent_tasks, hc, exports,
+        loglevel='info', pdb=None):
     """
     Run a calculation.
 
     :param job_ini:
         the configuration file (or filew, comma-separated)
+    :param slowest:
+        enable Python cProfile functionality
     :param concurrent_tasks:
-        the number of concurrent tasks (0 to disable the parallelization).
-    :param pdb:
-        flag to enable pdb debugging on failing calculations
-    :param loglevel:
-        the logging level (default 'info')
+        the number of concurrent tasks (0 to disable the parallelization)
     :param hc:
         ID of the previous calculation (or None)
+    :param loglevel:
+        the logging level (default 'info')
     :param exports:
         export type, can be '', 'csv', 'xml', 'geojson' or combinations
-    :param profile:
-        enable Python cProfile functionality
+    :param pdb:
+        flag to enable pdb debugging on failing calculations
     """
-    if profile:
+    if slowest:
         prof = cProfile.Profile()
         stmt = '_run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports)'
         prof.runctx(stmt, globals(), locals())
         pstat = calc_path + '.pstat'
         prof.dump_stats(pstat)
         print('Saved profiling info in %s' % pstat)
-        print(get_pstats(pstat, profile))
+        print(get_pstats(pstat, slowest))
     else:
         _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports)
 
 parser = sap.Parser(run)
 parser.arg('job_ini', 'calculation configuration file '
            '(or files, comma-separated)')
+parser.opt('slowest', 'enable profiling', type=int)
 parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
            type=int)
-parser.flg('pdb', 'enable post mortem debugging', '-d')
-parser.opt('loglevel', 'logging level',
-           choices='debug info warn error critical'.split())
 parser.opt('hc', 'previous calculation ID', type=int)
 parser.opt('exports', 'export formats as a comma-separated string',
            type=valid.export_formats)
-parser.opt('profile', 'enable profiling', type=int)
+parser.opt('loglevel', 'logging level',
+           choices='debug info warn error critical'.split())
+parser.flg('pdb', 'enable post mortem debugging', '-d')
