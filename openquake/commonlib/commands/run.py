@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2014-2015, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -114,7 +114,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports):
     return calc
 
 
-def run(job_ini, slowest, concurrent_tasks, hc, exports,
+def run(job_ini, slowest, concurrent_tasks, hc, exports='',
         loglevel='info', pdb=None):
     """
     Run a calculation.
