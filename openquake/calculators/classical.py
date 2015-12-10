@@ -23,10 +23,9 @@ import collections
 from functools import partial
 
 from openquake.hazardlib.site import SiteCollection
+from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
-from openquake.hazardlib.calc.filters import source_site_distance_filter, \
-    rupture_site_distance_filter
 from openquake.risklib import scientific
 from openquake.commonlib import parallel, source, datastore
 from openquake.calculators.views import get_data_transfer
@@ -57,11 +56,13 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     imtls = monitor.oqparam.imtls
     trt_model_id = sources[0].trt_model_id
     gsims = gsims_assoc[trt_model_id]
+    # NB: the source_site_filter below is ESSENTIAL for performance inside
+    # hazard_curves_per_trt, since it reduces the full site collection
+    # to a filtered one *before* doing the rupture filtering
     curves_by_gsim = hazard_curves_per_trt(
         sources, sitecol, imtls, gsims, truncation_level,
         source_site_filter=source_site_distance_filter(max_dist),
-        rupture_site_filter=rupture_site_distance_filter(max_dist),
-        monitor=monitor)
+        maximum_distance=max_dist, monitor=monitor)
     dic = dict(monitor=monitor)
     for gsim, curves in zip(gsims, curves_by_gsim):
         dic[trt_model_id, str(gsim)] = curves
@@ -118,7 +119,7 @@ class ClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        monitor = self.monitor(self.core_func.__name__)
+        monitor = self.monitor.new(self.core_func.__name__)
         monitor.oqparam = self.oqparam
         sources = self.csm.get_sources()
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
@@ -132,7 +133,7 @@ class ClassicalCalculator(base.HazardCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
-        monitor.flush()  # this is needed for the sequential case
+        monitor.flush()
         if self.persistent:
             store_source_chunks(self.datastore)
         return curves_by_trt_gsim

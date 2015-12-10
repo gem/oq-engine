@@ -293,8 +293,8 @@ class Fake(dict):
     """
     A fake datastore as a dict subclass, useful in tests and such
     """
-    def __init__(self, attrs, **kwargs):
-        self.attrs = {k: repr(v) for k, v in attrs.items()}
+    def __init__(self, attrs=None, **kwargs):
+        self.attrs = {k: repr(v) for k, v in attrs.items()} if attrs else {}
         self.update(kwargs)
 
 

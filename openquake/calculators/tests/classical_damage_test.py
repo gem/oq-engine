@@ -62,6 +62,12 @@ class ClassicalDamageCase2TestCase(CalculatorTestCase):
 
 class ClassicalDamageTestCase(CalculatorTestCase):
 
+    def check(self, case):
+        out = self.run_calc(
+            case.__file__, 'job_haz.ini,job_risk.ini', exports='csv')
+        [fname] = out['damages-rlzs', 'csv']
+        self.assertEqualFiles('expected/damages.csv', fname)
+
     @attr('qa', 'risk', 'classical_damage')
     def test_case_1a(self):
         self.run_calc(case_1a.__file__, 'job_haz.ini,job_risk.ini')
@@ -78,7 +84,8 @@ class ClassicalDamageTestCase(CalculatorTestCase):
     def test_case_1c(self):
         self.run_calc(case_1c.__file__, 'job_haz.ini,job_risk.ini')
         damages = tuple(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.971829, 0.005068, 0.00682, 0.005172, 0.011111], 6)
+        expected = [0.971993, 0.0047832, 0.006618, 0.0051539, 0.0114523]
+        aae(damages, expected, 5)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_2a(self):
@@ -124,38 +131,28 @@ class ClassicalDamageTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_6a(self):
-        self.run_calc(case_6a.__file__, 'job_haz.ini,job_risk.ini')
-        damages = list(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.9568527, 0.0149491, 0.0150699, 0.0075941, 0.005534], 5)
+        self.check(case_6a)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_6b(self):
-        self.run_calc(case_6b.__file__, 'job_haz.ini,job_risk.ini')
-        damages = list(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.933186, 0.030293, 0.0272806, 0.0059548, 0.0032858], 5)
+        self.check(case_6b)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_7a(self):
-        self.run_calc(case_7a.__file__, 'job_haz.ini,job_risk.ini')
-        damages = list(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.971802, 0.016595, 0.0092597, 0.001942, 0.000400], 5)
+        self.check(case_7a)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_7b(self):
-        self.run_calc(case_7b.__file__, 'job_haz.ini,job_risk.ini')
-        damages = list(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.8329889, 0.0927366, 0.0574756, 0.013433, 0.003366], 5)
+        self.check(case_7b)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_7c(self):
-        self.run_calc(case_7c.__file__, 'job_haz.ini,job_risk.ini')
-        damages = list(self.calc.datastore['damages-rlzs'][0, 0])
-        aae(damages, [0.927043, 0.0399827, 0.0248378, 0.0062636, 0.0018722], 5)
+        self.check(case_7c)
 
     @attr('qa', 'risk', 'classical_damage')
     def test_case_8a(self):
-        self.run_calc(case_8a.__file__, 'job_haz.ini,job_risk.ini')
-        damages = self.calc.datastore['damages-rlzs'][0]
-        expected = [(0.971829, 0.005068, 0.0068199, 0.005172, 0.011110),
-                    (0.973699, 0.005596, 0.0070726, 0.004946, 0.008684)]
-        aae(map(tuple, damages), expected, 5)
+        out = self.run_calc(
+            case_8a.__file__, 'job_haz.ini,job_risk.ini', exports='csv')
+        f1, f2 = out['damages-rlzs', 'csv']
+        self.assertEqualFiles('expected/damages-000.csv', f1)
+        self.assertEqualFiles('expected/damages-001.csv', f2)
