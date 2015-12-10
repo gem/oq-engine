@@ -148,7 +148,7 @@ def run(job_ini, slowest, concurrent_tasks, hc, exports='',
 parser = sap.Parser(run)
 parser.arg('job_ini', 'calculation configuration file '
            '(or files, comma-separated)')
-parser.opt('slowest', 'enable profiling', type=int)
+parser.opt('slowest', 'profile and show the slowest operations', type=int)
 parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
            type=int)
 parser.opt('hc', 'previous calculation ID', type=int)
