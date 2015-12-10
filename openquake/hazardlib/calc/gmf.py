@@ -24,7 +24,7 @@ import scipy.stats
 
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.gsim.base import gsim_imt_dt
+from openquake.hazardlib.gsim.base import gsim_imt_dt, ContextMaker
 from openquake.hazardlib.imt import from_string
 
 
@@ -86,7 +86,7 @@ class GmfComputer(object):
         self.gsims = gsims
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
-        self.ctx = {gsim: gsim.make_contexts(sites, rupture) for gsim in gsims}
+        self.ctx = ContextMaker(gsims).make_contexts(sites, rupture)
         self.gmf_dt = gsim_imt_dt(gsims, imts)
 
     def _compute(self, seed, gsim, realizations):
@@ -94,7 +94,7 @@ class GmfComputer(object):
         if seed is not None:
             numpy.random.seed(seed)
         result = collections.OrderedDict()
-        sctx, rctx, dctx = self.ctx[gsim]
+        sctx, rctx, dctx = self.ctx
 
         if self.truncation_level == 0:
             assert self.correlation_model is None

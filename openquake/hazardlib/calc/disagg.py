@@ -31,6 +31,7 @@ from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box, cross_idl
 from openquake.hazardlib.site import SiteCollection
+from openquake.hazardlib.gsim.base import ContextMaker
 
 
 def disaggregation(
@@ -109,7 +110,7 @@ def disaggregation(
     bins_data = _collect_bins_data(sources, site, imt, iml, gsims,
                                    truncation_level, n_epsilons,
                                    source_site_filter, rupture_site_filter)
-    if all([len(x) == 0 for x in bins_data]):
+    if all(len(x) == 0 for x in bins_data):
         # No ruptures have contributed to the hazard level at this site.
         warnings.warn(
             'No ruptures have contributed to the hazard at site %s'
@@ -156,8 +157,8 @@ def _collect_bins_data(sources, site, imt, iml, gsims,
         try:
             tect_reg = source.tectonic_region_type
             gsim = gsims[tect_reg]
-
-            if not tect_reg in trt_nums:
+            cmaker = ContextMaker([gsim])
+            if tect_reg not in trt_nums:
                 trt_nums[tect_reg] = _next_trt_num
                 _next_trt_num += 1
             tect_reg = trt_nums[tect_reg]
@@ -177,7 +178,7 @@ def _collect_bins_data(sources, site, imt, iml, gsims,
                 # compute conditional probability of exceeding iml given
                 # the current rupture, and different epsilon level, that is
                 # ``P(IMT >= iml | rup, epsilon_bin)`` for each of epsilon bins
-                sctx, rctx, dctx = gsim.make_contexts(sitecol, rupture)
+                sctx, rctx, dctx = cmaker.make_contexts(sitecol, rupture)
                 [poes_given_rup_eps] = gsim.disaggregate_poe(
                     sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons
                 )
@@ -302,9 +303,9 @@ def _digitize_lons(lons, lon_bins):
     international date line.
 
     :parameter lons:
-        An instance of :mod:`numpy.array`. 
+        An instance of `numpy.ndarray`.
     :parameter lons_bins:
-        An instance of :mod:`numpy.array`. 
+        An instance of `numpy.ndarray`.
     """
     if cross_idl(lon_bins[0], lon_bins[-1]):
         idx = numpy.zeros_like(lons, dtype=numpy.int)

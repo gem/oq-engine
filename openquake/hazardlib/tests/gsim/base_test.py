@@ -28,6 +28,7 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA, PGV
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import Rupture
+from openquake.hazardlib.gsim.base import ContextMaker
 
 
 class _FakeGSIMTestCase(unittest.TestCase):
@@ -51,6 +52,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
         super(_FakeGSIMTestCase, self).setUp()
         self.gsim_class = FakeGSIM
         self.gsim = self.gsim_class()
+        self.cmaker = ContextMaker([self.gsim])
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
             self.DEFAULT_COMPONENT
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES.add(self.DEFAULT_IMT)
@@ -419,25 +421,29 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.gsim_class.DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
         self.fake_surface = FakeSurface
 
+    def make_contexts(self, site_collection, rupture):
+        return ContextMaker([self.gsim_class]).make_contexts(
+            site_collection, rupture)
+
     def test_unknown_site_param_error(self):
         self.gsim_class.REQUIRES_SITES_PARAMETERS.add('unknown!')
-        err = "FakeGSIM requires unknown site parameter 'unknown!'"
-        sites = SiteCollection([self.site1])
-        self._assert_value_error(self.gsim.make_contexts, err,
+        err = "ContextMaker requires unknown site parameter 'unknown!'"
+        sites = SiteCollection([self.site1, self.site2])
+        self._assert_value_error(self.make_contexts, err,
                                  site_collection=sites, rupture=self.rupture)
 
     def test_unknown_rupture_param_error(self):
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS.add('stuff')
-        err = "FakeGSIM requires unknown rupture parameter 'stuff'"
+        err = "ContextMaker requires unknown rupture parameter 'stuff'"
         sites = SiteCollection([self.site1])
-        self._assert_value_error(self.gsim.make_contexts, err,
+        self._assert_value_error(self.make_contexts, err,
                                  site_collection=sites, rupture=self.rupture)
 
     def test_unknown_distance_error(self):
         self.gsim_class.REQUIRES_DISTANCES.add('jump height')
-        err = "FakeGSIM requires unknown distance measure 'jump height'"
-        sites = SiteCollection([self.site1])
-        self._assert_value_error(self.gsim.make_contexts, err,
+        err = "Unknown distance measure 'jump height'"
+        sites = SiteCollection([self.site1, self.site2])
+        self._assert_value_error(self.make_contexts, err,
                                  site_collection=sites, rupture=self.rupture)
 
     def test_all_values(self):
@@ -452,7 +458,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
             'vs30 vs30measured z1pt0 z2pt5 lons lats'.split()
         )
         sites = SiteCollection([self.site1, self.site2])
-        sctx, rctx, dctx = self.gsim.make_contexts(sites, self.rupture)
+        sctx, rctx, dctx = self.make_contexts(sites, self.rupture)
         self.assertIsInstance(sctx, SitesContext)
         self.assertIsInstance(rctx, RuptureContext)
         self.assertIsInstance(dctx, DistancesContext)
@@ -492,7 +498,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.gsim_class.REQUIRES_SITES_PARAMETERS = \
             set('vs30 z1pt0 lons'.split())
         sites = SiteCollection([self.site1, self.site2])
-        sctx, rctx, dctx = self.gsim.make_contexts(sites, self.rupture)
+        sctx, rctx, dctx = self.make_contexts(sites, self.rupture)
         self.assertEqual(
             (rctx.mag, rctx.rake, rctx.strike, rctx.hypo_lon),
             (123.45, 123.56, 60.123, 2)

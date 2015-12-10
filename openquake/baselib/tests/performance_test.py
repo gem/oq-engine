@@ -1,13 +1,15 @@
 import time
 import unittest
+import pickle
+import numpy
 from openquake.baselib.performance import PerformanceMonitor
 
 
+# NB: tests for the HDF5 functionality are in risklib
 class MonitorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.mon = PerformanceMonitor('test')
-        cls.mon.write(['operation', '0', '0'])
 
     def test_no_mem(self):
         mon = self.mon('test_no_mem')
@@ -28,21 +30,20 @@ class MonitorTestCase(unittest.TestCase):
         mon.flush()
 
     def test_children(self):
-        mon = PerformanceMonitor('test')
-        mon1 = mon('child1')
-        mon2 = mon('child2')
+        mon1 = self.mon('child1')
+        mon2 = self.mon('child2')
         with mon1:
             time.sleep(0.1)
         with mon2:
             time.sleep(0.1)
-        mon.flush()
-        data = mon.collect_performance()
-        total_time = data['time_sec'].sum()
-        self.assertGreaterEqual(total_time, 0.2)
+        with mon2:  # called twice on purpose
+            time.sleep(0.1)
 
-    @classmethod
-    def tearDownClass(cls):
-        data = cls.mon.collect_performance()
-        assert len(data) == 3, len(data)
-        assert data['time_sec'].sum() > 0
-        assert data['memory_mb'].sum() >= 0
+        data = numpy.concatenate([mon.get_data() for mon in self.mon.children])
+        self.assertEqual(list(data['counts']), [1, 2])
+        total_time = data['time_sec'].sum()
+        self.assertGreaterEqual(total_time, 0.3)
+        self.mon.flush()
+
+    def test_pickleable(self):
+        pickle.loads(pickle.dumps(self.mon))

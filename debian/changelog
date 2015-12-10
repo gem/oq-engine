@@ -1,5 +1,13 @@
+  [Michele Simionato]
+  * Avoided doing the rupture filtering twice
+  * Optimized the case of multiple GSIMs by instantiating the
+    ruptures/sites/distances contexts only once
+
+python-oq-hazardlib (0.16.0-0~precise01) precise; urgency=low
+
   [Graeme Weatherill]
   * Adds methods for modifying the geometry configurations of the fault sources
+  * Adds Allen, Wald and Worden (2012) Intensity Prediction Equation
 
   [Michele Simionato]
   * Refactored atkinson_boore_2003 classes to avoid unneeded instantiation
@@ -13,6 +21,8 @@
 
   [Robin Gee]
   * Adds Tusa and Langer (2015) GMPE
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 17 Nov 2015 10:31:52 +0100
 
 python-oq-hazardlib (0.15.0-0~precise01) precise; urgency=low
 
