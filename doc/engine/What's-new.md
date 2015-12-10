@@ -132,12 +132,12 @@ thus saving a redundant distance calculation.
 added an option to profile oq-lite calculations.
  
 13. The .rst report of a calculation has been improved and more information is
-displayed. Moreover, you can also run
-```bash
-$ oq-lite show <calc_id> fullreport
-```  
-to get information about a calculation which has already run. This
-only works for the lite calculators.
+  displayed. Moreover, you can also run
+  ```bash
+  $ oq-lite show <calc_id> fullreport
+  ```  
+  to get information about a calculation which has already run. This
+  only works for the lite calculators.
 
 14. Some small improvements to the Engine Web User Interface have been
 made and this feature, first introduced in OpenQuake Engine 1.4, is
