@@ -1,3 +1,6 @@
+  [Yen-Shin Chen]
+  * Modified the hypocentre_patch_index method to obtain the best solution
+  
   [Graeme Weatherill]
   * Adds methods for modifying the geometry configurations of the fault sources
 
