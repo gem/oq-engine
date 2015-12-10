@@ -1,3 +1,6 @@
+  [Yen-Shin Chen]
+  * Modified the hypocentre_patch_index method to obtain the best solution
+  
   [Michele Simionato]
   * Avoided doing the rupture filtering twice
   * Optimized the case of multiple GSIMs by instantiating the
