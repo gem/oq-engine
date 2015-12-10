@@ -66,7 +66,8 @@ asset and for each realization. Just set the configuration parameter
   ```
   hazard_curves_file = <path-to-file-hazard-curve.xml>
   ```
-  This already works if you use the `--lite` version of the classical calculators.
+  This already works if you use the `--lite` version of the classical calculators
+  (classical_risk/classical_damage/classical_bcr).
 
 3. OpenQuake 1.7 supports officially the format NRML 0.5 for all risk
 models. In OpenQuake 1.5 it was supported in a limited and experimental way
@@ -229,16 +230,13 @@ performance improvements.
 `event_based_risk` calculator. It has become useless thanks to the
 recent performance improvements. Use `asset_loss_table=True` instead.
 
-9. In some cases (i.e. for split fault sources) there was a spurious comma
-in the rupture tags which caused issues when exporting to CSV. This has
-been fixed.
+9. In some cases (for split fault sources) there was a spurious comma
+in the rupture tags which caused issues with a CSV importer in the
+Risk Modeler Toolkit. This has been fixed.
 
 9. The demos have been revisited and updated. Also their location has
 changed for the users installing OpenQuake from the packages. Now they
 are installed in `/usr/share/openquake/risklib/demos`.
-
-10. In some cases the rupture tag was containing spurios commas, thus breaking
-a CSV importer in the Risk Modeler Toolkit. This has been fixed.
 
 11. We fixed a bug reported by Blaž Barič with the AbrahamsonEtAl2014 GSIM
 by removing unneeded ``__slots__`` in hazardlib.
@@ -288,8 +286,8 @@ Ubuntu 12.04 by backporting the package `python-h5py` from Ubuntu 14.04.
 So *Ubuntu 12.04 is still supported, even if it is deprecated*.
 
 We have official packages also for CentOS 7
-and in general for [Red Hat Enterprise Linux clones].
-(Installing-the-OpenQuake-Engine-from-source-code-on-Fedora-and-RHEL.md)
+and in general for [Red Hat Enterprise Linux clones]
+(Installing-the-OpenQuake-Engine-from-source-code-on-Fedora-and-RHEL.md).
 
 While the engine is not supported on Windows and Mac OS X, we are
 happy to report that the underlying libraries and the
