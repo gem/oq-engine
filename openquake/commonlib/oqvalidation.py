@@ -22,8 +22,7 @@ import collections
 import numpy
 
 from openquake.commonlib import valid, parallel, logictree
-from openquake.commonlib.riskmodels import (
-    get_imtls, get_risk_files, get_risk_models)
+from openquake.commonlib.riskmodels import get_risk_files, get_risk_models
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
@@ -156,7 +155,7 @@ class OqParam(valid.ParamSet):
         rmdict.clear()
         rmodels = get_risk_models(self, file_type)
         rmdict.update(rmodels)
-        self.risk_imtls = get_imtls(rmdict)
+        self.set_imtls(rmdict)
 
         # check the IMTs vs the GSIMs
         if 'gsim_logic_tree' in self.inputs:
@@ -235,6 +234,28 @@ class OqParam(valid.ParamSet):
         if it is there) in order.
         """
         return sorted(get_risk_files(self.inputs)[1])
+
+    def set_imtls(self, ddict):
+        """
+        :param ddict:
+            a dictionary (imt, taxo) -> loss_type -> risk_function
+
+        Set the attributes risk_imtls and hazard_imtls.
+        """
+        # NB: different loss types may have different IMLs for the same IMT
+        # in that case we merge the IMLs
+        imtls = {}
+        for (imt, taxonomy), dic in ddict.items():
+            for loss_type, rf in dic.items():
+                imls = list(rf.imls)
+                if imt in imtls and imtls[imt] != imls:
+                    logging.info(
+                        'Different levels for IMT %s: got %s, expected %s',
+                        imt, imls, imtls[imt])
+                    imtls[imt] = sorted(set(imls + imtls[imt]))
+                else:
+                    imtls[imt] = imls
+        self.risk_imtls = imtls
 
     def no_imls(self):
         """

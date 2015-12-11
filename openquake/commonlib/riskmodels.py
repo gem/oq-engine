@@ -147,17 +147,17 @@ def get_risk_models(oqparam, kind):
             # build a copy of the FragilityModel with different IM levels
             newfm = fm.build(oqparam.continuous_fragility_discretization,
                              oqparam.steps_per_interval)
-            for imt_taxo, ff in newfm.items():
+            for imt_taxo, ffl in newfm.items():
                 if not limit_states:
                     limit_states.extend(fm.limitStates)
                 # we are rejecting the case of loss types with different
                 # limit states; this may change in the future
                 assert limit_states == fm.limitStates, (
                     limit_states, fm.limitStates)
-                rdict[imt_taxo][loss_type] = ff
+                rdict[imt_taxo][loss_type] = ffl
                 # TODO: see if it is possible to remove the attribute
                 # below, used in classical_damage
-                ff.steps_per_interval = oqparam.steps_per_interval
+                ffl.steps_per_interval = oqparam.steps_per_interval
         oqparam.limit_states = limit_states
     elif kind == 'consequence':
         rdict = rmodels
@@ -269,29 +269,6 @@ def get_vulnerability_functions_05(node, fname):
                     taxonomy, imt, imls, loss_ratios, coefficients,
                     vfun['dist'])
     return vmodel
-
-
-def get_imtls(ddict):
-    """
-    :param ddict:
-        a dictionary (imt, taxo) -> loss_type -> risk_function
-    :returns:
-        a dictionary imt_str -> imls
-    """
-    # NB: different loss types may have different IMLs for the same IMT
-    # in that case we merge the IMLs
-    imtls = {}
-    for (imt, taxonomy), dic in ddict.items():
-        for loss_type, rf in dic.items():
-            imls = list(rf.imls)
-            if imt in imtls and imtls[imt] != imls:
-                logging.info(
-                    'Different levels for IMT %s: got %s, expected %s',
-                    imt, imls, imtls[imt])
-                imtls[imt] = sorted(set(imls + imtls[imt]))
-            else:
-                imtls[imt] = imls
-    return imtls
 
 
 # ########################### fragility ############################### #
