@@ -29,7 +29,7 @@ import numpy
 from xml.etree import ElementTree as et
 
 from openquake.commonlib import node, nrml
-from openquake.commonlib.writers import scientificformat
+from openquake.commonlib.writers import scientificformat, floatformat
 
 by_imt = operator.itemgetter('imt', 'sa_period', 'sa_damping')
 
@@ -793,7 +793,7 @@ class DisaggXMLWriter(object):
               curve at the given ``poe``.
         """
 
-        with nrml.NRMLFile(self.dest, 'w') as fh:
+        with nrml.NRMLFile(self.dest, 'w') as fh, floatformat('%9.6E'):
             root = et.Element('nrml')
 
             diss_matrices = et.SubElement(root, 'disaggMatrices')
