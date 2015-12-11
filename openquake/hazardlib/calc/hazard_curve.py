@@ -209,11 +209,11 @@ def hazard_curves_per_trt(
                         jb_dists = dctx.rjb
                         closest_points = rupture.surface.get_closest_points(
                             sctx.sites.mesh)
-                        bbs = [bb for bb in bbs if bb.site_id in sids]
+                        bs = [bb for bb in bbs if bb.site_id in sids]
                         # NB: the assert below is always true; we are
                         # protecting against possible refactoring errors
-                        assert len(bbs) == len(jb_dists) == len(closest_points)
-                        for bb, dist, p in zip(bbs, jb_dists, closest_points):
+                        assert len(bs) == len(jb_dists) == len(closest_points)
+                        for bb, dist, p in zip(bs, jb_dists, closest_points):
                             if dist < maximum_distance:
                                 # ruptures too far away are ignored
                                 bb.update([dist], [p.longitude], [p.latitude])
