@@ -11,17 +11,30 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles(
-                'expected_output/disagg_matrix/%s' % fname, actual)
+                'expected_output/%s' % fname, actual)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_1(self):
         self.assert_curves_ok([
-            'PGA/disagg_matrix(0.02)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml',
-            'SA-0.025/disagg_matrix(0.02)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml',
-            'PGA/disagg_matrix(0.1)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml',
-            'SA-0.025/disagg_matrix(0.1)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml'
+            'disagg_matrix/PGA/disagg_matrix(0.02)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml',
+            'disagg_matrix/SA-0.025/disagg_matrix(0.02)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml',
+            'disagg_matrix/PGA/disagg_matrix(0.1)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml',
+            'disagg_matrix/SA-0.025/disagg_matrix(0.1)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml'
             ], case_1.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_2(self):
-        pass
+        self.assert_curves_ok(
+            ['poe-0.02-rlz-0-PGA-POINT(-3.0 -3.0).xml',
+             'poe-0.02-rlz-0-PGA-POINT(0.0 0.0).xml',
+             'poe-0.02-rlz-1-PGA-POINT(-3.0 -3.0).xml',
+             'poe-0.02-rlz-1-PGA-POINT(0.0 0.0).xml',
+             'poe-0.02-rlz-2-PGA-POINT(0.0 0.0).xml',
+             'poe-0.02-rlz-3-PGA-POINT(0.0 0.0).xml',
+             'poe-0.1-rlz-0-PGA-POINT(-3.0 -3.0).xml',
+             'poe-0.1-rlz-0-PGA-POINT(0.0 0.0).xml',
+             'poe-0.1-rlz-1-PGA-POINT(-3.0 -3.0).xml',
+             'poe-0.1-rlz-1-PGA-POINT(0.0 0.0).xml',
+             'poe-0.1-rlz-2-PGA-POINT(0.0 0.0).xml',
+             'poe-0.1-rlz-3-PGA-POINT(0.0 0.0).xml'],
+            case_2.__file__)

@@ -134,14 +134,14 @@ class BoundingBox(object):
 
 
 @parallel.litetask
-def classical(sources, sitecol, gsims_assoc, monitor):
+def classical(sources, sitecol, rlzs_assoc, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
     :param sitecol:
         a SiteCollection instance
-    :param gsims_assoc:
-        associations trt_model_id -> gsims
+    :param rlzs_assoc:
+        a RlzsAssoc instance
     :param monitor:
         a monitor instance
     :returns:
@@ -151,9 +151,15 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
     trt_model_id = sources[0].trt_model_id
-    gsims = gsims_assoc[trt_model_id]
+    gsims = rlzs_assoc.gsims_by_trt_id[trt_model_id]
+    for smodel in rlzs_assoc.csm_info.source_models:
+        for trt_model in smodel.trt_models:
+            if trt_model.id == trt_model_id:
+                sm_id = smodel.ordinal
+                break
+
     if monitor.oqparam.poes_disagg:
-        bbs = [BoundingBox(trt_model_id, sid) for sid in sitecol.sids]
+        bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
     else:
         bbs = []
     # NB: the source_site_filter below is ESSENTIAL for performance inside
@@ -233,10 +239,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 (smodel.ordinal, site.id): BoundingBox(smodel.ordinal, site.id)
                 for site in self.sitecol
                 for smodel in self.csm.source_models}
-        gsims_assoc = self.rlzs_assoc.gsims_by_trt_id
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
-            (sources, self.sitecol, gsims_assoc, monitor),
+            (sources, self.sitecol, self.rlzs_assoc, monitor),
             agg=agg_dicts, acc=zerodict,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
