@@ -35,9 +35,12 @@ if [ -n "$GEM_SET_DEBUG" -a "$GEM_SET_DEBUG" != "false" ]; then
 fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
+GEM_GIT_REPO2="git://github.com/GEMScienceTools"
 GEM_GIT_PACKAGE="hmtk"
-GEM_GIT_DEPS="oq-hazardlib oq-risklib oq-nrmllib"
-GEM_LOCAL_DEPS="python-nose python-coverage gmt python-pyshp gmt-gshhs-low python-matplotlib python-mpltoolkits.basemap pylint python-lxml python-yaml"
+GEM_GIT_DEPS="oq-hazardlib oq-risklib oq-nrmllib oq-ipynb-runner notebooks"
+GEM_PIP_DEPS="jupyter nose"
+
+GEM_LOCAL_DEPS="python-virtualenv python-nose python-coverage gmt python-pyshp gmt-gshhs-low python-matplotlib python-mpltoolkits.basemap pylint python-lxml python-yaml"
 
 if [ -z "$GEM_DEB_REPO" ]; then
     GEM_DEB_REPO="$HOME/gem_ubuntu_repo"
@@ -57,7 +60,7 @@ if [ "$GEM_EPHEM_CMD" = "" ]; then
     GEM_EPHEM_CMD="lxc-start-ephemeral"
 fi
 if [ "$GEM_EPHEM_NAME" = "" ]; then
-    GEM_EPHEM_NAME="ubuntu-lxc-eph"
+    GEM_EPHEM_NAME="ubuntu14-x11-lxc-eph"
 fi
 
 if command -v lxc-shutdown &> /dev/null; then
@@ -86,7 +89,8 @@ sig_hand () {
     if [ "$lxc_name" != "" ]; then
         set +e
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
-        scp "${lxc_ip}:${GEM_GIT_PACKAGE}/nosetests.xml" "out_${BUILD_UBUVER}/"
+        # currently no tests are developed for gmpe-smtk, temporarily we use notebooks
+        scp "${lxc_ip}:${GEM_GIT_PACKAGE}/nosetests*.xml" "out_${BUILD_UBUVER}/"
         echo "Destroying [$lxc_name] lxc"
         upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
         if [ -f "${upper}.dsk" ]; then
@@ -248,7 +252,9 @@ fi
     for dep in $GEM_GIT_DEPS; do
         # extract dependencies for source dependencies
         pkgs_list="$(deps_list "deprec" _jenkins_deps/$dep/debian)"
-        ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+        if [ "$pkgs_list" ]; then
+            ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+        fi
 
         # install source dependencies
         cd _jenkins_deps/$dep
@@ -259,15 +265,21 @@ fi
 
     # extract dependencies for this package
     pkgs_list="$(deps_list "all" debian)"
-    ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+    if [ "$pkgs_list" ]; then
+        ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+    fi
 
+    cat >gem_init.sh <<EOF
+export GEM_SET_DEBUG=$GEM_SET_DEBUG
+set -e
+if [ -n "\$GEM_SET_DEBUG" -a "\$GEM_SET_DEBUG" != "false" ]; then
+    export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
+    set -x
+fi
+EOF
+    scp gem_init.sh ${lxc_ip}:
     # build oq-hazardlib speedups and put in the right place
-    ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
-                 set -e
-                 if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
-                     export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
-                     set -x
-                 fi
+    ssh $lxc_ip "source gem_init.sh
                  cd oq-hazardlib
                  python ./setup.py build
                  for i in \$(find build/ -name *.so); do
@@ -275,10 +287,33 @@ fi
                      cp \$i \$o
                  done"
 
+    # create virtualenv and install pip deps
+    ssh $lxc_ip "source gem_init.sh
+                 virtualenv --system-site-packages ci-env
+                 source ci-env/bin/activate
+                 IFS=' '
+                 for ppkg in $GEM_PIP_DEPS; do
+                     pip install --upgrade \$ppkg
+                 done"
+
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "export DISPLAY=\"$guest_display\"; export PYTHONPATH="\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-nrmllib" ; cd $GEM_GIT_PACKAGE ; nosetests --with-xunit -v --with-coverage || true"
+    ssh $lxc_ip "source gem_init.sh
+                 source ci-env/bin/activate
+                 ipython profile create
+                 echo \"c = get_config()\"                      >> ~/.ipython/profile_default/ipython_config.py
+                 echo \"c.InteractiveShell.colors = 'NoColor'\" >> ~/.ipython/profile_default/ipython_config.py
+
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-nrmllib:\$PWD/oq-ipynb-runner\"
+                 cd $GEM_GIT_PACKAGE
+                 nosetests --with-xunit -v --with-coverage || true
+                 cd -
+                 cd notebooks/hmtk
+                 # mkdir images
+                 # unzip data/demo_records_full.zip -d data
+                 export DISPLAY=\"$guest_display\"
+                 nosetests --with-xunit --xunit-file=../../hmtk/nosetests_hmtk_notebooks.xml -v --with-coverage || true"
 
     trap ERR
 
@@ -294,10 +329,16 @@ fi
 deps_list() {
     local old_ifs out_list skip i d listtype="$1" control_file="$2"/control rules_file="$2"/rules
 
+    out_list=""
+
+    if [ ! -f "${control_file}" ]; then
+        echo "$out_list"
+        return 0
+    fi
+
     rules_dep=$(grep "^${BUILD_UBUVER^^}_DEP *= *" $rules_file | sed 's/^.*= *//g')
     rules_rec=$(grep "^${BUILD_UBUVER^^}_REC *= *" $rules_file | sed 's/^.*= *//g')
 
-    out_list=""
     if [ "$listtype" = "all" ]; then
         in_list="$((cat "$control_file" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' ; echo ", $rules_dep, $rules_rec") | tr '\n' ','| sed 's/,\+/,/g')"
     elif [  "$listtype" = "deprec" ]; then
@@ -432,28 +473,35 @@ devtest_run () {
     # and the same branch OR the gem repository and the "master" branch
     #
     repo_id="$(repo_id_get)"
-    if [ "$repo_id" != "$GEM_GIT_REPO" ]; then
-        repos="git://${repo_id} ${GEM_GIT_REPO}"
+    if [ "$repo_id" != "$GEM_GIT_REPO" -a "$repo_id" != "$GEM_GIT_REPO2" ]; then
+        repos="git://${repo_id} ${GEM_GIT_REPO} ${GEM_GIT_REPO2}"
     else
-        repos="${GEM_GIT_REPO}"
+        repos="${GEM_GIT_REPO} ${GEM_GIT_REPO2}"
     fi
+    if [ "$branch" != "master" ]; then
+        branches="$branch master"
+    else
+        branches="master"
+    fi
+
     old_ifs="$IFS"
     IFS=" "
     for dep in $GEM_GIT_DEPS; do
         found=0
-        branch_cur="$branch"
-        for repo in $repos; do
-            # search of same branch in same repo or in GEM_GIT_REPO repo
-            if git ls-remote --heads $repo/${dep}.git | grep -q "refs/heads/$branch_cur" ; then
-                deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
-                found=1
-                break
-            fi
+        for branch_cur in $branches; do
+            for repo in $repos; do
+                # search of same branch in same repo or in GEM_GIT_REPO repo
+                if git ls-remote --heads $repo/${dep}.git | grep -q "refs/heads/$branch_cur" ; then
+                    deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
+                    found=1
+                    break 2
+                fi
+            done
         done
-        # if not found it fallback in master branch of GEM_GIT_REPO repo
-        if [ $found -eq 0 ]; then
-            branch_cur="master"
-            deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
+
+        if [ $found -ne 1 ]; then
+            echo "Dependency $dep not found."
+            exit 1
         fi
         cd _jenkins_deps/$dep
         commit="$(git log -1 | grep '^commit' | sed 's/^commit //g')"
@@ -495,7 +543,8 @@ devtest_run () {
     _devtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
-    scp "${lxc_ip}:${GEM_GIT_PACKAGE}/nosetests.xml" "out_${BUILD_UBUVER}/" || true
+    # currently no tests are developed for gmpe-smtk, temporarily we use notebooks
+    scp "${lxc_ip}:${GEM_GIT_PACKAGE}/nosetests*.xml" "out_${BUILD_UBUVER}/" || true
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/devtest.history" || true
 
     sudo $LXC_TERM -n $lxc_name
