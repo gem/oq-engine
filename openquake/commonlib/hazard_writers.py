@@ -72,9 +72,9 @@ def _validate_hazard_metadata(md):
     :raises:
         :exc:`ValueError` if the metadata is not valid.
     """
-    if (md.get('statistics') is not None
-        and (md.get('smlt_path') is not None
-             or md.get('gsimlt_path') is not None)):
+    if (md.get('statistics') is not None and (
+            md.get('smlt_path') is not None or
+            md.get('gsimlt_path') is not None)):
         raise ValueError('Cannot specify both `statistics` and logic tree '
                          'paths')
 
@@ -793,7 +793,7 @@ class DisaggXMLWriter(object):
               curve at the given ``poe``.
         """
 
-        with nrml.NRMLFile(self.dest, 'w') as fh, floatformat('%9.6E'):
+        with nrml.NRMLFile(self.dest, 'w') as fh, floatformat('%.7E'):
             root = et.Element('nrml')
 
             diss_matrices = et.SubElement(root, 'disaggMatrices')
