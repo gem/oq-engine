@@ -173,7 +173,7 @@ class Parser(object):
         return self.parentparser.format_help()
 
 
-def compose(parsers, name='main', description=None, help=True):
+def compose(parsers, name='main', description=None, help=True, prog=None):
     """
     Collects together different arguments parsers and builds a single
     Parser dispatching on the subparsers depending on
@@ -181,12 +181,15 @@ def compose(parsers, name='main', description=None, help=True):
 
     :param parsers: a list of Parser instances
     :param name: the name of the composed parser
+    :param description: description of the composed parser
+    :param help: help flag
+    :param prog: name of the script printed in the usage message
     """
     assert len(parsers) >= 1, parsers
     parentparser = argparse.ArgumentParser(
         description=description, add_help=help)
     subparsers = parentparser.add_subparsers(
-        help='available subcommands (see sub help)')
+        help='available subcommands (see sub help)', prog=prog)
     for p in parsers:
         subp = subparsers.add_parser(p.name)
         for args, kw in p.all_arguments:
