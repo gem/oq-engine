@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2010-2014, GEM Foundation.
+# Copyright (c) 2010-2015, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,8 +45,8 @@ from openquake.engine.calculators.hazard.classical.core import \
 BinData = namedtuple('BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
-def _collect_bins_data(trt_num, source_ruptures, site, curves,
-                       trt_model_id, gsims, imtls, poes, truncation_level,
+def _collect_bins_data(trt_num, source_ruptures, site, curves, trt_model_id,
+                       rlzs_assoc, gsims, imtls, poes, truncation_level,
                        n_epsilons, mon):
     # returns a BinData instance
     sitecol = SiteCollection([site])
@@ -60,8 +60,6 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves,
     calc_dist = mon('calc distances', measuremem=False)
     make_ctxt = mon('making contexts', measuremem=False)
     disagg_poe = mon('disaggregate_poe', measuremem=False)
-    trt_model = models.TrtModel.objects.get(pk=trt_model_id)
-    rlzs = trt_model.get_rlzs_by_gsim()
     cmaker = ContextMaker(gsims)
     for source, ruptures in source_ruptures:
         try:
@@ -88,7 +86,8 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves,
                     for imt_str, imls in imtls.iteritems():
                         imt = from_string(imt_str)
                         imls = numpy.array(imls[::-1])
-                        for rlz in rlzs[gsim.__class__.__name__]:
+                        for rlz in rlzs_assoc[
+                                trt_model_id, gsim.__class__.__name__]:
                             curve_poes = curves[rlz.id, imt_str].poes[::-1]
                             for poe in poes:
                                 iml = numpy.interp(poe, curve_poes, imls)
@@ -189,7 +188,7 @@ def save_disagg_result(job_id, site_id, bin_edges, trt_names, matrix,
 
 
 @tasks.oqtask
-def compute_disagg(sitecol, sources, trt_model_id, gsims_by_trt_id,
+def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc, gsims_by_trt_id,
                    trt_num, curves_dict, bin_edges, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -216,7 +215,6 @@ def compute_disagg(sitecol, sources, trt_model_id, gsims_by_trt_id,
     trt_model = models.TrtModel.objects.get(pk=trt_model_id)
     gsims = gsims_by_trt_id[trt_model.id]
     lt_model_id = trt_model.lt_model.id
-    rlzs = trt_model.get_rlzs_by_gsim()
     trt_names = tuple(trt_model.lt_model.get_tectonic_region_types())
     result = {}  # site.id, rlz.id, poe, imt, iml, trt_names -> array
 
@@ -243,7 +241,7 @@ def compute_disagg(sitecol, sources, trt_model_id, gsims_by_trt_id,
         with collecting_mon:
             bdata = _collect_bins_data(
                 trt_num, source_ruptures, site, curves_dict[site.id],
-                trt_model_id, gsims, hc.imtls,
+                trt_model_id, rlzs_assoc, gsims, hc.imtls,
                 hc.poes_disagg, hc.truncation_level,
                 hc.num_epsilon_bins, monitor)
 
@@ -253,7 +251,8 @@ def compute_disagg(sitecol, sources, trt_model_id, gsims_by_trt_id,
         for poe in hc.poes_disagg:
             for imt in hc.imtls:
                 for gsim in gsims:
-                    for rlz in rlzs[gsim.__class__.__name__]:
+                    for rlz in rlzs_assoc[
+                            trt_model_id, gsim.__class__.__name__]:
                         # extract the probabilities of non-exceedance for the
                         # given realization, disaggregation PoE, and IMT
                         iml_pne_pairs = [pne[rlz.id, poe, imt]
@@ -372,7 +371,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
             all_args.append(
-                (sitecol, srcs, trt_model_id, gsims_by_trt_id,
+                (sitecol, srcs, trt_model_id, self.rlzs_assoc, gsims_by_trt_id,
                  trt_num, curves_dict, self.bin_edges, self.monitor))
 
         res = tasks.starmap(compute_disagg, all_args)

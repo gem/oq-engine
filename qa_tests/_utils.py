@@ -179,7 +179,8 @@ class DisaggHazardTestCase(BaseQATestCase):
         [act_dms] = act_tree.findall(
             '//nrml:disaggMatrices', namespaces=PARSE_NS_MAP
         )
-        self.assertEqual(exp_dms.attrib, act_dms.attrib)
+        for key in sorted(exp_dms.attrib):
+            self.assertEqual(exp_dms.attrib[key], act_dms.attrib[key])
 
         # Then, loop over each <disaggMatrix>, check attrs, then loop over each
         # <prob> and compare indices and values.
