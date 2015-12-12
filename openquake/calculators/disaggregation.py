@@ -239,9 +239,9 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
             poes = self.datastore['hcurves/rlz-%03d' % rlz.ordinal][sid]
             for imt_str in self.oqparam.imtls:
                 if all(x == 0.0 for x in poes[imt_str]):
-                    logging.warn(
-                        '* hazard curve contains all zero '
-                        'probabilities; skipping site %d, rlz=%d, IMT=%s',
+                    logging.info(
+                        'hazard curve contains all zero probabilities; '
+                        'skipping site %d, rlz=%d, IMT=%s',
                         sid, rlz.ordinal, imt_str)
                     continue
                 dic[rlz.ordinal, imt_str] = poes[imt_str]
