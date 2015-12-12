@@ -259,7 +259,7 @@ def is_effective_trt_model(result_dict, trt_model):
 
     :param result_dict: a dictionary with keys (trt_id, gsim)
     """
-    return any(trt_model.id == trt_id for trt_id, _gsim in result_dict)
+    return any(trt_model.id == key[0] for key in result_dict)
 
 
 @parallel.litetask
