@@ -216,6 +216,8 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
      [<WeightedSequence ['A', 'B'], weight=2>, <WeightedSequence ['C', 'D'], weight=2>, <WeightedSequence ['E'], weight=1>]
 
     """
+    if hint == 0:  # do not split
+        return sequence
     items = list(sequence)
     assert hint > 0, hint
     assert len(items) > 0, len(items)
