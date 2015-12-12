@@ -313,7 +313,7 @@ EOF
                  # mkdir images
                  # unzip data/demo_records_full.zip -d data
                  export DISPLAY=\"$guest_display\"
-                 nosetests --with-xunit --xunit-file=../../hmtk/nosetests_hmtk_notebooks.xml -v --with-coverage || true"
+                 nosetests --with-xunit --xunit-file=../../hmtk/nosetests_hmtk_notebooks.xmll -v --with-coverage || true"
 
     trap ERR
 
