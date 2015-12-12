@@ -768,6 +768,9 @@ class BaseSourceProcessor(object):
         self.maxdist = maxdist
         self.monitor = monitor
 
+    def process(self, csm, dstore, dummy=None):
+        pass
+
 
 class SourceFilter(BaseSourceProcessor):
     """

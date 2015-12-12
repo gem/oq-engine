@@ -314,7 +314,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     """
     Classical Tiling calculator
     """
-    SourceProcessor = source.SourceFilter
+    SourceProcessor = source.BaseSourceProcessor  # do nothing
 
     def execute(self):
         """
