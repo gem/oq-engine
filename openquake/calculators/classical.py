@@ -22,7 +22,7 @@ import operator
 import collections
 from functools import partial
 
-from openquake.hazardlib.site import SiteCollection
+from openquake.hazardlib.site import SiteCollection, FilteredSiteCollection
 from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
@@ -309,6 +309,32 @@ def agg_curves_by_trt_gsim(acc, curves_by_trt_gsim):
     return acc
 
 
+def get(array_or_float, indices):
+    try:  # if array
+        return array_or_float[indices]
+    except TypeError:  # if float
+        return array_or_float
+
+
+def split_in_tiles(sitecol, hint):
+    tiles = []
+    for seq in split_in_blocks(range(len(sitecol)), hint):
+        indices = numpy.array(seq, int)
+        sc = SiteCollection.__new__(SiteCollection)
+        sc.complete = sitecol
+        sc.total_sites = len(indices)
+        sc.sids = sitecol.sids[indices]
+        sc.lons = sitecol.lons[indices]
+        sc.lats = sitecol.lats[indices]
+        sc._vs30 = get(sitecol._vs30, indices)
+        sc._vs30measured = get(sitecol._vs30measured, indices)
+        sc._z1pt0 = get(sitecol._z1pt0, indices)
+        sc._z2pt5 = get(sitecol._z2pt5, indices)
+        sc._backarc = get(sitecol._backarc, indices)
+        tiles.append(sc)
+    return tiles
+
+
 @base.calculators.add('classical_tiling')
 class ClassicalTilingCalculator(ClassicalCalculator):
     """
@@ -322,21 +348,17 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         """
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = oq = self.oqparam
-        self.tiles = split_in_blocks(
-            self.sitecol, self.oqparam.concurrent_tasks or 1)
+        self.tiles = split_in_tiles(self.sitecol, oq.concurrent_tasks)
         oq.concurrent_tasks = 0
-        calculator = ClassicalCalculator(
-            self.oqparam, monitor, persistent=False)
+        calculator = ClassicalCalculator(oq, monitor, persistent=False)
         calculator.csm = self.csm
-        rlzs_assoc = self.csm.get_rlzs_assoc()
-        self.rlzs_assoc = calculator.rlzs_assoc = rlzs_assoc
+        calculator.rlzs_assoc = self.rlzs_assoc = self.csm.get_rlzs_assoc()
 
         # parallelization
         all_args = []
         position = 0
         for (i, tile) in enumerate(self.tiles):
-            all_args.append((calculator, SiteCollection(tile),
-                             position, i, monitor))
+            all_args.append((calculator, tile, position, i, monitor))
             position += len(tile)
         acc = {trt_gsim: zero_curves(len(self.sitecol), oq.imtls)
                for trt_gsim in calculator.rlzs_assoc}
