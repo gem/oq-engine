@@ -309,7 +309,7 @@ def agg_curves_by_trt_gsim(acc, curves_by_trt_gsim):
     return acc
 
 
-def get(array_or_float, indices):
+def _extract(array_or_float, indices):
     try:  # if array
         return array_or_float[indices]
     except TypeError:  # if float
@@ -317,6 +317,13 @@ def get(array_or_float, indices):
 
 
 def split_in_tiles(sitecol, hint):
+    """
+    Split a full SiteCollection instance is a set of full SiteCollection
+    instances.
+
+    :param sitecol: the original site collection
+    :param hint: hint for how many tiles to generate
+    """
     tiles = []
     for seq in split_in_blocks(range(len(sitecol)), hint):
         indices = numpy.array(seq, int)
@@ -326,11 +333,11 @@ def split_in_tiles(sitecol, hint):
         sc.sids = sitecol.sids[indices]
         sc.lons = sitecol.lons[indices]
         sc.lats = sitecol.lats[indices]
-        sc._vs30 = get(sitecol._vs30, indices)
-        sc._vs30measured = get(sitecol._vs30measured, indices)
-        sc._z1pt0 = get(sitecol._z1pt0, indices)
-        sc._z2pt5 = get(sitecol._z2pt5, indices)
-        sc._backarc = get(sitecol._backarc, indices)
+        sc._vs30 = _extract(sitecol._vs30, indices)
+        sc._vs30measured = _extract(sitecol._vs30measured, indices)
+        sc._z1pt0 = _extract(sitecol._z1pt0, indices)
+        sc._z2pt5 = _extract(sitecol._z2pt5, indices)
+        sc._backarc = _extract(sitecol._backarc, indices)
         tiles.append(sc)
     return tiles
 
