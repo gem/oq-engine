@@ -368,8 +368,8 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         siteidx = 0
         for (i, tile) in enumerate(tiles):
             calculator = ClassicalCalculator(oq, monitor, persistent=False)
-            logging.info('Filtering sources for tile %d', i)
-            calculator.csm = self.csm.filtered(oq.maximum_distance, tile)
+            with self.monitor('filtering sources per tile', autoflush=True):
+                calculator.csm = self.csm.filtered(oq.maximum_distance, tile)
             calculator.rlzs_assoc = calculator.csm.get_rlzs_assoc()
             yield (calculator, tile, siteidx, i, monitor)
             siteidx += len(tile)
