@@ -566,6 +566,7 @@ class CompositeSourceModel(collections.Sequence):
         Extracts a filtered source model
         """
         reduced = copy.copy(self)
+        reduced.source_models = map(copy.copy, self.source_models)
         for tm_ in self.trt_models:
             tm = copy.copy(tm_)
             tm.sources = [src for src in tm.sources

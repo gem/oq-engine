@@ -252,6 +252,10 @@ class ClassicalCalculator(base.HazardCalculator):
             dset.attrs[k] = v
 
 
+def nonzero(val):
+    return sum(val[k].sum() for k in val.dtype.names)
+
+
 def is_effective_trt_model(result_dict, trt_model):
     """
     Returns True on tectonic region types
@@ -259,7 +263,8 @@ def is_effective_trt_model(result_dict, trt_model):
 
     :param result_dict: a dictionary with keys (trt_id, gsim)
     """
-    return any(trt_model.id == key[0] for key in result_dict)
+    return sum(1 for key, val in result_dict.items()
+               if trt_model.id == key[0] and nonzero(val))
 
 
 @parallel.litetask
@@ -285,9 +290,10 @@ def classical_tiling(calculator, sitecol, siteidx, tileno, monitor):
     # build the correct realizations from the (reduced) logic tree
     calculator.rlzs_assoc = calculator.csm.get_rlzs_assoc(
         partial(is_effective_trt_model, curves_by_trt_gsim))
+    n_rlzs = len(calculator.rlzs_assoc.realizations)
     n_levels = sum(len(imls) for imls in calculator.oqparam.imtls.values())
     tup = (len(calculator.sitecol), n_levels, len(calculator.rlzs_assoc),
-           len(calculator.rlzs_assoc.realizations))
+           n_rlzs)
     logging.info('Processed tile %d, (sites, levels, keys, rlzs)=%s',
                  tileno, tup)
     return curves_by_trt_gsim
