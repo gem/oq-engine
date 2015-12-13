@@ -358,13 +358,13 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         self.tiles = split_in_tiles(self.sitecol, oq.concurrent_tasks)
         oq.concurrent_tasks = 0
         calculator = ClassicalCalculator(oq, monitor, persistent=False)
-        calculator.csm = self.csm
         calculator.rlzs_assoc = self.rlzs_assoc = self.csm.get_rlzs_assoc()
 
         # parallelization
         all_args = []
         siteidx = 0
         for (i, tile) in enumerate(self.tiles):
+            calculator.csm = self.csm.filtered(oq.maximum_distance, tile)
             all_args.append((calculator, tile, siteidx, i, monitor))
             siteidx += len(tile)
         acc = {trt_gsim: zero_curves(len(self.sitecol), oq.imtls)

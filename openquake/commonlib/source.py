@@ -15,6 +15,7 @@ from __future__ import division
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import mock
+import copy
 import time
 import logging
 import operator
@@ -559,6 +560,18 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             for trt_model in sm.trt_models:
                 yield trt_model
+
+    def filtered(self, maximum_distance, sitecol):
+        """
+        Extracts a filtered source model
+        """
+        reduced = copy.copy(self)
+        for tm_ in self.trt_models:
+            tm = copy.copy(tm_)
+            tm.sources = [src for src in tm.sources
+                          if src.filter_sites_by_distance_to_source(
+                                  maximum_distance, sitecol) is not None]
+        return reduced
 
     def get_sources(self):
         """
