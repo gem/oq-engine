@@ -307,13 +307,13 @@ EOF
 
                  export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-nrmllib:\$PWD/oq-ipynb-runner\"
                  cd $GEM_GIT_PACKAGE
-                 nosetests --with-xunit -v --with-coverage || true
+                 nosetests --with-xunit --xunit-file=nosetests.xmll -v --with-coverage || true
                  cd -
                  cd notebooks/hmtk
                  # mkdir images
                  # unzip data/demo_records_full.zip -d data
                  export DISPLAY=\"$guest_display\"
-                 nosetests --with-xunit --xunit-file=../../hmtk/nosetests_hmtk_notebooks.xmll -v --with-coverage || true"
+                 nosetests --with-xunit --xunit-file=../../hmtk/nosetests_hmtk_notebooks.xml -v --with-coverage || true"
 
     trap ERR
 
