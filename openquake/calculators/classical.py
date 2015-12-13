@@ -325,7 +325,7 @@ def split_in_tiles(sitecol, hint):
     :param hint: hint for how many tiles to generate
     """
     tiles = []
-    for seq in split_in_blocks(range(len(sitecol)), hint):
+    for seq in split_in_blocks(range(len(sitecol)), hint or 1):
         indices = numpy.array(seq, int)
         sc = SiteCollection.__new__(SiteCollection)
         sc.complete = sc
@@ -349,6 +349,25 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     """
     SourceProcessor = source.BaseSourceProcessor  # do nothing
 
+    def gen_args(self):
+        """
+        A generator yielding the arguments for classical_tiling tasks
+        """
+        monitor = self.monitor(self.core_func.__name__)
+        monitor.oqparam = oq = self.oqparam
+        tiles = split_in_tiles(self.sitecol, oq.concurrent_tasks)
+        logging.info('Generating %d tiles of %d sites each',
+                     len(tiles), len(tiles[0]))
+        oq.concurrent_tasks = 0
+        siteidx = 0
+        for (i, tile) in enumerate(tiles):
+            calculator = ClassicalCalculator(oq, monitor, persistent=False)
+            with self.monitor('filtering sources per tile', autoflush=True):
+                calculator.csm = self.csm.filtered(oq.maximum_distance, tile)
+            calculator.rlzs_assoc = calculator.csm.get_rlzs_assoc()
+            yield calculator, tile, siteidx, i, monitor
+            siteidx += len(tile)
+
     def execute(self):
         """
         Split the computation by tiles which are run in parallel.
@@ -359,17 +378,3 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         self.rlzs_assoc = self.csm.get_rlzs_assoc()
         return parallel.starmap(classical_tiling, self.gen_args()).reduce(
             agg_curves_by_trt_gsim, acc)
-
-    def gen_args(self):
-        monitor = self.monitor(self.core_func.__name__)
-        monitor.oqparam = oq = self.oqparam
-        tiles = split_in_tiles(self.sitecol, oq.concurrent_tasks)
-        oq.concurrent_tasks = 0
-        siteidx = 0
-        for (i, tile) in enumerate(tiles):
-            calculator = ClassicalCalculator(oq, monitor, persistent=False)
-            with self.monitor('filtering sources per tile', autoflush=True):
-                calculator.csm = self.csm.filtered(oq.maximum_distance, tile)
-            calculator.rlzs_assoc = calculator.csm.get_rlzs_assoc()
-            yield (calculator, tile, siteidx, i, monitor)
-            siteidx += len(tile)
