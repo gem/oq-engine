@@ -22,7 +22,7 @@ import operator
 import collections
 from functools import partial
 
-from openquake.hazardlib.site import SiteCollection, FilteredSiteCollection
+from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
@@ -328,7 +328,7 @@ def split_in_tiles(sitecol, hint):
     for seq in split_in_blocks(range(len(sitecol)), hint):
         indices = numpy.array(seq, int)
         sc = SiteCollection.__new__(SiteCollection)
-        sc.complete = sitecol
+        sc.complete = sc
         sc.total_sites = len(indices)
         sc.sids = sitecol.sids[indices]
         sc.lons = sitecol.lons[indices]
