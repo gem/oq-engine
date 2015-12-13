@@ -353,22 +353,23 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         """
         Split the computation by tiles which are run in parallel.
         """
+        acc = {trt_gsim: zero_curves(len(self.sitecol), self.oqparam.imtls)
+               for trt_gsim in self.rlzs_assoc}
+        acc['calc_times'] = []
+        self.rlzs_assoc = self.csm.get_rlzs_assoc()
+        return parallel.starmap(classical_tiling, self.gen_args()).reduce(
+            agg_curves_by_trt_gsim, acc)
+
+    def gen_args(self):
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = oq = self.oqparam
-        self.tiles = split_in_tiles(self.sitecol, oq.concurrent_tasks)
+        tiles = split_in_tiles(self.sitecol, oq.concurrent_tasks)
         oq.concurrent_tasks = 0
-        calculator = ClassicalCalculator(oq, monitor, persistent=False)
-        calculator.rlzs_assoc = self.rlzs_assoc = self.csm.get_rlzs_assoc()
-
-        # parallelization
-        all_args = []
         siteidx = 0
-        for (i, tile) in enumerate(self.tiles):
+        for (i, tile) in enumerate(tiles):
+            calculator = ClassicalCalculator(oq, monitor, persistent=False)
+            logging.info('Filtering sources for tile %d', i)
             calculator.csm = self.csm.filtered(oq.maximum_distance, tile)
-            all_args.append((calculator, tile, siteidx, i, monitor))
+            calculator.rlzs_assoc = calculator.csm.get_rlzs_assoc()
+            yield (calculator, tile, siteidx, i, monitor)
             siteidx += len(tile)
-        acc = {trt_gsim: zero_curves(len(self.sitecol), oq.imtls)
-               for trt_gsim in calculator.rlzs_assoc}
-        acc['calc_times'] = []
-        return parallel.starmap(classical_tiling, all_args).reduce(
-            agg_curves_by_trt_gsim, acc)
