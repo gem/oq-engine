@@ -263,14 +263,14 @@ def is_effective_trt_model(result_dict, trt_model):
 
 
 @parallel.litetask
-def classical_tiling(calculator, sitecol, position, tileno, monitor):
+def classical_tiling(calculator, sitecol, siteidx, tileno, monitor):
     """
     :param calculator:
         a ClassicalCalculator instance
     :param sitecol:
         the site collection of the current tile
-    :param position:
-        position of the current tile in the full site collection
+    :param siteidx:
+        index of the first site of the current tile
     :param tileno:
         the tile ordinal
     :param monitor:
@@ -281,7 +281,7 @@ def classical_tiling(calculator, sitecol, position, tileno, monitor):
     calculator.sitecol = sitecol
     calculator.tileno = '.%04d' % tileno
     curves_by_trt_gsim = calculator.execute()
-    curves_by_trt_gsim.indices = list(range(position, position + len(sitecol)))
+    curves_by_trt_gsim.indices = numpy.arange(siteidx, siteidx + len(sitecol))
     # build the correct realizations from the (reduced) logic tree
     calculator.rlzs_assoc = calculator.csm.get_rlzs_assoc(
         partial(is_effective_trt_model, curves_by_trt_gsim))
@@ -363,10 +363,10 @@ class ClassicalTilingCalculator(ClassicalCalculator):
 
         # parallelization
         all_args = []
-        position = 0
+        siteidx = 0
         for (i, tile) in enumerate(self.tiles):
-            all_args.append((calculator, tile, position, i, monitor))
-            position += len(tile)
+            all_args.append((calculator, tile, siteidx, i, monitor))
+            siteidx += len(tile)
         acc = {trt_gsim: zero_curves(len(self.sitecol), oq.imtls)
                for trt_gsim in calculator.rlzs_assoc}
         acc['calc_times'] = []
