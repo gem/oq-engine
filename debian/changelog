@@ -1,7 +1,11 @@
+python-oq-hazardlib (0.17.0-0~precise01) precise; urgency=low
+
   [Michele Simionato]
   * Avoided doing the rupture filtering twice
   * Optimized the case of multiple GSIMs by instantiating the
     ruptures/sites/distances contexts only once
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 14 Dec 2015 09:46:06 +0100
 
 python-oq-hazardlib (0.16.0-0~precise01) precise; urgency=low
 
