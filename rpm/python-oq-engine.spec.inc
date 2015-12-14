@@ -18,7 +18,7 @@ Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-engine
 
 %define common_deps python numpy scipy python-shapely python-psutil python-mock python-futures h5py python-amqp python-celery python-psycopg2 python-django rabbitmq-server postgresql-server postgis sudo
-%define oqlib_deps python-oq-hazardlib >= 0.17.0 python-oq-risklib >= 0.10.0
+%define oqlib_deps python-oq-hazardlib >= 0.18.0 python-oq-risklib >= 0.11.0
 %define dev_deps python-nose python-coverage
 Requires: %{common_deps}
 Requires: %{oqlib_deps}
