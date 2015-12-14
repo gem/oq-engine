@@ -1,3 +1,5 @@
+python-oq-risklib (0.10.0-0~precise01) precise; urgency=low
+
   [Michele Simionato]
   * Ported the classical_bcr calculator to oq-lite
   * Added a check on the uniform_hazard_spectra parameter depending on the IMTs
@@ -13,6 +15,8 @@
   * Fixed a bug in the oq-lite exporter of the hazard maps
   * Removed a spurious comma from the rupture tag
   * Removed the epsilon_sampling feature from event_based_risk
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 14 Dec 2015 10:12:22 +0100
 
 python-oq-risklib (0.9.0-0~precise01) precise; urgency=low
 
