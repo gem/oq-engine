@@ -1,11 +1,21 @@
+import unittest
 from nose.plugins.attrib import attr
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.disagg import case_1, case_2
+
+try:
+    from shapely.geos import geos_version
+except:
+    old_geos = True
+else:
+    old_geos = False
 
 
 class DisaggregationTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None):
+        if old_geos:  # Ubuntu 12.04
+            raise unittest.SkipTest('libgeos too old')
         out = self.run_calc(test_dir, 'job.ini', exports='xml')
         got = out['disagg', 'xml']
         self.assertEqual(len(expected), len(got))
