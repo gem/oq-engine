@@ -318,6 +318,57 @@ _devtest_innervm_run () {
     return
 }
 
+_builddoc_innervm_run () {
+    local i old_ifs pkgs_list dep lxc_ip="$1" branch="$2"
+
+    trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
+
+    ssh $lxc_ip "rm -f ssh.log"
+
+    ssh $lxc_ip "sudo apt-get update"
+    ssh $lxc_ip "sudo apt-get -y upgrade"
+    gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
+    # install package to manage repository properly
+    # ssh $lxc_ip "sudo apt-get install -y python-software-properties"
+
+    old_ifs="$IFS"
+    IFS=" "
+    for dep in $GEM_GIT_DEPS; do
+        # extract dependencies for source dependencies
+        pkgs_list="$(deps_list "build" _jenkins_deps/$dep/debian/control)"
+        ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+
+        # install source dependencies
+        cd _jenkins_deps/$dep
+        git archive --prefix ${dep}/ HEAD | ssh $lxc_ip "tar xv"
+        cd -
+    done
+    IFS="$old_ifs"
+
+    # extract dependencies for this package
+    pkgs_list="$(deps_list "all" debian/control)"
+    ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+
+    # build oq-hazardlib speedups and put in the right place
+    ssh $lxc_ip "set -e
+                 cd oq-hazardlib
+                 python ./setup.py build
+                 for i in \$(find build/ -name *.so); do
+                     o=\"\$(echo \"\$i\" | sed 's@^[^/]\+/[^/]\+/@@g')\"
+                     cp \$i \$o
+                 done"
+
+    # TODO: version check
+    git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
+
+    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-risklib:\$PWD/oq-hazardlib\" ;
+                 cd ${GEM_GIT_PACKAGE}/doc ; make html"
+    scp -r "$lxc_ip:$GEM_GIT_PACKAGE/doc/_build/html" "out_${BUILD_UBUVER}/"
+    trap ERR
+
+    return
+}
+
 #
 #  _pkgtest_innervm_run <lxc_ip> <branch> - part of package test performed on lxc
 #                     the following activities are performed:
@@ -676,6 +727,100 @@ devtest_run () {
     return $inner_ret
 }
 
+builddoc_run () {
+    local deps old_ifs branch="$1" branch_cur
+
+    if [ ! -d "out_${BUILD_UBUVER}" ]; then
+        mkdir "out_${BUILD_UBUVER}"
+    fi
+
+    if [ ! -d _jenkins_deps ]; then
+        mkdir _jenkins_deps
+    fi
+
+    #
+    #  dependencies repos
+    #
+    # in test sources different repositories and branches can be tested
+    # consistently: for each openquake dependency it try to use
+    # the same repository and the same branch OR the gem repository
+    # and the same branch OR the gem repository and the "master" branch
+    #
+    repo_id="$(repo_id_get)"
+    if [ "$repo_id" != "$GEM_GIT_REPO" ]; then
+        repos="git://${repo_id} ${GEM_GIT_REPO}"
+    else
+        repos="${GEM_GIT_REPO}"
+    fi
+    old_ifs="$IFS"
+    IFS=" "
+    for dep in $GEM_GIT_DEPS; do
+        found=0
+        branch_cur="$branch"
+        for repo in $repos; do
+            # search of same branch in same repo or in GEM_GIT_REPO repo
+            if git ls-remote --heads $repo/${dep}.git | grep -q "refs/heads/$branch_cur" ; then
+                deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
+                found=1
+                break
+            fi
+        done
+        # if not found it fallback in master branch of GEM_GIT_REPO repo
+        if [ $found -eq 0 ]; then
+            branch_cur="master"
+            deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
+        fi
+        cd _jenkins_deps/$dep
+        commit="$(git log -1 | grep '^commit' | sed 's/^commit //g')"
+        cd -
+        echo "dependency: $dep"
+        echo "repo:       $repo"
+        echo "branch:     $branch_cur"
+        echo "commit:     $commit"
+        echo
+        var_pfx="$(dep2var "$dep")"
+        if [ ! -f _jenkins_deps_info ]; then
+            touch _jenkins_deps_info
+        fi
+        if grep -q "^${var_pfx}_COMMIT=" _jenkins_deps_info; then
+            if ! grep -q "^${var_pfx}_COMMIT=$commit" _jenkins_deps_info; then
+                echo "ERROR: $repo -> $branch_cur changed during test:"
+                echo "before:"
+                grep "^${var_pfx}_COMMIT=" _jenkins_deps_info
+                echo "after:"
+                echo "${var_pfx}_COMMIT=$commit"
+                exit 1
+            fi
+        else
+            echo "${var_pfx}_COMMIT=$commit" >> _jenkins_deps_info
+            echo "${var_pfx}_REPO=$repo"     >> _jenkins_deps_info
+            echo "${var_pfx}_BRANCH=$branch_cur" >> _jenkins_deps_info
+        fi
+    done
+    IFS="$old_ifs"
+
+    sudo echo
+    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+
+    _wait_ssh $lxc_ip
+
+    set +e
+    _builddoc_innervm_run "$lxc_ip" "$branch"
+    inner_ret=$?
+
+    scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/builddoc.history"
+
+    sudo $LXC_TERM -n $lxc_name
+    set -e
+
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
+
+    return $inner_ret
+}
+
 
 #
 #  pkgtest_run <branch> - main function of package test
@@ -859,6 +1004,12 @@ while [ $# -gt 0 ]; do
         pkgtest)
             # Sed removes 'origin/' from the branch name
             pkgtest_run $(echo "$2" | sed 's@.*/@@g')
+            exit $?
+            break
+            ;;
+        builddoc)
+            # Sed removes 'origin/' from the branch name
+            builddoc_run $(echo "$2" | sed 's@.*/@@g')
             exit $?
             break
             ;;
