@@ -165,7 +165,7 @@ def hazard_curves_per_trt(
         sources, sites, imtls, gsims, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter,
-        maximum_distance=None, monitor=DummyMonitor()):
+        maximum_distance=None, bbs=(), monitor=DummyMonitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -202,6 +202,22 @@ def hazard_curves_per_trt(
                             r_sites, rupture)
                     except FarAwayRupture:
                         continue
+
+                    # add optional disaggregation information (bounding boxes)
+                    if bbs:
+                        sids = set(sctx.sites.sids)
+                        jb_dists = dctx.rjb
+                        closest_points = rupture.surface.get_closest_points(
+                            sctx.sites.mesh)
+                        bs = [bb for bb in bbs if bb.site_id in sids]
+                        # NB: the assert below is always true; we are
+                        # protecting against possible refactoring errors
+                        assert len(bs) == len(jb_dists) == len(closest_points)
+                        for bb, dist, p in zip(bs, jb_dists, closest_points):
+                            if dist < maximum_distance:
+                                # ruptures too far away are ignored
+                                bb.update([dist], [p.longitude], [p.latitude])
+
                 for i, gsim in enumerate(gsims):
                     with pne_mon:
                         for imt in imts:

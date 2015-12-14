@@ -179,7 +179,7 @@ class ContextMaker(object):
             If any of declared required distance parameters is unknown.
         """
         dctx = DistancesContext()
-        for param in self.REQUIRES_DISTANCES:
+        for param in self.REQUIRES_DISTANCES | set(['rjb']):
             if param in dist_dict:  # already computed distances
                 distances = dist_dict[param]
             else:
