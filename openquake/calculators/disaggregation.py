@@ -301,14 +301,14 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     self.bin_edges[sm_id, site.id] = (
                         mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
-            bin_edges = {}
-            for site in sitecol:
-                if (sm_id, site.id) in self.bin_edges:
-                    bin_edges[site.id] = self.bin_edges[sm_id, site.id]
+                bin_edges = {}
+                for site in sitecol:
+                    if (sm_id, site.id) in self.bin_edges:
+                        bin_edges[site.id] = self.bin_edges[sm_id, site.id]
 
-            all_args.append(
-                (sitecol, srcs, trt_model.id, self.rlzs_assoc,
-                 trt_names, curves_dict, bin_edges, oq, self.monitor))
+                all_args.append(
+                    (sitecol, srcs, trt_model.id, self.rlzs_assoc,
+                     trt_names, curves_dict, bin_edges, oq, self.monitor))
 
         results = parallel.starmap(compute_disagg, all_args).reduce(
             self.agg_result)
