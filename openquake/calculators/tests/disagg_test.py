@@ -26,11 +26,10 @@ class DisaggregationTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'classical')
     def test_case_1(self):
         self.assert_curves_ok([
-            'disagg_matrix/PGA/disagg_matrix(0.02)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml',
-            'disagg_matrix/SA-0.025/disagg_matrix(0.02)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml',
-            'disagg_matrix/PGA/disagg_matrix(0.1)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml',
-            'disagg_matrix/SA-0.025/disagg_matrix(0.1)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml'
-            ], case_1.__file__)
+            'poe-0.02-rlz-0-PGA-10.1-40.1.xml',
+            'poe-0.02-rlz-0-SA(0.025)-10.1-40.1.xml',
+            'poe-0.1-rlz-0-PGA-10.1-40.1.xml',
+            'poe-0.1-rlz-0-SA(0.025)-10.1-40.1.xml'], case_1.__file__)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_2(self):
