@@ -1,8 +1,8 @@
-OpenQuake 1.6 is a major release and a big improvement with respect
+OpenQuake 1.7 is a major release and a big improvement with respect
 to OpenQuake 1.5. Everybody is invited to upgrade,
 by following the [usual procedure](Installing-the-OpenQuake-Engine.md).
 
-New features of the OpenQuake Engine, version 1.6
+New features of the OpenQuake Engine, version 1.7
 ---------------------------------------------------
 
 1. The following six calculators have been completely rewritten and now
@@ -25,7 +25,7 @@ New features of the OpenQuake Engine, version 1.6
 
 2. The other calculators are unchanged; they are still using PostgreSQL.
   They will be replaced with HDF5-based versions in future releases of the
-  OpenQuake Engine. For some calculator the HDF5-based implementation is
+  OpenQuake Engine. For most calculators an HDF5-based implementation is
   already available in the engine and can be accessed by using the ``--lite``
   flag. For instance the classical hazard calculator is supported and can be
   run with
@@ -54,7 +54,22 @@ is possible to generate the full event loss table for each
 asset and for each realization. Just set the configuration parameter
 `asset_loss_table=True` (the default is False).
 
-3. OpenQuake 1.6 supports officially the format NRML 0.5 for all risk
+19. The `--load-gmf` option has been removed from the engine; now in order
+  to load an XML file containing ground motion fields you need to change
+  the `job.ini` file and add a line like the following:
+  ```
+  gmfs_file = <path-to-file-gmfs.xml>
+  ```
+  In the next release the ``--load-curve`` option will be removed and in
+  order to load an XML containing hazard curves you will need to change
+  the `job.ini` file and to add a line like the following:
+  ```
+  hazard_curves_file = <path-to-file-hazard-curve.xml>
+  ```
+  This already works if you use the `--lite` version of the classical calculators
+  (classical_risk/classical_damage/classical_bcr).
+
+3. OpenQuake 1.7 supports officially the format NRML 0.5 for all risk
 models. In OpenQuake 1.5 it was supported in a limited and experimental way
 only for a subset of the vulnerability functions. Now all kind of risk
 models are supported: vulnerability models, fragility risk models and
@@ -77,7 +92,7 @@ for the details).
 
 6. Some work has been going on hazardlib, as usual, and you can have a
 look at the [changelog]
-(https://github.com/gem/oq-hazardlib/blob/engine-1.6/debian/changelog). The
+(https://github.com/gem/oq-hazardlib/blob/engine-1.7/debian/changelog). The
 most prominent feature is the introduction of new epistemic
 uncertainties in the Source Model Logic Tree. Users are now able to
 represent alternative geometries for the fault source typologies using
@@ -103,30 +118,52 @@ analysis: area sources with little impact on the site of interest can use
 a large discretization step whereas the important area sources can use a
 finer discretization step.
 
-10. Two new GMPEs have been added to hazardlib: *Montalva et al. (2015)*
-and *Tusa and Langer (2015)*.
+10. Three new GMPEs have been added to hazardlib: *Montalva et al. (2015)*,
+*Tusa and Langer (2015)*, *Allen, Wald and Worden (2012)*.
 
-11. The .rst report of a calculation has been improved. Now you can run
-  
+10. The GSIM class has been refactored and now there is a clear distinction
+between the preparation phase (making the context) and the actual calculation
+phase (getting the PoEs). That made it possible an optimization in the
+computation of distances in the case of multiple GSIMs.
+
+11. The rupture filtering has been moved into the making context phase,
+thus saving a redundant distance calculation.
+
+12. We improved the support for monitoring calculations in oq-lite, and
+added an option to profile oq-lite calculations.
+ 
+13. The .rst report of a calculation has been improved and more information is
+  displayed. Moreover, you can also run
   ```bash
   $ oq-lite show <calc_id> fullreport
-  ```
-  
-  to get information about a given calculation. This only works for the lite
-  calculators.
+  ```  
+  to get information about a calculation which has already run. This
+  only works for the lite calculators.
 
-12. Some small improvements to the Engine Web User Interface have been
+14. Some small improvements to the Engine Web User Interface have been
 made and this feature, first introduced in OpenQuake Engine 1.4, is
-[now finally documented](https://github.com/gem/oq-engine/blob/engine-1.6/doc/server/OpenQuake-engine-webui.md).
+[now finally documented](https://github.com/gem/oq-engine/blob/engine-1.7/doc/server/OpenQuake-engine-webui.md).
 
-11. We added a script `oq_reset_db` to drop and recreate the engine
+15. We added a script `oq_reset_db` to drop and recreate the engine
 database, as well as removing the datastore directories of all users.
 This is meant to be used with care by system administrators. See the
 instructions printed at the moment of running the script.
 
-9. Countless small improvements and additional validations have been
-added. This release has seen more than 150 pull requests reviewed and
-merged.
+16. There is now a check to stop the calculation if the parameter
+`uniform_hazard_spectra` is set but there are no intensity measure types
+of kind Spectral Acceleration or Peak Ground Acceleration.
+
+17. We added a check for the case when the region constraint remove
+all the assets from a computation.
+
+18. We fixed several export bugs, especially for the CSV exporters.
+The CSV exporters are scheduled to change again in the next release,
+so they are not official yet.
+
+19. Countless small improvements and additional validations have been
+added. We also improved our Continuous Integration mechanism and our
+installation routines. This release has seen more than 200 pull
+requests reviewed and merged.
 
 Bug fixes and changes with respect to OpenQuake 1.5
 ----------------------------------------------------
@@ -184,34 +221,34 @@ respond, due to an heavy load. Now if celery appears to not respond
 a warning is printed and that user has to see if celery is really dead
 and in that case she can kill the computation manually.
 
-6. We removed the epsilon sampling feature from the scenario_risk calculator:
-it was a performance hack introducing a gratuitous seed dependency, now
-unneeded thanks to the recent performance improvements.
-
-7. We removed the `epsilon_sampling` parameter from the engine
-configuration file `openquake.cfg`. Now the parameter can be managed
-directly by the users, on a calculation-specific base, by setting it
-in the `job.ini` file. This is only relevant for event based risk
-calculations. In the future we will remove such parameter completely,
-but first further optimizations of the event based risk calculator
-are needed.
+6. We removed the epsilon sampling feature from the scenario_risk and
+event_based_risk calculators: it was a performance hack introducing a
+gratuitous seed dependency, now unneeded thanks to the recent
+performance improvements.
 
 8. The `specific_assets` feature has been removed from the
 `event_based_risk` calculator. It has become useless thanks to the
 recent performance improvements. Use `asset_loss_table=True` instead.
 
+9. In some cases (for split fault sources) there was a spurious comma
+in the rupture tags which caused issues with a CSV importer in the
+Risk Modeler Toolkit. This has been fixed.
+
 9. The demos have been revisited and updated. Also their location has
 changed for the users installing OpenQuake from the packages. Now they
 are installed in `/usr/share/openquake/risklib/demos`.
 
-10. In some cases the rupture tag was containing spurios commas, thus breaking
-a CSV importer in the Risk Modeler Toolkit. This has been fixed.
+11. We fixed a bug reported by Blaž Barič with the AbrahamsonEtAl2014 GSIM
+by removing unneeded ``__slots__`` in hazardlib.
 
-12. When using a vulnerability function with a Probability Mass Function,
+12. We fixed a bug with the AtkinsonBoore2003SSlabNSHMP2008 GSIM which was
+instanting GSIMs in the workers for no good reason.
+
+15. When using a vulnerability function with a Probability Mass Function,
 now it is possible to set the seed by changing the `random_seed` parameter
 in the configuration file. Before the seed was hard-coded.
 
-13. We introduced the concept of composite outputs, i.e. outputs that
+16. We introduced the concept of composite outputs, i.e. outputs that
 can be exported to a zip file containing a set of output files. For
 instance an event based risk calculation with two realizations and
 four loss types in the past could print something like the following:
@@ -242,15 +279,15 @@ When using the Web UI the zip file will be available for download.
 Support for different platforms
 ----------------------------------------------------
 
-OpenQuake 1.6 supports Ubuntu from release 12.04 up to 15.10. 
+OpenQuake 1.7 supports Ubuntu from release 12.04 up to 15.10. 
 We provide official packages for the long term releases 12.04 and 14.04.
 We were able to extend the support to
 Ubuntu 12.04 by backporting the package `python-h5py` from Ubuntu 14.04.
 So *Ubuntu 12.04 is still supported, even if it is deprecated*.
 
 We have official packages also for CentOS 7
-and in general for [Red Hat Enterprise Linux clones].
-(Installing-the-OpenQuake-Engine-from-source-code-on-Fedora-and-RHEL.md)
+and in general for [Red Hat Enterprise Linux clones]
+(Installing-the-OpenQuake-Engine-from-source-code-on-Fedora-and-RHEL.md).
 
 While the engine is not supported on Windows and Mac OS X, we are
 happy to report that the underlying libraries and the

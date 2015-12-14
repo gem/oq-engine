@@ -1,7 +1,11 @@
+python-oq-engine (1.7.0-0~precise01) precise; urgency=low
+
   [Michele Simionato]
   * Fixed an encoding bug in --lhc
   * Fixed an export bug: it is now possible to export the outputs generated
     by another user, if the read permissions are set correctly
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 14 Dec 2015 10:40:26 +0100
 
 python-oq-engine (1.6.0-0~precise01) precise; urgency=low
 
