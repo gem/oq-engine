@@ -25,7 +25,7 @@ oq_create_db='oq_create_db'
 oq_engine='oq-engine'
 database='openquake2'
 
-sudo -u postgres command -v oq_create_db &> /dev/null || {
+sudo -iu postgres command -v oq_create_db &> /dev/null || {
     if [ -x "./${oq_create_db}" ]; then
         oq_create_db="./${oq_create_db}"
     else
