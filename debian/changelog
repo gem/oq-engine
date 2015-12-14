@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Ported the disaggregation calculator to oq-lite
+  * Fixed a small bug in classical_damage for steps_per_interval = 1
 
 python-oq-risklib (0.10.0-0~precise01) precise; urgency=low
 
@@ -18,6 +19,8 @@ python-oq-risklib (0.10.0-0~precise01) precise; urgency=low
   * Fixed a bug in the oq-lite exporter of the hazard maps
   * Removed a spurious comma from the rupture tag
   * Removed the epsilon_sampling feature from event_based_risk
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 14 Dec 2015 10:12:22 +0100
 
 python-oq-risklib (0.9.0-0~precise01) precise; urgency=low
 
