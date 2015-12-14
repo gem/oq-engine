@@ -112,7 +112,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         Run the calculation and return the exported outputs.
         """
         self.set_log_format()
-        if concurrent_tasks is not None:
+        if (concurrent_tasks is not None and concurrent_tasks !=
+                OqParam.concurrent_tasks.default):
             self.oqparam.concurrent_tasks = concurrent_tasks
         self.save_params(**kw)
         exported = {}
