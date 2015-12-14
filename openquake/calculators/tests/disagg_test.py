@@ -8,7 +8,7 @@ try:
 except:
     old_geos = True
 else:
-    old_geos = False
+    old_geos = geos_version < (3, 4, 2)
 
 
 class DisaggregationTestCase(CalculatorTestCase):
