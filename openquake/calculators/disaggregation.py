@@ -33,7 +33,7 @@ from openquake.commonlib import parallel
 from openquake.calculators.calc import gen_ruptures_for_site
 from openquake.calculators import base, classical
 
-DISAGG_RES_NAME_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(wkt)s'
+DISAGG_RES_FMT = 'disagg/poe-%(poe)s-rlz-%(rlz)s-%(imt)s-%(lon)s-%(lat)s'
 
 
 # a 6-uple containing float 4 arrays mags, dists, lons, lats,
@@ -363,10 +363,10 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         :param float poe:
             Disaggregation probability of exceedance value for this result.
         """
-        site_wkt = 'POINT(%s %s)' % tuple(self.sitemesh[site_id])
-        mag, dist, lon, lat, eps = bin_edges
-        disp_name = DISAGG_RES_NAME_FMT % dict(
-            poe=poe, rlz=rlz_id, imt=imt_str, wkt=site_wkt)
+        lon, lat = self.sitemesh[site_id]
+        mag, dist, lons, lats, eps = bin_edges
+        disp_name = DISAGG_RES_FMT % dict(
+            poe=poe, rlz=rlz_id, imt=imt_str, lon=lon, lat=lat)
 
         self.datastore[disp_name] = matrix
         attrs = self.datastore.hdf5[disp_name].attrs
@@ -377,7 +377,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         attrs['trts'] = trt_names
         attrs['mag_bin_edges'] = mag
         attrs['dist_bin_edges'] = dist
-        attrs['lon_bin_edges'] = lon
-        attrs['lat_bin_edges'] = lat
+        attrs['lon_bin_edges'] = lons
+        attrs['lat_bin_edges'] = lats
         attrs['eps_bin_edges'] = eps
         attrs['location'] = self.sitemesh[site_id]

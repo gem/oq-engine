@@ -25,16 +25,16 @@ class DisaggregationTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'classical')
     def test_case_2(self):
         self.assert_curves_ok(
-            ['poe-0.02-rlz-0-PGA-POINT(-3.0 -3.0).xml',
-             'poe-0.02-rlz-0-PGA-POINT(0.0 0.0).xml',
-             'poe-0.02-rlz-1-PGA-POINT(-3.0 -3.0).xml',
-             'poe-0.02-rlz-1-PGA-POINT(0.0 0.0).xml',
-             'poe-0.02-rlz-2-PGA-POINT(0.0 0.0).xml',
-             'poe-0.02-rlz-3-PGA-POINT(0.0 0.0).xml',
-             'poe-0.1-rlz-0-PGA-POINT(-3.0 -3.0).xml',
-             'poe-0.1-rlz-0-PGA-POINT(0.0 0.0).xml',
-             'poe-0.1-rlz-1-PGA-POINT(-3.0 -3.0).xml',
-             'poe-0.1-rlz-1-PGA-POINT(0.0 0.0).xml',
-             'poe-0.1-rlz-2-PGA-POINT(0.0 0.0).xml',
-             'poe-0.1-rlz-3-PGA-POINT(0.0 0.0).xml'],
+            ['poe-0.02-rlz-0-PGA--3.0--3.0.xml',
+             'poe-0.02-rlz-0-PGA-0.0-0.0.xml',
+             'poe-0.02-rlz-1-PGA--3.0--3.0.xml',
+             'poe-0.02-rlz-1-PGA-0.0-0.0.xml',
+             'poe-0.02-rlz-2-PGA-0.0-0.0.xml',
+             'poe-0.02-rlz-3-PGA-0.0-0.0.xml',
+             'poe-0.1-rlz-0-PGA--3.0--3.0.xml',
+             'poe-0.1-rlz-0-PGA-0.0-0.0.xml',
+             'poe-0.1-rlz-1-PGA--3.0--3.0.xml',
+             'poe-0.1-rlz-1-PGA-0.0-0.0.xml',
+             'poe-0.1-rlz-2-PGA-0.0-0.0.xml',
+             'poe-0.1-rlz-3-PGA-0.0-0.0.xml'],
             case_2.__file__)
