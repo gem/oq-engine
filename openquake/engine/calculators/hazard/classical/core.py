@@ -74,98 +74,6 @@ from openquake.engine.utils import tasks
 inserter = writer.CacheInserter(models.SourceInfo, 100)
 
 
-class BoundingBox(object):
-    """
-    A class to store the bounding box in distances, longitudes and magnitudes,
-    given a source model and a site. This is used for disaggregation
-    calculations. The goal is to determine the minimum and maximum
-    distances of the ruptures generated from the model from the site;
-    moreover the maximum and minimum longitudes and magnitudes are stored, by
-    taking in account the international date line.
-    """
-    def __init__(self, lt_model_id, site_id):
-        self.lt_model_id = lt_model_id
-        self.site_id = site_id
-        self.min_dist = self.max_dist = None
-        self.east = self.west = self.south = self.north = None
-
-    def update(self, dists, lons, lats):
-        """
-        Compare the current bounding box with the value in the arrays
-        dists, lons, lats and enlarge it if needed.
-
-        :param dists:
-            a sequence of distances
-        :param lons:
-            a sequence of longitudes
-        :param lats:
-            a sequence of latitudes
-        """
-        if self.min_dist is not None:
-            dists = [self.min_dist, self.max_dist] + dists
-        if self.west is not None:
-            lons = [self.west, self.east] + lons
-        if self.south is not None:
-            lats = [self.south, self.north] + lats
-        self.min_dist, self.max_dist = min(dists), max(dists)
-        self.west, self.east, self.north, self.south = \
-            get_spherical_bounding_box(lons, lats)
-
-    def update_bb(self, bb):
-        """
-        Compare the current bounding box with the given bounding box
-        and enlarge it if needed.
-
-        :param bb:
-            an instance of :class:
-            `openquake.engine.calculators.hazard.classical.core.BoundingBox`
-        """
-        if bb:  # the given bounding box must be non-empty
-            self.update([bb.min_dist, bb.max_dist], [bb.west, bb.east],
-                        [bb.south, bb.north])
-
-    def bins_edges(self, dist_bin_width, coord_bin_width):
-        """
-        Define bin edges for disaggregation histograms, from the bin data
-        collected from the ruptures.
-
-        :param dists:
-            array of distances from the ruptures
-        :param lons:
-            array of longitudes from the ruptures
-        :param lats:
-            array of latitudes from the ruptures
-        :param dist_bin_width:
-            distance_bin_width from job.ini
-        :param coord_bin_width:
-            coordinate_bin_width from job.ini
-        """
-        dist_edges = dist_bin_width * numpy.arange(
-            int(self.min_dist / dist_bin_width),
-            int(numpy.ceil(self.max_dist / dist_bin_width) + 1))
-
-        west = numpy.floor(self.west / coord_bin_width) * coord_bin_width
-        east = numpy.ceil(self.east / coord_bin_width) * coord_bin_width
-        lon_extent = get_longitudinal_extent(west, east)
-
-        lon_edges, _, _ = npoints_between(
-            west, 0, 0, east, 0, 0,
-            numpy.round(lon_extent / coord_bin_width) + 1)
-
-        lat_edges = coord_bin_width * numpy.arange(
-            int(numpy.floor(self.south / coord_bin_width)),
-            int(numpy.ceil(self.north / coord_bin_width) + 1))
-
-        return dist_edges, lon_edges, lat_edges
-
-    def __nonzero__(self):
-        """
-        True if the bounding box is non empty.
-        """
-        return (self.min_dist is not None and self.west is not None and
-                self.south is not None)
-
-
 def _calc_pnes(gsim, r_sites, rupture, imts, imls, truncation_level,
                make_ctxt_mon, calc_poes_mon):
     # compute the probabilities of no exceedence for each IMT
@@ -207,16 +115,11 @@ def compute_hazard_curves(sources, sitecol, gsims_by_trt_id, monitor):
     sorted_imls = [hc.imtls[imt]
                    for imt in sorted_imts]
     sorted_imts = map(from_string, sorted_imts)
-    trt_model = models.TrtModel.objects.get(pk=trt_model_id)
 
     gsims = gsims_by_trt_id[trt_model_id]
     curves = [[numpy.ones([total_sites, len(ls)]) for ls in sorted_imls]
               for gsim in gsims]
-    if hc.poes_disagg:  # doing disaggregation
-        lt_model_id = trt_model.lt_model.id
-        bbs = [BoundingBox(lt_model_id, site_id) for site_id in sitecol.sids]
-    else:
-        bbs = []
+    bbs = []
     mon = monitor('getting ruptures', measuremem=False)
     make_ctxt_mon = monitor('making contexts', measuremem=False)
     calc_poes_mon = monitor('computing poes', measuremem=False)
@@ -280,25 +183,3 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
     """
 
     core_calc_task = compute_hazard_curves
-
-    def pre_execute(self):
-        """
-        Do pre-execution work. At the moment, this work entails:
-        parsing and initializing sources, parsing and initializing the
-        site model (if there is one), parsing vulnerability and
-        exposure files and generating logic tree realizations. (The
-        latter piece basically defines the work to be done in the
-        `execute` phase.).
-        """
-        weights = super(ClassicalHazardCalculator, self).pre_execute()
-        # a dictionary with the bounding boxes for earch source
-        # model and each site, defined only for disaggregation
-        # calculations:
-        if self.oqparam.poes_disagg:
-            lt_models = models.LtSourceModel.objects.filter(
-                hazard_calculation=self.job)
-            self.bb_dict = dict(
-                ((lt_model.id, site.id), BoundingBox(lt_model.id, site.id))
-                for site in self.site_collection
-                for lt_model in lt_models)
-        return weights
