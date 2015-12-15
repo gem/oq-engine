@@ -425,11 +425,13 @@ def export_hcurves_xml_json(ekey, dstore):
         name = hazard_curve_name(
             dstore, ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
         for imt in oq.imtls:
+            imtype, sa_period, sa_damping = from_string(imt)
             fname = name[:-len_ext] + '-' + imt + '.' + export_type
             data = [HazardCurve(Location(site), poes[imt])
                     for site, poes in zip(sitemesh, curves)]
             writer = writercls(fname, investigation_time=oq.investigation_time,
-                               imls=oq.imtls[imt],
+                               imls=oq.imtls[imt], imt=imtype,
+                               sa_period=sa_period, sa_damping=sa_damping,
                                smlt_path='_'.join(rlz.sm_lt_path),
                                gsimlt_path=rlz.gsim_rlz.uid)
             writer.serialize(data)

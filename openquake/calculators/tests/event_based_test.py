@@ -117,7 +117,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_1(self):
-        out = self.run_calc(case_1.__file__, 'job.ini', exports='csv')
+        out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
 
         [fname] = out['gmfs', 'csv']
         self.assertEqualFiles(
@@ -126,6 +126,10 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
+
+        [fname] = out['hcurves', 'xml']
+        self.assertEqualFiles(
+            'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_2(self):
