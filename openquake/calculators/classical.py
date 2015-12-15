@@ -63,7 +63,7 @@ def classical(sources, sitecol, gsims_assoc, monitor):
         sources, sitecol, imtls, gsims, truncation_level,
         source_site_filter=source_site_distance_filter(max_dist),
         maximum_distance=max_dist, monitor=monitor)
-    dic = dict(monitor=monitor)
+    dic = dict(calc_times=monitor.calc_times)
     for gsim, curves in zip(gsims, curves_by_gsim):
         dic[trt_model_id, str(gsim)] = curves
     return dic
@@ -74,8 +74,8 @@ def agg_dicts(acc, val):
     Aggregate dictionaries of hazard curves by updating the accumulator
     """
     for key in val:
-        if key == 'monitor':
-            acc['calc_times'].extend(val[key].calc_times)
+        if key == 'calc_times':
+            acc[key].extend(val[key])
         else:  # aggregate curves
             acc[key] = agg_curves(acc[key], val[key])
     return acc
@@ -133,7 +133,6 @@ class ClassicalCalculator(base.HazardCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
-        monitor.flush()
         if self.persistent:
             store_source_chunks(self.datastore)
         return curves_by_trt_gsim
@@ -303,7 +302,7 @@ def agg_curves_by_trt_gsim(acc, curves_by_trt_gsim):
     """
     for k in curves_by_trt_gsim:
         if k == 'calc_times':
-            acc['calc_times'].extend(curves_by_trt_gsim[k])
+            acc[k].extend(curves_by_trt_gsim[k])
         else:
             acc[k][curves_by_trt_gsim.indices] = curves_by_trt_gsim[k]
     return acc
@@ -320,7 +319,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         """
         Split the computation by tiles which are run in parallel.
         """
-        monitor = self.monitor(self.core_func.__name__)
+        monitor = self.monitor.new(self.core_func.__name__)
         monitor.oqparam = oq = self.oqparam
         self.tiles = split_in_blocks(
             self.sitecol, self.oqparam.concurrent_tasks or 1)
