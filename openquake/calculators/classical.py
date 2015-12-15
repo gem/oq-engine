@@ -169,7 +169,7 @@ def classical(sources, sitecol, rlzs_assoc, monitor):
         sources, sitecol, imtls, gsims, truncation_level,
         source_site_filter=source_site_distance_filter(max_dist),
         maximum_distance=max_dist, bbs=bbs, monitor=monitor)
-    dic = dict(monitor=monitor, bbs=bbs)
+    dic = dict(calc_times=monitor.calc_times, bbs=bbs)
     for gsim, curves in zip(gsims, curves_by_gsim):
         dic[trt_model_id, str(gsim)] = curves
     return dic
@@ -180,8 +180,8 @@ def agg_dicts(acc, val):
     Aggregate dictionaries of hazard curves by updating the accumulator
     """
     for key in val:
-        if key == 'monitor':
-            acc['calc_times'].extend(val[key].calc_times)
+        if key == 'calc_times':
+            acc[key].extend(val[key])
         elif key == 'bbs':
             for bb in val['bbs']:
                 acc['bb_dict'][bb.lt_model_id, bb.site_id].update_bb(bb)
@@ -247,7 +247,6 @@ class ClassicalCalculator(base.HazardCalculator):
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
         self.bb_dict = curves_by_trt_gsim.pop('bb_dict', {})
-        monitor.flush()
         if self.persistent:
             store_source_chunks(self.datastore)
         return curves_by_trt_gsim
@@ -417,7 +416,7 @@ def agg_curves_by_trt_gsim(acc, curves_by_trt_gsim):
     """
     for k in curves_by_trt_gsim:
         if k == 'calc_times':
-            acc['calc_times'].extend(curves_by_trt_gsim[k])
+            acc[k].extend(curves_by_trt_gsim[k])
         else:
             acc[k][curves_by_trt_gsim.indices] = curves_by_trt_gsim[k]
     return acc
@@ -434,7 +433,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         """
         Split the computation by tiles which are run in parallel.
         """
-        monitor = self.monitor(self.core_func.__name__)
+        monitor = self.monitor.new(self.core_func.__name__)
         monitor.oqparam = oq = self.oqparam
         self.tiles = split_in_blocks(
             self.sitecol, self.oqparam.concurrent_tasks or 1)
