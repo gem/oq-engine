@@ -307,7 +307,7 @@ EOF
 
                  export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-nrmllib:\$PWD/oq-ipynb-runner\"
                  cd $GEM_GIT_PACKAGE
-                 # nosetests --with-xunit --xunit-file=nosetests.xml -v --with-coverage || true
+                 nosetests --with-xunit --xunit-file=nosetests.xml -v --with-coverage || true
                  cd -
                  cd notebooks/hmtk
                  # mkdir images
