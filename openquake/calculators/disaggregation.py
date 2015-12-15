@@ -19,12 +19,14 @@
 """
 Disaggregation calculator core functionality
 """
-
+from __future__ import division
 import sys
+import math
 import logging
 from collections import namedtuple
 import numpy
 
+from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import SiteCollection
@@ -263,6 +265,8 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
         self.bin_edges = {}
         curves_dict = {sid: self.get_curves(sid) for sid in sitecol.sids}
         all_args = []
+        num_trts = sum(len(sm.trt_models) for sm in self.csm.source_models)
+        nblocks = math.ceil(oq.concurrent_tasks / num_trts)
         for smodel in self.csm.source_models:
             sm_id = smodel.ordinal
             trt_names = tuple(mod.trt for mod in smodel.trt_models)
@@ -273,9 +277,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                 int(numpy.ceil(max_mag / mag_bin_width) + 1))
             logging.info('%d mag bins from %s to %s', len(mag_edges) - 1,
                          min_mag, max_mag)
-
             for trt_model in smodel.trt_models:
-                srcs = list(trt_model)
                 for site in sitecol:
                     curves = curves_dict[site.id]
                     if not curves:
@@ -307,9 +309,10 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     if (sm_id, site.id) in self.bin_edges:
                         bin_edges[site.id] = self.bin_edges[sm_id, site.id]
 
-                all_args.append(
-                    (sitecol, srcs, trt_model.id, self.rlzs_assoc,
-                     trt_names, curves_dict, bin_edges, oq, self.monitor))
+                for srcs in split_in_blocks(trt_model, nblocks):
+                    all_args.append(
+                        (sitecol, srcs, trt_model.id, self.rlzs_assoc,
+                         trt_names, curves_dict, bin_edges, oq, self.monitor))
 
         results = parallel.starmap(compute_disagg, all_args).reduce(
             self.agg_result)
