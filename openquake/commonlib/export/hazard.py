@@ -18,6 +18,7 @@
 
 import os
 import re
+import pickle
 import logging
 import operator
 import collections
@@ -27,6 +28,7 @@ import numpy
 from openquake.baselib.general import AccumDict, groupby, humansize
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.site import FilteredSiteCollection
+from openquake.hazardlib.calc import disagg
 from openquake.commonlib.export import export
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.writers import (
@@ -556,3 +558,42 @@ def export_uhs_csv(key, dest, sitecol, hmaps):
             for lon, lat, row in zip(sitecol.lons, sitecol.lats, hmaps)]
     write_csv(dest, rows)
     return {dest: dest}
+
+DisaggMatrix = collections.namedtuple(
+    'DisaggMatrix', 'poe iml dim_labels matrix')
+
+
+@export.add(('disagg', 'xml'))
+def export_disagg_xml(ekey, dstore):
+    oq = OqParam.from_(dstore.attrs)
+    rlzs = dstore['rlzs_assoc'].realizations
+    group = dstore['disagg']
+    fnames = []
+    writercls = hazard_writers.DisaggXMLWriter
+    for key in group:
+        matrix = pickle.loads(group[key].value)
+        attrs = group[key].attrs
+        rlz = rlzs[attrs['rlzi']]
+        poe = attrs['poe']
+        iml = attrs['iml']
+        imt, sa_period, sa_damping = from_string(attrs['imt'])
+        fname = dstore.export_path(key + '.xml')
+        lon, lat = attrs['location']
+        # TODO: add poe=poe below
+        writer = writercls(
+            fname, investigation_time=oq.investigation_time,
+            imt=imt, smlt_path='_'.join(rlz.sm_lt_path),
+            gsimlt_path=rlz.gsim_rlz.uid, lon=lon, lat=lat,
+            sa_period=sa_period, sa_damping=sa_damping,
+            mag_bin_edges=attrs['mag_bin_edges'],
+            dist_bin_edges=attrs['dist_bin_edges'],
+            lon_bin_edges=attrs['lon_bin_edges'],
+            lat_bin_edges=attrs['lat_bin_edges'],
+            eps_bin_edges=attrs['eps_bin_edges'],
+            tectonic_region_types=attrs['trts'],
+        )
+        data = [DisaggMatrix(poe, iml, dim_labels, matrix[i])
+                for i, dim_labels in enumerate(disagg.pmf_map)]
+        writer.serialize(data)
+        fnames.append(fname)
+    return sorted(fnames)

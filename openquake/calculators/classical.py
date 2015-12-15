@@ -22,6 +22,9 @@ import operator
 import collections
 from functools import partial
 
+from openquake.hazardlib.geo.utils import get_spherical_bounding_box
+from openquake.hazardlib.geo.utils import get_longitudinal_extent
+from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
@@ -37,15 +40,108 @@ from openquake.calculators import base, calc
 HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 
 
+# this is needed for the disaggregation
+class BoundingBox(object):
+    """
+    A class to store the bounding box in distances, longitudes and magnitudes,
+    given a source model and a site. This is used for disaggregation
+    calculations. The goal is to determine the minimum and maximum
+    distances of the ruptures generated from the model from the site;
+    moreover the maximum and minimum longitudes and magnitudes are stored, by
+    taking in account the international date line.
+    """
+    def __init__(self, lt_model_id, site_id):
+        self.lt_model_id = lt_model_id
+        self.site_id = site_id
+        self.min_dist = self.max_dist = None
+        self.east = self.west = self.south = self.north = None
+
+    def update(self, dists, lons, lats):
+        """
+        Compare the current bounding box with the value in the arrays
+        dists, lons, lats and enlarge it if needed.
+
+        :param dists:
+            a sequence of distances
+        :param lons:
+            a sequence of longitudes
+        :param lats:
+            a sequence of latitudes
+        """
+        if self.min_dist is not None:
+            dists = [self.min_dist, self.max_dist] + dists
+        if self.west is not None:
+            lons = [self.west, self.east] + lons
+        if self.south is not None:
+            lats = [self.south, self.north] + lats
+        self.min_dist, self.max_dist = min(dists), max(dists)
+        self.west, self.east, self.north, self.south = \
+            get_spherical_bounding_box(lons, lats)
+
+    def update_bb(self, bb):
+        """
+        Compare the current bounding box with the given bounding box
+        and enlarge it if needed.
+
+        :param bb:
+            an instance of :class:
+            `openquake.engine.calculators.hazard.classical.core.BoundingBox`
+        """
+        if bb:  # the given bounding box must be non-empty
+            self.update([bb.min_dist, bb.max_dist], [bb.west, bb.east],
+                        [bb.south, bb.north])
+
+    def bins_edges(self, dist_bin_width, coord_bin_width):
+        """
+        Define bin edges for disaggregation histograms, from the bin data
+        collected from the ruptures.
+
+        :param dists:
+            array of distances from the ruptures
+        :param lons:
+            array of longitudes from the ruptures
+        :param lats:
+            array of latitudes from the ruptures
+        :param dist_bin_width:
+            distance_bin_width from job.ini
+        :param coord_bin_width:
+            coordinate_bin_width from job.ini
+        """
+        dist_edges = dist_bin_width * numpy.arange(
+            int(self.min_dist / dist_bin_width),
+            int(numpy.ceil(self.max_dist / dist_bin_width) + 1))
+
+        west = numpy.floor(self.west / coord_bin_width) * coord_bin_width
+        east = numpy.ceil(self.east / coord_bin_width) * coord_bin_width
+        lon_extent = get_longitudinal_extent(west, east)
+
+        lon_edges, _, _ = npoints_between(
+            west, 0, 0, east, 0, 0,
+            numpy.round(lon_extent / coord_bin_width) + 1)
+
+        lat_edges = coord_bin_width * numpy.arange(
+            int(numpy.floor(self.south / coord_bin_width)),
+            int(numpy.ceil(self.north / coord_bin_width) + 1))
+
+        return dist_edges, lon_edges, lat_edges
+
+    def __nonzero__(self):
+        """
+        True if the bounding box is non empty.
+        """
+        return (self.min_dist is not None and self.west is not None and
+                self.south is not None)
+
+
 @parallel.litetask
-def classical(sources, sitecol, gsims_assoc, monitor):
+def classical(sources, sitecol, rlzs_assoc, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
     :param sitecol:
         a SiteCollection instance
-    :param gsims_assoc:
-        associations trt_model_id -> gsims
+    :param rlzs_assoc:
+        a RlzsAssoc instance
     :param monitor:
         a monitor instance
     :returns:
@@ -55,15 +151,25 @@ def classical(sources, sitecol, gsims_assoc, monitor):
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
     trt_model_id = sources[0].trt_model_id
-    gsims = gsims_assoc[trt_model_id]
+    gsims = rlzs_assoc.gsims_by_trt_id[trt_model_id]
+    for smodel in rlzs_assoc.csm_info.source_models:
+        for trt_model in smodel.trt_models:
+            if trt_model.id == trt_model_id:
+                sm_id = smodel.ordinal
+                break
+
+    if monitor.oqparam.poes_disagg:
+        bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
+    else:
+        bbs = []
     # NB: the source_site_filter below is ESSENTIAL for performance inside
     # hazard_curves_per_trt, since it reduces the full site collection
     # to a filtered one *before* doing the rupture filtering
     curves_by_gsim = hazard_curves_per_trt(
         sources, sitecol, imtls, gsims, truncation_level,
         source_site_filter=source_site_distance_filter(max_dist),
-        maximum_distance=max_dist, monitor=monitor)
-    dic = dict(calc_times=monitor.calc_times)
+        maximum_distance=max_dist, bbs=bbs, monitor=monitor)
+    dic = dict(calc_times=monitor.calc_times, bbs=bbs)
     for gsim, curves in zip(gsims, curves_by_gsim):
         dic[trt_model_id, str(gsim)] = curves
     return dic
@@ -76,6 +182,9 @@ def agg_dicts(acc, val):
     for key in val:
         if key == 'calc_times':
             acc[key].extend(val[key])
+        elif key == 'bbs':
+            for bb in val['bbs']:
+                acc['bb_dict'][bb.lt_model_id, bb.site_id].update_bb(bb)
         else:  # aggregate curves
             acc[key] = agg_curves(acc[key], val[key])
     return acc
@@ -125,14 +234,19 @@ class ClassicalCalculator(base.HazardCalculator):
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         zerodict['calc_times'] = []
-        gsims_assoc = self.rlzs_assoc.gsims_by_trt_id
+        if self.oqparam.poes_disagg:
+            zerodict['bb_dict'] = {
+                (smodel.ordinal, site.id): BoundingBox(smodel.ordinal, site.id)
+                for site in self.sitecol
+                for smodel in self.csm.source_models}
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
-            (sources, self.sitecol, gsims_assoc, monitor),
+            (sources, self.sitecol, self.rlzs_assoc, monitor),
             agg=agg_dicts, acc=zerodict,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
+        self.bb_dict = curves_by_trt_gsim.pop('bb_dict', {})
         if self.persistent:
             store_source_chunks(self.datastore)
         return curves_by_trt_gsim
