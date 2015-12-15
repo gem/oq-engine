@@ -95,7 +95,7 @@ class OqParam(valid.ParamSet):
     loss_curve_resolution = valid.Param(valid.positiveint, 50)
     loss_ratios = valid.Param(valid.loss_ratios, ())
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
-    steps_per_interval = valid.Param(valid.positiveint, 0)
+    steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.positivefloat)  # km
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
