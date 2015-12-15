@@ -381,6 +381,8 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         acc = {trt_gsim: zero_curves(len(self.sitecol), self.oqparam.imtls)
                for trt_gsim in self.rlzs_assoc}
         acc['calc_times'] = []
-        self.rlzs_assoc = self.csm.get_rlzs_assoc()
-        return parallel.starmap(classical_tiling, self.gen_args()).reduce(
+        res = parallel.starmap(classical_tiling, self.gen_args()).reduce(
             agg_curves_by_trt_gsim, acc)
+        self.rlzs_assoc = self.csm.get_rlzs_assoc(
+            partial(is_effective_trt_model, res))
+        return res
