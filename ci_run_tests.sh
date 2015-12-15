@@ -269,7 +269,7 @@ fi
         ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
     fi
 
-    cat >gem_init.sh <<EOF
+    cat >.gem_init.sh <<EOF
 export GEM_SET_DEBUG=$GEM_SET_DEBUG
 set -e
 if [ -n "\$GEM_SET_DEBUG" -a "\$GEM_SET_DEBUG" != "false" ]; then
@@ -277,9 +277,9 @@ if [ -n "\$GEM_SET_DEBUG" -a "\$GEM_SET_DEBUG" != "false" ]; then
     set -x
 fi
 EOF
-    scp gem_init.sh ${lxc_ip}:
+    scp .gem_init.sh ${lxc_ip}:
     # build oq-hazardlib speedups and put in the right place
-    ssh $lxc_ip "source gem_init.sh
+    ssh $lxc_ip "source .gem_init.sh
                  cd oq-hazardlib
                  python ./setup.py build
                  for i in \$(find build/ -name *.so); do
@@ -288,7 +288,7 @@ EOF
                  done"
 
     # create virtualenv and install pip deps
-    ssh $lxc_ip "source gem_init.sh
+    ssh $lxc_ip "source .gem_init.sh
                  virtualenv --system-site-packages ci-env
                  source ci-env/bin/activate
                  IFS=' '
@@ -299,7 +299,7 @@ EOF
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "source gem_init.sh
+    ssh $lxc_ip "source .gem_init.sh
                  source ci-env/bin/activate
                  ipython profile create
                  echo \"c = get_config()\"                      >> ~/.ipython/profile_default/ipython_config.py
@@ -307,13 +307,14 @@ EOF
 
                  export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-nrmllib:\$PWD/oq-ipynb-runner\"
                  cd $GEM_GIT_PACKAGE
-                 nosetests --with-xunit --xunit-file=nosetests.xmll -v --with-coverage || true
+                 # nosetests --with-xunit --xunit-file=nosetests.xml -v --with-coverage || true
                  cd -
                  cd notebooks/hmtk
                  # mkdir images
                  # unzip data/demo_records_full.zip -d data
                  export DISPLAY=\"$guest_display\"
-                 nosetests --with-xunit --xunit-file=../../hmtk/nosetests_hmtk_notebooks.xml -v --with-coverage || true"
+                 # nosetests --with-xunit --xunit-file=../../hmtk/nosetests_hmtk_notebooks.xmlll -v --with-coverage || true
+                 deactivate"
 
     trap ERR
 
