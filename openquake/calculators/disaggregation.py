@@ -64,6 +64,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, trt_model_id,
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
                 with calc_dist:
+                    # TODO: see if we can avoid computing the JB distance twice
                     [jb_dist] = rupture.surface.get_joyner_boore_distance(
                         sitemesh)
                     dists.append(jb_dist)
