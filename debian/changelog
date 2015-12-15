@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added IMT information in the hazard curve XML exporter
   * Fixed a small bug in classical_damage for steps_per_interval = 1
 
 python-oq-risklib (0.10.0-0~precise01) precise; urgency=low
