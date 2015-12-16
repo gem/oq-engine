@@ -287,11 +287,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         self.N = N = len(self.assetcol)
         self.E = len(self.datastore['tags'])
-        ltypes = self.riskmodel.loss_types
 
         # average losses, stored in a composite array of shape N, R, 2
-        multi_avg_dt = numpy.dtype([(lt, F32) for lt in ltypes])
-        self.avg_losses = numpy.zeros((N, R, 2), multi_avg_dt)
+        multi_avg_dt = self.riskmodel.loss_type_dt(insured=self.I)
+        self.avg_losses = numpy.zeros((N, R), multi_avg_dt)
 
         ela_dt = numpy.dtype([('rup_id', U32), ('ass_id', U32),
                               ('loss', (F32, (L, 2)))])
@@ -380,7 +379,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     avg_losses_lt = self.avg_losses[lt]
                     asset_values = self.assetcol[lt]
                     for i, avalue in enumerate(asset_values):
-                        avg_losses_lt[i, r] = avgloss[i] * avalue
+                        avg_losses_lt[i, r] = avgloss[i, 0] * avalue
+                        if self.oqparam.insured_losses:
+                            self.avg_losses[lt + '_ins'][i, r] = (
+                                avgloss[i, 1] * avalue)
                 self.datastore['avg_losses-rlzs'] = self.avg_losses
                 saved['avg_losses-rlzs'] = self.avg_losses.nbytes
 
@@ -489,11 +491,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             rcurves = r_curves[loss_type]
             asset_values = self.assetcol[loss_type]
             data = []
-            avglosses = avg_losses[loss_type]
             for rlz in rlzs:
-                average_losses = avglosses[:, rlz.ordinal, 0]
-                average_insured_losses = (avglosses[:, rlz.ordinal, 1]
-                                          if insured else None)
+                average_losses = avg_losses[loss_type][:, rlz.ordinal]
+                average_insured_losses = (
+                    avg_losses[loss_type + '_ins'][:, rlz.ordinal]
+                    if insured else None)
                 loss_curves = _old_loss_curves(
                     asset_values, rcurves[:, rlz.ordinal, 0], cbuilder.ratios)
                 insured_curves = _old_loss_curves(

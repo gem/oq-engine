@@ -1634,15 +1634,14 @@ class SimpleStats(object):
         `<name>-stats`. Return the number of bytes stored.
         """
         array = dstore[name].value
-        loss_types = array.dtype.names
         weights = [rlz.weight for rlz in self.rlzs]
         newname = name.replace('-rlzs', '-stats')
         newshape = list(array.shape)
         newshape[1] = len(self.quantiles) + 1  # number of statistical outputs
         newarray = numpy.zeros(newshape, array.dtype)
-        for loss_type in loss_types:
-            new = newarray[loss_type]
-            data = [array[loss_type][:, i] for i in range(len(self.rlzs))]
+        for field in array.dtype.names:
+            new = newarray[field]
+            data = [array[field][:, i] for i in range(len(self.rlzs))]
             new[:, 0] = mean_curve(data, weights)
             for i, q in enumerate(self.quantiles, 1):
                 new[:, i] = quantile_curve(data, q, weights)
