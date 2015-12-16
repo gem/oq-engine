@@ -22,7 +22,7 @@ import math
 import numpy
 import scipy.stats
 
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots
@@ -35,7 +35,7 @@ class PoissonTOM(object):
     :raises ValueError:
         If ``time_span`` is not positive.
     """
-    __slots__ = ['time_span']
+    _slots_ = ['time_span']
 
     def __init__(self, time_span):
         if time_span <= 0:

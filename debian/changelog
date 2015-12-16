@@ -1,9 +1,48 @@
+python-oq-hazardlib (0.17.0-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * Avoided doing the rupture filtering twice
+  * Optimized the case of multiple GSIMs by instantiating the
+    ruptures/sites/distances contexts only once
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 14 Dec 2015 09:46:06 +0100
+
+python-oq-hazardlib (0.16.0-0~precise01) precise; urgency=low
+
+  [Graeme Weatherill]
+  * Adds methods for modifying the geometry configurations of the fault sources
+  * Adds Allen, Wald and Worden (2012) Intensity Prediction Equation
+
+  [Michele Simionato]
+  * Refactored atkinson_boore_2003 classes to avoid unneeded instantiation
+
+  [Matteo Nastasi]
+  * Imposed version for python-h5py dependency, Ubuntu 12.04 will use
+    backported version from GEM repository
+  
+  [Graeme Weatherill]
+  * Adds Montalva et al. (2015) GMPE
+
+  [Robin Gee]
+  * Adds Tusa and Langer (2015) GMPE
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 17 Nov 2015 10:31:52 +0100
+
+python-oq-hazardlib (0.15.0-0~precise01) precise; urgency=low
+
+  [Yen-Shin Chen]
+  * Surface: fix bug for dipping fault in get_fault_patch_vertices method
+
+  [Graeme Weatherill]
+  * Adds support for GMPEs to be implemented in the form of HDF5 binary tables
+  * Adds '__repr__' method to scalerel and MFD base classes
+
   [Michele Simionato]
   * Now hazardlib unofficially supports Python 3
   * Added support for python setup.py test
 
   [Graeme Weatherill]
-  * Adds the `upper' and `lower' epistemic uncertainty corrections for the
+  * Adds the 'upper' and 'lower' epistemic uncertainty corrections for the
     NGA West 2 GMPEs used in the 2014 US National Seismic Hazard Map
   
   [Michele Simionato]
@@ -28,6 +67,8 @@
   * Adds 'rcdpp' slot to DistanceContext object
   * ParametricProbabilisticRupture: adds 'rupture_slip_direction' slot and get_dppvalue, get_cdppvalue method
   * Implements near fault effect- directivity adaptation of Chiou & Youngs 2014
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 23 Sep 2015 14:28:50 +0200
 
 python-oq-hazardlib (0.14.0-0~precise01) precise; urgency=low
 
@@ -270,12 +311,12 @@ python-oq-hazardlib (0.11.0-0) precise; urgency=low
     (LP: #1174692)
   * included amplification factor in Si&Midorikawa 1999 GMPE
   * Si and Midorikawa 1999
-  * Add `type` attr to MFD and source classes (LP: #1045711)
+  * Add 'type' attr to MFD and source classes (LP: #1045711)
   * Restrict ComplexFaultSourceSurface to not pathological cases (LP: #1154024)
   * Rename CharacteristicSource to CharacteristicFaultSource
   * Characteristic source
   * Multi Surface
-  * Fix for an obscure `cascading union` use case in RectangularMesh
+  * Fix for an obscure 'cascading union' use case in RectangularMesh
     (LP: #1133447)
   * Rect mesh enclosing poly bug
   * fixed unstable behaviour of method geodetic.intervals_between

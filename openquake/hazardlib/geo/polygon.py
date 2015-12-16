@@ -22,7 +22,7 @@ import shapely.geometry
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 #: Polygon upsampling step for long edges, in kilometers.
 #: See :func:`get_resampled_coordinates`.
@@ -43,7 +43,7 @@ class Polygon(object):
         If ``points`` contains less than three unique points or if polygon
         perimeter intersects itself.
     """
-    __slots__ = 'lons lats _bbox _projection _polygon2d'.split()
+    _slots_ = 'lons lats _bbox _projection _polygon2d'.split()
 
     def __init__(self, points):
         points = utils.clean_points(points)

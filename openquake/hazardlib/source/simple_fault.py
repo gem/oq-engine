@@ -24,7 +24,7 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots
@@ -81,9 +81,13 @@ class SimpleFaultSource(ParametricSeismicSource):
         fails, if rake value is invalid and if rupture mesh spacing is too high
         for the lowest magnitude value.
     """
-    __slots__ = ParametricSeismicSource.__slots__ + '''upper_seismogenic_depth
+    _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
     lower_seismogenic_depth fault_trace dip rake hypo_list
     slip_list'''.split()
+
+    MODIFICATIONS = set(('set_geometry',
+                         'adjust_dip',
+                         'set_dip'))
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -211,6 +215,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                                     rupture_slip_direction
                                 )
 
+    # TODO: fix the count in the case of hypo_list and slip_list
     def count_ruptures(self):
         """
         See :meth:
@@ -227,8 +232,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         counts = 0
         for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             rup_cols, rup_rows = self._get_rupture_dimensions(
-                fault_length, fault_width, mag
-            )
+                fault_length, fault_width, mag)
             num_rup_along_length = mesh_cols - rup_cols + 1
             num_rup_along_width = mesh_rows - rup_rows + 1
             counts += num_rup_along_length * num_rup_along_width
@@ -253,8 +257,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         is considered to cover the whole fault.
         """
         area = self.magnitude_scaling_relationship.get_median_area(
-            mag, self.rake
-        )
+            mag, self.rake)
         rup_length = math.sqrt(area * self.rupture_aspect_ratio)
         rup_width = area / rup_length
 
@@ -278,3 +281,49 @@ class SimpleFaultSource(ParametricSeismicSource):
         rup_cols = int(round(rup_length / self.rupture_mesh_spacing) + 1)
         rup_rows = int(round(rup_width / self.rupture_mesh_spacing) + 1)
         return rup_cols, rup_rows
+
+    def modify_set_geometry(self, fault_trace, upper_seismogenic_depth,
+                            lower_seismogenic_depth, dip, spacing):
+        """
+        Modifies the current source geometry including trace, seismogenic
+        depths and dip
+        """
+        # Check the new geometries are valid
+        SimpleFaultSurface.check_fault_data(
+            fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
+            dip, spacing
+        )
+        self.fault_trace = fault_trace
+        self.upper_seismogenic_depth = upper_seismogenic_depth
+        self.lower_seismogenic_depth = lower_seismogenic_depth
+        self.dip = dip
+        self.rupture_mesh_spacing = spacing
+
+
+    def modify_adjust_dip(self, increment):
+        """
+        Modifies the dip by an incremental value
+
+        :param float increment:
+            Value by which to increase or decrease the dip (the resulting
+            dip must still be within 0.0 to 90.0 degrees)
+        """
+        SimpleFaultSurface.check_fault_data(
+            self.fault_trace, self.upper_seismogenic_depth,
+            self.lower_seismogenic_depth, self.dip + increment,
+            self.rupture_mesh_spacing
+        )
+        self.dip += increment
+
+    def modify_set_dip(self, dip):
+        """
+        Modifies the dip to the specified value
+
+        :param float dip:
+            New value of dip (must still be within 0.0 to 90.0 degrees)
+        """
+        SimpleFaultSurface.check_fault_data(
+            self.fault_trace, self.upper_seismogenic_depth,
+            self.lower_seismogenic_depth, dip, self.rupture_mesh_spacing
+        )
+        self.dip = dip

@@ -46,22 +46,24 @@ class GeographicObjects(object):
 
     def get_closest(self, lon, lat, max_distance=None):
         """
-        Get the closest object to the given longitude and latitude.
-        If the `max_distance` is given and all points are farther
-        then the maximum distance, returns None.
+        Get the closest object to the given longitude and latitude
+        and its distance. If the `max_distance` is given and all objects
+        are farther than the maximum distance, returns (None, None).
 
         :param lon: longitude in degrees
         :param lat: latitude in degrees
         :param max_distance: distance in km (or None)
         """
         zeros = numpy.zeros_like(self.lons)
+        # NB: it would be much cleaner if min_distance returned both
+        # the index and the min_dist, but we would need to work at C level :-(
         index = min_distance(self.lons, self.lats, zeros, lon, lat, 0.,
                              indices=True)
+        min_dist = min_distance(self.lons, self.lats, zeros, lon, lat, 0.)
         if max_distance is not None:
-            min_dist = min_distance(self.lons, self.lats, zeros, lon, lat, 0.)
             if min_dist > max_distance:
-                return
-        return self.objects[index]
+                return None, None
+        return self.objects[index], min_dist
 
 
 def geodetic_distance(lons1, lats1, lons2, lats2):

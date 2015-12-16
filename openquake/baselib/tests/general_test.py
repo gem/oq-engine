@@ -20,12 +20,14 @@
 Test related to code in openquake/utils/general.py
 """
 
+import mock
 import unittest
 from operator import attrgetter
 from collections import namedtuple
 
 from openquake.baselib.general import (
-    block_splitter, split_in_blocks, search_module, assert_close)
+    block_splitter, split_in_blocks, search_module, assert_close,
+    deprecated, DeprecationWarning)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
@@ -166,3 +168,24 @@ class AssertCloseTestCase(unittest.TestCase):
         c2.a = 1
         with self.assertRaises(AssertionError):  # different attributes
             assert_close(c1, c2)
+
+
+class DeprecatedTestCase(unittest.TestCase):
+    def test(self):
+        @deprecated('Use dummy_new instead.')
+        def dummy():
+            pass
+
+        # check that a DeprecationWarning is printed
+        with mock.patch('warnings.warn') as warn:
+            dummy()
+        warning_msg, warning_type = warn.call_args[0]
+        self.assertIs(warning_type, DeprecationWarning)
+        self.assertIn(
+            'general_test.dummy has been deprecated. Use dummy_new instead.',
+            warning_msg)
+
+        # check that at the second call the warning is not printed
+        with mock.patch('warnings.warn') as warn:
+            dummy()
+        self.assertIsNone(warn.call_args)

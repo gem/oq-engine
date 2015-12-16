@@ -17,7 +17,7 @@
 Module :mod:`openquake.hazardlib.pmf` implements :class:`PMF`.
 """
 import numpy as np
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots
@@ -47,7 +47,7 @@ class PMF(object):
     NB: in the engine the sum is checked to be exactly one by using
     Decimal numbers.
     """
-    __slots__ = ['data']
+    _slots_ = ['data']
 
     def __init__(self, data, epsilon=1E-15):
         probs, values = list(zip(*data))

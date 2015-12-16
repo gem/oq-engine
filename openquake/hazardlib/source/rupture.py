@@ -24,7 +24,7 @@ import abc
 import numpy
 import math
 from openquake.hazardlib.geo.nodalplane import NodalPlane
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.geodetic import geodetic_distance
@@ -67,11 +67,12 @@ class Rupture(object):
     NB: if you want to convert the rupture into XML, you should set the
     attribute surface_nodes to an appropriate value.
     """
-    __slots__ = '''mag rake tectonic_region_type hypocenter surface
+    _slots_ = '''mag rake tectonic_region_type hypocenter surface
     surface_nodes source_typology rupture_slip_direction'''.split()
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
-                 surface, source_typology, rupture_slip_direction=None, surface_nodes=()):
+                 surface, source_typology, rupture_slip_direction=None,
+                 surface_nodes=()):
         if not mag > 0:
             raise ValueError('magnitude must be positive')
         if not hypocenter.depth > 0:
@@ -231,7 +232,7 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
     :raises ValueError:
         If occurrence rate is not positive.
     """
-    __slots__ = Rupture.__slots__ + [
+    _slots_ = Rupture._slots_ + [
         'occurrence_rate', 'temporal_occurrence_model']
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
@@ -314,7 +315,6 @@ class ParametricProbabilisticRupture(BaseProbabilisticRupture):
             self.hypocenter, self.surface.get_resampled_top_edge(),
             self.surface.mesh.depths[0][0], self.surface.mesh.depths[-1][0],
             self.surface.get_dip())
-
         idx_nxtp = True
         hypocenter = self.hypocenter
 

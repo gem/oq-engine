@@ -20,7 +20,7 @@ import numpy
 
 from openquake.baselib.python3compat import range
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots
@@ -57,7 +57,7 @@ class Site(object):
 
         :class:`Sites <Site>` are pickleable
     """
-    __slots__ = 'location vs30 vs30measured z1pt0 z2pt5 backarc id'.split()
+    _slots_ = 'location vs30 vs30measured z1pt0 z2pt5 backarc id'.split()
 
     def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5,
                  backarc=False, id=0):
@@ -302,7 +302,7 @@ class FilteredSiteCollection(object):
     get a different FilteredSiteCollection referring to the complete
     SiteCollection `fsc.complete`, not to the filtered collection `fsc`.
     """
-    __slots__ = 'indices complete'.split()
+    _slots_ = 'indices complete'.split()
 
     def __init__(self, indices, complete):
         if complete is not complete.complete:

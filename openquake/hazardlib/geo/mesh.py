@@ -51,12 +51,12 @@ class Mesh(object):
     DIST_TOLERANCE = 0.005
 
     def __init__(self, lons, lats, depths=None):
-        assert (isinstance(lons, numpy.ndarray)
-                and isinstance(lats, numpy.ndarray)
-                and (depths is None or isinstance(depths, numpy.ndarray))
+        assert (isinstance(lons, numpy.ndarray) and
+                isinstance(lats, numpy.ndarray) and
+                (depths is None or isinstance(depths, numpy.ndarray))
                 ), (type(lons), type(lats), type(depths))
-        assert ((lons.shape == lats.shape)
-                and (depths is None or depths.shape == lats.shape)
+        assert ((lons.shape == lats.shape) and
+                (depths is None or depths.shape == lats.shape)
                 ), (lons.shape, lats.shape)
         assert lons.size > 0
         self.lons = lons
@@ -129,8 +129,8 @@ class Mesh(object):
             from this mesh (doesn't copy the array, just references it).
         """
         assert (isinstance(item, slice) or
-                (isinstance(item, (list, tuple))
-                 and all(isinstance(subitem, slice) for subitem in item))
+                (isinstance(item, (list, tuple)) and
+                 all(isinstance(subitem, slice) for subitem in item))
                 ), '%s objects can only be indexed by slices' % \
             type(self).__name__
         lons = self.lons[item]
@@ -241,7 +241,6 @@ class Mesh(object):
         # replace geodetic distance values for points-closer-than-the-threshold
         # by more accurate point-to-polygon distance values.
         distances.put(idxs, distances_2d)
-
         return distances.reshape(mesh.shape)
 
     def get_closest_points(self, mesh):

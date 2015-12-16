@@ -270,7 +270,6 @@ class BaseQuadrilateralSurface(with_metaclass(abc.ABCMeta, BaseSurface)):
         idx = numpy.sign(dst1) == numpy.sign(dst2)
         dst = numpy.zeros_like(dst1)
         dst[idx] = numpy.fmin(numpy.abs(dst1[idx]), numpy.abs(dst2[idx]))
-        #dst = numpy.fmin(numpy.abs(dst1), numpy.abs(dst2))
 
         return dst
 

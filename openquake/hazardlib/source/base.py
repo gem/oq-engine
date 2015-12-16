@@ -18,7 +18,7 @@ Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
 import abc
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 from openquake.baselib.python3compat import with_metaclass
 
 
@@ -37,8 +37,10 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
 
-    __slots__ = ['source_id', 'name', 'tectonic_region_type',
+    _slots_ = ['source_id', 'name', 'tectonic_region_type',
                  'trt_model_id', 'weight', 'seed', 'id']
+
+    MODIFICATIONS = abc.abstractproperty()
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id
@@ -133,6 +135,28 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
         rup_enc_poly = self.get_rupture_enclosing_polygon(integration_distance)
         return sites.filter(rup_enc_poly.intersects(sites.mesh))
 
+    def modify(self, modification, parameters):
+        """
+        Apply a single modificaton to the source parameters
+        Reflects the modification method and calls it passing ``parameters``
+        as keyword arguments.
+
+        Modifications can be applied one on top of another. The logic
+        of stacking modifications is up to a specific source implementation.
+
+        :param modification:
+            String name representing the type of modification.
+        :param parameters:
+            Dictionary of parameters needed for modification.
+        :raises ValueError:
+            If ``modification`` is missing from the attribute `MODIFICATIONS`.
+        """
+        if modification not in self.MODIFICATIONS:
+            raise ValueError('Modification %s is not supported by %s' %
+                             (modification, type(self).__name__))
+        meth = getattr(self, 'modify_%s' % modification)
+        meth(**parameters)
+
 
 @with_slots
 class ParametricSeismicSource(with_metaclass(abc.ABCMeta, BaseSeismicSource)):
@@ -170,7 +194,7 @@ class ParametricSeismicSource(with_metaclass(abc.ABCMeta, BaseSeismicSource)):
         (if not None).
     """
 
-    __slots__ = BaseSeismicSource.__slots__ + '''mfd rupture_mesh_spacing
+    _slots_ = BaseSeismicSource._slots_ + '''mfd rupture_mesh_spacing
     magnitude_scaling_relationship rupture_aspect_ratio
     temporal_occurrence_model'''.split()
 

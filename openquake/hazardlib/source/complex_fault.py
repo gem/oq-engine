@@ -24,7 +24,7 @@ from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots
@@ -48,7 +48,9 @@ class ComplexFaultSource(ParametricSeismicSource):
         fails or if rake value is invalid.
     """
 
-    __slots__ = ParametricSeismicSource.__slots__ + '''edges rake'''.split()
+    _slots_ = ParametricSeismicSource._slots_ + '''edges rake'''.split()
+
+    MODIFICATIONS = set(('set_geometry',))
 
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
@@ -151,6 +153,14 @@ class ComplexFaultSource(ParametricSeismicSource):
                                              cell_area, cell_length)
             counts += len(rupture_slices)
         return counts
+
+    def modify_set_geometry(self, edges, spacing):
+        """
+        Modifies the complex fault geometry
+        """
+        ComplexFaultSurface.check_fault_data(edges, spacing)
+        self.edges = edges
+        self.rupture_mesh_spacing = spacing
 
 
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):

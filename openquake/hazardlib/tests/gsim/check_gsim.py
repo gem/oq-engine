@@ -29,10 +29,10 @@ import copy
 import numpy
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
+from openquake.hazardlib.gsim.base import GroundShakingIntensityModel, IPE
 from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
-from openquake.hazardlib.imt import PGA, PGV, PGD, SA, CAV
+from openquake.hazardlib.imt import PGA, PGV, PGD, SA, CAV, MMI
 
 
 def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
@@ -90,7 +90,11 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
                 break
 
             if result_type == 'MEAN':
-                result = numpy.exp(mean)
+                if isinstance(gsim, IPE):
+                    # For IPEs it is the values, not the logarithms returned
+                    result = mean
+                else:
+                    result = numpy.exp(mean)
             else:
                 [result] = stddevs
             assert isinstance(result, numpy.ndarray), result_type
@@ -143,9 +147,12 @@ def _format_stats(time_spent, discrepancies, errors, ctxs):
                                                 for discrep in discrepancies))
 
     yes_no = {False: 'yes', True: 'no'}
+    # NB: on a windows virtual machine the clock can be buggy and
+    # the time spent can be zero: Daniele has seen that
+    checks_per_sec = (total_checks / time_spent) if time_spent else '?'
     stats = '''\
 total of %d checks done, %d were successful and %d failed.
-%.1f seconds spent, avg rate is %.1f checks per seconds.
+%.1f seconds spent, avg rate is %s checks per seconds.
 success rate = %.1f%%
 average discrepancy = %.4f%%
 maximum discrepancy = %.4f%%
@@ -153,7 +160,7 @@ standard deviation = %.4f%%
 context objects changed = %s'''
     successes = total_checks - errors
     stats %= (total_checks, successes, errors,
-              time_spent, total_checks / float(time_spent),
+              time_spent, checks_per_sec,
               success_rate,
               avg_discrep,
               max_discrep,
@@ -179,8 +186,8 @@ def _parse_csv(datafile, debug):
     headers = [param_name.lower() for param_name in next(reader)]
     sctx, rctx, dctx, stddev_types, expected_results, result_type \
         = _parse_csv_line(headers, next(reader))
-    sattrs = [slot for slot in SitesContext.__slots__ if hasattr(sctx, slot)]
-    dattrs = [slot for slot in DistancesContext.__slots__
+    sattrs = [slot for slot in SitesContext._slots_ if hasattr(sctx, slot)]
+    dattrs = [slot for slot in DistancesContext._slots_
               if hasattr(dctx, slot)]
     for line in reader:
         (sctx2, rctx2, dctx2, stddev_types2, expected_results2, result_type2) \
@@ -189,7 +196,7 @@ def _parse_csv(datafile, debug):
                 and stddev_types2 == stddev_types \
                 and result_type2 == result_type \
                 and all(getattr(rctx2, slot, None) == getattr(rctx, slot, None)
-                        for slot in RuptureContext.__slots__):
+                        for slot in RuptureContext._slots_):
             for slot in sattrs:
                 setattr(sctx, slot, numpy.hstack((getattr(sctx, slot),
                                                   getattr(sctx2, slot))))
@@ -289,6 +296,8 @@ def _parse_csv_line(headers, values):
                 imt = PGD()
             elif param == 'cav':
                 imt = CAV()
+            elif param == 'mmi':
+                imt = MMI()
             else:
                 period = float(param)
                 assert damping is not None

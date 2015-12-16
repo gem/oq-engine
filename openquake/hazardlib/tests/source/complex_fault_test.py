@@ -22,6 +22,8 @@ from openquake.hazardlib.source.complex_fault import (ComplexFaultSource,
 from openquake.hazardlib.geo import Line, Point
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.scalerel.peer import PeerMSR
+from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
+from openquake.hazardlib.tom import PoissonTOM
 
 from openquake.hazardlib.tests.source import simple_fault_test
 from openquake.hazardlib.tests.source import \
@@ -334,3 +336,58 @@ class FloatRupturesTestCase(unittest.TestCase):
         self.assertEqual(bl, (slice(1, 4), slice(0, 2)))
         self.assertEqual(bm, (slice(1, 4), slice(1, 3)))
         self.assertEqual(br, (slice(1, 4), slice(2, 4)))
+
+
+class ModifyComplexFaultGeometryTestCase(unittest.TestCase):
+    """
+
+    """
+    def setUp(self):
+        top_edge_1 = Line([Point(30.0, 30.0, 1.0), Point(31.0, 30.0, 1.0)])
+        bottom_edge_1 = Line([Point(29.7, 29.9, 30.0),
+                              Point(31.3, 29.9, 32.0)])
+        self.edges = [top_edge_1, bottom_edge_1]
+        self.mfd = EvenlyDiscretizedMFD(7.0, 0.1, [1.0])
+        self.aspect = 1.0
+        self.spacing = 5.0
+        self.rake = 90.
+
+    def _make_source(self, edges):
+        source_id = name = 'test-source'
+        trt = "Subduction Interface"
+        tom = PoissonTOM(50.0)
+        magnitude_scaling_relationship = PeerMSR()
+        cfs = ComplexFaultSource(
+            source_id, name, trt, self.mfd, self.spacing,
+            magnitude_scaling_relationship, self.aspect, tom,
+            edges, self.rake
+        )
+        return cfs
+
+    def test_modify_geometry(self):
+        fault = self._make_source(self.edges)
+        # Modify the edges
+        top_edge_2 = Line([Point(29.9, 30.0, 2.0), Point(31.1, 30.0, 2.1)])
+        bottom_edge_2 = Line([Point(29.6, 29.9, 29.0),
+                              Point(31.4, 29.9, 33.0)])
+        fault.modify_set_geometry([top_edge_2, bottom_edge_2], self.spacing)
+        exp_lons_top = [29.9, 31.1]
+        exp_lats_top = [30.0, 30.0]
+        exp_depths_top = [2.0, 2.1]
+        exp_lons_bot = [29.6, 31.4]
+        exp_lats_bot = [29.9, 29.9]
+        exp_depths_bot = [29.0, 33.0]
+        for iloc in range(len(fault.edges[0])):
+            self.assertAlmostEqual(fault.edges[0].points[iloc].longitude,
+                                   exp_lons_top[iloc])
+            self.assertAlmostEqual(fault.edges[0].points[iloc].latitude,
+                                   exp_lats_top[iloc])
+            self.assertAlmostEqual(fault.edges[0].points[iloc].depth,
+                                   exp_depths_top[iloc])
+        for iloc in range(len(fault.edges[1])):
+            self.assertAlmostEqual(fault.edges[1].points[iloc].longitude,
+                                   exp_lons_bot[iloc])
+            self.assertAlmostEqual(fault.edges[1].points[iloc].latitude,
+                                   exp_lats_bot[iloc])
+            self.assertAlmostEqual(fault.edges[1].points[iloc].depth,
+                                   exp_depths_bot[iloc])

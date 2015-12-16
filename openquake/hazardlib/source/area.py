@@ -20,7 +20,7 @@ from copy import deepcopy
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.slots import with_slots
+from openquake.baselib.slots import with_slots
 
 
 @with_slots
@@ -39,7 +39,9 @@ class AreaSource(PointSource):
     Other parameters (except ``location``) are the same as for
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
-    __slots__ = PointSource.__slots__ + 'polygon area_discretization'.split()
+    _slots_ = PointSource._slots_ + 'polygon area_discretization'.split()
+
+    MODIFICATIONS = set(())
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,

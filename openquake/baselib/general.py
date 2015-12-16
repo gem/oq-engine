@@ -25,6 +25,8 @@ import os
 import sys
 import imp
 import math
+import operator
+import warnings
 import tempfile
 import importlib
 import itertools
@@ -32,6 +34,7 @@ import subprocess
 import collections
 
 import numpy
+from decorator import decorator
 
 
 class WeightedSequence(collections.MutableSequence):
@@ -213,6 +216,8 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
      [<WeightedSequence ['A', 'B'], weight=2>, <WeightedSequence ['C', 'D'], weight=2>, <WeightedSequence ['E'], weight=1>]
 
     """
+    if hint == 0:  # do not split
+        return sequence
     items = list(sequence)
     assert hint > 0, hint
     assert len(items) > 0, len(items)
@@ -297,9 +302,9 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
         return
     if a == b:  # another shortcut
         return
-    if hasattr(a, '__slots__'):  # record-like objects
-        assert_close_seq(a.__slots__, b.__slots__, rtol, atol, a)
-        for x, y in zip(a.__slots__, b.__slots__):
+    if hasattr(a, '_slots_'):  # record-like objects
+        assert_close_seq(a._slots_, b._slots_, rtol, atol, a)
+        for x, y in zip(a._slots_, b._slots_):
             assert_close(getattr(a, x), getattr(b, y), rtol, atol, x)
         return
     if isinstance(a, collections.Mapping):  # dict-like objects
@@ -332,7 +337,9 @@ def writetmp(content=None, dir=None, prefix="tmp", suffix="tmp"):
             os.makedirs(dir)
     fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
     if content:
-        fh = os.fdopen(fh, "w")
+        fh = os.fdopen(fh, "wb")
+        if hasattr(content, 'encode'):
+            content = content.encode('utf8')
         fh.write(content)
         fh.close()
     return path
@@ -401,7 +408,7 @@ def import_all(module_or_package):
             if f.endswith('.py'):
                 # convert PKGPATH/subpackage/module.py -> subpackage.module
                 # works at any level of nesting
-                modname = (module_or_package + cwd[n:].replace('/', '.') +
+                modname = (module_or_package + cwd[n:].replace(os.sep, '.') +
                            '.' + os.path.basename(f[:-3]))
                 try:
                     importlib.import_module(modname)
@@ -458,7 +465,7 @@ class CallableDict(collections.OrderedDict):
 
     >>> @format_attrs.add('csv')  # implementation for csv
     ... def format_attrs_csv(fmt, obj):
-    ...     items = sorted(vars(obj).iteritems())
+    ...     items = sorted(vars(obj).items())
     ...     return '\n'.join('%s,%s' % item for item in items)
 
     >>> @format_attrs.add('json')  # implementation for json
@@ -495,7 +502,7 @@ class CallableDict(collections.OrderedDict):
 
     def __missing__(self, key):
         if callable(self.keymissing):
-            return self.keymissing(key)
+            return self.keymissing
         raise KeyError(key)
 
 
@@ -503,34 +510,34 @@ class AccumDict(dict):
     """
     An accumulating dictionary, useful to accumulate variables.
 
-    >>> acc = AccumDict()
-    >>> acc += {'a': 1}
-    >>> acc += {'a': 1, 'b': 1}
-    >>> acc
+    >> acc = AccumDict()
+    >> acc += {'a': 1}
+    >> acc += {'a': 1, 'b': 1}
+    >> acc
     {'a': 2, 'b': 1}
-    >>> {'a': 1} + acc
+    >> {'a': 1} + acc
     {'a': 3, 'b': 1}
-    >>> acc + 1
+    >> acc + 1
     {'a': 3, 'b': 2}
-    >>> 1 - acc
+    >> 1 - acc
     {'a': -1, 'b': 0}
-    >>> acc - 1
+    >> acc - 1
     {'a': 1, 'b': 0}
 
     Also the multiplication has been defined:
 
-    >>> prob1 = AccumDict(a=0.4, b=0.5)
-    >>> prob2 = AccumDict(b=0.5)
-    >>> prob1 * prob2
+    >> prob1 = AccumDict(a=0.4, b=0.5)
+    >> prob2 = AccumDict(b=0.5)
+    >> prob1 * prob2
     {'a': 0.4, 'b': 0.25}
-    >>> prob1 * 1.2
+    >> prob1 * 1.2
     {'a': 0.48, 'b': 0.6}
-    >>> 1.2 * prob1
+    >> 1.2 * prob1
     {'a': 0.48, 'b': 0.6}
     """
 
     def __iadd__(self, other):
-        if hasattr(other, 'iteritems'):
+        if hasattr(other, 'items'):
             for k, v in other.items():
                 try:
                     self[k] = self[k] + v
@@ -549,7 +556,7 @@ class AccumDict(dict):
     __radd__ = __add__
 
     def __isub__(self, other):
-        if hasattr(other, 'iteritems'):
+        if hasattr(other, 'items'):
             for k, v in other.items():
                 try:
                     self[k] = self[k] - v
@@ -572,7 +579,7 @@ class AccumDict(dict):
         return self.__class__({k: -v for k, v in self.items()})
 
     def __imul__(self, other):
-        if hasattr(other, 'iteritems'):
+        if hasattr(other, 'items'):
             for k, v in other.items():
                 try:
                     self[k] = self[k] * v
@@ -595,8 +602,8 @@ class AccumDict(dict):
 
     def apply(self, func, *extras):
         """
-        >>> a = AccumDict({'a': 1,  'b': 2})
-        >>> a.apply(lambda x, y: 2 * x + y, 1)
+        >> a = AccumDict({'a': 1,  'b': 2})
+        >> a.apply(lambda x, y: 2 * x + y, 1)
         {'a': 3, 'b': 5}
         """
         return self.__class__({key: func(value, *extras)
@@ -619,6 +626,32 @@ def groupby(objects, key, reducegroup=list):
                                    for k, group in kgroups)
 
 
+def groupby2(records, kfield, vfield):
+    """
+    :param records: a sequence of records with positional or named fields
+    :param kfield: the index/name/tuple specifying the field to use as a key
+    :param vfield: the index/name/tuple specifying the field to use as a value
+    :returns: an OrderedDict of lists of the form {key: [value, ...]}.
+
+    >>> groupby2(['A1', 'A2', 'B1', 'B2', 'B3'], 0, 1)
+    OrderedDict([('A', ['1', '2']), ('B', ['1', '2', '3'])])
+
+    Here is an example where the keyfield is a tuple of integers:
+
+    >>> groupby2(['A11', 'A12', 'B11', 'B21'], (0, 1), 2)
+    OrderedDict([(('A', '1'), ['1', '2']), (('B', '1'), ['1']), (('B', '2'), ['1'])])
+    """
+    if isinstance(kfield, tuple):
+        kgetter = operator.itemgetter(*kfield)
+    else:
+        kgetter = operator.itemgetter(kfield)
+    if isinstance(vfield, tuple):
+        vgetter = operator.itemgetter(*vfield)
+    else:
+        vgetter = operator.itemgetter(vfield)
+    return groupby(records, kgetter, lambda rows: [vgetter(r) for r in rows])
+
+
 def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
     """
     Return file size in a human-friendly format
@@ -631,3 +664,38 @@ def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
         i += 1
     f = ('%.2f' % nbytes).rstrip('0').rstrip('.')
     return '%s %s' % (f, suffixes[i])
+
+
+# the builtin DeprecationWarning has been silenced in Python 2.7
+class DeprecationWarning(UserWarning):
+    """
+    Raised the first time a deprecated function is called
+    """
+
+
+def deprecated(message):
+    """
+    Return a decorator to make deprecated functions.
+
+    :param message:
+        the message to print the first time the
+        deprecated function is used.
+
+    Here is an example of usage:
+
+    >>> @deprecated('Use new_function instead')
+    ... def old_function():
+    ...     'Do something'
+
+    Notice that if the function is called several time, the deprecation
+    warning will be displayed only the first time.
+    """
+    def _deprecated(func, *args, **kw):
+        msg = '%s.%s has been deprecated. %s' % (
+            func.__module__, func.__name__, message)
+        if not hasattr(func, 'called'):
+            warnings.warn(msg, DeprecationWarning, stacklevel=2)
+            func.called = 0
+        func.called += 1
+        return func(*args, **kw)
+    return decorator(_deprecated)
