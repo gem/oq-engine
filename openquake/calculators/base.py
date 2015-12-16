@@ -193,9 +193,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         if 'rlzs_assoc' in self.datastore:
             rlzs = self.rlzs_assoc.realizations
-            if len(rlzs) > 1:
-                self.realizations = numpy.array(
-                    [(r.uid, r.weight) for r in rlzs], rlz_dt)
+            self.realizations = numpy.array(
+                [(r.uid, r.weight) for r in rlzs], rlz_dt)
         # NB: the datastore must not be closed, it will be closed automatically
 
 
