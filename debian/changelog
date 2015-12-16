@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Now the loss maps and curves are exported with a fixed ordering: first
+    by lon-lat, then by asset ID
   * Replaced the old disaggregation calculator with the oq-lite one
 
 python-oq-engine (1.7.0-0~precise01) precise; urgency=low
