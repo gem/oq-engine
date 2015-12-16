@@ -226,8 +226,10 @@ def export_loss_map(key, output, target):
     writercls = (risk_writers.LossMapXMLWriter if key[1] == 'xml'
                  else risk_writers.LossMapGeoJSONWriter)
     writercls(dest, **args).serialize(
-        models.order_by_location(
-            output.loss_map.lossmapdata_set.all().order_by('asset_ref')))
+        output.loss_map.lossmapdata_set.extra(
+            select={'x': 'ST_X(geometry(location))',
+                    'y': 'ST_Y(geometry(location))'},
+            order_by=["x", "y", 'asset_ref']))
     return dest
 
 
