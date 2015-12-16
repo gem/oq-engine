@@ -192,10 +192,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         then close the datastore.
         """
         if 'rlzs_assoc' in self.datastore:
+            rlzs = self.rlzs_assoc.realizations
             self.realizations = numpy.array(
-                [(r.uid, r.weight) for r in self.rlzs_assoc.realizations],
-                rlz_dt)
-        # the datastore must not be closed, it will be closed automatically
+                [(r.uid, r.weight) for r in rlzs], rlz_dt)
+        # NB: the datastore must not be closed, it will be closed automatically
 
 
 class HazardCalculator(BaseCalculator):
