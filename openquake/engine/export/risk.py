@@ -175,7 +175,10 @@ def export_loss_curve_xml(key, output, target):
     dest = _get_result_export_dest(target, output)
     args['insured'] = output.loss_curve.insured
 
-    data = output.loss_curve.losscurvedata_set.all().order_by('asset_ref')
+    data = output.loss_curve.losscurvedata_set.extra(
+        select={'x': 'ST_X(geometry(location))',
+                'y': 'ST_Y(geometry(location))'},
+        order_by=["x", "y", 'asset_ref'])
     risk_writers.LossCurveXMLWriter(dest, **args).serialize(data)
     return dest
 
