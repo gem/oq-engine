@@ -196,6 +196,9 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.csv'''.split()
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
 
+        [fname] = out['realizations', 'csv']
+        self.assertEqualFiles('expected/realizations.csv', fname)
+
     @attr('qa', 'hazard', 'event_based')
     def test_case_7(self):
         # 2 models x 3 GMPEs, 100 samples * 10 SES

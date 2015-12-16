@@ -878,3 +878,14 @@ def export_bcr_map_rlzs(ekey, dstore):
     return sorted(fnames)
 
 # TODO: add export_bcr_map_stats
+
+
+@export.add(('realizations', 'csv'))
+def export_realizations(ekey, dstore):
+    rlzs = dstore[ekey[0]]
+    data = [['ordinal', 'uid', 'weight']]
+    for i, rlz in enumerate(rlzs):
+        data.append([i, rlz['uid'], rlz['weight']])
+    path = dstore.export_path('realizations.csv')
+    writers.write_csv(path, data, fmt='%s', sep='\t')
+    return [path]
