@@ -321,32 +321,6 @@ def export_dmg_dist(key, output, target):
     return dest
 
 
-@core.export_output.add(('dmg_per_asset', 'csv'))
-def export_dmg_per_asset_csv(key, output, target):
-    """
-    Classical Damage Per Asset in CSV format
-    """
-    dest = _get_result_export_dest(target, output)
-
-    damage_states = list(models.DmgState.objects.filter(
-        risk_calculation=output.oq_job).order_by('lsi'))
-    data = block_splitter(
-        models.DamageData.objects.filter(
-            dmg_state__risk_calculation=output.oq_job).order_by(
-            'exposure_data', 'dmg_state'),
-        len(damage_states))
-
-    with FileWrapper(dest, mode='wb') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(['asset_ref'] + [ds.dmg_state for ds in damage_states])
-        for row in data:
-            asset = row[0].exposure_data
-            fractions = [rec.fraction for rec in row]
-            writer.writerow(
-                [asset.asset_ref] + map(writers.scientificformat, fractions))
-    return dest
-
-
 @core.export_output.add(('aggregate_loss', 'csv'))
 def export_aggregate_loss_csv(key, output, target):
     """

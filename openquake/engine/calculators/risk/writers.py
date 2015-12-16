@@ -653,22 +653,3 @@ class ConditionalLossFractionBuilder(OutputBuilder):
                 poe=poe))
 
         return loss_fractions
-
-
-class DamageCurveBuilder(OutputBuilder):
-    """
-    Create output outputdict for damage distribution
-    """
-    def individual_outputs(self, _damage, hazard_output):
-        output = models.Output.objects.create_output(
-            self.calc.job,
-            "Damage distribution for hazard=%s" % hazard_output.id,
-            'dmg_per_asset')
-        outs = [models.Damage.objects.create(
-            risk_calculation=self.calc.job,
-            hazard_output=hazard_output, output=output)]
-        return outs
-
-    def statistical_outputs(self, _damage):
-        # TODO
-        return []
