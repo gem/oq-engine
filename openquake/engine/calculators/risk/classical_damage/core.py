@@ -17,66 +17,27 @@
 Core functionality for the classical damage risk calculator.
 """
 
-from openquake.engine.calculators.risk import (
-    base, hazard_getters, writers)
+from openquake.calculators import classical_damage
+from openquake.engine import engine
 from openquake.engine.calculators import calculators
-from openquake.engine.db import models
-
-
-def classical_damage(workflow, getter, outputdict, params, monitor):
-    """
-    Celery task for the classical risk calculator.
-
-    :param workflow:
-      A :class:`openquake.risklib.riskinput.RiskModel` instance
-    :param getter:
-      A HazardGetter instance
-    :param outputdict:
-      An instance of :class:`..writers.OutputDict` containing
-      output container instances (e.g. a LossCurve)
-    :param params:
-      An instance of :class:`..base.CalcParams` used to compute
-      derived outputs
-    :param monitor:
-      A monitor instance
-    """
-    for loss_type in workflow.loss_types:
-        with monitor('computing risk', autoflush=True):
-            outputs = workflow.compute_all_outputs(getter, loss_type)
-        with monitor('saving risk', autoflush=True):
-            for out in outputs:
-                damage = models.Damage.objects.get(
-                    risk_calculation=params.job_id, hazard_output=out.hid)
-                writers.classical_damage(
-                    out.assets, out.damages,
-                    params.damage_state_ids, damage.id)
-        # TODO: statistical outputs
+from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @calculators.add('classical_damage')
-class ClassicalDamageCalculator(base.RiskCalculator):
+class ClassicalDamageCalculator(classical_damage.ClassicalDamageCalculator):
     """
     Classical PSHA risk calculator. Computes loss curves and loss maps
     for a given set of assets.
     """
+    def __init__(self, job):
+        self.job = job
+        oq = job.get_oqparam()
+        monitor = EnginePerformanceMonitor('classical_damage', job.id)
+        calc_id = engine.get_calc_id(job.id)
+        super(ClassicalDamageCalculator, self).__init__(oq, monitor, calc_id)
+        job.ds_calc_dir = self.datastore.calc_dir
+        job.save()
 
-    core = staticmethod(classical_damage)
-
-    validators = []
-    # TODO: add proper validation
-
-    output_builders = [writers.DamageCurveBuilder]
-
-    getter_class = hazard_getters.HazardCurveGetter
-
-    def pre_execute(self):
-        """
-        Create the DmgState objects associated to the current calculation
-        """
-        super(ClassicalDamageCalculator, self).pre_execute()
-        self.oqparam.job_id = self.job.id
-        self.oqparam.damage_state_ids = []
-        for lsi, dstate in enumerate(self.risk_model.damage_states):
-            ds = models.DmgState.objects.create(
-                risk_calculation=self.job, dmg_state=dstate, lsi=lsi)
-            self.oqparam.damage_state_ids.append(ds.id)
+    def clean_up(self):
+        engine.expose_outputs(self.datastore, self.job)
+        super(ClassicalDamageCalculator, self).clean_up()
