@@ -40,7 +40,7 @@ def zipfiles(fnames, archive):
     :param fnames: list of path names
     :param archive: path of the archive
     """
-    z = zipfile.ZipFile(archive, 'w')
+    z = zipfile.ZipFile(archive, 'w', allowZip64=True)
     for f in fnames:
         z.write(f, os.path.basename(f))
     z.close()
