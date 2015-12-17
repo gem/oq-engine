@@ -36,12 +36,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========================= ====== ================================================================ =============== ================ ===========
-smlt_path                 weight source_model_file                                                gsim_logic_tree num_realizations num_sources
-========================= ====== ================================================================ =============== ================ ===========
-aFault_aPriori_D2.1       0.50   `aFault_aPriori_D2.1.xml <aFault_aPriori_D2.1.xml>`_             simple(2)       2/2              168        
-bFault_stitched_D2.1_Char 0.50   `bFault_stitched_D2.1_Char.xml <bFault_stitched_D2.1_Char.xml>`_ simple(2)       2/2              186        
-========================= ====== ================================================================ =============== ================ ===========
+========================= ====== ================================================================ =============== ================
+smlt_path                 weight source_model_file                                                gsim_logic_tree num_realizations
+========================= ====== ================================================================ =============== ================
+aFault_aPriori_D2.1       0.50   `aFault_aPriori_D2.1.xml <aFault_aPriori_D2.1.xml>`_             simple(2)       2/2             
+bFault_stitched_D2.1_Char 0.50   `bFault_stitched_D2.1_Char.xml <bFault_stitched_D2.1_Char.xml>`_ simple(2)       2/2             
+========================= ====== ================================================================ =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------

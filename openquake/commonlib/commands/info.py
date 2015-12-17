@@ -73,10 +73,9 @@ def _info(name, filtersources, weightsources):
             sitecol, assets_by_site = readinput.get_sitecol_assets(
                 oqparam, expo)
         elif filtersources or weightsources:
-            sitecol, assets_by_site = readinput.get_site_collection(
-                oqparam), []
+            sitecol = readinput.get_site_collection(oqparam)
         else:
-            sitecol, assets_by_site = None, []
+            sitecol = None
         if 'source_model_logic_tree' in oqparam.inputs:
             print('Reading the source model...')
             if weightsources:
@@ -91,12 +90,6 @@ def _info(name, filtersources, weightsources):
                 vars(oqparam), rlzs_assoc=assoc, composite_source_model=csm,
                 sitecol=sitecol)
             _print_info(dstore, filtersources, weightsources)
-        if len(assets_by_site):
-            assetcol = riskinput.build_asset_collection(assets_by_site)
-            dic = groupby(assetcol, operator.attrgetter('taxonomy'))
-            for taxo, num in dic.items():
-                print('taxonomy #%d, %d assets' % (taxo, num))
-            print('total assets = %d' % len(assetcol))
     else:
         print("No info for '%s'" % name)
 
@@ -109,8 +102,7 @@ def info(name, filtersources=False, weightsources=False, report=False):
     logging.basicConfig(level=logging.INFO)
     with PerformanceMonitor('info', measuremem=True) as mon:
         if report:
-            tmp = tempfile.gettempdir()
-            print('Generated', reportwriter.build_report(name, tmp))
+            print('Generated', reportwriter.build_report(name))
         else:
             _info(name, filtersources, weightsources)
     if mon.duration > 1:

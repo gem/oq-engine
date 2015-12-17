@@ -97,7 +97,8 @@ def build_report(job_ini, output_dir=None):
     ds = datastore.DataStore(calc.datastore.calc_id)
     rw = ReportWriter(ds)
     rw.make_report()
-    report = os.path.join(output_dir, 'report.rst')
+    report = (os.path.join(output_dir, 'report.rst') if output_dir
+              else ds.export_path('report.rst'))
     rw.save(report)
     return report
 
@@ -108,7 +109,7 @@ def main(directory):
             if f in ('job.ini', 'job_h.ini', 'job_haz.ini', 'job_hazard.ini'):
                 job_ini = os.path.join(cwd, f)
                 print(job_ini)
-                build_report(job_ini)
+                build_report(job_ini, cwd)
 
 if __name__ == '__main__':
     import sys

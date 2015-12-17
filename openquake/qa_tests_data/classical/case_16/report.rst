@@ -34,20 +34,20 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-============================================= ====== ====================================== =============== ================ ===========
-smlt_path                                     weight source_model_file                      gsim_logic_tree num_realizations num_sources
-============================================= ====== ====================================== =============== ================ ===========
-b11_b20_b31_b43_b52_b62_b72_b82_b91_b103_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1              135        
-b11_b21_b32_b43_b52_b62_b72_b82_b92_b102_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1              135        
-b11_b21_b32_b43_b52_b62_b73_b82_b92_b103_b113 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1              135        
-b11_b22_b31_b43_b52_b64_b73_b84_b92_b104_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1              135        
-b11_b22_b32_b42_b51_b61_b72_b83_b91_b101_b111 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1              135        
-b11_b22_b32_b42_b53_b62_b72_b81_b92_b103_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1              135        
-b11_b22_b33_b42_b52_b62_b72_b82_b92_b100_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1              135        
-b11_b23_b32_b43_b52_b62_b73_b82_b93_b101_b113 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1              135        
-b11_b24_b32_b41_b51_b62_b71_b84_b93_b101_b111 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1              135        
-b11_b24_b33_b40_b52_b62_b72_b81_b91_b102_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1              135        
-============================================= ====== ====================================== =============== ================ ===========
+============================================= ====== ====================================== =============== ================
+smlt_path                                     weight source_model_file                      gsim_logic_tree num_realizations
+============================================= ====== ====================================== =============== ================
+b11_b20_b31_b43_b52_b62_b72_b82_b91_b103_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b21_b32_b43_b52_b62_b72_b82_b92_b102_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b21_b32_b43_b52_b62_b73_b82_b92_b103_b113 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b22_b31_b43_b52_b64_b73_b84_b92_b104_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b22_b32_b42_b51_b61_b72_b83_b91_b101_b111 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b22_b32_b42_b53_b62_b72_b81_b92_b103_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b22_b33_b42_b52_b62_b72_b82_b92_b100_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b23_b32_b43_b52_b62_b73_b82_b93_b101_b113 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b24_b32_b41_b51_b62_b71_b84_b93_b101_b111 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b24_b33_b40_b52_b62_b72_b81_b91_b102_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+============================================= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------

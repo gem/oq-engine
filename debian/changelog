@@ -1,7 +1,7 @@
   [Michele Simionato]
   * Improved the header of the exported CSV files, to make it QGIS-friendly
-  * Keep exporting files, even if they are empty
   * Fixed a bug in the avg_losses for the event based risk calculator
+  * Keep exporting files, even if they are empty
   * Exported information about the realizations into a csv file
   * Ported the disaggregation calculator to oq-lite
   * Added IMT information in the hazard curve XML exporter
