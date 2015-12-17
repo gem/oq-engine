@@ -37,12 +37,12 @@ structural_vulnerability `vulnerability_model2013.xml <vulnerability_model2013.x
 
 Composite source model
 ----------------------
-========= ====== ============================================ =============== ================ ===========
-smlt_path weight source_model_file                            gsim_logic_tree num_realizations num_sources
-========= ====== ============================================ =============== ================ ===========
-b1        0.60   `SA_RA_CATAL1_00.xml <SA_RA_CATAL1_00.xml>`_ simple(2,0)     2/2              10191      
-b2        0.40   `SA_RA_CATAL2_00.xml <SA_RA_CATAL2_00.xml>`_ complex(2,2)    4/4              10191      
-========= ====== ============================================ =============== ================ ===========
+========= ====== ============================================ =============== ================
+smlt_path weight source_model_file                            gsim_logic_tree num_realizations
+========= ====== ============================================ =============== ================
+b1        0.60   `SA_RA_CATAL1_00.xml <SA_RA_CATAL1_00.xml>`_ simple(2,0)     2/2             
+b2        0.40   `SA_RA_CATAL2_00.xml <SA_RA_CATAL2_00.xml>`_ complex(2,2)    4/4             
+========= ====== ============================================ =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------

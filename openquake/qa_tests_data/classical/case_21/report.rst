@@ -34,37 +34,37 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====================== ======== ====================================== =============== ================ ===========
-smlt_path              weight   source_model_file                      gsim_logic_tree num_realizations num_sources
-====================== ======== ====================================== =============== ================ ===========
-b1_mfd1_high_dip_dip30 0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              444        
-b1_mfd1_high_dip_dip45 0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              208        
-b1_mfd1_high_dip_dip60 0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              149        
-b1_mfd1_low_dip_dip30  0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              534        
-b1_mfd1_low_dip_dip45  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              298        
-b1_mfd1_low_dip_dip60  0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              239        
-b1_mfd1_mid_dip_dip30  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              474        
-b1_mfd1_mid_dip_dip45  0.118800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              238        
-b1_mfd1_mid_dip_dip60  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              179        
-b1_mfd2_high_dip_dip30 0.013600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              409        
-b1_mfd2_high_dip_dip45 0.040800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              173        
-b1_mfd2_high_dip_dip60 0.013600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              114        
-b1_mfd2_low_dip_dip30  0.013600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              465        
-b1_mfd2_low_dip_dip45  0.040800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              229        
-b1_mfd2_low_dip_dip60  0.013600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              170        
-b1_mfd2_mid_dip_dip30  0.040800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              411        
-b1_mfd2_mid_dip_dip45  0.122400 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              175        
-b1_mfd2_mid_dip_dip60  0.040800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              116        
-b1_mfd3_high_dip_dip30 0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              385        
-b1_mfd3_high_dip_dip45 0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              149        
-b1_mfd3_high_dip_dip60 0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              90         
-b1_mfd3_low_dip_dip30  0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              385        
-b1_mfd3_low_dip_dip45  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              149        
-b1_mfd3_low_dip_dip60  0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              90         
-b1_mfd3_mid_dip_dip30  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              385        
-b1_mfd3_mid_dip_dip45  0.118800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              149        
-b1_mfd3_mid_dip_dip60  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              90         
-====================== ======== ====================================== =============== ================ ===========
+====================== ======== ====================================== =============== ================
+smlt_path              weight   source_model_file                      gsim_logic_tree num_realizations
+====================== ======== ====================================== =============== ================
+b1_mfd1_high_dip_dip30 0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_high_dip_dip45 0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_high_dip_dip60 0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_low_dip_dip30  0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_low_dip_dip45  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_low_dip_dip60  0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_mid_dip_dip30  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_mid_dip_dip45  0.118800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_mid_dip_dip60  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_high_dip_dip30 0.013600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_high_dip_dip45 0.040800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_high_dip_dip60 0.013600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_low_dip_dip30  0.013600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_low_dip_dip45  0.040800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_low_dip_dip60  0.013600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_mid_dip_dip30  0.040800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_mid_dip_dip45  0.122400 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_mid_dip_dip60  0.040800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_high_dip_dip30 0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_high_dip_dip45 0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_high_dip_dip60 0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_low_dip_dip30  0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_low_dip_dip45  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_low_dip_dip60  0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_mid_dip_dip30  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_mid_dip_dip45  0.118800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_mid_dip_dip60  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+====================== ======== ====================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
