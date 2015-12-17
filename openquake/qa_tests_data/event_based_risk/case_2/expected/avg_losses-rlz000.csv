@@ -1,4 +1,4 @@
-asset_ref:|S20:,lon:float32:,lat:float32:,structural:float32:,structural_ins:float32:
+asset_ref:|S20,lon,lat,structural,structural_ins
 a0,8.129850E+01,2.910980E+01,2.546726E+02,9.594796E+01
 a1,8.308230E+01,2.790060E+01,2.471865E+02,6.348668E+01
 a2,8.574770E+01,2.790150E+01,9.838715E+01,6.268233E+01

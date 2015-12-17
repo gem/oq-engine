@@ -1,2 +1,2 @@
-contents-mean:float64:,contents-stddev:float64:,nonstructural-mean:float64:,nonstructural-stddev:float64:,structural-mean:float64:,structural-stddev:float64:
-9.03692665E+03,3.32581442E+03,1.61720816E+04,7.02529085E+03,3.67612330E+03,2.93153197E+03
+contents-mean:float64,contents-stddev:float64,nonstructural-mean:float64,nonstructural-stddev:float64,structural-mean:float64,structural-stddev:float64
+9.036927E+03,3.325814E+03,1.617208E+04,7.025291E+03,3.676123E+03,2.931532E+03
