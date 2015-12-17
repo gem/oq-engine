@@ -31,7 +31,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                     all_csv.append(fname)
         assert all_csv, 'Could not find any CSV file??'
         for fname in all_csv:
-            print fname, 'expected/%s' % strip_calc_id(fname)
             self.assertEqualFiles(
                 'expected/%s' % strip_calc_id(fname), fname)
 
@@ -62,15 +61,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assert_stats_ok(case_2, individual_curves='true')
         text = view('mean_avg_losses', self.calc.datastore)
         self.assertEqual(text, '''\
-========= =========================
-asset_ref structural               
-========= =========================
-a0        2.546726E+02 9.594796E+01
-a1        2.471865E+02 6.348668E+01
-a2        9.838715E+01 6.268233E+01
-a3        9.505429E+01 0.000000E+00
-total     6.953005E+02 2.221170E+02
-========= =========================''')
+========= ============ ============ ============ ==============
+asset_ref lon          lat          structural   structural_ins
+========= ============ ============ ============ ==============
+a0        8.129850E+01 2.910980E+01 2.546726E+02 9.594796E+01  
+a1        8.308230E+01 2.790060E+01 2.471865E+02 6.348668E+01  
+a2        8.574770E+01 2.790150E+01 9.838715E+01 6.268233E+01  
+a3        8.574770E+01 2.790150E+01 9.505429E+01 0.000000E+00  
+========= ============ ============ ============ ==============''')
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2bis(self):

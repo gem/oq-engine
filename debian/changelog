@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug in the avg_losses for the event based risk calculator
   * Fixed a bug in the command `oq-lite info -f` in cases with an exposure
   * Keep exporting files, even if they are empty
   * Exported information about the realizations into a csv file
