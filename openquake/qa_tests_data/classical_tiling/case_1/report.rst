@@ -34,11 +34,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================ ===========
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations num_sources
-========= ====== ====================================== =============== ================ ===========
-b1        1.00   `source_model.xml <source_model.xml>`_ simple(2)       2/2              1          
-========= ====== ====================================== =============== ================ ===========
+========= ====== ====================================== =============== ================
+smlt_path weight source_model_file                      gsim_logic_tree num_realizations
+========= ====== ====================================== =============== ================
+b1        1.00   `source_model.xml <source_model.xml>`_ simple(2)       2/2             
+========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------

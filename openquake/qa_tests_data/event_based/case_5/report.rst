@@ -37,13 +37,13 @@ source_model_logic_tree `combined_logic-tree-source-model.xml <combined_logic-tr
 
 Composite source model
 ----------------------
-========= ====== ================================================================================================ ================ ================ ===========
-smlt_path weight source_model_file                                                                                gsim_logic_tree  num_realizations num_sources
-========= ====== ================================================================================================ ================ ================ ===========
-b1        0.50   `source_models/as_model.xml <source_models/as_model.xml>`_                                       trivial(0,0,0,0) 0/0              12         
-b2        0.200  `source_models/fs_bg_source_model.xml <source_models/fs_bg_source_model.xml>`_                   simple(0,0,5,0)  5/5              25331      
-b3        0.300  `source_models/ss_model_final_250km_Buffer.xml <source_models/ss_model_final_250km_Buffer.xml>`_ trivial(0,0,0,0) 0/0              36         
-========= ====== ================================================================================================ ================ ================ ===========
+========= ====== ================================================================================================ ================ ================
+smlt_path weight source_model_file                                                                                gsim_logic_tree  num_realizations
+========= ====== ================================================================================================ ================ ================
+b1        0.50   `source_models/as_model.xml <source_models/as_model.xml>`_                                       trivial(0,0,0,0) 0/0             
+b2        0.200  `source_models/fs_bg_source_model.xml <source_models/fs_bg_source_model.xml>`_                   simple(0,0,5,0)  5/5             
+b3        0.300  `source_models/ss_model_final_250km_Buffer.xml <source_models/ss_model_final_250km_Buffer.xml>`_ trivial(0,0,0,0) 0/0             
+========= ====== ================================================================================================ ================ ================
 
 Required parameters per tectonic region type
 --------------------------------------------
