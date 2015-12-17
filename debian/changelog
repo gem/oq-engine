@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Fixed a bug in the avg_losses for the event based risk calculator
+  * Exported information about the realizations into a csv file
   * Ported the disaggregation calculator to oq-lite
   * Added IMT information in the hazard curve XML exporter
   * Fixed a small bug in classical_damage for steps_per_interval = 1
