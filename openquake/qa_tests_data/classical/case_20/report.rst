@@ -34,22 +34,22 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========================= ======= ====================================== =============== ================ ===========
-smlt_path                 weight  source_model_file                      gsim_logic_tree num_realizations num_sources
-========================= ======= ====================================== =============== ================ ===========
-sm1_sg1_cog1_char_complex 0.07000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              86         
-sm1_sg1_cog1_char_plane   0.10500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              86         
-sm1_sg1_cog1_char_simple  0.17500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              86         
-sm1_sg1_cog2_char_complex 0.07000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              119        
-sm1_sg1_cog2_char_plane   0.10500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              119        
-sm1_sg1_cog2_char_simple  0.17500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              119        
-sm1_sg2_cog1_char_complex 0.03000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              88         
-sm1_sg2_cog1_char_plane   0.04500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              88         
-sm1_sg2_cog1_char_simple  0.07500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              88         
-sm1_sg2_cog2_char_complex 0.03000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              121        
-sm1_sg2_cog2_char_plane   0.04500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              121        
-sm1_sg2_cog2_char_simple  0.07500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1              121        
-========================= ======= ====================================== =============== ================ ===========
+========================= ======= ====================================== =============== ================
+smlt_path                 weight  source_model_file                      gsim_logic_tree num_realizations
+========================= ======= ====================================== =============== ================
+sm1_sg1_cog1_char_complex 0.07000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+sm1_sg1_cog1_char_plane   0.10500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+sm1_sg1_cog1_char_simple  0.17500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+sm1_sg1_cog2_char_complex 0.07000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+sm1_sg1_cog2_char_plane   0.10500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+sm1_sg1_cog2_char_simple  0.17500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+sm1_sg2_cog1_char_complex 0.03000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+sm1_sg2_cog1_char_plane   0.04500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+sm1_sg2_cog1_char_simple  0.07500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+sm1_sg2_cog2_char_complex 0.03000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+sm1_sg2_cog2_char_plane   0.04500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+sm1_sg2_cog2_char_simple  0.07500 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+========================= ======= ====================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
