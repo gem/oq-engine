@@ -1,4 +1,4 @@
-asset_ref:|S20:,lon:float32:,lat:float32:,no_damage:float32:,slight:float32:,moderate:float32:,extreme:float32:,complete:float32:
+asset_ref:|S20,lon,lat,no_damage,slight,moderate,extreme,complete
 a3,-1.225700E+02,3.811300E+01,8.779254E-01,4.110761E-02,4.270840E-02,2.201042E-02,1.624816E-02
 a2,-1.221140E+02,3.811300E+01,1.613069E-01,9.645037E-02,1.881332E-01,1.841560E-01,3.699535E-01
 a5,-1.220000E+02,3.791000E+01,3.011978E-01,1.255079E-01,1.988052E-01,1.555161E-01,2.189730E-01

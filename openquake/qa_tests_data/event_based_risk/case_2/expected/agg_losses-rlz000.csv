@@ -1,4 +1,4 @@
-tag:|S100:,structural:float32:,structural_ins:float32:
+tag:|S100,structural,structural_ins
 col=00~ses=0003~src=1~rup=001-01,3.461644E+02,0.000000E+00
 col=00~ses=0003~src=1~rup=001-02,1.018580E+03,2.685802E+02
 col=00~ses=0003~src=2~rup=001-01,9.634527E+01,0.000000E+00

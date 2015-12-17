@@ -26,11 +26,13 @@ import numpy
 from openquake.baselib.general import groupby, split_in_blocks, humansize
 from openquake.baselib.performance import PerformanceMonitor, perf_dt
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import parallel
+from openquake.commonlib import parallel, util
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
+
+# ########################## utility functions ############################## #
 
 
 def rst_table(data, header=None, fmt='%9.7E'):
@@ -320,23 +322,16 @@ def sum_table(records):
 # this is used by the ebr calculator
 @view.add('mean_avg_losses')
 def view_mean_avg_losses(token, dstore):
-    assets = dstore['assetcol'].value['asset_ref']
     try:
-        array = dstore['avg_losses-stats']  # shape (S, N, 2)
-        data = array[0, :, :]  # shape (N, 2)
+        array = dstore['avg_losses-stats']  # shape (S, N)
+        data = array[0, :]
     except KeyError:
-        array = dstore['avg_losses-rlzs']  # shape (N, R, 2)
-        data = array[:, 0, :]  # shape (N, 2)
-    loss_types = dstore['riskmodel'].loss_types
-    header = ['asset_ref'] + loss_types
-    losses = [[a] + [numpy.zeros(2)] * len(loss_types) for a in assets]
-    for lti, lt in enumerate(loss_types):
-        for aid, pair in enumerate(data[lt]):
-            losses[aid][lti + 1] = pair  # loss, ins_loss
+        array = dstore['avg_losses-rlzs']  # shape (N, R)
+        data = array[:, 0]
+    assets = util.get_assets(dstore)
+    losses = util.compose_arrays(assets, data)
     losses.sort()
-    if len(losses) > 1:
-        losses.append(sum_table(losses))
-    return rst_table(losses, header=header, fmt='%8.6E')
+    return rst_table(losses, fmt='%8.6E')
 
 
 @view.add('exposure_info')

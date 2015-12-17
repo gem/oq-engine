@@ -20,13 +20,27 @@ import numpy
 from openquake.commonlib import InvalidFile
 
 
+def castable_to_int(s):
+    """
+    Return True if the string `s` can be interpreted as an integer
+    """
+    try:
+        int(s)
+    except ValueError:
+        return False
+    else:
+        return True
+
+
 def parse_header(header):
     """
     Convert a list of the form `['fieldname:fieldtype:fieldsize',...]`
-    into a numpy composite dtype. Here is an example:
+    into a numpy composite dtype. The parser understands headers generated
+    by :function:`openquake.commonlib.writers.build_header`.
+    Here is an example:
 
-    >>> parse_header(['PGA:float64:3', 'PGV:float64:2', 'avg:float:1'])
-    (['PGA', 'PGV', 'avg'], dtype([('PGA', '<f8', (3,)), ('PGV', '<f8', (2,)), ('avg', '<f8', (1,))]))
+    >>> parse_header(['PGA', 'PGV:float64', 'avg:2'])
+    (['PGA', 'PGV', 'avg'], dtype([('PGA', '<f4'), ('PGV', '<f8'), ('avg', '<f4', (2,))]))
 
     :params header: a list of type descriptions
     :returns: column names and the corresponding composite dtype
@@ -35,6 +49,16 @@ def parse_header(header):
     fields = []
     for col_str in header:
         col = col_str.split(':')
+        n = len(col)
+        if n == 1:  # default dtype and no shape
+            col = [col[0], 'float32', '']
+        elif n == 2:
+            if castable_to_int(col[1]):  # default dtype and shape
+                col = [col[0], 'float32', col[1]]
+            else:  # dtype and no shape
+                col = [col[0], col[1], '']
+        elif n > 3:
+            raise ValueError('Invalid column description: %s' % col_str)
         field = col[0]
         numpytype = col[1]
         shape = () if not col[2].strip() else (int(col[2]),)

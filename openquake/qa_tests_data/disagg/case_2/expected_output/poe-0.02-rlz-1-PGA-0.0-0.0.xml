@@ -849,13 +849,13 @@ xmlns:gml="http://www.opengis.net/gml"
             <prob index="13,4,2" value="4.0145411E-06"/>
             <prob index="13,4,3" value="5.4477431E-05"/>
             <prob index="13,4,4" value="3.4478486E-05"/>
-            <prob index="13,4,5" value="5.4292168E-06"/>
+            <prob index="13,4,5" value="5.4292169E-06"/>
             <prob index="13,5,0" value="0.0000000E+00"/>
             <prob index="13,5,1" value="0.0000000E+00"/>
             <prob index="13,5,2" value="2.6865472E-06"/>
             <prob index="13,5,3" value="2.3411343E-05"/>
             <prob index="13,5,4" value="3.4478486E-05"/>
-            <prob index="13,5,5" value="5.4292169E-06"/>
+            <prob index="13,5,5" value="5.4292168E-06"/>
             <prob index="13,6,0" value="0.0000000E+00"/>
             <prob index="13,6,1" value="0.0000000E+00"/>
             <prob index="13,6,2" value="5.0948090E-07"/>
