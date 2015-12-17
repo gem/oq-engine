@@ -22,7 +22,6 @@ import time
 import getpass
 import itertools
 import operator
-import tempfile
 import traceback
 from contextlib import contextmanager
 from datetime import datetime
