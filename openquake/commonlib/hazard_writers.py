@@ -793,7 +793,7 @@ class DisaggXMLWriter(object):
               curve at the given ``poe``.
         """
 
-        with nrml.NRMLFile(self.dest, 'w') as fh, floatformat('%.7E'):
+        with nrml.NRMLFile(self.dest, 'w') as fh, floatformat('%.6E'):
             root = et.Element('nrml')
 
             diss_matrices = et.SubElement(root, 'disaggMatrices')

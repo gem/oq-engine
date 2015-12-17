@@ -55,7 +55,6 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, trt_model_id,
     trts = []
     pnes = []
     sitemesh = sitecol.mesh
-    calc_dist = mon('calc distances', measuremem=False)
     make_ctxt = mon('making contexts', measuremem=False)
     disagg_poe = mon('disaggregate_poe', measuremem=False)
     cmaker = ContextMaker(gsims)
@@ -63,24 +62,18 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, trt_model_id,
         try:
             tect_reg = trt_num[source.tectonic_region_type]
             for rupture in ruptures:
+                with make_ctxt:
+                    sctx, rctx, dctx = cmaker.make_contexts(sitecol, rupture)
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
-                with calc_dist:
-                    # TODO: see if we can avoid computing the JB distance twice
-                    [jb_dist] = rupture.surface.get_joyner_boore_distance(
-                        sitemesh)
-                    dists.append(jb_dist)
-                    [closest_point] = rupture.surface.get_closest_points(
-                        sitemesh)
+                dists.append(dctx.rjb[0])  # single site => single distance
+                [closest_point] = rupture.surface.get_closest_points(sitemesh)
                 lons.append(closest_point.longitude)
                 lats.append(closest_point.latitude)
                 trts.append(tect_reg)
 
                 pne_dict = {}
                 # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
-
-                with make_ctxt:
-                    sctx, rctx, dctx = cmaker.make_contexts(sitecol, rupture)
                 for gsim in gsims:
                     for imt_str, imls in imtls.iteritems():
                         imt = from_string(imt_str)
