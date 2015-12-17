@@ -26,62 +26,13 @@ import numpy
 from openquake.baselib.general import groupby, split_in_blocks, humansize
 from openquake.baselib.performance import PerformanceMonitor, perf_dt
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import parallel
+from openquake.commonlib import parallel, util
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
 
-
-F32 = numpy.float32
-asset_dt = numpy.dtype([('asset_ref', bytes, 20), ('lon', F32), ('lat', F32)])
-
-
 # ########################## utility functions ############################## #
-
-def compose_arrays(a1, a2):
-    """
-    Compose composite arrays by generating an extended datatype containing
-    all the fields. The two arrays must have the same length.
-    """
-    assert len(a1) == len(a2),  (len(a1), len(a2))
-    if a1.dtype.names is None and len(a1.shape) == 1:
-        # the first array is not composite, but it is one-dimensional
-        a1 = numpy.array(a1, numpy.dtype([('tag', a1.dtype)]))
-
-    fields1 = [(f, a1.dtype.fields[f][0]) for f in a1.dtype.names]
-    if a2.dtype.names is None:  # the second array is not composite
-        assert len(a2.shape) == 2, a2.shape
-        width = a2.shape[1]
-        fields2 = [('value%d' % i, a2.dtype) for i in range(width)]
-        composite = numpy.zeros(a1.shape, numpy.dtype(fields1 + fields2))
-        for f1 in dict(fields1):
-            composite[f1] = a1[f1]
-        for i in range(width):
-            composite['value%d' % i] = a2[:, i]
-        return composite
-
-    fields2 = [(f, a2.dtype.fields[f][0]) for f in a2.dtype.names]
-    composite = numpy.zeros(a1.shape, numpy.dtype(fields1 + fields2))
-    for f1 in dict(fields1):
-        composite[f1] = a1[f1]
-    for f2 in dict(fields2):
-        composite[f2] = a2[f2]
-    return composite
-
-
-def get_assets(dstore):
-    """
-    :param dstore: a datastore with a key `specific_assets`
-    :returns: an ordered array of records (asset_ref, lon, lat)
-    """
-    assets = []
-    for assets_by_site in dstore['assets_by_site']:
-        assets.extend(sorted(assets_by_site, key=operator.attrgetter('id')))
-    asset_data = numpy.array(
-        [(asset.id, asset.location[0], asset.location[1])
-         for asset in assets], asset_dt)
-    return asset_data
 
 
 def rst_table(data, header=None, fmt='%9.7E'):
@@ -377,11 +328,9 @@ def view_mean_avg_losses(token, dstore):
     except KeyError:
         array = dstore['avg_losses-rlzs']  # shape (N, R)
         data = array[:, 0]
-    assets = get_assets(dstore)
-    losses = compose_arrays(assets, data)
+    assets = util.get_assets(dstore)
+    losses = util.compose_arrays(assets, data)
     losses.sort()
-    # if len(losses) > 1:
-    #     losses.append(sum_table(losses))
     return rst_table(losses, fmt='%8.6E')
 
 

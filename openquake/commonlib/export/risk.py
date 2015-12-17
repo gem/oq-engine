@@ -28,7 +28,7 @@ from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers, riskmodels
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.export import export_csv
-from openquake.calculators.views import (
+from openquake.commonlib.util import (
     get_assets, compose_arrays, asset_dt)
 
 from openquake.commonlib.risk_writers import (
