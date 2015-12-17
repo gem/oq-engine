@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2014, GEM Foundation.
+# Copyright (c) 2010-2015, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -92,9 +92,7 @@ def export(output_id, target, export_type='xml,geojson,csv'):
     if isinstance(target, basestring):  # create target directory
         makedirs(target)
     for exptype in export_type.split(','):
-        rtype = output.output_type
-        if rtype == 'datastore':
-            rtype = output.ds_key
+        rtype = output.ds_key
         key = (rtype, exptype)
         if key in export_output:
             return export_output(key, output, target)
