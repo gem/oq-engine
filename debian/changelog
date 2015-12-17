@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * The engine can now zip files larger than 2 GB (used in the export)
   * Now the loss maps and curves are exported with a fixed ordering: first
     by lon-lat, then by asset ID
   * Replaced the old disaggregation calculator with the oq-lite one
