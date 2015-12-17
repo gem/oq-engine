@@ -5,15 +5,15 @@ xmlns:gml="http://www.opengis.net/gml"
 >
     <disaggMatrices
     IMT="SA"
-    distBinEdges="0.0000000E+00, 2.5000000E+01, 5.0000000E+01, 7.5000000E+01, 1.0000000E+02"
-    epsBinEdges="-3.0000000E+00, -1.0000000E+00, 1.0000000E+00, 3.0000000E+00"
+    distBinEdges="0.000000E+00, 2.500000E+01, 5.000000E+01, 7.500000E+01, 1.000000E+02"
+    epsBinEdges="-3.000000E+00, -1.000000E+00, 1.000000E+00, 3.000000E+00"
     gsimTreePath="b1"
     investigationTime="50.0"
     lat="40.1"
-    latBinEdges="3.9000000E+01, 4.0500000E+01"
+    latBinEdges="3.900000E+01, 4.050000E+01"
     lon="10.1"
-    lonBinEdges="9.0000000E+00, 1.0500000E+01, 1.2000000E+01"
-    magBinEdges="5.0000000E+00, 6.0000000E+00, 7.0000000E+00, 8.0000000E+00"
+    lonBinEdges="9.000000E+00, 1.050000E+01, 1.200000E+01"
+    magBinEdges="5.000000E+00, 6.000000E+00, 7.000000E+00, 8.000000E+00"
     saDamping="5.0"
     saPeriod="0.025"
     sourceModelTreePath="b1"
@@ -21,125 +21,125 @@ xmlns:gml="http://www.opengis.net/gml"
     >
         <disaggMatrix
         dims="3"
-        iml="3.2798360E-01"
-        poE="1.0000000E-01"
+        iml="3.279836E-01"
+        poE="1.000000E-01"
         type="Mag"
         >
-            <prob index="0" value="5.4032969E-02"/>
-            <prob index="1" value="3.0540903E-02"/>
-            <prob index="2" value="9.8858953E-03"/>
+            <prob index="0" value="5.403297E-02"/>
+            <prob index="1" value="3.054090E-02"/>
+            <prob index="2" value="9.885895E-03"/>
         </disaggMatrix>
         <disaggMatrix
         dims="4"
-        iml="3.2798360E-01"
-        poE="1.0000000E-01"
+        iml="3.279836E-01"
+        poE="1.000000E-01"
         type="Dist"
         >
-            <prob index="0" value="8.7627415E-02"/>
-            <prob index="1" value="4.6354988E-03"/>
-            <prob index="2" value="1.4651874E-04"/>
-            <prob index="3" value="0.0000000E+00"/>
+            <prob index="0" value="8.762742E-02"/>
+            <prob index="1" value="4.635499E-03"/>
+            <prob index="2" value="1.465187E-04"/>
+            <prob index="3" value="0.000000E+00"/>
         </disaggMatrix>
         <disaggMatrix
         dims="1"
-        iml="3.2798360E-01"
-        poE="1.0000000E-01"
+        iml="3.279836E-01"
+        poE="1.000000E-01"
         type="TRT"
         >
-            <prob index="0" value="9.1989777E-02"/>
+            <prob index="0" value="9.198978E-02"/>
         </disaggMatrix>
         <disaggMatrix
         dims="3,4"
-        iml="3.2798360E-01"
-        poE="1.0000000E-01"
+        iml="3.279836E-01"
+        poE="1.000000E-01"
         type="Mag,Dist"
         >
-            <prob index="0,0" value="5.3803835E-02"/>
-            <prob index="0,1" value="2.4216284E-04"/>
-            <prob index="0,2" value="0.0000000E+00"/>
-            <prob index="0,3" value="0.0000000E+00"/>
-            <prob index="1,0" value="2.6797209E-02"/>
-            <prob index="1,1" value="3.8396015E-03"/>
-            <prob index="1,2" value="7.2038691E-06"/>
-            <prob index="1,3" value="0.0000000E+00"/>
-            <prob index="2,0" value="9.1961220E-03"/>
-            <prob index="2,1" value="5.5693705E-04"/>
-            <prob index="2,2" value="1.3931588E-04"/>
-            <prob index="2,3" value="0.0000000E+00"/>
+            <prob index="0,0" value="5.380384E-02"/>
+            <prob index="0,1" value="2.421628E-04"/>
+            <prob index="0,2" value="0.000000E+00"/>
+            <prob index="0,3" value="0.000000E+00"/>
+            <prob index="1,0" value="2.679721E-02"/>
+            <prob index="1,1" value="3.839601E-03"/>
+            <prob index="1,2" value="7.203869E-06"/>
+            <prob index="1,3" value="0.000000E+00"/>
+            <prob index="2,0" value="9.196122E-03"/>
+            <prob index="2,1" value="5.569370E-04"/>
+            <prob index="2,2" value="1.393159E-04"/>
+            <prob index="2,3" value="0.000000E+00"/>
         </disaggMatrix>
         <disaggMatrix
         dims="3,4,3"
-        iml="3.2798360E-01"
-        poE="1.0000000E-01"
+        iml="3.279836E-01"
+        poE="1.000000E-01"
         type="Mag,Dist,Eps"
         >
-            <prob index="0,0,0" value="0.0000000E+00"/>
-            <prob index="0,0,1" value="9.8367316E-03"/>
-            <prob index="0,0,2" value="4.4403893E-02"/>
-            <prob index="0,1,0" value="0.0000000E+00"/>
-            <prob index="0,1,1" value="0.0000000E+00"/>
-            <prob index="0,1,2" value="2.4216284E-04"/>
-            <prob index="0,2,0" value="0.0000000E+00"/>
-            <prob index="0,2,1" value="0.0000000E+00"/>
-            <prob index="0,2,2" value="0.0000000E+00"/>
-            <prob index="0,3,0" value="0.0000000E+00"/>
-            <prob index="0,3,1" value="0.0000000E+00"/>
-            <prob index="0,3,2" value="0.0000000E+00"/>
-            <prob index="1,0,0" value="8.1709561E-06"/>
-            <prob index="1,0,1" value="1.2970267E-02"/>
-            <prob index="1,0,2" value="1.4000580E-02"/>
-            <prob index="1,1,0" value="0.0000000E+00"/>
-            <prob index="1,1,1" value="0.0000000E+00"/>
-            <prob index="1,1,2" value="3.8396015E-03"/>
-            <prob index="1,2,0" value="0.0000000E+00"/>
-            <prob index="1,2,1" value="0.0000000E+00"/>
-            <prob index="1,2,2" value="7.2038691E-06"/>
-            <prob index="1,3,0" value="0.0000000E+00"/>
-            <prob index="1,3,1" value="0.0000000E+00"/>
-            <prob index="1,3,2" value="0.0000000E+00"/>
-            <prob index="2,0,0" value="1.0224407E-04"/>
-            <prob index="2,0,1" value="5.6557727E-03"/>
-            <prob index="2,0,2" value="3.4585962E-03"/>
-            <prob index="2,1,0" value="0.0000000E+00"/>
-            <prob index="2,1,1" value="0.0000000E+00"/>
-            <prob index="2,1,2" value="5.5693705E-04"/>
-            <prob index="2,2,0" value="0.0000000E+00"/>
-            <prob index="2,2,1" value="0.0000000E+00"/>
-            <prob index="2,2,2" value="1.3931588E-04"/>
-            <prob index="2,3,0" value="0.0000000E+00"/>
-            <prob index="2,3,1" value="0.0000000E+00"/>
-            <prob index="2,3,2" value="0.0000000E+00"/>
+            <prob index="0,0,0" value="0.000000E+00"/>
+            <prob index="0,0,1" value="9.836732E-03"/>
+            <prob index="0,0,2" value="4.440389E-02"/>
+            <prob index="0,1,0" value="0.000000E+00"/>
+            <prob index="0,1,1" value="0.000000E+00"/>
+            <prob index="0,1,2" value="2.421628E-04"/>
+            <prob index="0,2,0" value="0.000000E+00"/>
+            <prob index="0,2,1" value="0.000000E+00"/>
+            <prob index="0,2,2" value="0.000000E+00"/>
+            <prob index="0,3,0" value="0.000000E+00"/>
+            <prob index="0,3,1" value="0.000000E+00"/>
+            <prob index="0,3,2" value="0.000000E+00"/>
+            <prob index="1,0,0" value="8.170956E-06"/>
+            <prob index="1,0,1" value="1.297027E-02"/>
+            <prob index="1,0,2" value="1.400058E-02"/>
+            <prob index="1,1,0" value="0.000000E+00"/>
+            <prob index="1,1,1" value="0.000000E+00"/>
+            <prob index="1,1,2" value="3.839601E-03"/>
+            <prob index="1,2,0" value="0.000000E+00"/>
+            <prob index="1,2,1" value="0.000000E+00"/>
+            <prob index="1,2,2" value="7.203869E-06"/>
+            <prob index="1,3,0" value="0.000000E+00"/>
+            <prob index="1,3,1" value="0.000000E+00"/>
+            <prob index="1,3,2" value="0.000000E+00"/>
+            <prob index="2,0,0" value="1.022441E-04"/>
+            <prob index="2,0,1" value="5.655773E-03"/>
+            <prob index="2,0,2" value="3.458596E-03"/>
+            <prob index="2,1,0" value="0.000000E+00"/>
+            <prob index="2,1,1" value="0.000000E+00"/>
+            <prob index="2,1,2" value="5.569370E-04"/>
+            <prob index="2,2,0" value="0.000000E+00"/>
+            <prob index="2,2,1" value="0.000000E+00"/>
+            <prob index="2,2,2" value="1.393159E-04"/>
+            <prob index="2,3,0" value="0.000000E+00"/>
+            <prob index="2,3,1" value="0.000000E+00"/>
+            <prob index="2,3,2" value="0.000000E+00"/>
         </disaggMatrix>
         <disaggMatrix
         dims="2,1"
-        iml="3.2798360E-01"
-        poE="1.0000000E-01"
+        iml="3.279836E-01"
+        poE="1.000000E-01"
         type="Lon,Lat"
         >
-            <prob index="0,0" value="8.9367783E-02"/>
-            <prob index="1,0" value="2.8793117E-03"/>
+            <prob index="0,0" value="8.936778E-02"/>
+            <prob index="1,0" value="2.879312E-03"/>
         </disaggMatrix>
         <disaggMatrix
         dims="3,2,1"
-        iml="3.2798360E-01"
-        poE="1.0000000E-01"
+        iml="3.279836E-01"
+        poE="1.000000E-01"
         type="Mag,Lon,Lat"
         >
-            <prob index="0,0,0" value="5.4012473E-02"/>
-            <prob index="0,1,0" value="2.1665757E-05"/>
-            <prob index="1,0,0" value="2.7762533E-02"/>
-            <prob index="1,1,0" value="2.8577079E-03"/>
-            <prob index="2,0,0" value="9.8858953E-03"/>
-            <prob index="2,1,0" value="0.0000000E+00"/>
+            <prob index="0,0,0" value="5.401247E-02"/>
+            <prob index="0,1,0" value="2.166576E-05"/>
+            <prob index="1,0,0" value="2.776253E-02"/>
+            <prob index="1,1,0" value="2.857708E-03"/>
+            <prob index="2,0,0" value="9.885895E-03"/>
+            <prob index="2,1,0" value="0.000000E+00"/>
         </disaggMatrix>
         <disaggMatrix
         dims="2,1,1"
-        iml="3.2798360E-01"
-        poE="1.0000000E-01"
+        iml="3.279836E-01"
+        poE="1.000000E-01"
         type="Lon,Lat,TRT"
         >
-            <prob index="0,0,0" value="8.9367783E-02"/>
-            <prob index="1,0,0" value="2.8793117E-03"/>
+            <prob index="0,0,0" value="8.936778E-02"/>
+            <prob index="1,0,0" value="2.879312E-03"/>
         </disaggMatrix>
     </disaggMatrices>
 </nrml>
