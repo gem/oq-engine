@@ -1,3 +1,6 @@
+  [Silvia Canessa]
+  * Adds Dowrick and Rhoades 2005 GMPE
+
   [Michele Simionato]
   * Fixed the equality check for SiteCollections: now all of the parameters
     are compared, not only lons and lats.
