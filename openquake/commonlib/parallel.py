@@ -374,7 +374,8 @@ class TaskManager(object):
             self.progress('Sent %s of data', humansize(self.sent))
             agg_result = self.aggregate_result_set(agg_and_percent, acc)
             self.progress('Received %s of data', humansize(sum(self.received)))
-            self.info('Maximum task output: %s', humansize(max(self.received)))
+            self.progress('Maximum task output: %s',
+                          humansize(max(self.received)))
         self.results = []
         return agg_result
 
