@@ -101,13 +101,7 @@ Backarc=False>'
         return self.__str__()
 
 
-def eq(array1, array2):
-    """
-    Compare two numpy arrays for equality and return a boolean
-    """
-    return array1.shape == array2.shape and (array1 == array2).all()
-
-
+@with_slots
 class SiteCollection(object):
     """
     A collection of :class:`sites <Site>`.
@@ -127,6 +121,9 @@ class SiteCollection(object):
     :param sites:
         A list of instances of :class:`Site` class.
     """
+    _slots_ = (
+        'sids lons lats _vs30 _vs30measured _z1pt0 _z2pt5 _backarc'.split())
+
     @classmethod
     def from_points(cls, lons, lats, site_ids, sitemodel):
         """
@@ -263,12 +260,6 @@ class SiteCollection(object):
         Return the number of sites in the collection.
         """
         return self.total_sites
-
-    def __eq__(self, other):
-        return eq(self.lons, other.lons) and eq(self.lats, other.lats)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
     def __repr__(self):
         return '<SiteCollection with %d sites>' % self.total_sites
