@@ -46,6 +46,12 @@ class EngineServerTestCase(unittest.TestCase):
                              data, **params)
 
     @classmethod
+    def post_nrml(cls, data=None, **params):
+        return requests.post(
+            'http://%s/v1/valid/' % cls.hostport,
+            data, **params)
+
+    @classmethod
     def get(cls, path, **params):
         resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
                             params=params)
@@ -147,5 +153,40 @@ class EngineServerTestCase(unittest.TestCase):
         # there is no file job.ini, job_hazard.ini or job_risk.ini
         tb_str = self.postzip('archive_err_3.zip')
         self.assertIn('Could not find any file of the form', tb_str)
+
+    # tests for nrml validation
+
+    def test_validate_nrml_valid(self):
+        valid_file = os.path.join(self.datadir, 'vulnerability_model.xml')
+        with open(valid_file, 'rb') as vf:
+            valid_content = vf.read()
+        data = dict(xml_text=valid_content)
+        resp = self.post_nrml(data)
+        assert resp.status_code == 200, resp
+        resp_text_dict = json.loads(resp.text)
+        assert resp_text_dict['valid'], resp_text_dict
+        assert not resp_text_dict['validation_errors'], resp_text_dict
+
+    def test_validate_nrml_invalid(self):
+        invalid_file = os.path.join(self.datadir,
+                                    'vulnerability_model_invalid.xml')
+        with open(invalid_file, 'rb') as vf:
+            invalid_content = vf.read()
+        data = dict(xml_text=invalid_content)
+        resp = self.post_nrml(data)
+        assert resp.status_code == 200, resp
+        resp_text_dict = json.loads(resp.text)
+        assert not resp_text_dict['valid'], resp_text_dict
+        expected_err_list = [u'mismatched tag: line 40, column 14']
+        assert resp_text_dict['validation_errors'] == \
+            expected_err_list, resp_text_dict['validation_errors']
+
+    def test_validate_nrml_missing_parameter(self):
+        # passing a wrong parameter, instead of the required 'xml_text'
+        data = dict(foo="bar")
+        resp = self.post_nrml(data)
+        assert resp.status_code == 400, resp
+        assert \
+            resp.text == 'Please provide the "xml_text" parameter', resp.text
 
     # TODO: add more tests for error situations
