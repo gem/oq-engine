@@ -388,7 +388,6 @@ def run_job(cfg_file, log_level, log_file, exports='',
         job.save()
         t0 = time.time()
         calc = run_calc(job, log_level, log_file, exports)
-        expose_outputs(calc.datastore, job)
         duration = time.time() - t0
         if job.status == 'complete':
             print_results(job.id, duration, list_outputs)
