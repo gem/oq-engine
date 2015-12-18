@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed the equality check for SiteCollections: now all of the parameters
+    are compared, not only lons and lats.
+
 python-oq-hazardlib (0.17.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
@@ -19,7 +23,7 @@ python-oq-hazardlib (0.16.0-0~precise01) precise; urgency=low
   [Matteo Nastasi]
   * Imposed version for python-h5py dependency, Ubuntu 12.04 will use
     backported version from GEM repository
-  
+
   [Graeme Weatherill]
   * Adds Montalva et al. (2015) GMPE
 
