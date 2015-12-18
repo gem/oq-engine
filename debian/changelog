@@ -1,5 +1,7 @@
   [Michele Simionato]
-  * Now the loss maps are exported with a fixed ordering of the assets
+  * The engine can now zip files larger than 2 GB (used in the export)
+  * Now the loss maps and curves are exported with a fixed ordering: first
+    by lon-lat, then by asset ID
   * Replaced the old disaggregation calculator with the oq-lite one
 
 python-oq-engine (1.7.0-0~precise01) precise; urgency=low
