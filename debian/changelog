@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Revises Montalva et al. (2015) GMPE (on author's advice)
+
   [Yen-Shin Chen]
   * Modified the hypocentre_patch_index method to obtain the best solution
 
