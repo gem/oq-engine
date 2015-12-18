@@ -33,8 +33,7 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR"):
     sys.modules['openquake'].__dict__["__path__"].insert(
         0, os.path.join(os.path.dirname(__file__), "openquake"))
 
-from openquake.engine.utils import config, get_core_modules
-from openquake import engine
+from openquake.engine.utils import config
 
 config.abort_if_no_config_available()
 
@@ -76,12 +75,14 @@ CELERY_MAX_CACHED_RESULTS = 1
 
 CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 
-CELERY_IMPORTS = get_core_modules(engine) + [
+CELERY_IMPORTS = [
     "openquake.calculators.classical",
     "openquake.calculators.classical_risk",
     "openquake.calculators.classical_damage",
+    "openquake.calculators.classical_bcr",
     "openquake.calculators.event_based",
     "openquake.calculators.event_based_risk",
+    "openquake.calculators.scenario",
     "openquake.calculators.scenario_risk",
     "openquake.calculators.scenario_damage",
     ]
