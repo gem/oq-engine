@@ -165,7 +165,8 @@ class EngineServerTestCase(unittest.TestCase):
         assert resp.status_code == 200, resp
         resp_text_dict = json.loads(resp.text)
         assert resp_text_dict['valid'], resp_text_dict
-        assert not resp_text_dict['validation_errors'], resp_text_dict
+        assert resp_text_dict['error_msg'] is None, resp_text_dict
+        assert resp_text_dict['error_line'] is None, resp_text_dict
 
     def test_validate_nrml_invalid(self):
         invalid_file = os.path.join(self.datadir,
@@ -177,9 +178,13 @@ class EngineServerTestCase(unittest.TestCase):
         assert resp.status_code == 200, resp
         resp_text_dict = json.loads(resp.text)
         assert not resp_text_dict['valid'], resp_text_dict
-        expected_err_list = [u'mismatched tag: line 40, column 14']
-        assert resp_text_dict['validation_errors'] == \
-            expected_err_list, resp_text_dict['validation_errors']
+        expected_error_line = 7
+        expected_error_msg = (u'Could not convert lossRatio->positivefloats:'
+                              ' float -0.018800826 < 0')
+        assert resp_text_dict['error_msg'] == \
+            expected_error_msg, resp_text_dict['error_msg']
+        assert resp_text_dict['error_line'] == \
+            expected_error_line, resp_text_dict['error_line']
 
     def test_validate_nrml_missing_parameter(self):
         # passing a wrong parameter, instead of the required 'xml_text'
