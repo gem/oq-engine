@@ -2,6 +2,10 @@
   * Fixed the equality check for SiteCollections: now all of the parameters
     are compared, not only lons and lats.
 
+  [Yen-Shin Chen]
+  * Modified the hypocentre_patch_index method to obtain the best solution
+
+
 python-oq-hazardlib (0.17.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
