@@ -208,6 +208,9 @@ def run_calc(job, log_level, log_file, exports):
     upgrader.check_versions(django_db.connections['admin'])
     with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
         _do_run_calc(calculator, exports)
+        job.ds_calc_dir = calculator.datastore.calc_dir
+        job.save()
+        expose_outputs(calculator.datastore, job)
     return calculator
 
 
@@ -448,7 +451,7 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
 
 @django_db.transaction.atomic
 def job_from_file(cfg_file, username, log_level='info', exports='',
-                  **extras):
+                  hazard_output_id=None, hazard_calculation_id=None, **extras):
     """
     Create a full job profile from a job config file.
 
@@ -459,7 +462,11 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
     :param str log_level:
         Desired log level.
     :param exports:
-        Comma-separated sting of desired export types.
+        Comma-separated sting of desired export types
+    :param hazard_output_id:
+        Hazard output ID
+    :param hazard_calculation_id:
+        Hazard calculation ID
     :params extras:
         Extra parameters (used only in the tests to override the params)
 
@@ -470,8 +477,7 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
     """
     from openquake.calculators import base
     # create the current job
-    hc_id = extras.get('hazard_calculation_id')
-    job = create_job(username, log_level, hc_id)
+    job = create_job(username, log_level, hazard_calculation_id)
     models.JobStats.objects.create(oq_job=job)
     with logs.handle(job, log_level):
         # read calculation params and create the calculation profile
