@@ -1,8 +1,16 @@
   [Graeme Weatherill]
   * Revises Montalva et al. (2015) GMPE (on author's advice)
 
+  [Silvia Canessa]
+  * Adds Dowrick and Rhoades 2005 GMPE
+
+  [Michele Simionato]
+  * Fixed the equality check for SiteCollections: now all of the parameters
+    are compared, not only lons and lats.
+
   [Yen-Shin Chen]
   * Modified the hypocentre_patch_index method to obtain the best solution
+
 
 python-oq-hazardlib (0.17.0-0~precise01) precise; urgency=low
 
@@ -25,7 +33,7 @@ python-oq-hazardlib (0.16.0-0~precise01) precise; urgency=low
   [Matteo Nastasi]
   * Imposed version for python-h5py dependency, Ubuntu 12.04 will use
     backported version from GEM repository
-  
+
   [Graeme Weatherill]
   * Adds Montalva et al. (2015) GMPE
 
