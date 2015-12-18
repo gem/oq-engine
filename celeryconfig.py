@@ -77,7 +77,6 @@ CELERY_MAX_CACHED_RESULTS = 1
 CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 
 CELERY_IMPORTS = get_core_modules(engine) + [
-    "openquake.engine.calculators.hazard.general"] + [
     "openquake.calculators.classical",
     "openquake.calculators.classical_risk",
     "openquake.calculators.classical_damage",
