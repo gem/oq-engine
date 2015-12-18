@@ -24,14 +24,16 @@ import urlparse
 from xml.etree import ElementTree as etree
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpResponse
-from django.http import HttpResponseNotFound
+from django.http import (HttpResponse,
+                         HttpResponseNotFound,
+                         HttpResponseBadRequest,
+                         )
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
-from openquake.baselib.general import groupby
+from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib import nrml, readinput, valid
 from openquake.engine import engine as oq_engine, __version__ as oqversion
 from openquake.engine.db import models as oqe_models
@@ -143,6 +145,39 @@ def get_engine_version(request):
     Return a string with the openquake.engine version
     """
     return HttpResponse(oqversion)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def validate_nrml(request):
+    """
+    Leverage oq-risklib to check if a given xml text is a valid nrml
+
+    :param request:
+        a `django.http.HttpRequest` object containing the mandatory
+        parameter 'xml_text': the text of the xml to be validated as nrml
+
+    :returns: a JSON object, containing:
+        * 'valid': a boolean indicating if the provided text is a valid nrml
+        * 'validation_errors': a list of validation errors
+    """
+    xml_text = request.POST.get('xml_text')
+    if not xml_text:
+        return HttpResponseBadRequest(
+            'Please provide the "xml_text" parameter')
+    xml_file = writetmp(xml_text, suffix='.xml')
+    response_data = {}
+    try:
+        nrml.read(xml_file)
+    except Exception as exc:
+        response_data['validation_errors'] = str(exc).splitlines()
+        response_data['valid'] = False
+    else:
+        response_data['validation_errors'] = []
+        response_data['valid'] = True
+    return HttpResponse(
+        content=json.dumps(response_data), content_type=JSON)
 
 
 @require_http_methods(['GET'])
