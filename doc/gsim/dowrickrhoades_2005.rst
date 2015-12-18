@@ -1,5 +1,5 @@
-===================Dowrick and Rhoades 2005
-===================
+Dowrick and Rhoades 2005
+========================
 
 .. module:: openquake.hazardlib.gsim.dowrickrhoades_2005
 

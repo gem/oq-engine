@@ -49,6 +49,7 @@ Built-in GSIMs
     convertito_2012
     dost_2004
     douglas_stochastic_2013
+    dowrickrhoades_2005
     edwards_fah_2013a
     edwards_fah_2013f
     faccioli_2010
