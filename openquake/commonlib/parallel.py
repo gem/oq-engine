@@ -297,7 +297,7 @@ class TaskManager(object):
         self.name = name or oqtask.__name__
         self.results = []
         self.sent = 0
-        self.received = 0
+        self.received = []
         self.no_distribute = no_distribute()
 
     def submit(self, *args):
@@ -340,7 +340,7 @@ class TaskManager(object):
             result = future.result()
             if isinstance(result, BaseException):
                 raise result
-            self.received += len(result)
+            self.received.append(len(result))
             acc = agg(acc, result.unpickle())
         return acc
 
@@ -373,7 +373,9 @@ class TaskManager(object):
         else:
             self.progress('Sent %s of data', humansize(self.sent))
             agg_result = self.aggregate_result_set(agg_and_percent, acc)
-            self.progress('Received %s of data', humansize(self.received))
+            self.progress('Received %s of data', humansize(sum(self.received)))
+            self.progress('Maximum task output: %s',
+                          humansize(max(self.received)))
         self.results = []
         return agg_result
 
