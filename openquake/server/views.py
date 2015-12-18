@@ -20,6 +20,7 @@ import os
 import traceback
 import tempfile
 import urlparse
+import re
 
 from xml.etree import ElementTree as etree
 
@@ -160,7 +161,10 @@ def validate_nrml(request):
 
     :returns: a JSON object, containing:
         * 'valid': a boolean indicating if the provided text is a valid nrml
-        * 'validation_errors': a list of validation errors
+        * 'error_msg': the validation error message, if any error was found
+                       (None otherwise)
+        * 'error_line': line of the given xml where the error was found
+                        (None if no error was found)
     """
     xml_text = request.POST.get('xml_text')
     if not xml_text:
@@ -171,10 +175,14 @@ def validate_nrml(request):
     try:
         nrml.read(xml_file)
     except Exception as exc:
-        response_data['validation_errors'] = str(exc).splitlines()
+        error_msg = str(exc).split(', line')[0]
+        error_line = int(re.search(r'line \d+', str(exc)).group(0).split()[1])
+        response_data['error_msg'] = error_msg
+        response_data['error_line'] = error_line
         response_data['valid'] = False
     else:
-        response_data['validation_errors'] = []
+        response_data['error_msg'] = None
+        response_data['error_line'] = None
         response_data['valid'] = True
     return HttpResponse(
         content=json.dumps(response_data), content_type=JSON)
