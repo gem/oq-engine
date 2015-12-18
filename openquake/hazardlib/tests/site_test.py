@@ -261,6 +261,11 @@ class SiteCollectionIterTestCase(unittest.TestCase):
         sc = SiteCollection([exp_s1, exp_s2])
         self.assertEqual(cll, sc)
 
+        # test nonequality of site collections
+        # (see https://github.com/gem/oq-hazardlib/pull/403)
+        sc._vs30 = numpy.array([numpy.nan, numpy.nan])
+        self.assertNotEqual(cll, sc)
+
 
 class SitePickleTestCase(unittest.TestCase):
     # Tests for pickling Sites.
