@@ -160,7 +160,7 @@ class DrouetBrazil2015(GMPE):
 class DrouetBrazil2015withDepth(DrouetBrazil2015):
     """
     Implements GMPE developed by S. Drouet unpublished for Brazil based on the
-    method describes in Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
+    method described in Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
     Model with magnitude-dependent depth distribution and depth-dependent 
     stress distribution
     """
