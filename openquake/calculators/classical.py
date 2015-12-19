@@ -269,7 +269,8 @@ class ClassicalCalculator(base.HazardCalculator):
             src = sources[i]
             info.append((src.trt_model_id, src.source_id, dt))
         info.sort(key=operator.itemgetter(2), reverse=True)
-        self.source_info = numpy.array(info, source_info_dt)
+        if info:
+            self.source_info = numpy.array(info, source_info_dt)
 
         # save curves_by_trt_gsim
         for sm in self.rlzs_assoc.csm_info.source_models:
