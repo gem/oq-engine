@@ -250,8 +250,7 @@ class ClassicalCalculator(base.HazardCalculator):
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
         self.bb_dict = curves_by_trt_gsim.pop('bb_dict', {})
-        if self.persistent:
-            store_source_chunks(self.datastore)
+        store_source_chunks(self.datastore)
         return curves_by_trt_gsim
 
     def post_execute(self, curves_by_trt_gsim):
@@ -345,8 +344,6 @@ class ClassicalCalculator(base.HazardCalculator):
         :param curves: an array of N curves to store
         :param rlz: hazard realization, if any
         """
-        if not self.persistent:  # do nothing
-            return
         oq = self.oqparam
         self._store('hcurves/' + kind, curves, rlz)
         if oq.hazard_maps or oq.uniform_hazard_spectra:
