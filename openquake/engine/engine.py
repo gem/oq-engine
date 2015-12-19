@@ -180,18 +180,11 @@ def create_job(user_name="openquake", log_level='progress', hc_id=None):
 
 
 class EnginePerformanceMonitor(PerformanceMonitor):
+    """
+    PerformanceMonitor that writes both in the datastore and in the database
+    """
     def flush(self):
-        for child in self.children:
-            child.flush()
-        data = self.get_data()
-        if len(data) == 0:  # no information
-            return
-
-        # reset monitor
-        self.duration = 0
-        self.mem = 0
-        self.counts = 0
-
+        data = PerformanceMonitor.flush(self)
         for rec in data:
             models.Performance.objects.create(
                 oq_job_id=self.job_id,
@@ -224,7 +217,8 @@ def run_calc(job, log_level, log_file, exports):
     from openquake.calculators import base
     calculator = base.calculators(job.get_oqparam(), calc_id=job.id)
     calculator.job = job
-    calculator.monitor = EnginePerformanceMonitor('')
+    calculator.monitor = EnginePerformanceMonitor(
+        '', calculator.datastore.hdf5path)
     calculator.monitor.job_id = job.id
 
     # first of all check the database version and exit if the db is outdated
