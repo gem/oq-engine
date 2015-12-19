@@ -3,7 +3,7 @@ from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical_tiling import case_1, case_2
 
 
-class ClassicalTestCase(CalculatorTestCase):
+class ClassicalTilingTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'classical_tiling')
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv')

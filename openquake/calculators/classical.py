@@ -181,6 +181,20 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     return dic
 
 
+def expand(array, n, aslice):
+    """
+    Expand a short array to size n by adding zeros outside of the slice
+    """
+    if len(array) == n:  # nothing to expand
+        return array
+    if aslice.stop - aslice.start != len(array):
+        raise ValueError('The slice has %d places, but the array has length '
+                         '%d', slice.stop - aslice.start, len(array))
+    zeros = numpy.zeros((n,) + array.shape[1:], array.dtype)
+    zeros[aslice] = array
+    return zeros
+
+
 # used by the classical calculator
 def agg_dicts(acc, val):
     """
@@ -191,7 +205,7 @@ def agg_dicts(acc, val):
     for bb in getattr(val, 'bbs', []):
         acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
     for key in val:
-        acc[key] = agg_curves(acc[key], val[key])
+        acc[key] = agg_curves(acc[key], expand(val[key], acc.n, val.siteslice))
     return acc
 
 
@@ -244,6 +258,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for site in self.sitecol
             for smodel in self.csm.source_models
         } if self.oqparam.poes_disagg else {}
+        zerodict.n = len(self.sitecol)
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, 0, self.rlzs_assoc, monitor),
@@ -285,8 +300,9 @@ class ClassicalCalculator(base.HazardCalculator):
                         pass
                     else:
                         ts = '%03d-%s' % (tm.id, gsim)
-                        group[ts] = curves
-                        group[ts].attrs['trt'] = tm.trt
+                        if nonzero(curves):
+                            group[ts] = curves
+                            group[ts].attrs['trt'] = tm.trt
         oq = self.oqparam
         zc = zero_curves(len(self.sitecol.complete), oq.imtls)
         curves_by_rlz = self.rlzs_assoc.combine_curves(
@@ -381,21 +397,6 @@ def is_effective_trt_model(result_dict, trt_model):
                if trt_model.id == key[0] and nonzero(val))
 
 
-# used by the classical_tiling calculator
-def agg_curves_by_trt_gsim(acc, curves_by_trt_gsim):
-    """
-    :param acc: AccumDict (trt_id, gsim) -> N curves
-    :param curves_by_trt_gsim: AccumDict (trt_id, gsim) -> T curves
-
-    where N is the total number of sites and T the number of sites
-    in the current tile. Works by side effect, by updating the accumulator.
-    """
-    acc.calc_times.extend(curves_by_trt_gsim.calc_times)
-    for k in curves_by_trt_gsim:
-        acc[k][curves_by_trt_gsim.siteslice] = curves_by_trt_gsim[k]
-    return acc
-
-
 def _extract(array_or_float, indices):
     try:  # if array
         return array_or_float[indices]
@@ -469,8 +470,9 @@ class ClassicalTilingCalculator(ClassicalCalculator):
             {trt_gsim: zero_curves(len(self.sitecol), self.oqparam.imtls)
              for trt_gsim in self.rlzs_assoc})
         acc.calc_times = []
+        acc.n = len(self.sitecol)
         res = parallel.starmap(classical, self.gen_args()).reduce(
-            agg_curves_by_trt_gsim, acc)
+            agg_dicts, acc)
         self.rlzs_assoc = self.csm.get_rlzs_assoc(
             partial(is_effective_trt_model, res))
         return res
