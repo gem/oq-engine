@@ -210,7 +210,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
     """
     def post_execute(self, result=None):
         super(DisaggregationCalculator, self).post_execute(result)
-        self.full_disaggregation()
+        self.full_disaggregation(result)
 
     def agg_result(self, acc, result):
         """
@@ -243,7 +243,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                 dic[rlz.ordinal, imt_str] = poes[imt_str]
         return dic
 
-    def full_disaggregation(self):
+    def full_disaggregation(self, curves_by_trt_gsim):
         """
         Run the disaggregation phase after hazard curve finalization.
         """
@@ -275,7 +275,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
                     curves = curves_dict[site.id]
                     if not curves:
                         continue  # skip zero-valued hazard curves
-                    bb = self.bb_dict[sm_id, site.id]
+                    bb = curves_by_trt_gsim.bb_dict[sm_id, site.id]
                     if not bb:
                         logging.info(
                             'location %s was too far, skipping disaggregation',

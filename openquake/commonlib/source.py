@@ -295,6 +295,13 @@ class RlzsAssoc(collections.Mapping):
         """Flat list with all the realizations"""
         return sum(self.rlzs_by_smodel, [])
 
+    def get_sm_id(self, trt_model_id):
+        """Return the source model ordinal for the given trt_model_id"""
+        for smodel in self.csm_info.source_models:
+            for trt_model in smodel.trt_models:
+                if trt_model.id == trt_model_id:
+                    return smodel.ordinal
+
     def get_gsims_by_col(self):
         """Return a list of lists of GSIMs of length num_collections"""
         # TODO: add a special case for sampling?
@@ -560,19 +567,6 @@ class CompositeSourceModel(collections.Sequence):
         for sm in self.source_models:
             for trt_model in sm.trt_models:
                 yield trt_model
-
-    def filtered(self, maximum_distance, sitecol):
-        """
-        Extracts a filtered source model
-        """
-        reduced = copy.copy(self)
-        reduced.source_models = map(copy.copy, self.source_models)
-        for tm_ in self.trt_models:
-            tm = copy.copy(tm_)
-            tm.sources = [src for src in tm.sources
-                          if src.filter_sites_by_distance_to_source(
-                                  maximum_distance, sitecol) is not None]
-        return reduced
 
     def get_sources(self):
         """

@@ -15,13 +15,16 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
-import numpy
+from __future__ import division
+import math
 import logging
 import operator
 import collections
 from functools import partial
 
+import numpy
+
+from openquake.baselib.general import groupby
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -153,43 +156,41 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
     trt_model_id = sources[0].trt_model_id
+    # sanity check: the trt_model must be the same for all sources
+    for src in sources[1:]:
+        src.trt_model_id == trt_model_id
     gsims = rlzs_assoc.gsims_by_trt_id[trt_model_id]
-    for smodel in rlzs_assoc.csm_info.source_models:
-        for trt_model in smodel.trt_models:
-            if trt_model.id == trt_model_id:
-                sm_id = smodel.ordinal
-                break
 
+    dic = AccumDict()
+    dic.siteslice = slice(siteidx, siteidx + len(sitecol))
     if monitor.oqparam.poes_disagg:
-        bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
+        sm_id = rlzs_assoc.get_sm_id(trt_model_id)
+        dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
     else:
-        bbs = []
+        dic.bbs = []
     # NB: the source_site_filter below is ESSENTIAL for performance inside
     # hazard_curves_per_trt, since it reduces the full site collection
     # to a filtered one *before* doing the rupture filtering
     curves_by_gsim = hazard_curves_per_trt(
         sources, sitecol, imtls, gsims, truncation_level,
         source_site_filter=source_site_distance_filter(max_dist),
-        maximum_distance=max_dist, bbs=bbs, monitor=monitor)
-    dic = AccumDict(calc_times=monitor.calc_times, bbs=bbs)
+        maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
+    dic.calc_times = monitor.calc_times  # added by hazard_curves_per_trt
     for gsim, curves in zip(gsims, curves_by_gsim):
         dic[trt_model_id, str(gsim)] = curves
-    dic.indices = numpy.arange(siteidx, siteidx + len(sitecol))
     return dic
 
 
+# used by the classical calculator
 def agg_dicts(acc, val):
     """
     Aggregate dictionaries of hazard curves by updating the accumulator
     """
+    acc.calc_times.extend(val.calc_times)
+    for bb in val.bbs:
+        acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
     for key in val:
-        if key == 'calc_times':
-            acc[key].extend(val[key])
-        elif key == 'bbs':
-            for bb in val['bbs']:
-                acc['bb_dict'][bb.lt_model_id, bb.site_id].update_bb(bb)
-        else:  # aggregate curves
-            acc[key] = agg_curves(acc[key], val[key])
+        acc[key] = agg_curves(acc[key], val[key])
     return acc
 
 
@@ -236,12 +237,12 @@ class ClassicalCalculator(base.HazardCalculator):
         sources = self.csm.get_sources()
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
-        zerodict['calc_times'] = []
-        if self.oqparam.poes_disagg:
-            zerodict['bb_dict'] = {
-                (smodel.ordinal, site.id): BoundingBox(smodel.ordinal, site.id)
-                for site in self.sitecol
-                for smodel in self.csm.source_models}
+        zerodict.calc_times = []
+        zerodict.bb_dict = {
+            (smodel.ordinal, site.id): BoundingBox(smodel.ordinal, site.id)
+            for site in self.sitecol
+            for smodel in self.csm.source_models
+        } if self.oqparam.poes_disagg else {}
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, 0, self.rlzs_assoc, monitor),
@@ -249,7 +250,6 @@ class ClassicalCalculator(base.HazardCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
-        self.bb_dict = curves_by_trt_gsim.pop('bb_dict', {})
         store_source_chunks(self.datastore)
         return curves_by_trt_gsim
 
@@ -261,18 +261,14 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary (trt_id, gsim) -> hazard curves
         """
         # save calculation time per source
-        try:
-            calc_times = curves_by_trt_gsim.pop('calc_times')
-        except KeyError:
-            pass
-        else:
-            sources = self.csm.get_sources()
-            info = []
-            for i, dt in calc_times:
-                src = sources[i]
-                info.append((src.trt_model_id, src.source_id, dt))
-            info.sort(key=operator.itemgetter(2), reverse=True)
-            self.source_info = numpy.array(info, source_info_dt)
+        calc_times = curves_by_trt_gsim.calc_times
+        sources = self.csm.get_sources()
+        info = []
+        for i, dt in calc_times:
+            src = sources[i]
+            info.append((src.trt_model_id, src.source_id, dt))
+        info.sort(key=operator.itemgetter(2), reverse=True)
+        self.source_info = numpy.array(info, source_info_dt)
 
         # save curves_by_trt_gsim
         for sm in self.rlzs_assoc.csm_info.source_models:
@@ -366,6 +362,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
 
 def nonzero(val):
+    """
+    :returns: the sum of the composite array `val`
+    """
     return sum(val[k].sum() for k in val.dtype.names)
 
 
@@ -388,13 +387,9 @@ def agg_curves_by_trt_gsim(acc, curves_by_trt_gsim):
     where N is the total number of sites and T the number of sites
     in the current tile. Works by side effect, by updating the accumulator.
     """
+    acc.calc_times.extend(curves_by_trt_gsim.calc_times)
     for k in curves_by_trt_gsim:
-        if k == 'bbs':  # ignored in the tiling calculator
-            pass
-        elif k == 'calc_times':
-            acc[k].extend(curves_by_trt_gsim[k])
-        else:
-            acc[k][curves_by_trt_gsim.indices] = curves_by_trt_gsim[k]
+        acc[k][curves_by_trt_gsim.siteslice] = curves_by_trt_gsim[k]
     return acc
 
 
@@ -444,25 +439,33 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         """
         monitor = self.monitor.new(self.core_func.__name__)
         monitor.oqparam = oq = self.oqparam
-        tiles = split_in_tiles(self.sitecol, oq.concurrent_tasks)
+        rlzs_assoc = self.csm.get_rlzs_assoc()
+        hint = math.ceil(oq.concurrent_tasks / len(rlzs_assoc))
+        tiles = split_in_tiles(self.sitecol, hint)
         logging.info('Generating %d tiles of %d sites each',
                      len(tiles), len(tiles[0]))
-        oq.concurrent_tasks = 0
         siteidx = 0
+        sources = self.csm.get_sources()
         for tile in tiles:
             with self.monitor('filtering sources per tile', autoflush=True):
-                csm = self.csm.filtered(oq.maximum_distance, tile)
-            yield (csm.get_sources(), tile, siteidx, csm.get_rlzs_assoc(),
-                   monitor)
+                filtered_sources = [
+                    src for src in sources
+                    if src.filter_sites_by_distance_to_source(
+                            oq.maximum_distance, tile) is not None]
+            groups = groupby(
+                filtered_sources, operator.attrgetter('trt_model_id')).values()
+            for group in groups:  # sources of homogeneous trt_model_id
+                yield group, tile, siteidx, rlzs_assoc, monitor
             siteidx += len(tile)
 
     def execute(self):
         """
         Split the computation by tiles which are run in parallel.
         """
-        acc = {trt_gsim: zero_curves(len(self.sitecol), self.oqparam.imtls)
-               for trt_gsim in self.rlzs_assoc}
-        acc['calc_times'] = []
+        acc = AccumDict(
+            {trt_gsim: zero_curves(len(self.sitecol), self.oqparam.imtls)
+             for trt_gsim in self.rlzs_assoc})
+        acc.calc_times = []
         res = parallel.starmap(classical, self.gen_args()).reduce(
             agg_curves_by_trt_gsim, acc)
         self.rlzs_assoc = self.csm.get_rlzs_assoc(
