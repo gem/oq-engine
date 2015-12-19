@@ -1,6 +1,6 @@
 from nose.plugins.attrib import attr
 from openquake.calculators.tests import CalculatorTestCase
-from openquake.qa_tests_data.classical_tiling import case_1
+from openquake.qa_tests_data.classical_tiling import case_1, case_2
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -28,3 +28,9 @@ class ClassicalTestCase(CalculatorTestCase):
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual,
                                   lambda lines: lines[1:], delta=1E-6)
+
+    @attr('qa', 'hazard', 'classical_tiling')
+    def test_case_2(self):
+        out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
+        [fname] = out['hmaps', 'csv']
+        self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
