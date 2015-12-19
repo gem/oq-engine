@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Replaced all classical calculators with their lite counterparts
   * The engine can now zip files larger than 2 GB (used in the export)
   * Now the loss maps and curves are exported with a fixed ordering: first
     by lon-lat, then by asset ID
