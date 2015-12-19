@@ -211,6 +211,7 @@ def _build_header(dtype, root):
     return header
 
 
+# NB: builds an header that can be read by readers.parse_header
 def build_header(dtype):
     """
     Convert a numpy nested dtype into a list of strings suitable as header
@@ -222,7 +223,7 @@ def build_header(dtype):
     >>> gmf_dt = numpy.dtype([('A', imt_dt), ('B', imt_dt),
     ...                       ('idx', numpy.uint32)])
     >>> build_header(gmf_dt)
-    ['A-PGA:float64:3', 'A-PGV:float64:4', 'B-PGA:float64:3', 'B-PGV:float64:4', 'idx:uint32:']
+    ['A-PGA:float64:3', 'A-PGV:float64:4', 'B-PGA:float64:3', 'B-PGV:float64:4', 'idx:uint32']
     """
     header = _build_header(dtype, ())
     h = []
@@ -230,7 +231,12 @@ def build_header(dtype):
         name = '-'.join(col[:-2])
         numpytype = col[-2]
         shape = col[-1]
-        h.append(':'.join([name, numpytype, ':'.join(map(str, shape))]))
+        coldescr = name
+        if numpytype != 'float32':
+            coldescr += ':' + numpytype
+        if shape:
+            coldescr += ':' + ':'.join(map(str, shape))
+        h.append(coldescr)
     return h
 
 
@@ -267,8 +273,7 @@ def write_csv(dest, data, sep=',', fmt='%12.8E', header=None):
        optional list with the names of the columns to display
     """
     if len(data) == 0:
-        logging.warn('Not generating %s, it would be empty', dest)
-        return dest
+        logging.warn('%s is empty', dest)
     if not hasattr(dest, 'getvalue'):
         # not a StringIO, assume dest is a filename
         dest = open(dest, 'w')
@@ -303,6 +308,34 @@ def write_csv(dest, data, sep=',', fmt='%12.8E', header=None):
     else:
         dest.close()
     return dest.name
+
+
+class CsvWriter(object):
+    """
+    Class used in the exporters to save a bunch of CSV files
+    """
+    def __init__(self, sep=',', fmt='%12.8E'):
+        self.sep = sep
+        self.fmt = fmt
+        self.fnames = []
+
+    def save(self, data, fname, header=None):
+        """
+        Save data on fname.
+
+        :param data: numpy array or list of lists
+        :param fname: path name
+        :param header: header to use
+        """
+        write_csv(fname, data, self.sep, self.fmt, header)
+        self.fnames.append(fname)
+
+    def getsaved(self):
+        """
+        Returns the list of files saved by this CsvWriter
+        """
+        return sorted(self.fnames)
+
 
 if __name__ == '__main__':  # pretty print of NRML files
     import sys

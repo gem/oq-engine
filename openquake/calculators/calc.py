@@ -76,9 +76,6 @@ def gen_ruptures(sources, site_coll, maximum_distance, monitor):
                 if r_sites is None:
                     continue
             yield SourceRuptureSites(src, rupture, r_sites)
-    filtsources_mon.flush()
-    genruptures_mon.flush()
-    filtruptures_mon.flush()
 
 
 def gen_ruptures_for_site(site, sources, maximum_distance, monitor):

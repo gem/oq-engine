@@ -18,7 +18,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   10.0     
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             64       
+concurrent_tasks             32       
 ============================ =========
 
 Input files
@@ -69,11 +69,11 @@ source_model.xml 0      Active Shallow Crust 501         6405
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ========
-Number of tasks to generate        54      
-Estimated sources to send          205.4 KB
-Estimated hazard curves to receive 96 KB   
-================================== ========
+================================== =========
+Number of tasks to generate        27       
+Estimated sources to send          151.87 KB
+Estimated hazard curves to receive 48 KB    
+================================== =========
 
 Exposure model
 --------------

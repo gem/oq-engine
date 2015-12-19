@@ -113,11 +113,15 @@ class RiskModel(collections.Mapping):
         self.covs = 0  # number of coefficients of variation
         self.taxonomies = []  # populated in get_risk_model
 
-    def loss_type_dt(self, dtype=numpy.float32):
+    def loss_type_dt(self, dtype=numpy.float32, insured=False):
         """
         Return a composite dtype based on the loss types
         """
-        return numpy.dtype([(lt, dtype) for lt in self.loss_types])
+        dts = [(lt, dtype) for lt in self.loss_types]
+        if insured:
+            for lt in self.loss_types:
+                dts.append((lt + '_ins', dtype))
+        return numpy.dtype(dts)
 
     def build_loss_dtypes(self, conditional_loss_poes, insured_losses=False):
         """

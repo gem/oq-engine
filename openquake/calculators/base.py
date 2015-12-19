@@ -192,10 +192,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         then close the datastore.
         """
         if 'rlzs_assoc' in self.datastore:
+            rlzs = self.rlzs_assoc.realizations
             self.realizations = numpy.array(
-                [(r.uid, r.weight) for r in self.rlzs_assoc.realizations],
-                rlz_dt)
-        # the datastore must not be closed, it will be closed automatically
+                [(r.uid, r.weight) for r in rlzs], rlz_dt)
+        # NB: the datastore must not be closed, it will be closed automatically
 
 
 class HazardCalculator(BaseCalculator):
@@ -213,11 +213,10 @@ class HazardCalculator(BaseCalculator):
         :returns: a pair (filtered_sites, assets_by_site)
 
         The new site collection is different from the original one
-        if some assets were discarded because of the asset_hazard_distance
-        or if there were missing assets for some sites.
+        if some assets were discarded or if there were missing assets
+        for some sites.
         """
         maximum_distance = self.oqparam.asset_hazard_distance
-
         siteobjects = geodetic.GeographicObjects(
             Site(sid, lon, lat) for sid, lon, lat in
             zip(sitecol.sids, sitecol.lons, sitecol.lats))

@@ -4,6 +4,7 @@ Utilities to build a report writer generating a .rst report for a calculation
 """
 from __future__ import print_function
 import os
+import sys
 
 from openquake.commonlib import readinput, datastore
 from openquake.calculators import base, views
@@ -97,8 +98,12 @@ def build_report(job_ini, output_dir=None):
     ds = datastore.DataStore(calc.datastore.calc_id)
     rw = ReportWriter(ds)
     rw.make_report()
-    report = os.path.join(output_dir, 'report.rst')
-    rw.save(report)
+    report = (os.path.join(output_dir, 'report.rst') if output_dir
+              else ds.export_path('report.rst'))
+    try:
+        rw.save(report)
+    except IOError as exc:  # permission error
+        sys.stderr.write(str(exc) + '\n')
     return report
 
 
@@ -108,8 +113,7 @@ def main(directory):
             if f in ('job.ini', 'job_h.ini', 'job_haz.ini', 'job_hazard.ini'):
                 job_ini = os.path.join(cwd, f)
                 print(job_ini)
-                build_report(job_ini)
+                build_report(job_ini, cwd)
 
 if __name__ == '__main__':
-    import sys
     main(sys.argv[1])

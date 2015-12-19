@@ -272,21 +272,21 @@ class TaskManager(object):
         :param key: function to extract the kind of an item in arg0
         """
         arg0 = task_args[0]  # this is assumed to be a sequence
-        num_items = len(arg0)
         args = task_args[1:]
         task_func = getattr(task, 'task_func', task)
         if acc is None:
             acc = AccumDict()
-        if num_items == 0:  # nothing to do
+        if len(arg0) == 0:  # nothing to do
             return acc
-        elif num_items == 1:  # apply the function in the master process
-            return agg(acc, task_func(arg0, *args))
         chunks = list(split_in_blocks(
             arg0, concurrent_tasks or 1, weight, key))
         cls.apply_reduce.__func__._chunks = chunks
-        if not concurrent_tasks or no_distribute():
+        if not concurrent_tasks or no_distribute() or len(chunks) == 1:
+            # apply the function in the master process
             for chunk in chunks:
                 acc = agg(acc, task_func(chunk, *args))
+                if args and hasattr(args[-1], 'flush'):
+                    args[-1].flush()
             return acc
         logging.info('Starting %d tasks', len(chunks))
         self = cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
@@ -298,7 +298,7 @@ class TaskManager(object):
         self.name = name or oqtask.__name__
         self.results = []
         self.sent = 0
-        self.received = 0
+        self.received = []
         self.no_distribute = no_distribute()
 
     def submit(self, *args):
@@ -341,7 +341,7 @@ class TaskManager(object):
             result = future.result()
             if isinstance(result, BaseException):
                 raise result
-            self.received += len(result)
+            self.received.append(len(result))
             acc = agg(acc, result.unpickle())
         return acc
 
@@ -374,7 +374,9 @@ class TaskManager(object):
         else:
             self.progress('Sent %s of data', humansize(self.sent))
             agg_result = self.aggregate_result_set(agg_and_percent, acc)
-            self.progress('Received %s of data', humansize(self.received))
+            self.progress('Received %s of data', humansize(sum(self.received)))
+            self.progress('Maximum task output: %s',
+                          humansize(max(self.received)))
         self.results = []
         return agg_result
 

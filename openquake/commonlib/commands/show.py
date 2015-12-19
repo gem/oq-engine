@@ -64,8 +64,8 @@ def show(calc_id, key=None, rlzs=None):
             return
         rows = []
         for calc_id in datastore.get_calc_ids(datastore.DATADIR):
-            ds = datastore.DataStore(calc_id, mode='r')
             try:
+                ds = datastore.DataStore(calc_id, mode='r')
                 oq = OqParam.from_(ds.attrs)
                 cmode, descr = oq.calculation_mode, oq.description
             except:
@@ -74,9 +74,9 @@ def show(calc_id, key=None, rlzs=None):
                 logging.warn('Removed invalid calculation %d', calc_id)
                 os.remove(
                     os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id))
+                continue
             else:
                 rows.append((calc_id, cmode, descr))
-            finally:
                 ds.close()
         for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
             print('#%d %s: %s' % row)

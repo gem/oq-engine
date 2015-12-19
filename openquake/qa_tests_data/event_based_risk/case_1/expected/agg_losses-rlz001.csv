@@ -1,4 +1,4 @@
-tag:|S100:,contents:float32:,fatalities:float32:,nonstructural:float32:,structural:float32:,contents_ins:float32:,fatalities_ins:float32:,nonstructural_ins:float32:,structural_ins:float32:
+tag:|S100,contents,fatalities,nonstructural,structural,contents_ins,fatalities_ins,nonstructural_ins,structural_ins
 col=00~ses=0003~src=1~rup=001-01,6.923173E+01,4.560633E-01,0.000000E+00,2.769269E+02,       NAN,       NAN,0.000000E+00,       NAN
 col=00~ses=0003~src=1~rup=001-02,1.016186E+02,7.889151E-01,0.000000E+00,5.129291E+02,       NAN,       NAN,0.000000E+00,       NAN
 col=00~ses=0003~src=2~rup=001-01,2.063615E+02,5.341379E-01,4.283778E+01,9.288134E+01,       NAN,       NAN,       NAN,       NAN

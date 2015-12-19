@@ -28,62 +28,14 @@ from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers, riskmodels
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.export import export_csv
+from openquake.commonlib.util import (
+    get_assets, compose_arrays, asset_dt)
+
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
 
 Output = collections.namedtuple('Output', 'ltype path array')
-
-F32 = numpy.float32
-
-
-# ########################## utility functions ############################## #
-
-def compose_arrays(a1, a2):
-    """
-    Compose composite arrays by generating an extended datatype containing
-    all the fields. The two arrays must have the same length.
-    """
-    assert len(a1) == len(a2),  (len(a1), len(a2))
-    if a1.dtype.names is None and len(a1.shape) == 1:
-        # the first array is not composite, but it is one-dimensional
-        a1 = numpy.array(a1, numpy.dtype([('tag', a1.dtype)]))
-
-    fields1 = [(f, a1.dtype.fields[f][0]) for f in a1.dtype.names]
-    if a2.dtype.names is None:  # the second array is not composite
-        assert len(a2.shape) == 2, a2.shape
-        width = a2.shape[1]
-        fields2 = [('value%d' % i, a2.dtype) for i in range(width)]
-        composite = numpy.zeros(a1.shape, numpy.dtype(fields1 + fields2))
-        for f1 in dict(fields1):
-            composite[f1] = a1[f1]
-        for i in range(width):
-            composite['value%d' % i] = a2[:, i]
-        return composite
-
-    fields2 = [(f, a2.dtype.fields[f][0]) for f in a2.dtype.names]
-    composite = numpy.zeros(a1.shape, numpy.dtype(fields1 + fields2))
-    for f1 in dict(fields1):
-        composite[f1] = a1[f1]
-    for f2 in dict(fields2):
-        composite[f2] = a2[f2]
-    return composite
-
-asset_dt = numpy.dtype([('asset_ref', bytes, 20), ('lon', F32), ('lat', F32)])
-
-
-def get_assets(dstore):
-    """
-    :param dstore: a datastore with a key `specific_assets`
-    :returns: an ordered array of records (asset_ref, lon, lat)
-    """
-    assets = []
-    for assets_by_site in dstore['assets_by_site']:
-        assets.extend(sorted(assets_by_site, key=operator.attrgetter('id')))
-    asset_data = numpy.array(
-        [(asset.id, asset.location[0], asset.location[1])
-         for asset in assets], asset_dt)
-    return asset_data
 
 
 def get_assets_sites(dstore):
@@ -171,17 +123,16 @@ def export_avg_losses(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    avg_losses = compactify(dstore[ekey[0]].value)
+    avg_losses = dstore[ekey[0]].value
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets(dstore)
-    fnames = []
+    writer = writers.CsvWriter(fmt='%10.6E')
     for rlz in rlzs:
         losses = avg_losses[:, rlz.ordinal]
         dest = dstore.export_path('avg_losses-rlz%03d.csv' % rlz.ordinal)
         data = compose_arrays(assets, losses)
-        writers.write_csv(dest, data, fmt='%10.6E')
-        fnames.append(dest)
-    return fnames
+        writer.save(data, dest)
+    return writer.getsaved()
 
 
 @export.add(('avg_losses-stats', 'csv'))
@@ -191,17 +142,16 @@ def export_avg_losses_stats(ekey, dstore):
     :param dstore: datastore object
     """
     oq = OqParam.from_(dstore.attrs)
-    avg_losses = compactify(dstore[ekey[0]].value)
+    avg_losses = dstore[ekey[0]].value
     quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     assets = get_assets(dstore)
-    fnames = []
+    writer = writers.CsvWriter(fmt='%10.6E')
     for i, quantile in enumerate(quantiles):
         losses = avg_losses[:, i]
         dest = dstore.export_path('avg_losses-%s.csv' % quantile)
         data = compose_arrays(assets, losses)
-        writers.write_csv(dest, data, fmt='%10.6E')
-        fnames.append(dest)
-    return fnames
+        writer.save(data, dest)
+    return writer.getsaved()
 
 
 # this is used by classical_risk
@@ -214,14 +164,13 @@ def export_agg_losses(ekey, dstore):
     agg_losses = compactify(dstore[ekey[0]].value)
     rlzs = dstore['rlzs_assoc'].realizations
     tags = dstore['tags'].value
-    fnames = []
+    writer = writers.CsvWriter(fmt='%10.6E')
     for rlz in rlzs:
         losses = agg_losses[:, rlz.ordinal]
         dest = dstore.export_path('agg_losses-rlz%03d.csv' % rlz.ordinal)
         data = compose_arrays(tags, losses)
-        writers.write_csv(dest, data, fmt='%10.6E')
-        fnames.append(dest)
-    return fnames
+        writer.save(data, dest)
+    return writer.getsaved()
 
 
 # this is used by event_based_risk
@@ -239,7 +188,7 @@ def export_agg_losses_ebr(ekey, dstore):
     ext_dt = numpy.dtype(
         [('tag', (bytes, 100))] +
         [(elt, numpy.float32) for elt in ext_loss_types])
-    fnames = []
+    writer = writers.CsvWriter(fmt='%10.6E')
     for rlz in rlzs:
         rows = agg_losses[rlz.uid]
         data = []
@@ -249,9 +198,8 @@ def export_agg_losses_ebr(ekey, dstore):
                         tuple(loss[:, 0]) + tuple(loss[:, 1]))
         data.sort()
         dest = dstore.export_path('agg_losses-rlz%03d.csv' % rlz.ordinal)
-        writers.write_csv(dest, numpy.array(data, ext_dt), fmt='%10.6E')
-        fnames.append(dest)
-    return fnames
+        writer.save(numpy.array(data, ext_dt), dest)
+    return writer.getsaved()
 
 
 # alternative export format for the average losses, used by the platform
@@ -283,13 +231,12 @@ def export_rcurves(ekey, dstore):
     assets = get_assets_sites(dstore)
     curves = compactify(dstore[ekey[0]].value)
     name = ekey[0].split('-')[0]
-    paths = []
+    writer = writers.CsvWriter(fmt='%9.7E')
     for rlz in rlzs:
         array = compose_arrays(assets, curves[:, rlz.ordinal])
         path = dstore.export_path('%s-%s.csv' % (name, rlz.uid))
-        writers.write_csv(path, array, fmt='%9.7E')
-        paths.append(path)
-    return paths
+        writer.save(array, path)
+    return writer.getsaved()
 
 
 # this is used by classical_risk
@@ -300,14 +247,13 @@ def export_loss_curves(ekey, dstore):
     assets = get_assets_sites(dstore)
     curves = dstore[ekey[0]]
     name = ekey[0].split('-')[0]
-    paths = []
+    writer = writers.CsvWriter(fmt='%9.6E')
     for rlz in rlzs:
         for ltype in loss_types:
             array = compose_arrays(assets, curves[ltype][:, rlz.ordinal])
             path = dstore.export_path('%s-%s-%s.csv' % (name, ltype, rlz.uid))
-            writers.write_csv(path, array, fmt='%9.6E')
-            paths.append(path)
-    return paths
+            writer.save(array, path)
+    return writer.getsaved()
 
 
 @export.add(('dmg_by_asset', 'xml'))
@@ -422,13 +368,12 @@ def export_rlzs_by_asset_csv(ekey, dstore):
     assets = get_assets(dstore)
     R = len(rlzs)
     value = dstore[ekey[0]].value  # matrix N x R or T x R
-    fnames = []
+    writer = writers.CsvWriter(fmt='%9.6E')
     for rlz, values in zip(rlzs, value.T):
         suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
         fname = dstore.export_path(ekey[0] + suffix)
-        writers.write_csv(fname, compose_arrays(assets, values), fmt='%9.6E')
-        fnames.append(fname)
-    return fnames
+        writer.save(compose_arrays(assets, values), fname)
+    return writer.getsaved()
 
 
 @export.add(('csq_by_taxon', 'csv'))
@@ -436,13 +381,12 @@ def export_csq_by_taxon_csv(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     R = len(rlzs)
     value = dstore[ekey[0]].value  # matrix T x R
-    fnames = []
+    writer = writers.CsvWriter(fmt='%9.6E')
     for rlz, values in zip(rlzs, value.T):
         suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
         fname = dstore.export_path(ekey[0] + suffix)
-        writers.write_csv(fname, values)
-        fnames.append(fname)
-    return fnames
+        writer.save(values, fname)
+    return writer.getsaved()
 
 
 # TODO: export loss_maps-stats csv
@@ -451,13 +395,12 @@ def export_csq_total_csv(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     R = len(rlzs)
     value = dstore[ekey[0]].value
-    fnames = []
+    writer = writers.CsvWriter(fmt='%9.6E')
     for rlz, values in zip(rlzs, value):
         suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
         fname = dstore.export_path(ekey[0] + suffix)
-        writers.write_csv(fname, numpy.array([values], value.dtype))
-        fnames.append(fname)
-    return fnames
+        writer.save(numpy.array([values], value.dtype), fname)
+    return writer.getsaved()
 
 
 export.add(
@@ -878,3 +821,14 @@ def export_bcr_map_rlzs(ekey, dstore):
     return sorted(fnames)
 
 # TODO: add export_bcr_map_stats
+
+
+@export.add(('realizations', 'csv'))
+def export_realizations(ekey, dstore):
+    rlzs = dstore[ekey[0]]
+    data = [['ordinal', 'uid', 'weight']]
+    for i, rlz in enumerate(rlzs):
+        data.append([i, rlz['uid'], rlz['weight']])
+    path = dstore.export_path('realizations.csv')
+    writers.write_csv(path, data, fmt='%s', sep='\t')
+    return [path]

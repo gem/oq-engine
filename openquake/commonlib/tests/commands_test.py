@@ -103,7 +103,7 @@ class RunShowExportTestCase(unittest.TestCase):
         with Print.patch() as p:
             show(self.datastore.calc_id, 'sitemesh')
         self.assertEqual(str(p), '''\
-lon:float64:,lat:float64:
+lon:float64,lat:float64
 0.00000000E+00,0.00000000E+00''')
 
     def test_show_attrs(self):

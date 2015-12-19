@@ -29,7 +29,7 @@ import numpy
 from xml.etree import ElementTree as et
 
 from openquake.commonlib import node, nrml
-from openquake.commonlib.writers import scientificformat
+from openquake.commonlib.writers import scientificformat, floatformat
 
 by_imt = operator.itemgetter('imt', 'sa_period', 'sa_damping')
 
@@ -72,9 +72,9 @@ def _validate_hazard_metadata(md):
     :raises:
         :exc:`ValueError` if the metadata is not valid.
     """
-    if (md.get('statistics') is not None
-        and (md.get('smlt_path') is not None
-             or md.get('gsimlt_path') is not None)):
+    if (md.get('statistics') is not None and (
+            md.get('smlt_path') is not None or
+            md.get('gsimlt_path') is not None)):
         raise ValueError('Cannot specify both `statistics` and logic tree '
                          'paths')
 
@@ -793,7 +793,7 @@ class DisaggXMLWriter(object):
               curve at the given ``poe``.
         """
 
-        with nrml.NRMLFile(self.dest, 'w') as fh:
+        with nrml.NRMLFile(self.dest, 'w') as fh, floatformat('%.6E'):
             root = et.Element('nrml')
 
             diss_matrices = et.SubElement(root, 'disaggMatrices')

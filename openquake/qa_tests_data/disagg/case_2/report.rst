@@ -18,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0          
 random_seed                  23            
 master_seed                  0             
-concurrent_tasks             32            
+concurrent_tasks             10            
 ============================ ==============
 
 Input files
@@ -35,12 +35,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-============== ====== ========================================== =============== ================ ===========
-smlt_path      weight source_model_file                          gsim_logic_tree num_realizations num_sources
-============== ====== ========================================== =============== ================ ===========
-source_model_1 0.50   `source_model_1.xml <source_model_1.xml>`_ simple(2,1)     2/2              363        
-source_model_2 0.50   `source_model_2.xml <source_model_2.xml>`_ simple(2,0)     2/2              15         
-============== ====== ========================================== =============== ================ ===========
+============== ====== ========================================== =============== ================
+smlt_path      weight source_model_file                          gsim_logic_tree num_realizations
+============== ====== ========================================== =============== ================
+source_model_1 0.50   `source_model_1.xml <source_model_1.xml>`_ simple(2,1)     2/2             
+source_model_2 0.50   `source_model_2.xml <source_model_2.xml>`_ simple(2,0)     2/2             
+============== ====== ========================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------

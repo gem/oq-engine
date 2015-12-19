@@ -1,2 +1,2 @@
-asset_ref:|S20:,lon:float32:,lat:float32:,structural-mean:float64:,structural-stddev:float64:
+asset_ref:|S20,lon,lat,structural-mean:float64,structural-stddev:float64
 a1,-1.220000E+02,3.811300E+01,2.263182E+03,1.433032E+03

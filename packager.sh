@@ -502,6 +502,9 @@ _pkgtest_innervm_run () {
         oq-lite run ClassicalBCR/job_hazard.ini,ClassicalBCR/job_risk.ini
 
         cd ../hazard
+        echo 'running Disaggregation'
+        oq-lite run Disaggregation/job.ini
+
         echo 'running LogicTreeCase1ClassicalPSHA'
         oq-lite run LogicTreeCase1ClassicalPSHA/job.ini
         oq-lite show -1 --rlzs

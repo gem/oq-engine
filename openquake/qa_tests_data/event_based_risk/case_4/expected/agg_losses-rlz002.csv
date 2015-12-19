@@ -1,4 +1,4 @@
-tag:|S100:,structural:float32:,structural_ins:float32:
+tag:|S100,structural,structural_ins
 col=05~ses=0001~src=AS_TRAS334-149~rup=005-01,2.612424E+05,       NAN
 col=05~ses=0001~src=AS_TRAS334-155~rup=001-01,1.231194E+05,       NAN
 col=05~ses=0001~src=AS_TRAS334-160~rup=031-01,1.102214E+07,       NAN
