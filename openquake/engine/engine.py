@@ -33,11 +33,11 @@ import openquake.engine
 from django.core import exceptions
 from django import db as django_db
 
+from openquake.baselib.performance import PerformanceMonitor
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.celery_node_monitor import CeleryNodeMonitor
-from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.writer import CacheInserter
 from openquake.engine.settings import DATABASES
 from openquake.engine.db.models import Performance
@@ -179,6 +179,28 @@ def create_job(user_name="openquake", log_level='progress', hc_id=None):
     return job
 
 
+class EnginePerformanceMonitor(PerformanceMonitor):
+    def flush(self):
+        for child in self.children:
+            child.flush()
+        data = self.get_data()
+        if len(data) == 0:  # no information
+            return
+
+        # reset monitor
+        self.duration = 0
+        self.mem = 0
+        self.counts = 0
+
+        for rec in data:
+            models.Performance.objects.create(
+                oq_job_id=self.job_id,
+                operation=rec['operation'],
+                start_time=self.start_time,
+                duration=rec['time_sec'],
+                pymemory=rec['memory_mb'])
+
+
 # used by bin/openquake and openquake.server.views
 def run_calc(job, log_level, log_file, exports):
     """
@@ -202,7 +224,8 @@ def run_calc(job, log_level, log_file, exports):
     from openquake.calculators import base
     calculator = base.calculators(job.get_oqparam(), calc_id=job.id)
     calculator.job = job
-    calculator.monitor = EnginePerformanceMonitor('', job.id)
+    calculator.monitor = EnginePerformanceMonitor('')
+    calculator.monitor.job_id = job.id
 
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
