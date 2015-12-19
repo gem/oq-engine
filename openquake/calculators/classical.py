@@ -134,12 +134,14 @@ class BoundingBox(object):
 
 
 @parallel.litetask
-def classical(sources, sitecol, rlzs_assoc, monitor):
+def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     """
     :param sources:
         a non-empty sequence of sources of homogeneous tectonic region type
     :param sitecol:
         a SiteCollection instance
+    :param siteidx:
+        index of the first site (0 if there is a single tile)
     :param rlzs_assoc:
         a RlzsAssoc instance
     :param monitor:
@@ -169,9 +171,10 @@ def classical(sources, sitecol, rlzs_assoc, monitor):
         sources, sitecol, imtls, gsims, truncation_level,
         source_site_filter=source_site_distance_filter(max_dist),
         maximum_distance=max_dist, bbs=bbs, monitor=monitor)
-    dic = dict(calc_times=monitor.calc_times, bbs=bbs)
+    dic = AccumDict(calc_times=monitor.calc_times, bbs=bbs)
     for gsim, curves in zip(gsims, curves_by_gsim):
         dic[trt_model_id, str(gsim)] = curves
+    dic.indices = numpy.arange(siteidx, siteidx + len(sitecol))
     return dic
 
 
@@ -241,7 +244,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 for smodel in self.csm.source_models}
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
-            (sources, self.sitecol, self.rlzs_assoc, monitor),
+            (sources, self.sitecol, 0, self.rlzs_assoc, monitor),
             agg=agg_dicts, acc=zerodict,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
@@ -380,38 +383,6 @@ def is_effective_trt_model(result_dict, trt_model):
                if trt_model.id == key[0] and nonzero(val))
 
 
-@parallel.litetask
-def classical_tiling(calculator, sitecol, siteidx, tileno, monitor):
-    """
-    :param calculator:
-        a ClassicalCalculator instance
-    :param sitecol:
-        the site collection of the current tile
-    :param siteidx:
-        index of the first site of the current tile
-    :param tileno:
-        the tile ordinal
-    :param monitor:
-        a monitor instance
-    :returns:
-        a dictionary file name -> full path for each exported file
-    """
-    calculator.sitecol = sitecol
-    calculator.tileno = '.%04d' % tileno
-    curves_by_trt_gsim = calculator.execute()
-    curves_by_trt_gsim.indices = numpy.arange(siteidx, siteidx + len(sitecol))
-    # build the correct realizations from the (reduced) logic tree
-    calculator.rlzs_assoc = calculator.csm.get_rlzs_assoc(
-        partial(is_effective_trt_model, curves_by_trt_gsim))
-    n_rlzs = len(calculator.rlzs_assoc.realizations)
-    n_levels = sum(len(imls) for imls in calculator.oqparam.imtls.values())
-    tup = (len(calculator.sitecol), n_levels, len(calculator.rlzs_assoc),
-           n_rlzs)
-    logging.info('Processed tile %d, (sites, levels, keys, rlzs)=%s',
-                 tileno, tup)
-    return curves_by_trt_gsim
-
-
 def agg_curves_by_trt_gsim(acc, curves_by_trt_gsim):
     """
     :param acc: AccumDict (trt_id, gsim) -> N curves
@@ -421,7 +392,9 @@ def agg_curves_by_trt_gsim(acc, curves_by_trt_gsim):
     in the current tile. Works by side effect, by updating the accumulator.
     """
     for k in curves_by_trt_gsim:
-        if k == 'calc_times':
+        if k == 'bbs':  # ignored in the tiling calculator
+            pass
+        elif k == 'calc_times':
             acc[k].extend(curves_by_trt_gsim[k])
         else:
             acc[k][curves_by_trt_gsim.indices] = curves_by_trt_gsim[k]
@@ -479,12 +452,11 @@ class ClassicalTilingCalculator(ClassicalCalculator):
                      len(tiles), len(tiles[0]))
         oq.concurrent_tasks = 0
         siteidx = 0
-        for (i, tile) in enumerate(tiles):
-            calculator = ClassicalCalculator(oq, monitor, persistent=False)
+        for tile in tiles:
             with self.monitor('filtering sources per tile', autoflush=True):
-                calculator.csm = self.csm.filtered(oq.maximum_distance, tile)
-            calculator.rlzs_assoc = calculator.csm.get_rlzs_assoc()
-            yield calculator, tile, siteidx, i, monitor
+                csm = self.csm.filtered(oq.maximum_distance, tile)
+            yield (csm.get_sources(), tile, siteidx, csm.get_rlzs_assoc(),
+                   monitor)
             siteidx += len(tile)
 
     def execute(self):
@@ -494,7 +466,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         acc = {trt_gsim: zero_curves(len(self.sitecol), self.oqparam.imtls)
                for trt_gsim in self.rlzs_assoc}
         acc['calc_times'] = []
-        res = parallel.starmap(classical_tiling, self.gen_args()).reduce(
+        res = parallel.starmap(classical, self.gen_args()).reduce(
             agg_curves_by_trt_gsim, acc)
         self.rlzs_assoc = self.csm.get_rlzs_assoc(
             partial(is_effective_trt_model, res))
