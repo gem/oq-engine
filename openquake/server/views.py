@@ -175,8 +175,10 @@ def validate_nrml(request):
     try:
         nrml.read(xml_file)
     except Exception as exc:
-        error_msg = str(exc).split(', line')[0]
-        error_line = int(re.search(r'line \d+', str(exc)).group(0).split()[1])
+        exc_msg = exc.message.encode('utf8')
+        error_msg = exc_msg.split(', line')[0]
+        error_line = int(
+            re.search(r'line \d+', exc_msg).group(0).split()[1])
         response_data['error_msg'] = error_msg
         response_data['error_line'] = error_line
         response_data['valid'] = False
