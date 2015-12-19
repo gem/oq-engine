@@ -604,7 +604,7 @@ class EventBasedCalculator(ClassicalCalculator):
             elif isinstance(gsim_or_col, str):  # aggregate hcurves
                 with agg_mon:
                     curves_by_imt = res[trt_id, gsim_or_col]
-                    acc = agg_dicts(
+                    agg_dicts(
                         acc, AccumDict({(trt_id, gsim_or_col): curves_by_imt}))
         sav_mon.flush()
         agg_mon.flush()

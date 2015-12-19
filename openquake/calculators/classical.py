@@ -186,8 +186,9 @@ def agg_dicts(acc, val):
     """
     Aggregate dictionaries of hazard curves by updating the accumulator
     """
-    acc.calc_times.extend(val.calc_times)
-    for bb in val.bbs:
+    if hasattr(val, 'calc_times'):
+        acc.calc_times.extend(val.calc_times)
+    for bb in getattr(val, 'bbs', []):
         acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
     for key in val:
         acc[key] = agg_curves(acc[key], val[key])
@@ -261,7 +262,7 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary (trt_id, gsim) -> hazard curves
         """
         # save calculation time per source
-        calc_times = curves_by_trt_gsim.calc_times
+        calc_times = getattr(curves_by_trt_gsim, 'calc_times', [])
         sources = self.csm.get_sources()
         info = []
         for i, dt in calc_times:
@@ -379,6 +380,7 @@ def is_effective_trt_model(result_dict, trt_model):
                if trt_model.id == key[0] and nonzero(val))
 
 
+# used by the classical_tiling calculator
 def agg_curves_by_trt_gsim(acc, curves_by_trt_gsim):
     """
     :param acc: AccumDict (trt_id, gsim) -> N curves
