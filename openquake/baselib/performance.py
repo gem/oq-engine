@@ -147,7 +147,7 @@ class PerformanceMonitor(object):
             child.flush()
         data = self.get_data()
         if len(data) == 0:  # no information
-            return
+            return []
 
         # reset monitor
         self.duration = 0
@@ -164,6 +164,8 @@ class PerformanceMonitor(object):
             h5.close()
         else:  # print on stddout
             print(data[0])
+
+        return data
 
     # TODO: rename this as spawn; see what will break
     def __call__(self, operation, **kw):
