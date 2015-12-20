@@ -448,7 +448,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         monitor.oqparam = oq = self.oqparam
         rlzs_assoc = self.csm.get_rlzs_assoc()
         num_src_models = len(rlzs_assoc.csm_info.source_models)
-        hint = math.ceil(oq.concurrent_tasks, num_src_models)
+        hint = math.ceil(oq.concurrent_tasks / num_src_models)
         tiles = split_in_tiles(self.sitecol, hint)
         logging.info('Generating %d tiles of %d sites each',
                      len(tiles), len(tiles[0]))
