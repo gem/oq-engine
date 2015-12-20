@@ -125,8 +125,8 @@ def job_stats(job):
         job.is_running = False
         if tb != 'None\n':
             # rollback the transactions; unfortunately, for mysterious reasons,
-            # this is not enough and an OperationError may still show up in the
-            # finalization phase when forks are involved
+            # this is not enough and an OperationalError may still show up in
+            # the finalization phase when forks are involved
             for conn in django_db.connections.all():
                 conn.rollback()
         # try to save the job stats on the database and then clean up;
@@ -142,8 +142,9 @@ def job_stats(job):
             js.save()
             cleanup_after_job(job, terminate=TERMINATE)
         except:
-            # log the non-interesting error
-            logs.LOG.error('finalizing', exc_info=True)
+            # log the finalization error only if there is not real error
+            if tb == 'None\n':
+                logs.LOG.error('finalizing', exc_info=True)
 
         # log the real error, if any
         if tb != 'None\n':
