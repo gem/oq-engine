@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2014, GEM Foundation.
+# Copyright (c) 2010-2015, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -83,19 +83,17 @@ RISK_HAZARD_MAP = dict(
     event_based_risk=['event_based', 'event_based_risk'])
 
 
-def cleanup_after_job(job, terminate):
+def cleanup_after_job(job, terminate, task_ids=()):
     """
     Release the resources used by an openquake job.
     In particular revoke the running tasks (if any).
 
     :param int job_id: the job id
     :param bool terminate: the celery revoke command terminate flag
+    :param task_ids: celery task IDs
     """
     # Using the celery API, terminate and revoke and terminate any running
     # tasks associated with the current job.
-    task_ids = Performance.objects.filter(
-        oq_job=job, operation='storing task id', task_id__isnull=False)\
-        .values_list('task_id', flat=True)
     if task_ids:
         logs.LOG.warn('Revoking %d tasks', len(task_ids))
     else:  # this is normal when OQ_NO_DISTRIBUTE=1
@@ -140,6 +138,7 @@ def job_stats(job):
             js.disk_space = new_dbsize - dbsize
             js.stop_time = datetime.utcnow()
             js.save()
+            # FIXME: we should pass the task IDs somewhat
             cleanup_after_job(job, terminate=TERMINATE)
         except:
             # log the finalization error only if there is not real error
