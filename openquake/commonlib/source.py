@@ -600,6 +600,7 @@ class CompositeSourceModel(collections.Sequence):
             if trt_model.num_ruptures == 0 or really:
                 trt_model.num_ruptures = sum(
                     src.count_ruptures() for src in trt_model)
+                logging.info('Processed %s', trt_model)
 
     def get_info(self):
         """
