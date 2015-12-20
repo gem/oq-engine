@@ -195,8 +195,8 @@ def plot_magnitude_time_scatter(catalogue, plot_error=False, filename=None,
     return
 
 def plot_magnitude_time_density(catalogue, mag_int, time_int,
-        normalisation=False, bootstrap=None, filename=None, filetype='png',
-        dpi=300):
+        normalisation=False, logscale=True, bootstrap=None, filename=None,
+        filetype='png', dpi=300):
     """
     Creates a plot of magnitude-time density
     :param catalogue:
@@ -237,10 +237,15 @@ def plot_magnitude_time_density(catalogue, mag_int, time_int,
     # Get smallest non-zero value
     vmin_val = np.min(mag_time_dist[mag_time_dist > 0.])
     # Create plot
+    if logscale:
+        norm_data = LogNorm(vmin=vmin_val, vmax=np.max(mag_time_dist))
+    else:
+        norm_data = Normalize(vmin=vmin_val, vmax=np.max(mag_time_dist))
+
     plt.pcolor(time_bins[:-1],
                mag_bins[:-1],
                mag_time_dist.T,
-               norm=LogNorm(vmin=vmin_val, vmax=np.max(mag_time_dist)))
+               norm=norm_data)
     plt.xlabel('Time (year)', fontsize='large')
     plt.ylabel('Magnitude', fontsize='large')
     plt.xlim(time_bins[0], time_bins[-1])

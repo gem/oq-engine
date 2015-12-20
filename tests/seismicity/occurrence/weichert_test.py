@@ -49,7 +49,7 @@
 Unit tests for the Weichert algorithm class which computes
 seismicity occurrence parameters.
 """
-
+import os
 import unittest
 import numpy as np
 
@@ -57,52 +57,120 @@ from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.occurrence.weichert import Weichert
 
 
-class WeichertTestCase(unittest.TestCase):
+#class WeichertTestCase(unittest.TestCase):
+#
+#    def setUp(self):
+#        """
+#        This generates a catalogue to be used for the regression.
+#        """
+#        # Generates a data set assuming b=1
+#        self.dmag = 0.1
+#        mext = np.arange(4.0,7.01,0.1)
+#        self.mval = mext[0:-1] + self.dmag / 2.0
+#        self.bval = 1.0
+#        numobs = np.flipud(np.diff(np.flipud(10.0**(-self.bval*mext+7.0))))
+#        # Compute the number of observations in the different magnitude
+#        # intervals (according to completeness) 
+#        numobs[0:6] *= 10
+#        numobs[6:13] *= 20
+#        numobs[13:22] *= 50
+#        numobs[22:] *= 100
+#        # Define completeness window
+#        compl = np.array([[1900, 1950, 1980, 1990], [6.34, 5.44, 4.74, 3.0]])
+#        self.compl = np.flipud(compl.transpose())
+#        # Compute the number of observations (i.e. earthquakes) in each
+#        # magnitude bin
+#        numobs = np.around(numobs)
+#        magnitude = np.zeros( (np.sum(numobs)) )
+#        year = np.zeros( (np.sum(numobs)) ) * 1999
+#        # Generate the catalogue
+#        lidx = 0
+#        for mag, nobs in zip(self.mval, numobs):
+#            uidx = int(lidx+nobs)
+#            magnitude[lidx:uidx] = mag + 0.01
+#            year_low = compl[0,np.min(np.nonzero(compl[1,:] < mag)[0])]
+#            year[lidx:uidx] = (year_low + np.random.rand(uidx-lidx) *
+#                    (2000-year_low))
+#            lidx = uidx
+#        # Fix the parameters that later will be used for the testing
+#        self.catalogue = Catalogue.make_from_dict(
+#            {'magnitude' : magnitude, 'year' : year})
+#        self.wei = Weichert()
+#        self.config = {'Average Type' : 'Weighted'}
+#
+#    def test_weichert(self):
+#        """
+#        Tests that the computed b value corresponds to the same value
+#        used to generate the test data set
+#        """
+#        bval, sigma_b, aval, sigma_a = self.wei.calculate(self.catalogue,
+#                self.config, self.compl)
+#        self.assertAlmostEqual(self.bval, bval, 1)
 
+
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
+
+
+class WeichertTestCase(unittest.TestCase):
+    """
+    This test verifies two components of the Weichert algorithm against
+    a synthetic catalogue of known properties.
+    The synthetic catalogue is derived from a b-value of 0.9, a minimum
+    magnitude of 3.0 and a maximum magnitude of 8.0. The annual rate of
+    events >= 3.0 is 100.
+
+    The completeness periods of the catalogue are:
+    [[1990, 3.0],
+     [1975, 4.0],
+     [1960, 5.0],
+     [1930, 6.0],
+     [1910, 7.0]]
+    """
     def setUp(self):
         """
-        This generates a catalogue to be used for the regression.
+        Sets up the test catalogue to be used for the Weichert algorithm
         """
-        # Generates a data set assuming b=1
-        self.dmag = 0.1
-        mext = np.arange(4.0,7.01,0.1)
-        self.mval = mext[0:-1] + self.dmag / 2.0
-        self.bval = 1.0
-        numobs = np.flipud(np.diff(np.flipud(10.0**(-self.bval*mext+7.0))))
-        # Compute the number of observations in the different magnitude
-        # intervals (according to completeness) 
-        numobs[0:6] *= 10
-        numobs[6:13] *= 20
-        numobs[13:22] *= 50
-        numobs[22:] *= 100
-        # Define completeness window
-        compl = np.array([[1900, 1950, 1980, 1990], [6.34, 5.44, 4.74, 3.0]])
-        self.compl = np.flipud(compl.transpose())
-        # Compute the number of observations (i.e. earthquakes) in each
-        # magnitude bin
-        numobs = np.around(numobs)
-        magnitude = np.zeros( (np.sum(numobs)) )
-        year = np.zeros( (np.sum(numobs)) ) * 1999
-        # Generate the catalogue
-        lidx = 0
-        for mag, nobs in zip(self.mval, numobs):
-            uidx = int(lidx+nobs)
-            magnitude[lidx:uidx] = mag + 0.01
-            year_low = compl[0,np.min(np.nonzero(compl[1,:] < mag)[0])]
-            year[lidx:uidx] = (year_low + np.random.rand(uidx-lidx) *
-                    (2000-year_low))
-            lidx = uidx
-        # Fix the parameters that later will be used for the testing
-        self.catalogue = Catalogue.make_from_dict(
-            {'magnitude' : magnitude, 'year' : year})
-        self.wei = Weichert()
-        self.config = {'Average Type' : 'Weighted'}
+        cat_file = os.path.join(BASE_DATA_PATH, "synthetic_test_cat1.csv")
+        raw_data = np.genfromtxt(cat_file, delimiter=",")
+        neq = raw_data.shape[0]
+        self.catalogue = Catalogue.make_from_dict({
+            "eventID": raw_data[:, 0].astype(int),
+            "year": raw_data[:, 1].astype(int),
+            "dtime": raw_data[:, 2],
+            "longitude": raw_data[:, 3],
+            "latitude": raw_data[:, 4],
+            "magnitude": raw_data[:, 5],
+            "depth": raw_data[:, 6]})
+        self.config = {"reference_magnitude": 3.0}
+        self.completeness = np.array([[1990., 3.0],
+                                      [1975., 4.0],
+                                      [1960., 5.0],
+                                      [1930., 6.0],
+                                      [1910., 7.0]])
 
-    def test_weichert(self):
+    def test_weichert_prep(self):
         """
-        Tests that the computed b value corresponds to the same value
-        used to generate the test data set
+        Tests the Weichert preparation function to ensure the correct counts
         """
-        bval, sigma_b, aval, sigma_a = self.wei.calculate(self.catalogue,
-                self.config, self.compl)
-        self.assertAlmostEqual(self.bval, bval, 1)
+        wchrt = Weichert()
+        expected_mags = np.array([3.5, 4.5, 5.5, 6.5, 7.06])
+        expected_count = np.array([1749., 391., 72., 13., 1.])
+        expected_tper = np.array([20., 35., 50., 80.,100.])
+        cent_mag, t_per, n_obs = wchrt._weichert_prep(self.catalogue,
+                                                      self.completeness)
+        np.testing.assert_array_almost_equal(cent_mag, expected_mags)
+        np.testing.assert_array_almost_equal(t_per, expected_tper)
+        np.testing.assert_array_almost_equal(n_obs, expected_count)
+
+    def test_weichert_full(self):
+        """
+        Tests the Weichert function for the synthetic catalogue
+        """
+        wchrt = Weichert()
+        bval, sigmab, rate, sigma_rate = wchrt.calculate(self.catalogue,
+                                                         self.config,
+                                                         self.completeness)
+        self.assertAlmostEqual(bval, 0.905, 3)
+        self.assertAlmostEqual(sigmab, 0.0165, 4)
+        self.assertAlmostEqual(rate, 100.350, 3)
+        self.assertAlmostEqual(sigma_rate, 2.1269, 3) 
