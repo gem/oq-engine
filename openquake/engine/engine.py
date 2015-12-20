@@ -148,7 +148,10 @@ def job_stats(job):
 
         # log the real error, if any
         if tb != 'None\n':
-            logs.LOG.critical(tb)
+            try:
+                logs.LOG.critical(tb)
+            except:  # an OperationalError may always happen
+                sys.stderr.write(tb)
 
 
 def create_job(user_name="openquake", log_level='progress', hc_id=None):
