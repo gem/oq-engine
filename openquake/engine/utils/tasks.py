@@ -28,7 +28,6 @@ from openquake.commonlib.parallel import \
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.utils import config
-from openquake.engine.writer import CacheInserter
 
 SOFT_MEM_LIMIT = int(config.get('memory', 'soft_mem_limit'))
 HARD_MEM_LIMIT = int(config.get('memory', 'hard_mem_limit'))
@@ -51,10 +50,13 @@ class OqTaskManager(TaskManager):
     Progress report is built-in.
     """
     progress = staticmethod(logs.LOG.progress)
+    task_ids = []
 
     def _submit(self, pickled_args):
         # submit tasks by using celery
-        return self.oqtask.delay(*pickled_args)
+        res = self.oqtask.delay(*pickled_args)
+        self.task_ids.append(res.task_id)
+        return res
 
     def aggregate_result_set(self, agg, acc):
         """
@@ -71,6 +73,8 @@ class OqTaskManager(TaskManager):
         amqp_backend = backend.__class__.__name__.startswith('AMQP')
         rset = ResultSet(self.results)
         for task_id, result_dict in rset.iter_native():
+            idx = self.task_ids.index(task_id)
+            self.task_ids.pop(idx)
             check_mem_usage()  # warn if too much memory is used
             result = result_dict['result']
             if isinstance(result, BaseException):

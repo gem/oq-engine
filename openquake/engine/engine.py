@@ -36,11 +36,10 @@ from django import db as django_db
 from openquake.baselib.performance import PerformanceMonitor
 from openquake.engine import logs
 from openquake.engine.db import models
-from openquake.engine.utils import config
+from openquake.engine.utils import config, tasks
 from openquake.engine.celery_node_monitor import CeleryNodeMonitor
 from openquake.engine.writer import CacheInserter
 from openquake.engine.settings import DATABASES
-from openquake.engine.db.models import Performance
 from openquake.engine.db.schema.upgrades import upgrader
 
 from openquake import hazardlib, risklib, commonlib
@@ -138,8 +137,7 @@ def job_stats(job):
             js.disk_space = new_dbsize - dbsize
             js.stop_time = datetime.utcnow()
             js.save()
-            # FIXME: we should pass the task IDs somewhat
-            cleanup_after_job(job, terminate=TERMINATE)
+            cleanup_after_job(job, TERMINATE, tasks.OqTaskManager.task_ids)
         except:
             # log the finalization error only if there is not real error
             if tb == 'None\n':
