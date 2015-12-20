@@ -108,31 +108,16 @@ def oqtask(task_func):
         if job.is_running is False:
             # the job was killed, it is useless to run the task
             raise JobNotRunning(monitor.job_id)
+        check_mem_usage()  # warn if too much memory is used
+        total = 'total ' + task_func.__name__
+        with monitor(total, task=tsk):
+            with GroundShakingIntensityModel.forbid_instantiation():
+                return task_func(*args)
 
-        # it is important to save the task id soon, so that
-        # the revoke functionality can work
-        with monitor('storing task id', task=tsk, autoflush=True):
-            pass
-
-        with logs.handle(job):
-            check_mem_usage()  # warn if too much memory is used
-            # run the task
-            try:
-                total = 'total ' + task_func.__name__
-                with monitor(total, task=tsk):
-                    with GroundShakingIntensityModel.forbid_instantiation():
-                        return task_func(*args)
-            finally:
-                # save on the db
-                CacheInserter.flushall()
-                # the task finished, we can remove from the performance
-                # table the associated row 'storing task id'
-                models.Performance.objects.filter(
-                    oq_job=job,
-                    operation='storing task id',
-                    task_id=tsk.request.id).delete()
     celery_queue = config.get('amqp', 'celery_queue')
-    f = lambda *args: safely_call(wrapped, args, pickle=True)
+
+    def f(*args):
+        return safely_call(wrapped, args, pickle=True)
     f.__name__ = task_func.__name__
     f.__module__ = task_func.__module__
     tsk = task(f, queue=celery_queue)
