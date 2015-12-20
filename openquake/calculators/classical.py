@@ -16,7 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
-import math
 import logging
 import operator
 import collections
@@ -447,8 +446,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         monitor = self.monitor.new(self.core_func.__name__)
         monitor.oqparam = oq = self.oqparam
         rlzs_assoc = self.csm.get_rlzs_assoc()
-        hint = math.ceil(oq.concurrent_tasks / len(rlzs_assoc))
-        tiles = split_in_tiles(self.sitecol, hint)
+        tiles = split_in_tiles(self.sitecol, oq.concurrent_tasks)
         logging.info('Generating %d tiles of %d sites each',
                      len(tiles), len(tiles[0]))
         siteidx = 0
