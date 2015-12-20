@@ -195,20 +195,6 @@ def expand(array, n, aslice):
     return zeros
 
 
-# used by the classical calculator
-def agg_dicts(acc, val):
-    """
-    Aggregate dictionaries of hazard curves by updating the accumulator
-    """
-    if hasattr(val, 'calc_times'):
-        acc.calc_times.extend(val.calc_times)
-    for bb in getattr(val, 'bbs', []):
-        acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
-    for key in val:
-        acc[key] = agg_curves(acc[key], expand(val[key], acc.n, val.siteslice))
-    return acc
-
-
 source_info_dt = numpy.dtype(
     [('trt_model_id', numpy.uint32),
      ('source_id', (bytes, 20)),
@@ -241,6 +227,20 @@ class ClassicalCalculator(base.HazardCalculator):
     core_func = classical
     source_info = datastore.persistent_attribute('source_info')
 
+    def agg_dicts(self, acc, val):
+        """
+        Aggregate dictionaries of hazard curves by updating the accumulator
+        """
+        with self.monitor('aggregate curves', autoflush=True):
+            if hasattr(val, 'calc_times'):
+                acc.calc_times.extend(val.calc_times)
+            for bb in getattr(val, 'bbs', []):
+                acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
+            for key in val:
+                acc[key] = agg_curves(
+                    acc[key], expand(val[key], acc.n, val.siteslice))
+        return acc
+
     def execute(self):
         """
         Run in parallel `core_func(sources, sitecol, monitor)`, by
@@ -262,7 +262,7 @@ class ClassicalCalculator(base.HazardCalculator):
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, 0, self.rlzs_assoc, monitor),
-            agg=agg_dicts, acc=zerodict,
+            agg=self.agg_dicts, acc=zerodict,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_model_id'))
@@ -472,7 +472,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         acc.calc_times = []
         acc.n = len(self.sitecol)
         res = parallel.starmap(classical, self.gen_args()).reduce(
-            agg_dicts, acc)
+            self.agg_dicts, acc)
         self.rlzs_assoc = self.csm.get_rlzs_assoc(
             partial(is_effective_trt_model, res))
         return res
