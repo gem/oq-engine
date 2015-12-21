@@ -17,25 +17,19 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """Utility functions related to splitting work into tasks."""
+import types
 
 from celery.result import ResultSet
 from celery.app import current_app
 from celery.task import task
 
-from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
-from openquake.commonlib.parallel import \
-    TaskManager, safely_call, check_mem_usage
+from openquake.commonlib.parallel import TaskManager, check_mem_usage
 from openquake.engine import logs
-from openquake.engine.db import models
 from openquake.engine.utils import config
 
 SOFT_MEM_LIMIT = int(config.get('memory', 'soft_mem_limit'))
 HARD_MEM_LIMIT = int(config.get('memory', 'hard_mem_limit'))
 check_mem_usage.__defaults__ = (SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
-
-
-class JobNotRunning(Exception):
-    pass
 
 
 class OqTaskManager(TaskManager):
@@ -54,6 +48,9 @@ class OqTaskManager(TaskManager):
 
     def _submit(self, pickled_args):
         # submit tasks by using celery
+        if isinstance(self.oqtask, types.FunctionType):
+            celery_queue = config.get('amqp', 'celery_queue')
+            self.oqtask = task(self.oqtask, queue=celery_queue)
         res = self.oqtask.delay(*pickled_args)
         self.task_ids.append(res.task_id)
         return res
@@ -89,52 +86,3 @@ class OqTaskManager(TaskManager):
 # convenient aliases
 starmap = OqTaskManager.starmap
 apply_reduce = OqTaskManager.apply_reduce
-
-
-def oqtask(task_func):
-    """
-    Task function decorator which sets up logging and catches (and logs) any
-    errors which occur inside the task. Also checks to make sure the job is
-    actually still running. If it is not running, the task doesn't get
-    executed, so we don't do useless computation.
-
-    :param task_func: the function to decorate
-    """
-    def wrapped(*args):
-        """
-        Initialize logs, make sure the job is still running, and run the task
-        code surrounded by a try-except. If any error occurs, log it as a
-        critical failure.
-        """
-        # the last argument is assumed to be a monitor
-        monitor = args[-1]
-        job = models.OqJob.objects.get(id=monitor.job_id)
-        if job.is_running is False:
-            # the job was killed, it is useless to run the task
-            raise JobNotRunning(monitor.job_id)
-        check_mem_usage()  # warn if too much memory is used
-        total = 'total ' + task_func.__name__
-        with monitor(total, task=tsk):
-            with GroundShakingIntensityModel.forbid_instantiation():
-                return task_func(*args)
-
-    celery_queue = config.get('amqp', 'celery_queue')
-
-    def f(*args):
-        return safely_call(wrapped, args, pickle=True)
-    f.__name__ = task_func.__name__
-    f.__module__ = task_func.__module__
-    tsk = task(f, queue=celery_queue)
-    tsk.__func__ = tsk
-    tsk.task_func = task_func
-    return tsk
-
-
-# ######### oq-lite support: this is hackish for the time being ############# #
-
-from openquake.commonlib import parallel
-
-# monkey patch the parallel module
-parallel.starmap = starmap
-parallel.apply_reduce = apply_reduce
-parallel.litetask = oqtask
