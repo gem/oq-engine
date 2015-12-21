@@ -157,7 +157,7 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     trt_model_id = sources[0].trt_model_id
     # sanity check: the trt_model must be the same for all sources
     for src in sources[1:]:
-        src.trt_model_id == trt_model_id
+        assert src.trt_model_id == trt_model_id
     gsims = rlzs_assoc.gsims_by_trt_id[trt_model_id]
 
     dic = AccumDict()
