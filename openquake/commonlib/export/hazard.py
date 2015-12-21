@@ -399,22 +399,37 @@ def export_hcurves_csv(ekey, dstore):
 
 UHS = collections.namedtuple('UHS', 'imls location')
 
+
 @export.add(('uhs', 'xml'))
 def export_uhs_xml(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
     rlzs_assoc = dstore['rlzs_assoc']
-    sitecol = dstore['sitecol']
+    sitemesh = dstore['sitemesh'].value
     key, fmt = ekey
     fnames = []
     periods = [imt for imt in oq.imtls if imt.startswith('SA') or imt == 'PGA']
     for kind, uhs_curves in dstore[key].items():
-        fname = hazard_curve_name(
-            dstore, ekey, kind, rlzs_assoc,
-            oq.number_of_logic_tree_samples)
-        writer = hazard_writers.UHSXMLWriter(fname, periods=periods)
-        data = []
-        writer.serialize(data)
-        fnames.append(fname)
+        if kind.startswith('rlz-'):
+            rlz = rlzs_assoc.realizations[int(kind[4:])]
+            smlt_path = '_'.join(rlz.sm_lt_path)
+            gsimlt_path = rlz.gsim_rlz.uid
+        else:
+            smlt_path = ''
+            gsimlt_path = ''
+            # TODO: statistics and quantile_value
+        for i, poe in enumerate(oq.poes):
+            fname = hazard_curve_name(
+                dstore, ekey, kind + '-%s' % poe, rlzs_assoc,
+                oq.number_of_logic_tree_samples)
+            writer = hazard_writers.UHSXMLWriter(
+                fname, periods=periods, poe=poe,
+                investigation_time=oq.investigation_time,
+                smlt_path=smlt_path, gsimlt_path=gsimlt_path)
+            data = []
+            for site, curve in zip(sitemesh, uhs_curves[i]):
+                data.append(UHS(curve, Location(site)))
+            writer.serialize(data)
+            fnames.append(fname)
     return sorted(fnames)
 
 
