@@ -397,6 +397,26 @@ def export_hcurves_csv(ekey, dstore):
         fnames.append(fname)
     return sorted(fnames)
 
+UHS = collections.namedtuple('UHS', 'imls location')
+
+@export.add(('uhs', 'xml'))
+def export_uhs_xml(ekey, dstore):
+    oq = OqParam.from_(dstore.attrs)
+    rlzs_assoc = dstore['rlzs_assoc']
+    sitecol = dstore['sitecol']
+    key, fmt = ekey
+    fnames = []
+    periods = [imt for imt in oq.imtls if imt.startswith('SA') or imt == 'PGA']
+    for kind, uhs_curves in dstore[key].items():
+        fname = hazard_curve_name(
+            dstore, ekey, kind, rlzs_assoc,
+            oq.number_of_logic_tree_samples)
+        writer = hazard_writers.UHSXMLWriter(fname, periods=periods)
+        data = []
+        writer.serialize(data)
+        fnames.append(fname)
+    return sorted(fnames)
+
 
 # emulate a Django point
 class Location(object):
