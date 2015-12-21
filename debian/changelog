@@ -1,3 +1,6 @@
+  [Paolo Tormene]
+  * Added API to validate NRML
+
   [Michele Simionato]
   * Replaced the old disaggregation calculator with the oq-lite one
 
