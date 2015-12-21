@@ -38,7 +38,6 @@ from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.utils import config, tasks
 from openquake.engine.celery_node_monitor import CeleryNodeMonitor
-from openquake.engine.writer import CacheInserter
 from openquake.engine.settings import DATABASES
 from openquake.engine.db.schema.upgrades import upgrader
 
@@ -280,8 +279,6 @@ def _do_run_calc(calc, exports):
 
     log_status(job, "clean_up")
     calc.clean_up()
-
-    CacheInserter.flushall()  # flush caches into the db
 
     log_status(job, "complete")
 
