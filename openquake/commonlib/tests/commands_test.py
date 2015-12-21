@@ -24,10 +24,10 @@ class Print(object):
         self.lst = []
 
     def __call__(self, *args):
-        self.lst.append(' '.join(map(str, args)))
+        self.lst.append(' '.join(map(unicode, args)))
 
-    def __str__(self):
-        return '\n'.join(self.lst)
+    def __unicode__(self):
+        return u'\n'.join(self.lst)
 
     @classmethod
     def patch(cls):
