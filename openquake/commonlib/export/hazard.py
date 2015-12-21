@@ -415,15 +415,14 @@ def export_hcurves_xml_json(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
     sitemesh = dstore['sitemesh'].value
     rlzs_assoc = dstore['rlzs_assoc']
+    hcurves = dstore[ekey[0]]
     fnames = []
     writercls = (hazard_writers.HazardCurveGeoJSONWriter
                  if export_type == 'geojson' else
                  hazard_writers.HazardCurveXMLWriter)
-    rlzs = iter(rlzs_assoc.realizations)
-    for kind, curves in dstore[ekey[0]].items():
-        if not kind.startswith('rlz-'):  # mean and quantiles
-            continue
-        rlz = next(rlzs)
+    for rlz in rlzs_assoc.realizations:
+        kind = 'rlz-%03d' % rlz.ordinal
+        curves = hcurves[kind]
         name = hazard_curve_name(
             dstore, ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
         for imt in oq.imtls:
@@ -451,9 +450,9 @@ def export_hmaps_xml_json(ekey, dstore):
     writercls = (hazard_writers.HazardMapGeoJSONWriter
                  if export_type == 'geojson' else
                  hazard_writers.HazardMapXMLWriter)
-    rlzs = iter(rlzs_assoc.realizations)
-    for kind, maps in dstore[ekey[0]].items():
-        rlz = next(rlzs)
+    for rlz in rlzs_assoc.realizations:
+        kind = 'rlz-%03d' % rlz.ordinal
+        maps = dstore[ekey[0]][kind]
         for imt in oq.imtls:
             for i, poe in enumerate(oq.poes):
                 suffix = '-%s-%s' % (poe, imt)
