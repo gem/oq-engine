@@ -420,23 +420,26 @@ def export_hcurves_xml_json(ekey, dstore):
     writercls = (hazard_writers.HazardCurveGeoJSONWriter
                  if export_type == 'geojson' else
                  hazard_writers.HazardCurveXMLWriter)
-    for rlz in rlzs_assoc.realizations:
-        kind = 'rlz-%03d' % rlz.ordinal
-        curves = hcurves[kind]
-        name = hazard_curve_name(
-            dstore, ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
-        for imt in oq.imtls:
-            imtype, sa_period, sa_damping = from_string(imt)
-            fname = name[:-len_ext] + '-' + imt + '.' + export_type
-            data = [HazardCurve(Location(site), poes[imt])
-                    for site, poes in zip(sitemesh, curves)]
-            writer = writercls(fname, investigation_time=oq.investigation_time,
-                               imls=oq.imtls[imt], imt=imtype,
-                               sa_period=sa_period, sa_damping=sa_damping,
-                               smlt_path='_'.join(rlz.sm_lt_path),
-                               gsimlt_path=rlz.gsim_rlz.uid)
-            writer.serialize(data)
-            fnames.append(fname)
+    for kind in hcurves:
+        if kind.startswith('rlz-'):
+            rlz = rlzs_assoc.realizations[int(kind[4:])]
+            curves = hcurves[kind]
+            name = hazard_curve_name(
+                dstore, ekey, kind, rlzs_assoc,
+                oq.number_of_logic_tree_samples)
+            for imt in oq.imtls:
+                imtype, sa_period, sa_damping = from_string(imt)
+                fname = name[:-len_ext] + '-' + imt + '.' + export_type
+                data = [HazardCurve(Location(site), poes[imt])
+                        for site, poes in zip(sitemesh, curves)]
+                writer = writercls(fname,
+                                   investigation_time=oq.investigation_time,
+                                   imls=oq.imtls[imt], imt=imtype,
+                                   sa_period=sa_period, sa_damping=sa_damping,
+                                   smlt_path='_'.join(rlz.sm_lt_path),
+                                   gsimlt_path=rlz.gsim_rlz.uid)
+                writer.serialize(data)
+                fnames.append(fname)
     return sorted(fnames)
 
 
@@ -445,29 +448,31 @@ def export_hmaps_xml_json(ekey, dstore):
     export_type = ekey[1]
     oq = OqParam.from_(dstore.attrs)
     sitemesh = dstore['sitemesh'].value
+    hmaps = dstore[ekey[0]]
     rlzs_assoc = dstore['rlzs_assoc']
     fnames = []
     writercls = (hazard_writers.HazardMapGeoJSONWriter
                  if export_type == 'geojson' else
                  hazard_writers.HazardMapXMLWriter)
-    for rlz in rlzs_assoc.realizations:
-        kind = 'rlz-%03d' % rlz.ordinal
-        maps = dstore[ekey[0]][kind]
-        for imt in oq.imtls:
-            for i, poe in enumerate(oq.poes):
-                suffix = '-%s-%s' % (poe, imt)
-                fname = hazard_curve_name(
-                    dstore, ekey, kind + suffix, rlzs_assoc,
-                    oq.number_of_logic_tree_samples)
-                data = [HazardMap(site[0], site[1], poes[imt][i])
-                        for site, poes in zip(sitemesh, maps)]
-                writer = writercls(
-                    fname, investigation_time=oq.investigation_time,
-                    imt=imt, poe=poe,
-                    smlt_path='_'.join(rlz.sm_lt_path),
-                    gsimlt_path=rlz.gsim_rlz.uid)
-                writer.serialize(data)
-                fnames.append(fname)
+    for kind in hmaps:
+        if kind.startswith('rlz-'):
+            rlz = rlzs_assoc.realizations[int(kind[4:])]
+            maps = hmaps[kind]
+            for imt in oq.imtls:
+                for i, poe in enumerate(oq.poes):
+                    suffix = '-%s-%s' % (poe, imt)
+                    fname = hazard_curve_name(
+                        dstore, ekey, kind + suffix, rlzs_assoc,
+                        oq.number_of_logic_tree_samples)
+                    data = [HazardMap(site[0], site[1], poes[imt][i])
+                            for site, poes in zip(sitemesh, maps)]
+                    writer = writercls(
+                        fname, investigation_time=oq.investigation_time,
+                        imt=imt, poe=poe,
+                        smlt_path='_'.join(rlz.sm_lt_path),
+                        gsimlt_path=rlz.gsim_rlz.uid)
+                    writer.serialize(data)
+                    fnames.append(fname)
     return sorted(fnames)
 
 
