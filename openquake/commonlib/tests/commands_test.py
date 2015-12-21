@@ -26,8 +26,8 @@ class Print(object):
     def __call__(self, *args):
         self.lst.append(' '.join(map(unicode, args)))
 
-    def __unicode__(self):
-        return u'\n'.join(self.lst)
+    def __str__(self):
+        return u'\n'.join(self.lst).encode('utf-8')
 
     @classmethod
     def patch(cls):
