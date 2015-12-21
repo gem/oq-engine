@@ -167,7 +167,7 @@ Parameters:
 Response: Redirects to [/v1/calc/:calc_id](#get-v1calchazardcalc_id), where `calc_id` is the ID of the newly created calculation.
 
 
-#### POST /v1/valid
+#### POST /v1/valid/
 
 Leverage oq-risklib to check if a given xml text is a valid nrml.
 
