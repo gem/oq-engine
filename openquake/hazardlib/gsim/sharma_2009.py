@@ -30,16 +30,16 @@ from openquake.hazardlib import const, imt
 
 class SharmaEtAl2009(GMPE):
     """
-    Implements GMPE of Sharma et al. (2009). This GMPE is intended 
-    for the Indian Himalayas but is based on data from both Zagros 
-    in Iran and the Himalayas. The combination of these two regions 
-    is motivated by the sparsity of near field data. Seismotectonic 
-    similarity is supposed based on both regions being continental 
-    collision zones, and in spite of the lack of subduction in 
-    Zagros.  
-    
-    Note that Figure 7-9 of Sharma et al. (2009) are in error 
-    (Sharma, personal communication). This implementation is 
+    Implements GMPE of Sharma et al. (2009). This GMPE is intended
+    for the Indian Himalayas but is based on data from both Zagros
+    in Iran and the Himalayas. The combination of these two regions
+    is motivated by the sparsity of near field data. Seismotectonic
+    similarity is supposed based on both regions being continental
+    collision zones, and in spite of the lack of subduction in
+    Zagros.
+
+    Note that Figure 7-9 of Sharma et al. (2009) are in error
+    (Sharma, personal communication). This implementation is
     verified against test vector obtained from lead author.
 
     Reference:
@@ -196,18 +196,19 @@ class SharmaEtAl2009(GMPE):
         RAKE_THRESH = 30.
 
         # normal faulting
-        is_normal = RAKE_THRESH < -rup.rake < (180. - RAKE_THRESH)
+        is_normal = np.array(RAKE_THRESH < -rup.rake < (180. - RAKE_THRESH))
 
         # reverse raulting
-        is_reverse = RAKE_THRESH < rup.rake < (180. - RAKE_THRESH)
+        is_reverse = np.array(RAKE_THRESH < rup.rake < (180. - RAKE_THRESH))
 
         if is_normal.any():
             msg = ('Normal faulting is not supported by %s'
                    % type(self).__name__)
             warnings.warn(msg, UserWarning)
-            return np.nan
-        else:
-            return ~is_reverse
+
+        is_reverse[is_normal] = np.nan
+
+        return ~is_reverse
 
     #: Coefficients taken from Table 2, p. 1202. Note that "In
     #: this article, only the coefficients for a subset of these
