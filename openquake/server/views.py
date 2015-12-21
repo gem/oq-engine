@@ -161,10 +161,11 @@ def validate_nrml(request):
 
     :returns: a JSON object, containing:
         * 'valid': a boolean indicating if the provided text is a valid nrml
-        * 'error_msg': the validation error message, if any error was found
+        * 'error_msg': the error message, if any error was found
                        (None otherwise)
         * 'error_line': line of the given xml where the error was found
-                        (None if no error was found)
+                        (None if no error was found or if it was not a
+                        validation error)
     """
     xml_text = request.POST.get('xml_text')
     if not xml_text:
@@ -188,7 +189,7 @@ def validate_nrml(request):
         if search_match:
             error_line = int(search_match.group(0).split()[1])
         else:
-            error_line = -1
+            error_line = None
         response_data['error_msg'] = error_msg
         response_data['error_line'] = error_line
         response_data['valid'] = False
