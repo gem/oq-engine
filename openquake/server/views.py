@@ -148,6 +148,14 @@ def get_engine_version(request):
     return HttpResponse(oqversion)
 
 
+def _make_response(error_msg, error_line, valid):
+    response_data = dict(error_msg=error_msg,
+                         error_line=error_line,
+                         valid=valid)
+    return HttpResponse(
+        content=json.dumps(response_data), content_type=JSON)
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -172,33 +180,36 @@ def validate_nrml(request):
         return HttpResponseBadRequest(
             'Please provide the "xml_text" parameter')
     xml_file = writetmp(xml_text, suffix='.xml')
-    response_data = {}
     try:
         nrml.read(xml_file)
+    except etree.ParseError as exc:
+        return _make_response(error_msg=exc.message.message,
+                              error_line=exc.message.lineno,
+                              valid=False)
     except Exception as exc:
         # get the exception message
         exc_msg = exc.args[0]
         if isinstance(exc_msg, bytes):
             exc_msg = exc_msg.decode('utf-8')   # make it a unicode object
+        elif isinstance(exc_msg, unicode):
+            pass
         else:
-            assert isinstance(exc_msg, unicode), exc_msg
-        error_msg = exc_msg.split(', line')[0]  # if the line is not mentioned,
-                                                # the whole message is taken
+            # if it is another kind of object, it is not obvious a priori how
+            # to extract the error line from it
+            return _make_response(
+                error_msg=unicode(exc_msg), error_line=None, valid=False)
+        # if the line is not mentioned, the whole message is taken
+        error_msg = exc_msg.split(', line')[0]
         # check if the exc_msg contains a line number indication
         search_match = re.search(r'line \d+', exc_msg)
         if search_match:
             error_line = int(search_match.group(0).split()[1])
         else:
             error_line = None
-        response_data['error_msg'] = error_msg
-        response_data['error_line'] = error_line
-        response_data['valid'] = False
+        return _make_response(
+            error_msg=error_msg, error_line=error_line, valid=False)
     else:
-        response_data['error_msg'] = None
-        response_data['error_line'] = None
-        response_data['valid'] = True
-    return HttpResponse(
-        content=json.dumps(response_data), content_type=JSON)
+        return _make_response(error_msg=None, error_line=None, valid=True)
 
 
 @require_http_methods(['GET'])
