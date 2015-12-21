@@ -28,14 +28,13 @@ from openquake.baselib.general import groupby
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
-from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
 from openquake.risklib import scientific
 from openquake.commonlib import parallel, source, datastore
 from openquake.calculators.views import get_data_transfer
-from openquake.baselib.general import AccumDict, split_in_blocks
+from openquake.baselib.general import AccumDict
 
 from openquake.calculators import base, calc
 
@@ -400,39 +399,6 @@ def is_effective_trt_model(result_dict, trt_model):
                if trt_model.id == key[0] and nonzero(val))
 
 
-def _extract(array_or_float, indices):
-    try:  # if array
-        return array_or_float[indices]
-    except TypeError:  # if float
-        return array_or_float
-
-
-def split_in_tiles(sitecol, hint):
-    """
-    Split a full SiteCollection instance is a set of full SiteCollection
-    instances.
-
-    :param sitecol: the original site collection
-    :param hint: hint for how many tiles to generate
-    """
-    tiles = []
-    for seq in split_in_blocks(range(len(sitecol)), hint or 1):
-        indices = numpy.array(seq, int)
-        sc = SiteCollection.__new__(SiteCollection)
-        sc.complete = sc
-        sc.total_sites = len(indices)
-        sc.sids = sitecol.sids[indices]
-        sc.lons = sitecol.lons[indices]
-        sc.lats = sitecol.lats[indices]
-        sc._vs30 = _extract(sitecol._vs30, indices)
-        sc._vs30measured = _extract(sitecol._vs30measured, indices)
-        sc._z1pt0 = _extract(sitecol._z1pt0, indices)
-        sc._z2pt5 = _extract(sitecol._z2pt5, indices)
-        sc._backarc = _extract(sitecol._backarc, indices)
-        tiles.append(sc)
-    return tiles
-
-
 @base.calculators.add('classical_tiling')
 class ClassicalTilingCalculator(ClassicalCalculator):
     """
@@ -449,7 +415,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         rlzs_assoc = self.csm.get_rlzs_assoc()
         num_src_models = len(rlzs_assoc.csm_info.source_models)
         hint = math.ceil(oq.concurrent_tasks / num_src_models)
-        tiles = split_in_tiles(self.sitecol, hint)
+        tiles = self.sitecol.split_in_tiles(hint)
         logging.info('Generating %d tiles of %d sites each',
                      len(tiles), len(tiles[0]))
         siteidx = 0
@@ -459,7 +425,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
                 filtered_sources = [
                     src for src in sources
                     if src.filter_sites_by_distance_to_source(
-                            oq.maximum_distance, tile) is not None]
+                        oq.maximum_distance, tile) is not None]
             groups = groupby(
                 filtered_sources, operator.attrgetter('trt_model_id')).values()
             for group in groups:  # sources of homogeneous trt_model_id
