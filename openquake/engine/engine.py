@@ -223,7 +223,8 @@ def run_calc(job, log_level, log_file, exports):
 
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
-    with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
+    # FIXME: restore logs.handle(job, log_level, log_file)
+    with job_stats(job):  # run the job
         _do_run_calc(calculator, exports)
         job.ds_calc_dir = calculator.datastore.calc_dir
         job.save()
