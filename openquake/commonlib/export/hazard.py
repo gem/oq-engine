@@ -421,6 +421,8 @@ def export_hcurves_xml_json(ekey, dstore):
                  hazard_writers.HazardCurveXMLWriter)
     rlzs = iter(rlzs_assoc.realizations)
     for kind, curves in dstore[ekey[0]].items():
+        if not kind.startswith('rlz-'):  # mean and quantiles
+            continue
         rlz = next(rlzs)
         name = hazard_curve_name(
             dstore, ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
