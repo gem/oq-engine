@@ -113,7 +113,7 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         assert_eq(cll.mesh.lats, [20, -3.4])
         assert_eq(cll.mesh.depths, None)
         assert_eq(cll.backarc, [False, False])
-        
+
         for arr in (cll.vs30, cll.z1pt0, cll.z2pt5):
             self.assertIsInstance(arr, numpy.ndarray)
             self.assertEqual(arr.dtype, float)
@@ -122,6 +122,16 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
             self.assertEqual(arr.flags.writeable, False)
             self.assertEqual(arr.dtype, bool)
         self.assertEqual(len(cll), 2)
+
+        # test split_in_tiles
+        tiles = cll.split_in_tiles(0)
+        self.assertEqual(len(tiles), 1)
+
+        tiles = cll.split_in_tiles(1)
+        self.assertEqual(len(tiles), 1)
+
+        tiles = cll.split_in_tiles(2)
+        self.assertEqual(len(tiles), 2)
 
 
 class SiteCollectionFilterTestCase(unittest.TestCase):

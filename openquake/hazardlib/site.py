@@ -19,8 +19,9 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 import numpy
 
 from openquake.baselib.python3compat import range
-from openquake.hazardlib.geo.mesh import Mesh
 from openquake.baselib.slots import with_slots
+from openquake.baselib.general import split_in_blocks
+from openquake.hazardlib.geo.mesh import Mesh
 
 
 @with_slots
@@ -99,6 +100,13 @@ Backarc=False>'
         True
         """
         return self.__str__()
+
+
+def _extract(array_or_float, indices):
+    try:  # if array
+        return array_or_float[indices]
+    except TypeError:  # if float
+        return array_or_float
 
 
 @with_slots
@@ -199,6 +207,29 @@ class SiteCollection(object):
     def indices(self):
         """The full set of indices from 0 to total_sites - 1"""
         return numpy.arange(0, self.total_sites)
+
+    def split_in_tiles(self, hint):
+        """
+        Split a SiteCollection a set of tiles (SiteCollection instances).
+
+        :param hint: hint for how many tiles to generate
+        """
+        tiles = []
+        for seq in split_in_blocks(range(len(self)), hint or 1):
+            indices = numpy.array(seq, int)
+            sc = SiteCollection.__new__(SiteCollection)
+            sc.complete = sc
+            sc.total_sites = len(indices)
+            sc.sids = self.sids[indices]
+            sc.lons = self.lons[indices]
+            sc.lats = self.lats[indices]
+            sc._vs30 = _extract(self._vs30, indices)
+            sc._vs30measured = _extract(self._vs30measured, indices)
+            sc._z1pt0 = _extract(self._z1pt0, indices)
+            sc._z2pt5 = _extract(self._z2pt5, indices)
+            sc._backarc = _extract(self._backarc, indices)
+            tiles.append(sc)
+        return tiles
 
     def __iter__(self):
         """
