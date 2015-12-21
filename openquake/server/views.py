@@ -177,12 +177,18 @@ def validate_nrml(request):
     except Exception as exc:
         # get the exception message
         exc_msg = exc.args[0]
-        # if it is not a simple string, let's assume it's UTF8 eoncoded
-        if not isinstance(exc_msg, bytes):
-            exc_msg = exc_msg.encode('utf8')
-        error_msg = exc_msg.split(', line')[0]
-        error_line = int(
-            re.search(r'line \d+', exc_msg).group(0).split()[1])
+        if isinstance(exc_msg, bytes):
+            exc_msg = exc_msg.decode('utf-8')   # make it a unicode object
+        else:
+            assert isinstance(exc_msg, unicode), exc_msg
+        error_msg = exc_msg.split(', line')[0]  # if the line is not mentioned,
+                                                # the whole message is taken
+        # check if the exc_msg contains a line number indication
+        search_match = re.search(r'line \d+', exc_msg)
+        if search_match:
+            error_line = int(search_match.group(0).split()[1])
+        else:
+            error_line = -1
         response_data['error_msg'] = error_msg
         response_data['error_line'] = error_line
         response_data['valid'] = False
@@ -349,9 +355,10 @@ def run_calc(request):
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = exc.args[0]
-        # if it is not a simple string, let's assume it's UTF8 eoncoded
-        if not isinstance(exc_msg, bytes):
-            exc_msg = exc_msg.encode('utf8')
+        if isinstance(exc_msg, bytes):
+            exc_msg = exc_msg.decode('utf-8')   # make it a unicode object
+        else:
+            assert isinstance(exc_msg, unicode), exc_msg
         logging.error(exc_msg)
         response_data = exc_msg.splitlines()
         status = 500
