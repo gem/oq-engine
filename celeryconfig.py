@@ -88,10 +88,3 @@ CELERY_IMPORTS = [
     ]
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.engine.settings"
-
-try:
-    from openquake.engine.utils import tasks
-    # as a side effect, this import replaces the litetask with oqtask
-    # this is hackish, but bear with until we remove the old calculators
-except ImportError:  # circular import with celery 2, only affecting nose
-    pass
