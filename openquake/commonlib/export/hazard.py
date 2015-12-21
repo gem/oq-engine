@@ -435,25 +435,33 @@ def export_hcurves_xml_json(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
     sitemesh = dstore['sitemesh'].value
     rlzs_assoc = dstore['rlzs_assoc']
+    hcurves = dstore[ekey[0]]
     fnames = []
     writercls = (hazard_writers.HazardCurveGeoJSONWriter
                  if export_type == 'geojson' else
                  hazard_writers.HazardCurveXMLWriter)
-    rlzs = iter(rlzs_assoc.realizations)
-    for kind, curves in dstore[ekey[0]].items():
-        rlz = next(rlzs)
+    for kind in hcurves:
+        if kind.startswith('rlz-'):
+            rlz = rlzs_assoc.realizations[int(kind[4:])]
+            smlt_path = '_'.join(rlz.sm_lt_path)
+            gsimlt_path = rlz.gsim_rlz.uid
+        else:
+            smlt_path = ''
+            gsimlt_path = ''
+        curves = hcurves[kind]
         name = hazard_curve_name(
-            dstore, ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
+            dstore, ekey, kind, rlzs_assoc,
+            oq.number_of_logic_tree_samples)
         for imt in oq.imtls:
             imtype, sa_period, sa_damping = from_string(imt)
             fname = name[:-len_ext] + '-' + imt + '.' + export_type
             data = [HazardCurve(Location(site), poes[imt])
                     for site, poes in zip(sitemesh, curves)]
-            writer = writercls(fname, investigation_time=oq.investigation_time,
+            writer = writercls(fname,
+                               investigation_time=oq.investigation_time,
                                imls=oq.imtls[imt], imt=imtype,
                                sa_period=sa_period, sa_damping=sa_damping,
-                               smlt_path='_'.join(rlz.sm_lt_path),
-                               gsimlt_path=rlz.gsim_rlz.uid)
+                               smlt_path=smlt_path, gsimlt_path=gsimlt_path)
             writer.serialize(data)
             fnames.append(fname)
     return sorted(fnames)
@@ -465,13 +473,20 @@ def export_hmaps_xml_json(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
     sitemesh = dstore['sitemesh'].value
     rlzs_assoc = dstore['rlzs_assoc']
+    hmaps = dstore[ekey[0]]
     fnames = []
     writercls = (hazard_writers.HazardMapGeoJSONWriter
                  if export_type == 'geojson' else
                  hazard_writers.HazardMapXMLWriter)
-    rlzs = iter(rlzs_assoc.realizations)
-    for kind, maps in dstore[ekey[0]].items():
-        rlz = next(rlzs)
+    for kind in hmaps:
+        if kind.startswith('rlz-'):
+            rlz = rlzs_assoc.realizations[int(kind[4:])]
+            smlt_path = '_'.join(rlz.sm_lt_path)
+            gsimlt_path = rlz.gsim_rlz.uid
+        else:
+            smlt_path = ''
+            gsimlt_path = ''
+        maps = hmaps[kind]
         for imt in oq.imtls:
             for i, poe in enumerate(oq.poes):
                 suffix = '-%s-%s' % (poe, imt)
@@ -483,8 +498,7 @@ def export_hmaps_xml_json(ekey, dstore):
                 writer = writercls(
                     fname, investigation_time=oq.investigation_time,
                     imt=imt, poe=poe,
-                    smlt_path='_'.join(rlz.sm_lt_path),
-                    gsimlt_path=rlz.gsim_rlz.uid)
+                    smlt_path=smlt_path, gsimlt_path=gsimlt_path)
                 writer.serialize(data)
                 fnames.append(fname)
     return sorted(fnames)
