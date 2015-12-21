@@ -1,3 +1,6 @@
+  [Nick Ackerley]
+  * Implemented GSIM: SharmaEtAl2009
+
   [Michele Simionato]
   * Optimized the case of multiple GSIMs by instantiating the
     ruptures/sites/distances contexts only once
