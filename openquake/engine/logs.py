@@ -186,20 +186,3 @@ def handle(job, log_level='info', log_file=None):
             logging.root.warn('The log file %s is empty!?' % log_file)
         for handler in handlers:
             logging.root.removeHandler(handler)
-            
-
-class tracing(object):
-    """
-    Simple context manager util to handle tracing. E.g.
-
-    with log("exports"):
-       do_export()
-    """
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __enter__(self):
-        LOG.debug('starting ' + self.msg)
-
-    def __exit__(self, *args):
-        LOG.debug('ending ' + self.msg)
