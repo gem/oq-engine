@@ -452,15 +452,14 @@ def export_hmaps_xml_json(ekey, dstore):
     export_type = ekey[1]
     oq = OqParam.from_(dstore.attrs)
     sitemesh = dstore['sitemesh'].value
-    hmaps = dstore[ekey[0]]
     rlzs_assoc = dstore['rlzs_assoc']
+    hmaps = dstore[ekey[0]]
     fnames = []
     writercls = (hazard_writers.HazardMapGeoJSONWriter
                  if export_type == 'geojson' else
                  hazard_writers.HazardMapXMLWriter)
     for kind in hmaps:
         if kind.startswith('rlz-'):
-            rlz = rlzs_assoc.realizations[int(kind[4:])]
             rlz = rlzs_assoc.realizations[int(kind[4:])]
             smlt_path = '_'.join(rlz.sm_lt_path)
             gsimlt_path = rlz.gsim_rlz.uid
