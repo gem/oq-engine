@@ -55,6 +55,7 @@ def _db_cfg(db_name):
         PASSWORD=DB_SECTION.get('%s_password' % db_name, ''),
         HOST=DB_SECTION.get('host', 'localhost'),
         PORT=DB_SECTION.get('port', '5432'),
+        OPTIONS={'sslmode': 'disable'},
     )
 
 
