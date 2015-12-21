@@ -32,7 +32,7 @@ from openquake.baselib.performance import DummyMonitor
 from openquake.commonlib import (
     readinput, datastore, logictree, export, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.parallel import apply_reduce
+from openquake.commonlib.parallel import apply_reduce, executor
 from openquake.risklib import riskinput
 from openquake.baselib.python3compat import with_metaclass
 
@@ -123,6 +123,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             result = self.execute()
             self.post_execute(result)
             exported = self.export()
+        except KeyboardInterrupt:
+            pids = ' '.join(str(p.pid) for p in executor._processes)
+            sys.stderr.write(
+                'You can manually kill the workers with kill %s\n' % pids)
+            raise
         except:
             if kw.get('pdb'):  # post-mortem debug
                 tb = sys.exc_info()[2]
