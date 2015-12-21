@@ -175,7 +175,11 @@ def validate_nrml(request):
     try:
         nrml.read(xml_file)
     except Exception as exc:
-        exc_msg = exc.message.encode('utf8')
+        # get the exception message
+        exc_msg = exc.args[0]
+        # if it is not a simple string, let's assume it's UTF8 eoncoded
+        if not isinstance(exc_msg, bytes):
+            exc_msg = exc_msg.encode('utf8')
         error_msg = exc_msg.split(', line')[0]
         error_line = int(
             re.search(r'line \d+', exc_msg).group(0).split()[1])
@@ -343,8 +347,13 @@ def run_calc(request):
                                user['name'], callback_url, foreign_calc_id,
                                hazard_output_id, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
-        logging.error(exc)
-        response_data = str(exc).splitlines()
+        # get the exception message
+        exc_msg = exc.args[0]
+        # if it is not a simple string, let's assume it's UTF8 eoncoded
+        if not isinstance(exc_msg, bytes):
+            exc_msg = exc_msg.encode('utf8')
+        logging.error(exc_msg)
+        response_data = exc_msg.splitlines()
         status = 500
     else:
         calc = oqe_models.OqJob.objects.get(pk=job.id)
