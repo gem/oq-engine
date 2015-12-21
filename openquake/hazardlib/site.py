@@ -210,7 +210,7 @@ class SiteCollection(object):
 
     def split_in_tiles(self, hint):
         """
-        Split a SiteCollection a set of tiles (SiteCollection instances).
+        Split a SiteCollection into a set of tiles (SiteCollection instances).
 
         :param hint: hint for how many tiles to generate
         """
