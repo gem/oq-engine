@@ -161,17 +161,17 @@ def _make_response(error_msg, error_line, valid):
 @require_http_methods(['POST'])
 def validate_nrml(request):
     """
-    Leverage oq-risklib to check if a given xml text is a valid nrml
+    Leverage oq-risklib to check if a given XML text is a valid NRML
 
     :param request:
         a `django.http.HttpRequest` object containing the mandatory
-        parameter 'xml_text': the text of the xml to be validated as nrml
+        parameter 'xml_text': the text of the XML to be validated as NRML
 
     :returns: a JSON object, containing:
-        * 'valid': a boolean indicating if the provided text is a valid nrml
+        * 'valid': a boolean indicating if the provided text is a valid NRML
         * 'error_msg': the error message, if any error was found
                        (None otherwise)
-        * 'error_line': line of the given xml where the error was found
+        * 'error_line': line of the given XML where the error was found
                         (None if no error was found or if it was not a
                         validation error)
     """
