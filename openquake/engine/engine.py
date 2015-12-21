@@ -195,7 +195,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
 
 
 # used by bin/openquake and openquake.server.views
-def run_calc(job, log_level, log_file, exports):
+def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
     """
     Run a calculation.
 
@@ -225,7 +225,7 @@ def run_calc(job, log_level, log_file, exports):
     upgrader.check_versions(django_db.connections['admin'])
     # FIXME: restore logs.handle(job, log_level, log_file)
     with job_stats(job):  # run the job
-        _do_run_calc(calculator, exports)
+        _do_run_calc(calculator, exports, hazard_calculation_id)
         job.ds_calc_dir = calculator.datastore.calc_dir
         job.save()
         expose_outputs(calculator.datastore, job)
@@ -249,7 +249,7 @@ def log_status(job, status):
     logs.LOG.progress("%s (%s)", status, job.job_type)
 
 
-def _do_run_calc(calc, exports):
+def _do_run_calc(calc, exports, hazard_calculation_id):
     """
     Step through all of the phases of a calculation, updating the job
     status at each phase.
@@ -259,29 +259,9 @@ def _do_run_calc(calc, exports):
     :param exports:
         a (potentially empty) comma-separated string of export targets
     """
-    job = calc.job
-
-    log_status(job, "pre_executing")
     if hasattr(calc, 'save_params'):
         calc.save_params()
-    calc.pre_execute()
-
-    log_status(job, "executing")
-    result = calc.execute()
-
-    log_status(job, "post_executing")
-    calc.post_execute(result)
-
-    log_status(job, "post_processing")
-    calc.post_process()
-
-    log_status(job, "export")
-    calc.export(exports=exports)
-
-    log_status(job, "clean_up")
-    calc.clean_up()
-
-    log_status(job, "complete")
+    calc.run(hazard_calculation_id=hazard_calculation_id)
 
 
 def del_calc(job_id):
@@ -403,7 +383,8 @@ def run_job(cfg_file, log_level, log_file, exports='',
         job.ds_calc_dir = datastore.DataStore(job.id).calc_dir
         job.save()
         t0 = time.time()
-        run_calc(job, log_level, log_file, exports)
+        run_calc(job, log_level, log_file, exports,
+                 hazard_calculation_id=hazard_calculation_id)
         duration = time.time() - t0
         if job.status == 'complete':
             print_results(job.id, duration, list_outputs)
