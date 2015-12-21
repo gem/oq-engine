@@ -165,3 +165,19 @@ Parameters:
     * hazard_result: the hazard results ID upon which to run the risk calculation; specify this or hazard_calc (only for risk calculations)
 
 Response: Redirects to [/v1/calc/:calc_id](#get-v1calchazardcalc_id), where `calc_id` is the ID of the newly created calculation.
+
+
+#### POST /v1/valid
+
+Leverage oq-risklib to check if a given xml text is a valid nrml.
+
+Parameters:
+
+    * xml_text: the text of the xml to be validated as nrml
+
+Response:
+
+a JSON object, containing:
+    * valid: a boolean indicating if the provided text is a valid nrml
+    * error_msg: the error message, if any error was found (None otherwise)
+    * error_line: line of the given xml where the error was found (None if no error was found or if it was not a validation error)
