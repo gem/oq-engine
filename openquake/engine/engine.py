@@ -231,23 +231,6 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
     return calculator
 
 
-def log_status(job, status):
-    """
-    Switch to a particular phase of execution.
-
-    :param job:
-        An :class:`~openquake.engine.db.models.OqJob` instance.
-    :param str job_type:
-        calculation type (hazard|risk)
-    :param str status:
-        one of the following: pre_executing, executing,
-        post_executing, post_processing, export, clean_up, complete
-    """
-    job.status = status
-    job.save()
-    logs.LOG.progress("%s (%s)", status, job.job_type)
-
-
 def _do_run_calc(calc, exports, hazard_calculation_id):
     """
     Step through all of the phases of a calculation, updating the job
