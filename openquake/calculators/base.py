@@ -102,7 +102,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     def set_log_format(self):
         """Set the format of the root logger"""
         fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(
-                self.datastore.calc_id)
+            self.datastore.calc_id)
         for handler in logging.root.handlers:
             handler.setFormatter(logging.Formatter(fmt))
 

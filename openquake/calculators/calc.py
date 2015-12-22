@@ -223,12 +223,16 @@ def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
 
 def get_imts_periods(imtls):
     """
-    Returns a lit of IMT strings and one of periods for IMT in the
-    set SA (PGA is considered an alias for SA(0.0))
+    Returns a list of IMT strings and a list of periods. There is an element
+    for each IMT of type Spectral Acceleration (PGA is considered an alias
+    for SA(0.0))
+
+    :param imtls: as set of intensity measure type strings
     """
     imts = sorted(from_string(imt) for imt in imtls
                   if imt.startswith('SA') or imt == 'PGA')
     return map(str, imts), [imt[1] or 0.0 for imt in imts]
+
 
 def make_uhs(maps, poes):
     """
