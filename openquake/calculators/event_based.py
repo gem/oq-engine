@@ -38,7 +38,7 @@ from openquake.calculators import base, views
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.calculators.calc import MAX_INT, gmvs_to_haz_curve
 from openquake.calculators.classical import (
-    ClassicalCalculator, store_source_chunks, agg_dicts)
+    ClassicalCalculator, store_source_chunks)
 
 # ######################## rupture calculator ############################ #
 
@@ -604,7 +604,7 @@ class EventBasedCalculator(ClassicalCalculator):
             elif isinstance(gsim_or_col, str):  # aggregate hcurves
                 with agg_mon:
                     curves_by_imt = res[trt_id, gsim_or_col]
-                    acc = agg_dicts(
+                    self.agg_dicts(
                         acc, AccumDict({(trt_id, gsim_or_col): curves_by_imt}))
         sav_mon.flush()
         agg_mon.flush()

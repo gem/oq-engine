@@ -32,6 +32,7 @@ import psutil
 from openquake.baselib.python3compat import pickle
 from openquake.baselib.performance import PerformanceMonitor, DummyMonitor
 from openquake.baselib.general import split_in_blocks, AccumDict, humansize
+from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
 
 if psutil.__version__ > '2.0.0':  # Ubuntu 14.10
@@ -438,9 +439,11 @@ def litetask(func):
     must be a monitor object.
     """
     def wrapper(*args):
+        check_mem_usage()  # check if too much memory is used
         monitor = args[-1]
         monitor.flush = NoFlush(monitor, func.__name__)
-        with monitor('total ' + func.__name__, measuremem=True):
+        with monitor('total ' + func.__name__, measuremem=True), \
+                GroundShakingIntensityModel.forbid_instantiation():
             result = func(*args)
         rec_delattr(monitor, 'flush')
         return result
