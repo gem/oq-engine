@@ -386,14 +386,10 @@ def run_job(cfg_file, log_level, log_file, exports='',
         run_calc(job, log_level, log_file, exports,
                  hazard_calculation_id=hazard_calculation_id)
         duration = time.time() - t0
-        if job.status == 'complete':
-            print_results(job.id, duration, list_outputs)
-        else:
-            sys.exit('Calculation %s failed' % job.id)
+        print_results(job.id, duration, list_outputs)
     return job
 
-DISPLAY_NAME = dict(
-    dmg_by_asset='dmg_by_asset_and_collapse_map')
+DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset_and_collapse_map')
 
 
 def expose_outputs(dstore, job):
