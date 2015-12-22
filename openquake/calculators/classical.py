@@ -182,9 +182,16 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
 
 def expand(array, n, aslice):
     """
-    Expand a short array to size n by adding zeros outside of the slice
+    Expand a short array to size n by adding zeros outside of the slice.
+    For instance:
+
+    >>> arr = numpy.array([1, 2, 3])
+    >>> expand(arr, 5, slice(1, 4))
+    array([0, 1, 2, 3, 0])
     """
-    if len(array) == n:  # nothing to expand
+    if len(array) > n:
+        raise ValueError('The array is too large: %d > %d' % (len(array), n))
+    elif len(array) == n:  # nothing to expand
         return array
     if aslice.stop - aslice.start != len(array):
         raise ValueError('The slice has %d places, but the array has length '
@@ -228,7 +235,10 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def agg_dicts(self, acc, val):
         """
-        Aggregate dictionaries of hazard curves by updating the accumulator
+        Aggregate dictionaries of hazard curves by updating the accumulator.
+
+        :param acc: accumulator dictionary
+        :param val: a dictionary of hazard curves, keyed by (trt_id, gsim)
         """
         with self.monitor('aggregate curves', autoflush=True):
             if hasattr(val, 'calc_times'):
@@ -390,10 +400,11 @@ def nonzero(val):
 
 def is_effective_trt_model(result_dict, trt_model):
     """
-    Returns True on tectonic region types
-    which ID in contained in the result_dict.
+    Returns the number of tectonic region types
+    with ID contained in the result_dict.
 
     :param result_dict: a dictionary with keys (trt_id, gsim)
+    :param trt_model: a TrtModel instance
     """
     return sum(1 for key, val in result_dict.items()
                if trt_model.id == key[0] and nonzero(val))
