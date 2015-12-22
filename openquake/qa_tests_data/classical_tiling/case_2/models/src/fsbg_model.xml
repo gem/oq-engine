@@ -1,0 +1,1201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="SHARE Complete Fault Source and Background Model"
+    >
+        <areaSource
+        id="FSBG_ESBG038"
+        name="ESBG038"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                3.708470000E-01 4.101785800E+01 5.001420000E-01 4.111311900E+01 1.053695000E+00 4.151036900E+01 1.683238000E+00 4.163450100E+01 2.086435000E+00 4.186010400E+01 2.241330000E+00 4.207521900E+01 3.085935000E+00 4.123334000E+01 1.398962000E+00 4.068357600E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    3.266321346E-03 2.034505691E-03 1.267240106E-03 7.893305448E-04 4.916532440E-04 3.062378796E-04 1.907475239E-04 1.188116177E-04 7.400463297E-05
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.3000"
+                rake="0.0"
+                strike="0.0"
+                >
+                    3.000000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.3000"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    3.000000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.4000"
+                rake="90.0"
+                strike="0.0"
+                >
+                    4.000000000E-01 0.000000000E+00 9.000000000E+01 9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="13.2"
+                probability="1.0"
+                >
+                    1.000000000E+00 1.320000000E+01
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="FSBG_BGBG090"
+        name="BGBG090"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                2.215093900E+01 4.198439700E+01 2.257457900E+01 4.206356500E+01 2.292928300E+01 4.219218000E+01 2.320891100E+01 4.240152600E+01 2.354664800E+01 4.225765400E+01 2.439962200E+01 4.203367800E+01 2.414147100E+01 4.139943700E+01 2.389362500E+01 4.150535500E+01 2.300126500E+01 4.150499200E+01 2.247012300E+01 4.172050500E+01 2.187198500E+01 4.192857000E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    5.619393128E-02 3.344178235E-02 1.990166520E-02 1.184375503E-02 7.048381717E-03 4.194589023E-03 2.496257691E-03 1.485557328E-03 8.840756235E-04
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.2000"
+                rake="0.0"
+                strike="0.0"
+                >
+                    2.000000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.6000"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    6.000000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.2000"
+                rake="90.0"
+                strike="0.0"
+                >
+                    2.000000000E-01 0.000000000E+00 9.000000000E+01 9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="13.2"
+                probability="1.0"
+                >
+                    1.000000000E+00 1.320000000E+01
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="FSBG_TRBG103"
+        name="TRBG103"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                3.334605800E+01 3.856017300E+01 3.278774100E+01 3.767382400E+01 3.228730100E+01 3.735709800E+01 3.189549300E+01 3.782838500E+01 3.102927300E+01 3.854384100E+01 3.098774300E+01 3.858470000E+01 3.080967100E+01 3.859423200E+01 3.063647500E+01 3.863998300E+01 3.040229900E+01 3.879821100E+01 3.005347100E+01 3.900684000E+01 2.971196700E+01 3.912145600E+01 2.939972700E+01 3.911763600E+01 2.912651900E+01 3.919404800E+01 2.820776800E+01 3.949406600E+01 2.818762400E+01 3.968328400E+01 2.842545200E+01 3.981994200E+01 2.882442000E+01 4.006650300E+01 2.963173100E+01 3.981221200E+01 2.994159100E+01 3.971461100E+01 3.037215400E+01 3.958068700E+01 3.098397900E+01 3.942209800E+01 3.148972900E+01 3.924959000E+01 3.193345800E+01 3.907642000E+01 3.239957800E+01 3.882233900E+01 3.269471400E+01 3.860281700E+01 3.282297200E+01 3.848771300E+01 3.294977000E+01 3.865852200E+01 3.309081600E+01 3.885165900E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    5.187774576E-01 3.410209787E-01 2.241718606E-01 1.473605034E-01 9.686817026E-02 6.367678036E-02 4.185825279E-02 2.751573362E-02 1.808760630E-02
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.2000"
+                rake="0.0"
+                strike="0.0"
+                >
+                    2.000000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.7500"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    7.500000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.0500"
+                rake="90.0"
+                strike="0.0"
+                >
+                    5.000000000E-02 0.000000000E+00 9.000000000E+01 9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="13.2"
+                probability="1.0"
+                >
+                    1.000000000E+00 1.320000000E+01
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="FSBG_YUBG128"
+        name="YUBG128"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                2.421436700E+01 4.257598200E+01 2.366639800E+01 4.277224500E+01 2.309117400E+01 4.292053300E+01 2.263775800E+01 4.295978400E+01 2.202496600E+01 4.309498800E+01 2.140622200E+01 4.312988000E+01 2.069972900E+01 4.322572400E+01 1.956189400E+01 4.351368400E+01 1.933849600E+01 4.377609200E+01 1.978895900E+01 4.449919100E+01 2.078812500E+01 4.461498200E+01 2.113774500E+01 4.465326700E+01 2.185071200E+01 4.409912800E+01 2.214090800E+01 4.391228000E+01 2.334008400E+01 4.371270500E+01 2.394866100E+01 4.364305800E+01 2.410369200E+01 4.292096200E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    6.750981336E-02 4.075368716E-02 2.460180134E-02 1.485138331E-02 8.965342951E-03 5.412113643E-03 3.267133700E-03 1.972272446E-03 1.190602821E-03
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.2000"
+                rake="0.0"
+                strike="0.0"
+                >
+                    2.000000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.6000"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    6.000000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.2000"
+                rake="90.0"
+                strike="0.0"
+                >
+                    2.000000000E-01 0.000000000E+00 9.000000000E+01 9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="13.2"
+                probability="1.0"
+                >
+                    1.000000000E+00 1.320000000E+01
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="FSBG_ITBG068"
+        name="ITBG068"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                1.358853300E+01 4.252232700E+01 1.315179600E+01 4.302821700E+01 1.211651000E+01 4.379397200E+01 1.132331000E+01 4.413668400E+01 1.114890100E+01 4.415687700E+01 1.069987600E+01 4.420886600E+01 9.656718000E+00 4.466963200E+01 9.270211000E+00 4.428342800E+01 8.475530000E+00 4.471249800E+01 9.314071000E+00 4.526553300E+01 9.706941000E+00 4.525257600E+01 1.016428700E+01 4.517973900E+01 1.038372900E+01 4.489294100E+01 1.053728900E+01 4.474572700E+01 1.113718000E+01 4.454851500E+01 1.155307900E+01 4.450770200E+01 1.207572000E+01 4.429739400E+01 1.227012300E+01 4.410645300E+01 1.354115600E+01 4.329429600E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    9.071730638E-02 4.946410398E-02 2.697057133E-02 1.470585049E-02 8.018444849E-03 4.372100601E-03 2.383911598E-03 1.299840745E-03 7.087452258E-04
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.1000"
+                rake="0.0"
+                strike="0.0"
+                >
+                    1.000000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.7000"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    7.000000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.2000"
+                rake="90.0"
+                strike="0.0"
+                >
+                    2.000000000E-01 0.000000000E+00 9.000000000E+01 9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="8.5"
+                probability="1.0"
+                >
+                    1.000000000E+00 8.500000000E+00
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="FSBG_CHAS089"
+        name="CHAS089"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                6.670247000E+00 4.641474300E+01 7.533134000E+00 4.681400700E+01 7.871795000E+00 4.689099100E+01 7.950105000E+00 4.658220400E+01 7.755025000E+00 4.643097600E+01 7.404614000E+00 4.647133400E+01 6.796553000E+00 4.618079200E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    7.599718621E-03 5.021084299E-03 3.317397498E-03 2.191782792E-03 1.448096530E-03 9.567478894E-04 6.321170619E-04 4.176356012E-04 2.759291054E-04 1.823045520E-04 1.204474231E-04 7.957882325E-05 1.576570880E-05 1.041630051E-05 2.293993832E-06
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.7000"
+                rake="0.0"
+                strike="0.0"
+                >
+                    7.000000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.2500"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    2.500000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.0500"
+                rake="90.0"
+                strike="0.0"
+                >
+                    5.000000000E-02 0.000000000E+00 9.000000000E+01 9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="10.2"
+                probability="1.0"
+                >
+                    1.000000000E+00 1.020000000E+01
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="FSBG_CHAS098"
+        name="CHAS098"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                7.950105000E+00 4.658220400E+01 8.346861000E+00 4.676622000E+01 8.442768000E+00 4.681110900E+01 9.004639000E+00 4.684279300E+01 9.041553000E+00 4.685708400E+01 9.240769000E+00 4.693448900E+01 9.350842000E+00 4.675057800E+01 9.386614000E+00 4.652556600E+01 9.475730000E+00 4.640240000E+01 9.649988000E+00 4.615864500E+01 8.839502000E+00 4.613348900E+01 8.802371000E+00 4.614852400E+01 8.376094000E+00 4.638814000E+01 8.242544000E+00 4.649284600E+01 7.755025000E+00 4.643097600E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    7.374532933E-03 4.653015716E-03 2.935854440E-03 1.852398921E-03 1.168784704E-03 7.374532933E-04 4.653015716E-04 2.935854440E-04 1.852398921E-04 1.168784704E-04 3.685199745E-05 1.394796018E-05 2.932928262E-06
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.7000"
+                rake="0.0"
+                strike="0.0"
+                >
+                    7.000000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.2500"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    2.500000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.0500"
+                rake="90.0"
+                strike="0.0"
+                >
+                    5.000000000E-02 0.000000000E+00 9.000000000E+01 9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="10.2"
+                probability="1.0"
+                >
+                    1.000000000E+00 1.020000000E+01
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="FSBG_HUAS132"
+        name="HUAS132"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                1.842653700E+01 4.679929700E+01 1.855849700E+01 4.764582800E+01 2.103234300E+01 4.778305000E+01 2.044668000E+01 4.739989700E+01 1.952385300E+01 4.701981700E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    1.167359628E-02 7.365541310E-03 4.647342386E-03 2.932274811E-03 1.850140328E-03 1.167359628E-03 7.365541310E-04 4.647342386E-04 2.932274811E-04 1.850140328E-04 1.167359628E-04 3.683856795E-05 4.645971771E-06 2.931410011E-06
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.3000"
+                rake="0.0"
+                strike="0.0"
+                >
+                    3.000000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.3000"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    3.000000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.4000"
+                rake="90.0"
+                strike="0.0"
+                >
+                    4.000000000E-01 0.000000000E+00 9.000000000E+01 9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="13.2"
+                probability="1.0"
+                >
+                    1.000000000E+00 1.320000000E+01
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="FSBG_HRAS215"
+        name="HRAS215"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                1.385096000E+01 4.472678900E+01 1.412620017E+01 4.536775180E+01 1.490951900E+01 4.465783900E+01 1.458803900E+01 4.415833500E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    1.574260384E-02 9.932911515E-03 6.267243472E-03 3.954363298E-03 2.495034566E-03 1.574260384E-03 9.932911515E-04 6.267243472E-04 3.954363298E-04 2.495034566E-04 1.574260384E-04 9.932911515E-05 6.267243472E-05 3.954363298E-05 1.247517283E-05 4.722781152E-06 9.932911515E-07
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="36.830488"
+                probability="0.3000"
+                rake="0.0"
+                strike="317.224152"
+                >
+                    3.000000000E-01 3.172241520E+02 3.683048800E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="36.830488"
+                probability="0.0500"
+                rake="-90.0"
+                strike="317.224152"
+                >
+                    5.000000000E-02 3.172241520E+02 3.683048800E+01 -9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="36.830488"
+                probability="0.6500"
+                rake="90.0"
+                strike="317.224152"
+                >
+                    6.500000000E-01 3.172241520E+02 3.683048800E+01 9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="13.2"
+                probability="1.0"
+                >
+                    1.000000000E+00 1.320000000E+01
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="FSBG_ITAS307"
+        name="ITAS307"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                1.157798700E+01 4.322285800E+01 1.179718000E+01 4.354949200E+01 1.196760300E+01 4.350790400E+01 1.276646100E+01 4.266539400E+01 1.293802500E+01 4.243908700E+01 1.353023400E+01 4.184817900E+01 1.360496400E+01 4.152716800E+01 1.333268100E+01 4.145759200E+01 1.305091000E+01 4.173682800E+01 1.275090700E+01 4.195519600E+01 1.270169500E+01 4.199811900E+01 1.254292200E+01 4.214525600E+01 1.228081900E+01 4.248345200E+01 1.216164500E+01 4.263577300E+01 1.189358700E+01 4.296128800E+01 1.175555200E+01 4.309378100E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    9.269932390E-02 5.848931925E-02 3.690426555E-02 2.328501739E-02 1.469185274E-02 9.269932390E-03 5.848931925E-03 3.690426555E-03 2.328501739E-03 1.469185274E-03 9.269932390E-04 5.848931925E-04 3.690426555E-04 2.328501739E-04 7.345926370E-05 2.780979717E-05 5.848931925E-06
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.1000"
+                rake="0.0"
+                strike="0.0"
+                >
+                    1.000000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.7000"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    7.000000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.2000"
+                rake="90.0"
+                strike="0.0"
+                >
+                    2.000000000E-01 0.000000000E+00 9.000000000E+01 9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="8.5"
+                probability="1.0"
+                >
+                    1.000000000E+00 8.500000000E+00
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="FSBG_ARAS462"
+        name="ARAS462"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                4.472409500E+01 4.053629100E+01 4.498201800E+01 4.047648900E+01 4.548138300E+01 4.007070400E+01 4.581428900E+01 3.976352200E+01 4.597795300E+01 3.944770700E+01 4.610794300E+01 3.904254800E+01 4.610245400E+01 3.904749200E+01 4.589259400E+01 3.927654700E+01 4.553077400E+01 3.950560300E+01 4.534807000E+01 3.965410200E+01 4.524855200E+01 3.985756600E+01 4.500251400E+01 4.010338200E+01 4.477818400E+01 4.041623800E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    5.129714566E-02 2.718774577E-02 1.440964230E-02 7.637183053E-03 4.047745515E-03 2.145325526E-03 1.137033343E-03 6.026334029E-04 3.193987412E-04 1.692829428E-04 8.972081299E-05 4.755248313E-05 2.520305576E-05 1.335774659E-05 3.539836512E-06 1.125678717E-06 1.988717980E-07
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.3300"
+                rake="0.0"
+                strike="0.0"
+                >
+                    3.300000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.3300"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    3.300000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.3400"
+                rake="90.0"
+                strike="0.0"
+                >
+                    3.400000000E-01 0.000000000E+00 9.000000000E+01 9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="13.2"
+                probability="1.0"
+                >
+                    1.000000000E+00 1.320000000E+01
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="FSBG_ESAS971"
+        name="ESAS971"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                -1.950539998E-01 4.203007900E+01 -5.212490003E-01 4.275136200E+01 2.583999652E-03 4.272901700E+01 2.560390002E-01 4.264557300E+01 8.543110003E-01 4.236293200E+01 1.295671000E+00 4.229024300E+01 1.535856000E+00 4.225233700E+01 2.117206000E+00 4.219594700E+01 2.307903000E+00 4.219788000E+01 2.241330000E+00 4.207521900E+01 2.086435000E+00 4.186010400E+01 1.683238000E+00 4.163450100E+01 1.053695000E+00 4.151036900E+01 5.001420003E-01 4.111311900E+01 3.057690002E-01 4.097473800E+01 1.238160001E-01 4.084519900E+01 -5.651230001E-01 4.110751500E+01 -8.903910001E-01 4.148814200E+01 -1.131235000E+00 4.154243500E+01 -1.838393000E+00 4.211216400E+01 -2.103851000E+00 4.226043200E+01 -2.420626000E+00 4.243874600E+01 -1.173931000E+00 4.243432100E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    2.184283432E-04 1.359280203E-04 8.458804579E-05 5.263916502E-05 3.275736740E-05 2.038491907E-05 1.268554095E-05 7.894215753E-06 4.912572714E-06 3.057095401E-06 1.902431340E-06 5.917549077E-07 2.209207128E-07 4.582121163E-08
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.3000"
+                rake="0.0"
+                strike="0.0"
+                >
+                    3.000000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.3000"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    3.000000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.4000"
+                rake="90.0"
+                strike="0.0"
+                >
+                    4.000000000E-01 0.000000000E+00 9.000000000E+01 9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="13.2"
+                probability="1.0"
+                >
+                    1.000000000E+00 1.320000000E+01
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="FSBG_PLAS982"
+        name="PLAS982"
+        tectonicRegion="Stable Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                1.782388200E+01 5.038224500E+01 1.811332700E+01 5.022554900E+01 1.914702300E+01 5.006062800E+01 1.999214000E+01 4.975700400E+01 1.885890100E+01 4.944201300E+01 1.850440800E+01 4.951745400E+01 1.795266900E+01 4.966375800E+01 1.706372400E+01 4.995928400E+01 1.596438300E+01 5.040156600E+01 1.545647800E+01 5.075751000E+01 1.558206400E+01 5.089785900E+01 1.650413900E+01 5.065264600E+01 1.696384300E+01 5.083500400E+01 1.723606700E+01 5.069169500E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    5.000314693E-03 3.325043546E-03 2.211043757E-03 1.470270818E-03 9.776813649E-04 6.501257045E-04 4.323120464E-04 2.874731828E-04 1.911601389E-04 1.271151568E-04 4.227434429E-05 1.687229416E-05
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.3300"
+                rake="0.0"
+                strike="0.0"
+                >
+                    3.300000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.3300"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    3.300000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.3400"
+                rake="90.0"
+                strike="0.0"
+                >
+                    3.400000000E-01 0.000000000E+00 9.000000000E+01 9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="14.0"
+                probability="1.0"
+                >
+                    1.000000000E+00 1.400000000E+01
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="FSBG_DEAS972"
+        name="DEAS972"
+        tectonicRegion="Stable Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                1.429346600E+01 5.088872100E+01 1.418716600E+01 5.054091200E+01 1.313677700E+01 5.021419800E+01 1.272429700E+01 5.016213500E+01 1.254961500E+01 5.039778200E+01 1.254088400E+01 5.058923100E+01 1.263074500E+01 5.112978600E+01 1.254536900E+01 5.140773300E+01 1.241771500E+01 5.149167300E+01 1.469549200E+01 5.102333800E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    5.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    7.626769531E-05 4.812166250E-05 3.036271638E-05 1.915757890E-05 1.208761511E-05 7.626769531E-06 4.812166250E-06 3.036271638E-06 1.915757890E-06 1.208761511E-06 3.813947179E-07 1.444146677E-07
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.9000"
+                rake="0.0"
+                strike="0.0"
+                >
+                    9.000000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.1000"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    1.000000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="9.5"
+                probability="1.0"
+                >
+                    1.000000000E+00 9.500000000E+00
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="AS_PTAS275"
+        name="PTAS275"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                -2.412776100E+01 3.601453800E+01 -2.352511900E+01 3.751380200E+01 -1.963203300E+01 3.827178100E+01 -1.942317400E+01 3.701542900E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    3.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    7.363397700E-02 4.645989859E-02 2.931421424E-02 1.849601877E-02 1.167019889E-02 7.363397700E-03 4.645989859E-03 2.931421424E-03 1.849601877E-03 1.167019889E-03 7.363397700E-04 4.645989859E-04 2.931421424E-04 1.849601877E-04 1.167019889E-04 7.363397700E-05 4.645989859E-05 2.931421424E-05 1.849601877E-05 1.167019889E-05 2.209039378E-06
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.6000"
+                rake="0.0"
+                strike="0.0"
+                >
+                    6.000000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.1000"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    1.000000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.3000"
+                rake="90.0"
+                strike="0.0"
+                >
+                    3.000000000E-01 0.000000000E+00 9.000000000E+01 9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="13.2"
+                probability="1.0"
+                >
+                    1.000000000E+00 1.320000000E+01
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="AS_FIAS032"
+        name="FIAS032"
+        tectonicRegion="Shield"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                1.760213400E+01 6.050100200E+01 2.164000000E+01 6.384000000E+01 2.800000000E+01 6.419000000E+01 3.395000000E+01 6.595000000E+01 3.395000000E+01 6.449000000E+01 3.013000000E+01 5.995000000E+01 2.820000000E+01 5.930000000E+01 2.572704500E+01 5.960830000E+01 2.500000000E+01 5.970000000E+01 2.232313600E+01 5.959235800E+01 2.000000000E+01 5.950000000E+01 1.926459400E+01 5.980579600E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    3.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    1.469401987E-03 9.271299759E-04 5.849794676E-04 3.690970914E-04 2.328845207E-04 1.469401987E-04 9.271299759E-05 5.849794676E-05 3.690970914E-05 2.328845207E-05 7.348093503E-06 2.782347086E-06
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.5000"
+                rake="0.0"
+                strike="0.0"
+                >
+                    5.000000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.4000"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    4.000000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.1000"
+                rake="90.0"
+                strike="0.0"
+                >
+                    1.000000000E-01 0.000000000E+00 9.000000000E+01 9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="17.0"
+                probability="1.0"
+                >
+                    1.000000000E+00 1.700000000E+01
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+        <areaSource
+        id="V_CZAS127"
+        name="CZAS127"
+        tectonicRegion="Volcanic"
+        >
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                                1.235401900E+01 5.012042800E+01 1.272429700E+01 5.016213500E+01 1.273427900E+01 5.008421200E+01 1.277443700E+01 4.995991400E+01 1.280801500E+01 4.985408900E+01 1.278360000E+01 4.958128100E+01 1.276499500E+01 4.937821800E+01 1.278144800E+01 4.921641500E+01 1.257928400E+01 4.934524200E+01 1.238908800E+01 4.951337500E+01 1.244681200E+01 5.000109100E+01
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>
+                    0.000000000E+00
+                </upperSeismoDepth>
+                <lowerSeismoDepth>
+                    3.000000000E+01
+                </lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>
+                WC1994
+            </magScaleRel>
+            <ruptAspectRatio>
+                1.000000000E+00
+            </ruptAspectRatio>
+            <incrementalMFD
+            binWidth="2.000000000E-01"
+            minMag="4.700000000E+00"
+            >
+                <occurRates>
+                    3.302810089E-03 1.857306602E-03 1.044440256E-03 5.873319177E-04 3.302810089E-04 1.857306602E-04 5.212758873E-05
+                </occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane
+                dip="90.0"
+                probability="0.9000"
+                rake="0.0"
+                strike="0.0"
+                >
+                    9.000000000E-01 0.000000000E+00 9.000000000E+01 0.000000000E+00
+                </nodalPlane>
+                <nodalPlane
+                dip="90.0"
+                probability="0.1000"
+                rake="-90.0"
+                strike="0.0"
+                >
+                    1.000000000E-01 0.000000000E+00 9.000000000E+01 -9.000000000E+01
+                </nodalPlane>
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth
+                depth="11.0"
+                probability="1.0"
+                >
+                    1.000000000E+00 1.100000000E+01
+                </hypoDepth>
+            </hypoDepthDist>
+        </areaSource>
+    </sourceModel>
+</nrml>

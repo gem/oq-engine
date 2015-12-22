@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel
+    category="buildings"
+    id="exp_mod_1"
+    taxonomySource="User Taxonomy"
+    >
+        <description>
+            Exposure Model for buildings located in Turkey
+        </description>
+        <conversions>
+            <costTypes>
+                <costType name="structural" type="aggregated" unit="TRY"/>
+            </costTypes>
+        </conversions>
+        <assets>
+            <asset
+            id="a124"
+            taxonomy="RC_LR"
+            >
+                <location lat="3.780813200E+01" lon="2.731028100E+01"/>
+                <costs>
+                    <cost type="structural" value="3.794851040E+09"/>
+                </costs>
+            </asset>
+            <asset
+            id="a427"
+            taxonomy="RC_LR"
+            >
+                <location lat="4.122317300E+01" lon="2.869244100E+01"/>
+                <costs>
+                    <cost type="structural" value="1.571552468E+09"/>
+                </costs>
+            </asset>
+            <asset
+            id="a684"
+            taxonomy="RC_LR"
+            >
+                <location lat="3.705973900E+01" lon="3.481905800E+01"/>
+                <costs>
+                    <cost type="structural" value="4.565545321E+09"/>
+                </costs>
+            </asset>
+            <asset
+            id="a1133"
+            taxonomy="RC_MR"
+            >
+                <location lat="4.003498700E+01" lon="2.952277100E+01"/>
+                <costs>
+                    <cost type="structural" value="1.669113530E+09"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2112"
+            taxonomy="RC_HR"
+            >
+                <location lat="3.848514400E+01" lon="2.726104700E+01"/>
+                <costs>
+                    <cost type="structural" value="7.312968254E+08"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2563"
+            taxonomy="URM_1S"
+            >
+                <location lat="4.023526300E+01" lon="4.031728500E+01"/>
+                <costs>
+                    <cost type="structural" value="2.140355938E+07"/>
+                </costs>
+            </asset>
+            <asset
+            id="a2568"
+            taxonomy="URM_1S"
+            >
+                <location lat="4.039133400E+01" lon="2.998459300E+01"/>
+                <costs>
+                    <cost type="structural" value="2.592137524E+07"/>
+                </costs>
+            </asset>
+            <asset
+            id="a3801"
+            taxonomy="URM_2S"
+            >
+                <location lat="3.796024000E+01" lon="2.735752300E+01"/>
+                <costs>
+                    <cost type="structural" value="4.466662381E+07"/>
+                </costs>
+            </asset>
+            <asset
+            id="a4071"
+            taxonomy="URM_2S"
+            >
+                <location lat="4.098274100E+01" lon="3.090751100E+01"/>
+                <costs>
+                    <cost type="structural" value="7.643916778E+07"/>
+                </costs>
+            </asset>
+            <asset
+            id="a6735"
+            taxonomy="SAM_1S"
+            >
+                <location lat="3.836295100E+01" lon="3.432061000E+01"/>
+                <costs>
+                    <cost type="structural" value="7.273553115E+07"/>
+                </costs>
+            </asset>
+            <asset
+            id="a8308"
+            taxonomy="SAM_2S"
+            >
+                <location lat="4.077946200E+01" lon="3.736957500E+01"/>
+                <costs>
+                    <cost type="structural" value="2.163933198E+06"/>
+                </costs>
+            </asset>
+            <asset
+            id="a8370"
+            taxonomy="SAM_2S"
+            >
+                <location lat="3.809533400E+01" lon="4.181168100E+01"/>
+                <costs>
+                    <cost type="structural" value="4.590983342E+06"/>
+                </costs>
+            </asset>
+            <asset
+            id="a8877"
+            taxonomy="SAM_3S"
+            >
+                <location lat="3.617747200E+01" lon="3.595386700E+01"/>
+                <costs>
+                    <cost type="structural" value="1.194378308E+05"/>
+                </costs>
+            </asset>
+            <asset
+            id="a9711"
+            taxonomy="SAM_4S"
+            >
+                <location lat="3.809481500E+01" lon="3.661979200E+01"/>
+                <costs>
+                    <cost type="structural" value="9.138977417E+05"/>
+                </costs>
+            </asset>
+        </assets>
+    </exposureModel>
+</nrml>

@@ -15,6 +15,7 @@ from __future__ import division
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import mock
+import copy
 import time
 import logging
 import operator
@@ -293,6 +294,13 @@ class RlzsAssoc(collections.Mapping):
     def realizations(self):
         """Flat list with all the realizations"""
         return sum(self.rlzs_by_smodel, [])
+
+    def get_sm_id(self, trt_model_id):
+        """Return the source model ordinal for the given trt_model_id"""
+        for smodel in self.csm_info.source_models:
+            for trt_model in smodel.trt_models:
+                if trt_model.id == trt_model_id:
+                    return smodel.ordinal
 
     def get_gsims_by_col(self):
         """Return a list of lists of GSIMs of length num_collections"""
@@ -592,6 +600,7 @@ class CompositeSourceModel(collections.Sequence):
             if trt_model.num_ruptures == 0 or really:
                 trt_model.num_ruptures = sum(
                     src.count_ruptures() for src in trt_model)
+                logging.info('Processed %s', trt_model)
 
     def get_info(self):
         """
@@ -767,6 +776,9 @@ class BaseSourceProcessor(object):
         self.sitecol = sitecol
         self.maxdist = maxdist
         self.monitor = monitor
+
+    def process(self, csm, dstore, dummy=None):
+        pass
 
 
 class SourceFilter(BaseSourceProcessor):

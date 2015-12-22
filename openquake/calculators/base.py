@@ -75,19 +75,12 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
 
-    def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None,
-                 persistent=True):
+    def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
         self.monitor = monitor
-        if persistent:
-            self.datastore = datastore.DataStore(calc_id)
-            self.monitor.hdf5path = self.datastore.hdf5path
-        else:
-            self.datastore = general.AccumDict()
-            self.datastore.hdf5 = {}
-            self.datastore.attrs = {}
+        self.datastore = datastore.DataStore(calc_id)
+        self.monitor.hdf5path = self.datastore.hdf5path
         self.datastore.export_dir = oqparam.export_dir
         self.oqparam = oqparam
-        self.persistent = persistent
 
     def save_params(self, **kw):
         """
