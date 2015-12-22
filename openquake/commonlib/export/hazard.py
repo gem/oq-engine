@@ -404,6 +404,14 @@ UHS = collections.namedtuple('UHS', 'imls location')
 
 
 def get_metadata(realizations, kind):
+    """
+    :param list realizations:
+        realization objects
+    :param str kind:
+        kind of data, i.e. a key in the datastore
+    :returns:
+        a dictionary with smlt_path, gsimlt_path, statistics, quantile_value
+    """
     metadata = {}
     if kind.startswith('rlz-'):
         rlz = realizations[int(kind[4:])]
