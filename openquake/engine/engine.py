@@ -184,14 +184,14 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     PerformanceMonitor that writes both in the datastore and in the database
     """
     def flush(self):
+        curs = models.getcursor('job_init')
         data = PerformanceMonitor.flush(self)
         for rec in data:
-            models.Performance.objects.create(
-                oq_job_id=self.job_id,
-                operation=rec['operation'],
-                start_time=self.start_time,
-                duration=rec['time_sec'],
-                pymemory=rec['memory_mb'])
+            curs.execute("""INSERT INTO uiapi.performance
+            (oq_job_id, operation, start_time, duration, pymemory)
+            VALUES (%s, %s, %s, %s, %s)""", (
+                self.job_id, rec['operation'], self.start_time,
+                rec['time_sec'], rec['memory_mb']))
 
 
 # used by bin/openquake and openquake.server.views
@@ -223,8 +223,8 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
 
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
-    # FIXME: restore logs.handle(job, log_level, log_file)
-    with job_stats(job):  # run the job
+    # FIXME: restore 
+    with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
         _do_run_calc(calculator, exports, hazard_calculation_id)
         job.ds_calc_dir = calculator.datastore.calc_dir
         job.save()
