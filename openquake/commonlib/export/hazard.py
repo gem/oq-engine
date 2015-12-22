@@ -389,12 +389,12 @@ def export_hcurves_csv(ekey, dstore):
     sitemesh = dstore['sitemesh']
     key, fmt = ekey
     fnames = []
-    for kind, hcurves in dstore[key].items():
+    for kind, hcurves in dstore['hmaps' if key == 'uhs' else key].items():
         fname = hazard_curve_name(
-            dstore, ekey, kind, rlzs_assoc,
-            oq.number_of_logic_tree_samples)
+            dstore, ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
         if key == 'uhs':
-            write_csv(fname, util.compose_arrays(sitemesh, hcurves))
+            uhs_curves = calc.make_uhs(hcurves, oq.poes)
+            write_csv(fname, util.compose_arrays(sitemesh, uhs_curves))
         else:
             export_hazard_curves_csv(ekey, fname, sitecol, hcurves, oq.imtls)
         fnames.append(fname)
@@ -425,10 +425,10 @@ def export_uhs_xml(ekey, dstore):
     key, fmt = ekey
     fnames = []
     periods = [imt for imt in oq.imtls if imt.startswith('SA') or imt == 'PGA']
-    for kind, uhs_curves in dstore[key].items():
+    for kind, hmaps in dstore['hmaps'].items():
         metadata = get_metadata(rlzs_assoc.realizations, kind)
         _, periods = calc.get_imts_periods(oq.imtls)
-        uhs = uhs_curves.value
+        uhs = calc.make_uhs(hmaps, oq.poes)
         for poe in oq.poes:
             poe_str = 'poe~%s' % poe
             fname = hazard_curve_name(

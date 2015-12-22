@@ -16,8 +16,7 @@ class ClassicalTestCase(CalculatorTestCase):
     def assert_curves_ok(self, expected, test_dir, delta=None):
         out = self.run_calc(test_dir, 'job.ini', exports='csv')
         got = (out['hcurves', 'csv'] +
-               out.get(('hmaps', 'csv'), []) +
-               out.get(('uhs', 'csv'), []))
+               out.get(('hmaps', 'csv'), []))
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual,
@@ -140,18 +139,15 @@ hazard_map-smltp_SM1-gsimltp_CB2008_T2002.csv
 hazard_map-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
 hazard_map-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
 hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
-hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv
-hazard_uhs-mean.csv
-hazard_uhs-smltp_SM1-gsimltp_BA2008_C2003.csv
-hazard_uhs-smltp_SM1-gsimltp_BA2008_T2002.csv
-hazard_uhs-smltp_SM1-gsimltp_CB2008_C2003.csv
-hazard_uhs-smltp_SM1-gsimltp_CB2008_T2002.csv
-hazard_uhs-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
-hazard_uhs-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
-hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
-hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
+hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
                               case_15.__file__)
-        # test USH XML export
+
+        # test UHS CSV export
+        [fname] = [f for f in export(('uhs', 'csv'), self.calc.datastore)
+                   if 'mean' in f]
+        self.assertEqualFiles('expected/hazard_uhs-mean.csv', fname)
+
+        # test UHS XML export
         fnames = [f for f in export(('uhs', 'xml'), self.calc.datastore)
                   if 'mean' in f]
         self.assertEqualFiles('expected/hazard_uhs-mean-0.01.xml', fnames[0])
