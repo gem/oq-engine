@@ -415,7 +415,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     """
     Classical Tiling calculator
     """
-    MAX_WEIGHT = 100000
+    MAX_WEIGHT = 10000
     SourceProcessor = source.BaseSourceProcessor  # do nothing
 
     def gen_args(self):
@@ -425,8 +425,8 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         monitor = self.monitor.new(self.core_func.__name__)
         monitor.oqparam = oq = self.oqparam
         rlzs_assoc = self.csm.get_rlzs_assoc()
-        num_src_models = len(rlzs_assoc.csm_info.source_models)
-        hint = math.ceil(oq.concurrent_tasks / num_src_models)
+        num_trt_models = len(rlzs_assoc)
+        hint = math.ceil(oq.concurrent_tasks / num_trt_models)
         tiles = self.sitecol.split_in_tiles(hint)
         logging.info('Generating %d tiles of %d sites each',
                      len(tiles), len(tiles[0]))
