@@ -24,7 +24,7 @@ from functools import partial
 
 import numpy
 
-from openquake.baselib.general import groupby
+from openquake.baselib.general import groupby, block_splitter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -415,6 +415,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     """
     Classical Tiling calculator
     """
+    MAX_WEIGHT = 100000
     SourceProcessor = source.BaseSourceProcessor  # do nothing
 
     def gen_args(self):
@@ -440,7 +441,8 @@ class ClassicalTilingCalculator(ClassicalCalculator):
             groups = groupby(
                 filtered_sources, operator.attrgetter('trt_model_id')).values()
             for group in groups:  # sources of homogeneous trt_model_id
-                yield group, tile, siteidx, rlzs_assoc, monitor
+                for block in block_splitter(group, self.MAX_WEIGHT):
+                    yield block, tile, siteidx, rlzs_assoc, monitor
             siteidx += len(tile)
 
     def execute(self):
