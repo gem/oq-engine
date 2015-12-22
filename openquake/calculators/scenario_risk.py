@@ -16,7 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import logging
 
 import numpy
@@ -55,9 +54,6 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         (n, R, 4), with n the number of assets in the current riskinput object
     """
     E = monitor.oqparam.number_of_ground_motion_fields
-    logging.info('Process %d, considering %d risk input(s) of weight %d',
-                 os.getpid(), len(riskinputs),
-                 sum(ri.weight for ri in riskinputs))
     L = len(riskmodel.loss_types)
     R = len(rlzs_assoc.realizations)
     result = dict(agg=numpy.zeros((E, L, R, 2), F64), avg=[])

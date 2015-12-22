@@ -16,8 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import logging
 import itertools
 import numpy
 
@@ -98,9 +96,6 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     If there is no consequence model `c_asset` is an empty list and
     `c_taxonomy` is a zero-value array.
     """
-    logging.info('Process %d, considering %d risk input(s) of weight %d',
-                 os.getpid(), len(riskinputs),
-                 sum(ri.weight for ri in riskinputs))
     c_models = monitor.consequence_models
     L = len(riskmodel.loss_types)
     R = len(rlzs_assoc.realizations)

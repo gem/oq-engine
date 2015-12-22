@@ -16,9 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import logging
-
 import numpy
 
 from openquake.baselib.general import AccumDict
@@ -42,9 +39,6 @@ def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     :returns:
         a nested dictionary rlz_idx -> asset -> <damage array>
     """
-    logging.info('Process %d, considering %d risk input(s) of weight %d',
-                 os.getpid(), len(riskinputs),
-                 sum(ri.weight for ri in riskinputs))
     with monitor:
         result = {i: AccumDict() for i in range(len(rlzs_assoc))}
         for out_by_rlz in riskmodel.gen_outputs(
