@@ -70,7 +70,7 @@ curve_matrix_size 232 B'''
         exp = self.EXPECTED + '''
 n_sites 1
 n_sources 1
-input_weight 1722.0
+input_weight 43.05
 n_levels 29
 output_weight 29.0
 n_realizations 1
