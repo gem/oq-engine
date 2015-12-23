@@ -204,7 +204,8 @@ def expand(array, n, aslice):
 source_info_dt = numpy.dtype(
     [('trt_model_id', numpy.uint32),
      ('source_id', (bytes, 20)),
-     ('calc_time', numpy.float32)])
+     ('calc_time', numpy.float32),
+     ('weight', numpy.float32)])
 
 
 def store_source_chunks(dstore):
@@ -291,13 +292,16 @@ class ClassicalCalculator(base.HazardCalculator):
         # save calculation time per source
         calc_times = getattr(curves_by_trt_gsim, 'calc_times', [])
         sources = self.csm.get_sources()
-        info = []
-        for i, dt in calc_times:
-            src = sources[i]
-            info.append((src.trt_model_id, src.source_id, dt))
-        info.sort(key=operator.itemgetter(2), reverse=True)
-        if info:
-            self.source_info = numpy.array(info, source_info_dt)
+        infodict = collections.defaultdict(float)
+        weight = {}
+        for src_idx, dt in calc_times:
+            src = sources[src_idx]
+            weight[src.trt_model_id, src.source_id] = src.weight
+            infodict[src.trt_model_id, src.source_id] += dt
+        infolist = [key + (dt, weight[key]) for key, dt in infodict.items()]
+        infolist.sort(key=operator.itemgetter(1), reverse=True)
+        if infolist:
+            self.source_info = numpy.array(infolist, source_info_dt)
 
         # save curves_by_trt_gsim
         for sm in self.rlzs_assoc.csm_info.source_models:
