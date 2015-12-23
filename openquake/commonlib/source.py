@@ -96,7 +96,7 @@ def get_weight(src, point_source_weight=1/40., num_ruptures=None):
     """
     num_ruptures = num_ruptures or src.count_ruptures()
     weight = (num_ruptures * point_source_weight
-              if src.__class__.__name__ == 'PointSource'
+              if src.__class__.__name__ in ('PointSource', 'AreaSource')
               else num_ruptures)
     return weight
 

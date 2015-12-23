@@ -414,12 +414,23 @@ def is_effective_trt_model(result_dict, trt_model):
                if trt_model.id == key[0] and nonzero(val))
 
 
+def get_light_heavy_sources(sources, max_weight):
+    light, heavy = [], []
+    for src in sources:
+        if src.weight >= max_weight:
+            heavy.append(src)
+        else:
+            light.append(src)
+    return light, heavy
+
+
 @base.calculators.add('classical_tiling')
 class ClassicalTilingCalculator(ClassicalCalculator):
     """
     Classical Tiling calculator
     """
     SourceProcessor = source.BaseSourceProcessor  # do nothing
+    MAX_WEIGHT = 10000
 
     def execute(self):
         """
@@ -440,8 +451,9 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         tmanagers = []
         maximum_distance = self.oqparam.maximum_distance
         num_blocks = math.ceil(self.oqparam.concurrent_tasks / len(tiles))
-        num_tasks = 0
         for i, tile in enumerate(tiles, 1):
+            monitor = self.monitor.new('tile')
+            monitor.oqparam = self.oqparam
             with self.monitor('filtering sources per tile', autoflush=True):
                 filtered_sources = [
                     src for src in sources
@@ -449,22 +461,30 @@ class ClassicalTilingCalculator(ClassicalCalculator):
                         maximum_distance, tile) is not None]
                 if not filtered_sources:
                     continue
-            blocks = list(
-                split_in_blocks(
-                    filtered_sources,
-                    num_blocks,
+            light, heavy = get_light_heavy_sources(
+                filtered_sources, self.MAX_WEIGHT)
+            if heavy:
+                # send one heavy source at the time
+                tm = parallel.starmap(
+                    classical,
+                    (([src], tile, siteidx, rlzs_assoc, monitor)
+                     for src in heavy),
+                    name='classical_tile_%d/%d' % (i, len(tiles)))
+                tmanagers.append(tm)
+            if light:
+                blocks = split_in_blocks(
+                    light, num_blocks,
                     weight=operator.attrgetter('weight'),
-                    key=operator.attrgetter('trt_model_id')))
-            monitor = self.monitor.new('tile')
-            monitor.oqparam = self.oqparam
-            tm = parallel.starmap(
-                classical,
-                ((blk, tile, siteidx, rlzs_assoc, monitor) for blk in blocks),
-                name='classical_tile_%d/%d' % (i, len(tiles)))
-            num_tasks += len(tm.results)
-            tmanagers.append(tm)
+                    key=operator.attrgetter('trt_model_id'))
+                tm = parallel.starmap(
+                    classical,
+                    ((blk, tile, siteidx, rlzs_assoc, monitor)
+                     for blk in blocks),
+                    name='classical_tile_%d/%d' % (i, len(tiles)))
+                tmanagers.append(tm)
             siteidx += len(tile)
-        logging.info('Total number of tasks: %d', num_tasks)
+        logging.info('Total number of tasks submitted: %d',
+                     sum(len(tm.results) for tm in tmanagers))
         for tm in tmanagers:
             tm.reduce(self.agg_dicts, acc)
         self.rlzs_assoc = self.csm.get_rlzs_assoc(
