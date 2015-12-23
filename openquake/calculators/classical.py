@@ -430,20 +430,32 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         tiles = self.sitecol.split_in_tiles(hint)
         logging.info('Generating %d tiles of %d sites each',
                      len(tiles), len(tiles[0]))
-        blocks = list(split_in_blocks(
-            self.csm.get_sources(),
-            self.oqparam.concurrent_tasks,
-            weight=operator.attrgetter('weight'),
-            key=operator.attrgetter('trt_model_id')))
+        sources = self.csm.get_sources()
         rlzs_assoc = self.csm.get_rlzs_assoc()
         siteidx = 0
         tmanagers = []
-        for tile in tiles:
+        maximum_distance = self.oqparam.maximum_distance
+        num_blocks = math.ceil(self.oqparam.concurrent_tasks / len(tiles))
+        for i, tile in enumerate(tiles, 1):
+            with self.monitor('filtering sources per tile', autoflush=True):
+                filtered_sources = [
+                    src for src in sources
+                    if src.filter_sites_by_distance_to_source(
+                        maximum_distance, tile) is not None]
+                if not filtered_sources:
+                    continue
+            blocks = list(
+                split_in_blocks(
+                    filtered_sources,
+                    num_blocks,
+                    weight=operator.attrgetter('weight'),
+                    key=operator.attrgetter('trt_model_id')))
             monitor = self.monitor.new('tile')
             monitor.oqparam = self.oqparam
             tm = parallel.starmap(
                 classical,
-                ((blk, tile, siteidx, rlzs_assoc, monitor) for blk in blocks))
+                ((blk, tile, siteidx, rlzs_assoc, monitor) for blk in blocks),
+                name='classical_tile_%d/%d' % (i, len(tiles)))
             tmanagers.append(tm)
             siteidx += len(tile)
         for tm in tmanagers:
