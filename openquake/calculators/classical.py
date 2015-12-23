@@ -440,6 +440,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         tmanagers = []
         maximum_distance = self.oqparam.maximum_distance
         num_blocks = math.ceil(self.oqparam.concurrent_tasks / len(tiles))
+        num_tasks = 0
         for i, tile in enumerate(tiles, 1):
             with self.monitor('filtering sources per tile', autoflush=True):
                 filtered_sources = [
@@ -460,8 +461,10 @@ class ClassicalTilingCalculator(ClassicalCalculator):
                 classical,
                 ((blk, tile, siteidx, rlzs_assoc, monitor) for blk in blocks),
                 name='classical_tile_%d/%d' % (i, len(tiles)))
+            num_tasks += len(tm.results)
             tmanagers.append(tm)
             siteidx += len(tile)
+        logging.info('Total number of tasks: %d', num_tasks)
         for tm in tmanagers:
             tm.reduce(self.agg_dicts, acc)
         self.rlzs_assoc = self.csm.get_rlzs_assoc(
