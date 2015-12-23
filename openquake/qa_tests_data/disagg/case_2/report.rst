@@ -66,12 +66,6 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-=========== ====
-#TRT models 3   
-#sources    378 
-#ruptures   6865
-=========== ====
-
 ================== ====== ==================== =========== ============
 source_model       trt_id trt                  num_sources num_ruptures
 ================== ====== ==================== =========== ============
@@ -79,3 +73,9 @@ source_model_1.xml 0      Subduction IntraSlab 121         1815
 source_model_1.xml 1      Active Shallow Crust 242         3630        
 source_model_2.xml 2      Active Shallow Crust 15          1420        
 ================== ====== ==================== =========== ============
+
+=========== ====
+#TRT models 3   
+#sources    378 
+#ruptures   6865
+=========== ====

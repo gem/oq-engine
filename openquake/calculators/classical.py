@@ -24,7 +24,7 @@ from functools import partial
 
 import numpy
 
-from openquake.baselib.general import groupby, block_splitter
+from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -415,35 +415,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     """
     Classical Tiling calculator
     """
-    MAX_WEIGHT = 10000
     SourceProcessor = source.BaseSourceProcessor  # do nothing
-
-    def gen_args(self):
-        """
-        A generator yielding the arguments for classical_tiling tasks
-        """
-        monitor = self.monitor.new(self.core_func.__name__)
-        monitor.oqparam = oq = self.oqparam
-        rlzs_assoc = self.csm.get_rlzs_assoc()
-        num_trt_models = len(rlzs_assoc)
-        hint = math.ceil(oq.concurrent_tasks / num_trt_models)
-        tiles = self.sitecol.split_in_tiles(hint)
-        logging.info('Generating %d tiles of %d sites each',
-                     len(tiles), len(tiles[0]))
-        siteidx = 0
-        sources = self.csm.get_sources()
-        for tile in tiles:
-            with self.monitor('filtering sources per tile', autoflush=True):
-                filtered_sources = [
-                    src for src in sources
-                    if src.filter_sites_by_distance_to_source(
-                        oq.maximum_distance, tile) is not None]
-            groups = groupby(
-                filtered_sources, operator.attrgetter('trt_model_id')).values()
-            for group in groups:  # sources of homogeneous trt_model_id
-                for block in block_splitter(group, self.MAX_WEIGHT):
-                    yield block, tile, siteidx, rlzs_assoc, monitor
-            siteidx += len(tile)
 
     def execute(self):
         """
@@ -454,8 +426,28 @@ class ClassicalTilingCalculator(ClassicalCalculator):
              for trt_gsim in self.rlzs_assoc})
         acc.calc_times = []
         acc.n = len(self.sitecol)
-        res = parallel.starmap(classical, self.gen_args()).reduce(
-            self.agg_dicts, acc)
+        hint = math.ceil(acc.n / self.oqparam.sites_per_tile)
+        tiles = self.sitecol.split_in_tiles(hint)
+        logging.info('Generating %d tiles of %d sites each',
+                     len(tiles), len(tiles[0]))
+        blocks = list(split_in_blocks(
+            self.csm.get_sources(),
+            self.oqparam.concurrent_tasks,
+            weight=operator.attrgetter('weight'),
+            key=operator.attrgetter('trt_model_id')))
+        rlzs_assoc = self.csm.get_rlzs_assoc()
+        siteidx = 0
+        tmanagers = []
+        for tile in tiles:
+            monitor = self.monitor.new('tile')
+            monitor.oqparam = self.oqparam
+            tm = parallel.starmap(
+                classical,
+                ((blk, tile, siteidx, rlzs_assoc, monitor) for blk in blocks))
+            tmanagers.append(tm)
+            siteidx += len(tile)
+        for tm in tmanagers:
+            tm.reduce(self.agg_dicts, acc)
         self.rlzs_assoc = self.csm.get_rlzs_assoc(
-            partial(is_effective_trt_model, res))
-        return res
+            partial(is_effective_trt_model, acc))
+        return acc
