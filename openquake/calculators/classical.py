@@ -473,14 +473,14 @@ class ClassicalTilingCalculator(ClassicalCalculator):
                     classical,
                     ((blk, tile, siteidx, rlzs_assoc, monitor)
                      for blk in blocks),
-                    name='light task tile_%d/%d' % (i, len(tiles)))
+                    name='tile_%d/%d_light' % (i, len(tiles)))
                 tmanagers.append(tm)
             if heavy:
                 tm = parallel.starmap(
                     classical,
                     (([src], tile, siteidx, rlzs_assoc, monitor)
                      for src in heavy),
-                    name='heavy task tile_%d/%d' % (i, len(tiles)))
+                    name='tile_%d/%d_heavy' % (i, len(tiles)))
                 tmanagers.append(tm)
             siteidx += len(tile)
 
