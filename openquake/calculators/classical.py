@@ -430,7 +430,6 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     Classical Tiling calculator
     """
     SourceProcessor = source.BaseSourceProcessor  # do nothing
-    MAX_WEIGHT = 10000
 
     def execute(self):
         """
@@ -462,26 +461,15 @@ class ClassicalTilingCalculator(ClassicalCalculator):
                         maximum_distance, tile) is not None]
                 if not filtered_sources:
                     continue
-            light, heavy = get_light_heavy_sources(
-                filtered_sources, self.MAX_WEIGHT)
-            if light:
-                blocks = split_in_blocks(
-                    light, num_blocks,
-                    weight=operator.attrgetter('weight'),
-                    key=operator.attrgetter('trt_model_id'))
-                tm = parallel.starmap(
-                    classical,
-                    ((blk, tile, siteidx, rlzs_assoc, monitor)
-                     for blk in blocks),
-                    name='tile_%d/%d_light' % (i, len(tiles)))
-                tmanagers.append(tm)
-            if heavy:
-                tm = parallel.starmap(
-                    classical,
-                    (([src], tile, siteidx, rlzs_assoc, monitor)
-                     for src in heavy),
-                    name='tile_%d/%d_heavy' % (i, len(tiles)))
-                tmanagers.append(tm)
+            blocks = split_in_blocks(
+                sources, num_blocks,
+                weight=operator.attrgetter('weight'),
+                key=operator.attrgetter('trt_model_id'))
+            tm = parallel.starmap(
+                classical,
+                ((blk, tile, siteidx, rlzs_assoc, monitor) for blk in blocks),
+                name='tile_%d/%d' % (i, len(tiles)))
+            tmanagers.append(tm)
             siteidx += len(tile)
 
         logging.info('Total number of tasks submitted: %d',
