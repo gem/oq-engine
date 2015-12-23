@@ -186,15 +186,13 @@ def hazard_curves_per_trt(
     curves = [numpy.ones(len(sites), imt_dt) for gname in gnames]
     sources_sites = ((source, sites) for source in sources)
     ctx_mon = monitor('making contexts', measuremem=False)
-    rup_mon = monitor('getting ruptures', measuremem=False)
     pne_mon = monitor('computing poes', measuremem=False)
     monitor.calc_times = []  # pairs (src_id, delta_t)
     for source, s_sites in source_site_filter(sources_sites):
         t0 = time.time()
         try:
-            with rup_mon:
-                rupture_sites = list(rupture_site_filter(
-                    (rupture, s_sites) for rupture in source.iter_ruptures()))
+            rupture_sites = rupture_site_filter(
+                (rupture, s_sites) for rupture in source.iter_ruptures())
             for rupture, r_sites in rupture_sites:
                 with ctx_mon:
                     try:
