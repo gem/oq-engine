@@ -303,57 +303,59 @@ class ClassicalCalculator(base.HazardCalculator):
         if infolist:
             self.source_info = numpy.array(infolist, source_info_dt)
 
-        # save curves_by_trt_gsim
-        for sm in self.rlzs_assoc.csm_info.source_models:
-            group = self.datastore.hdf5.create_group(
-                'curves_by_sm/' + '_'.join(sm.path))
-            group.attrs['source_model'] = sm.name
-            for tm in sm.trt_models:
-                for gsim in tm.gsims:
-                    try:
-                        curves = curves_by_trt_gsim[tm.id, gsim]
-                    except KeyError:  # no data for the trt_model
-                        pass
-                    else:
-                        ts = '%03d-%s' % (tm.id, gsim)
-                        if nonzero(curves):
-                            group[ts] = curves
-                            group[ts].attrs['trt'] = tm.trt
+        with self.monitor('save curves_by_trt_gsim', autoflush=True):
+            for sm in self.rlzs_assoc.csm_info.source_models:
+                group = self.datastore.hdf5.create_group(
+                    'curves_by_sm/' + '_'.join(sm.path))
+                group.attrs['source_model'] = sm.name
+                for tm in sm.trt_models:
+                    for gsim in tm.gsims:
+                        try:
+                            curves = curves_by_trt_gsim[tm.id, gsim]
+                        except KeyError:  # no data for the trt_model
+                            pass
+                        else:
+                            ts = '%03d-%s' % (tm.id, gsim)
+                            if nonzero(curves):
+                                group[ts] = curves
+                                group[ts].attrs['trt'] = tm.trt
         oq = self.oqparam
-        zc = zero_curves(len(self.sitecol.complete), oq.imtls)
-        curves_by_rlz = self.rlzs_assoc.combine_curves(
-            curves_by_trt_gsim, agg_curves, zc)
-        rlzs = self.rlzs_assoc.realizations
-        nsites = len(self.sitecol)
-        if oq.individual_curves:
-            for rlz, curves in curves_by_rlz.items():
-                self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
+        with self.monitor('combine and save curves_by_rlz', autoflush=True):
+            zc = zero_curves(len(self.sitecol.complete), oq.imtls)
+            curves_by_rlz = self.rlzs_assoc.combine_curves(
+                curves_by_trt_gsim, agg_curves, zc)
+            rlzs = self.rlzs_assoc.realizations
+            nsites = len(self.sitecol)
+            if oq.individual_curves:
+                for rlz, curves in curves_by_rlz.items():
+                    self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
 
-        if len(rlzs) == 1:  # cannot compute statistics
-            [self.mean_curves] = curves_by_rlz.values()
-            return
+            if len(rlzs) == 1:  # cannot compute statistics
+                [self.mean_curves] = curves_by_rlz.values()
+                return
 
-        weights = (None if oq.number_of_logic_tree_samples
-                   else [rlz.weight for rlz in rlzs])
-        mean = oq.mean_hazard_curves
-        if mean:
-            self.mean_curves = numpy.array(zc)
-            for imt in oq.imtls:
-                self.mean_curves[imt] = scientific.mean_curve(
-                    [curves_by_rlz[rlz][imt] for rlz in rlzs], weights)
+        with self.monitor('compute and save statistics', autoflush=True):
+            weights = (None if oq.number_of_logic_tree_samples
+                       else [rlz.weight for rlz in rlzs])
+            mean = oq.mean_hazard_curves
+            if mean:
+                self.mean_curves = numpy.array(zc)
+                for imt in oq.imtls:
+                    self.mean_curves[imt] = scientific.mean_curve(
+                        [curves_by_rlz[rlz][imt] for rlz in rlzs], weights)
 
-        self.quantile = {}
-        for q in oq.quantile_hazard_curves:
-            self.quantile[q] = qc = numpy.array(zc)
-            for imt in oq.imtls:
-                curves = [curves_by_rlz[rlz][imt] for rlz in rlzs]
-                qc[imt] = scientific.quantile_curve(
-                    curves, q, weights).reshape((nsites, -1))
+            self.quantile = {}
+            for q in oq.quantile_hazard_curves:
+                self.quantile[q] = qc = numpy.array(zc)
+                for imt in oq.imtls:
+                    curves = [curves_by_rlz[rlz][imt] for rlz in rlzs]
+                    qc[imt] = scientific.quantile_curve(
+                        curves, q, weights).reshape((nsites, -1))
 
-        if mean:
-            self.store_curves('mean', self.mean_curves)
-        for q in self.quantile:
-            self.store_curves('quantile-%s' % q, self.quantile[q])
+            if mean:
+                self.store_curves('mean', self.mean_curves)
+            for q in self.quantile:
+                self.store_curves('quantile-%s' % q, self.quantile[q])
 
     def hazard_maps(self, curves):
         """
