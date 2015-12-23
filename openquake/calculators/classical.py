@@ -32,7 +32,7 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, source, datastore
+from openquake.commonlib import parallel, source, datastore, sourceconverter
 from openquake.calculators.views import get_data_transfer
 from openquake.baselib.general import AccumDict
 
@@ -451,40 +451,47 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         tmanagers = []
         maximum_distance = self.oqparam.maximum_distance
         num_blocks = math.ceil(self.oqparam.concurrent_tasks / len(tiles))
+
+        light, heavy = get_light_heavy_sources(sources, self.MAX_WEIGHT)
         for i, tile in enumerate(tiles, 1):
             monitor = self.monitor.new('tile')
             monitor.oqparam = self.oqparam
             with self.monitor('filtering sources per tile', autoflush=True):
                 filtered_sources = [
-                    src for src in sources
+                    src for src in light
                     if src.filter_sites_by_distance_to_source(
                         maximum_distance, tile) is not None]
                 if not filtered_sources:
                     continue
-            light, heavy = get_light_heavy_sources(
-                filtered_sources, self.MAX_WEIGHT)
-            if heavy:
-                # send one heavy source at the time
-                tm = parallel.starmap(
-                    classical,
-                    (([src], tile, siteidx, rlzs_assoc, monitor)
-                     for src in heavy),
-                    name='classical_tile_%d/%d' % (i, len(tiles)))
-                tmanagers.append(tm)
-            if light:
-                blocks = split_in_blocks(
-                    light, num_blocks,
-                    weight=operator.attrgetter('weight'),
-                    key=operator.attrgetter('trt_model_id'))
-                tm = parallel.starmap(
-                    classical,
-                    ((blk, tile, siteidx, rlzs_assoc, monitor)
-                     for blk in blocks),
-                    name='classical_tile_%d/%d' % (i, len(tiles)))
-                tmanagers.append(tm)
+            blocks = split_in_blocks(
+                filtered_sources, num_blocks,
+                weight=operator.attrgetter('weight'),
+                key=operator.attrgetter('trt_model_id'))
+            tm = parallel.starmap(
+                classical,
+                ((blk, tile, siteidx, rlzs_assoc, monitor)
+                 for blk in blocks),
+                name='classical_tile_%d/%d' % (i, len(tiles)))
+            tmanagers.append(tm)
             siteidx += len(tile)
-        logging.info('Total number of tasks submitted: %d',
+
+        logging.info('Number of light tasks submitted: %d',
                      sum(len(tm.results) for tm in tmanagers))
+        if heavy:
+            # split the heavy sources and send them to all sites
+            split_sources = []
+            for src in heavy:
+                if src.filter_sites_by_distance_to_source(
+                        maximum_distance, self.sitecol) is not None:
+                    for ss in sourceconverter.split_source(src):
+                        split_sources.append(ss)
+            acc = parallel.apply_reduce(
+                classical,
+                (split_sources, self.sitecol, 0, rlzs_assoc, monitor),
+                agg=self.agg_dicts, acc=acc,
+                concurrent_tasks=self.oqparam.concurrent_tasks,
+                weight=operator.attrgetter('weight'),
+                key=operator.attrgetter('trt_model_id'))
         for tm in tmanagers:
             tm.reduce(self.agg_dicts, acc)
         self.rlzs_assoc = self.csm.get_rlzs_assoc(
