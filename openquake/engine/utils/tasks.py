@@ -18,6 +18,8 @@
 
 """Utility functions related to splitting work into tasks."""
 
+import types
+
 from celery.result import ResultSet
 from celery.app import current_app
 from celery.task import task
@@ -54,6 +56,8 @@ class OqTaskManager(TaskManager):
 
     def _submit(self, pickled_args):
         # submit tasks by using celery
+        if isinstance(self.oqtask, types.FunctionType):
+            self.oqtask = oqtask(self.oqtask)
         return self.oqtask.delay(*pickled_args)
 
     def aggregate_result_set(self, agg, acc):
