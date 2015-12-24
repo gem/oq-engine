@@ -456,7 +456,7 @@ def expose_outputs(dstore, job):
     calcmode = job.get_param('calculation_mode')
     if 'scenario' in calcmode and 'sescollection' in exportable:
         exportable.remove('sescollection')
-    uhs = job.get_param('uniform_hazard_spectra')
+    uhs = job.get_param('uniform_hazard_spectra', False)
     if uhs and 'hmaps' in dstore:
         out = models.Output.objects.create_output(
             job, 'uhs', output_type='datastore')
