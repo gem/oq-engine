@@ -511,7 +511,7 @@ def get_composite_source_model(
         processor.process(csm, dstore, no_distribute)
         if not csm.get_sources():
             raise RuntimeError('All sources were filtered away')
-    csm.count_ruptures()
+    csm.initsources()
     return csm
 
 

@@ -561,31 +561,27 @@ class CompositeSourceModel(collections.Sequence):
         """
         Extract the sources contained in the internal source models.
         """
-        sources = []
-        ordinal = 0
+        return sum((trt_model.sources for trt_model in self.trt_models), [])
+
+    def get_num_sources(self):
+        """
+        :returns: the total number of sources in the model
+        """
+        return sum(len(trt_model) for trt_model in self.trt_models)
+
+    def initsources(self, ordinal=0):
+        """
+        Update the attributes src.id and src.trt_model_id for each source,
+        then set the attribute num_ruptures in each TRT model.
+        """
         for trt_model in self.trt_models:
+            num_ruptures = 0
             for src in trt_model:
                 if hasattr(src, 'trt_model_id'):
                     # .trt_model_id is missing for source nodes
                     src.trt_model_id = trt_model.id
                     src.id = ordinal
                     ordinal += 1
-                sources.append(src)
-        return sources
-
-    def get_num_sources(self):
-        """
-        :returns: the total number of sources in the model
-        """
-        return len(self.get_sources())
-
-    def count_ruptures(self):
-        """
-        Update the attribute .num_ruptures in each TRT model.
-        """
-        for trt_model in self.trt_models:
-            num_ruptures = 0
-            for src in trt_model:
                 if src.__class__.__name__ in ('PointSource', 'AreaSource'):
                     num_ruptures += (src.weight /
                                      sourceconverter.POINT_SOURCE_WEIGHT)
