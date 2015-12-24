@@ -437,7 +437,7 @@ def get_source_models(oqparam, source_model_lt, sitecol=None, in_memory=True):
             apply_unc = source_model_lt.make_apply_uncertainties(smpath)
             try:
                 trt_models = source.parse_source_model(
-                    fname, converter, apply_unc)
+                    fname, converter, apply_unc, set_weight=True)
             except ValueError as e:
                 if str(e) in ('Surface does not conform with Aki & '
                               'Richards convention',

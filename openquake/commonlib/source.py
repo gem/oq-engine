@@ -86,15 +86,17 @@ SourceModel = collections.namedtuple(
     'num_sources')
 
 
-def get_weight(src, point_source_weight=1/40., num_ruptures=None):
+POINT_SOURCE_WEIGHT = 1 / 40.
+
+
+def get_weight(src, num_ruptures=None):
     """
     :param src: a hazardlib source object
-    :param point_source_weight: default 1/40
     :param num_ruptures: if None it is recomputed
     :returns: the weight of the given source
     """
     num_ruptures = num_ruptures or src.count_ruptures()
-    weight = (num_ruptures * point_source_weight
+    weight = (num_ruptures * POINT_SOURCE_WEIGHT
               if src.__class__.__name__ in ('PointSource', 'AreaSource')
               else num_ruptures)
     return weight
@@ -209,7 +211,9 @@ class TrtModel(collections.Sequence):
         return len(self.sources)
 
 
-def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
+def parse_source_model(fname, converter,
+                       apply_uncertainties=lambda src: None,
+                       set_weight=False):
     """
     Parse a NRML source model and return an ordered list of TrtModel
     instances.
@@ -220,6 +224,8 @@ def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
         :class:`openquake.commonlib.source.SourceConverter` instance
     :param apply_uncertainties:
         a function modifying the sources (or do nothing)
+    :param set_weight:
+        if True, set the weight of the sources
     """
     converter.fname = fname
     source_stats_dict = {}
@@ -232,6 +238,8 @@ def parse_source_model(fname, converter, apply_uncertainties=lambda src: None):
             raise DuplicatedID(
                 'The source ID %s is duplicated!' % src.source_id)
         apply_uncertainties(src)
+        if set_weight:
+            src.weight = get_weight(src)
         trt = src.tectonic_region_type
         if trt not in source_stats_dict:
             source_stats_dict[trt] = TrtModel(trt)
@@ -589,21 +597,18 @@ class CompositeSourceModel(collections.Sequence):
         """
         return len(self.get_sources())
 
-    def count_ruptures(self, really=False):
+    def count_ruptures(self):
         """
         Update the attribute .num_ruptures in each TRT model.
-        This method is lazy, i.e. the number is not updated if it is already
-        set and nonzero, unless `really` is True.
         """
         for trt_model in self.trt_models:
-            if trt_model.num_ruptures == 0 or really:
-                num_ruptures = 0
-                for src in trt_model:
-                    nr = src.count_ruptures()
-                    src.weight = get_weight(src, num_ruptures=nr)
-                    num_ruptures += nr
-                trt_model.num_ruptures = num_ruptures
-                logging.info('Processed %s', trt_model)
+            num_ruptures = 0
+            for src in trt_model:
+                if src.__class__.__name__ in ('PointSource', 'AreaSource'):
+                    num_ruptures += src.weight / POINT_SOURCE_WEIGHT
+                else:
+                    num_ruptures += src.weight
+            trt_model.num_ruptures = num_ruptures
 
     def get_info(self):
         """
