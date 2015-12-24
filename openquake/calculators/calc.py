@@ -136,7 +136,7 @@ def compute_hazard_maps(curves, imls, poes):
         Value(s) on which to interpolate a hazard map from the input
         ``curves``. Can be an array-like or scalar value (for a single PoE).
     :returns:
-        An array of shape P x N, where N is the number of curves and P the
+        An array of shape N x P, where N is the number of curves and P the
         number of poes.
     """
     curves = numpy.array(curves)
@@ -221,7 +221,22 @@ def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
 
 # ################## utilities for classical calculators ################ #
 
-def make_uhs(maps):
+def get_imts_periods(imtls):
+    """
+    Returns a list of IMT strings and a list of periods. There is an element
+    for each IMT of type Spectral Acceleration, including PGA which is
+    considered an alias for SA(0.0). The lists are sorted by period.
+
+    :param imtls: a set of intensity measure type strings
+    :returns: a list of IMT strings and a list of periods
+    """
+    getperiod = operator.itemgetter(1)
+    imts = sorted((from_string(imt) for imt in imtls
+                   if imt.startswith('SA') or imt == 'PGA'), key=getperiod)
+    return map(str, imts), [imt[1] or 0.0 for imt in imts]
+
+
+def make_uhs(maps, poes):
     """
     Make Uniform Hazard Spectra curves for each location.
 
@@ -232,11 +247,14 @@ def make_uhs(maps):
         A composite array with shape N x P, where N is the number of
         sites and P is the number of poes in the hazard maps
     :returns:
-        an array N x I x P where I the number of intensity measure types of
-        kind SA (with PGA = SA(0)), containing the hazard maps
+        an composite array containing N uniform hazard maps
     """
-    sorted_imts = list(map(str, sorted(
-        from_string(imt) for imt in maps.dtype.fields
-        if imt.startswith('SA') or imt == 'PGA')))
-    hmaps = numpy.array([maps[imt] for imt in sorted_imts])  # I * N * P
-    return hmaps.transpose(1, 0, 2)  # N * I * P
+    N = len(maps)
+    I = len(maps.dtype.names)
+    uhs_dt = numpy.dtype([('poe~%s' % poe, (F32, I)) for poe in poes])
+    hmaps = numpy.zeros(N, uhs_dt)
+    imts, _ = get_imts_periods(maps.dtype.names)
+    for i in range(N):
+        for j, poename in enumerate(uhs_dt.names):
+            hmaps[poename][i] = tuple(maps[imt][i, j] for imt in imts)
+    return hmaps
