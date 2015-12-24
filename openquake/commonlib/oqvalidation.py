@@ -99,7 +99,7 @@ class OqParam(valid.ParamSet):
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.positivefloat)  # km
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
-    sites_per_tile = valid.Param(valid.positiveint, 1000)
+    maximum_tile_weight = valid.Param(valid.positivefloat)
     mean_hazard_curves = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
@@ -129,6 +129,7 @@ class OqParam(valid.ParamSet):
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
+    sites_per_tile = valid.Param(valid.positiveint, 1000)
     specific_assets = valid.Param(valid.namelist, [])
     statistics = valid.Param(valid.boolean, True)
     taxonomies_from_model = valid.Param(valid.boolean, False)
