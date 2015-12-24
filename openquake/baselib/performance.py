@@ -168,7 +168,7 @@ class PerformanceMonitor(object):
         return data
 
     # TODO: rename this as spawn; see what will break
-    def __call__(self, operation, **kw):
+    def __call__(self, operation='no operation', **kw):
         """
         Return a child of the monitor usable for a different operation.
         """
@@ -176,7 +176,7 @@ class PerformanceMonitor(object):
         self.children.append(child)
         return child
 
-    def new(self, operation, **kw):
+    def new(self, operation='no operation', **kw):
         """
         Return a copy of the monitor usable for a different operation.
         """
