@@ -766,16 +766,24 @@ class SourceSplitter(BaseSourceProcessor):
     MAX_WEIGHT = 10000
 
     def process(self, csm, dstore, dummy=None):
-        for source_model in csm:
-            for trt_model in source_model.trt_models:
-                sources = []
-                for src in trt_model.sources:
-                    if src.weight >= self.MAX_WEIGHT:
-                        sources.extend(
-                            sourceconverter.split_source(src, self.MAX_WEIGHT))
-                    else:
-                        sources.append(src)
-                trt_model.sources = sources
+        with self.monitor('splitting sources', autoflush=True):
+            heavy, total = 0, 0
+            for source_model in csm:
+                for trt_model in source_model.trt_models:
+                    total += len(trt_model.sources)
+                    sources = []
+                    for src in trt_model.sources:
+                        if src.weight >= self.MAX_WEIGHT:
+                            heavy += 1
+                            sources.extend(
+                                sourceconverter.split_source(
+                                    src, self.MAX_WEIGHT))
+                        else:
+                            sources.append(src)
+                    trt_model.sources = sorted(
+                        sources, key=operator.attrgetter('source_id'))
+        logging.info('Split %d/%d heavy sources of weight >= %d',
+                     heavy, total, self.MAX_WEIGHT)
 
 
 class SourceFilter(BaseSourceProcessor):
