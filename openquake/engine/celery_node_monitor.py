@@ -28,7 +28,7 @@ from openquake.engine import logs
 from openquake.engine.utils import config
 from openquake.commonlib.valid import boolean
 
-CELERY_ON  = boolean(config.get('celery', 'celery_on'))
+CELERY_ON = boolean(config.get('celery', 'celery_on'))
 
 
 class MasterKilled(KeyboardInterrupt):
@@ -81,9 +81,10 @@ class CeleryNodeMonitor(object):
     :param bool no_distribute:
         if True, the CeleryNodeMonitor will do nothing at all
     """
-    def __init__(self, no_distribute, interval):
-        self.interval = interval
+    def __init__(self, no_distribute, interval, celery_on=CELERY_ON):
         self.no_distribute = no_distribute
+        self.interval = interval
+        self.celery_on = celery_on
         self.job_running = True
         self.live_nodes = None  # set of live worker nodes
         self.th = None
@@ -92,7 +93,7 @@ class CeleryNodeMonitor(object):
     def __enter__(self):
         if self.no_distribute:
             return self  # do nothing
-        elif CELERY_ON:
+        elif self.celery_on:
             self.live_nodes = self.ping(timeout=1)
             if not self.live_nodes:
                 sys.exit("No live compute nodes, aborting calculation")
