@@ -334,10 +334,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 for rlz, curves in curves_by_rlz.items():
                     self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
 
-            self.datastore.set_nbytes('hcurves')
-            if 'hmaps' in self.datastore:
-                self.datastore.set_nbytes('hmaps')
-
             if len(rlzs) == 1:  # cannot compute statistics
                 [self.mean_curves] = curves_by_rlz.values()
                 return
@@ -423,16 +419,6 @@ def is_effective_trt_model(result_dict, trt_model):
     """
     return sum(1 for key, val in result_dict.items()
                if trt_model.id == key[0] and nonzero(val))
-
-
-def get_light_heavy_sources(sources, max_weight):
-    light, heavy = [], []
-    for src in sources:
-        if src.weight >= max_weight:
-            heavy.append(src)
-        else:
-            light.append(src)
-    return light, heavy
 
 
 @base.calculators.add('classical_tiling')
