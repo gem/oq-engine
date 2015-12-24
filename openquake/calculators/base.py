@@ -30,7 +30,7 @@ from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general
 from openquake.baselib.performance import DummyMonitor
 from openquake.commonlib import (
-    readinput, datastore, logictree, export, source, __version__)
+    readinput, datastore, logictree, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import apply_reduce, executor
 from openquake.risklib import riskinput
@@ -95,7 +95,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     def set_log_format(self):
         """Set the format of the root logger"""
         fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(
-                self.datastore.calc_id)
+            self.datastore.calc_id)
         for handler in logging.root.handlers:
             handler.setFormatter(logging.Formatter(fmt))
 
@@ -168,6 +168,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
         :returns: dictionary output_key -> sorted list of exported paths
         """
+        # avoid circular imports
+        from openquake.commonlib.export import export as exp
         exported = {}
         individual_curves = self.oqparam.individual_curves
         fmts = exports.split(',') if exports else self.oqparam.exports
@@ -178,9 +180,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
                 ekey = (key, fmt)
-                if ekey not in export.export:  # non-exportable output
+                if ekey not in exp:  # non-exportable output
                     continue
-                exported[ekey] = export.export(ekey, self.datastore)
+                exported[ekey] = exp(ekey, self.datastore)
                 logging.info('exported %s: %s', key, exported[ekey])
         return exported
 

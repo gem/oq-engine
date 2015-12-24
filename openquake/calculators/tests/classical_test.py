@@ -4,6 +4,7 @@ from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_19, case_20, case_21)
+from openquake.commonlib.export import export
 
 
 def skipheader(lines):
@@ -15,8 +16,7 @@ class ClassicalTestCase(CalculatorTestCase):
     def assert_curves_ok(self, expected, test_dir, delta=None):
         out = self.run_calc(test_dir, 'job.ini', exports='csv')
         got = (out['hcurves', 'csv'] +
-               out.get(('hmaps', 'csv'), []) +
-               out.get(('uhs', 'csv'), []))
+               out.get(('hmaps', 'csv'), []))
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual,
@@ -139,17 +139,20 @@ hazard_map-smltp_SM1-gsimltp_CB2008_T2002.csv
 hazard_map-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
 hazard_map-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
 hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
-hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv
-hazard_uhs-mean.csv
-hazard_uhs-smltp_SM1-gsimltp_BA2008_C2003.csv
-hazard_uhs-smltp_SM1-gsimltp_BA2008_T2002.csv
-hazard_uhs-smltp_SM1-gsimltp_CB2008_C2003.csv
-hazard_uhs-smltp_SM1-gsimltp_CB2008_T2002.csv
-hazard_uhs-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
-hazard_uhs-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
-hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
-hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
+hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
                               case_15.__file__)
+
+        # test UHS CSV export
+        [fname] = [f for f in export(('uhs', 'csv'), self.calc.datastore)
+                   if 'mean' in f]
+        self.assertEqualFiles('expected/hazard_uhs-mean.csv', fname)
+
+        # test UHS XML export
+        fnames = [f for f in export(('uhs', 'xml'), self.calc.datastore)
+                  if 'mean' in f]
+        self.assertEqualFiles('expected/hazard_uhs-mean-0.01.xml', fnames[0])
+        self.assertEqualFiles('expected/hazard_uhs-mean-0.1.xml', fnames[1])
+        self.assertEqualFiles('expected/hazard_uhs-mean-0.2.xml', fnames[2])
 
     @attr('qa', 'hazard', 'classical')
     def test_case_16(self):   # sampling
