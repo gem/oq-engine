@@ -5,6 +5,8 @@ import shutil
 import tempfile
 import unittest
 
+import numpy
+
 from openquake.commonlib.commands.info import info
 from openquake.commonlib.commands.show import show
 from openquake.commonlib.commands.show_attrs import show_attrs
@@ -112,14 +114,13 @@ lon:float64,lat:float64
         self.assertEqual("'hcurve' is not in %s" % self.datastore, str(p))
 
         with Print.patch() as p:
-            self.datastore['hcurves'].attrs.clear()
-            show_attrs(self.datastore.calc_id, 'hcurves')
-        self.assertEqual('hcurves has no attributes', str(p))
+            self.datastore['one'] = numpy.array([1])
+            show_attrs(self.datastore.calc_id, 'one')
+        self.assertEqual('one has no attributes', str(p))
 
-        self.datastore['hcurves'].attrs['some_attribute'] = True
         with Print.patch() as p:
             show_attrs(self.datastore.calc_id, 'hcurves')
-        self.assertEqual('some_attribute True', str(p))
+        self.assertEqual('nbytes 48', str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
