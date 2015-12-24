@@ -319,6 +319,10 @@ class ClassicalCalculator(base.HazardCalculator):
                             if nonzero(curves):
                                 group[ts] = curves
                                 group[ts].attrs['trt'] = tm.trt
+                                group[ts].attrs['nbytes'] = curves.nbytes
+                self.datastore.set_nbytes(group.name)
+            self.datastore.set_nbytes('curves_by_sm')
+
         oq = self.oqparam
         with self.monitor('combine and save curves_by_rlz', autoflush=True):
             zc = zero_curves(len(self.sitecol.complete), oq.imtls)
@@ -329,6 +333,10 @@ class ClassicalCalculator(base.HazardCalculator):
             if oq.individual_curves:
                 for rlz, curves in curves_by_rlz.items():
                     self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
+
+            self.datastore.set_nbytes('hcurves')
+            if 'hmaps' in self.datastore:
+                self.datastore.set_nbytes('hmaps')
 
             if len(rlzs) == 1:  # cannot compute statistics
                 [self.mean_curves] = curves_by_rlz.values()
@@ -377,12 +385,13 @@ class ClassicalCalculator(base.HazardCalculator):
         :param rlz: hazard realization, if any
         """
         oq = self.oqparam
-        self._store('hcurves/' + kind, curves, rlz)
+        self._store('hcurves/' + kind, curves, rlz, nbytes=curves.nbytes)
         if oq.hazard_maps or oq.uniform_hazard_spectra:
             # hmaps is a composite array of shape (N, P)
             hmaps = self.hazard_maps(curves)
             if oq.hazard_maps:
-                self._store('hmaps/' + kind, hmaps, rlz, poes=oq.poes)
+                self._store('hmaps/' + kind, hmaps, rlz,
+                            poes=oq.poes, nbytes=hmaps.nbytes)
             if oq.uniform_hazard_spectra:
                 # uhs is an array of shape (N, I, P)
                 self._store('uhs/' + kind, calc.make_uhs(hmaps), rlz,

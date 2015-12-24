@@ -162,6 +162,13 @@ class DataStore(collections.MutableMapping):
             if name not in self.attrs:  # add missing parameter
                 self.attrs[name] = value
 
+    def set_nbytes(self, key):
+        """
+        Set the `nbytes` attribute on the HDF5 object identified by `key`.
+        """
+        obj = self.hdf5[key]
+        obj.attrs['nbytes'] = ByteCounter.get_nbytes(obj)
+
     def create_dset(self, key, dtype, size=None, compression=None):
         """
         Create a one-dimensional HDF5 dataset.
