@@ -34,6 +34,20 @@ MAGNITUDE_FOR_RUPTURE_SPLITTING = 6.5  # given by Marco Pagani
 # configuration file, otherwise the tests will break by changing it;
 # reason: the numbers in the event based calculators depend on the
 # splitting: different sources => different seeds => different numbers
+POINT_SOURCE_WEIGHT = 1 / 40.
+
+
+def get_weight(src, num_ruptures=None):
+    """
+    :param src: a hazardlib source object
+    :param num_ruptures: if None it is recomputed
+    :returns: the weight of the given source
+    """
+    num_ruptures = num_ruptures or src.count_ruptures()
+    weight = (num_ruptures * POINT_SOURCE_WEIGHT
+              if src.__class__.__name__ in ('PointSource', 'AreaSource')
+              else num_ruptures)
+    return weight
 
 
 def area_to_point_sources(area_src):
@@ -84,6 +98,7 @@ def area_to_point_sources(area_src):
             hypocenter_distribution=area_src.hypocenter_distribution,
             temporal_occurrence_model=area_src.temporal_occurrence_model)
         pt.trt_model_id = area_src.trt_model_id
+        pt.weight = get_weight(pt)
         yield pt
 
 
@@ -123,6 +138,7 @@ def split_fault_source(src):
     # will fail to transmit to the workers the generated sources.
     for s in split_fault_source_by_magnitude(src):
         if s.mfd.min_mag < MAGNITUDE_FOR_RUPTURE_SPLITTING:
+            s.weight = s.count_ruptures()
             yield s  # don't split, there would too many ruptures
         else:  # split on MultiRuptureSources
             for ss in MultiRuptureSource.split(s):

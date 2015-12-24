@@ -86,22 +86,6 @@ SourceModel = collections.namedtuple(
     'num_sources')
 
 
-POINT_SOURCE_WEIGHT = 1 / 40.
-
-
-def get_weight(src, num_ruptures=None):
-    """
-    :param src: a hazardlib source object
-    :param num_ruptures: if None it is recomputed
-    :returns: the weight of the given source
-    """
-    num_ruptures = num_ruptures or src.count_ruptures()
-    weight = (num_ruptures * POINT_SOURCE_WEIGHT
-              if src.__class__.__name__ in ('PointSource', 'AreaSource')
-              else num_ruptures)
-    return weight
-
-
 class TrtModel(collections.Sequence):
     """
     A container for the following parameters:
@@ -122,8 +106,6 @@ class TrtModel(collections.Sequence):
         an optional numeric ID (default None) useful to associate
         the model to a database object
     """
-    POINT_SOURCE_WEIGHT = 1 / 40.
-
     @classmethod
     def collect(cls, sources):
         """
@@ -239,7 +221,7 @@ def parse_source_model(fname, converter,
                 'The source ID %s is duplicated!' % src.source_id)
         apply_uncertainties(src)
         if set_weight:
-            src.weight = get_weight(src)
+            src.weight = sourceconverter.get_weight(src)
         trt = src.tectonic_region_type
         if trt not in source_stats_dict:
             source_stats_dict[trt] = TrtModel(trt)
@@ -605,7 +587,8 @@ class CompositeSourceModel(collections.Sequence):
             num_ruptures = 0
             for src in trt_model:
                 if src.__class__.__name__ in ('PointSource', 'AreaSource'):
-                    num_ruptures += src.weight / POINT_SOURCE_WEIGHT
+                    num_ruptures += (src.weight /
+                                     sourceconverter.POINT_SOURCE_WEIGHT)
                 else:
                     num_ruptures += src.weight
             trt_model.num_ruptures = num_ruptures
@@ -736,25 +719,15 @@ def filter_and_split(src, sourceprocessor):
     else:  # only split
         filter_time = 0
     t1 = time.time()
-    out = []
-    weight_time = 0
-    weight = 0
-    for ss in sourceconverter.split_source(src):
-        if sourceprocessor.weight:
-            t = time.time()
-            ss.weight = get_weight(ss)
-            weight_time += time.time() - t
-            weight += ss.weight
-        out.append(ss)
-    src.weight = weight
-    split_time = time.time() - t1 - weight_time
+    out = list(sourceconverter.split_source(src))
+    split_time = time.time() - t1
     return SourceInfo(src.trt_model_id, src.source_id, src.__class__.__name__,
-                      weight, out, filter_time, weight_time, split_time)
+                      src.weight, out, filter_time, split_time)
 
 
 SourceInfo = collections.namedtuple(
     'SourceInfo', 'trt_model_id source_id source_class weight sources '
-    'filter_time weight_time split_time')
+    'filter_time split_time')
 
 source_info_dt = numpy.dtype(
     [('trt_model_id', numpy.uint32),
@@ -763,7 +736,6 @@ source_info_dt = numpy.dtype(
      ('weight', numpy.float32),
      ('split_num', numpy.uint32),
      ('filter_time', numpy.float32),
-     ('weight_time', numpy.float32),
      ('split_time', numpy.float32)])
 
 
@@ -801,18 +773,10 @@ class SourceFilter(BaseSourceProcessor):
             self.maxdist, self.sitecol)
         t1 = time.time()
         filter_time = t1 - t0
-        if sites is not None and self.weight:
-            t2 = time.time()
-            weight = get_weight(src)
-            src.weight = weight
-            weight_time = time.time() - t2
-        else:
-            weight = numpy.nan
-            weight_time = 0
         sources = [] if sites is None else [src]
         return SourceInfo(
             src.trt_model_id, src.source_id, src.__class__.__name__,
-            weight, sources, filter_time, weight_time, 0)
+            src.weight, sources, filter_time, 0)
 
     def agg_source_info(self, acc, info):
         """
@@ -822,7 +786,7 @@ class SourceFilter(BaseSourceProcessor):
         self.infos.append(
             SourceInfo(info.trt_model_id, info.source_id, info.source_class,
                        info.weight, len(info.sources), info.filter_time,
-                       info.weight_time, info.split_time))
+                       info.split_time))
         return acc + {info.trt_model_id: info.sources}
 
     def process(self, csm, dstore, dummy=None):
@@ -855,8 +819,7 @@ class SourceFilter(BaseSourceProcessor):
         :param sources_by_trt: a dictionary trt_model_id -> sources
         """
         self.infos.sort(
-            key=lambda info: info.filter_time + info.weight_time +
-            info.split_time, reverse=True)
+            key=lambda info: info.filter_time + info.split_time, reverse=True)
         dstore['pre_source_info'] = numpy.array(self.infos, source_info_dt)
         del self.infos[:]
 
