@@ -1,6 +1,12 @@
   [Michele Simionato]
   * Made celery required only in cluster situations
   * Replaced all classical calculators with their lite counterparts
+  * Fixed the site-ordering in the UHS exporter (by lon-lat)
+
+  [Paolo Tormene]
+  * Added API to validate NRML
+
+  [Michele Simionato]
   * The engine can now zip files larger than 2 GB (used in the export)
   * Now the loss maps and curves are exported with a fixed ordering: first
     by lon-lat, then by asset ID

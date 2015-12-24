@@ -20,18 +20,21 @@ import os
 import traceback
 import tempfile
 import urlparse
+import re
 
 from xml.etree import ElementTree as etree
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpResponse
-from django.http import HttpResponseNotFound
+from django.http import (HttpResponse,
+                         HttpResponseNotFound,
+                         HttpResponseBadRequest,
+                         )
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
-from openquake.baselib.general import groupby
+from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib import nrml, readinput, valid
 from openquake.engine import engine as oq_engine, __version__ as oqversion
 from openquake.engine.db import models as oqe_models
@@ -143,6 +146,70 @@ def get_engine_version(request):
     Return a string with the openquake.engine version
     """
     return HttpResponse(oqversion)
+
+
+def _make_response(error_msg, error_line, valid):
+    response_data = dict(error_msg=error_msg,
+                         error_line=error_line,
+                         valid=valid)
+    return HttpResponse(
+        content=json.dumps(response_data), content_type=JSON)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def validate_nrml(request):
+    """
+    Leverage oq-risklib to check if a given XML text is a valid NRML
+
+    :param request:
+        a `django.http.HttpRequest` object containing the mandatory
+        parameter 'xml_text': the text of the XML to be validated as NRML
+
+    :returns: a JSON object, containing:
+        * 'valid': a boolean indicating if the provided text is a valid NRML
+        * 'error_msg': the error message, if any error was found
+                       (None otherwise)
+        * 'error_line': line of the given XML where the error was found
+                        (None if no error was found or if it was not a
+                        validation error)
+    """
+    xml_text = request.POST.get('xml_text')
+    if not xml_text:
+        return HttpResponseBadRequest(
+            'Please provide the "xml_text" parameter')
+    xml_file = writetmp(xml_text, suffix='.xml')
+    try:
+        nrml.read(xml_file)
+    except etree.ParseError as exc:
+        return _make_response(error_msg=exc.message.message,
+                              error_line=exc.message.lineno,
+                              valid=False)
+    except Exception as exc:
+        # get the exception message
+        exc_msg = exc.args[0]
+        if isinstance(exc_msg, bytes):
+            exc_msg = exc_msg.decode('utf-8')   # make it a unicode object
+        elif isinstance(exc_msg, unicode):
+            pass
+        else:
+            # if it is another kind of object, it is not obvious a priori how
+            # to extract the error line from it
+            return _make_response(
+                error_msg=unicode(exc_msg), error_line=None, valid=False)
+        # if the line is not mentioned, the whole message is taken
+        error_msg = exc_msg.split(', line')[0]
+        # check if the exc_msg contains a line number indication
+        search_match = re.search(r'line \d+', exc_msg)
+        if search_match:
+            error_line = int(search_match.group(0).split()[1])
+        else:
+            error_line = None
+        return _make_response(
+            error_msg=error_msg, error_line=error_line, valid=False)
+    else:
+        return _make_response(error_msg=None, error_line=None, valid=True)
 
 
 @require_http_methods(['GET'])
@@ -298,8 +365,14 @@ def run_calc(request):
                                user['name'], callback_url, foreign_calc_id,
                                hazard_output_id, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
-        logging.error(exc)
-        response_data = str(exc).splitlines()
+        # get the exception message
+        exc_msg = exc.args[0]
+        if isinstance(exc_msg, bytes):
+            exc_msg = exc_msg.decode('utf-8')   # make it a unicode object
+        else:
+            assert isinstance(exc_msg, unicode), exc_msg
+        logging.error(exc_msg)
+        response_data = exc_msg.splitlines()
         status = 500
     else:
         calc = oqe_models.OqJob.objects.get(pk=job.id)
