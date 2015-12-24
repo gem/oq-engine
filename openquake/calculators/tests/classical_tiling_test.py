@@ -16,14 +16,9 @@ class ClassicalTilingTestCase(CalculatorTestCase):
             'hazard_map-smltp_b1-gsimltp_b1.csv',
             'hazard_map-smltp_b1-gsimltp_b2.csv',
             'quantile_map-0.1.csv',
-            'hazard_uhs-mean.csv',
-            'hazard_uhs-smltp_b1-gsimltp_b1.csv',
-            'hazard_uhs-smltp_b1-gsimltp_b2.csv',
-            'quantile_uhs-0.1.csv',
         ]
         got = (out['hcurves', 'csv'] +
-               out.get(('hmaps', 'csv'), []) +
-               out.get(('uhs', 'csv'), []))
+               out.get(('hmaps', 'csv'), []))
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual,

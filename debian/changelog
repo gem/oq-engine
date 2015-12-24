@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an XML exporter for the UHS curves
   * Rewritten the classical_tiling calculator in oq-lite
   * Fixed a bug when exporting the hazard curves in presence of quantiles/means
   * Improved the header of the exported CSV files, to make it QGIS-friendly

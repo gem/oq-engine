@@ -33,7 +33,9 @@ from openquake.commonlib.export import export
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.writers import (
     scientificformat, floatformat, write_csv)
-from openquake.commonlib import hazard_writers
+from openquake.commonlib import hazard_writers, util
+from openquake.calculators import calc
+
 
 GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 GMF_WARNING = '''\
@@ -384,17 +386,70 @@ def export_hcurves_csv(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
     rlzs_assoc = dstore['rlzs_assoc']
     sitecol = dstore['sitecol']
+    sitemesh = dstore['sitemesh']
     key, fmt = ekey
     fnames = []
-    for kind, hcurves in dstore[key].items():
+    for kind, hcurves in dstore['hmaps' if key == 'uhs' else key].items():
         fname = hazard_curve_name(
-            dstore, ekey, kind, rlzs_assoc,
-            oq.number_of_logic_tree_samples)
+            dstore, ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
         if key == 'uhs':
-            export_uhs_csv(ekey, fname, sitecol, hcurves)
+            uhs_curves = calc.make_uhs(hcurves, oq.poes)
+            write_csv(fname, util.compose_arrays(sitemesh, uhs_curves))
         else:
             export_hazard_curves_csv(ekey, fname, sitecol, hcurves, oq.imtls)
         fnames.append(fname)
+    return sorted(fnames)
+
+UHS = collections.namedtuple('UHS', 'imls location')
+
+
+def get_metadata(realizations, kind):
+    """
+    :param list realizations:
+        realization objects
+    :param str kind:
+        kind of data, i.e. a key in the datastore
+    :returns:
+        a dictionary with smlt_path, gsimlt_path, statistics, quantile_value
+    """
+    metadata = {}
+    if kind.startswith('rlz-'):
+        rlz = realizations[int(kind[4:])]
+        metadata['smlt_path'] = '_'.join(rlz.sm_lt_path)
+        metadata['gsimlt_path'] = rlz.gsim_rlz.uid
+    elif kind.startswith('quantile-'):
+        metadata['statistics'] = 'quantile'
+        metadata['quantile_value'] = float(kind[9:])
+    elif kind == 'mean':
+        metadata['statistics'] = 'mean'
+    return metadata
+
+
+@export.add(('uhs', 'xml'))
+def export_uhs_xml(ekey, dstore):
+    oq = OqParam.from_(dstore.attrs)
+    rlzs_assoc = dstore['rlzs_assoc']
+    sitemesh = dstore['sitemesh'].value
+    key, fmt = ekey
+    fnames = []
+    periods = [imt for imt in oq.imtls if imt.startswith('SA') or imt == 'PGA']
+    for kind, hmaps in dstore['hmaps'].items():
+        metadata = get_metadata(rlzs_assoc.realizations, kind)
+        _, periods = calc.get_imts_periods(oq.imtls)
+        uhs = calc.make_uhs(hmaps, oq.poes)
+        for poe in oq.poes:
+            poe_str = 'poe~%s' % poe
+            fname = hazard_curve_name(
+                dstore, ekey, kind + '-%s' % poe, rlzs_assoc,
+                oq.number_of_logic_tree_samples)
+            writer = hazard_writers.UHSXMLWriter(
+                fname, periods=periods, poe=poe,
+                investigation_time=oq.investigation_time, **metadata)
+            data = []
+            for site, curve in zip(sitemesh, uhs[poe_str]):
+                data.append(UHS(curve, Location(site)))
+            writer.serialize(data)
+            fnames.append(fname)
     return sorted(fnames)
 
 
@@ -556,22 +611,6 @@ def export_hazard_curves_xml(key, dest, sitecol, curves_by_imt,
         writer.serialize(hcurves)
     return {dest: dest}
 
-
-def export_uhs_csv(key, dest, sitecol, hmaps):
-    """
-    Export the scalar outputs.
-
-    :param key: output_type and export_type
-    :param dest: file name
-    :param sitecol: site collection
-    :param hmaps:
-        an array N x I x P where N is the number of sites,
-        I the number of IMTs of SA type, and P the number of poes
-    """
-    rows = [[[lon, lat]] + list(row)
-            for lon, lat, row in zip(sitecol.lons, sitecol.lats, hmaps)]
-    write_csv(dest, rows)
-    return {dest: dest}
 
 DisaggMatrix = collections.namedtuple(
     'DisaggMatrix', 'poe iml dim_labels matrix')
