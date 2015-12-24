@@ -774,7 +774,8 @@ class SourceSplitter(BaseSourceProcessor):
                     sources = []
                     for src in trt_model.sources:
                         if src.weight >= self.MAX_WEIGHT:
-                            logging.info('Splitting %s', src)
+                            logging.info('Splitting %s of weight',
+                                         src, src.weight)
                             heavy += 1
                             sources.extend(
                                 sourceconverter.split_source(

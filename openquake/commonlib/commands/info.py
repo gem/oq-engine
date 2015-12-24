@@ -18,16 +18,13 @@
 
 from __future__ import print_function
 import textwrap
-import operator
 import logging
-import tempfile
 from openquake.baselib.performance import PerformanceMonitor
-from openquake.baselib.general import humansize, groupby
+from openquake.baselib.general import humansize
 from openquake.commonlib import (
     sap, readinput, nrml, source, datastore, reportwriter)
 from openquake.calculators import base
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.risklib import riskinput
 from openquake.hazardlib import gsim
 
 
@@ -78,9 +75,7 @@ def _info(name, filtersources, weightsources):
             sitecol = None
         if 'source_model_logic_tree' in oqparam.inputs:
             print('Reading the source model...')
-            if weightsources:
-                sp = source.SourceFilterWeighter
-            elif filtersources:
+            if weightsources or filtersources:
                 sp = source.SourceFilter
             else:
                 sp = source.BaseSourceProcessor  # do nothing
@@ -88,7 +83,7 @@ def _info(name, filtersources, weightsources):
             assoc = csm.get_rlzs_assoc()
             dstore = datastore.Fake(
                 vars(oqparam), rlzs_assoc=assoc, composite_source_model=csm,
-                sitecol=sitecol)
+                sitecol=sitecol, in_memory=weightsources or filtersources)
             _print_info(dstore, filtersources, weightsources)
     else:
         print("No info for '%s'" % name)
