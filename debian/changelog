@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Fixed the site-ordering in the UHS exporter (by lon-lat)
+
   [Paolo Tormene]
   * Added API to validate NRML
 
