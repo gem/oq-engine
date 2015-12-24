@@ -750,8 +750,6 @@ class BaseSourceProcessor(object):
     :param monitor:
         a PerformanceMonitor instance
     """
-    weight = False  # when True, set the weight on each source
-
     def __init__(self, sitecol, maxdist, monitor):
         self.sitecol = sitecol
         self.maxdist = maxdist
@@ -759,6 +757,25 @@ class BaseSourceProcessor(object):
 
     def process(self, csm, dstore, dummy=None):
         pass
+
+
+class SourceSplitter(BaseSourceProcessor):
+    """
+    Split only the sources with weight >= MAX_WEIGHT
+    """
+    MAX_WEIGHT = 10000
+
+    def process(self, csm, dstore, dummy=None):
+        for source_model in csm:
+            for trt_model in source_model.trt_models:
+                sources = []
+                for src in trt_model.sources:
+                    if src.weight >= self.MAX_WEIGHT:
+                        sources.extend(
+                            sourceconverter.split_source(src, self.MAX_WEIGHT))
+                    else:
+                        sources.append(src)
+                trt_model.sources = sources
 
 
 class SourceFilter(BaseSourceProcessor):
@@ -837,16 +854,7 @@ class SourceFilter(BaseSourceProcessor):
                         self.maxdist, trt_model.trt)
 
 
-class SourceFilterWeighter(SourceFilter):
-    """
-    Filter sequentially the sources of the given CompositeSourceModel
-    instance and compute their weights. An array `.source_info` is added
-    to the instance, containing information about the processing times.
-    """
-    weight = True
-
-
-class SourceFilterSplitter(SourceFilterWeighter):
+class SourceFilterSplitter(SourceFilter):
     """
     Filter and split in parallel the sources of the given CompositeSourceModel
     instance. An array `.source_info` is added to the instance, containing

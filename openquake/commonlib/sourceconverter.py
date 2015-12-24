@@ -125,7 +125,7 @@ def split_fault_source_by_magnitude(src):
     return splitlist
 
 
-def split_fault_source(src):
+def split_fault_source(src, block_size):
     """
     Generator splitting a fault source into several fault sources.
 
@@ -141,7 +141,7 @@ def split_fault_source(src):
             s.weight = s.count_ruptures()
             yield s  # don't split, there would too many ruptures
         else:  # split on MultiRuptureSources
-            for ss in MultiRuptureSource.split(s):
+            for ss in MultiRuptureSource.split(s, block_size):
                 yield ss
 
 
@@ -160,15 +160,14 @@ class MultiRuptureSource(object):
     :param trt_model_id:
         ID of the tectonic region model the source belongs to
     """
-    block_size = 1
-
     @classmethod
-    def split(cls, src):
+    def split(cls, src, block_size):
         """
-        Split the given fault source into MultiRuptureSources
+        Split the given fault source into MultiRuptureSources depending
+        on the given block size.
         """
         for i, ruptures in enumerate(
-                block_splitter(src.iter_ruptures(), cls.block_size)):
+                block_splitter(src.iter_ruptures(), block_size)):
             yield cls(ruptures, '%s-%s' % (src.source_id, i),
                       src.tectonic_region_type, src.trt_model_id)
 
@@ -194,7 +193,7 @@ class MultiRuptureSource(object):
         return sitecol
 
 
-def split_source(src):
+def split_source(src, block_size=1):
     """
     Split an area source into point sources and a fault sources into
     smaller fault sources.
@@ -207,7 +206,7 @@ def split_source(src):
             yield s
     elif isinstance(
             src, (source.SimpleFaultSource, source.ComplexFaultSource)):
-        for s in split_fault_source(src):
+        for s in split_fault_source(src, block_size):
             yield s
     else:
         # characteristic and nonparametric sources are not split
