@@ -15,7 +15,6 @@ from __future__ import division
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import mock
-import copy
 import time
 import logging
 import operator

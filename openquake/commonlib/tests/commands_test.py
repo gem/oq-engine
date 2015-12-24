@@ -112,6 +112,7 @@ lon:float64,lat:float64
         self.assertEqual("'hcurve' is not in %s" % self.datastore, str(p))
 
         with Print.patch() as p:
+            self.datastore['hcurves'].attrs.clear()
             show_attrs(self.datastore.calc_id, 'hcurves')
         self.assertEqual('hcurves has no attributes', str(p))
 
