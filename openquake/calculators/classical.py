@@ -24,7 +24,7 @@ from functools import partial
 
 import numpy
 
-from openquake.baselib.general import groupby
+from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -32,7 +32,7 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, source, datastore
+from openquake.commonlib import parallel, source, datastore, sourceconverter
 from openquake.calculators.views import get_data_transfer
 from openquake.baselib.general import AccumDict
 
@@ -204,7 +204,8 @@ def expand(array, n, aslice):
 source_info_dt = numpy.dtype(
     [('trt_model_id', numpy.uint32),
      ('source_id', (bytes, 20)),
-     ('calc_time', numpy.float32)])
+     ('calc_time', numpy.float32),
+     ('weight', numpy.float32)])
 
 
 def store_source_chunks(dstore):
@@ -291,65 +292,74 @@ class ClassicalCalculator(base.HazardCalculator):
         # save calculation time per source
         calc_times = getattr(curves_by_trt_gsim, 'calc_times', [])
         sources = self.csm.get_sources()
-        info = []
-        for i, dt in calc_times:
-            src = sources[i]
-            info.append((src.trt_model_id, src.source_id, dt))
-        info.sort(key=operator.itemgetter(2), reverse=True)
-        if info:
-            self.source_info = numpy.array(info, source_info_dt)
+        infodict = collections.defaultdict(float)
+        weight = {}
+        for src_idx, dt in calc_times:
+            src = sources[src_idx]
+            weight[src.trt_model_id, src.source_id] = src.weight
+            infodict[src.trt_model_id, src.source_id] += dt
+        infolist = [key + (dt, weight[key]) for key, dt in infodict.items()]
+        infolist.sort(key=operator.itemgetter(1), reverse=True)
+        if infolist:
+            self.source_info = numpy.array(infolist, source_info_dt)
 
-        # save curves_by_trt_gsim
-        for sm in self.rlzs_assoc.csm_info.source_models:
-            group = self.datastore.hdf5.create_group(
-                'curves_by_sm/' + '_'.join(sm.path))
-            group.attrs['source_model'] = sm.name
-            for tm in sm.trt_models:
-                for gsim in tm.gsims:
-                    try:
-                        curves = curves_by_trt_gsim[tm.id, gsim]
-                    except KeyError:  # no data for the trt_model
-                        pass
-                    else:
-                        ts = '%03d-%s' % (tm.id, gsim)
-                        if nonzero(curves):
-                            group[ts] = curves
-                            group[ts].attrs['trt'] = tm.trt
+        with self.monitor('save curves_by_trt_gsim', autoflush=True):
+            for sm in self.rlzs_assoc.csm_info.source_models:
+                group = self.datastore.hdf5.create_group(
+                    'curves_by_sm/' + '_'.join(sm.path))
+                group.attrs['source_model'] = sm.name
+                for tm in sm.trt_models:
+                    for gsim in tm.gsims:
+                        try:
+                            curves = curves_by_trt_gsim[tm.id, gsim]
+                        except KeyError:  # no data for the trt_model
+                            pass
+                        else:
+                            ts = '%03d-%s' % (tm.id, gsim)
+                            if nonzero(curves):
+                                group[ts] = curves
+                                group[ts].attrs['trt'] = tm.trt
+                                group[ts].attrs['nbytes'] = curves.nbytes
+                self.datastore.set_nbytes(group.name)
+            self.datastore.set_nbytes('curves_by_sm')
+
         oq = self.oqparam
-        zc = zero_curves(len(self.sitecol.complete), oq.imtls)
-        curves_by_rlz = self.rlzs_assoc.combine_curves(
-            curves_by_trt_gsim, agg_curves, zc)
-        rlzs = self.rlzs_assoc.realizations
-        nsites = len(self.sitecol)
-        if oq.individual_curves:
-            for rlz, curves in curves_by_rlz.items():
-                self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
+        with self.monitor('combine and save curves_by_rlz', autoflush=True):
+            zc = zero_curves(len(self.sitecol.complete), oq.imtls)
+            curves_by_rlz = self.rlzs_assoc.combine_curves(
+                curves_by_trt_gsim, agg_curves, zc)
+            rlzs = self.rlzs_assoc.realizations
+            nsites = len(self.sitecol)
+            if oq.individual_curves:
+                for rlz, curves in curves_by_rlz.items():
+                    self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
 
-        if len(rlzs) == 1:  # cannot compute statistics
-            [self.mean_curves] = curves_by_rlz.values()
-            return
+            if len(rlzs) == 1:  # cannot compute statistics
+                [self.mean_curves] = curves_by_rlz.values()
+                return
 
-        weights = (None if oq.number_of_logic_tree_samples
-                   else [rlz.weight for rlz in rlzs])
-        mean = oq.mean_hazard_curves
-        if mean:
-            self.mean_curves = numpy.array(zc)
-            for imt in oq.imtls:
-                self.mean_curves[imt] = scientific.mean_curve(
-                    [curves_by_rlz[rlz][imt] for rlz in rlzs], weights)
+        with self.monitor('compute and save statistics', autoflush=True):
+            weights = (None if oq.number_of_logic_tree_samples
+                       else [rlz.weight for rlz in rlzs])
+            mean = oq.mean_hazard_curves
+            if mean:
+                self.mean_curves = numpy.array(zc)
+                for imt in oq.imtls:
+                    self.mean_curves[imt] = scientific.mean_curve(
+                        [curves_by_rlz[rlz][imt] for rlz in rlzs], weights)
 
-        self.quantile = {}
-        for q in oq.quantile_hazard_curves:
-            self.quantile[q] = qc = numpy.array(zc)
-            for imt in oq.imtls:
-                curves = [curves_by_rlz[rlz][imt] for rlz in rlzs]
-                qc[imt] = scientific.quantile_curve(
-                    curves, q, weights).reshape((nsites, -1))
+            self.quantile = {}
+            for q in oq.quantile_hazard_curves:
+                self.quantile[q] = qc = numpy.array(zc)
+                for imt in oq.imtls:
+                    curves = [curves_by_rlz[rlz][imt] for rlz in rlzs]
+                    qc[imt] = scientific.quantile_curve(
+                        curves, q, weights).reshape((nsites, -1))
 
-        if mean:
-            self.store_curves('mean', self.mean_curves)
-        for q in self.quantile:
-            self.store_curves('quantile-%s' % q, self.quantile[q])
+            if mean:
+                self.store_curves('mean', self.mean_curves)
+            for q in self.quantile:
+                self.store_curves('quantile-%s' % q, self.quantile[q])
 
     def hazard_maps(self, curves):
         """
@@ -371,12 +381,13 @@ class ClassicalCalculator(base.HazardCalculator):
         :param rlz: hazard realization, if any
         """
         oq = self.oqparam
-        self._store('hcurves/' + kind, curves, rlz)
+        self._store('hcurves/' + kind, curves, rlz, nbytes=curves.nbytes)
         if oq.hazard_maps or oq.uniform_hazard_spectra:
             # hmaps is a composite array of shape (N, P)
             hmaps = self.hazard_maps(curves)
             if oq.hazard_maps:
-                self._store('hmaps/' + kind, hmaps, rlz, poes=oq.poes)
+                self._store('hmaps/' + kind, hmaps, rlz,
+                            poes=oq.poes, nbytes=hmaps.nbytes)
 
     def _store(self, name, curves, rlz, **kw):
         self.datastore.hdf5[name] = curves
@@ -413,32 +424,6 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     """
     SourceProcessor = source.BaseSourceProcessor  # do nothing
 
-    def gen_args(self):
-        """
-        A generator yielding the arguments for classical_tiling tasks
-        """
-        monitor = self.monitor.new(self.core_func.__name__)
-        monitor.oqparam = oq = self.oqparam
-        rlzs_assoc = self.csm.get_rlzs_assoc()
-        num_src_models = len(rlzs_assoc.csm_info.source_models)
-        hint = math.ceil(oq.concurrent_tasks / num_src_models)
-        tiles = self.sitecol.split_in_tiles(hint)
-        logging.info('Generating %d tiles of %d sites each',
-                     len(tiles), len(tiles[0]))
-        siteidx = 0
-        sources = self.csm.get_sources()
-        for tile in tiles:
-            with self.monitor('filtering sources per tile', autoflush=True):
-                filtered_sources = [
-                    src for src in sources
-                    if src.filter_sites_by_distance_to_source(
-                        oq.maximum_distance, tile) is not None]
-            groups = groupby(
-                filtered_sources, operator.attrgetter('trt_model_id')).values()
-            for group in groups:  # sources of homogeneous trt_model_id
-                yield group, tile, siteidx, rlzs_assoc, monitor
-            siteidx += len(tile)
-
     def execute(self):
         """
         Split the computation by tiles which are run in parallel.
@@ -448,8 +433,42 @@ class ClassicalTilingCalculator(ClassicalCalculator):
              for trt_gsim in self.rlzs_assoc})
         acc.calc_times = []
         acc.n = len(self.sitecol)
-        res = parallel.starmap(classical, self.gen_args()).reduce(
-            self.agg_dicts, acc)
+        hint = math.ceil(acc.n / self.oqparam.sites_per_tile)
+        tiles = self.sitecol.split_in_tiles(hint)
+        logging.info('Generating %d tiles of %d sites each',
+                     len(tiles), len(tiles[0]))
+        sources = self.csm.get_sources()
+        rlzs_assoc = self.csm.get_rlzs_assoc()
+        siteidx = 0
+        tmanagers = []
+        maximum_distance = self.oqparam.maximum_distance
+        num_blocks = math.ceil(self.oqparam.concurrent_tasks / len(tiles))
+
+        for i, tile in enumerate(tiles, 1):
+            monitor = self.monitor.new()
+            monitor.oqparam = self.oqparam
+            with self.monitor('filtering sources per tile', autoflush=True):
+                filtered_sources = [
+                    src for src in sources
+                    if src.filter_sites_by_distance_to_source(
+                        maximum_distance, tile) is not None]
+                if not filtered_sources:
+                    continue
+            blocks = split_in_blocks(
+                sources, num_blocks,
+                weight=operator.attrgetter('weight'),
+                key=operator.attrgetter('trt_model_id'))
+            tm = parallel.starmap(
+                classical,
+                ((blk, tile, siteidx, rlzs_assoc, monitor) for blk in blocks),
+                name='tile_%d/%d' % (i, len(tiles)))
+            tmanagers.append(tm)
+            siteidx += len(tile)
+
+        logging.info('Total number of tasks submitted: %d',
+                     sum(len(tm.results) for tm in tmanagers))
+        for tm in tmanagers:
+            tm.reduce(self.agg_dicts, acc)
         self.rlzs_assoc = self.csm.get_rlzs_assoc(
-            partial(is_effective_trt_model, res))
-        return res
+            partial(is_effective_trt_model, acc))
+        return acc

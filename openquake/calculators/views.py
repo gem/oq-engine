@@ -147,10 +147,10 @@ def view_ruptures_per_trt(token, dstore):
     rows = [('#TRT models', num_trts), ('#sources', num_sources),
             ('#ruptures', num_ruptures)]
     if len(tbl) > 1:
-        summary = rst_table(rows) + '\n\n'
+        summary = '\n\n' + rst_table(rows)
     else:
         summary = ''
-    return summary + rst_table(tbl, header=header)
+    return rst_table(tbl, header=header) + summary
 
 
 @view.add('params')

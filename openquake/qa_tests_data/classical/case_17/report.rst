@@ -62,18 +62,18 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-=========== ==
-#TRT models 2 
-#sources    2 
-#ruptures   46
-=========== ==
-
 ================== ====== ==================== =========== ============
 source_model       trt_id trt                  num_sources num_ruptures
 ================== ====== ==================== =========== ============
 source_model_1.xml 0      active shallow crust 1           39          
 source_model_2.xml 1      active shallow crust 1           7           
 ================== ====== ==================== =========== ============
+
+=========== ==
+#TRT models 2 
+#sources    2 
+#ruptures   46
+=========== ==
 
 Expected data transfer for the sources
 --------------------------------------

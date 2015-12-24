@@ -99,8 +99,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         for handler in logging.root.handlers:
             handler.setFormatter(logging.Formatter(fmt))
 
-    def run(self, pre_execute=True, clean_up=True, concurrent_tasks=None,
-            **kw):
+    def run(self, pre_execute=True, concurrent_tasks=None, **kw):
         """
         Run the calculation and return the exported outputs.
         """
@@ -129,10 +128,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             else:
                 logging.critical('', exc_info=True)
                 raise
-        # don't cleanup if there is a critical error, otherwise
-        # there will likely be a cleanup error covering the real one
-        if clean_up:
-            self.clean_up()
+        self.clean_up()
         return exported
 
     def core_func(*args):
@@ -191,6 +187,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         Collect the realizations and the monitoring information,
         then close the datastore.
         """
+        if 'hcurves' in self.datastore:
+            self.datastore.set_nbytes('hcurves')
+        if 'hmaps' in self.datastore:
+            self.datastore.set_nbytes('hmaps')
         if 'rlzs_assoc' in self.datastore:
             rlzs = self.rlzs_assoc.realizations
             self.realizations = numpy.array(

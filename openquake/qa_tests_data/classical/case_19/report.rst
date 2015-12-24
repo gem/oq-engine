@@ -61,12 +61,6 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-=========== ====
-#TRT models 5   
-#sources    370 
-#ruptures   7770
-=========== ====
-
 ============================ ====== ==================== =========== ============
 source_model                 trt_id trt                  num_sources num_ruptures
 ============================ ====== ==================== =========== ============
@@ -76,6 +70,12 @@ simple_area_source_model.xml 2      Shield               0           0
 simple_area_source_model.xml 3      Stable Shallow Crust 0           0           
 simple_area_source_model.xml 4      Subduction Inslab    370         7770        
 ============================ ====== ==================== =========== ============
+
+=========== ====
+#TRT models 5   
+#sources    370 
+#ruptures   7770
+=========== ====
 
 Expected data transfer for the sources
 --------------------------------------

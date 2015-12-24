@@ -15,7 +15,6 @@ from __future__ import division
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import mock
-import copy
 import time
 import logging
 import operator
@@ -96,7 +95,7 @@ def get_weight(src, point_source_weight=1/40., num_ruptures=None):
     """
     num_ruptures = num_ruptures or src.count_ruptures()
     weight = (num_ruptures * point_source_weight
-              if src.__class__.__name__ == 'PointSource'
+              if src.__class__.__name__ in ('PointSource', 'AreaSource')
               else num_ruptures)
     return weight
 
@@ -598,8 +597,12 @@ class CompositeSourceModel(collections.Sequence):
         """
         for trt_model in self.trt_models:
             if trt_model.num_ruptures == 0 or really:
-                trt_model.num_ruptures = sum(
-                    src.count_ruptures() for src in trt_model)
+                num_ruptures = 0
+                for src in trt_model:
+                    nr = src.count_ruptures()
+                    src.weight = get_weight(src, num_ruptures=nr)
+                    num_ruptures += nr
+                trt_model.num_ruptures = num_ruptures
                 logging.info('Processed %s', trt_model)
 
     def get_info(self):
