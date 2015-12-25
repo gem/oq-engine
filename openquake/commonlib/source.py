@@ -145,6 +145,7 @@ class TrtModel(collections.Sequence):
         for src in self.sources:
             self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
+        self.weight = 1
 
     def update(self, src):
         """
@@ -564,8 +565,9 @@ class CompositeSourceModel(collections.Sequence):
         filtering and splitting them, depending on the passed parameters
         """
         if sitecol is None:
-            for trt_model in self.trt_models:
-                for src in sorted(trt_model, key=operator.attrgetter('weight')):
+            weight = operator.attrgetter('weight')
+            for trt_model in sorted(self.trt_models, key=weight):
+                for src in sorted(trt_model, key=weight):
                     yield src
             return
         assert maximum_distance
@@ -595,6 +597,7 @@ class CompositeSourceModel(collections.Sequence):
         then set the attribute num_ruptures in each TRT model.
         """
         for trt_model in self.trt_models:
+            weight = 0
             num_ruptures = 0
             for src in trt_model:
                 if hasattr(src, 'trt_model_id'):
@@ -607,7 +610,9 @@ class CompositeSourceModel(collections.Sequence):
                                      sourceconverter.POINT_SOURCE_WEIGHT)
                 else:
                     num_ruptures += src.weight
+                weight += src.weight
             trt_model.num_ruptures = num_ruptures
+            trt_model.weight = weight
 
     def get_info(self):
         """
