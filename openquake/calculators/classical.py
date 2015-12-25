@@ -445,7 +445,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         num_blocks = math.ceil(self.oqparam.concurrent_tasks / len(tiles))
 
         for i, tile in enumerate(tiles, 1):
-            monitor = self.monitor.new('tile')
+            monitor = self.monitor.new()
             monitor.oqparam = self.oqparam
             with self.monitor('filtering sources per tile', autoflush=True):
                 filtered_sources = [
