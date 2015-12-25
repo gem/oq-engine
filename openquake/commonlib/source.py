@@ -547,6 +547,7 @@ class CompositeSourceModel(collections.Sequence):
         self.source_model_lt = source_model_lt
         self.source_models = source_models
         self.source_info = ()  # set by the SourceFilterSplitter
+        self.split_map = {}
 
     @property
     def trt_models(self):
@@ -557,11 +558,30 @@ class CompositeSourceModel(collections.Sequence):
             for trt_model in sm.trt_models:
                 yield trt_model
 
-    def get_sources(self):
+    def get_sources(self, sitecol=None, maximum_distance=None, maxweight=None):
         """
-        Extract the sources contained in the internal source models.
+        Extract the sources contained in the internal source models, optionally
+        filtering and splitting them, depending on the passed parameters
         """
-        return sum((trt_model.sources for trt_model in self.trt_models), [])
+        if sitecol is None:
+            for trt_model in self.trt_models:
+                for src in trt_model:
+                    yield src
+            return
+        assert maximum_distance
+        for src in self.get_sources():
+            if src.filter_sites_by_distance_to_source(
+                    maximum_distance, sitecol) is not None:
+                if maxweight is not None and src.weight >= maxweight:
+                    if src.id not in self.split_map:
+                        logging.info('Splitting %s', src)
+                        sources = sourceconverter.split_source(src, maxweight)
+                        self.split_map[src.id] = list(sources)
+                    for ss in self.split_map[src.id]:
+                        ss.id = src.id
+                        yield ss
+                else:
+                    yield src
 
     def get_num_sources(self):
         """

@@ -291,7 +291,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         # save calculation time per source
         calc_times = getattr(curves_by_trt_gsim, 'calc_times', [])
-        sources = self.csm.get_sources()
+        sources = list(self.csm.get_sources())
         infodict = collections.defaultdict(float)
         weight = {}
         for src_idx, dt in calc_times:
@@ -422,7 +422,24 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     """
     Classical Tiling calculator
     """
-    SourceProcessor = source.SourceSplitter
+    SourceProcessor = source.BaseSourceProcessor
+    MAXWEIGHT = 1000
+
+    def gen_args(self, tiles):
+        rlzs_assoc = self.csm.get_rlzs_assoc()
+        num_blocks = math.ceil(self.oqparam.concurrent_tasks / len(tiles))
+        maximum_distance = self.oqparam.maximum_distance
+        siteidx = 0
+        for tile in tiles:
+            sources = self.csm.get_sources(
+                tile, maximum_distance, self.MAXWEIGHT)
+            for blk in split_in_blocks(
+                    sources, num_blocks,
+                    weight=operator.attrgetter('weight'),
+                    key=operator.attrgetter('trt_model_id')):
+                yield (blk, tile, siteidx, rlzs_assoc,
+                       self.monitor.new(oqparam=self.oqparam))
+            siteidx += len(tile)
 
     def execute(self):
         """
@@ -437,38 +454,8 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         tiles = self.sitecol.split_in_tiles(hint)
         logging.info('Generating %d tiles of %d sites each',
                      len(tiles), len(tiles[0]))
-        sources = self.csm.get_sources()
-        rlzs_assoc = self.csm.get_rlzs_assoc()
-        siteidx = 0
-        tmanagers = []
-        maximum_distance = self.oqparam.maximum_distance
-        num_blocks = math.ceil(self.oqparam.concurrent_tasks / len(tiles))
-
-        for i, tile in enumerate(tiles, 1):
-            monitor = self.monitor.new()
-            monitor.oqparam = self.oqparam
-            with self.monitor('filtering sources per tile', autoflush=True):
-                filtered_sources = [
-                    src for src in sources
-                    if src.filter_sites_by_distance_to_source(
-                        maximum_distance, tile) is not None]
-                if not filtered_sources:
-                    continue
-            blocks = split_in_blocks(
-                sources, num_blocks,
-                weight=operator.attrgetter('weight'),
-                key=operator.attrgetter('trt_model_id'))
-            tm = parallel.starmap(
-                classical,
-                ((blk, tile, siteidx, rlzs_assoc, monitor) for blk in blocks),
-                name='tile_%d/%d' % (i, len(tiles)))
-            tmanagers.append(tm)
-            siteidx += len(tile)
-
-        logging.info('Total number of tasks submitted: %d',
-                     sum(len(tm.results) for tm in tmanagers))
-        for tm in tmanagers:
-            tm.reduce(self.agg_dicts, acc)
+        tm = parallel.starmap(classical, self.gen_args(tiles))
+        tm.reduce(self.agg_dicts, acc)
         self.rlzs_assoc = self.csm.get_rlzs_assoc(
             partial(is_effective_trt_model, acc))
         return acc
