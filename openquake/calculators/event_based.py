@@ -398,7 +398,7 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
         """
         monitor = self.monitor(self.core_func.__name__)
         monitor.oqparam = self.oqparam
-        sources = self.csm.get_sources()
+        sources = list(self.csm.get_sources())
         ruptures_by_trt = parallel.apply_reduce(
             self.core_func.__func__,
             (sources, self.sitecol, self.rlzs_assoc.csm_info, monitor),

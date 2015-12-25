@@ -24,7 +24,7 @@ from functools import partial
 
 import numpy
 
-from openquake.baselib.general import split_in_blocks
+from openquake.baselib.general import block_splitter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -263,7 +263,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor.new(self.core_func.__name__)
         monitor.oqparam = self.oqparam
-        sources = self.csm.get_sources()
+        sources = list(self.csm.get_sources())
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         zerodict.calc_times = []
@@ -423,23 +423,21 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     Classical Tiling calculator
     """
     SourceProcessor = source.BaseSourceProcessor
-    MAXWEIGHT = 1000
 
     def gen_args(self, tiles):
+        maxweight = math.ceil(self.csm.weight / self.oqparam.concurrent_tasks)
         rlzs_assoc = self.csm.get_rlzs_assoc()
-        num_blocks = math.ceil(self.oqparam.concurrent_tasks / len(tiles))
         maximum_distance = self.oqparam.maximum_distance
         siteidx = 0
         for tile in tiles:
-            sources = list(self.csm.get_sources(
-                tile, maximum_distance, self.MAXWEIGHT))
-            if sources:
-                for blk in split_in_blocks(
-                        sources, num_blocks,
-                        weight=operator.attrgetter('weight'),
-                        key=operator.attrgetter('trt_model_id')):
-                    yield (blk, tile, siteidx, rlzs_assoc,
-                           self.monitor.new(oqparam=self.oqparam))
+            sources = self.csm.get_sources(
+                tile, maximum_distance, maxweight)
+            for block in block_splitter(
+                    sources, maxweight,
+                    weight=operator.attrgetter('weight'),
+                    kind=operator.attrgetter('trt_model_id')):
+                yield (block, tile, siteidx, rlzs_assoc,
+                       self.monitor.new(oqparam=self.oqparam))
             siteidx += len(tile)
 
     def execute(self):

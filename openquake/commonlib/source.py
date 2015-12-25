@@ -549,6 +549,7 @@ class CompositeSourceModel(collections.Sequence):
         self.source_models = source_models
         self.source_info = ()  # set by the SourceFilterSplitter
         self.split_map = {}
+        self.weight = 0
 
     @property
     def trt_models(self):
@@ -613,6 +614,7 @@ class CompositeSourceModel(collections.Sequence):
                 weight += src.weight
             trt_model.num_ruptures = num_ruptures
             trt_model.weight = weight
+            self.weight += weight
 
     def get_info(self):
         """
@@ -872,17 +874,20 @@ class SourceFilter(BaseSourceProcessor):
         del self.infos[:]
 
         # update trt_model.sources
+        weight = 0
         for source_model in csm:
             for trt_model in source_model.trt_models:
                 trt_model.sources = sorted(
                     sources_by_trt.get(trt_model.id, []),
                     key=operator.attrgetter('source_id'))
+                weight += sum(src.weight for src in trt_model)
                 if not trt_model.sources:
                     logging.warn(
                         'Could not find sources close to the sites in %s '
                         'sm_lt_path=%s, maximum_distance=%s km, TRT=%s',
                         source_model.name, source_model.path,
                         self.maxdist, trt_model.trt)
+        csm.weight = weight
 
 
 class SourceFilterSplitter(SourceFilter):

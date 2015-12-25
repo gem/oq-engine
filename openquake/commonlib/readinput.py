@@ -507,11 +507,11 @@ def get_composite_source_model(
             trt_id += 1
         smodels.append(source_model)
     csm = source.CompositeSourceModel(source_model_lt, smodels)
+    csm.initsources()
     if sitecol is not None and hasattr(processor, 'process'):
         processor.process(csm, dstore, no_distribute)
-        if not csm.get_sources():
+        if not csm.weight:
             raise RuntimeError('All sources were filtered away')
-    csm.initsources()
     return csm
 
 
