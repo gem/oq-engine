@@ -431,14 +431,15 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         maximum_distance = self.oqparam.maximum_distance
         siteidx = 0
         for tile in tiles:
-            sources = self.csm.get_sources(
-                tile, maximum_distance, self.MAXWEIGHT)
-            for blk in split_in_blocks(
-                    sources, num_blocks,
-                    weight=operator.attrgetter('weight'),
-                    key=operator.attrgetter('trt_model_id')):
-                yield (blk, tile, siteidx, rlzs_assoc,
-                       self.monitor.new(oqparam=self.oqparam))
+            sources = list(self.csm.get_sources(
+                tile, maximum_distance, self.MAXWEIGHT))
+            if sources:
+                for blk in split_in_blocks(
+                        sources, num_blocks,
+                        weight=operator.attrgetter('weight'),
+                        key=operator.attrgetter('trt_model_id')):
+                    yield (blk, tile, siteidx, rlzs_assoc,
+                           self.monitor.new(oqparam=self.oqparam))
             siteidx += len(tile)
 
     def execute(self):

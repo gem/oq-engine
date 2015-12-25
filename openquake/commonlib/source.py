@@ -565,7 +565,7 @@ class CompositeSourceModel(collections.Sequence):
         """
         if sitecol is None:
             for trt_model in self.trt_models:
-                for src in trt_model:
+                for src in sorted(trt_model, operator.attrgetter('weight')):
                     yield src
             return
         assert maximum_distance
