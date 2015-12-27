@@ -787,10 +787,12 @@ class SourceManager(object):
                                self.rlzs_assoc, self.monitor.new())
 
     def store_source_info(self, dstore):
-        self.infos.sort(
-            key=lambda info: info.filter_time + info.split_time, reverse=True)
-        dstore['pre_source_info'] = numpy.array(self.infos, source_info_dt)
-        del self.infos[:]
+        if self.infos:
+            self.infos.sort(
+                key=lambda info: info.filter_time + info.split_time,
+                reverse=True)
+            dstore['pre_source_info'] = numpy.array(self.infos, source_info_dt)
+            del self.infos[:]
 
     def update(self):
         """
