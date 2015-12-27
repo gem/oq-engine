@@ -14,22 +14,19 @@ from __future__ import division
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import mock
-import time
+import math
 import logging
 import operator
-import itertools
 import collections
 import random
 from xml.etree import ElementTree as etree
 
 import numpy
 
-from openquake.baselib.general import AccumDict, groupby
+from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import valid, logictree, sourceconverter, parallel
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
-from functools import reduce
 
 
 class DuplicatedID(Exception):
@@ -549,7 +546,7 @@ class CompositeSourceModel(collections.Sequence):
         self.source_models = source_models
         self.source_info = ()  # set by the SourceFilterSplitter
         self.split_map = {}
-        self.weight = 0
+        self.set_weights()
 
     @property
     def trt_models(self):
@@ -560,31 +557,21 @@ class CompositeSourceModel(collections.Sequence):
             for trt_model in sm.trt_models:
                 yield trt_model
 
-    def get_sources(self, sitecol=None, maximum_distance=None, maxweight=None):
+    def get_sources(self, kind='all'):
         """
-        Extract the sources contained in the internal source models, optionally
-        filtering and splitting them, depending on the passed parameters
+        Extract the sources contained in the source models by optionally
+        filtering and splitting them, depending on the passed parameters.
         """
-        if sitecol is None:
-            weight = operator.attrgetter('weight')
-            for trt_model in sorted(self.trt_models, key=weight):
-                for src in sorted(trt_model, key=weight):
-                    yield src
-            return
-        assert maximum_distance
-        for src in self.get_sources():
-            if src.filter_sites_by_distance_to_source(
-                    maximum_distance, sitecol) is not None:
-                if maxweight is not None and src.weight >= maxweight:
-                    if src.id not in self.split_map:
-                        logging.info('Splitting %s', src)
-                        sources = sourceconverter.split_source(src, maxweight)
-                        self.split_map[src.id] = list(sources)
-                    for ss in self.split_map[src.id]:
-                        ss.id = src.id
-                        yield ss
-                else:
-                    yield src
+        sources = []
+        for trt_model in self.trt_models:
+            for src in trt_model:
+                if kind == 'all':
+                    sources.append(src)
+                elif kind == 'light' and src.weight <= self.maxweight:
+                    sources.append(src)
+                elif kind == 'heavy' and src.weight > self.maxweight:
+                    sources.append(src)
+        return sources
 
     def get_num_sources(self):
         """
@@ -592,20 +579,16 @@ class CompositeSourceModel(collections.Sequence):
         """
         return sum(len(trt_model) for trt_model in self.trt_models)
 
-    def initsources(self, ordinal=0):
+    def set_weights(self):
         """
-        Update the attributes src.id and src.trt_model_id for each source,
+        Update the attributes src.weight and src.trt_model_id for each source,
         then set the attribute num_ruptures in each TRT model.
         """
+        self.weight = 0
         for trt_model in self.trt_models:
             weight = 0
             num_ruptures = 0
             for src in trt_model:
-                if hasattr(src, 'trt_model_id'):
-                    # .trt_model_id is missing for source nodes
-                    src.trt_model_id = trt_model.id
-                    src.id = ordinal
-                    ordinal += 1
                 if src.__class__.__name__ in ('PointSource', 'AreaSource'):
                     num_ruptures += (src.weight /
                                      sourceconverter.POINT_SOURCE_WEIGHT)
@@ -723,162 +706,104 @@ def collect_source_model_paths(smlt):
     return sorted(set(src_paths))
 
 
-# ########################## SourceFilterSplitter ########################### #
-
-def filter_and_split(src, sourceprocessor):
-    """
-    Filter and split the source by using the source processor.
-    Also, sets the sub sources `.weight` attribute.
-
-    :param src: a hazardlib source object
-    :param sourceprocessor: a SourceFilterSplitter object
-    :returns: a named tuple of type SourceInfo
-    """
-    if sourceprocessor.sitecol:  # filter
-        info = sourceprocessor.filter(src)
-        if not info.sources:
-            return info  # filtered away
-        filter_time = info.filter_time
-    else:  # only split
-        filter_time = 0
-    t1 = time.time()
-    out = list(sourceconverter.split_source(src))
-    split_time = time.time() - t1
-    return SourceInfo(src.trt_model_id, src.source_id, src.__class__.__name__,
-                      src.weight, out, filter_time, split_time)
-
+# ########################## SourceManager ########################### #
 
 SourceInfo = collections.namedtuple(
     'SourceInfo', 'trt_model_id source_id source_class weight sources '
-    'filter_time split_time')
+    'filter_time split_time calc_time')
 
-source_info_dt = numpy.dtype(
-    [('trt_model_id', numpy.uint32),
-     ('source_id', (bytes, 20)),
-     ('source_class', (bytes, 20)),
-     ('weight', numpy.float32),
-     ('split_num', numpy.uint32),
-     ('filter_time', numpy.float32),
-     ('split_time', numpy.float32)])
+source_info_dt = numpy.dtype([
+    ('trt_model_id', numpy.uint32),
+    ('source_id', (bytes, 20)),
+    ('source_class', (bytes, 20)),
+    ('weight', numpy.float32),
+    ('split_num', numpy.uint32),
+    ('filter_time', numpy.float32),
+    ('split_time', numpy.float32),
+    ('calc_time', numpy.float32),
+])
 
 
-class BaseSourceProcessor(object):
+class SourceManager(object):
     """
-    Do nothing source processor.
-
-    :param sitecol:
-        a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param maxdist:
-        maximum distance for the filtering
-    :param monitor:
-        a PerformanceMonitor instance
+    Manager associated to a CompositeSourceModel instance.
+    Filter and split sources and send them to the worker tasks.
     """
-    def __init__(self, sitecol, maxdist, monitor):
-        self.sitecol = sitecol
-        self.maxdist = maxdist
+    def __init__(self, csm, taskfunc, concurrent_tasks, maximum_distance,
+                 monitor):
+        self.tm = parallel.TaskManager(taskfunc)
+        self.csm = csm
+        self.maxweight = math.ceil(csm.weight / (concurrent_tasks or 1))
+        self.maximum_distance = maximum_distance
         self.monitor = monitor
+        self.rlzs_assoc = csm.get_rlzs_assoc()
+        self.split_map = {}
 
-    def process(self, csm, dstore, dummy=None):
-        pass
-
-
-class SourceSplitter(BaseSourceProcessor):
-    """
-    Split only the sources with weight >= MAX_WEIGHT
-    """
-    MAX_WEIGHT = 10000
-
-    def process(self, csm, dstore, dummy=None):
-        with self.monitor('splitting sources', autoflush=True):
-            heavy, total = 0, 0
-            for source_model in csm:
-                for trt_model in source_model.trt_models:
-                    total += len(trt_model.sources)
-                    sources = []
-                    for src in trt_model.sources:
-                        if src.weight >= self.MAX_WEIGHT:
-                            logging.info('Splitting %s of weight',
-                                         src, src.weight)
-                            heavy += 1
-                            sources.extend(
-                                sourceconverter.split_source(
-                                    src, self.MAX_WEIGHT))
-                        else:
-                            sources.append(src)
-                    trt_model.sources = sorted(
-                        sources, key=operator.attrgetter('source_id'))
-        logging.info('Split %d/%d sources of weight >= %d',
-                     heavy, total, self.MAX_WEIGHT)
-
-
-class SourceFilter(BaseSourceProcessor):
-    """
-    Filter sequentially the sources of the given CompositeSourceModel
-    instance. An array `.source_info` is added to the instance, containing
-    information about the processing times.
-    """
-    def filter(self, src):
-        t0 = time.time()
-        sites = src.filter_sites_by_distance_to_source(
-            self.maxdist, self.sitecol)
-        t1 = time.time()
-        filter_time = t1 - t0
-        sources = [] if sites is None else [src]
-        return SourceInfo(
-            src.trt_model_id, src.source_id, src.__class__.__name__,
-            src.weight, sources, filter_time, 0)
-
-    def agg_source_info(self, acc, info):
+    def get_sources(self, kind, sitecol):
         """
-        :param acc: a dictionary {trt_model_id: sources}
-        :param info: a SourceInfo instance
+        Get all the sources of kind `kind` affecting the `sitecol`;
+        heavy sources are split.
         """
-        self.infos.append(
-            SourceInfo(info.trt_model_id, info.source_id, info.source_class,
-                       info.weight, len(info.sources), info.filter_time,
-                       info.split_time))
-        return acc + {info.trt_model_id: info.sources}
-
-    def process(self, csm, dstore, dummy=None):
-        """
-        :param csm: a CompositeSourceModel instance
-        :param dstore: a DataStore instance
-        :returns: the times spent in sequential and parallel processing
-        """
-        sources = csm.get_sources()
         self.infos = []
-        seqtime, partime = 0, 0
-        sources_by_trt = AccumDict()
+        filter_mon = self.monitor('filtering sources')
+        split_mon = self.monitor('splitting heavy sources')
+        self.sources_by_trt = collections.defaultdict(list)
+        for src in self.csm.get_sources(kind):
+            with filter_mon:
+                sites = src.filter_sites_by_distance_to_source(
+                    self.maximum_distance, sitecol)
+            if sites is not None:
+                self.sources_by_trt[src.trt_model_id].append(src)
+                if kind == 'heavy':
+                    if src.id not in self.split_map:
+                        logging.info('Splitting %s', src)
+                        with split_mon:
+                            sources = sourceconverter.split_source(src)
+                            self.split_map[src.id] = list(sources)
+                    for ss in self.split_map[src.id]:
+                        ss.id = src.id
+                        yield ss
+                else:
+                    yield src
+            sources = [] if sites is None else [src]
+            self.infos.append(
+                SourceInfo(src.trt_model_id, src.source_id,
+                           src.__class__.__name__,
+                           src.weight, len(sources),
+                           filter_mon.dt, split_mon.dt, 0))
 
-        logging.info('Sequential processing of %d sources...', len(sources))
-        t1 = time.time()
-        for src in sources:
-            sources_by_trt = self.agg_source_info(
-                sources_by_trt, self.filter(src))
-        seqtime = time.time() - t1
-        self.update(csm, dstore, sources_by_trt)
-        logging.info('fast sources filtering/splitting: %s', seqtime)
-        logging.info('slow sources filtering/splitting: %s', partime)
-
-    def update(self, csm, dstore, sources_by_trt):
+    def submit_sources(self, sitecol, siteidx=0):
         """
-        Store the `source_info` array in the composite source model.
-
-        :param csm: a CompositeSourceModel instance
-        :param dstore: a DataStore instance
-        :param sources_by_trt: a dictionary trt_model_id -> sources
+        Submit the light sources and then the (split) heavy sources.
         """
+        for kind in ('light', 'heavy'):
+            sources = self.get_sources(kind, sitecol)
+            for block in block_splitter(
+                    sources, self.csm.maxweight,
+                    operator.attrgetter('weight'),
+                    operator.attrgetter('trt_model_id')):
+                self.tm.submit(block, sitecol, siteidx,
+                               self.rlzs_assoc, self.monitor.new())
+
+    def store_source_info(self, dstore):
         self.infos.sort(
             key=lambda info: info.filter_time + info.split_time, reverse=True)
         dstore['pre_source_info'] = numpy.array(self.infos, source_info_dt)
         del self.infos[:]
 
+    def update(self):
+        """
+        Store the `source_info` array in the composite source model.
+
+        :param csm: a CompositeSourceModel instance
+        :param sources_by_trt: a dictionary trt_model_id -> sources
+        """
         # update trt_model.sources
         weight = 0
-        for source_model in csm:
+        for source_model in self.csm:
             for trt_model in source_model.trt_models:
                 trt_model.sources = sorted(
-                    sources_by_trt.get(trt_model.id, []),
+                    self.sources_by_trt.get(trt_model.id, []),
                     key=operator.attrgetter('source_id'))
                 weight += sum(src.weight for src in trt_model)
                 if not trt_model.sources:
@@ -887,60 +812,4 @@ class SourceFilter(BaseSourceProcessor):
                         'sm_lt_path=%s, maximum_distance=%s km, TRT=%s',
                         source_model.name, source_model.path,
                         self.maxdist, trt_model.trt)
-        csm.weight = weight
-
-
-class SourceFilterSplitter(SourceFilter):
-    """
-    Filter and split in parallel the sources of the given CompositeSourceModel
-    instance. An array `.source_info` is added to the instance, containing
-    information about the processing times and the splitting process.
-
-    :param sitecol: a SiteCollection instance
-    :param maxdist: maximum distance for the filtering
-    """
-    def process(self, csm, dstore, no_distribute=False):
-        """
-        :param csm: a CompositeSourceModel instance
-        :param dstore: a DataStore instance
-        :param no_distribute: flag to disable parallel processing
-        :returns: the times spent in sequential and parallel processing
-        """
-        sources = csm.get_sources()
-        fast_sources = [(src, self) for src in sources
-                        if src.__class__.__name__ in
-                        ('PointSource', 'AreaSource')]
-        slow_sources = [(src, self) for src in sources
-                        if src.__class__.__name__ not in
-                        ('PointSource', 'AreaSource')]
-        self.infos = []
-        seqtime, partime = 0, 0
-        sources_by_trt = AccumDict()
-
-        # start multicore processing
-        if slow_sources:
-            t0 = time.time()
-            logging.warn('Processing %d slow sources...', len(slow_sources))
-            with mock.patch.object(
-                    parallel, 'no_distribute', lambda: no_distribute):
-                ss = parallel.TaskManager.starmap(
-                    filter_and_split, slow_sources)
-
-        # single core processing
-        if fast_sources:
-            logging.info('Processing %d fast sources...', len(fast_sources))
-            t1 = time.time()
-            sources_by_trt += reduce(
-                self.agg_source_info,
-                itertools.starmap(filter_and_split, fast_sources), AccumDict())
-            seqtime = time.time() - t1
-
-        # finish multicore processing
-        sources_by_trt += (ss.reduce(self.agg_source_info)
-                           if slow_sources else {})
-        if slow_sources:
-            partime = time.time() - t0
-
-        self.update(csm, dstore, sources_by_trt)
-
-        return seqtime, partime
+        self.csm.weight = weight

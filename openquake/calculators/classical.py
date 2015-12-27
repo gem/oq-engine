@@ -24,7 +24,6 @@ from functools import partial
 
 import numpy
 
-from openquake.baselib.general import block_splitter
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -263,7 +262,6 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor.new(self.core_func.__name__)
         monitor.oqparam = self.oqparam
-        sources = list(self.csm.get_sources())
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         zerodict.calc_times = []
@@ -272,13 +270,9 @@ class ClassicalCalculator(base.HazardCalculator):
             for site in self.sitecol
             for smodel in self.csm.source_models
         } if self.oqparam.poes_disagg else {}
-        curves_by_trt_gsim = parallel.apply_reduce(
-            self.core_func.__func__,
-            (sources, self.sitecol, 0, self.rlzs_assoc, monitor),
-            agg=self.agg_dicts, acc=zerodict,
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=operator.attrgetter('weight'),
-            key=operator.attrgetter('trt_model_id'))
+        curves_by_trt_gsim = self.manager.tm.reduce(self.agg_dicts, zerodict)
+        self.rlzs_assoc = self.csm.get_rlzs_assoc(
+            partial(is_effective_trt_model, curves_by_trt_gsim))
         store_source_chunks(self.datastore)
         return curves_by_trt_gsim
 
@@ -422,39 +416,16 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     """
     Classical Tiling calculator
     """
-    SourceProcessor = source.BaseSourceProcessor
-
-    def gen_args(self, tiles):
-        maxweight = math.ceil(self.csm.weight / self.oqparam.concurrent_tasks)
-        rlzs_assoc = self.csm.get_rlzs_assoc()
-        maximum_distance = self.oqparam.maximum_distance
-        siteidx = 0
-        for tile in tiles:
-            sources = self.csm.get_sources(
-                tile, maximum_distance, maxweight)
-            for block in block_splitter(
-                    sources, maxweight,
-                    weight=operator.attrgetter('weight'),
-                    kind=operator.attrgetter('trt_model_id')):
-                yield (block, tile, siteidx, rlzs_assoc,
-                       self.monitor.new(oqparam=self.oqparam))
-            siteidx += len(tile)
-
-    def execute(self):
-        """
-        Split the computation by tiles which are run in parallel.
-        """
-        acc = AccumDict(
-            {trt_gsim: zero_curves(len(self.sitecol), self.oqparam.imtls)
-             for trt_gsim in self.rlzs_assoc})
-        acc.calc_times = []
-        acc.n = len(self.sitecol)
-        hint = math.ceil(acc.n / self.oqparam.sites_per_tile)
+    def send_sources(self):
+        oq = self.oqparam
+        hint = math.ceil(len(self.sitecol) / oq.sites_per_tile)
         tiles = self.sitecol.split_in_tiles(hint)
         logging.info('Generating %d tiles of %d sites each',
                      len(tiles), len(tiles[0]))
-        tm = parallel.starmap(classical, self.gen_args(tiles))
-        tm.reduce(self.agg_dicts, acc)
-        self.rlzs_assoc = self.csm.get_rlzs_assoc(
-            partial(is_effective_trt_model, acc))
-        return acc
+        self.manager = source.SourceManager(
+            self.csm, classical, oq.concurrent_tasks, oq.maximum_distance,
+            self.monitor.new(oqparam=oq))
+        siteidx = 0
+        for tile in tiles:
+            self.manager.submit_sources(tile, siteidx)
+            siteidx += len(tile)

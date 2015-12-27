@@ -1,4 +1,3 @@
 tag:|S100,structural,structural_ins
-col=09~ses=0001~src=FSBG_TRBG103-25~rup=008-01,1.719297E+05,       NAN
-col=09~ses=0001~src=FSBG_TRBG103-37~rup=005-01,4.906738E+05,       NAN
-col=09~ses=0001~src=FSBG_TRCS322-4-39~rup=001-01,4.126710E+06,       NAN
+col=09~ses=0001~src=FSBG_TRBG103~rup=2054-01,2.632361E+05,       NAN
+col=09~ses=0001~src=FSBG_TRCS322~rup=165-01,6.157831E+06,       NAN

@@ -205,7 +205,6 @@ class HazardCalculator(BaseCalculator):
     riskmodel = datastore.persistent_attribute('riskmodel')
 
     mean_curves = None  # to be overridden
-    SourceProcessor = source.SourceFilterSplitter
 
     def assoc_assets_sites(self, sitecol):
         """
@@ -267,7 +266,23 @@ class HazardCalculator(BaseCalculator):
 
         else:  # we are in a basic calculator
             self.read_risk_data()
-            self.read_sources()
+            if 'source' in self.oqparam.inputs:
+                logging.info('Reading the composite source model')
+                with self.monitor(
+                        'reading composite source model', autoflush=True):
+                    self.csm = readinput.get_composite_source_model(
+                        self.oqparam)
+                    # we could manage limits here
+                    self.job_info = readinput.get_job_info(
+                        self.oqparam, self.csm, self.sitecol)
+                    logging.info(
+                        'Total weight of the sources=%s',
+                        self.job_info['input_weight'])
+                    logging.info(
+                        'Expected output size=%s',
+                        self.job_info['output_weight'])
+                with self.monitor('sending the sources', autoflush=True):
+                    self.send_sources()
         self.datastore.hdf5.flush()
 
     def read_exposure(self):
@@ -364,30 +379,17 @@ class HazardCalculator(BaseCalculator):
             mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
             self.sitemesh = numpy.array(list(zip(col.lons, col.lats)), mesh_dt)
 
-    def read_sources(self):
+    def send_sources(self):
         """
-        Read the composite source model (if any).
-        This method must be called after read_risk_data, to be able
-        to filter to sources according to the site collection.
+        Filter/split and send the sources to the worker tasks.
         """
-        if 'source' in self.oqparam.inputs:
-            logging.info('Reading the composite source model')
-            with self.monitor(
-                    'reading composite source model', autoflush=True):
-                self.csm = readinput.get_composite_source_model(
-                    self.oqparam, self.sitecol, self.SourceProcessor,
-                    self.monitor, dstore=self.datastore)
-                # we could manage limits here
-                self.job_info = readinput.get_job_info(
-                    self.oqparam, self.csm, self.sitecol)
-                self.rlzs_assoc = self.csm.get_rlzs_assoc()
-
-                logging.info(
-                    'Total weight of the sources=%s',
-                    self.job_info['input_weight'])
-                logging.info(
-                    'Expected output size=%s',
-                    self.job_info['output_weight'])
+        oq = self.oqparam
+        self.manager = source.SourceManager(
+            self.csm, self.core_func.__func__, oq.concurrent_tasks,
+            oq.maximum_distance, self.monitor.new(oqparam=oq))
+        self.manager.submit_sources(self.sitecol)
+        self.manager.store_source_info(self.datastore)
+        self.rlzs_assoc = self.manager.rlzs_assoc
 
     def post_process(self):
         """For compatibility with the engine"""
