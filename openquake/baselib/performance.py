@@ -84,9 +84,14 @@ class PerformanceMonitor(object):
         self.measuremem = measuremem
         self.mem = 0
         self.duration = 0
-        self._start_time = time.time()
+        self._start_time = self._stop_time = time.time()
         self.children = []
         self.counts = 0
+
+    @property
+    def dt(self):
+        """Last time interval measured"""
+        return self._stop_time - self._start_time
 
     def measure_mem(self):
         """A memory measurement (in bytes)"""
@@ -130,7 +135,8 @@ class PerformanceMonitor(object):
         if self.measuremem:
             self.stop_mem = self.measure_mem()
             self.mem += self.stop_mem - self.start_mem
-        self.duration += time.time() - self._start_time
+        self._stop_time = time.time()
+        self.duration += self._stop_time - self._start_time
         self.counts += 1
         self.on_exit()
 
