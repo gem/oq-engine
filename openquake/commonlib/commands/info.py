@@ -75,15 +75,12 @@ def _info(name, filtersources, weightsources):
             sitecol = None
         if 'source_model_logic_tree' in oqparam.inputs:
             print('Reading the source model...')
-            if weightsources or filtersources:
-                sp = source.SourceFilter
-            else:
-                sp = source.BaseSourceProcessor  # do nothing
-            csm = readinput.get_composite_source_model(oqparam, sitecol, sp)
+            in_memory = weightsources or filtersources
+            csm = readinput.get_composite_source_model(oqparam, in_memory)
             assoc = csm.get_rlzs_assoc()
             dstore = datastore.Fake(
                 vars(oqparam), rlzs_assoc=assoc, composite_source_model=csm,
-                sitecol=sitecol, in_memory=weightsources or filtersources)
+                sitecol=sitecol, in_memory=in_memory)
             _print_info(dstore, filtersources, weightsources)
     else:
         print("No info for '%s'" % name)

@@ -486,11 +486,16 @@ def get_composite_source_model(oqparam, in_memory=True):
     smodels = []
     trt_id = 0
     idx = 0
+
+    def getid(src):
+        try:
+            return src.source_id
+        except:
+            return src['id']
     for source_model in get_source_models(
             oqparam, source_model_lt, in_memory=in_memory):
         for trt_model in source_model.trt_models:
-            trt_model.sources = sorted(
-                trt_model, key=operator.attrgetter('source_id'))
+            trt_model.sources = sorted(trt_model, key=getid)
             trt_model.id = trt_id
             for src in trt_model:
                 if hasattr(src, 'trt_model_id'):
@@ -500,8 +505,9 @@ def get_composite_source_model(oqparam, in_memory=True):
                     idx += 1
             trt_id += 1
         smodels.append(source_model)
-    csm = source.CompositeSourceModel(source_model_lt, smodels)
-    csm.maxweight = math.ceil(csm.weight / (oqparam.concurrent_tasks or 1))
+    csm = source.CompositeSourceModel(source_model_lt, smodels, in_memory)
+    if hasattr(csm, 'weight'):
+        csm.maxweight = math.ceil(csm.weight / (oqparam.concurrent_tasks or 1))
     return csm
 
 

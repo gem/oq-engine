@@ -541,12 +541,13 @@ class CompositeSourceModel(collections.Sequence):
     :param source_models:
         a list of :class:`openquake.commonlib.source.SourceModel` tuples
     """
-    def __init__(self, source_model_lt, source_models):
+    def __init__(self, source_model_lt, source_models, set_weight=True):
         self.source_model_lt = source_model_lt
         self.source_models = source_models
         self.source_info = ()  # set by the SourceFilterSplitter
         self.split_map = {}
-        self.set_weights()
+        if set_weight:
+            self.set_weights()
 
     @property
     def trt_models(self):
