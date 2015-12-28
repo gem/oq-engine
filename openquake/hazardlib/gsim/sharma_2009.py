@@ -16,8 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports:
-class:`SharmaEtAl2009`
+Module
+:mod:`openquake.hazardlib.gsim.sharma_2009`
+exports
+:class:`SharmaEtAl2009`
 """
 
 from __future__ import division
@@ -161,17 +163,8 @@ class SharmaEtAl2009(GMPE):
         Binary rock/soil classification dummy variable based on sites.vs30.
 
         "``S`` is 1 for a rock site and 0 otherwise" (p. 1201).
-
-        Sharma et al. (2009) does not use VS30 so no threshhold is given.
-        A value of 760 m/s was selected. This is consistent with
-        :mod:`openquake.hazardlib.gsim.atkinson_boore_2003`,
-        corresponds to NEHRP class A/B, and is close to the
-        threshhold for Eurocode 8 Class 8 (800 m/s).
         """
-
-        NEHRP_BC_BOUNDARY = 760.
-
-        is_rock = np.array(sites.vs30 > NEHRP_BC_BOUNDARY)
+        is_rock = np.array(sites.vs30 > self.NEHRP_BC_BOUNDARY)
         return is_rock
 
     def get_fault_type_dummy_variables(self, rup):
@@ -181,25 +174,19 @@ class SharmaEtAl2009(GMPE):
         "``H`` is 1 for a strike-slip mechanism and 0 for a reverse mechanism"
         (p. 1201).
 
-        Rake threshhold of 30 degrees was selected, same as
-        :mod:`openquake.hazardlib.gsim.boore_atkinson_2008` and
-        :mod:`openquake.hazardlib.gsim.campbell_bozorgnia_2008`.
-        Contrast with 45 degree threshhold used by 30 degree
-        threshhold used in :mod:`openquake.hazardlib.gsim.zhao_2006`.
-
         :raises UserWarning:
             If mechanism is determined to be normal faulting, since
             as summarized in Table 2 on p. 1197 the data used for
             regression included only reverse and stike-slip events.
         """
 
-        RAKE_THRESH = 30.
-
         # normal faulting
-        is_normal = np.array(RAKE_THRESH < -rup.rake < (180. - RAKE_THRESH))
+        is_normal = np.array(
+            self.RAKE_THRESH < -rup.rake < (180. - self.RAKE_THRESH))
 
         # reverse raulting
-        is_reverse = np.array(RAKE_THRESH < rup.rake < (180. - RAKE_THRESH))
+        is_reverse = np.array(
+            self.RAKE_THRESH < rup.rake < (180. - self.RAKE_THRESH))
 
         is_strike_slip = ~is_reverse
         is_strike_slip = is_strike_slip.astype(float)
@@ -238,3 +225,17 @@ class SharmaEtAl2009(GMPE):
     CONSTS = {
         'b4': 15.0
     }
+
+    #: Sharma et al. (2009) does not use VS30 so no threshhold is given.
+    #: A value of 760 m/s was selected. This is consistent with
+    #: :mod:`openquake.hazardlib.gsim.atkinson_boore_2003`,
+    #: corresponds to NEHRP class A/B, and is close to the
+    #: threshhold for Eurocode 8 Class 8 (800 m/s).
+    NEHRP_BC_BOUNDARY = 760.
+
+    #: Rake threshhold of 30 degrees was selected, same as
+    #: :mod:`openquake.hazardlib.gsim.boore_atkinson_2008` and
+    #: :mod:`openquake.hazardlib.gsim.campbell_bozorgnia_2008`.
+    #: Contrast with 45 degree threshhold used by 30 degree
+    #: threshhold used in :mod:`openquake.hazardlib.gsim.zhao_2006`.
+    RAKE_THRESH = 30.

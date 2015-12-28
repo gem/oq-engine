@@ -1,5 +1,6 @@
   [Nick Ackerley]
-  * Implemented GSIM: SharmaEtAl2009
+  * Implemented GMPE of Sharma et al. (2009) for active shallow crust of
+    Indian Himalayas.
 
   [Michele Simionato]
   * Optimized the case of multiple GSIMs by instantiating the
