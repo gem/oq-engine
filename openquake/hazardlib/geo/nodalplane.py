@@ -73,4 +73,4 @@ class NodalPlane(object):
         and raise ``ValueError`` otherwise.
         """
         if not -180 < rake <= 180:
-            raise ValueError('rake  %g is out of range (-180, 180]' % rake)
+            raise ValueError('rake %g is out of range (-180, 180]' % rake)
