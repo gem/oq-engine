@@ -17,9 +17,7 @@
 Core functionality for the classical tilint PSHA hazard calculator.
 """
 import math
-from openquake.baselib.general import split_in_blocks
 from openquake.commonlib import readinput
-from openquake.hazardlib.site import SiteCollection
 
 from openquake.engine.calculators import calculators
 from openquake.engine.calculators.hazard.general import BaseHazardCalculator
@@ -39,7 +37,7 @@ class ClassicalTilingHazardCalculator(BaseHazardCalculator):
         """
         classical = calculators['classical'](self.job)
         classical.tilepath = ('tile%d' % i,)
-        classical.site_collection = SiteCollection(tile)
+        classical.site_collection = tile
         classical.initialize_sources()
         classical.init_zeros_ones()
         classical.execute()
@@ -61,7 +59,8 @@ class ClassicalTilingHazardCalculator(BaseHazardCalculator):
         self.imtls = self.oqparam.imtls
         weight = info['n_sites'] * info['n_levels'] * info['n_realizations']
         nblocks = math.ceil(weight / self.oqparam.maximum_tile_weight)
-        self.tiles = list(split_in_blocks(self.site_collection, nblocks))
+        self.tiles = self.site_collection.split_in_tiles(nblocks)
+
         self.num_tiles = len(self.tiles)
 
     def execute(self):
