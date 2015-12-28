@@ -22,7 +22,7 @@ import logging
 from openquake.baselib.performance import PerformanceMonitor
 from openquake.baselib.general import humansize
 from openquake.commonlib import (
-    sap, readinput, nrml, source, datastore, reportwriter)
+    sap, readinput, nrml, datastore, reportwriter)
 from openquake.calculators import base
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.hazardlib import gsim

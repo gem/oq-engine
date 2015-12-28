@@ -6,7 +6,7 @@ from __future__ import print_function
 import os
 import sys
 
-from openquake.commonlib import readinput, datastore
+from openquake.commonlib import readinput, datastore, source
 from openquake.calculators import base, views
 from openquake.commonlib.oqvalidation import OqParam
 
@@ -93,9 +93,12 @@ def build_report(job_ini, output_dir=None):
     oq = readinput.get_oqparam(job_ini)
     output_dir = output_dir or os.path.dirname(job_ini)
     calc = base.calculators(oq)
+    calc.SourceManager = source.DummySourceManager
     calc.pre_execute()
+    calc.execute()
     calc.save_params()
-    ds = datastore.DataStore(calc.datastore.calc_id)
+    calc.datastore.close()
+    ds = datastore.DataStore(calc.datastore.calc_id, 'r')
     rw = ReportWriter(ds)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir

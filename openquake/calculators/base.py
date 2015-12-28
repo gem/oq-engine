@@ -203,7 +203,7 @@ class HazardCalculator(BaseCalculator):
     Base class for hazard calculators based on source models
     """
     riskmodel = datastore.persistent_attribute('riskmodel')
-
+    SourceManager = source.SourceManager
     mean_curves = None  # to be overridden
 
     def assoc_assets_sites(self, sitecol):
@@ -272,6 +272,7 @@ class HazardCalculator(BaseCalculator):
                         'reading composite source model', autoflush=True):
                     self.csm = readinput.get_composite_source_model(
                         self.oqparam)
+                    self.rlzs_assoc = self.csm.get_rlzs_assoc()
                     # we could manage limits here
                     self.job_info = readinput.get_job_info(
                         self.oqparam, self.csm, self.sitecol)
@@ -384,12 +385,11 @@ class HazardCalculator(BaseCalculator):
         Filter/split and send the sources to the worker tasks.
         """
         oq = self.oqparam
-        self.manager = source.SourceManager(
+        self.manager = self.SourceManager(
             self.csm, self.core_func.__func__, oq.concurrent_tasks,
             oq.maximum_distance, self.monitor.new(oqparam=oq))
         self.manager.submit_sources(self.sitecol)
         self.manager.store_source_info(self.datastore)
-        self.rlzs_assoc = self.manager.rlzs_assoc
 
     def post_process(self):
         """For compatibility with the engine"""
