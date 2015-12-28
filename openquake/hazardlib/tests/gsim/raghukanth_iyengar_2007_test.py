@@ -14,6 +14,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+Module exports:
+class:`RaghukanthIyengar2007TestCase`
+class:`RaghukanthIyengar2007KoynaWarnaTestCase`
+class:`RaghukanthIyengar2007SouthernTestCase`
+class:`RaghukanthIyengar2007WesternCentralTestCase`
+"""
+
 import warnings
 import numpy as np
 
@@ -40,9 +48,15 @@ class RaghukanthIyengar2007TestCase(BaseGSIMTestCase):
     TOL_PERCENT = 11.
 
     def test_mean(self):
+        """
+        Ensure that means match reference dataset.
+        """
         self.check(self.MEAN_FILE, max_discrep_percentage=self.TOL_PERCENT)
 
     def test_std_total(self):
+        """
+        Ensure that standard deviations match reference dataset.
+        """
         self.check(self.SIGMA_FILE, max_discrep_percentage=self.TOL_PERCENT)
 
     def test_warning(self):
@@ -64,16 +78,16 @@ class RaghukanthIyengar2007TestCase(BaseGSIMTestCase):
         # set critical value to trigger warning
         sctx.vs30 = np.array([170.])
 
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True) as warning_stream:
             warnings.simplefilter('always')
 
             mean = gmpe.get_mean_and_stddevs(
                 sctx, rctx, dctx, im_type, std_types)[0]
 
             # confirm type and content of warning
-            assert len(w) == 1
-            assert issubclass(w[-1].category, UserWarning)
-            assert 'not supported' in str(w[-1].message).lower()
+            assert len(warning_stream) == 1
+            assert issubclass(warning_stream[-1].category, UserWarning)
+            assert 'not supported' in str(warning_stream[-1].message).lower()
             assert np.all(np.isnan(mean))
 
 

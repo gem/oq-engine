@@ -32,18 +32,19 @@ from openquake.hazardlib import const, imt
 
 class RaghukanthIyengar2007(GMPE):
     """
-    Implements GMPE of Raghukanth & Iyengar (2007) for peninsular India.
+    Implements GMPE of Raghukanth & Iyengar (2007) for stable continental
+    regions of peninsular India.
 
     This model is intended to be used to predict ground motions in
     peninsular India, a  stable continental region with nonetheless
-    significant seismic hazard (see Section 1 "Introduction", p. 199
-    and Section 2 "Seismological model", p. 200)
+    significant seismic hazard (see Section 1 "Introduction", p. 199 and
+    Section 2 "Seismological model", p. 200)
 
     Reference:
 
-    Raghukanth, S. and Iyengar, R. (2007). Estimation of seismic
-    spectral acceleration in peninsular India. Journal of Earth
-    System Science, 116(3):199–214.
+    Raghukanth, S. and Iyengar, R. (2007). Estimation of seismic spectral
+    acceleration in peninsular India. Journal of Earth System Science,
+    116(3):199–214.
     """
 
     #: Supported tectonic region type is 'stable continental' since
@@ -101,17 +102,7 @@ class RaghukanthIyengar2007(GMPE):
     #:
     #: RaghukanthIyengar2007Southern COEFFS_BEDROCK (Table 2(b)) at 0.150 s:
     #:      change c1 from .1941 to 2.1941
-
-    NOT_VERIFIED = True
-
-    def __init__(self):
-
-        self.COEFFS_SITES = {
-            'A': self.COEFFS_NEHRP_A,
-            'B': self.COEFFS_NEHRP_B,
-            'C': self.COEFFS_NEHRP_C,
-            'D': self.COEFFS_NEHRP_D,
-            }
+    non_verified = True
 
     def get_mean_and_stddevs(self, sites, rup, dists, im_type, stddev_types):
         """
@@ -145,8 +136,8 @@ class RaghukanthIyengar2007(GMPE):
         coeffs = self.COEFFS_BEDROCK[im_type].copy()
 
         # obtain site-class specific coefficients
-        a1, a2, sigma_site = self._get_site_coeffs(sites, im_type)
-        coeffs.update({'a1': a1, 'a2': a2, 'sigma_site': sigma_site})
+        a_1, a_2, sigma_site = self._get_site_coeffs(sites, im_type)
+        coeffs.update({'a1': a_1, 'a2': a_2, 'sigma_site': sigma_site})
 
         # compute bedrock motion, equation (8)
         ln_mean = (self._compute_magnitude_terms(rup, coeffs) +
@@ -215,20 +206,20 @@ class RaghukanthIyengar2007(GMPE):
                    % type(self).__name__)
             warnings.warn(msg, UserWarning)
 
-        a1 = np.full_like(sites.vs30, np.nan)
-        a2 = np.full_like(sites.vs30, np.nan)
+        a_1 = np.full_like(sites.vs30, np.nan)
+        a_2 = np.full_like(sites.vs30, np.nan)
         sigma = np.full_like(sites.vs30, np.nan)
-        for key in self.COEFFS_SITES.keys():
+        for key in self.COEFFS_NEHRP.keys():
             indices = (site_classes == key) & ~is_bedrock
-            a1[indices] = self.COEFFS_SITES[key][im_type]['a1']
-            a2[indices] = self.COEFFS_SITES[key][im_type]['a2']
-            sigma[indices] = self.COEFFS_SITES[key][im_type]['sigma']
+            a_1[indices] = self.COEFFS_NEHRP[key][im_type]['a1']
+            a_2[indices] = self.COEFFS_NEHRP[key][im_type]['a2']
+            sigma[indices] = self.COEFFS_NEHRP[key][im_type]['sigma']
 
-        a1[is_bedrock] = 0.
-        a2[is_bedrock] = 0.
+        a_1[is_bedrock] = 0.
+        a_2[is_bedrock] = 0.
         sigma[is_bedrock] = 0.
 
-        return (a1, a2, sigma)
+        return (a_1, a_2, sigma)
 
     def is_bedrock(self, sites):
         """
@@ -241,9 +232,9 @@ class RaghukanthIyengar2007(GMPE):
 
     def get_nehrp_classes(self, sites):
         """
-        Site classification threshholds from Section 4 "Site
-        correction coefficients" p. 205. Note that site classes E
-        and F are not supported.
+        Site classification threshholds from Section 4 "Site correction
+        coefficients" p. 205. Note that site classes E and F are not
+        supported.
         """
 
         classes = sorted(self.NEHRP_VS30_UPPER_BOUNDS.keys())
@@ -293,7 +284,8 @@ class RaghukanthIyengar2007(GMPE):
     }
 
     #: Site class coefficients taken from Table 5, p. 208.
-    COEFFS_NEHRP_A = CoeffsTable(sa_damping=5., table="""\
+    COEFFS_NEHRP = {
+        'A': CoeffsTable(sa_damping=5., table="""\
       IMT  a1    a2  sigma
       PGA  0.  0.36   0.03
     0.010  0.  0.35   0.04
@@ -323,9 +315,8 @@ class RaghukanthIyengar2007(GMPE):
     2.500  0.  0.34   0.04
     3.000  0.  0.32   0.04
     4.000  0.  0.31   0.05
-    """)
-
-    COEFFS_NEHRP_B = CoeffsTable(sa_damping=5., table="""\
+    """),
+        'B': CoeffsTable(sa_damping=5., table="""\
       IMT  a1    a2  sigma
       PGA  0.  0.49   0.08
     0.010  0.  0.43   0.11
@@ -355,9 +346,8 @@ class RaghukanthIyengar2007(GMPE):
     2.500  0.  0.40   0.08
     3.000  0.  0.38   0.10
     4.000  0.  0.36   0.11
-    """)
-
-    COEFFS_NEHRP_C = CoeffsTable(sa_damping=5., table="""\
+    """),
+        'C': CoeffsTable(sa_damping=5., table="""\
       IMT    a1    a2  sigma
       PGA -0.89  0.66   0.23
     0.010 -0.89  0.66   0.23
@@ -387,9 +377,8 @@ class RaghukanthIyengar2007(GMPE):
     2.500 -0.15  0.39   0.08
     3.000 -0.17  0.32   0.09
     4.000 -0.19  0.35   0.08
-    """)
-
-    COEFFS_NEHRP_D = CoeffsTable(sa_damping=5., table="""\
+    """),
+        'D': CoeffsTable(sa_damping=5., table="""\
       IMT    a1    a2  sigma
       PGA -2.61  0.80   0.36
     0.010 -2.62  0.80   0.37
@@ -419,7 +408,8 @@ class RaghukanthIyengar2007(GMPE):
     2.500  0.37  0.68   0.15
     3.000  0.13  0.60   0.13
     4.000  0.12  0.44   0.15
-    """)
+    """),
+    }
 
     NEHRP_VS30_UPPER_BOUNDS = {
         'A': np.inf,
@@ -432,12 +422,12 @@ class RaghukanthIyengar2007(GMPE):
 
 class RaghukanthIyengar2007KoynaWarna(RaghukanthIyengar2007):
     """
-    Implements GMPE of Raghukanth & Iyengar (2007) for the
-    Koyna-Warna region of India.
+    Implements GMPE of Raghukanth & Iyengar (2007) for the Koyna-Warna
+    region of India.
 
     The Koyna-Warna region is defined for the purpose of this GMPE by
-    Figure 2. It is approximately a circle of 2° radius centered on
-    17°N 75°E.
+    Figure 2. It is approximately a circle of 2° radius centered on 17°N
+    75°E.
     """
 
     #: Coefficients taken from Table 2(a), p. 202.
@@ -478,14 +468,13 @@ class RaghukanthIyengar2007Southern(RaghukanthIyengar2007):
     """
     Implements GMPE of Raghukanth & Iyengar (2007) for southern India.
 
-    Southern India is defined for the purpose of this GMPE by Figure 2,
-    p. 201. It is that part of India which is south of a line
-    from from approximately 22°N 72°E to 17°N 83°E and excluding the
-    Koyna-Warna region, approximately a circle of 2° radius centered
-    on 17°N 75°E.
+    Southern India is defined for the purpose of this GMPE by Figure 2, p.
+    201. It is that part of India which is south of a line from from
+    approximately 22°N 72°E to 17°N 83°E and excluding the Koyna-Warna
+    region, approximately a circle of 2° radius centered on 17°N 75°E.
 
-    Note that in Table 2(b) coefficient c1 at 0.150 s is inexplicably missing
-    the digit before the decimal point. This was assumed to be "2".
+    Note that in Table 2(b) coefficient c1 at 0.150 s is inexplicably
+    missing the digit before the decimal point. This was assumed to be "2".
     """
 
     #: Coefficients taken from Table 2(b), p. 203.
@@ -524,12 +513,11 @@ class RaghukanthIyengar2007Southern(RaghukanthIyengar2007):
 
 class RaghukanthIyengar2007WesternCentral(RaghukanthIyengar2007):
     """
-    Implements GMPE of Raghukanth & Iyengar (2007) for
-    western-central India.
+    Implements GMPE of Raghukanth & Iyengar (2007) for western-central India.
 
-    Western-central India is defined for the purpose of this GMPE by
-    Figure 2, p. 201. It is that part of India which is north of a
-    line from from approximately 22°N 72°E to 17°N 83°E.
+    Western-central India is defined for the purpose of this GMPE by Figure
+    2, p. 201. It is that part of India which is north of a line from from
+    approximately 22°N 72°E to 17°N 83°E.
     """
 
     #: Coefficients taken from Table 2(c), p. 204.

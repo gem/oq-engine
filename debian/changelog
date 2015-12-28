@@ -1,3 +1,7 @@
+  [Nick Ackerley]
+  * Implemented GMPE of Raghukanth & Iyengar (2007) for stable continental
+    regions of peninsular India.
+    
   [Michele Simionato]
   * Optimized the case of multiple GSIMs by instantiating the
     ruptures/sites/distances contexts only once
