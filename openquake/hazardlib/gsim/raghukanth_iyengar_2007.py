@@ -16,11 +16,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports:
-class:`RaghukanthIyengar2007`
-class:`RaghukanthIyengar2007KoynaWarna`
-class:`RaghukanthIyengar2007Southern`
-class:`RaghukanthIyengar2007WesternCentral`
+Module
+:mod:`openquake.hazardlib.gsim.raghukanth_iyengar_2007`
+exports
+:class:`RaghukanthIyengar2007`
+:class:`RaghukanthIyengar2007KoynaWarna`
+:class:`RaghukanthIyengar2007Southern`
+:class:`RaghukanthIyengar2007WesternCentral`
 """
 
 from __future__ import division

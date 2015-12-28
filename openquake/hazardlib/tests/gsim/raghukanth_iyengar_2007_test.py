@@ -15,11 +15,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports:
-class:`RaghukanthIyengar2007TestCase`
-class:`RaghukanthIyengar2007KoynaWarnaTestCase`
-class:`RaghukanthIyengar2007SouthernTestCase`
-class:`RaghukanthIyengar2007WesternCentralTestCase`
+Module
+:mod:`openquake.hazardlib.gsim.raghukanth_iyengar_2007_test`
+defines
+:class:`RaghukanthIyengar2007TestCase`
+:class:`RaghukanthIyengar2007KoynaWarnaTestCase`
+:class:`RaghukanthIyengar2007SouthernTestCase`
+:class:`RaghukanthIyengar2007WesternCentralTestCase`
+for testing of
+:class:`openquake.hazardlib.gsim.raghukanth_iyengar_2007.RaghukanthIyengar2007`
+and subclasses of same.
 """
 
 import warnings
