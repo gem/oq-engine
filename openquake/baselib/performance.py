@@ -214,12 +214,14 @@ class DummyMonitor(PerformanceMonitor):
         self.hdf5path = None
         self.children = []
         self.counts = 0
+        self._start_time = self._stop_time = time.time()
 
     def __enter__(self):
+        self._start_time = time.time()
         return self
 
     def __exit__(self, etype, exc, tb):
-        pass
+        self._stop_time = time.time()
 
     def flush(self):
         pass
