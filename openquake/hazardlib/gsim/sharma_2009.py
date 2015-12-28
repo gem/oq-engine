@@ -187,7 +187,7 @@ class SharmaEtAl2009(GMPE):
         Contrast with 45 degree threshhold used by 30 degree
         threshhold used in :mod:`openquake.hazardlib.gsim.zhao_2006`.
 
-        :raises ValueError:
+        :raises UserWarning:
             If mechanism is determined to be normal faulting, since
             as summarized in Table 2 on p. 1197 the data used for
             regression included only reverse and stike-slip events.
@@ -201,14 +201,16 @@ class SharmaEtAl2009(GMPE):
         # reverse raulting
         is_reverse = np.array(RAKE_THRESH < rup.rake < (180. - RAKE_THRESH))
 
+        is_strike_slip = ~is_reverse
+        is_strike_slip = is_strike_slip.astype(float)
+
         if is_normal.any():
             msg = ('Normal faulting is not supported by %s'
                    % type(self).__name__)
             warnings.warn(msg, UserWarning)
+            is_strike_slip[is_normal] = np.nan
 
-        is_reverse[is_normal] = np.nan
-
-        return ~is_reverse
+        return is_strike_slip
 
     #: Coefficients taken from Table 2, p. 1202. Note that "In
     #: this article, only the coefficients for a subset of these
@@ -231,7 +233,7 @@ class SharmaEtAl2009(GMPE):
     2.50 -2.9420  0.5671 -0.8270  0.0054 -0.2710  0.3959
     """)
 
-    #: "After trials with different values b 4 was fixed to be 15km for
+    #: "After trials with different values b4 was fixed to be 15km for
     #: all periods." (Sharma et al., 2009, p. 1201)
     CONSTS = {
         'b4': 15.0
