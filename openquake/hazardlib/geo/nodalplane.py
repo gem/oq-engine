@@ -64,7 +64,7 @@ class NodalPlane(object):
         and raise ``ValueError`` otherwise.
         """
         if not 0 <= strike < 360:
-            raise ValueError('strike  %g is out of range [0, 360)' % strike)
+            raise ValueError('strike %g is out of range [0, 360)' % strike)
 
     @classmethod
     def check_rake(cls, rake):
