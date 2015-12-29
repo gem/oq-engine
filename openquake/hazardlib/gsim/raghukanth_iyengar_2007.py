@@ -87,7 +87,7 @@ class RaghukanthIyengar2007(GMPE):
 
     #: Verification of mean value data was done by digitizing Figures 3 and
     #: 5 using http://arohatgi.info/WebPlotDigitizer/ app/. Maximum error
-    #: was relatively high, approximately 9%, but could be reduced to
+    #: was relatively high, approximately 10%, but could be reduced to
     #: approximately 1.5% by making the following changes to what may be
     #: typographical errors in the published coefficients. In each case the
     #: value sugstituted is interpolated from neighbouring values.
