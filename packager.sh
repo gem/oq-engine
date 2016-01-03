@@ -255,6 +255,32 @@ _pkgtest_innervm_run () {
     return
 }
 
+_builddoc_innervm_run () {
+    local i lxc_ip="$1"
+
+    trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
+
+    ssh $lxc_ip "sudo apt-get update"
+    ssh $lxc_ip "sudo apt-get upgrade -y"
+
+    gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
+    # install package to manage repository properly
+    # ssh $lxc_ip "sudo apt-get install -y python-software-properties"
+
+    pkgs_list="$(deps_list debian/control)"
+    ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+
+    # TODO: version check
+    git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
+
+    ssh $lxc_ip "cd ${GEM_GIT_PACKAGE} ; export PYTHONPATH=\$PWD ; cd doc ; make html"
+    scp -r "$lxc_ip:${GEM_GIT_PACKAGE}/doc/build/html" "out_${BUILD_UBUVER}/"
+
+    trap ERR
+
+    return
+}
+
 deps_list() {
     local oldifs out_list i filename="$1" build_only="$2"
 
@@ -440,6 +466,30 @@ EOF
     return
 }
 
+builddoc_run () {
+    if [ ! -d "out_${BUILD_UBUVER}" ]; then
+        mkdir "out_${BUILD_UBUVER}"
+    fi
+
+    sudo echo
+    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+
+    _wait_ssh $lxc_ip
+
+    set +e
+    _builddoc_innervm_run $lxc_ip
+    inner_ret=$?
+    sudo $LXC_TERM -n $lxc_name
+    set -e
+
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
+
+    return $inner_ret
+}
+
 #
 #  MAIN
 #
@@ -505,6 +555,11 @@ while [ $# -gt 0 ]; do
         pkgtest)
             # Sed removes 'origin/' from the branch name
             pkgtest_run $(echo "$2" | sed 's@.*/@@g')
+            exit $?
+            break
+            ;;
+        builddoc)
+            builddoc_run $(echo "$2" | sed 's@.*/@@g')
             exit $?
             break
             ;;
