@@ -23,7 +23,7 @@ from openquake.commonlib import parallel, riskmodels
 from openquake.risklib import scientific
 from openquake.calculators import base
 
-F64 = numpy.float64
+F32 = numpy.float32
 
 
 def dist_by_asset(data, multi_stat_dt):
@@ -104,8 +104,8 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     T = len(monitor.taxonomies)
     taxo2idx = {taxo: i for i, taxo in enumerate(monitor.taxonomies)}
     lt2idx = {lt: i for i, lt in enumerate(riskmodel.loss_types)}
-    result = dict(d_asset=[], d_taxon=numpy.zeros((T, L, R, E, D), F64),
-                  c_asset=[], c_taxon=numpy.zeros((T, L, R, E), F64))
+    result = dict(d_asset=[], d_taxon=numpy.zeros((T, L, R, E, D), F32),
+                  c_asset=[], c_taxon=numpy.zeros((T, L, R, E), F32))
     for out_by_rlz in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:
@@ -164,10 +164,10 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         # damage distributions
         dt_list = []
         for ltype in ltypes:
-            dt_list.append((ltype, numpy.dtype([('mean', (F64, D)),
-                                                ('stddev', (F64, D))])))
+            dt_list.append((ltype, numpy.dtype([('mean', (F32, D)),
+                                                ('stddev', (F32, D))])))
         multi_stat_dt = numpy.dtype(dt_list)
-        d_asset = numpy.zeros((N, L, R, 2, D), F64)
+        d_asset = numpy.zeros((N, L, R, 2, D), F32)
         for (l, r, a, stat) in result['d_asset']:
             d_asset[a, l, r] = stat
         self.datastore['dmg_by_asset'] = dist_by_asset(
@@ -179,11 +179,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # consequence distributions
         if result['c_asset']:
-            c_asset = numpy.zeros((N, L, R, 2), F64)
+            c_asset = numpy.zeros((N, L, R, 2), F32)
             for (l, r, a, stat) in result['c_asset']:
                 c_asset[a, l, r] = stat
             multi_stat_dt = numpy.dtype(
-                [(lt, [('mean', F64), ('stddev', F64)]) for lt in ltypes])
+                [(lt, [('mean', F32), ('stddev', F32)]) for lt in ltypes])
             self.datastore['csq_by_asset'] = dist_by_asset(
                 c_asset, multi_stat_dt)
             self.datastore['csq_by_taxon'] = dist_by_taxon(

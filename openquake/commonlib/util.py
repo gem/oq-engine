@@ -84,7 +84,7 @@ def rmsep(array_ref, array, min_value=0.01):
     return numpy.sqrt(reldiffsquare.mean())
 
 
-def compose_arrays(a1, a2):
+def compose_arrays(a1, a2, firstfield='tag'):
     """
     Compose composite arrays by generating an extended datatype containing
     all the fields. The two arrays must have the same length.
@@ -92,7 +92,7 @@ def compose_arrays(a1, a2):
     assert len(a1) == len(a2),  (len(a1), len(a2))
     if a1.dtype.names is None and len(a1.shape) == 1:
         # the first array is not composite, but it is one-dimensional
-        a1 = numpy.array(a1, numpy.dtype([('tag', a1.dtype)]))
+        a1 = numpy.array(a1, numpy.dtype([(firstfield, a1.dtype)]))
 
     fields1 = [(f, a1.dtype.fields[f][0]) for f in a1.dtype.names]
     if a2.dtype.names is None:  # the second array is not composite
