@@ -24,6 +24,7 @@ from openquake.risklib import scientific
 from openquake.calculators import base
 
 F32 = numpy.float32
+F64 = numpy.float64
 
 
 def dist_by_asset(data, multi_stat_dt):
@@ -104,8 +105,8 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     T = len(monitor.taxonomies)
     taxo2idx = {taxo: i for i, taxo in enumerate(monitor.taxonomies)}
     lt2idx = {lt: i for i, lt in enumerate(riskmodel.loss_types)}
-    result = dict(d_asset=[], d_taxon=numpy.zeros((T, L, R, E, D), F32),
-                  c_asset=[], c_taxon=numpy.zeros((T, L, R, E), F32))
+    result = dict(d_asset=[], d_taxon=numpy.zeros((T, L, R, E, D), F64),
+                  c_asset=[], c_taxon=numpy.zeros((T, L, R, E), F64))
     for out_by_rlz in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:
