@@ -11,9 +11,9 @@ xmlns:gml="http://www.opengis.net/gml"
             <taxonomy>
                 Wood
             </taxonomy>
-            <damage ds="no_damage" mean="3.0328841E-01" stddev="2.1714586E-01"/>
-            <damage ds="slight" mean="2.9927179E-01" stddev="7.9032393E-02"/>
-            <damage ds="moderate" mean="1.5820503E-01" stddev="5.8145316E-02"/>
+            <damage ds="no_damage" mean="3.0328840E-01" stddev="2.1714586E-01"/>
+            <damage ds="slight" mean="2.9927179E-01" stddev="7.9032391E-02"/>
+            <damage ds="moderate" mean="1.5820503E-01" stddev="5.8145314E-02"/>
             <damage ds="extreme" mean="8.7466612E-02" stddev="5.2291457E-02"/>
             <damage ds="complete" mean="1.5176816E-01" stddev="1.5844199E-01"/>
         </DDNode>
