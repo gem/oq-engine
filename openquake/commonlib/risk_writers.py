@@ -931,7 +931,7 @@ class DamageWriter(object):
         :returns: a `gml:Point` node
         """
         return Node('gml:Point',
-                    nodes=[Node('gml:pos', text='%s %s' % (loc.x, loc.y))])
+                    nodes=[Node('gml:pos', text='%.5f %.5f' % (loc.x, loc.y))])
 
     def asset_node(self, asset_ref, means, stddevs):
         """

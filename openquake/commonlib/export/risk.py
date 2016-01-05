@@ -378,6 +378,7 @@ def export_rlzs_by_asset_csv(ekey, dstore):
 
 @export.add(('csq_by_taxon', 'csv'))
 def export_csq_by_taxon_csv(ekey, dstore):
+    taxonomies = dstore['taxonomies'].value
     rlzs = dstore['rlzs_assoc'].realizations
     R = len(rlzs)
     value = dstore[ekey[0]].value  # matrix T x R
@@ -385,7 +386,7 @@ def export_csq_by_taxon_csv(ekey, dstore):
     for rlz, values in zip(rlzs, value.T):
         suffix = '.csv' if R == 1 else '-gsimltp_%s.csv' % rlz.uid
         fname = dstore.export_path(ekey[0] + suffix)
-        writer.save(values, fname)
+        writer.save(compose_arrays(taxonomies, values, 'taxonomy'), fname)
     return writer.getsaved()
 
 

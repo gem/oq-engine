@@ -1,4 +1,4 @@
-contents-mean:float64,contents-stddev:float64,nonstructural-mean:float64,nonstructural-stddev:float64,structural-mean:float64,structural-stddev:float64
-5.482033E+03,1.711507E+03,6.425368E+03,2.965169E+03,1.935653E+03,1.734820E+03
-1.568593E+03,1.179163E+03,4.531460E+03,2.821966E+03,5.978970E+02,7.437096E+02
-9.509954E+02,7.134587E+02,2.889041E+03,1.663326E+03,3.340948E+02,3.867999E+02
+taxonomy:|S100,contents-mean,contents-stddev,nonstructural-mean,nonstructural-stddev,structural-mean,structural-stddev
+tax1,5.482033E+03,1.711507E+03,6.425369E+03,2.965169E+03,1.935653E+03,1.734820E+03
+tax2,1.568593E+03,1.179163E+03,4.531460E+03,2.821967E+03,5.978970E+02,7.437096E+02
+tax3,9.509954E+02,7.134587E+02,2.889041E+03,1.663326E+03,3.340948E+02,3.867999E+02

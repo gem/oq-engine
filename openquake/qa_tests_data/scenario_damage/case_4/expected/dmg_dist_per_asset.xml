@@ -10,43 +10,43 @@ xmlns:gml="http://www.opengis.net/gml"
         <DDNode>
             <gml:Point>
                 <gml:pos>
-                    81.2985 29.1098
+                    81.29850 29.10980
                 </gml:pos>
             </gml:Point>
             <asset
             assetRef="a1"
             >
-                <damage ds="no_damage" mean="2.6659251E+03" stddev="3.8540885E+02"/>
-                <damage ds="LS1" mean="3.2092497E+02" stddev="3.6327497E+02"/>
+                <damage ds="no_damage" mean="2.6659250E+03" stddev="3.8540884E+02"/>
+                <damage ds="LS1" mean="3.2092496E+02" stddev="3.6327496E+02"/>
                 <damage ds="LS2" mean="1.3149887E+01" stddev="2.3862005E+01"/>
             </asset>
         </DDNode>
         <DDNode>
             <gml:Point>
                 <gml:pos>
-                    83.0823 27.9006
+                    83.08230 27.90060
                 </gml:pos>
             </gml:Point>
             <asset
             assetRef="a2"
             >
-                <damage ds="no_damage" mean="2.0826853E+02" stddev="3.0739570E+02"/>
-                <damage ds="LS1" mean="5.3367381E+02" stddev="1.7719037E+02"/>
-                <damage ds="LS2" mean="2.5805766E+02" stddev="2.5157743E+02"/>
+                <damage ds="no_damage" mean="2.0826854E+02" stddev="3.0739569E+02"/>
+                <damage ds="LS1" mean="5.3367383E+02" stddev="1.7719037E+02"/>
+                <damage ds="LS2" mean="2.5805765E+02" stddev="2.5157742E+02"/>
             </asset>
         </DDNode>
         <DDNode>
             <gml:Point>
                 <gml:pos>
-                    85.7477 27.9015
+                    85.74770 27.90150
                 </gml:pos>
             </gml:Point>
             <asset
             assetRef="a3"
             >
-                <damage ds="no_damage" mean="6.3869839E+02" stddev="7.5799179E+02"/>
-                <damage ds="LS1" mean="6.7041720E+02" stddev="5.3936487E+02"/>
-                <damage ds="LS2" mean="6.9088441E+02" stddev="8.8318510E+02"/>
+                <damage ds="no_damage" mean="6.3869836E+02" stddev="7.5799176E+02"/>
+                <damage ds="LS1" mean="6.7041718E+02" stddev="5.3936487E+02"/>
+                <damage ds="LS2" mean="6.9088440E+02" stddev="8.8318512E+02"/>
             </asset>
         </DDNode>
     </dmgDistPerAsset>
