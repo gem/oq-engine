@@ -21,8 +21,7 @@ class ClassicalTilingTestCase(CalculatorTestCase):
                out.get(('hmaps', 'csv'), []))
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
-            self.assertEqualFiles('expected/%s' % fname, actual,
-                                  lambda lines: lines[1:], delta=1E-6)
+            self.assertEqualFiles('expected/%s' % fname, actual, delta=1E-6)
 
     @attr('qa', 'hazard', 'classical_tiling')
     def test_case_2(self):
