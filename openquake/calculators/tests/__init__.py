@@ -34,7 +34,12 @@ class DifferentFiles(Exception):
 def columns(line):
     data = []
     for column in line.split(','):
-        data.append(numpy.array(list(map(float, column.split(' ')))))
+        try:
+            floats = list(map(float, column.split(' ')))
+        except ValueError:  # skip header
+            pass
+        else:
+            data.append(numpy.array(floats))
     return data
 
 
@@ -47,7 +52,7 @@ def get_datastore(calc):
 
 
 class CalculatorTestCase(unittest.TestCase):
-    OVERWRITE_EXPECTED = True
+    OVERWRITE_EXPECTED = False
 
     def get_calc(self, testfile, job_ini, **kw):
         """
