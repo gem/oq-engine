@@ -7,7 +7,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <CMNode>
             <gml:Point>
                 <gml:pos>
-                    -75.07679 6.90913
+                    -75.0768 6.90913
                 </gml:pos>
             </gml:Point>
             <cf assetRef="ant_13_S1" mean="3.7066869E-08" stdDev="7.6173158E-08"/>
