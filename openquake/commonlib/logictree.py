@@ -41,7 +41,7 @@ from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib
 from openquake.hazardlib import geo
-from openquake.commonlib import nrml, valid
+from openquake.commonlib import valid
 from openquake.commonlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 
@@ -501,7 +501,6 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         If logic tree file has a logic error, which can not be prevented
         by xml schema rules (like referencing sources with missing id).
     """
-    NRML = nrml.NAMESPACE
     FILTERS = ('applyToTectonicRegionType',
                'applyToSources',
                'applyToSourceType')
@@ -521,7 +520,9 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         except etree.ParseError as exc:
             # Wrap etree parsing exception to :exc:`ParsingError`.
             raise ParsingError(self.filename, str(exc))
-        [tree] = tree.findall('{%s}logicTree' % self.NRML)
+        # {http://openquake.org/xmlns/nrml/VERSION}
+        self.NRML = tree.getroot().tag[:-4]
+        [tree] = tree.findall('%slogicTree' % self.NRML)
         self.root_branchset = None
         self.parse_tree(tree, validate)
 
@@ -541,7 +542,7 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         :meth:`validate_tree` when done. Also passes that value
         to :meth:`parse_branchinglevel`.
         """
-        levels = tree_node.findall('{%s}logicTreeBranchingLevel' % self.NRML)
+        levels = tree_node.findall('%slogicTreeBranchingLevel' % self.NRML)
         for depth, branchinglevel_node in enumerate(levels):
             self.parse_branchinglevel(branchinglevel_node, depth, validate)
         if validate:
@@ -569,7 +570,7 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         can have child branchsets (if there is one on the next level).
         """
         new_open_ends = set()
-        branchsets = branchinglevel_node.findall('{%s}logicTreeBranchSet' %
+        branchsets = branchinglevel_node.findall('%slogicTreeBranchSet' %
                                                  self.NRML)
         for number, branchset_node in enumerate(branchsets):
             if self.skip_branchset_condition(branchset_node.attrib):
@@ -633,13 +634,13 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
             ``None``, all branches are attached to provided branchset.
         """
         weight_sum = 0
-        branches = branchset_node.findall('{%s}logicTreeBranch' % self.NRML)
+        branches = branchset_node.findall('%slogicTreeBranch' % self.NRML)
         for branchnode in branches:
-            weight = branchnode.find('{%s}uncertaintyWeight' % self.NRML).text
+            weight = branchnode.find('%suncertaintyWeight' % self.NRML).text
             weight = Decimal(weight.strip())
             weight_sum += weight
             value_node = node_from_elem(
-                branchnode.find('{%s}uncertaintyModel' % self.NRML),
+                branchnode.find('%suncertaintyModel' % self.NRML),
                 nodefactory=LiteralNode
                 )
             if validate:
@@ -1234,9 +1235,9 @@ class SourceModelLogicTree(BaseLogicTree):
         information is used then for :meth:`validate_filters` and
         :meth:`validate_uncertainty_value`.
         """
-        all_source_types = set('{%s}%sSource' % (self.NRML, tagname)
+        all_source_types = set('%s%sSource' % (self.NRML, tagname)
                                for tagname in self.SOURCE_TYPES)
-        sourcetype_slice = slice(len('{%s}' % self.NRML), - len('Source'))
+        sourcetype_slice = slice(len('%s' % self.NRML), - len('Source'))
 
         fh = self._get_source_model(source_model)
         eventstream = iterparse(fh)
