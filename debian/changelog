@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Reduced the precision of the site mesh to 32 bits
   * The source model logic tree parser supports NRML 0.5
   * Reduced the precision of the scenario_damage outputs to 32 bits
   * Added an XML exporter for the UHS curves
