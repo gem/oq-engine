@@ -319,7 +319,7 @@ def export_hazard_curves_csv(key, dest, sitecol, curves_by_imt,
     # the + 1 is needed since the 0-th column contains lon lat
     rows = numpy.empty((nsites, len(imtls) + 1), dtype=object)
     for sid, lon, lat in zip(range(nsites), sitecol.lons, sitecol.lats):
-        rows[sid, 0] = '%s %s' % (lon, lat)
+        rows[sid, 0] = '%.5f %.5f' % (lon, lat)
     for i, imt in enumerate(curves_by_imt.dtype.names, 1):
         for sid, curve in zip(range(nsites), curves_by_imt[imt]):
             rows[sid, i] = scientificformat(curve, fmt='%11.7E')
@@ -393,8 +393,10 @@ def export_hcurves_csv(ekey, dstore):
         fname = hazard_curve_name(
             dstore, ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
         if key == 'uhs':
-            uhs_curves = calc.make_uhs(hcurves, oq.poes)
+            uhs_curves = calc.make_uhs(hcurves, oq.imtls, oq.poes)
             write_csv(fname, util.compose_arrays(sitemesh, uhs_curves))
+        elif key == 'hmaps':
+            write_csv(fname, util.compose_arrays(sitemesh, hcurves))
         else:
             export_hazard_curves_csv(ekey, fname, sitecol, hcurves, oq.imtls)
         fnames.append(fname)
@@ -436,7 +438,7 @@ def export_uhs_xml(ekey, dstore):
     for kind, hmaps in dstore['hmaps'].items():
         metadata = get_metadata(rlzs_assoc.realizations, kind)
         _, periods = calc.get_imts_periods(oq.imtls)
-        uhs = calc.make_uhs(hmaps, oq.poes)
+        uhs = calc.make_uhs(hmaps, oq.imtls, oq.poes)
         for poe in oq.poes:
             poe_str = 'poe~%s' % poe
             fname = hazard_curve_name(
