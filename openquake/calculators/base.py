@@ -45,6 +45,7 @@ calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
 
 Site = collections.namedtuple('Site', 'sid lon lat')
 
+F32 = numpy.float32
 
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
@@ -361,7 +362,7 @@ class HazardCalculator(BaseCalculator):
         if ('sitemesh' not in self.datastore and
                 'sitemesh' not in self.datastore.parent):
             col = self.sitecol.complete
-            mesh_dt = numpy.dtype([('lon', float), ('lat', float)])
+            mesh_dt = numpy.dtype([('lon', F32), ('lat', F32)])
             self.sitemesh = numpy.array(list(zip(col.lons, col.lats)), mesh_dt)
 
     def read_sources(self):
