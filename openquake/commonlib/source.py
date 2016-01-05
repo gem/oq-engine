@@ -793,6 +793,7 @@ class SourceManager(object):
                 key=lambda info: info.filter_time + info.split_time,
                 reverse=True)
             dstore['pre_source_info'] = numpy.array(self.infos, source_info_dt)
+            dstore['pre_source_info'].attrs['maxweight'] = self.maxweight
             del self.infos[:]
 
     def update(self):
