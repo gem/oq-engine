@@ -45,16 +45,19 @@ def zero_curves(num_sites, imtls):
     return zero
 
 
-def zero_maps(num_sites, imts):
+def zero_maps(num_sites, imts, poes=()):
     """
     :param num_sites: the number of sites
     :param imts: the intensity measure types
     :returns: an array of zero curves with length num_sites
     """
     # numpy dtype for the hazard maps
-    imt_dt = numpy.dtype([(imt, float) for imt in imts])
-    zero = numpy.zeros(num_sites, imt_dt)
-    return zero
+    if poes:
+        imt_dt = numpy.dtype([('%s~%s' % (imt, poe), float)
+                              for imt in imts for poe in poes])
+    else:
+        imt_dt = numpy.dtype([(imt, float) for imt in imts])
+    return numpy.zeros(num_sites, imt_dt)
 
 
 def agg_curves(acc, curves):
