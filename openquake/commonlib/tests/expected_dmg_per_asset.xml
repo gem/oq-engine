@@ -10,7 +10,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <DDNode>
             <gml:Point>
                 <gml:pos>
-                    -117.0 42.0
+                    -117.00000 42.00000
                 </gml:pos>
             </gml:Point>
             <asset
@@ -35,7 +35,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <DDNode>
             <gml:Point>
                 <gml:pos>
-                    -116.0 41.0
+                    -116.00000 41.00000
                 </gml:pos>
             </gml:Point>
             <asset
