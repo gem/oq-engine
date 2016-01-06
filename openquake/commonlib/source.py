@@ -725,13 +725,14 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def display(msg):
+def display(msg, width=128):
     """
-    An utility to display one-liners on stdout
+    An utility to display one-liners on stdout, left justified on 128 chars
     """
-    sys.stdout.write(msg)
+    ljust_msg = msg.ljust(width)
+    sys.stdout.write(ljust_msg)
     sys.stdout.flush()
-    sys.stdout.write('\x08' * len(msg))
+    sys.stdout.write('\x08' * len(ljust_msg))
 
 
 class SourceManager(object):
