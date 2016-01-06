@@ -260,6 +260,6 @@ def make_uhs(maps, imtls, poes):
     uhs = numpy.zeros(N, uhs_dt)
     for i in range(N):
         for poe, poename in zip(poes, uhs_dt.names):
-            for imt in imts:
-                uhs[poename][i] = maps['%s~%s' % (imt, poe)][i]
+            uhs[poename][i] = tuple(maps['%s~%s' % (imt, poe)][i]
+                                    for imt in imts)
     return uhs
