@@ -756,17 +756,17 @@ class SourceManager(object):
                     self.maximum_distance, sitecol)
             if sites is not None:
                 self.sources_by_trt[src.trt_model_id].append(src)
-                if distribute and kind == 'heavy':
-                    if src.id not in self.split_map:
-                        logging.info('Splitting %s', src)
-                        with split_mon:
-                            sources = sourceconverter.split_source(src)
-                            self.split_map[src.id] = list(sources)
-                    for ss in self.split_map[src.id]:
-                        ss.id = src.id
-                        yield ss
-                else:
-                    yield src
+                # if distribute and kind == 'heavy':
+                if src.id not in self.split_map:
+                    logging.info('Splitting %s', src)
+                    with split_mon:
+                        sources = sourceconverter.split_source(src)
+                        self.split_map[src.id] = list(sources)
+                for ss in self.split_map[src.id]:
+                    ss.id = src.id
+                    yield ss
+                # else:
+                #    yield src
             sources = [] if sites is None else [src]
             self.infos.append(
                 SourceInfo(src.trt_model_id, src.source_id,
