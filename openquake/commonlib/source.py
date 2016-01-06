@@ -752,7 +752,8 @@ class SourceManager(object):
 
     def get_sources(self, kind, sitecol):
         """
-        Get and split all the sources of kind `kind` affecting the `sitecol`
+        Get and the sources of kind `kind` affecting the `sitecol`; split
+        the heavy sources
         """
         self.infos = []
         filter_mon = self.monitor('filtering sources')
@@ -764,14 +765,17 @@ class SourceManager(object):
                     self.maximum_distance, sitecol)
             if sites is not None:
                 self.sources_by_trt[src.trt_model_id].append(src)
-                if src.id not in self.split_map:
-                    display('Splitting %s' % src)
-                    with split_mon:
-                        sources = sourceconverter.split_source(src)
-                        self.split_map[src.id] = list(sources)
-                for ss in self.split_map[src.id]:
-                    ss.id = src.id
-                    yield ss
+                if kind == 'heavy':
+                    if src.id not in self.split_map:
+                        with split_mon:
+                            display('processing/splitting %s' % src)
+                            sources = sourceconverter.split_source(src)
+                            self.split_map[src.id] = list(sources)
+                    for ss in self.split_map[src.id]:
+                        ss.id = src.id
+                        yield ss
+                else:
+                    yield src
             sources = [] if sites is None else [src]
             self.infos.append(
                 SourceInfo(src.trt_model_id, src.source_id,
