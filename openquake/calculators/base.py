@@ -286,6 +286,7 @@ class HazardCalculator(BaseCalculator):
                         self.job_info['output_weight'])
                 with self.monitor('sending the sources', autoflush=True):
                     self.send_sources()
+                logging.info('Sent %d tasks', len(self.manager.tm.results))
         self.datastore.hdf5.flush()
 
     def read_exposure(self):
