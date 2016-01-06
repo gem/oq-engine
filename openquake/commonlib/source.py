@@ -1,4 +1,3 @@
-from __future__ import division
 # Copyright (c) 2010-2015, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -13,7 +12,8 @@ from __future__ import division
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import division
+import sys
 import math
 import logging
 import operator
@@ -725,6 +725,15 @@ source_info_dt = numpy.dtype([
 ])
 
 
+def display(msg):
+    """
+    An utility to display one-liners on stdout
+    """
+    sys.stdout.write(msg)
+    sys.stdout.flush()
+    sys.stdout.write('\x08' * len(msg))
+
+
 class SourceManager(object):
     """
     Manager associated to a CompositeSourceModel instance.
@@ -746,7 +755,7 @@ class SourceManager(object):
         """
         self.infos = []
         filter_mon = self.monitor('filtering sources')
-        split_mon = self.monitor('splitting heavy sources')
+        split_mon = self.monitor('splitting sources')
         self.sources_by_trt = collections.defaultdict(list)
         for src in self.csm.get_sources(kind):
             with filter_mon:
@@ -755,7 +764,7 @@ class SourceManager(object):
             if sites is not None:
                 self.sources_by_trt[src.trt_model_id].append(src)
                 if src.id not in self.split_map:
-                    logging.info('Splitting %s', src)
+                    display('Splitting %s' % src)
                     with split_mon:
                         sources = sourceconverter.split_source(src)
                         self.split_map[src.id] = list(sources)
