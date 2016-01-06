@@ -742,10 +742,8 @@ class SourceManager(object):
 
     def get_sources(self, kind, sitecol):
         """
-        Get all the sources of kind `kind` affecting the `sitecol`;
-        heavy sources are split.
+        Get and split all the sources of kind `kind` affecting the `sitecol`
         """
-        distribute = not self.tm.no_distribute
         self.infos = []
         filter_mon = self.monitor('filtering sources')
         split_mon = self.monitor('splitting heavy sources')
@@ -756,7 +754,6 @@ class SourceManager(object):
                     self.maximum_distance, sitecol)
             if sites is not None:
                 self.sources_by_trt[src.trt_model_id].append(src)
-                # if distribute and kind == 'heavy':
                 if src.id not in self.split_map:
                     logging.info('Splitting %s', src)
                     with split_mon:
@@ -765,8 +762,6 @@ class SourceManager(object):
                 for ss in self.split_map[src.id]:
                     ss.id = src.id
                     yield ss
-                # else:
-                #    yield src
             sources = [] if sites is None else [src]
             self.infos.append(
                 SourceInfo(src.trt_model_id, src.source_id,

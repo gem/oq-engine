@@ -15,7 +15,7 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import division
 import os
 import csv
 import gzip
@@ -32,13 +32,12 @@ from openquake.hazardlib import geo, site, correlation, imt
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import workflows, riskinput
 
-from openquake.commonlib.datastore import DataStore, Fake
+from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.oqvalidation import OqParam, rmdict
 from openquake.commonlib.node import read_nodes, LiteralNode, context
-from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
+from openquake.commonlib import nrml, valid, logictree, InvalidFile
 from openquake.commonlib.riskmodels import get_risk_models
 from openquake.baselib.general import groupby, AccumDict, writetmp
-from openquake.baselib.performance import DummyMonitor
 from openquake.baselib.python3compat import configparser
 
 from openquake.commonlib import source, sourceconverter
