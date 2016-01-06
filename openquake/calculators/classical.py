@@ -245,14 +245,12 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc.calc_times.extend(val.calc_times)
             for bb in getattr(val, 'bbs', []):
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
-            if hasattr(acc, 'n'):  # tiling calculator
-                for key in val:
-                    acc[key] = agg_curves(
-                        acc[key], expand(val[key], acc.n, val.siteslice))
-            else:  # classical, event_based
-                for key in val:
-                    acc[key] = agg_curves(acc[key], val[key])
+            self.agg_curves(acc, val)
         return acc
+
+    def agg_curves(self, acc, val):
+        for key in val:
+            acc[key] = agg_curves(acc[key], val[key])
 
     def execute(self):
         """
@@ -432,3 +430,8 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         for tile in tiles:
             self.manager.submit_sources(tile, siteidx)
             siteidx += len(tile)
+
+    def agg_curves(self, acc, val):
+        n = len(self.sitecol)
+        for key in val:
+            acc[key] = agg_curves(acc[key], expand(val[key], n, val.siteslice))
