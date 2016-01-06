@@ -47,6 +47,7 @@ Site = collections.namedtuple('Site', 'sid lon lat')
 
 F32 = numpy.float32
 
+
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 

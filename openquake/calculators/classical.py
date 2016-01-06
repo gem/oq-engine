@@ -359,11 +359,14 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Compute the hazard maps associated to the curves
         """
-        n, p = len(self.sitecol), len(self.oqparam.poes)
-        maps = zero_maps((n, p), self.oqparam.imtls)
+        maps = zero_maps(
+            len(self.sitecol), self.oqparam.imtls, self.oqparam.poes)
         for imt in curves.dtype.fields:
-            maps[imt] = calc.compute_hazard_maps(
+            # build a matrix of size (N, P)
+            data = calc.compute_hazard_maps(
                 curves[imt], self.oqparam.imtls[imt], self.oqparam.poes)
+            for poe, hmap in zip(self.oqparam.poes, data.T):
+                maps['%s~%s' % (imt, poe)] = hmap
         return maps
 
     def store_curves(self, kind, curves, rlz=None):
