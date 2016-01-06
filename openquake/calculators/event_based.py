@@ -658,7 +658,7 @@ class EventBasedCalculator(ClassicalCalculator):
             # use a different datastore
             self.cl = ClassicalCalculator(oq, self.monitor)
             self.cl.datastore.parent = self.datastore
-            result = self.cl.run(pre_execute=False)
+            result = self.cl.run()
             for imt in self.mean_curves.dtype.fields:
                 rdiff, index = max_rel_diff_index(
                     self.cl.mean_curves[imt], self.mean_curves[imt])
