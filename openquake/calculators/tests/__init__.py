@@ -52,7 +52,7 @@ def get_datastore(calc):
 
 
 class CalculatorTestCase(unittest.TestCase):
-    OVERWRITE_EXPECTED = True
+    OVERWRITE_EXPECTED = False
 
     def get_calc(self, testfile, job_ini, **kw):
         """
