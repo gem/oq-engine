@@ -767,14 +767,15 @@ class SourceManager(object):
                 self.sources_by_trt[src.trt_model_id].append(src)
                 if kind == 'heavy':
                     if src.id not in self.split_map:
+                        logging.info('splitting %s', src)
                         with split_mon:
-                            display('processing/splitting %s' % src)
                             sources = sourceconverter.split_source(src)
                             self.split_map[src.id] = list(sources)
                     for ss in self.split_map[src.id]:
                         ss.id = src.id
                         yield ss
                 else:
+                    display('sending %s' % src)
                     yield src
             sources = [] if sites is None else [src]
             self.infos.append(
