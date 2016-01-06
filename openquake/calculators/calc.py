@@ -236,7 +236,7 @@ def get_imts_periods(imtls):
     return map(str, imts), [imt[1] or 0.0 for imt in imts]
 
 
-def make_uhs(maps, poes):
+def make_uhs(maps, imtls, poes):
     """
     Make Uniform Hazard Spectra curves for each location.
 
@@ -244,17 +244,22 @@ def make_uhs(maps, poes):
     uniform.
 
     :param maps:
-        A composite array with shape N x P, where N is the number of
+        a composite array with shape N x P, where N is the number of
         sites and P is the number of poes in the hazard maps
+    :param imtls:
+        a dictionary of intensity measure types and levels
+   :param poes:
+        a sequence of PoEs for the underlying hazard maps
     :returns:
         an composite array containing N uniform hazard maps
     """
+    imts, _ = get_imts_periods(imtls)
     N = len(maps)
-    I = len(maps.dtype.names)
+    I = len(imts)
     uhs_dt = numpy.dtype([('poe~%s' % poe, (F32, I)) for poe in poes])
-    hmaps = numpy.zeros(N, uhs_dt)
-    imts, _ = get_imts_periods(maps.dtype.names)
+    uhs = numpy.zeros(N, uhs_dt)
     for i in range(N):
-        for j, poename in enumerate(uhs_dt.names):
-            hmaps[poename][i] = tuple(maps[imt][i, j] for imt in imts)
-    return hmaps
+        for poe, poename in zip(poes, uhs_dt.names):
+            uhs[poename][i] = tuple(maps['%s~%s' % (imt, poe)][i]
+                                    for imt in imts)
+    return uhs

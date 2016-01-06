@@ -32,7 +32,7 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, source, datastore, sourceconverter
+from openquake.commonlib import parallel, source, datastore
 from openquake.calculators.views import get_data_transfer
 from openquake.baselib.general import AccumDict
 
@@ -365,11 +365,14 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Compute the hazard maps associated to the curves
         """
-        n, p = len(self.sitecol), len(self.oqparam.poes)
-        maps = zero_maps((n, p), self.oqparam.imtls)
+        maps = zero_maps(
+            len(self.sitecol), self.oqparam.imtls, self.oqparam.poes)
         for imt in curves.dtype.fields:
-            maps[imt] = calc.compute_hazard_maps(
+            # build a matrix of size (N, P)
+            data = calc.compute_hazard_maps(
                 curves[imt], self.oqparam.imtls[imt], self.oqparam.poes)
+            for poe, hmap in zip(self.oqparam.poes, data.T):
+                maps['%s~%s' % (imt, poe)] = hmap
         return maps
 
     def store_curves(self, kind, curves, rlz=None):

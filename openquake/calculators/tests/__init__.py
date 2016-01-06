@@ -34,7 +34,12 @@ class DifferentFiles(Exception):
 def columns(line):
     data = []
     for column in line.split(','):
-        data.append(numpy.array(list(map(float, column.split(' ')))))
+        try:
+            floats = list(map(float, column.split(' ')))
+        except ValueError:  # skip header
+            pass
+        else:
+            data.append(numpy.array(floats))
     return data
 
 
