@@ -71,7 +71,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_spatial_correlation(self):
-        expected = {sc1: [0.99, 0.41],
+        expected = {sc1: [0.99, 0.45],
                     sc2: [0.99, 0.64],
                     sc3: [0.99, 0.22]}
 
