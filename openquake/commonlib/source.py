@@ -769,6 +769,7 @@ class SourceManager(object):
                 self.sources_by_trt[src.trt_model_id].append(src)
                 if kind == 'heavy':
                     if src.id not in self.split_map:
+                        print
                         logging.info('splitting %s', src)
                         with split_mon:
                             sources = sourceconverter.split_source(src)
