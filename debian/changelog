@@ -1,5 +1,7 @@
   [Michele Simionato]
-  * Worked around a bug in h5File.visitems in Ubuntu 12.04
+  * Refactored the source filtering/splitting mechanism and improved
+    substantially the classical_tiling calculator
+  * Worked around a bug in h5py.Group.visitems in Ubuntu 12.04
   * Reduced the precision of the site mesh to 32 bits
   * The source model logic tree parser supports NRML 0.5
   * Reduced the precision of the scenario_damage outputs to 32 bits
