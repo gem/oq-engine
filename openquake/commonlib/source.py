@@ -725,16 +725,6 @@ source_info_dt = numpy.dtype([
 ])
 
 
-def display(msg, width=128):
-    """
-    An utility to display one-liners on stdout, left justified on 128 chars
-    """
-    ljust_msg = msg.ljust(width)
-    sys.stdout.write(ljust_msg)
-    sys.stdout.flush()
-    sys.stdout.write('\x08' * len(ljust_msg))
-
-
 class SourceManager(object):
     """
     Manager associated to a CompositeSourceModel instance.
@@ -769,8 +759,8 @@ class SourceManager(object):
                 self.sources_by_trt[src.trt_model_id].append(src)
                 if kind == 'heavy':
                     if src.id not in self.split_map:
-                        print
-                        logging.info('splitting %s', src)
+                        logging.info('splitting %s of weight %s',
+                                     src, src.weight)
                         with split_mon:
                             sources = sourceconverter.split_source(src)
                             self.split_map[src.id] = list(sources)
@@ -778,7 +768,6 @@ class SourceManager(object):
                         ss.id = src.id
                         yield ss
                 else:
-                    display('sending %s' % src)
                     yield src
             sources = [] if sites is None else [src]
             self.infos.append(
