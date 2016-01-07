@@ -505,6 +505,9 @@ _pkgtest_innervm_run () {
         echo 'running Disaggregation'
         oq-lite run Disaggregation/job.ini
 
+        echo 'running LogicTreeCase1ClassicalPSHA'
+        oq-lite run LogicTreeCase1ClassicalPSHA/job.ini
+
         echo 'running LogicTreeCase3ClassicalPSHA'
         oq-lite run LogicTreeCase3ClassicalPSHA/job.ini --exports xml
         oq-lite show -1 --rlzs
