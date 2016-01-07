@@ -380,16 +380,6 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     counts_per_rlz = datastore.persistent_attribute('counts_per_rlz')
     is_stochastic = True
 
-    def pre_execute(self):
-        """
-        Set a seed on each source
-        """
-        super(EventBasedRuptureCalculator, self).pre_execute()
-        rnd = random.Random()
-        rnd.seed(self.oqparam.random_seed)
-        for src in self.csm.get_sources():
-            src.seed = rnd.randint(0, MAX_INT)
-
     def execute(self):
         """
         Run in parallel `core_func(sources, sitecol, info, monitor)`, by

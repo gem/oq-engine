@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
-import sys
 import math
 import logging
 import operator
@@ -27,6 +26,8 @@ from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import valid, logictree, sourceconverter, parallel
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
+
+MAX_INT = 2 ** 31 - 1
 
 
 class DuplicatedID(Exception):
@@ -793,12 +794,18 @@ class SourceManager(object):
             else:
                 self.infos[key] = info
 
-    def submit_sources(self, sitecol, siteidx=0):
+    def submit_sources(self, sitecol, siteidx=0, random_seed=42):
         """
         Submit the light sources and then the (split) heavy sources.
         """
+        rnd = random.Random()
+        rnd.seed(random_seed)
         for kind in ('light', 'heavy'):
-            sources = self.get_sources(kind, sitecol)
+            sources = list(self.get_sources(kind, sitecol))
+            # set a seed for each split source; the seed is used
+            # only by the event based calculator, but it is set anyway
+            for src in sources:
+                src.seed = rnd.randint(0, MAX_INT)
             for block in block_splitter(
                     sources, self.csm.maxweight,
                     operator.attrgetter('weight'),

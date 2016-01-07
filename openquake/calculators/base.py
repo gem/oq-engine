@@ -404,7 +404,7 @@ class HazardCalculator(BaseCalculator):
         self.manager = self.SourceManager(
             self.csm, self.core_func.__func__, oq.concurrent_tasks,
             oq.maximum_distance, self.monitor.new(oqparam=oq))
-        self.manager.submit_sources(self.sitecol)
+        self.manager.submit_sources(self.sitecol, random_seed=oq.random_seed)
 
     def post_process(self):
         """For compatibility with the engine"""
