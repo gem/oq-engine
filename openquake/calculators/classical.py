@@ -200,13 +200,6 @@ def expand(array, n, aslice):
     return zeros
 
 
-source_info_dt = numpy.dtype(
-    [('trt_model_id', numpy.uint32),
-     ('source_id', (bytes, 20)),
-     ('calc_time', numpy.float32),
-     ('weight', numpy.float32)])
-
-
 def store_source_chunks(dstore):
     """
     Get information about the source data transfer and store it
@@ -296,16 +289,16 @@ class ClassicalCalculator(base.HazardCalculator):
         # save calculation time per source
         calc_times = getattr(curves_by_trt_gsim, 'calc_times', [])
         sources = list(self.csm.get_sources())
-        infodict = collections.defaultdict(float)
-        weight = {}
+        source_info = list(self.source_info.value)
         for src_idx, dt in calc_times:
             src = sources[src_idx]
-            weight[src.trt_model_id, src.source_id] = src.weight
-            infodict[src.trt_model_id, src.source_id] += dt
-        infolist = [key + (dt, weight[key]) for key, dt in infodict.items()]
-        infolist.sort(key=operator.itemgetter(1), reverse=True)
-        if infolist:
-            self.source_info = numpy.array(infolist, source_info_dt)
+            trt_id, src_id = src.trt_model_id, src.source_id
+            for info in source_info:
+                if info[1] == src_id and info[0] == trt_id:
+                    info[7] += dt
+        # source_info_dt field #7 is calc_time
+        source_info.sort(key=operator.itemgetter(7), reverse=True)
+        self.source_info = numpy.array(source_info)
 
         with self.monitor('save curves_by_trt_gsim', autoflush=True):
             for sm in self.rlzs_assoc.csm_info.source_models:

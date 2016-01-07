@@ -709,19 +709,28 @@ def collect_source_model_paths(smlt):
 
 # ########################## SourceManager ########################### #
 
+def source_info_iadd(self, other):
+    assert self.trt_model_id == other.trt_model_id
+    assert self.source_id == other.source_id
+    return self.__class__(
+        self.trt_model_id, self.source_id, self.source_class, self.weight,
+        self.sources, self.filter_time + other.filter_time,
+        self.split_time + other.split_time, self.calc_time + other.calc_time)
+
 SourceInfo = collections.namedtuple(
     'SourceInfo', 'trt_model_id source_id source_class weight sources '
     'filter_time split_time calc_time')
+SourceInfo.__iadd__ = source_info_iadd
 
 source_info_dt = numpy.dtype([
-    ('trt_model_id', numpy.uint32),
-    ('source_id', (bytes, 20)),
-    ('source_class', (bytes, 20)),
-    ('weight', numpy.float32),
-    ('split_num', numpy.uint32),
-    ('filter_time', numpy.float32),
-    ('split_time', numpy.float32),
-    ('calc_time', numpy.float32),
+    ('trt_model_id', numpy.uint32),  # 0
+    ('source_id', (bytes, 20)),      # 1
+    ('source_class', (bytes, 20)),   # 2
+    ('weight', numpy.float32),       # 3
+    ('split_num', numpy.uint32),     # 4
+    ('filter_time', numpy.float32),  # 5
+    ('split_time', numpy.float32),   # 6
+    ('calc_time', numpy.float32),    # 7
 ])
 
 
@@ -739,6 +748,7 @@ class SourceManager(object):
         self.monitor = monitor
         self.rlzs_assoc = csm.get_rlzs_assoc()
         self.split_map = {}
+        self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
         logging.info('instantiating SourceManager with maxweight=%.1f',
                      self.maxweight)
 
@@ -747,7 +757,6 @@ class SourceManager(object):
         Get and the sources of kind `kind` affecting the `sitecol`; split
         the heavy sources
         """
-        self.infos = []
         filter_mon = self.monitor('filtering sources')
         split_mon = self.monitor('splitting sources')
         self.sources_by_trt = collections.defaultdict(list)
@@ -755,6 +764,8 @@ class SourceManager(object):
             with filter_mon:
                 sites = src.filter_sites_by_distance_to_source(
                     self.maximum_distance, sitecol)
+            filter_time = filter_mon.dt
+            split_time = 0
             if sites is not None:
                 self.sources_by_trt[src.trt_model_id].append(src)
                 if kind == 'heavy':
@@ -764,17 +775,22 @@ class SourceManager(object):
                         with split_mon:
                             sources = sourceconverter.split_source(src)
                             self.split_map[src.id] = list(sources)
+                        split_time = split_mon.dt
                     for ss in self.split_map[src.id]:
                         ss.id = src.id
                         yield ss
                 else:
                     yield src
-            sources = [] if sites is None else [src]
-            self.infos.append(
-                SourceInfo(src.trt_model_id, src.source_id,
-                           src.__class__.__name__,
-                           src.weight, len(sources),
-                           filter_mon.dt, split_mon.dt, 0))
+            split_sources = self.split_map.get(src.id, [src])
+            info = SourceInfo(src.trt_model_id, src.source_id,
+                              src.__class__.__name__,
+                              src.weight, len(split_sources),
+                              filter_time, split_time, 0)
+            key = (src.trt_model_id, src.source_id)
+            if key in self.infos:
+                self.infos[key] += info
+            else:
+                self.infos[key] = info
 
     def submit_sources(self, sitecol, siteidx=0):
         """
@@ -790,13 +806,17 @@ class SourceManager(object):
                                self.rlzs_assoc, self.monitor.new())
 
     def store_source_info(self, dstore):
+        """
+        Save the source_info array in the datastore
+        """
         if self.infos:
-            self.infos.sort(
+            values = self.infos.values()
+            values.sort(
                 key=lambda info: info.filter_time + info.split_time,
                 reverse=True)
-            dstore['pre_source_info'] = numpy.array(self.infos, source_info_dt)
-            dstore['pre_source_info'].attrs['maxweight'] = self.maxweight
-            del self.infos[:]
+            dstore['source_info'] = numpy.array(values, source_info_dt)
+            dstore['source_info'].attrs['maxweight'] = self.maxweight
+            self.infos.clear()
 
     def update(self):
         """

@@ -287,6 +287,7 @@ class HazardCalculator(BaseCalculator):
                         self.job_info['output_weight'])
                 with self.monitor('sending the sources', autoflush=True):
                     self.send_sources()
+                self.manager.store_source_info(self.datastore)
                 logging.info('Sent %d tasks', len(self.manager.tm.results))
         self.datastore.hdf5.flush()
 
@@ -393,7 +394,6 @@ class HazardCalculator(BaseCalculator):
             self.csm, self.core_func.__func__, oq.concurrent_tasks,
             oq.maximum_distance, self.monitor.new(oqparam=oq))
         self.manager.submit_sources(self.sitecol)
-        self.manager.store_source_info(self.datastore)
 
     def post_process(self):
         """For compatibility with the engine"""
