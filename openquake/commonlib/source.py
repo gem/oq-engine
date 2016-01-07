@@ -754,8 +754,9 @@ class SourceManager(object):
 
     def get_sources(self, kind, sitecol):
         """
-        Get and the sources of kind `kind` affecting the `sitecol`; split
-        the heavy sources
+        :param kind: a string 'light', 'heavy' or 'all'
+        :param sitecol: a SiteCollection instance
+        :returns: the sources of the given kind affecting the given sitecol
         """
         filter_mon = self.monitor('filtering sources')
         split_mon = self.monitor('splitting sources')

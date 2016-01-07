@@ -479,7 +479,7 @@ def get_composite_source_model(oqparam, in_memory=True):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param in_memory:
-        if False, just parse the XML without instanting the sources
+        if False, just parse the XML without instantiating the sources
     """
     source_model_lt = get_source_model_lt(oqparam)
     smodels = []
@@ -497,6 +497,10 @@ def get_composite_source_model(oqparam, in_memory=True):
             trt_model.sources = sorted(trt_model, key=getid)
             trt_model.id = trt_id
             for src in trt_model:
+                # there are two cases depending on the flag in_memory:
+                # 1) src is a hazardlib source and has a trt_model_id
+                #    attribute; in that case the source has to be numbered
+                # 2) src is a Node object, then nothing must be done
                 if hasattr(src, 'trt_model_id'):
                     # .trt_model_id is missing for source nodes
                     src.trt_model_id = trt_id
