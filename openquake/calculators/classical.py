@@ -252,6 +252,18 @@ class ClassicalCalculator(base.HazardCalculator):
         for key in val:
             acc[key] = agg_curves(acc[key], val[key])
 
+    @staticmethod
+    def is_effective_trt_model(result_dict, trt_model):
+        """
+        Returns the number of tectonic region types
+        with ID contained in the result_dict.
+
+        :param result_dict: a dictionary with keys (trt_id, gsim)
+        :param trt_model: a TrtModel instance
+        """
+        return sum(1 for key, val in result_dict.items()
+                   if trt_model.id == key[0] and nonzero(val))
+
     def execute(self):
         """
         Run in parallel `core_func(sources, sitecol, monitor)`, by
@@ -270,7 +282,7 @@ class ClassicalCalculator(base.HazardCalculator):
         } if self.oqparam.poes_disagg else {}
         curves_by_trt_gsim = self.manager.tm.reduce(self.agg_dicts, zerodict)
         self.rlzs_assoc = self.csm.get_rlzs_assoc(
-            partial(is_effective_trt_model, curves_by_trt_gsim))
+            partial(self.is_effective_trt_model, curves_by_trt_gsim))
         store_source_chunks(self.datastore)
         return curves_by_trt_gsim
 
@@ -398,18 +410,6 @@ def nonzero(val):
     :returns: the sum of the composite array `val`
     """
     return sum(val[k].sum() for k in val.dtype.names)
-
-
-def is_effective_trt_model(result_dict, trt_model):
-    """
-    Returns the number of tectonic region types
-    with ID contained in the result_dict.
-
-    :param result_dict: a dictionary with keys (trt_id, gsim)
-    :param trt_model: a TrtModel instance
-    """
-    return sum(1 for key, val in result_dict.items()
-               if trt_model.id == key[0] and nonzero(val))
 
 
 @base.calculators.add('classical_tiling')

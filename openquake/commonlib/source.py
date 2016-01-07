@@ -591,8 +591,8 @@ class CompositeSourceModel(collections.Sequence):
             num_ruptures = 0
             for src in trt_model:
                 if src.__class__.__name__ in ('PointSource', 'AreaSource'):
-                    num_ruptures += (src.weight /
-                                     sourceconverter.POINT_SOURCE_WEIGHT)
+                    num_ruptures += math.ceil(
+                        src.weight / sourceconverter.POINT_SOURCE_WEIGHT)
                 else:
                     num_ruptures += src.weight
                 weight += src.weight

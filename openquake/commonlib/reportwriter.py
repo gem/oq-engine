@@ -94,11 +94,11 @@ def build_report(job_ini, output_dir=None):
     output_dir = output_dir or os.path.dirname(job_ini)
     calc = base.calculators(oq)
     calc.SourceManager = source.DummySourceManager
+    calc.is_effective_trt_model = lambda result_dict, trt_model: True
     calc.pre_execute()
     calc.execute()
     calc.save_params()
-    calc.datastore.close()
-    ds = datastore.DataStore(calc.datastore.calc_id, 'r')
+    ds = calc.datastore
     rw = ReportWriter(ds)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir

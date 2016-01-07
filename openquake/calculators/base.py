@@ -275,6 +275,7 @@ class HazardCalculator(BaseCalculator):
                     self.csm = readinput.get_composite_source_model(
                         self.oqparam)
                     self.rlzs_assoc = self.csm.get_rlzs_assoc()
+
                     # we could manage limits here
                     self.job_info = readinput.get_job_info(
                         self.oqparam, self.csm, self.sitecol)
