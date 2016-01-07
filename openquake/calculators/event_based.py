@@ -37,8 +37,7 @@ from openquake.commonlib.util import max_rel_diff_index
 from openquake.calculators import base, views
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.calculators.calc import MAX_INT, gmvs_to_haz_curve
-from openquake.calculators.classical import (
-    ClassicalCalculator, store_source_chunks)
+from openquake.calculators.classical import ClassicalCalculator
 
 # ######################## rupture calculator ############################ #
 
@@ -268,14 +267,16 @@ class SESRupture(object):
 
 
 @parallel.litetask
-def compute_ruptures(sources, sitecol, info, monitor):
+def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     """
     :param sources:
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param info:
-        a :class:`openquake.commonlib.source.CompositionInfo` instance
+    :param rlzs_assoc:
+        a :class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param siteidx:
+        always equal to 0
     :param monitor:
         monitor instance
     :returns:
@@ -295,7 +296,7 @@ def compute_ruptures(sources, sitecol, info, monitor):
             continue
 
         num_occ_by_rup = sample_ruptures(
-            src, oq.ses_per_logic_tree_path, info)
+            src, oq.ses_per_logic_tree_path, rlzs_assoc.csm_info)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
@@ -369,7 +370,7 @@ def build_ses_ruptures(
 
 
 @base.calculators.add('event_based_rupture')
-class EventBasedRuptureCalculator(base.HazardCalculator):
+class EventBasedRuptureCalculator(ClassicalCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
@@ -380,40 +381,35 @@ class EventBasedRuptureCalculator(base.HazardCalculator):
     counts_per_rlz = datastore.persistent_attribute('counts_per_rlz')
     is_stochastic = True
 
-    def execute(self):
+    @staticmethod
+    def is_effective_trt_model(ruptures_by_trt_id, trt_model):
         """
-        Run in parallel `core_func(sources, sitecol, info, monitor)`, by
-        parallelizing on the sources according to their weight and
-        tectonic region type.
+        Returns the number of tectonic region types
+        with ID contained in the ruptures_by_trt_id.
+
+        :param ruptures_by_trt_id: a dictionary with key trt_id
+        :param trt_model: a TrtModel instance
         """
-        monitor = self.monitor(self.core_func.__name__)
-        monitor.oqparam = self.oqparam
-        sources = list(self.csm.get_sources())
-        ruptures_by_trt = parallel.apply_reduce(
-            self.core_func.__func__,
-            (sources, self.sitecol, self.rlzs_assoc.csm_info, monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=operator.attrgetter('weight'),
-            key=operator.attrgetter('trt_model_id'))
+        return sum(1 for key, val in ruptures_by_trt_id.items()
+                   if trt_model.id == key and val)
 
-        store_source_chunks(self.datastore)
-        logging.info('Generated %d SESRuptures',
-                     sum(len(v) for v in ruptures_by_trt.values()))
-
-        self.rlzs_assoc = self.csm.get_rlzs_assoc(
-            lambda trt: len(ruptures_by_trt.get(trt.id, [])))
-
-        return ruptures_by_trt
+    def agg_curves(self, acc, val):
+        acc += val
 
     def post_execute(self, result):
         """
         Save the SES collection and the array counts_per_rlz
         """
+        logging.info('Generated %d SESRuptures',
+                     sum(len(v) for v in result.values()))
         nc = self.rlzs_assoc.csm_info.num_collections
         sescollection = numpy.array([{} for col_id in range(nc)])
         tags = []
         ordinal = 0
         for trt_id in sorted(result):
+            if isinstance(trt_id, tuple):
+                # a pair (trt_id, gsim), skip
+                continue
             for sr in sorted(result[trt_id]):
                 sr.ordinal = ordinal
                 ordinal += 1
