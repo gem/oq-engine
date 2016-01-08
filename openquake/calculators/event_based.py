@@ -15,7 +15,7 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+import time
 import os.path
 import random
 import operator
@@ -287,9 +287,11 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     trt_model_id = sources[0].trt_model_id
     oq = monitor.oqparam
     sesruptures = []
+    calc_times = []
 
     # Compute and save stochastic event sets
     for src in sources:
+        t0 = time.time()
         s_sites = src.filter_sites_by_distance_to_source(
             oq.maximum_distance, sitecol)
         if s_sites is None:
@@ -304,8 +306,11 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         for rup, rups in build_ses_ruptures(
                 src, num_occ_by_rup, s_sites, oq.maximum_distance, sitecol):
             sesruptures.extend(rups)
-
-    return {trt_model_id: sesruptures}
+        dt = time.time() - t0
+        calc_times.append((src.id, dt))
+    res = AccumDict({trt_model_id: sesruptures})
+    res.calc_times = calc_times
+    return res
 
 
 def sample_ruptures(src, num_ses, info):
