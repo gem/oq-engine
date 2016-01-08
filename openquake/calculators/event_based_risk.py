@@ -229,7 +229,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     fixed ratios loss curves.
     """
     pre_calculator = 'event_based'
-    core_func = event_based_risk
+    core_task = event_based_risk
 
     epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
     is_stochastic = True
@@ -312,7 +312,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.ass_bytes = 0
         self.agg_bytes = 0
         return apply_reduce(
-            self.core_func.__func__,
+            self.core_task.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc,
              self.assets_by_site, self.monitor.new('task')),
             concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg,

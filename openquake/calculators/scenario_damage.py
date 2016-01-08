@@ -137,7 +137,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     Scenario damage calculator
     """
     pre_calculator = 'scenario'
-    core_func = scenario_damage
+    core_task = scenario_damage
     is_stochastic = True
 
     def pre_execute(self):

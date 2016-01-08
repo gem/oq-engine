@@ -102,7 +102,7 @@ def build_report(job_ini, output_dir=None):
     calc = base.calculators(oq)
     calc.SourceManager = source.DummySourceManager
     calc.is_effective_trt_model = lambda result_dict, trt_model: True
-    calc.core_func = dummy_task
+    calc.core_task = dummy_task
     calc.pre_execute()
     with mock.patch.object(logging.root, 'info'):  # reduce logging
         calc.execute()

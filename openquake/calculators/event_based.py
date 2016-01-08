@@ -379,7 +379,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
-    core_func = compute_ruptures
+    core_task = compute_ruptures
     tags = datastore.persistent_attribute('tags')
     sescollection = datastore.persistent_attribute('sescollection')
     num_ruptures = datastore.persistent_attribute('num_ruptures')
@@ -552,7 +552,7 @@ class EventBasedCalculator(ClassicalCalculator):
     Event based PSHA calculator generating the ruptures only
     """
     pre_calculator = 'event_based_rupture'
-    core_func = compute_gmfs_and_curves
+    core_task = compute_gmfs_and_curves
     is_stochastic = True
 
     def pre_execute(self):
@@ -607,20 +607,20 @@ class EventBasedCalculator(ClassicalCalculator):
 
     def execute(self):
         """
-        Run in parallel `core_func(sources, sitecol, monitor)`, by
+        Run in parallel `core_task(sources, sitecol, monitor)`, by
         parallelizing on the ruptures according to their weight and
         tectonic region type.
         """
         oq = self.oqparam
         if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
             return
-        monitor = self.monitor(self.core_func.__name__)
+        monitor = self.monitor(self.core_task.__name__)
         monitor.oqparam = oq
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         self.nbytes = 0
         curves_by_trt_gsim = parallel.apply_reduce(
-            self.core_func.__func__,
+            self.core_task.__func__,
             (self.sesruptures, self.sitecol, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             acc=zerodict, agg=self.combine_curves_and_save_gmfs,

@@ -133,7 +133,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.clean_up()
         return exported
 
-    def core_func(*args):
+    def core_task(*args):
         """
         Core routine running on the workers.
         """
@@ -399,7 +399,7 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         self.manager = self.SourceManager(
-            self.csm, self.core_func.__func__, oq.concurrent_tasks,
+            self.csm, self.core_task.__func__, oq.concurrent_tasks,
             oq.maximum_distance, self.monitor.new(oqparam=oq))
         self.manager.submit_sources(self.sitecol, random_seed=oq.random_seed)
 
@@ -483,7 +483,7 @@ class RiskCalculator(HazardCalculator):
     def execute(self):
         """
         Parallelize on the riskinputs and returns a dictionary of results.
-        Require a `.core_func` to be defined with signature
+        Require a `.core_task` to be defined with signature
         (riskinputs, riskmodel, rlzs_assoc, monitor).
         """
         # add fatalities as side effect
@@ -496,7 +496,7 @@ class RiskCalculator(HazardCalculator):
         all_args = ((self.riskinputs, self.riskmodel, self.rlzs_assoc) +
                     self.extra_args + (self.monitor,))
         res = apply_reduce(
-            self.core_func.__func__, all_args,
+            self.core_task.__func__, all_args,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=get_weight, key=self.riskinput_key)
         return res

@@ -54,7 +54,7 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
     """
     Scenario damage calculator
     """
-    core_func = classical_damage
+    core_task = classical_damage
     damages = datastore.persistent_attribute('damages-rlzs')
 
     def post_execute(self, result):

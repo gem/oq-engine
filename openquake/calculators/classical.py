@@ -205,7 +205,7 @@ class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
-    core_func = classical
+    core_task = classical
     source_info = datastore.persistent_attribute('source_info')
 
     def agg_dicts(self, acc, val):
@@ -241,11 +241,11 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def execute(self):
         """
-        Run in parallel `core_func(sources, sitecol, monitor)`, by
+        Run in parallel `core_task(sources, sitecol, monitor)`, by
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        monitor = self.monitor.new(self.core_func.__name__)
+        monitor = self.monitor.new(self.core_task.__name__)
         monitor.oqparam = self.oqparam
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
@@ -412,7 +412,8 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         logging.info('Generating %d tiles of %d sites each',
                      len(tiles), len(tiles[0]))
         self.manager = source.SourceManager(
-            self.csm, self.core_func, oq.concurrent_tasks, oq.maximum_distance,
+            self.csm, self.core_task.__func__,
+            oq.concurrent_tasks, oq.maximum_distance,
             self.monitor.new(oqparam=oq))
         siteidx = 0
         for i, tile in enumerate(tiles, 1):
