@@ -90,24 +90,21 @@ if celery_node_monitor.USE_CELERY:
                     del backend._cache[task_id]
             return acc
 
+    def oqtask(task_func):
+        """
+        Wrapper around celery.task and parallel.litetask
+        """
+        tsk = task(litetask(task_func), queue=celery_queue)
+        tsk.__func__ = tsk
+        tsk.task_func = task_func
+        return tsk
+
+    # hack
+    parallel.TaskManager = OqTaskManager
+    parallel.litetask = oqtask
+    parallel.apply_reduce = OqTaskManager.apply_reduce
+    parallel.starmap = OqTaskManager.starmap
+
 else:  # no celery
 
-    class OqTaskManager(parallel.TaskManager):
-        progress = staticmethod(logs.LOG.progress)
-        task_ids = []
-
-
-def oqtask(task_func):
-    """
-    Wrapper around celery.task and parallel.litetask
-    """
-    tsk = task(litetask(task_func), queue=celery_queue)
-    tsk.__func__ = tsk
-    tsk.task_func = task_func
-    return tsk
-
-# hack
-parallel.TaskManager = OqTaskManager
-parallel.litetask = oqtask
-parallel.apply_reduce = OqTaskManager.apply_reduce
-parallel.starmap = OqTaskManager.starmap
+    parallel.TaskManager.progress = staticmethod(logs.LOG.progress)
