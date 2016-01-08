@@ -23,6 +23,8 @@ from xml.etree import ElementTree as etree
 import numpy
 
 from openquake.baselib.general import AccumDict, groupby, block_splitter
+from openquake.hazardlib.source.point import PointSource
+from openquake.hazardlib.source.area import AreaSource
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import valid, logictree, sourceconverter, parallel
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
@@ -591,7 +593,7 @@ class CompositeSourceModel(collections.Sequence):
             weight = 0
             num_ruptures = 0
             for src in trt_model:
-                if src.__class__.__name__ in ('PointSource', 'AreaSource'):
+                if isinstance(src, (PointSource, AreaSource)):
                     num_ruptures += math.ceil(
                         src.weight / sourceconverter.POINT_SOURCE_WEIGHT)
                 else:
@@ -750,7 +752,7 @@ class SourceManager(object):
         self.rlzs_assoc = csm.get_rlzs_assoc()
         self.split_map = {}
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
-        logging.info('instantiating SourceManager with maxweight=%.1f',
+        logging.info('Instantiating SourceManager with maxweight=%.1f',
                      self.maxweight)
 
     def get_sources(self, kind, sitecol):
@@ -794,6 +796,9 @@ class SourceManager(object):
             else:
                 self.infos[key] = info
 
+        filter_mon.flush()
+        split_mon.flush()
+
     def submit_sources(self, sitecol, siteidx=0, random_seed=42):
         """
         Submit the light sources and then the (split) heavy sources.
@@ -802,6 +807,7 @@ class SourceManager(object):
         rnd.seed(random_seed)
         for kind in ('light', 'heavy'):
             sources = list(self.get_sources(kind, sitecol))
+            logging.info('Submitting %d %s sources', len(sources), kind)
             # set a seed for each split source; the seed is used
             # only by the event based calculator, but it is set anyway
             for src in sources:

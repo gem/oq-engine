@@ -20,6 +20,8 @@ import operator
 
 from openquake.baselib.general import block_splitter
 from openquake.baselib.performance import PerformanceMonitor
+from openquake.hazardlib.source.point import PointSource
+from openquake.hazardlib.source.area import AreaSource
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import context, striptag
@@ -45,7 +47,7 @@ def get_weight(src, num_ruptures=None):
     """
     num_ruptures = num_ruptures or src.count_ruptures()
     weight = (num_ruptures * POINT_SOURCE_WEIGHT
-              if src.__class__.__name__ in ('PointSource', 'AreaSource')
+              if isinstance(src, (PointSource, AreaSource))
               else num_ruptures)
     return weight
 
