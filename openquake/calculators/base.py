@@ -290,16 +290,13 @@ class HazardCalculator(BaseCalculator):
                     # we could manage limits here
                     self.job_info = readinput.get_job_info(
                         self.oqparam, self.csm, self.sitecol)
-                    logging.info(
-                        'Total weight of the sources=%s',
-                        self.job_info['input_weight'])
-                    logging.info(
-                        'Expected output size=%s',
-                        self.job_info['output_weight'])
+                    logging.info('Expected output size=%s',
+                                 self.job_info['output_weight'])
+                    logging.info('Total weight of the sources=%s',
+                                 self.job_info['input_weight'])
                 with self.monitor('sending the sources', autoflush=True):
                     self.send_sources()
                 self.manager.store_source_info(self.datastore)
-                logging.info('Sent %d tasks', len(self.manager.tm.results))
         self.datastore.hdf5.flush()
 
     def read_exposure(self):

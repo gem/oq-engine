@@ -354,10 +354,10 @@ class TaskManager(object):
         :param acc: the initial value of the accumulator
         :returns: the final value of the accumulator
         """
+        num_tasks = len(self.results)
         if acc is None:
             acc = AccumDict()
-        log_percent = log_percent_gen(
-            self.name, len(self.results), self.progress)
+        log_percent = log_percent_gen(self.name, num_tasks, self.progress)
         next(log_percent)
 
         def agg_and_percent(acc, triple):
@@ -372,10 +372,11 @@ class TaskManager(object):
         if self.no_distribute:
             agg_result = reduce(agg_and_percent, self.results, acc)
         else:
-            self.progress('Sent %s of data', humansize(self.sent))
+            self.progress('Sent %s of data in %d task(s)',
+                          humansize(self.sent), num_tasks)
             agg_result = self.aggregate_result_set(agg_and_percent, acc)
-            self.progress('Received %s of data', humansize(sum(self.received)))
-            self.progress('Maximum task output: %s',
+            self.progress('Received %s of data, maximum task %s',
+                          humansize(sum(self.received)),
                           humansize(max(self.received)))
         self.results = []
         return agg_result
