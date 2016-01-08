@@ -807,7 +807,8 @@ class SourceManager(object):
         rnd.seed(random_seed)
         for kind in ('light', 'heavy'):
             sources = list(self.get_sources(kind, sitecol))
-            logging.info('Submitting %d %s sources', len(sources), kind)
+            if sources:
+                logging.info('Submitting %d sources', len(sources))
             # set a seed for each split source; the seed is used
             # only by the event based calculator, but it is set anyway
             for src in sources:

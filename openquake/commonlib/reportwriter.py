@@ -5,8 +5,10 @@ Utilities to build a report writer generating a .rst report for a calculation
 from __future__ import print_function
 import os
 import sys
+import mock
+import logging
 
-from openquake.commonlib import readinput, datastore, source
+from openquake.commonlib import readinput, datastore, source, parallel
 from openquake.calculators import base, views
 from openquake.commonlib.oqvalidation import OqParam
 
@@ -81,6 +83,11 @@ class ReportWriter(object):
             f.write(self.text)
 
 
+@parallel.litetask
+def dummy_task(sources, sitecol, siteidx, rlzs_assoc, monitor):
+    return {}
+
+
 def build_report(job_ini, output_dir=None):
     """
     Write a `report.csv` file with information about the calculation.
@@ -95,8 +102,10 @@ def build_report(job_ini, output_dir=None):
     calc = base.calculators(oq)
     calc.SourceManager = source.DummySourceManager
     calc.is_effective_trt_model = lambda result_dict, trt_model: True
+    calc.core_func = dummy_task
     calc.pre_execute()
-    calc.execute()
+    with mock.patch.object(logging.root, 'info'):  # reduce logging
+        calc.execute()
     calc.save_params()
     ds = calc.datastore
     rw = ReportWriter(ds)

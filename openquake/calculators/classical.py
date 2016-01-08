@@ -412,10 +412,11 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         logging.info('Generating %d tiles of %d sites each',
                      len(tiles), len(tiles[0]))
         self.manager = source.SourceManager(
-            self.csm, classical, oq.concurrent_tasks, oq.maximum_distance,
+            self.csm, self.core_func, oq.concurrent_tasks, oq.maximum_distance,
             self.monitor.new(oqparam=oq))
         siteidx = 0
-        for tile in tiles:
+        for i, tile in enumerate(tiles, 1):
+            logging.info('Filtering sources against tile %d', i)
             self.manager.submit_sources(tile, siteidx)
             siteidx += len(tile)
 
