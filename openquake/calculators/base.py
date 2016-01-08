@@ -86,7 +86,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     def save_params(self, **kw):
         """
-        Update the current calculation parameters
+        Update the current calculation parameters and save oqlite_version
         """
         vars(self.oqparam).update(kw)
         for name, val in self.oqparam.to_params():
@@ -297,6 +297,10 @@ class HazardCalculator(BaseCalculator):
                 with self.monitor('sending the sources', autoflush=True):
                     self.send_sources()
                 self.manager.store_source_info(self.datastore)
+                attrs = self.datastore.hdf5['composite_source_model'].attrs
+                attrs['weight'] = self.csm.weight
+                attrs['filtered_weight'] = self.csm.filtered_weight
+                attrs['maxweight'] = self.csm.maxweight
         self.datastore.hdf5.flush()
 
     def read_exposure(self):

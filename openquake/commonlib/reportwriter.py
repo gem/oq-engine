@@ -90,7 +90,8 @@ def dummy_task(sources, sitecol, siteidx, rlzs_assoc, monitor):
 
 def build_report(job_ini, output_dir=None):
     """
-    Write a `report.csv` file with information about the calculation.
+    Write a `report.csv` file with information about the calculation
+    without running it
 
     :param job_ini:
         full pathname of the job.ini file
@@ -100,18 +101,19 @@ def build_report(job_ini, output_dir=None):
     oq = readinput.get_oqparam(job_ini)
     output_dir = output_dir or os.path.dirname(job_ini)
     calc = base.calculators(oq)
+    # some taken is care so that the real calculation is not run:
+    # the goal is to extract information about the source management only
     calc.SourceManager = source.DummySourceManager
     calc.is_effective_trt_model = lambda result_dict, trt_model: True
-    calc.core_task = dummy_task
-    calc.pre_execute()
+    with mock.patch.object(calc.__class__, 'core_task', dummy_task):
+        calc.pre_execute()
     with mock.patch.object(logging.root, 'info'):  # reduce logging
         calc.execute()
     calc.save_params()
-    ds = calc.datastore
-    rw = ReportWriter(ds)
+    rw = ReportWriter(calc.datastore)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir
-              else ds.export_path('report.rst'))
+              else calc.datastore.export_path('report.rst'))
     try:
         rw.save(report)
     except IOError as exc:  # permission error

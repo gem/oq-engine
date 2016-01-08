@@ -273,15 +273,18 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param rlzs_assoc:
-        a :class:`openquake.commonlib.source.RlzsAssoc` instance
     :param siteidx:
         always equal to 0
+    :param rlzs_assoc:
+        a :class:`openquake.commonlib.source.RlzsAssoc` instance
     :param monitor:
         monitor instance
     :returns:
         a dictionary trt_model_id -> [Rupture instances]
     """
+    assert siteidx == 0, (
+        'siteidx can be nonzero only for the classical_tiling calculations: '
+        'tiling with the EventBasedRuptureCalculator is an error')
     # NB: by construction each block is a non-empty list with
     # sources of the same trt_model_id
     trt_model_id = sources[0].trt_model_id
@@ -653,6 +656,9 @@ class EventBasedCalculator(ClassicalCalculator):
             # use a different datastore
             self.cl = ClassicalCalculator(oq, self.monitor)
             self.cl.datastore.parent = self.datastore
+            # TODO: perhaps it is possible to avoid reprocessing the source
+            # model, however usually this is quite fast and do not dominate
+            # the computation
             result = self.cl.run()
             for imt in self.mean_curves.dtype.fields:
                 rdiff, index = max_rel_diff_index(

@@ -567,13 +567,14 @@ class CompositeSourceModel(collections.Sequence):
         filtering and splitting them, depending on the passed parameters.
         """
         sources = []
+        maxweight = self.maxweight
         for trt_model in self.trt_models:
             for src in trt_model:
                 if kind == 'all':
                     sources.append(src)
-                elif kind == 'light' and src.weight <= self.maxweight:
+                elif kind == 'light' and src.weight <= maxweight:
                     sources.append(src)
-                elif kind == 'heavy' and src.weight > self.maxweight:
+                elif kind == 'heavy' and src.weight > maxweight:
                     sources.append(src)
         return sources
 
@@ -588,7 +589,7 @@ class CompositeSourceModel(collections.Sequence):
         Update the attributes src.weight and src.trt_model_id for each source,
         then set the attribute num_ruptures in each TRT model.
         """
-        self.weight = 0
+        self.weight = self.filtered_weight = 0
         for trt_model in self.trt_models:
             weight = 0
             num_ruptures = 0
@@ -746,14 +747,13 @@ class SourceManager(object):
                  monitor):
         self.tm = parallel.TaskManager(taskfunc)
         self.csm = csm
-        self.maxweight = math.ceil(csm.weight / (concurrent_tasks or 1))
         self.maximum_distance = maximum_distance
         self.monitor = monitor
         self.rlzs_assoc = csm.get_rlzs_assoc()
         self.split_map = {}
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
         logging.info('Instantiating SourceManager with maxweight=%.1f',
-                     self.maxweight)
+                     self.csm.maxweight)
 
     def get_sources(self, kind, sitecol):
         """
@@ -807,22 +807,25 @@ class SourceManager(object):
         rnd.seed(random_seed)
         for kind in ('light', 'heavy'):
             sources = list(self.get_sources(kind, sitecol))
-            if sources:
-                logging.info('Submitting %d sources', len(sources))
+            if not sources:
+                continue
             # set a seed for each split source; the seed is used
             # only by the event based calculator, but it is set anyway
             for src in sources:
                 src.seed = rnd.randint(0, MAX_INT)
+            nblocks = 0
             for block in block_splitter(
                     sources, self.csm.maxweight,
                     operator.attrgetter('weight'),
                     operator.attrgetter('trt_model_id')):
                 self.tm.submit(block, sitecol, siteidx,
                                self.rlzs_assoc, self.monitor.new())
+                nblocks += 1
+            logging.info('Sent %d sources in %d blocks', len(sources), nblocks)
 
     def store_source_info(self, dstore):
         """
-        Save the source_info array in the datastore
+        Save the `source_info` array and its attributes in the datastore
         """
         if self.infos:
             values = self.infos.values()
@@ -830,7 +833,9 @@ class SourceManager(object):
                 key=lambda info: info.filter_time + info.split_time,
                 reverse=True)
             dstore['source_info'] = numpy.array(values, source_info_dt)
-            dstore['source_info'].attrs['maxweight'] = self.maxweight
+            attrs = dstore['source_info'].attrs
+            attrs['maxweight'] = self.csm.maxweight
+            attrs['nbytes_sent'] = self.tm.sent
             self.infos.clear()
 
     def update(self):
@@ -854,7 +859,7 @@ class SourceManager(object):
                         'sm_lt_path=%s, maximum_distance=%s km, TRT=%s',
                         source_model.name, source_model.path,
                         self.maxdist, trt_model.trt)
-        self.csm.weight = weight
+        self.csm.filtered_weight = weight
 
 
 class DummySourceManager(SourceManager):
