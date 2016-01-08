@@ -277,16 +277,14 @@ class ClassicalCalculator(base.HazardCalculator):
         calc_times = getattr(curves_by_trt_gsim, 'calc_times', [])
         if calc_times:
             sources = self.csm.get_sources()
-            source_info = list(self.source_info.value)
+            info_dict = {(rec[0], rec[1]): rec for rec in self.source_info}
             for src_idx, dt in calc_times:
                 src = sources[src_idx]
-                trt_id, src_id = src.trt_model_id, src.source_id
-                for info in source_info:
-                    if info[1] == src_id and info[0] == trt_id:
-                        info[7] += dt
-            # source_info_dt field #7 is calc_time
-            source_info.sort(key=operator.itemgetter(7), reverse=True)
-            self.source_info = numpy.array(source_info)
+                info = info_dict[src.trt_model_id, src.source_id]
+                info[7] += dt  # source_info_dt field #7 is calc_time
+            self.source_info = numpy.array(
+                sorted(info_dict.values(), key=operator.itemgetter(7),
+                       reverse=True))
 
     def post_execute(self, curves_by_trt_gsim):
         """

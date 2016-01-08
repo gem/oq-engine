@@ -752,7 +752,7 @@ class SourceManager(object):
         self.rlzs_assoc = csm.get_rlzs_assoc()
         self.split_map = {}
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
-        logging.info('Instantiating SourceManager with maxweight=%.1f',
+        logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.csm.maxweight)
 
     def get_sources(self, kind, sitecol):
