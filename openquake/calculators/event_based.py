@@ -399,6 +399,10 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                    if trt_model.id == key and val)
 
     def agg_curves(self, acc, val):
+        """
+        For the rupture calculator, just increment the AccumDict
+        trt_id -> ruptures
+        """
         acc += val
 
     def post_execute(self, result):
