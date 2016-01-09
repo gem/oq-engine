@@ -212,7 +212,6 @@ class VulnerabilityFunction(object):
         return utils.numpy_map(
             vulnerability_function._apply, ground_motion_values)
 
-    @utils.memoized
     def strictly_increasing(self):
         """
         :returns:
@@ -1196,9 +1195,9 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
     :param int steps:
         Number of steps between loss ratios.
     """
-    vf = vulnerability_function.strictly_increasing()
-    imls = vf.mean_imls()
-    loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
+    imls = vulnerability_function.mean_imls()
+    loss_ratios, lrem = vulnerability_function.loss_ratio_exceedance_matrix(
+        steps)
 
     # saturate imls to hazard imls
     min_val, max_val = hazard_imls[0], hazard_imls[-1]

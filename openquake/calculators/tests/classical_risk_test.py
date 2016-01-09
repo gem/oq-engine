@@ -1,7 +1,7 @@
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.classical_risk import (
-    case_1, case_2, case_3, case_4)
+    case_1, case_2, case_3, case_4, case_5)
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.writers import scientificformat
 
@@ -61,5 +61,11 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-000.csv', fnames[0])
         self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
 
+    @attr('qa', 'risk', 'classical_risk')
+    def test_case_5(self):
+        out = self.run_calc(case_5.__file__, 'job_h.ini,job_r.ini',
+                            exports='csv')
+        fnames = out['loss_curves-rlzs', 'csv']
+        print fnames
+
     # TODO: tests with more than a loss type
-    # tests with more than one pair IMT, taxo

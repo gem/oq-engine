@@ -162,9 +162,13 @@ def get_risk_models(oqparam, kind):
     elif kind == 'consequence':
         rdict = rmodels
     else:  # vulnerability
+        classical = oqparam.calculation_mode == 'classical_risk'
         for loss_type, rm in rmodels.items():
             for imt_taxo, rf in rm.items():
-                rdict[imt_taxo][loss_type] = rf
+                rdict[imt_taxo][loss_type] = (
+                    rf.strictly_increasing() if classical else rf)
+                # TODO: ask Anirudh; perhaps we should remove the `if`,
+                # but then event_based_risk/case_4 has to be fixed
     return rdict
 
 

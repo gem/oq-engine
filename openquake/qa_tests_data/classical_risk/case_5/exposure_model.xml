@@ -1,0 +1,75 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings">
+    <description>Exposure model for CITY C</description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" unit="EUR" type="aggregated"/>
+      </costTypes>
+      <deductible isAbsolute="false"/>
+      <insuranceLimit isAbsolute="false"/>
+    </conversions>
+    <assets>
+      <asset id="a1" taxonomy="MS-SLSB-1">
+        <location lon="-78.167775" lat="15.592965"/>
+        <costs>
+          <cost type="structural" value="43889.78977" deductible="0.1" insuranceLimit="0.9" />
+        </costs>
+      </asset>
+      <asset id="a2" taxonomy="MS-FLSB-2">
+        <location lon="-78.167809" lat="15.593067"/>
+        <costs>
+          <cost type="structural" value="61276.22663" deductible="0.1" insuranceLimit="0.9" />
+        </costs>
+      </asset>
+      <asset id="a3" taxonomy="MS-SLSB-1">
+        <location lon="-78.167845" lat="15.593165"/>
+        <costs>
+          <cost type="structural" value="36939.74031" deductible="0.1" insuranceLimit="0.9" />
+        </costs>
+      </asset>
+      <asset id="a4" taxonomy="MS-SLSB-1">
+        <location lon="-78.167733" lat="15.592819"/>
+        <costs>
+          <cost type="structural" value="86825.67485" deductible="0.1" insuranceLimit="0.9" />
+        </costs>
+      </asset>
+      <asset id="a5" taxonomy="MS-FLSB-2">
+        <location lon="-78.16787" lat="15.593317"/>
+        <costs>
+          <cost type="structural" value="114772.9901" deductible="0.1" insuranceLimit="0.9" />
+        </costs>
+      </asset>
+      <asset id="a6" taxonomy="MC-RLSB-2">
+        <location lon="-78.168002" lat="15.593287"/>
+        <costs>
+          <cost type="structural" value="124522.486" deductible="0.1" insuranceLimit="0.9" />
+        </costs>
+      </asset>
+      <asset id="a7" taxonomy="MS-SLSB-1">
+        <location lon="-78.168117" lat="15.59329"/>
+        <costs>
+          <cost type="structural" value="32911.55171" deductible="0.1" insuranceLimit="0.9" />
+        </costs>
+      </asset>
+      <asset id="a8" taxonomy="MS-SLSB-1">
+        <location lon="-78.168208" lat="15.593259"/>
+        <costs>
+          <cost type="structural" value="42519.28895" deductible="0.1" insuranceLimit="0.9" />
+        </costs>
+      </asset>
+      <asset id="a9" taxonomy="MS-FLSB-2">
+        <location lon="-78.168313" lat="15.59324"/>
+        <costs>
+          <cost type="structural" value="79031.8682" deductible="0.1" insuranceLimit="0.9" />
+        </costs>
+      </asset>
+      <asset id="a10" taxonomy="MS-FLSB-2">
+        <location lon="-78.168421" lat="15.593159"/>
+        <costs>
+          <cost type="structural" value="141552.1735" deductible="0.1" insuranceLimit="0.9" />
+        </costs>
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>
