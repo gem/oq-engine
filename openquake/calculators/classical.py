@@ -417,7 +417,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         self.manager = source.SourceManager(
             self.csm, self.core_task.__func__,
             oq.concurrent_tasks, oq.maximum_distance,
-            self.monitor.new(oqparam=oq))
+            self.datastore, self.monitor.new(oqparam=oq))
         siteidx = 0
         for i, tile in enumerate(tiles, 1):
             logging.info('Filtering sources against tile %d', i)

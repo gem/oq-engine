@@ -744,10 +744,11 @@ class SourceManager(object):
     Filter and split sources and send them to the worker tasks.
     """
     def __init__(self, csm, taskfunc, concurrent_tasks, maximum_distance,
-                 monitor):
+                 dstore, monitor):
         self.tm = parallel.TaskManager(taskfunc)
         self.csm = csm
         self.maximum_distance = maximum_distance
+        self.dstore = dstore
         self.monitor = monitor
         self.rlzs_assoc = csm.get_rlzs_assoc()
         self.split_map = {}
@@ -774,8 +775,8 @@ class SourceManager(object):
                 self.sources_by_trt[src.trt_model_id].append(src)
                 if kind == 'heavy':
                     if src.id not in self.split_map:
-                        logging.info('splitting %s of weight %s',
-                                     src, src.weight)
+                        logging.info('splitting %s (#%d) of weight %s',
+                                     src, src.id, src.weight)
                         with split_mon:
                             sources = sourceconverter.split_source(src)
                             self.split_map[src.id] = list(sources)
@@ -865,7 +866,7 @@ class SourceManager(object):
 
 class DummySourceManager(SourceManager):
     def __init__(self, csm, taskfunc, concurrent_tasks, maximum_distance,
-                 monitor):
+                 dstore, monitor):
         SourceManager.__init__(self, csm, lambda *a: {}, concurrent_tasks,
-                               maximum_distance, monitor)
+                               maximum_distance, dstore, monitor)
         self.tm.no_distribute = True
