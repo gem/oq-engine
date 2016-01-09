@@ -246,7 +246,6 @@ class Workflow(object):
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = risk_functions
-        self.curve_builders = []  # a CurveBuilder per each loss type
 
     @property
     def loss_types(self):
