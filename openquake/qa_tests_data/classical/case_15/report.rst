@@ -71,25 +71,28 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================== ====== ======================== =========== ============
-source_model       trt_id trt                      num_sources num_ruptures
-================== ====== ======================== =========== ============
-source_model_1.xml 0      Active Shallow Crust     1           15          
-source_model_1.xml 1      Stable Continental Crust 1           15          
-source_model_2.xml 2      Active Shallow Crust     16          240         
-source_model_2.xml 3      Active Shallow Crust     16          240         
-================== ====== ======================== =========== ============
+================== ====== ======================== =========== ============ ======
+source_model       trt_id trt                      num_sources num_ruptures weight
+================== ====== ======================== =========== ============ ======
+source_model_1.xml 0      Active Shallow Crust     1           15           0.375 
+source_model_1.xml 1      Stable Continental Crust 1           15           0.375 
+source_model_2.xml 2      Active Shallow Crust     1           240          6.0   
+source_model_2.xml 3      Active Shallow Crust     1           240          6.0   
+================== ====== ======================== =========== ============ ======
 
-=========== ===
-#TRT models 4  
-#sources    34 
-#ruptures   510
-=========== ===
+=============== =====
+#TRT models     4    
+#sources        4    
+#ruptures       510  
+total weight    12.75
+filtered weight 12.75
+=============== =====
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ========
-Number of tasks to generate        18      
-Estimated sources to send          44.56 KB
-Estimated hazard curves to receive 13 KB   
-================================== ========
+=========================== =========
+Number of tasks to generate 18       
+Sent data                   242.68 KB
+Total received data         35.31 KB 
+Maximum received per task   1.96 KB  
+=========================== =========

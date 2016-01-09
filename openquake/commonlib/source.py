@@ -119,15 +119,12 @@ class TrtModel(collections.Sequence):
                 source_stats_dict[trt] = TrtModel(trt)
             tm = source_stats_dict[trt]
             if not tm.sources:
-
-                # we increate the rupture counter by 1,
+                # we increment the rupture counter by 1,
                 # to avoid filtering away the TRTModel
                 tm.num_ruptures = 1
 
                 # we append just one source per TRTModel, so that
-                # the memory occupation is insignificand and at
-                # the same time we avoid the RuntimeError
-                # "All sources were filtered away"
+                # the memory occupation is insignificant
                 tm.sources.append(src)
 
         # return TrtModels, ordered by TRT string
@@ -595,7 +592,7 @@ class CompositeSourceModel(collections.Sequence):
             num_ruptures = 0
             for src in trt_model:
                 if isinstance(src, (PointSource, AreaSource)):
-                    num_ruptures += math.ceil(
+                    num_ruptures += int(
                         src.weight / sourceconverter.POINT_SOURCE_WEIGHT)
                 else:
                     num_ruptures += src.weight
@@ -810,6 +807,8 @@ class SourceManager(object):
     def submit_sources(self, sitecol, siteidx=0, random_seed=42):
         """
         Submit the light sources and then the (split) heavy sources.
+        Only the sources affecting the sitecol as considered. Also,
+        set the .seed attribute of each source.
         """
         rnd = random.Random()
         rnd.seed(random_seed)
@@ -821,11 +820,13 @@ class SourceManager(object):
             # only by the event based calculator, but it is set anyway
             for src in sources:
                 src.seed = rnd.randint(0, MAX_INT)
+                self.csm.filtered_weight += src.weight
             nblocks = 0
             for block in block_splitter(
                     sources, self.csm.maxweight,
                     operator.attrgetter('weight'),
                     operator.attrgetter('trt_model_id')):
+                monitor = PerformanceMonitor('')
                 sent = self.tm.submit(block, sitecol, siteidx,
                                       self.rlzs_assoc, self.monitor.new())
                 self.source_chunks.append((len(block), block.weight, sent))
@@ -862,26 +863,31 @@ class SourceManager(object):
         :param csm: a CompositeSourceModel instance
         :param sources_by_trt: a dictionary trt_model_id -> sources
         """
-        # update trt_model.sources
-        weight = 0
+        # reorder trt_model.sources
         for source_model in self.csm:
             for trt_model in source_model.trt_models:
                 trt_model.sources = sorted(
                     self.sources_by_trt.get(trt_model.id, []),
                     key=operator.attrgetter('source_id'))
-                weight += sum(src.weight for src in trt_model)
                 if not trt_model.sources:
                     logging.warn(
                         'Could not find sources close to the sites in %s '
                         'sm_lt_path=%s, maximum_distance=%s km, TRT=%s',
                         source_model.name, source_model.path,
                         self.maxdist, trt_model.trt)
-        self.csm.filtered_weight = weight
+
+
+@parallel.litetask
+def dummy_task(sources, sitecol, siteidx, rlzs_assoc, monitor):
+    return {}
 
 
 class DummySourceManager(SourceManager):
+    """
+    A SourceManager submitting do-nothing tasks: this is useful to stress
+    the calculation in case of a large data transfer, and to measure it.
+    """
     def __init__(self, csm, taskfunc, concurrent_tasks, maximum_distance,
                  dstore, monitor):
-        SourceManager.__init__(self, csm, lambda *a: {}, concurrent_tasks,
+        SourceManager.__init__(self, csm, dummy_task, concurrent_tasks,
                                maximum_distance, dstore, monitor)
-        self.tm.no_distribute = True

@@ -262,11 +262,18 @@ class ClassicalCalculator(base.HazardCalculator):
         return curves_by_trt_gsim
 
     def store_source_info(self, curves_by_trt_gsim):
+        # store the information about received data
+        received = self.manager.tm.received
+        attrs = self.datastore['source_chunks'].attrs
+        attrs['max_received'] = max(received)
+        attrs['tot_received'] = sum(received)
+
         # then save the calculation times per each source
         calc_times = getattr(curves_by_trt_gsim, 'calc_times', [])
         if calc_times:
             sources = self.csm.get_sources()
-            info_dict = {(rec[0], rec[1]): rec for rec in self.source_info}
+            info_dict = {(rec['trt_model_id'], rec['source_id']): rec
+                         for rec in self.source_info}
             for src_idx, dt in calc_times:
                 src = sources[src_idx]
                 try:
@@ -275,10 +282,11 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.error('source_info for (%s, %s) not found??',
                                   src.trt_model_id, src.source_id)
                 else:
-                    info[7] += dt  # source_info_dt field #7 is calc_time
+                    info['calc_time'] += dt
             self.source_info = numpy.array(
                 sorted(info_dict.values(), key=operator.itemgetter(7),
                        reverse=True))
+        self.datastore.hdf5.flush()
 
     def post_execute(self, curves_by_trt_gsim):
         """

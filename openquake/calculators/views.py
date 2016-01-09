@@ -23,10 +23,10 @@ import operator
 import itertools
 import numpy
 
-from openquake.baselib.general import groupby, split_in_blocks, humansize
-from openquake.baselib.performance import PerformanceMonitor, perf_dt
+from openquake.baselib.general import humansize
+from openquake.baselib.performance import perf_dt
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import parallel, util
+from openquake.commonlib import util
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import (
@@ -133,19 +133,25 @@ def view_rupture_collections(token, dstore):
 @view.add('ruptures_per_trt')
 def view_ruptures_per_trt(token, dstore):
     tbl = []
-    header = 'source_model trt_id trt num_sources num_ruptures'.split()
+    header = 'source_model trt_id trt num_sources num_ruptures weight'.split()
     num_trts = 0
     num_sources = 0
     num_ruptures = 0
-    for sm in dstore['composite_source_model']:
+    csm = dstore['composite_source_model']
+    attrs = dstore.hdf5['composite_source_model'].attrs
+    for sm in csm:
         for trt_model in sm.trt_models:
             num_trts += 1
             num_sources += len(trt_model.sources)
             num_ruptures += trt_model.num_ruptures
             tbl.append((sm.name, trt_model.id, trt_model.trt,
-                        len(trt_model.sources), trt_model.num_ruptures))
-    rows = [('#TRT models', num_trts), ('#sources', num_sources),
-            ('#ruptures', num_ruptures)]
+                        len(trt_model.sources), trt_model.num_ruptures,
+                        trt_model.weight))
+    rows = [('#TRT models', num_trts),
+            ('#sources', num_sources),
+            ('#ruptures', num_ruptures),
+            ('total weight', attrs['weight']),
+            ('filtered weight', attrs['filtered_weight'])]
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:
@@ -199,7 +205,9 @@ def source_data_transfer(token, dstore):
     tbl = [
         ('Number of tasks to generate', len(sc)),
         ('Sent data', humansize(sc.attrs['sent'])),
-        ('Estimated hazard curves to receive', 'NOT IMPLEMENTED YET')]
+        ('Total received data', humansize(sc.attrs['tot_received'])),
+        ('Maximum received per task', humansize(sc.attrs['max_received'])),
+    ]
     return rst_table(tbl)
 
 
@@ -217,31 +225,6 @@ def avglosses_data_transfer(token, dstore):
     size_bytes = N * R * L * 2 * 8 * ct  # two 8 byte floats, loss and ins_loss
     return ('%d asset(s) x %d realization(s) x %d loss type(s) x 2 losses x '
             '8 bytes x %d tasks = %s' % (N, R, L, ct, humansize(size_bytes)))
-
-
-# this is used by the ebr calculator
-@view.add('old_avg_losses')
-def view_old_avg_losses(token, dstore):
-    stats = 'specific/loss_curves-stats' in dstore
-    group = (dstore['specific/loss_curves-stats'] if stats
-             else dstore['specific/loss_curves-rlzs'])
-    loss_types = group.dtype.names
-    assets = dstore['assetcol']['asset_ref']
-
-    data_by_lt = {}
-    for lt in loss_types:
-        loss_curves = group[lt]['mean'] if stats else group[lt]['rlz-000']
-        data = loss_curves.value['avg']
-        data_by_lt[lt] = dict(zip(assets, data))
-    dt_list = [('asset_ref', '|S100')] + [(str(ltype), numpy.float32)
-                                          for ltype in sorted(data_by_lt)]
-    avg_loss_dt = numpy.dtype(dt_list)
-    losses = numpy.zeros(len(data_by_lt[lt]), avg_loss_dt)
-    for lt, loss_by_asset in data_by_lt.items():
-        assets = sorted(loss_by_asset)
-        losses[lt] = [loss_by_asset[a] for a in assets]
-    losses['asset_ref'] = assets
-    return rst_table(losses)
 
 
 # for scenario_risk

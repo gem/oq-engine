@@ -8,7 +8,7 @@ import sys
 import mock
 import logging
 
-from openquake.commonlib import readinput, datastore, source, parallel
+from openquake.commonlib import readinput, datastore, source
 from openquake.calculators import base, views
 from openquake.commonlib.oqvalidation import OqParam
 
@@ -82,11 +82,6 @@ class ReportWriter(object):
             f.write(self.text)
 
 
-@parallel.litetask
-def dummy_task(sources, sitecol, siteidx, rlzs_assoc, monitor):
-    return {}
-
-
 def build_report(job_ini, output_dir=None):
     """
     Write a `report.csv` file with information about the calculation
@@ -104,7 +99,7 @@ def build_report(job_ini, output_dir=None):
     # the goal is to extract information about the source management only
     calc.SourceManager = source.DummySourceManager
     calc.is_effective_trt_model = lambda result_dict, trt_model: True
-    with mock.patch.object(calc.__class__, 'core_task', dummy_task):
+    with mock.patch.object(calc.__class__, 'core_task', source.dummy_task):
         calc.pre_execute()
     with mock.patch.object(logging.root, 'info'):  # reduce logging
         calc.execute()

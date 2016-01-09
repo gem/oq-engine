@@ -58,16 +58,17 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============
-source_model     trt_id trt                  num_sources num_ruptures
-================ ====== ==================== =========== ============
-source_model.xml 0      active shallow crust 2           1386        
-================ ====== ==================== =========== ============
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources num_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      active shallow crust 2           1386         1386  
+================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =======
-Number of tasks to generate        2      
-Estimated sources to send          3.63 KB
-Estimated hazard curves to receive 48 B   
-================================== =======
+=========================== ========
+Number of tasks to generate 2       
+Sent data                   11.98 KB
+Total received data         3.17 KB 
+Maximum received per task   1.58 KB 
+=========================== ========

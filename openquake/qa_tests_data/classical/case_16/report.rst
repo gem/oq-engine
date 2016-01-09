@@ -18,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0     
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             32       
+concurrent_tasks             16       
 ============================ =========
 
 Input files
@@ -85,31 +85,34 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============
-source_model     trt_id trt                  num_sources num_ruptures
-================ ====== ==================== =========== ============
-source_model.xml 0      Active Shallow Crust 135         1925        
-source_model.xml 1      Active Shallow Crust 135         2025        
-source_model.xml 2      Active Shallow Crust 135         2135        
-source_model.xml 3      Active Shallow Crust 135         2035        
-source_model.xml 4      Active Shallow Crust 135         1865        
-source_model.xml 5      Active Shallow Crust 135         2085        
-source_model.xml 6      Active Shallow Crust 135         2075        
-source_model.xml 7      Active Shallow Crust 135         2185        
-source_model.xml 8      Active Shallow Crust 135         1905        
-source_model.xml 9      Active Shallow Crust 135         2025        
-================ ====== ==================== =========== ============
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources num_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust 5           1925         48.125
+source_model.xml 1      Active Shallow Crust 5           2025         50.625
+source_model.xml 2      Active Shallow Crust 5           2135         53.375
+source_model.xml 3      Active Shallow Crust 5           2035         50.875
+source_model.xml 4      Active Shallow Crust 5           1865         46.625
+source_model.xml 5      Active Shallow Crust 5           2085         52.125
+source_model.xml 6      Active Shallow Crust 5           2075         51.875
+source_model.xml 7      Active Shallow Crust 5           2185         54.625
+source_model.xml 8      Active Shallow Crust 5           1905         47.625
+source_model.xml 9      Active Shallow Crust 5           2025         50.625
+================ ====== ==================== =========== ============ ======
 
-=========== =====
-#TRT models 10   
-#sources    1350 
-#ruptures   20260
-=========== =====
+=============== =====
+#TRT models     10   
+#sources        50   
+#ruptures       20260
+total weight    506.5
+filtered weight 506.5
+=============== =====
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =========
-Number of tasks to generate        38       
-Estimated sources to send          346.89 KB
-Estimated hazard curves to receive 912 B    
-================================== =========
+=========================== =========
+Number of tasks to generate 22       
+Sent data                   552.11 KB
+Total received data         38.74 KB 
+Maximum received per task   1.76 KB  
+=========================== =========
