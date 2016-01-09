@@ -68,8 +68,7 @@ class ReportWriter(object):
             self.add('col_rlz_assocs')
         elif 'composite_source_model' in ds:
             self.add('ruptures_per_trt')
-        if oq.calculation_mode in ('classical', 'event_based',
-                                   'event_based_risk'):
+        if 'scenario' not in oq.calculation_mode:
             self.add('source_data_transfer')
         if oq.calculation_mode in ('event_based_risk',):
             self.add('avglosses_data_transfer')

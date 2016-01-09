@@ -738,6 +738,12 @@ source_info_dt = numpy.dtype([
 ])
 
 
+source_chunk_dt = numpy.dtype([
+    ('num_sources', numpy.uint32),
+    ('weight', numpy.float32),
+    ('sent', numpy.int32)])
+
+
 class SourceManager(object):
     """
     Manager associated to a CompositeSourceModel instance.
@@ -752,6 +758,7 @@ class SourceManager(object):
         self.monitor = monitor
         self.rlzs_assoc = csm.get_rlzs_assoc()
         self.split_map = {}
+        self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.csm.maxweight)
@@ -775,8 +782,8 @@ class SourceManager(object):
                 self.sources_by_trt[src.trt_model_id].append(src)
                 if kind == 'heavy':
                     if src.id not in self.split_map:
-                        logging.info('splitting %s (#%d) of weight %s',
-                                     src, src.id, src.weight)
+                        logging.info('splitting %s of weight %s',
+                                     src, src.weight)
                         with split_mon:
                             sources = sourceconverter.split_source(src)
                             self.split_map[src.id] = list(sources)
@@ -819,8 +826,9 @@ class SourceManager(object):
                     sources, self.csm.maxweight,
                     operator.attrgetter('weight'),
                     operator.attrgetter('trt_model_id')):
-                self.tm.submit(block, sitecol, siteidx,
-                               self.rlzs_assoc, self.monitor.new())
+                sent = self.tm.submit(block, sitecol, siteidx,
+                                      self.rlzs_assoc, self.monitor.new())
+                self.source_chunks.append((len(block), block.weight, sent))
                 nblocks += 1
             logging.info('Sent %d sources in %d block(s)',
                          len(sources), nblocks)
@@ -837,8 +845,15 @@ class SourceManager(object):
             dstore['source_info'] = numpy.array(values, source_info_dt)
             attrs = dstore['source_info'].attrs
             attrs['maxweight'] = self.csm.maxweight
-            attrs['nbytes_sent'] = self.tm.sent
+            attrs['sent'] = self.tm.sent
             self.infos.clear()
+        if self.source_chunks:
+            dstore['source_chunks'] = sc = numpy.array(
+                self.source_chunks, source_chunk_dt)
+            attrs = dstore['source_chunks'].attrs
+            attrs['nbytes'] = sc.nbytes
+            attrs['sent'] = sc['sent'].sum()
+            del self.source_chunks
 
     def update(self):
         """

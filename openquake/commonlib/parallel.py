@@ -311,12 +311,15 @@ class TaskManager(object):
         check_mem_usage()
         # log a warning if too much memory is used
         if self.no_distribute:
+            sent = 0
             res = safely_call(self.task_func, args)
         else:
             piks = pickle_sequence(args)
-            self.sent += sum(len(p) for p in piks)
+            sent = sum(len(p) for p in piks)
             res = self._submit(piks)
+            self.sent += sent
         self.results.append(res)
+        return sent
 
     def _submit(self, piks):
         # submit tasks by using the ProcessPoolExecutor
