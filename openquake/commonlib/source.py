@@ -768,7 +768,6 @@ class SourceManager(object):
         """
         filter_mon = self.monitor('filtering sources')
         split_mon = self.monitor('splitting sources')
-        self.sources_by_trt = collections.defaultdict(list)
         for src in self.csm.get_sources(kind):
             with filter_mon:
                 sites = src.filter_sites_by_distance_to_source(
@@ -776,7 +775,6 @@ class SourceManager(object):
             filter_time = filter_mon.dt
             split_time = 0
             if sites is not None:
-                self.sources_by_trt[src.trt_model_id].append(src)
                 if kind == 'heavy':
                     if src.id not in self.split_map:
                         logging.info('splitting %s of weight %s',
@@ -854,26 +852,6 @@ class SourceManager(object):
             attrs['nbytes'] = sc.nbytes
             attrs['sent'] = sc['sent'].sum()
             del self.source_chunks
-
-    def update(self):
-        """
-        Store the `source_info` array in the composite source model.
-
-        :param csm: a CompositeSourceModel instance
-        :param sources_by_trt: a dictionary trt_model_id -> sources
-        """
-        # reorder trt_model.sources
-        for source_model in self.csm:
-            for trt_model in source_model.trt_models:
-                trt_model.sources = sorted(
-                    self.sources_by_trt.get(trt_model.id, []),
-                    key=operator.attrgetter('source_id'))
-                if not trt_model.sources:
-                    logging.warn(
-                        'Could not find sources close to the sites in %s '
-                        'sm_lt_path=%s, maximum_distance=%s km, TRT=%s',
-                        source_model.name, source_model.path,
-                        self.maxdist, trt_model.trt)
 
 
 @parallel.litetask
