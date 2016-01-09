@@ -821,7 +821,8 @@ class SourceManager(object):
                 self.tm.submit(block, sitecol, siteidx,
                                self.rlzs_assoc, self.monitor.new())
                 nblocks += 1
-            logging.info('Sent %d sources in %d blocks', len(sources), nblocks)
+            logging.info('Sent %d sources in %d block(s)',
+                         len(sources), nblocks)
 
     def store_source_info(self, dstore):
         """
