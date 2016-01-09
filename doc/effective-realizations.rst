@@ -158,17 +158,14 @@ How to analyze the logic tree of a calculation without running the calculation
 computation without running it. The command you need is the *info* command::
 
    $ oq-lite info -h
-   usage: oq-lite info [-h] [-f] [-w] [-d] name
+   usage: oq-lite info [-h] [-r] name
    
    positional arguments:
      name                 calculator name, job.ini file or zip archive
    
    optional arguments:
      -h, --help           show this help message and exit
-     -f, --filtersources  flag to enable filtering of the source models
-     -w, --weightsources  flag to enable weighting of the source models
-     -d, --datatransfer   flag to enable data transfer calculation
-     -r, --report         flag to enable building a report in rst format
+     -r, --report         build a report in rst format
    
 Let's assume that you have a zip archive called `SHARE.zip` containing the
 SHARE source model, the SHARE source model logic tree file and the SHARE
@@ -208,35 +205,22 @@ submodels:
 In practice, you want to know if your complete logic tree will be
 reduced by the filtering, i.e. you want to know the effective
 realizations, not the potential ones. You can perform that check by
-using the `--filtersources` flag. For the sake of exemplification, I will
-show the output of a real life computation, performed by one of our users
-who was interested in only three sites and wanted to filter the sources
-around those points with a maximum distance of 200 kilometers::
+using the `--report` flag. This will generate a report with a name
+like `report_<calc_id>.rst`::
 
-   $ oq-lite info SHARE.zip --filtersources
-   <CompositionInfo
-   b1, area_source_model.xml, trt=[0, 1, 2, 3, 4, 5, 6], weight=0.500: 80 realization(s)
-   b2, faults_backg_source_model.xml, trt=[7, 8, 9, 10, 11, 12, 13, weight=0.200]: 80 realization(s)
-   b3, seifa_model.xml, trt=[14, 15, 16, 17, 18, 19], weight=0.300: 80 realization(s)>
-   <RlzsAssoc...>
+   $ oq-lite info SHARE.zip --report
+   ...
+   Generated /home/michele/report_5580.rst
 
-In this example the effective SHARE model is composed by three submodels:
-
- * `area_source_model.xml` contains 7 Tectonic Region Types numbered from 0 to 7
-   and produces 80 effective realizations;
- * `faults_backg_source_model.xml` contains 7 Tectonic Region Types numbered from 7 to 13
-   and produces 80 effective realizations;
- * `seifa_model.xml` contains 6 Tectonic Region Types numbered from 14 to 19
-   and produces 80 effective realizations;
+If you open that file you will find a lot of useful information about
+the source model, its composition, the number of sources and ruptures
+and the effective realizations.
 
 Depending on the location of the points and the maximum distance, one
 or more submodels could be completely filtered out and could produce
 zero effective realizations, so the reduction effect could be even
 stronger. Such a situation is covered by our tests
-and will be discussed later on. Notice that already in
-this case we reduced the computation from 1280 + 1280 + 640 = 3200
-potential realizations to only 80 + 80 + 80 = 240 effective
-realizations.
+and will be discussed later on.
 
 
 The realization-association object
