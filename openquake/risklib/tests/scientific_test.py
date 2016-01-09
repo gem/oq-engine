@@ -596,20 +596,19 @@ class InsuredLossCurveTestCase(unittest.TestCase):
     def test_curve(self):
         curve = numpy.array(
             [numpy.linspace(0, 1, 11), numpy.linspace(1, 0, 11)])
-
+        losses, poes = scientific.insured_loss_curve(curve, 0.2, 0.5)
         numpy.testing.assert_allclose(
-            numpy.array([[0., 0.1, 0.2, 0.3, 0.4, 0.5],
-                         [0.8, 0.8, 0.8, 0.7, 0.6, 0.5]]),
-            scientific.insured_loss_curve(curve, 0.2, 0.5))
+            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0], losses)
+        numpy.testing.assert_allclose(
+            [0.8, 0.8, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.0], poes)
 
     def test_trivial_curve(self):
         curve = numpy.array(
             [numpy.linspace(0, 1, 11), numpy.zeros(11)])
-
+        losses, poes = scientific.insured_loss_curve(curve, 0.1, 0.5)
         numpy.testing.assert_allclose(
-            [[0, 0.1, 0.2, 0.3, 0.4, 0.5],
-             [0, 0, 0, 0, 0, 0]],
-            scientific.insured_loss_curve(curve, 0.1, 0.5))
+            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0], losses)
+        numpy.testing.assert_allclose([0] * 11, poes)
 
 
 class LossMapMatrixTest(unittest.TestCase):

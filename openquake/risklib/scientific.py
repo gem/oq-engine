@@ -1296,7 +1296,7 @@ def insured_loss_curve(curve, deductible, insured_limit):
     :param float insured_limit: the insured limit in fraction form
     """
     losses, poes = curve
-    losses[losses <= insured_limit] = 0
+    losses[losses > insured_limit] = 0
     limit_poe = interpolate.interp1d(
         *curve, bounds_error=False, fill_value=1)(deductible)
     return numpy.array([
