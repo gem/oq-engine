@@ -826,7 +826,6 @@ class SourceManager(object):
                     sources, self.csm.maxweight,
                     operator.attrgetter('weight'),
                     operator.attrgetter('trt_model_id')):
-                monitor = PerformanceMonitor('')
                 sent = self.tm.submit(block, sitecol, siteidx,
                                       self.rlzs_assoc, self.monitor.new())
                 self.source_chunks.append((len(block), block.weight, sent))
