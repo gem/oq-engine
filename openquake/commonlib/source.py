@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
-import math
 import logging
 import operator
 import collections
@@ -593,6 +592,8 @@ class CompositeSourceModel(collections.Sequence):
                 weight += src.weight
             trt_model.num_ruptures = num_ruptures
             trt_model.weight = weight
+            trt_model.sources = sorted(
+                trt_model, key=operator.attrgetter('source_id'))
             self.weight += weight
 
     def get_info(self):
@@ -752,7 +753,10 @@ class SourceManager(object):
         self.split_map = {}
         self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
-        numpy.random.seed(self.random_seed)
+        if random_seed is not None:
+            numpy.random.seed(self.random_seed)
+            self.src_seed = {src.id: numpy.random.randint(0, MAX_INT)
+                             for src in self.csm.get_sources('all')}
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.csm.maxweight)
 
@@ -807,13 +811,14 @@ class SourceManager(object):
         """
         if self.random_seed is not None:
             num_ruptures = sourceconverter.get_num_ruptures(src)
-            src.seeds = numpy.array(numpy.random.randint(
+            numpy.random.seed(self.src_seed[src.id])
+            src.seed = numpy.array(numpy.random.randint(
                 0, MAX_INT, size=num_ruptures), dtype=numpy.uint32)
             if split_sources:
                 start = 0
                 for ss in split_sources:
                     nr = sourceconverter.get_num_ruptures(ss)
-                    ss.seeds = src.seeds[start:start + nr]
+                    ss.seed = src.seed[start:start + nr]
                     start += nr
 
     def submit_sources(self, sitecol, siteidx=0):

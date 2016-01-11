@@ -305,7 +305,6 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-
         for rup, rups in build_ses_ruptures(
                 src, num_occ_by_rup, s_sites, oq.maximum_distance, sitecol):
             sesruptures.extend(rups)
@@ -333,7 +332,7 @@ def sample_ruptures(src, num_ses, info):
     num_occ_by_rup = collections.defaultdict(AccumDict)
     # generating ruptures for the given source
     for rup_no, rup in enumerate(src.iter_ruptures()):
-        numpy.random.seed(src.seeds[rup_no])
+        numpy.random.seed(src.seed[rup_no])
         for col_id in col_ids:
             for ses_idx in range(1, num_ses + 1):
                 num_occurrences = rup.sample_number_of_occurrences()
@@ -350,7 +349,7 @@ def build_ses_ruptures(
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated SESRuptures>)
     """
-    rnd = random.Random(src.seeds[0])
+    rnd = random.Random(src.seed[0])
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         # filtering ruptures
         r_sites = filter_sites_by_distance_to_rupture(
@@ -409,7 +408,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
 
     def send_sources(self):
         """
-        Filter, split and set the seeds for each source, then send it the
+        Filter, split and set the seed array for each source, then send it the
         workers
         """
         oq = self.oqparam

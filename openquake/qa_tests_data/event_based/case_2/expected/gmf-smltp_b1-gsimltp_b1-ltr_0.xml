@@ -9,13 +9,134 @@ xmlns:gml="http://www.opengis.net/gml"
     >
         <gmfSet
         investigationTime="1.0"
-        stochasticEventSetId="550"
+        stochasticEventSetId="33"
         >
             <gmf
             IMT="PGA"
-            ruptureId="col=00~ses=0550~src=1~rup=407-01"
+            ruptureId="col=00~ses=0033~src=1~rup=081-01"
             >
-                <node gmv="2.8548921E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+                <node gmv="2.4453511E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+            </gmf>
+        </gmfSet>
+        <gmfSet
+        investigationTime="1.0"
+        stochasticEventSetId="120"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="col=00~ses=0120~src=1~rup=020-01"
+            >
+                <node gmv="2.3755151E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+            </gmf>
+        </gmfSet>
+        <gmfSet
+        investigationTime="1.0"
+        stochasticEventSetId="174"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="col=00~ses=0174~src=1~rup=011-01"
+            >
+                <node gmv="2.3653816E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+            </gmf>
+        </gmfSet>
+        <gmfSet
+        investigationTime="1.0"
+        stochasticEventSetId="211"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="col=00~ses=0211~src=1~rup=013-01"
+            >
+                <node gmv="2.3676297E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+            </gmf>
+        </gmfSet>
+        <gmfSet
+        investigationTime="1.0"
+        stochasticEventSetId="213"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="col=00~ses=0213~src=1~rup=177-01"
+            >
+                <node gmv="2.5594378E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+            </gmf>
+        </gmfSet>
+        <gmfSet
+        investigationTime="1.0"
+        stochasticEventSetId="257"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="col=00~ses=0257~src=1~rup=147-01"
+            >
+                <node gmv="2.5232254E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+            </gmf>
+        </gmfSet>
+        <gmfSet
+        investigationTime="1.0"
+        stochasticEventSetId="288"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="col=00~ses=0288~src=1~rup=2545-01"
+            >
+                <node gmv="7.6966041E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+            </gmf>
+        </gmfSet>
+        <gmfSet
+        investigationTime="1.0"
+        stochasticEventSetId="295"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="col=00~ses=0295~src=1~rup=290-01"
+            >
+                <node gmv="2.7005652E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+            </gmf>
+        </gmfSet>
+        <gmfSet
+        investigationTime="1.0"
+        stochasticEventSetId="535"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="col=00~ses=0535~src=1~rup=054-01"
+            >
+                <node gmv="2.4141903E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+            </gmf>
+        </gmfSet>
+        <gmfSet
+        investigationTime="1.0"
+        stochasticEventSetId="539"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="col=00~ses=0539~src=1~rup=317-01"
+            >
+                <node gmv="2.7354218E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+            </gmf>
+        </gmfSet>
+        <gmfSet
+        investigationTime="1.0"
+        stochasticEventSetId="564"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="col=00~ses=0564~src=1~rup=263-01"
+            >
+                <node gmv="2.6661527E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
+            </gmf>
+        </gmfSet>
+        <gmfSet
+        investigationTime="1.0"
+        stochasticEventSetId="577"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="col=00~ses=0577~src=1~rup=429-01"
+            >
+                <node gmv="2.8848809E-01" lat="0.0000000E+00" lon="0.0000000E+00"/>
             </gmf>
         </gmfSet>
     </gmfCollection>
