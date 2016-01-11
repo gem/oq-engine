@@ -89,17 +89,20 @@ class TruncatedGRMFD(BaseMFD):
         * ``b`` value is positive.
         """
         if not self.bin_width > 0:
-            raise ValueError('bin width must be positive')
+            raise ValueError('bin width %g must be positive' % self.bin_width)
 
         if not self.min_mag >= 0:
-            raise ValueError('minimum magnitude must be non-negative')
+            raise ValueError('minimum magnitude %g must be non-negative'
+                             % self.min_mag)
 
         if not self.max_mag >= self.min_mag + self.bin_width:
-            raise ValueError('maximum magnitude must be higher than minimum '
-                             'magnitude by bin width at least')
+            raise ValueError('maximum magnitude %g must be higher than '
+                             'minimum magnitude %g by '
+                             'bin width %g at least'
+                             % (self.max_mag, self.min_mag, self.bin_width))
 
         if not 0 < self.b_val:
-            raise ValueError('b value must be non-negative')
+            raise ValueError('b-value %g must be non-negative' % self.b_val)
 
     def _get_rate(self, mag):
         """
