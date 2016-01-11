@@ -409,7 +409,8 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
 
     def send_sources(self):
         """
-        Filter/split/set the seeds and then send the sources to the worker tasks.
+        Filter, split and set the seeds for each source, then send it the
+        workers
         """
         oq = self.oqparam
         self.manager = self.SourceManager(

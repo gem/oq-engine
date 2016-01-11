@@ -1,6 +1,8 @@
-  [Michele Simionato]
+  [Michele Simionato] 
   * Refactored the source filtering/splitting mechanism and improved
     substantially the classical_tiling calculator
+  * Changed the management of the seeds in the event based calculator:
+    now we generate a seed per each rupture
   * Worked around a bug in h5py.Group.visitems in Ubuntu 12.04
   * Reduced the precision of the site mesh to 32 bits
   * The source model logic tree parser supports NRML 0.5
