@@ -407,13 +407,17 @@ class GSIMTableGoodTestCase(unittest.TestCase):
 
     def test_instantiation_without_file(self):
         """
-        Tests the case when no GMPE table file is coded into the GMPE, nor
-        is any provided - should raise an error
+        Tests the case when the GMPE table file is missing
         """
         with self.assertRaises(IOError) as ioe:
             GMPETable(gmpe_table=None)
         self.assertEqual(str(ioe.exception),
                          "GMPE Table Not Defined!")
+
+        with self.assertRaises(IOError) as ioe:
+            GMPETable(gmpe_table='/do/not/exists/table.hdf5')
+        self.assertEqual(str(ioe.exception),
+                         "Missing file '/do/not/exists/table.hdf5'")
 
     def test_retreival_tables_good_no_interp(self):
         """

@@ -302,6 +302,7 @@ class GMPETable(GMPE):
     REQUIRES_RUPTURE_PARAMETERS = {"mag"}
 
     GMPE_TABLE = None
+    GMPE_DIR = '.'
 
     def __init__(self, gmpe_table=None):
         """
@@ -317,7 +318,11 @@ class GMPETable(GMPE):
         """
         if not self.GMPE_TABLE:
             if gmpe_table:
-                self.GMPE_TABLE = os.path.abspath(gmpe_table)
+                if os.path.isabs(gmpe_table):
+                    self.GMPE_TABLE = gmpe_table
+                else:
+                    self.GMPE_TABLE = os.path.abspath(
+                        os.path.join(self.GMPE_DIR, gmpe_table))
                 if not os.path.exists(self.GMPE_TABLE):
                     raise IOError('Missing file %r' % self.GMPE_TABLE)
             else:
