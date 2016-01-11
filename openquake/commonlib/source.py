@@ -662,7 +662,7 @@ class CompositeSourceModel(collections.Sequence):
 
         assoc.gsims_by_trt_id = groupby(
             assoc.rlzs_assoc, operator.itemgetter(0),
-            lambda group: sorted(valid.gsim(gsim) for trt_id, gsim in group))
+            lambda group: sorted(gsim for trt_id, gsim in group))
 
         return assoc
 
