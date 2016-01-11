@@ -100,4 +100,4 @@ a4,3,1,50,500000,2.0,6.0
                          [b'a0', b'a1', b'a2', b'a3', b'a4'])
         self.assertEqual(set(a.taxonomy for a in assets),
                          set(['RM', 'RC', 'W']))
-        self.assertEqual(list(map(len, epsilons)), [20] * 5)
+        self.assertEqual(list(map(len, epsilons)), [26] * 5)
