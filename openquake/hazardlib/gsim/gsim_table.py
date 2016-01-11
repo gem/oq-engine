@@ -22,7 +22,7 @@ the corresponding amplification of the IMLs
 """
 
 from __future__ import division
-
+import os
 from copy import deepcopy
 
 import h5py
@@ -32,8 +32,7 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.gsim.base import (GMPE, RuptureContext, SitesContext,
-                                           DistancesContext)
+from openquake.hazardlib.gsim.base import GMPE, RuptureContext, SitesContext
 from openquake.baselib.python3compat import round
 
 
@@ -140,12 +139,12 @@ class AmplificationTable(object):
                 else:
                     assert numpy.allclose(self.periods, amp_model["IMLs/T"][:])
             for imt in ["SA", "PGA", "PGV"]:
-                if imt in amp_model["IMLs"].keys():
-                    self.mean[imt][:, :, :, self.argidx[iloc]] =\
+                if imt in amp_model["IMLs"]:
+                    self.mean[imt][:, :, :, self.argidx[iloc]] = \
                         amp_model["IMLs/" + imt][:]
                     for stddev_type in self.sigma:
-                        self.sigma[stddev_type][imt]\
-                            [:, :, :, self.argidx[iloc]] =\
+                        self.sigma[stddev_type][imt][
+                            :, :, :, self.argidx[iloc]] = \
                             amp_model["/".join([stddev_type, imt])][:]
         self.shape = (n_d, n_p, n_m, n_levels)
 
@@ -318,7 +317,9 @@ class GMPETable(GMPE):
         """
         if not self.GMPE_TABLE:
             if gmpe_table:
-                self.GMPE_TABLE = gmpe_table
+                self.GMPE_TABLE = os.path.abspath(gmpe_table)
+                if not os.path.exists(self.GMPE_TABLE):
+                    raise IOError('Missing file %r' % self.GMPE_TABLE)
             else:
                 raise IOError("GMPE Table Not Defined!")
         super(GMPETable, self).__init__()

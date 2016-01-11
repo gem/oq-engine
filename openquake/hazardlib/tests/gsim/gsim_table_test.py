@@ -15,8 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import unittest
-import collections
-import mock
 
 import h5py
 import numpy as np
@@ -24,8 +22,9 @@ from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.gsim_table import (
-    SitesContext, RuptureContext, DistancesContext, GMPETable,
-    AmplificationTable, hdf_arrays_to_dict)
+    GMPETable, AmplificationTable, hdf_arrays_to_dict)
+from openquake.hazardlib.gsim.base import (
+    RuptureContext, SitesContext, DistancesContext)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib import imt as imt_module
 
@@ -667,7 +666,7 @@ class GSIMTableTestCaseBadFile(unittest.TestCase):
         Tests missing period information
         """
         with self.assertRaises(ValueError) as ve:
-            gsim = GMPETable(gmpe_table=self.TABLE_FILE)
+            GMPETable(gmpe_table=self.TABLE_FILE)
         self.assertEqual(str(ve.exception),
                          "Spectral Acceleration must be accompanied by periods"
                          )
