@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the GMPETable GSIM and added an end-to-end test for it
   * Changed the management of the seeds in the event based calculator:
     now we generate a seed per each rupture
   * Worked around a bug in h5File.visitems in Ubuntu 12.04
