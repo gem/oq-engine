@@ -25,7 +25,8 @@ from openquake.hazardlib.source.area import AreaSource
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import context, striptag
-from openquake.commonlib import valid, util, parallel
+from openquake.commonlib import valid, parallel
+from openquake.risklib import utils
 
 # the following is arbitrary, it is used to decide when to parallelize
 # the filtering (MS)
@@ -38,7 +39,7 @@ MAGNITUDE_FOR_RUPTURE_SPLITTING = 6.5  # given by Marco Pagani
 POINT_SOURCE_WEIGHT = 1 / 40.
 
 
-@util.memoized
+@utils.memoized
 def get_num_ruptures(src):
     """
     Extract the number of ruptures from the weight attribute
