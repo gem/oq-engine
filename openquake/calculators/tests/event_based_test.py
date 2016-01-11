@@ -103,13 +103,15 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_blocksize(self):
-        out = self.run_calc(blocksize.__file__, 'job.ini', concurrent_tasks=4,
+        # here the <AreaSource 1> is light and not split
+        out = self.run_calc(blocksize.__file__, 'job.ini', concurrent_tasks=3,
                             exports='csv')
         [fname] = out['gmfs', 'csv']
         self.assertEqualFiles('expected/0-ChiouYoungs2008.csv',
                               fname, sorted)
 
-        out = self.run_calc(blocksize.__file__, 'job.ini', concurrent_tasks=8,
+        # here the <AreaSource 1> is heavy and split
+        out = self.run_calc(blocksize.__file__, 'job.ini', concurrent_tasks=4,
                             exports='csv')
         [fname] = out['gmfs', 'csv']
         self.assertEqualFiles('expected/0-ChiouYoungs2008.csv',
