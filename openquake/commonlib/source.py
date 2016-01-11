@@ -23,8 +23,6 @@ from xml.etree import ElementTree as etree
 import numpy
 
 from openquake.baselib.general import AccumDict, groupby, block_splitter
-from openquake.hazardlib.source.point import PointSource
-from openquake.hazardlib.source.area import AreaSource
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import valid, logictree, sourceconverter, parallel
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
@@ -591,11 +589,7 @@ class CompositeSourceModel(collections.Sequence):
             weight = 0
             num_ruptures = 0
             for src in trt_model:
-                if isinstance(src, (PointSource, AreaSource)):
-                    num_ruptures += int(
-                        src.weight / sourceconverter.POINT_SOURCE_WEIGHT)
-                else:
-                    num_ruptures += src.weight
+                num_ruptures += sourceconverter.get_num_ruptures(src)
                 weight += src.weight
             trt_model.num_ruptures = num_ruptures
             trt_model.weight = weight
@@ -747,16 +741,18 @@ class SourceManager(object):
     Filter and split sources and send them to the worker tasks.
     """
     def __init__(self, csm, taskfunc, concurrent_tasks, maximum_distance,
-                 dstore, monitor):
+                 dstore, monitor, random_seed=None):
         self.tm = parallel.TaskManager(taskfunc)
         self.csm = csm
         self.maximum_distance = maximum_distance
+        self.random_seed = random_seed
         self.dstore = dstore
         self.monitor = monitor
         self.rlzs_assoc = csm.get_rlzs_assoc()
         self.split_map = {}
         self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
+        numpy.random.seed(self.random_seed)
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.csm.maxweight)
 
@@ -780,13 +776,15 @@ class SourceManager(object):
                         logging.info('splitting %s of weight %s',
                                      src, src.weight)
                         with split_mon:
-                            sources = sourceconverter.split_source(src)
-                            self.split_map[src.id] = list(sources)
+                            sources = list(sourceconverter.split_source(src))
+                            self.split_map[src.id] = sources
                         split_time = split_mon.dt
+                        self.set_seeds(src, sources)
                     for ss in self.split_map[src.id]:
                         ss.id = src.id
                         yield ss
                 else:
+                    self.set_seeds(src)
                     yield src
             split_sources = self.split_map.get(src.id, [src])
             info = SourceInfo(src.trt_model_id, src.source_id,
@@ -802,14 +800,28 @@ class SourceManager(object):
         filter_mon.flush()
         split_mon.flush()
 
-    def submit_sources(self, sitecol, siteidx=0, random_seed=42):
+    def set_seeds(self, src, split_sources=()):
+        """
+        Set a seed per each rupture in a source, managing also the
+        case of split sources, if any.
+        """
+        if self.random_seed is not None:
+            num_ruptures = sourceconverter.get_num_ruptures(src)
+            src.seeds = numpy.array(numpy.random.randint(
+                0, MAX_INT, size=num_ruptures), dtype=numpy.uint32)
+            if split_sources:
+                start = 0
+                for ss in split_sources:
+                    nr = sourceconverter.get_num_ruptures(ss)
+                    ss.seeds = src.seeds[start:start + nr]
+                    start += nr
+
+    def submit_sources(self, sitecol, siteidx=0):
         """
         Submit the light sources and then the (split) heavy sources.
         Only the sources affecting the sitecol as considered. Also,
         set the .seed attribute of each source.
         """
-        rnd = random.Random()
-        rnd.seed(random_seed)
         for kind in ('light', 'heavy'):
             sources = list(self.get_sources(kind, sitecol))
             if not sources:
@@ -817,7 +829,6 @@ class SourceManager(object):
             # set a seed for each split source; the seed is used
             # only by the event based calculator, but it is set anyway
             for src in sources:
-                src.seed = rnd.randint(0, MAX_INT)
                 self.csm.filtered_weight += src.weight
             nblocks = 0
             for block in block_splitter(

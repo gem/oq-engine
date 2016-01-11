@@ -25,8 +25,7 @@ from openquake.hazardlib.source.area import AreaSource
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import context, striptag
-from openquake.commonlib import valid
-from openquake.commonlib import parallel
+from openquake.commonlib import valid, util, parallel
 
 # the following is arbitrary, it is used to decide when to parallelize
 # the filtering (MS)
@@ -39,13 +38,21 @@ MAGNITUDE_FOR_RUPTURE_SPLITTING = 6.5  # given by Marco Pagani
 POINT_SOURCE_WEIGHT = 1 / 40.
 
 
+@util.memoized
+def get_num_ruptures(src):
+    """
+    Extract the number of ruptures from the weight attribute
+    """
+    return src.count_ruptures()
+
+
 def get_weight(src, num_ruptures=None):
     """
     :param src: a hazardlib source object
     :param num_ruptures: if None it is recomputed
     :returns: the weight of the given source
     """
-    num_ruptures = num_ruptures or src.count_ruptures()
+    num_ruptures = num_ruptures or get_num_ruptures(src)
     weight = (num_ruptures * POINT_SOURCE_WEIGHT
               if isinstance(src, (PointSource, AreaSource))
               else num_ruptures)
@@ -140,7 +147,7 @@ def split_fault_source(src, block_size):
     # will fail to transmit to the workers the generated sources.
     for s in split_fault_source_by_magnitude(src):
         if s.mfd.min_mag < MAGNITUDE_FOR_RUPTURE_SPLITTING:
-            s.weight = s.count_ruptures()
+            s.weight = get_num_ruptures(s)
             yield s  # don't split, there would too many ruptures
         else:  # split in MultiRuptureSources
             for ss in MultiRuptureSource.split(s, block_size):

@@ -326,22 +326,21 @@ def sample_ruptures(src, num_ses, info):
     :returns: a dictionary of dictionaries rupture ->
               {(col_id, ses_id): num_occurrences}
     """
-    rnd = random.Random(src.seed)
     col_ids = info.col_ids_by_trt_id[src.trt_model_id]
     # the dictionary `num_occ_by_rup` contains a dictionary
     # (col_id, ses_id) -> num_occurrences
     # for each occurring rupture
     num_occ_by_rup = collections.defaultdict(AccumDict)
     # generating ruptures for the given source
-    for rup_no, rup in enumerate(src.iter_ruptures(), 1):
-        rup.rup_no = rup_no
+    for rup_no, rup in enumerate(src.iter_ruptures()):
+        numpy.random.seed(src.seeds[rup_no])
         for col_id in col_ids:
             for ses_idx in range(1, num_ses + 1):
-                numpy.random.seed(rnd.randint(0, MAX_INT))
                 num_occurrences = rup.sample_number_of_occurrences()
                 if num_occurrences:
                     num_occ_by_rup[rup] += {
                         (col_id, ses_idx): num_occurrences}
+        rup.rup_no = rup_no + 1
     return num_occ_by_rup
 
 
@@ -351,7 +350,7 @@ def build_ses_ruptures(
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated SESRuptures>)
     """
-    rnd = random.Random(src.seed)
+    rnd = random.Random(src.seeds[0])
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         # filtering ruptures
         r_sites = filter_sites_by_distance_to_rupture(
@@ -407,6 +406,17 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         trt_id -> ruptures
         """
         acc += val
+
+    def send_sources(self):
+        """
+        Filter/split/set the seeds and then send the sources to the worker tasks.
+        """
+        oq = self.oqparam
+        self.manager = self.SourceManager(
+            self.csm, self.core_task.__func__, oq.concurrent_tasks,
+            oq.maximum_distance, self.datastore,
+            self.monitor.new(oqparam=oq), oq.random_seed)
+        self.manager.submit_sources(self.sitecol)
 
     def post_execute(self, result):
         """
