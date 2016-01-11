@@ -332,7 +332,8 @@ def sample_ruptures(src, num_ses, info):
     num_occ_by_rup = collections.defaultdict(AccumDict)
     # generating ruptures for the given source
     for rup_no, rup in enumerate(src.iter_ruptures()):
-        numpy.random.seed(src.seed[rup_no])
+        rup.seed = seed = src.seed[rup_no]
+        numpy.random.seed(seed)
         for col_id in col_ids:
             for ses_idx in range(1, num_ses + 1):
                 num_occurrences = rup.sample_number_of_occurrences()
@@ -349,7 +350,6 @@ def build_ses_ruptures(
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated SESRuptures>)
     """
-    rnd = random.Random(src.seed[0])
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         # filtering ruptures
         r_sites = filter_sites_by_distance_to_rupture(
@@ -363,6 +363,7 @@ def build_ses_ruptures(
 
         # creating SESRuptures
         sesruptures = []
+        rnd = random.Random(rup.seed)
         for (col_id, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
