@@ -126,6 +126,7 @@ class EngineServerTestCase(unittest.TestCase):
         results = self.get('%s/results' % job_id)
         for res in results:
             etype = res['outtypes'][0]  # get the first export type
+            # FIXME: see why there is 404 here
             text = self.get_text('result/%s' % res['id'], export_type=etype)
             self.assertGreater(len(text), 0)
         self.assertGreater(len(results), 0)

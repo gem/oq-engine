@@ -19,23 +19,23 @@
 """Utility functions related to splitting work into tasks."""
 import types
 
-import types
-
 from celery.result import ResultSet
 from celery.app import current_app
 from celery.task import task
 
-from openquake.commonlib.parallel import TaskManager, check_mem_usage
+from openquake.commonlib import parallel
 from openquake.engine import logs, celery_node_monitor
 from openquake.engine.utils import config
 
+litetask = parallel.litetask
+celery_queue = config.get('amqp', 'celery_queue')
 SOFT_MEM_LIMIT = int(config.get('memory', 'soft_mem_limit'))
 HARD_MEM_LIMIT = int(config.get('memory', 'hard_mem_limit'))
-check_mem_usage.__defaults__ = (SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
+parallel.check_mem_usage.__defaults__ = (SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
 
-if celery_node_monitor.CELERY_ON:
+if celery_node_monitor.USE_CELERY:
 
-    class OqTaskManager(TaskManager):
+    class OqTaskManager(parallel.TaskManager):
         """
         A celery-based task manager. The usage is::
 
@@ -50,10 +50,10 @@ if celery_node_monitor.CELERY_ON:
         task_ids = []
 
         def _submit(self, pickled_args):
-            # submit tasks by using celery
             if isinstance(self.oqtask, types.FunctionType):
-                celery_queue = config.get('amqp', 'celery_queue')
-                self.oqtask = task(self.oqtask, queue=celery_queue)
+                # don't use celery
+                return super(OqTaskManager, self)._submit(pickled_args)
+            # else use celery
             res = self.oqtask.delay(*pickled_args)
             self.task_ids.append(res.task_id)
             return res
@@ -67,6 +67,10 @@ if celery_node_monitor.CELERY_ON:
             :param acc: the initial value of the accumulator
             :returns: the final value of the accumulator
             """
+            if isinstance(self.oqtask, types.FunctionType):
+                # don't use celery
+                return super(OqTaskManager, self).aggregate_result_set(
+                    agg, acc)
             if not self.results:
                 return acc
             backend = current_app().backend
@@ -75,7 +79,7 @@ if celery_node_monitor.CELERY_ON:
             for task_id, result_dict in rset.iter_native():
                 idx = self.task_ids.index(task_id)
                 self.task_ids.pop(idx)
-                check_mem_usage()  # warn if too much memory is used
+                parallel.check_mem_usage()  # warn if too much memory is used
                 result = result_dict['result']
                 if isinstance(result, BaseException):
                     raise result
@@ -88,11 +92,22 @@ if celery_node_monitor.CELERY_ON:
 
 else:  # no celery
 
-    class OqTaskManager(TaskManager):
+    class OqTaskManager(parallel.TaskManager):
         progress = staticmethod(logs.LOG.progress)
         task_ids = []
 
 
-# convenient aliases
-starmap = OqTaskManager.starmap
-apply_reduce = OqTaskManager.apply_reduce
+def oqtask(task_func):
+    """
+    Wrapper around celery.task and parallel.litetask
+    """
+    tsk = task(litetask(task_func), queue=celery_queue)
+    tsk.__func__ = tsk
+    tsk.task_func = task_func
+    return tsk
+
+# hack
+parallel.TaskManager = OqTaskManager
+parallel.litetask = oqtask
+parallel.apply_reduce = OqTaskManager.apply_reduce
+parallel.starmap = OqTaskManager.starmap
