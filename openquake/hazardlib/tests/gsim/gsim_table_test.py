@@ -627,7 +627,7 @@ class GSIMTableTestCaseRupture(unittest.TestCase):
                             expected_rupture_set)
         self.assertEqual(gsim.amplification.parameter, "rake")
         self.assertEqual(gsim.amplification.element, "Rupture")
-        self.assertSetEqual(gsim.REQUIRES_SITES_PARAMETERS, set(()))
+        self.assertSetEqual(gsim.REQUIRES_SITES_PARAMETERS, set())
 
     def test_get_mean_and_stddevs_good(self):
         """
