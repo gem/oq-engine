@@ -216,7 +216,7 @@ def parse_source_model(fname, converter,
                 'The source ID %s is duplicated!' % src.source_id)
         apply_uncertainties(src)
         if set_weight:
-            src.weight = sourceconverter.get_weight(src)
+            src.num_ruptures = src.count_ruptures()
         trt = src.tectonic_region_type
         if trt not in source_stats_dict:
             source_stats_dict[trt] = TrtModel(trt)
@@ -580,15 +580,14 @@ class CompositeSourceModel(collections.Sequence):
 
     def set_weights(self):
         """
-        Update the attributes src.weight and src.trt_model_id for each source,
-        then set the attribute num_ruptures in each TRT model.
+        Update the attributes .weight and src.num_ruptures for each TRT model
         """
         self.weight = self.filtered_weight = 0
         for trt_model in self.trt_models:
             weight = 0
             num_ruptures = 0
             for src in trt_model:
-                num_ruptures += sourceconverter.get_num_ruptures(src)
+                num_ruptures += src.num_ruptures
                 weight += src.weight
             trt_model.num_ruptures = num_ruptures
             trt_model.weight = weight
@@ -821,7 +820,7 @@ class SourceManager(object):
             if split_sources:
                 start = 0
                 for ss in split_sources:
-                    nr = sourceconverter.get_num_ruptures(ss)
+                    nr = ss.num_ruptures
                     ss.seed = src.seed[start:start + nr]
                     start += nr
 
