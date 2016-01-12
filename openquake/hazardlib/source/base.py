@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012-2016, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -42,11 +42,15 @@ class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
 
     MODIFICATIONS = abc.abstractproperty()
 
-    POINT_SOURCE_WEIGHT = 1.  # overridden in PointSource and AreaSource
+    RUPTURE_WEIGHT = 1.  # overridden in PointSource and AreaSource
 
     @property
     def weight(self):
-        return self.num_ruptures * self.POINT_SOURCE_WEIGHT
+        """
+        Determine the source weight from the number of ruptures, by
+        multiplying with the scale factor RUPTURE_WEIGHT
+        """
+        return self.num_ruptures * self.RUPTURE_WEIGHT
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id
