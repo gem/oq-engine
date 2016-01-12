@@ -120,7 +120,6 @@ class TrtModel(collections.Sequence):
         an optional numeric ID (default None) useful to associate
         the model to a database object
     """
-    POINT_SOURCE_WEIGHT = 1 / 40.
 
     @classmethod
     def collect(cls, sources):
