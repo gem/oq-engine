@@ -1,7 +1,7 @@
 Disaggregation calculation with Source Model containing an Area Source and a Simple Fault Source belonging to different tectonic region types
 =============================================================================================================================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -34,11 +34,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================ ===========
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations num_sources
-========= ====== ====================================== =============== ================ ===========
-b11       1.00   `source_model.xml <source_model.xml>`_ trivial(1,1)    1/1              1539       
-========= ====== ====================================== =============== ================ ===========
+========= ====== ====================================== =============== ================
+smlt_path weight source_model_file                      gsim_logic_tree num_realizations
+========= ====== ====================================== =============== ================
+b11       1.00   `source_model.xml <source_model.xml>`_ trivial(1,1)    1/1             
+========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -60,15 +60,25 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-=========== ====
-#TRT models 2   
-#sources    1539
-#ruptures   5434
-=========== ====
+================ ====== ======================== =========== ============ ======
+source_model     trt_id trt                      num_sources num_ruptures weight
+================ ====== ======================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust     1           1334         1     
+source_model.xml 1      Stable Continental Crust 1           4100         1     
+================ ====== ======================== =========== ============ ======
 
-================ ====== ======================== =========== ============
-source_model     trt_id trt                      num_sources num_ruptures
-================ ====== ======================== =========== ============
-source_model.xml 0      Active Shallow Crust     1334        1334        
-source_model.xml 1      Stable Continental Crust 205         4100        
-================ ====== ======================== =========== ============
+=============== ======
+#TRT models     2     
+#sources        2     
+#ruptures       5434  
+filtered_weight 1436.5
+=============== ======
+
+Expected data transfer for the sources
+--------------------------------------
+=========================== ========
+Number of tasks to generate 33      
+Sent data                   5.35 MB 
+Total received data         60.88 KB
+Maximum received per task   1.84 KB 
+=========================== ========

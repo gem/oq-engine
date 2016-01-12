@@ -40,6 +40,7 @@ import numpy
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib
+from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib import geo
 from openquake.commonlib import valid
 from openquake.commonlib.sourceconverter import (
@@ -1402,9 +1403,13 @@ class GsimLogicTree(object):
                     weights.append(weight)
                     branch_id = branch['branchID']
                     uncertainty = branch.uncertaintyModel
+                    gsim_name = uncertainty.text.strip()
+                    if gsim_name == 'GMPETable':
+                        # a bit hackish: set the GMPE_DIR equal to the
+                        # directory where the gsim_logic_tree file is
+                        GMPETable.GMPE_DIR = os.path.dirname(self.fname)
                     try:
-                        gsim = valid.gsim(
-                            uncertainty.text.strip(), **uncertainty.attrib)
+                        gsim = valid.gsim(gsim_name, **uncertainty.attrib)
                     except:
                         etype, exc, tb = sys.exc_info()
                         raise_(etype, '%s in file %r' % (exc, self.fname), tb)

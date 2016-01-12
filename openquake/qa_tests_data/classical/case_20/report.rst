@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 20
 =================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -94,33 +94,32 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources num_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 3           86           86    
-source_model.xml 1      Active Shallow Crust 3           86           86    
-source_model.xml 2      Active Shallow Crust 3           86           86    
-source_model.xml 3      Active Shallow Crust 3           119          119   
-source_model.xml 4      Active Shallow Crust 3           119          119   
-source_model.xml 5      Active Shallow Crust 3           119          119   
-source_model.xml 6      Active Shallow Crust 3           88           88    
-source_model.xml 7      Active Shallow Crust 3           88           88    
-source_model.xml 8      Active Shallow Crust 3           88           88    
-source_model.xml 9      Active Shallow Crust 3           121          121   
-source_model.xml 10     Active Shallow Crust 3           121          121   
-source_model.xml 11     Active Shallow Crust 3           121          121   
+source_model.xml 0      Active Shallow Crust 3           86           1     
+source_model.xml 1      Active Shallow Crust 3           86           1     
+source_model.xml 2      Active Shallow Crust 3           86           1     
+source_model.xml 3      Active Shallow Crust 3           119          1     
+source_model.xml 4      Active Shallow Crust 3           119          1     
+source_model.xml 5      Active Shallow Crust 3           119          1     
+source_model.xml 6      Active Shallow Crust 3           88           1     
+source_model.xml 7      Active Shallow Crust 3           88           1     
+source_model.xml 8      Active Shallow Crust 3           88           1     
+source_model.xml 9      Active Shallow Crust 3           121          1     
+source_model.xml 10     Active Shallow Crust 3           121          1     
+source_model.xml 11     Active Shallow Crust 3           121          1     
 ================ ====== ==================== =========== ============ ======
 
-=============== ====
-#TRT models     12  
-#sources        36  
-#ruptures       1242
-total weight    1242
-filtered weight 1242
-=============== ====
+=============== ======
+#TRT models     12    
+#sources        36    
+#ruptures       1242  
+filtered_weight 1242.0
+=============== ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 48      
 Sent data                   5.01 MB 
-Total received data         73.64 KB
-Maximum received per task   1.53 KB 
+Total received data         80.06 KB
+Maximum received per task   1.67 KB 
 =========================== ========

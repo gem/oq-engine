@@ -1,7 +1,7 @@
 Event-Based Hazard QA Test, Case 4
 ==================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -61,7 +61,7 @@ Non-empty rupture collections
 === ========= ==================== ============
 col smlt_path TRT                  num_ruptures
 === ========= ==================== ============
-0   b1        active shallow crust 55          
+0   b1        active shallow crust 44          
 === ========= ==================== ============
 
 Collections <-> realizations
@@ -73,8 +73,9 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =======
-Number of tasks to generate        1      
-Estimated sources to send          1.78 KB
-Estimated hazard curves to receive 24 B   
-================================== =======
+=========================== =======
+Number of tasks to generate 1      
+Sent data                   6.29 KB
+Total received data         9.98 KB
+Maximum received per task   9.98 KB
+=========================== =======

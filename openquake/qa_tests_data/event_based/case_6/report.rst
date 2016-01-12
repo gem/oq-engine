@@ -1,7 +1,7 @@
 Event-based PSHA producing hazard curves only
 =============================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -69,8 +69,8 @@ Non-empty rupture collections
 === ========= ==================== ============
 col smlt_path TRT                  num_ruptures
 === ========= ==================== ============
-0   b11       Active Shallow Crust 14413       
-1   b12       Active Shallow Crust 1429        
+0   b11       Active Shallow Crust 14732       
+1   b12       Active Shallow Crust 1454        
 === ========= ==================== ============
 
 Collections <-> realizations
@@ -83,8 +83,9 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =========
-Number of tasks to generate        34       
-Estimated sources to send          187.47 KB
-Estimated hazard curves to receive 3 KB     
-================================== =========
+=========================== =========
+Number of tasks to generate 34       
+Sent data                   461.46 KB
+Total received data         3.42 MB  
+Maximum received per task   176.67 KB
+=========================== =========

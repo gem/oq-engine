@@ -23,7 +23,7 @@ import operator
 import itertools
 import numpy
 
-from openquake.baselib.general import humansize
+from openquake.baselib.general import humansize, groupby
 from openquake.baselib.performance import perf_dt
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util
@@ -137,21 +137,26 @@ def view_ruptures_per_trt(token, dstore):
     num_trts = 0
     num_sources = 0
     num_ruptures = 0
-    csm = dstore['composite_source_model']
-    attrs = dstore.hdf5['composite_source_model'].attrs
-    for sm in csm:
+    weight = 0
+    source_info = dstore['source_info'].value
+    csm_info = dstore['rlzs_assoc'].csm_info
+    w = groupby(source_info, operator.itemgetter('trt_model_id'),
+                lambda rows: sum(r['weight'] for r in rows))
+    n = groupby(source_info, operator.itemgetter('trt_model_id'),
+                lambda rows: sum(1 for r in rows))
+    for sm in csm_info.source_models:
         for trt_model in sm.trt_models:
             num_trts += 1
-            num_sources += len(trt_model.sources)
+            num_sources += n[trt_model.id]
             num_ruptures += trt_model.num_ruptures
+            weight += w[trt_model.id]
             tbl.append((sm.name, trt_model.id, trt_model.trt,
-                        len(trt_model.sources), trt_model.num_ruptures,
+                        n[trt_model.id], trt_model.num_ruptures,
                         trt_model.weight))
     rows = [('#TRT models', num_trts),
             ('#sources', num_sources),
             ('#ruptures', num_ruptures),
-            ('total weight', attrs['weight']),
-            ('filtered weight', attrs['filtered_weight'])]
+            ('filtered_weight', weight)]
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:

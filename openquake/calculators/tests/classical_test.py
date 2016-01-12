@@ -3,7 +3,7 @@ from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
-    case_19, case_20, case_21)
+    case_18, case_19, case_20, case_21)
 from openquake.commonlib.export import export
 
 
@@ -167,6 +167,12 @@ hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
             case_17.__file__)
+
+    @attr('qa', 'hazard', 'classical')
+    def test_case_18(self):  # GMPEtable
+        self.assert_curves_ok(
+            ['hazard_curve-mean.csv', 'hazard_map-mean.csv'],
+            case_18.__file__, delta=1E-7)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_19(self):

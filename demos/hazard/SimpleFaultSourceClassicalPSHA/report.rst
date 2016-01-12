@@ -1,7 +1,7 @@
 Classical PSHA with Simple Fault Source
 =======================================
 
-num_sites = 1369
+num_sites = 1369, sitecol = 32.5 KB
 
 Parameters
 ----------
@@ -34,11 +34,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================ ===========
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations num_sources
-========= ====== ====================================== =============== ================ ===========
-b1        1.00   `source_model.xml <source_model.xml>`_ trivial(1)      1/1              548        
-========= ====== ====================================== =============== ================ ===========
+========= ====== ====================================== =============== ================
+smlt_path weight source_model_file                      gsim_logic_tree num_realizations
+========= ====== ====================================== =============== ================
+b1        1.00   `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -58,16 +58,17 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============
-source_model     trt_id trt                  num_sources num_ruptures
-================ ====== ==================== =========== ============
-source_model.xml 0      Active Shallow Crust 548         548         
-================ ====== ==================== =========== ============
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources num_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust 1           548          1     
+================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =======
-Number of tasks to generate        31     
-Estimated sources to send          2.68 MB
-Estimated hazard curves to receive 61 MB  
-================================== =======
+=========================== =========
+Number of tasks to generate 31       
+Sent data                   2.87 MB  
+Total received data         100.78 KB
+Maximum received per task   3.25 KB  
+=========================== =========

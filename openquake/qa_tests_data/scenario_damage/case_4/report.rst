@@ -1,7 +1,7 @@
 Scenario Damage QA Test 4
 =========================
 
-num_sites = 3
+num_sites = 3, sitecol = 485 B
 
 Parameters
 ----------
