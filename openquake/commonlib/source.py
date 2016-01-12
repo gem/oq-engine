@@ -754,9 +754,16 @@ class SourceManager(object):
         self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
         if random_seed is not None:
-            numpy.random.seed(self.random_seed)
-            self.src_seed = {src.id: numpy.random.randint(0, MAX_INT)
-                             for src in self.csm.get_sources('all')}
+            # generate unique seeds for each rupture with numpy.arange
+            self.src_seed = {}
+            n = sum(trtmod.num_ruptures for trtmod in self.csm.trt_models)
+            rup_seeds = numpy.array(numpy.arange(n) + random_seed,
+                                    dtype=numpy.uint32)
+            start = 0
+            for src in self.csm.get_sources('all'):
+                nr = sourceconverter.get_num_ruptures(src)
+                self.src_seed[src.id] = rup_seeds[start:start + nr]
+                start += nr
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.csm.maxweight)
 
@@ -810,10 +817,7 @@ class SourceManager(object):
         case of split sources, if any.
         """
         if self.random_seed is not None:
-            num_ruptures = sourceconverter.get_num_ruptures(src)
-            numpy.random.seed(self.src_seed[src.id])
-            src.seed = numpy.array(numpy.random.randint(
-                0, MAX_INT, size=num_ruptures), dtype=numpy.uint32)
+            src.seed = self.src_seed[src.id]
             if split_sources:
                 start = 0
                 for ss in split_sources:
