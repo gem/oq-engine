@@ -104,6 +104,9 @@ class RaghukanthIyengar2007(GMPE):
     #:
     #: RaghukanthIyengar2007Southern COEFFS_BEDROCK (Table 2(b)) at 0.150 s:
     #:      change c1 from .1941 to 2.1941
+    #:
+    #: Note that since test data was dervied from Figures 3 and 5, PGA is
+    #: not covered.
     non_verified = True
 
     def get_mean_and_stddevs(self, sites, rup, dists, im_type, stddev_types):
@@ -208,9 +211,9 @@ class RaghukanthIyengar2007(GMPE):
                    % type(self).__name__)
             warnings.warn(msg, UserWarning)
 
-        a_1 = np.full_like(sites.vs30, np.nan)
-        a_2 = np.full_like(sites.vs30, np.nan)
-        sigma = np.full_like(sites.vs30, np.nan)
+        a_1 = np.nan*np.ones_like(sites.vs30)
+        a_2 = np.nan*np.ones_like(sites.vs30)
+        sigma = np.nan*np.ones_like(sites.vs30)
         for key in self.COEFFS_NEHRP.keys():
             indices = (site_classes == key) & ~is_bedrock
             a_1[indices] = self.COEFFS_NEHRP[key][im_type]['a1']
