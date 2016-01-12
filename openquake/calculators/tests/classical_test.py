@@ -172,7 +172,7 @@ hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
     def test_case_18(self):  # GMPEtable
         self.assert_curves_ok(
             ['hazard_curve-mean.csv', 'hazard_map-mean.csv'],
-            case_18.__file__)
+            case_18.__file__, delta=1E-7)
 
     @attr('qa', 'hazard', 'classical')
     def test_case_19(self):
