@@ -391,8 +391,8 @@ class GMPETable(GMPE):
         elif self.amplification.element == "Rupture":
             # Re-set the site parameters
             self.REQUIRES_SITES_PARAMETERS = set()
-            self.REQUIRES_RUPTURE_PARAMETERS = set(
-                [self.amplification.parameter])
+            self.REQUIRES_RUPTURE_PARAMETERS.add(
+                self.amplification.parameter)
 
     def _supported_imts(self):
         """
