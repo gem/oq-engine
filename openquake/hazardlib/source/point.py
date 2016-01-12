@@ -65,6 +65,8 @@ class PointSource(ParametricSeismicSource):
 
     MODIFICATIONS = set(())
 
+    POINT_SOURCE_WEIGHT = 1 / 40.
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,
@@ -182,8 +184,8 @@ class PointSource(ParametricSeismicSource):
                     hypocenter = Point(latitude=location.latitude,
                                        longitude=location.longitude,
                                        depth=hc_depth)
-                    occurrence_rate = (mag_occ_rate
-                                       * float(np_prob) * float(hc_prob))
+                    occurrence_rate = (
+                        mag_occ_rate * float(np_prob) * float(hc_prob))
                     occurrence_rate *= rate_scaling_factor
                     surface = self._get_rupture_surface(mag, np, hypocenter)
                     yield ParametricProbabilisticRupture(

@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a .weight property to sources, as well as a .num_ruptures attribute
   * The GMPETable now understands paths relative to a directory GMPE_DIR
 
   [Graeme Weatherill]
