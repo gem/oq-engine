@@ -47,6 +47,7 @@ Site = collections.namedtuple('Site', 'sid lon lat')
 
 F32 = numpy.float32
 
+
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
@@ -169,7 +170,12 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         from openquake.commonlib.export import export as exp
         exported = {}
         individual_curves = self.oqparam.individual_curves
-        fmts = exports.split(',') if exports else self.oqparam.exports
+        if exports and isinstance(exports, tuple):
+            fmts = exports
+        elif exports:  # is a string
+            fmts = exports.split(',')
+        else:  # use passed values
+            fmts = self.oqparam.exports
         for fmt in fmts:
             if not fmt:
                 continue
