@@ -1,7 +1,7 @@
 Event-Based Hazard QA Test, Case 2
 ==================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -10,7 +10,7 @@ calculation_mode             event_based
 number_of_logic_tree_samples 0          
 maximum_distance             200.0      
 investigation_time           1.0        
-ses_per_logic_tree_path      350        
+ses_per_logic_tree_path      600        
 truncation_level             0.0        
 rupture_mesh_spacing         1.0        
 complex_fault_mesh_spacing   1.0        
@@ -73,8 +73,9 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =======
-Number of tasks to generate        1      
-Estimated sources to send          1.88 KB
-Estimated hazard curves to receive 32 B   
-================================== =======
+=========================== ========
+Number of tasks to generate 1       
+Sent data                   18.06 KB
+Total received data         4.77 KB 
+Maximum received per task   4.77 KB 
+=========================== ========

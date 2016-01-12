@@ -1,7 +1,7 @@
 Classical PSHA - Loss fractions QA test
 =======================================
 
-num_sites = 13
+num_sites = 13, sitecol = 725 B
 
 Parameters
 ----------
@@ -61,11 +61,20 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============
-source_model     trt_id trt                  num_sources num_ruptures
-================ ====== ==================== =========== ============
-source_model.xml 0      Active Shallow Crust 5101        66419       
-================ ====== ==================== =========== ============
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources num_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust 24          868805       1     
+================ ====== ==================== =========== ============ ======
+
+Expected data transfer for the sources
+--------------------------------------
+=========================== ========
+Number of tasks to generate 2       
+Sent data                   35.36 KB
+Total received data         14.19 KB
+Maximum received per task   7.48 KB 
+=========================== ========
 
 Exposure model
 --------------

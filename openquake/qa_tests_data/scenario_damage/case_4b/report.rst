@@ -1,7 +1,7 @@
 scenario hazard
 ===============
 
-num_sites = 7
+num_sites = 7, sitecol = 581 B
 
 Parameters
 ----------

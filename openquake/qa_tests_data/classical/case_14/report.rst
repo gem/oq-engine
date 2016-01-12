@@ -1,7 +1,7 @@
 Classical PSHA QA test with sites_csv
 =====================================
 
-num_sites = 10
+num_sites = 10, sitecol = 653 B
 
 Parameters
 ----------
@@ -63,14 +63,14 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources num_ruptures weight
 ================ ====== ==================== =========== ============ ======
-simple_fault.xml 0      Active Shallow Crust 1           447          447   
+simple_fault.xml 0      Active Shallow Crust 1           447          1     
 ================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 13      
-Sent data                   87.97 KB
-Total received data         22.66 KB
-Maximum received per task   1.74 KB 
+Sent data                   89.55 KB
+Total received data         24.4 KB 
+Maximum received per task   1.88 KB 
 =========================== ========

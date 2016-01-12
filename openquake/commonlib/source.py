@@ -216,7 +216,7 @@ def parse_source_model(fname, converter,
                 'The source ID %s is duplicated!' % src.source_id)
         apply_uncertainties(src)
         if set_weight:
-            src.weight = sourceconverter.get_weight(src)
+            sourceconverter.get_set_num_ruptures(src)
         trt = src.tectonic_region_type
         if trt not in source_stats_dict:
             source_stats_dict[trt] = TrtModel(trt)
@@ -588,7 +588,7 @@ class CompositeSourceModel(collections.Sequence):
             weight = 0
             num_ruptures = 0
             for src in trt_model:
-                num_ruptures += sourceconverter.get_num_ruptures(src)
+                num_ruptures += sourceconverter.get_set_num_ruptures(src)
                 weight += src.weight
             trt_model.num_ruptures = num_ruptures
             trt_model.weight = weight
@@ -761,7 +761,7 @@ class SourceManager(object):
                                     dtype=numpy.uint32)
             start = 0
             for src in self.csm.get_sources('all'):
-                nr = sourceconverter.get_num_ruptures(src)
+                nr = sourceconverter.get_set_num_ruptures(src)
                 self.src_seed[src.id] = rup_seeds[start:start + nr]
                 start += nr
         logging.info('Instantiated SourceManager with maxweight=%.1f',
@@ -781,22 +781,23 @@ class SourceManager(object):
                     self.maximum_distance, sitecol)
             filter_time = filter_mon.dt
             split_time = 0
-            if sites is not None:
-                if kind == 'heavy':
-                    if src.id not in self.split_map:
-                        logging.info('splitting %s of weight %s',
-                                     src, src.weight)
-                        with split_mon:
-                            sources = list(sourceconverter.split_source(src))
-                            self.split_map[src.id] = sources
-                        split_time = split_mon.dt
-                        self.set_seeds(src, sources)
-                    for ss in self.split_map[src.id]:
-                        ss.id = src.id
-                        yield ss
-                else:
-                    self.set_seeds(src)
-                    yield src
+            if sites is None:
+                continue
+            if kind == 'heavy':
+                if src.id not in self.split_map:
+                    logging.info('splitting %s of weight %s',
+                                 src, src.weight)
+                    with split_mon:
+                        sources = list(sourceconverter.split_source(src))
+                        self.split_map[src.id] = sources
+                    split_time = split_mon.dt
+                    self.set_seeds(src, sources)
+                for ss in self.split_map[src.id]:
+                    ss.id = src.id
+                    yield ss
+            else:
+                self.set_seeds(src)
+                yield src
             split_sources = self.split_map.get(src.id, [src])
             info = SourceInfo(src.trt_model_id, src.source_id,
                               src.__class__.__name__,
@@ -821,7 +822,7 @@ class SourceManager(object):
             if split_sources:
                 start = 0
                 for ss in split_sources:
-                    nr = sourceconverter.get_num_ruptures(ss)
+                    nr = sourceconverter.get_set_num_ruptures(ss)
                     ss.seed = src.seed[start:start + nr]
                     start += nr
 

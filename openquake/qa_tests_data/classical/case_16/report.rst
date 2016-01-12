@@ -1,7 +1,7 @@
 Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per source + 3 Mmax per source
 ==========================================================================================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -88,31 +88,30 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources num_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 5           1925         48.125
-source_model.xml 1      Active Shallow Crust 5           2025         50.625
-source_model.xml 2      Active Shallow Crust 5           2135         53.375
-source_model.xml 3      Active Shallow Crust 5           2035         50.875
-source_model.xml 4      Active Shallow Crust 5           1865         46.625
-source_model.xml 5      Active Shallow Crust 5           2085         52.125
-source_model.xml 6      Active Shallow Crust 5           2075         51.875
-source_model.xml 7      Active Shallow Crust 5           2185         54.625
-source_model.xml 8      Active Shallow Crust 5           1905         47.625
-source_model.xml 9      Active Shallow Crust 5           2025         50.625
+source_model.xml 0      Active Shallow Crust 5           1925         1     
+source_model.xml 1      Active Shallow Crust 5           2025         1     
+source_model.xml 2      Active Shallow Crust 5           2135         1     
+source_model.xml 3      Active Shallow Crust 5           2035         1     
+source_model.xml 4      Active Shallow Crust 5           1865         1     
+source_model.xml 5      Active Shallow Crust 5           2085         1     
+source_model.xml 6      Active Shallow Crust 5           2075         1     
+source_model.xml 7      Active Shallow Crust 5           2185         1     
+source_model.xml 8      Active Shallow Crust 5           1905         1     
+source_model.xml 9      Active Shallow Crust 5           2025         1     
 ================ ====== ==================== =========== ============ ======
 
 =============== =====
 #TRT models     10   
 #sources        50   
 #ruptures       20260
-total weight    506.5
-filtered weight 506.5
+filtered_weight 506.5
 =============== =====
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 22       
-Sent data                   552.11 KB
-Total received data         38.74 KB 
-Maximum received per task   1.76 KB  
+Sent data                   554.66 KB
+Total received data         41.68 KB 
+Maximum received per task   1.89 KB  
 =========================== =========

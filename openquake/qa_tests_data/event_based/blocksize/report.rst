@@ -1,7 +1,7 @@
 QA test for blocksize independence (hazard)
 ===========================================
 
-num_sites = 2
+num_sites = 2, sitecol = 461 B
 
 Parameters
 ----------
@@ -61,7 +61,7 @@ Non-empty rupture collections
 === ========= ==================== ============
 col smlt_path TRT                  num_ruptures
 === ========= ==================== ============
-0   b1        Active Shallow Crust 4           
+0   b1        Active Shallow Crust 3           
 === ========= ==================== ============
 
 Collections <-> realizations
@@ -73,8 +73,9 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =========
-Number of tasks to generate        32       
-Estimated sources to send          950.85 KB
-Estimated hazard curves to receive 2 KB     
-================================== =========
+=========================== =========
+Number of tasks to generate 16       
+Sent data                   589.38 KB
+Total received data         57.1 KB  
+Maximum received per task   4.95 KB  
+=========================== =========

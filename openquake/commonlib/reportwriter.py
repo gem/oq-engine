@@ -8,9 +8,11 @@ import sys
 import mock
 import logging
 
+
+from openquake.baselib.general import humansize
 from openquake.commonlib import readinput, datastore, source
-from openquake.calculators import base, views
 from openquake.commonlib.oqvalidation import OqParam
+from openquake.calculators import base, views
 
 
 def indent(text):
@@ -39,7 +41,9 @@ class ReportWriter(object):
         self.dstore = dstore
         self.oq = oq = OqParam.from_(dstore.attrs)
         self.text = oq.description + '\n' + '=' * len(oq.description)
-        self.text += '\n\nnum_sites = %d' % len(dstore['sitemesh'])
+        sitecol_size = humansize(len(dstore.hdf5['sitecol'].value))
+        self.text += '\n\nnum_sites = %d, sitecol = %s' % (
+            len(dstore['sitemesh']), sitecol_size)
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""

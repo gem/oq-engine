@@ -1,7 +1,7 @@
 Scenario Calculation with Complex Fault Rupture
 ===============================================
 
-num_sites = 352
+num_sites = 352, sitecol = 8.67 KB
 
 Parameters
 ----------

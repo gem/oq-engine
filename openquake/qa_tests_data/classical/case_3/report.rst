@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 3
 ================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -58,17 +58,17 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ =======
-source_model     trt_id trt                  num_sources num_ruptures weight 
-================ ====== ==================== =========== ============ =======
-source_model.xml 0      active shallow crust 1           31353        783.825
-================ ====== ==================== =========== ============ =======
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources num_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      active shallow crust 1           31353        1     
+================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 32      
-Sent data                   6.75 MB 
-Total received data         50.69 KB
-Maximum received per task   1.58 KB 
+Sent data                   6.64 MB 
+Total received data         54.97 KB
+Maximum received per task   1.72 KB 
 =========================== ========

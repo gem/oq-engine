@@ -1,7 +1,7 @@
 Scenario Damage
 ===============
 
-num_sites = 7
+num_sites = 7, sitecol = 690 B
 
 Parameters
 ----------

@@ -1,7 +1,7 @@
 Calculation of the ground motion fields for a scenario
 ======================================================
 
-num_sites = 11
+num_sites = 11, sitecol = 834 B
 
 Parameters
 ----------
