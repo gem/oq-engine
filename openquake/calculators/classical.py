@@ -309,13 +309,13 @@ class ClassicalCalculator(base.HazardCalculator):
                     'curves_by_sm/' + '_'.join(sm.path))
                 group.attrs['source_model'] = sm.name
                 for tm in sm.trt_models:
-                    for gsim in tm.gsims:
+                    for i, gsim in enumerate(tm.gsims):
                         try:
                             curves = curves_by_trt_gsim[tm.id, gsim]
                         except KeyError:  # no data for the trt_model
                             pass
                         else:
-                            ts = '%03d-%s' % (tm.id, gsim)
+                            ts = '%03d-%d' % (tm.id, i)
                             if nonzero(curves):
                                 group[ts] = curves
                                 group[ts].attrs['trt'] = tm.trt

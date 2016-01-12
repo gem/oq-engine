@@ -27,7 +27,7 @@ import numpy
 
 from openquake.baselib.general import AccumDict, groupby
 from openquake.commonlib.node import read_nodes
-from openquake.commonlib import valid, logictree, sourceconverter, parallel
+from openquake.commonlib import logictree, sourceconverter, parallel
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 from functools import reduce
 
@@ -381,7 +381,7 @@ class RlzsAssoc(collections.Mapping):
 
     def combine(self, results, agg=agg_prob):
         """
-        :param results: a dictionary (trt_model_id, gsim_name) -> floats
+        :param results: a dictionary (trt_model_id, gsim_no) -> floats
         :param agg: an aggregation function
         :returns: a dictionary rlz -> aggregated floats
 
@@ -427,7 +427,8 @@ class RlzsAssoc(collections.Mapping):
         """
         ad = AccumDict()
         for key, value in results.items():
-            for rlz in self.rlzs_assoc[key]:
+            gsim = self.csm_info.gsimdict[key]
+            for rlz in self.rlzs_assoc[key[0], gsim]:
                 ad[rlz] = agg(ad.get(rlz, 0), value)
         return ad
 
@@ -469,6 +470,7 @@ class CompositionInfo(object):
         col_id = 0
         self.col_ids_by_trt_id = collections.defaultdict(list)
         self.tmdict = {}  # trt_id -> trt_model
+        self.gsimdict = {}  # (trt_id, gsim_no) -> gsim instance
         for sm in self.source_models:
             for trt_model in sm.trt_models:
                 trt_model.source_model = sm
@@ -478,6 +480,9 @@ class CompositionInfo(object):
                     cols.append((trt_id, idx))
                     self.col_ids_by_trt_id[trt_id].append(col_id)
                     col_id += 1
+                for i, gsim in enumerate(trt_model.gsims):
+                    self.gsimdict[trt_model.id, str(i)] = gsim
+
         self.cols = numpy.array(cols, col_dt)
 
     def __getnewargs__(self):
@@ -660,7 +665,7 @@ class CompositeSourceModel(collections.Sequence):
 
         assoc.gsims_by_trt_id = groupby(
             assoc.rlzs_assoc, operator.itemgetter(0),
-            lambda group: sorted(valid.gsim(gsim) for trt_id, gsim in group))
+            lambda group: sorted(gsim for trt_id, gsim in group))
 
         return assoc
 
