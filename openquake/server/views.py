@@ -36,10 +36,10 @@ from django.template import RequestContext
 
 from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib import nrml, readinput, valid
+from openquake.commonlib.parallel import safely_call
 from openquake.engine import engine as oq_engine, __version__ as oqversion
 from openquake.engine.db import models as oqe_models
 from openquake.engine.export import core
-from openquake.engine.utils.tasks import safely_call
 from openquake.engine.export.core import export_output, DataStoreExportError
 from openquake.server import tasks, executor, utils
 
@@ -458,8 +458,6 @@ def calc_results(request, calc_id):
         oqjob = oqe_models.OqJob.objects.get(id=calc_id)
         if not user['is_super'] and oqjob.user_name != user['name']:
             return HttpResponseNotFound()
-        if not oqjob.status == 'complete':
-            return HttpResponseNotFound()
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
     base_url = _get_base_url(request)
@@ -475,15 +473,11 @@ def calc_results(request, calc_id):
 
     response_data = []
     for result in results:
-        try:  # output from the old calculators
-            rtype = result.output_type
+        try:  # output from the datastore
+            rtype = result.ds_key
             outtypes = output_types[rtype]
         except KeyError:
-            try:  # output from the datastore
-                rtype = result.ds_key
-                outtypes = output_types[rtype]
-            except KeyError:
-                continue  # non-exportable outputs should not be shown
+            continue  # non-exportable outputs should not be shown
         url = urlparse.urljoin(base_url, 'v1/calc/result/%d' % result.id)
         datum = dict(
             id=result.id, name=result.display_name, type=rtype,
@@ -505,8 +499,9 @@ def get_traceback(request, calc_id):
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
-    response_data = oqe_models.Log.objects.get(
-        job_id=calc_id, level='CRITICAL').message.splitlines()
+    # FIXME: why this is returning two records??
+    response_data = [rec for rec in oqe_models.Log.objects.filter(
+        job_id=calc_id, level='CRITICAL')][1].message.splitlines()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
