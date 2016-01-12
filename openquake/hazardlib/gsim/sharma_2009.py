@@ -31,25 +31,24 @@ from openquake.hazardlib import const, imt
 
 
 class SharmaEtAl2009(GMPE):
+    # pylint: disable=no-init
     """
-    Implements GMPE of Sharma et al. (2009). This GMPE is intended
-    for the Indian Himalayas but is based on data from both Zagros
-    in Iran and the Himalayas. The combination of these two regions
-    is motivated by the sparsity of near field data. Seismotectonic
-    similarity is supposed based on both regions being continental
-    collision zones, and in spite of the lack of subduction in
-    Zagros.
+    Implements GMPE of Sharma et al. (2009). This GMPE is intended for the
+    Indian Himalayas but is based on data from both Zagros in Iran and the
+    Himalayas. The combination of these two regions is motivated by the
+    sparsity of near field data. Seismotectonic similarity is supposed
+    based on both regions being continental collision zones, and in spite
+    of the lack of subduction in Zagros.
 
-    Note that Figure 7-9 of Sharma et al. (2009) are in error
-    (Sharma, personal communication). This implementation is
-    verified against test vector obtained from lead author.
+    Note that Figure 7-9 of Sharma et al. (2009) are in error (Sharma,
+    personal communication). This implementation is verified against test
+    vector obtained from lead author.
 
     Reference:
 
     Sharma, M. L., Douglas, J., Bungum, H., and Kotadia, J. (2009).
-    Ground-motion prediction equations based on data from the Himalayan
-    and Zagros regions. *Journal of Earthquake Engineering*,
-    13(8):1191–1210.
+    Ground-motion prediction equations based on data from the Himalayan and
+    Zagros regions. *Journal of Earthquake Engineering*, 13(8):1191–1210.
     """
 
     #: Supported tectonic region type is 'active shallow crust'
@@ -86,6 +85,7 @@ class SharmaEtAl2009(GMPE):
     REQUIRES_DISTANCES = set(('rjb',))
 
     def get_mean_and_stddevs(self, sites, rup, dists, im_type, stddev_types):
+        # pylint: disable=too-many-arguments
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
@@ -101,16 +101,14 @@ class SharmaEtAl2009(GMPE):
                     self._compute_distance(dists, coeffs) +
                     self._get_site_amplification(sites, coeffs) +
                     self._get_mechanism(rup, coeffs))
+        # Convert to g and thence to the natural logarithm
+        mean = log_mean*np.log(10.0) - np.log(g)
 
-        # Convert to g
-        mean = np.log((10.0 ** log_mean) / g)
-
-        stddevs = self._get_stddevs(coeffs, stddev_types,
-                                    len(sites.vs30))
-
-        # Since sigma is not present in equation (1) it is not
-        # entirely clear what it represents. For now just pass the
-        # raw value on through.
+        # Since sigma is not present in equation (1) it is not  entirely
+        # clear what it represents. We shall assume it requires the same
+        # processing that the mean value did.
+        log_stddevs = self._get_stddevs(coeffs, stddev_types, len(sites.vs30))
+        stddevs = log_stddevs*np.log(10.0)
 
         return mean, stddevs
 
@@ -125,6 +123,7 @@ class SharmaEtAl2009(GMPE):
         return np.array(stddevs)
 
     def _compute_magnitude(self, rup, coeffs):
+        # pylint: disable=no-self-use
         """
         Compute first two terms of equation (1) on p. 1200:
 
@@ -133,6 +132,7 @@ class SharmaEtAl2009(GMPE):
         return coeffs['b1'] + coeffs['b2']*rup.mag
 
     def _compute_distance(self, dists, coeffs):
+        # pylint: disable=no-self-use
         """
         Compute third term of equation (1) on p. 1200:
 
