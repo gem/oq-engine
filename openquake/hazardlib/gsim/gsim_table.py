@@ -385,8 +385,13 @@ class GMPETable(GMPE):
         self.amplification = AmplificationTable(fle["Amplification"],
                                                 self.m_w,
                                                 self.distances)
-        if self.amplification.element in ("Sites", "Rupture"):
+        if self.amplification.element == "Sites":
             self.REQUIRES_SITES_PARAMETERS = set(
+                [self.amplification.parameter])
+        elif self.amplification.element == "Rupture":
+            # Re-set the site parameters
+            self.REQUIRES_SITES_PARAMETERS = set()
+            self.REQUIRES_RUPTURE_PARAMETERS = set(
                 [self.amplification.parameter])
 
     def _supported_imts(self):
