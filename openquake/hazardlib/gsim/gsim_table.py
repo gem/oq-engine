@@ -289,15 +289,15 @@ class GMPETable(GMPE):
     """
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
 
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set(())
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
 
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ""
 
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
 
-    REQUIRES_SITES_PARAMETERS = set(())
+    REQUIRES_SITES_PARAMETERS = set()
 
-    REQUIRES_DISTANCES = set(())
+    REQUIRES_DISTANCES = set()
 
     REQUIRES_RUPTURE_PARAMETERS = {"mag"}
 
@@ -343,15 +343,14 @@ class GMPETable(GMPE):
         """
         fle = h5py.File(self.GMPE_TABLE, "r")
         self.distance_type = fle["Distances"].attrs["metric"].decode('utf8')
-        self.REQUIRES_DISTANCES.clear()
-        self.REQUIRES_DISTANCES.add(self.distance_type)
+        self.REQUIRES_DISTANCES = set([self.distance_type])
         # Load in magnitude
         self.m_w = fle["Mw"][:]
         # Load in distances
         self.distances = fle["Distances"][:]
         # Load intensity measure types and levels
         self.imls = hdf_arrays_to_dict(fle["IMLs"])
-        self._update_supported_imts()
+        self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = set(self._supported_imts())
         if "SA" in self.imls.keys() and "T" not in self.imls:
             raise ValueError("Spectral Acceleration must be accompanied by "
                              "periods")
@@ -386,20 +385,16 @@ class GMPETable(GMPE):
         self.amplification = AmplificationTable(fle["Amplification"],
                                                 self.m_w,
                                                 self.distances)
-        if self.amplification.element == "Sites":
-            self.REQUIRES_SITES_PARAMETERS = set(())
-            self.REQUIRES_SITES_PARAMETERS.add(self.amplification.parameter)
-        elif self.amplification.element == "Rupture":
-            # Re-set the site parameters
-            self.REQUIRES_SITES_PARAMETERS = set(())
-            self.REQUIRES_RUPTURE_PARAMETERS.add(self.amplification.parameter)
+        if self.amplification.element in ("Sites", "Rupture"):
+            self.REQUIRES_SITES_PARAMETERS = set(
+                [self.amplification.parameter])
 
-    def _update_supported_imts(self):
+    def _supported_imts(self):
         """
         Updates the list of supported IMTs from the tables
         """
         imt_list = []
-        for key in self.imls.keys():
+        for key in self.imls:
             if "SA" in key:
                 imt_list.append(imt_module.SA)
             elif key == "T":
@@ -410,7 +405,7 @@ class GMPETable(GMPE):
                 except:
                     continue
                 imt_list.append(imt_val.__class__)
-        self.DEFINED_FOR_INTENSITY_MEASURE_TYPES.update(imt_list)
+        return imt_list
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
