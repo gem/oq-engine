@@ -46,6 +46,12 @@ class EngineServerTestCase(unittest.TestCase):
                              data, **params)
 
     @classmethod
+    def post_nrml(cls, data=None, **params):
+        return requests.post(
+            'http://%s/v1/valid/' % cls.hostport,
+            data, **params)
+
+    @classmethod
     def get(cls, path, **params):
         resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
                             params=params)
@@ -147,5 +153,57 @@ class EngineServerTestCase(unittest.TestCase):
         # there is no file job.ini, job_hazard.ini or job_risk.ini
         tb_str = self.postzip('archive_err_3.zip')
         self.assertIn('Could not find any file of the form', tb_str)
+
+    # tests for nrml validation
+
+    def test_validate_nrml_valid(self):
+        valid_file = os.path.join(self.datadir, 'vulnerability_model.xml')
+        with open(valid_file, 'rb') as vf:
+            valid_content = vf.read()
+        data = dict(xml_text=valid_content)
+        resp = self.post_nrml(data)
+        self.assertEqual(resp.status_code, 200)
+        resp_text_dict = json.loads(resp.text)
+        self.assertTrue(resp_text_dict['valid'])
+        self.assertIsNone(resp_text_dict['error_msg'])
+        self.assertIsNone(resp_text_dict['error_line'])
+
+    def test_validate_nrml_invalid(self):
+        invalid_file = os.path.join(self.datadir,
+                                    'vulnerability_model_invalid.xml')
+        with open(invalid_file, 'rb') as vf:
+            invalid_content = vf.read()
+        data = dict(xml_text=invalid_content)
+        resp = self.post_nrml(data)
+        self.assertEqual(resp.status_code, 200)
+        resp_text_dict = json.loads(resp.text)
+        self.assertFalse(resp_text_dict['valid'])
+        expected_error_line = 7
+        expected_error_msg = (u'Could not convert lossRatio->positivefloats:'
+                              ' float -0.018800826 < 0')
+        self.assertEqual(resp_text_dict['error_msg'], expected_error_msg)
+        self.assertEqual(resp_text_dict['error_line'], expected_error_line)
+
+    def test_validate_nrml_unclosed_tag(self):
+        invalid_file = os.path.join(self.datadir,
+                                    'vulnerability_model_unclosed_tag.xml')
+        with open(invalid_file, 'rb') as vf:
+            invalid_content = vf.read()
+        data = dict(xml_text=invalid_content)
+        resp = self.post_nrml(data)
+        self.assertEqual(resp.status_code, 200)
+        resp_text_dict = json.loads(resp.text)
+        self.assertFalse(resp_text_dict['valid'])
+        expected_error_line = 9
+        expected_error_msg = u'mismatched tag: line 9, column 10'
+        self.assertEqual(resp_text_dict['error_msg'], expected_error_msg)
+        self.assertEqual(resp_text_dict['error_line'], expected_error_line)
+
+    def test_validate_nrml_missing_parameter(self):
+        # passing a wrong parameter, instead of the required 'xml_text'
+        data = dict(foo="bar")
+        resp = self.post_nrml(data)
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.text, 'Please provide the "xml_text" parameter')
 
     # TODO: add more tests for error situations
