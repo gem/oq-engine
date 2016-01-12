@@ -1,5 +1,6 @@
   [Michele Simionato] 
   * Refactored the source filtering/splitting mechanism and improved
+  * Fixed the GMPETable GSIM and added an end-to-end test for it
     substantially the classical_tiling calculator
   * Changed the management of the seeds in the event based calculator:
     now we generate a seed per each rupture
