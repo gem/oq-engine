@@ -27,7 +27,7 @@ import numpy
 
 from openquake.baselib.general import AccumDict, groupby
 from openquake.commonlib.node import read_nodes
-from openquake.commonlib import valid, logictree, sourceconverter, parallel
+from openquake.commonlib import logictree, sourceconverter, parallel
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 from functools import reduce
 
@@ -120,7 +120,6 @@ class TrtModel(collections.Sequence):
         an optional numeric ID (default None) useful to associate
         the model to a database object
     """
-    POINT_SOURCE_WEIGHT = 1 / 40.
 
     @classmethod
     def collect(cls, sources):
@@ -382,30 +381,30 @@ class RlzsAssoc(collections.Mapping):
 
     def combine(self, results, agg=agg_prob):
         """
-        :param results: a dictionary (trt_model_id, gsim_name) -> floats
+        :param results: a dictionary (trt_model_id, gsim_no) -> floats
         :param agg: an aggregation function
         :returns: a dictionary rlz -> aggregated floats
 
         Example: a case with tectonic region type T1 with GSIMS A, B, C
         and tectonic region type T2 with GSIMS D, E.
 
-        >>> assoc = RlzsAssoc(CompositionInfo([], []))
-        >>> assoc.rlzs_assoc = {
+        >> assoc = RlzsAssoc(CompositionInfo([], []))
+        >> assoc.rlzs_assoc = {
         ... ('T1', 'A'): ['r0', 'r1'],
         ... ('T1', 'B'): ['r2', 'r3'],
         ... ('T1', 'C'): ['r4', 'r5'],
         ... ('T2', 'D'): ['r0', 'r2', 'r4'],
         ... ('T2', 'E'): ['r1', 'r3', 'r5']}
         ...
-        >>> results = {
+        >> results = {
         ... ('T1', 'A'): 0.01,
         ... ('T1', 'B'): 0.02,
         ... ('T1', 'C'): 0.03,
         ... ('T2', 'D'): 0.04,
         ... ('T2', 'E'): 0.05,}
         ...
-        >>> combinations = assoc.combine(results, operator.add)
-        >>> for key, value in sorted(combinations.items()): print key, value
+        >> combinations = assoc.combine(results, operator.add)
+        >> for key, value in sorted(combinations.items()): print key, value
         r0 0.05
         r1 0.06
         r2 0.06
@@ -428,7 +427,8 @@ class RlzsAssoc(collections.Mapping):
         """
         ad = AccumDict()
         for key, value in results.items():
-            for rlz in self.rlzs_assoc[key]:
+            gsim = self.csm_info.gsimdict[key]
+            for rlz in self.rlzs_assoc[key[0], gsim]:
                 ad[rlz] = agg(ad.get(rlz, 0), value)
         return ad
 
@@ -470,6 +470,7 @@ class CompositionInfo(object):
         col_id = 0
         self.col_ids_by_trt_id = collections.defaultdict(list)
         self.tmdict = {}  # trt_id -> trt_model
+        self.gsimdict = {}  # (trt_id, gsim_no) -> gsim instance
         for sm in self.source_models:
             for trt_model in sm.trt_models:
                 trt_model.source_model = sm
@@ -479,6 +480,9 @@ class CompositionInfo(object):
                     cols.append((trt_id, idx))
                     self.col_ids_by_trt_id[trt_id].append(col_id)
                     col_id += 1
+                for i, gsim in enumerate(trt_model.gsims):
+                    self.gsimdict[trt_model.id, str(i)] = gsim
+
         self.cols = numpy.array(cols, col_dt)
 
     def __getnewargs__(self):
@@ -599,8 +603,7 @@ class CompositeSourceModel(collections.Sequence):
             if trt_model.num_ruptures == 0 or really:
                 num_ruptures = 0
                 for src in trt_model:
-                    nr = src.count_ruptures()
-                    src.weight = get_weight(src, num_ruptures=nr)
+                    src.num_ruptures = nr = src.count_ruptures()
                     num_ruptures += nr
                 trt_model.num_ruptures = num_ruptures
                 logging.info('Processed %s', trt_model)
@@ -662,7 +665,7 @@ class CompositeSourceModel(collections.Sequence):
 
         assoc.gsims_by_trt_id = groupby(
             assoc.rlzs_assoc, operator.itemgetter(0),
-            lambda group: sorted(valid.gsim(gsim) for trt_id, gsim in group))
+            lambda group: sorted(gsim for trt_id, gsim in group))
 
         return assoc
 
@@ -737,11 +740,10 @@ def filter_and_split(src, sourceprocessor):
     for ss in sourceconverter.split_source(src):
         if sourceprocessor.weight:
             t = time.time()
-            ss.weight = get_weight(ss)
+            ss.num_ruptures = ss.count_ruptures()
             weight_time += time.time() - t
             weight += ss.weight
         out.append(ss)
-    src.weight = weight
     split_time = time.time() - t1 - weight_time
     return SourceInfo(src.trt_model_id, src.source_id, src.__class__.__name__,
                       weight, out, filter_time, weight_time, split_time)
@@ -798,16 +800,13 @@ class SourceFilter(BaseSourceProcessor):
         filter_time = t1 - t0
         if sites is not None and self.weight:
             t2 = time.time()
-            weight = get_weight(src)
-            src.weight = weight
             weight_time = time.time() - t2
         else:
-            weight = numpy.nan
             weight_time = 0
         sources = [] if sites is None else [src]
         return SourceInfo(
             src.trt_model_id, src.source_id, src.__class__.__name__,
-            weight, sources, filter_time, weight_time, 0)
+            src.weight, sources, filter_time, weight_time, 0)
 
     def agg_source_info(self, acc, info):
         """
