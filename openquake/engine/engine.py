@@ -243,6 +243,7 @@ def _do_run_calc(calc, exports, hazard_calculation_id):
     """
     calc.save_params()
     calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id)
+    calc.job.status = 'complete'
 
 
 def del_calc(job_id):
@@ -367,7 +368,10 @@ def run_job(cfg_file, log_level, log_file, exports='',
         run_calc(job, log_level, log_file, exports,
                  hazard_calculation_id=hazard_calculation_id)
         duration = time.time() - t0
-        print_results(job.id, duration, list_outputs)
+        if job.status == 'complete':
+            print_results(job.id, duration, list_outputs)
+        else:
+            sys.exit('Calculation %s failed' % job.id)
     return job
 
 DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset_and_collapse_map')
