@@ -120,7 +120,6 @@ class TrtModel(collections.Sequence):
         an optional numeric ID (default None) useful to associate
         the model to a database object
     """
-    POINT_SOURCE_WEIGHT = 1 / 40.
 
     @classmethod
     def collect(cls, sources):
@@ -604,8 +603,7 @@ class CompositeSourceModel(collections.Sequence):
             if trt_model.num_ruptures == 0 or really:
                 num_ruptures = 0
                 for src in trt_model:
-                    nr = src.count_ruptures()
-                    src.weight = get_weight(src, num_ruptures=nr)
+                    src.num_ruptures = nr = src.count_ruptures()
                     num_ruptures += nr
                 trt_model.num_ruptures = num_ruptures
                 logging.info('Processed %s', trt_model)
@@ -742,11 +740,10 @@ def filter_and_split(src, sourceprocessor):
     for ss in sourceconverter.split_source(src):
         if sourceprocessor.weight:
             t = time.time()
-            ss.weight = get_weight(ss)
+            ss.num_ruptures = ss.count_ruptures()
             weight_time += time.time() - t
             weight += ss.weight
         out.append(ss)
-    src.weight = weight
     split_time = time.time() - t1 - weight_time
     return SourceInfo(src.trt_model_id, src.source_id, src.__class__.__name__,
                       weight, out, filter_time, weight_time, split_time)
@@ -803,16 +800,13 @@ class SourceFilter(BaseSourceProcessor):
         filter_time = t1 - t0
         if sites is not None and self.weight:
             t2 = time.time()
-            weight = get_weight(src)
-            src.weight = weight
             weight_time = time.time() - t2
         else:
-            weight = numpy.nan
             weight_time = 0
         sources = [] if sites is None else [src]
         return SourceInfo(
             src.trt_model_id, src.source_id, src.__class__.__name__,
-            weight, sources, filter_time, weight_time, 0)
+            src.weight, sources, filter_time, weight_time, 0)
 
     def agg_source_info(self, acc, info):
         """
