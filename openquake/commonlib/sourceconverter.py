@@ -84,6 +84,7 @@ def area_to_point_sources(area_src):
             hypocenter_distribution=area_src.hypocenter_distribution,
             temporal_occurrence_model=area_src.temporal_occurrence_model)
         pt.trt_model_id = area_src.trt_model_id
+        pt.num_ruptures = pt.count_ruptures()
         yield pt
 
 
@@ -123,6 +124,7 @@ def split_fault_source(src):
     # will fail to transmit to the workers the generated sources.
     for s in split_fault_source_by_magnitude(src):
         if s.mfd.min_mag < MAGNITUDE_FOR_RUPTURE_SPLITTING:
+            s.num_ruptures = s.count_ruptures()
             yield s  # don't split, there would too many ruptures
         else:  # split on MultiRuptureSources
             for ss in MultiRuptureSource.split(s):
@@ -162,7 +164,7 @@ class MultiRuptureSource(object):
         self.source_id = source_id
         self.tectonic_region_type = tectonic_region_type
         self.trt_model_id = trt_model_id
-        self.weight = len(ruptures)
+        self.weight = self.num_ruptures = len(ruptures)
 
     def iter_ruptures(self):
         """Yield the ruptures"""
@@ -188,10 +190,12 @@ def split_source(src):
     """
     if isinstance(src, source.AreaSource):
         for s in area_to_point_sources(src):
+            s.id = src.id
             yield s
     elif isinstance(
             src, (source.SimpleFaultSource, source.ComplexFaultSource)):
         for s in split_fault_source(src):
+            s.id = src.id
             yield s
     else:
         # characteristic and nonparametric sources are not split

@@ -32,7 +32,7 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, source, datastore
+from openquake.commonlib import parallel, source, datastore, sourceconverter
 from openquake.calculators.views import get_data_transfer
 from openquake.baselib.general import AccumDict
 
@@ -420,6 +420,25 @@ def is_effective_trt_model(result_dict, trt_model):
                if trt_model.id == key[0] and nonzero(val))
 
 
+def split_sources(sources, maxweight, splitmap):
+    """
+    Split the sources with weight greater than maxweight. `splitmap`
+    is a cache to avoid splitting twice the same source.
+    """
+    ss = []
+    for src in sources:
+        if src.weight > maxweight:
+            key = (src.trt_model_id, src.source_id)
+            try:
+                srcs = splitmap[key]
+            except KeyError:
+                srcs = splitmap[key] = list(sourceconverter.split_source(src))
+            ss.extend(srcs)
+        else:
+            ss.append(src)
+    return ss
+
+
 @base.calculators.add('classical_tiling')
 class ClassicalTilingCalculator(ClassicalCalculator):
     """
@@ -442,11 +461,12 @@ class ClassicalTilingCalculator(ClassicalCalculator):
                      len(tiles), len(tiles[0]))
         sources = self.csm.get_sources()
         rlzs_assoc = self.csm.get_rlzs_assoc()
+        maxweight = 1000  # right now hard-coded
         siteidx = 0
         tmanagers = []
         maximum_distance = self.oqparam.maximum_distance
         num_blocks = math.ceil(self.oqparam.concurrent_tasks / len(tiles))
-
+        splitmap = {}
         for i, tile in enumerate(tiles, 1):
             monitor = self.monitor.new()
             monitor.oqparam = self.oqparam
@@ -458,7 +478,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
                 if not filtered_sources:
                     continue
             blocks = split_in_blocks(
-                sources, num_blocks,
+                split_sources(sources, maxweight, splitmap), num_blocks,
                 weight=operator.attrgetter('weight'),
                 key=operator.attrgetter('trt_model_id'))
             tm = parallel.starmap(
