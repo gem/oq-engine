@@ -50,7 +50,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         with self.assertRaises(ValueError) as ctx:
             self.calc.pre_execute()
         msg = str(ctx.exception)
-        self.assertIn("time_event is Day in", msg)
+        self.assertIn("time_event is 'Day' in", msg)
         self.assertIn("but the exposure contains day, night, transit", msg)
 
     @attr('qa', 'risk', 'scenario_risk')
