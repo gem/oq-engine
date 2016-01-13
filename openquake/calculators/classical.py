@@ -446,6 +446,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     Classical Tiling calculator
     """
     SourceProcessor = source.BaseSourceProcessor  # do nothing
+    MORE_TASKS = 10  # multiplication factor for concurrent_tasks
 
     def execute(self):
         """
@@ -467,7 +468,9 @@ class ClassicalTilingCalculator(ClassicalCalculator):
         siteidx = 0
         tmanagers = []
         maximum_distance = self.oqparam.maximum_distance
-        num_blocks = math.ceil(self.oqparam.concurrent_tasks / len(tiles))
+        # try to produce more tasks than self.oqparam.concurrent_tasks
+        num_blocks = math.ceil(
+            self.MORE_TASKS * self.oqparam.concurrent_tasks / len(tiles))
         splitmap = {}
         for i, tile in enumerate(tiles, 1):
             monitor = self.monitor.new()
