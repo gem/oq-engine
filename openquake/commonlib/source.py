@@ -586,14 +586,16 @@ class CompositeSourceModel(collections.Sequence):
     def set_weights(self):
         """
         Update the attributes .weight and src.num_ruptures for each TRT model
+        .weight of the CompositeSourceModel.
         """
         self.weight = self.filtered_weight = 0
         for trt_model in self.trt_models:
             weight = 0
             num_ruptures = 0
             for src in trt_model:
-                num_ruptures += src.num_ruptures
+                src.num_ruptures = nr = src.count_ruptures()
                 weight += src.weight
+                num_ruptures += nr
             trt_model.num_ruptures = num_ruptures
             trt_model.weight = weight
             trt_model.sources = sorted(

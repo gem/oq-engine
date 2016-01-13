@@ -1,5 +1,6 @@
   [Michele Simionato] 
   * Refactored the source filtering/splitting mechanism and improved
+  * Changed the classical_tiling calculator to split the heavy sources first
   * Fixed the GMPETable GSIM and added an end-to-end test for it
     substantially the classical_tiling calculator
   * Changed the management of the seeds in the event based calculator:

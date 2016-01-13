@@ -95,6 +95,7 @@ def area_to_point_sources(area_src):
             hypocenter_distribution=area_src.hypocenter_distribution,
             temporal_occurrence_model=area_src.temporal_occurrence_model)
         pt.trt_model_id = area_src.trt_model_id
+        pt.num_ruptures = pt.count_ruptures()
         yield pt
 
 
@@ -198,10 +199,12 @@ def split_source(src, block_size=1):
     """
     if isinstance(src, source.AreaSource):
         for s in area_to_point_sources(src):
+            s.id = src.id
             yield s
     elif isinstance(
             src, (source.SimpleFaultSource, source.ComplexFaultSource)):
         for s in split_fault_source(src, block_size):
+            s.id = src.id
             yield s
     else:
         # characteristic and nonparametric sources are not split
