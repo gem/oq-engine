@@ -446,7 +446,7 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     Classical Tiling calculator
     """
     SourceProcessor = source.BaseSourceProcessor  # do nothing
-    MORE_TASKS = 10  # multiplication factor for concurrent_tasks
+    MORE_TASKS = 4  # multiplication factor for concurrent_tasks
 
     def execute(self):
         """
