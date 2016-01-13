@@ -432,6 +432,7 @@ def split_sources(sources, maxweight, splitmap):
             try:
                 srcs = splitmap[key]
             except KeyError:
+                logging.info('Splitting %s of weight %s', src, src.weight)
                 srcs = splitmap[key] = list(sourceconverter.split_source(src))
             ss.extend(srcs)
         else:
@@ -461,7 +462,8 @@ class ClassicalTilingCalculator(ClassicalCalculator):
                      len(tiles), len(tiles[0]))
         sources = self.csm.get_sources()
         rlzs_assoc = self.csm.get_rlzs_assoc()
-        maxweight = 1000  # right now hard-coded
+        maxweight = math.ceil(self.csm.weight / (
+            self.oqparam.concurrent_tasks or 1))
         siteidx = 0
         tmanagers = []
         maximum_distance = self.oqparam.maximum_distance
