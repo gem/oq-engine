@@ -37,7 +37,7 @@ set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="hmtk"
 GEM_GIT_DEPS="oq-hazardlib oq-risklib oq-nrmllib"
-GEM_LOCAL_DEPS="python-nose python-coverage gmt python-pyshp gmt-gshhs-low python-matplotlib python-mpltoolkits.basemap pylint python-lxml"
+GEM_LOCAL_DEPS="python-nose python-coverage gmt python-pyshp gmt-gshhs-low python-matplotlib python-mpltoolkits.basemap pylint python-lxml python-yaml"
 
 if [ -z "$GEM_DEB_REPO" ]; then
     GEM_DEB_REPO="$HOME/gem_ubuntu_repo"
@@ -278,7 +278,7 @@ fi
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    ssh $lxc_ip "export PYTHONPATH="\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-nrmllib" ; cd $GEM_GIT_PACKAGE ; nosetests --with-xunit -v --with-coverage || true"
+    ssh $lxc_ip "export DISPLAY=\"$guest_display\"; export PYTHONPATH="\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-nrmllib" ; cd $GEM_GIT_PACKAGE ; nosetests --with-xunit -v --with-coverage || true"
 
     trap ERR
 
@@ -369,6 +369,20 @@ _lxc_name_and_ip_get()
     echo "SUCCESSFULLY RUNNED $lxc_name ($lxc_ip)"
 
     return 0
+}
+
+# get guest DISPLAY value
+_guest_display_get () {
+    local lxc_ip="$1"
+
+    ssh $lxc_ip 'x_list="$(ls /tmp/.X*-lock)"
+for x in $(echo "$x_list"); do
+    if sudo kill -0 $(cat $x) >/dev/null 2>&1; then
+        echo "$x" | sed '"'"'s@^/tmp/.X@:@g;s@-lock$@@g'"'"'
+        exit 0
+    fi
+done
+exit 1'
 }
 
 deps_check_or_clone () {
@@ -475,6 +489,8 @@ devtest_run () {
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
+    guest_display="$(_guest_display_get "$lxc_ip")"
+
     set +e
     _devtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
