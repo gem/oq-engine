@@ -97,16 +97,15 @@ class SharmaEtAl2009(GMPE):
         coeffs = self.COEFFS[im_type]
         coeffs.update(self.CONSTS)
 
+        # equation (1) is in terms of common logarithm
         log_mean = (self._compute_magnitude(rup, coeffs) +
                     self._compute_distance(dists, coeffs) +
                     self._get_site_amplification(sites, coeffs) +
                     self._get_mechanism(rup, coeffs))
-        # Convert to g and thence to the natural logarithm
+        # so convert to g and thence to the natural logarithm
         mean = log_mean*np.log(10.0) - np.log(g)
 
-        # Since sigma is not present in equation (1) it is not  entirely
-        # clear what it represents. We shall assume it requires the same
-        # processing that the mean value did.
+        # convert standard deviations from common to natural logarithm
         log_stddevs = self._get_stddevs(coeffs, stddev_types, len(sites.vs30))
         stddevs = log_stddevs*np.log(10.0)
 
