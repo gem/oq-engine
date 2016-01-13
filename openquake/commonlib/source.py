@@ -86,20 +86,6 @@ SourceModel = collections.namedtuple(
     'num_sources')
 
 
-def get_weight(src, point_source_weight=1/40., num_ruptures=None):
-    """
-    :param src: a hazardlib source object
-    :param point_source_weight: default 1/40
-    :param num_ruptures: if None it is recomputed
-    :returns: the weight of the given source
-    """
-    num_ruptures = num_ruptures or src.count_ruptures()
-    weight = (num_ruptures * point_source_weight
-              if src.__class__.__name__ in ('PointSource', 'AreaSource')
-              else num_ruptures)
-    return weight
-
-
 class TrtModel(collections.Sequence):
     """
     A container for the following parameters:
@@ -595,15 +581,18 @@ class CompositeSourceModel(collections.Sequence):
 
     def count_ruptures(self, really=False):
         """
-        Update the attribute .num_ruptures in each TRT model.
+        Update the attribute .num_ruptures in each TRT model and set the
+        .weight of the CompositeSourceModel.
         This method is lazy, i.e. the number is not updated if it is already
         set and nonzero, unless `really` is True.
         """
+        self.weight = 0
         for trt_model in self.trt_models:
             if trt_model.num_ruptures == 0 or really:
                 num_ruptures = 0
                 for src in trt_model:
                     src.num_ruptures = nr = src.count_ruptures()
+                    self.weight += src.weight
                     num_ruptures += nr
                 trt_model.num_ruptures = num_ruptures
                 logging.info('Processed %s', trt_model)
