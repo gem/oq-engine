@@ -32,6 +32,17 @@ class OqParamTestCase(unittest.TestCase):
                     intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
                     truncation_level=None).validate()
 
+    def test_region_grid_spacing(self):
+        # if there is a region there must be a region_grid_spacing
+        with self.assertRaises(ValueError):
+            OqParam(
+                calculation_mode='classical_risk',
+                hazard_calculation_id=None, hazard_output_id=None,
+                maximum_distance=10,
+                region='-78.182 15.615, -78.152 15.615, -78.152 15.565, '
+                '-78.182 15.565', inputs=dict(site_model='')
+            ).validate()
+
     def test_geometry(self):
         # you cannot have both region and sites
         with self.assertRaises(ValueError):
