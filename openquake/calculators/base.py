@@ -302,6 +302,7 @@ class HazardCalculator(BaseCalculator):
                 self.cost_types = self.exposure.cost_types
             self.taxonomies = numpy.array(
                 sorted(self.exposure.taxonomies), '|S100')
+            self.datastore['time_events'] = sorted(self.exposure.time_events)
 
     def load_riskmodel(self):
         """
