@@ -679,9 +679,12 @@ def get_exposure_lazy(fname, ok_cost_types):
         area = LiteralNode('area', dict(type=''))
 
     # read the cost types and make some check
-    cost_types = [(ct['name'], ct['type'], ct['unit'])
-                  for ct in conversions.costTypes
-                  if ct['name'] in ok_cost_types]
+    cost_types = []
+    for ct in conversions.costTypes:
+        if ct['name'] in ok_cost_types:
+            with context(fname, ct):
+                cost_types.append(
+                    (ct['name'], valid_cost_type(ct['type']), ct['unit']))
     if 'occupants' in ok_cost_types:
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
@@ -690,6 +693,9 @@ def get_exposure_lazy(fname, ok_cost_types):
         exposure['id'], exposure['category'],
         ~description, numpy.array(cost_types, cost_type_dt), time_events,
         ~inslimit, ~deductible, area.attrib, [], set()), exposure.assets
+
+
+valid_cost_type = valid.Choice('aggregated', 'per_area', 'per_asset')
 
 
 def get_exposure(oqparam):

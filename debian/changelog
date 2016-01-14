@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a validation on the cost type in the exposure
   * Added a validation for missing region_grid_spacing
   * Added a cross validation for the `time_event` parameter
   * Added a validation for empty descriptions in fragility models
