@@ -340,15 +340,16 @@ class BaseHazardCalculator(base.Calculator):
                     output=multicurve, lt_realization=rlz,
                     investigation_time=self.oqparam.investigation_time)
 
-            with self.monitor('building curves per realization'):
+            with self.monitor('building curves per realization',
+                              autoflush=True):
                 the_curves = models.build_curves(rlz, self.acc)
                 if all_equal(the_curves, 0):
                     the_curves = self.zeros
-                for imt, curves in zip(sorted_imts, the_curves):
-                    if individual_curves:
-                        self.save_curves_for_rlz_imt(
-                            rlz, imt, imtls[imt], points, curves)
-                    curves_by_imt[imt].append(curves)
+            for imt, curves in zip(sorted_imts, the_curves):
+                if individual_curves:
+                    self.save_curves_for_rlz_imt(
+                        rlz, imt, imtls[imt], points, curves)
+                curves_by_imt[imt].append(curves)
 
         self.acc = {}  # save memory for the post-processing phase
         if self.mean_hazard_curves or self.quantile_hazard_curves:
