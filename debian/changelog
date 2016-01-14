@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Added a validation for missing region_grid_spacing
+  * Added a cross validation for the `time_event` parameter
   * Added a validation for empty descriptions in fragility models
   * Changed the classical_tiling calculator to split the heavy sources first
   * Fixed the GMPETable GSIM and added an end-to-end test for it
