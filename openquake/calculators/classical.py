@@ -320,6 +320,7 @@ class ClassicalCalculator(base.HazardCalculator):
                                 group[ts] = curves
                                 group[ts].attrs['trt'] = tm.trt
                                 group[ts].attrs['nbytes'] = curves.nbytes
+                                group[ts].attrs['gsim'] = str(gsim)
                 self.datastore.set_nbytes(group.name)
             self.datastore.set_nbytes('curves_by_sm')
 
