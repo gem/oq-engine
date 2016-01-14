@@ -199,7 +199,7 @@ def float_or_flag(value, isAbsolute=None):
 class ExposureDataNode(LiteralNode):
     validators = dict(
         id=valid.simple_id,
-        description=valid.utf8,
+        description=valid.utf8_not_empty,
         name=valid.cost_type,
         type=valid.name,
         insuranceLimit=float_or_flag,
@@ -256,7 +256,7 @@ class FragilityNode(LiteralNode):
         minIML=valid.positivefloat,
         maxIML=valid.positivefloat,
         limitStates=valid.namelist,
-        description=valid.utf8,
+        description=valid.utf8_not_empty,
         type=valid.ChoiceCI('lognormal'),
         poEs=valid.probabilities,
         noDamageLimit=valid.NoneOr(valid.positivefloat),

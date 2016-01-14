@@ -169,6 +169,13 @@ class DataStore(collections.MutableMapping):
         obj = self.hdf5[key]
         obj.attrs['nbytes'] = ByteCounter.get_nbytes(obj)
 
+    def set_attrs(self, key, **kw):
+        """
+        Set the HDF5 attributes of the given key
+        """
+        for k, v in kw.items():
+            self.hdf5[key].attrs[k] = v
+
     def create_dset(self, key, dtype, size=None, compression=None):
         """
         Create a one-dimensional HDF5 dataset.

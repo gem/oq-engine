@@ -273,6 +273,12 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
+    def is_valid_region(self):
+        """
+        If there is a region a region_grid_spacing must be given
+        """
+        return self.region_grid_spacing if self.region else True
+
     def is_valid_geometry(self):
         """
         It is possible to infer the geometry only if exactly

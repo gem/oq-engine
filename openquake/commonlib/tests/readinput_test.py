@@ -337,6 +337,19 @@ class ExposureTestCase(unittest.TestCase):
   </exposureModel>
 </nrml>''')
 
+    exposure2 = general.writetmp('''\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <exposureModel id="ep" category="buildings">
+    <description>Exposure model for buildings</description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" unit="USD" type="aggregate"/>
+      </costTypes>
+    </conversions>
+  </exposureModel>
+</nrml>''')  # wrong cost type "aggregate"
+
     def test_get_exposure_metadata(self):
         exp, _assets = readinput.get_exposure_lazy(
             self.exposure, ['structural'])
@@ -425,6 +438,21 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         with self.assertRaises(RuntimeError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn('Could not find any asset within the region!',
+                      str(ctx.exception))
+
+    def test_exposure_wrong_cost_type(self):
+        oqparam = mock.Mock()
+        oqparam.base_path = '/'
+        oqparam.calculation_mode = 'scenario_risk'
+        oqparam.all_cost_types = ['structural']
+        oqparam.region_constraint = '''\
+POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
+        oqparam.inputs = {'exposure': self.exposure2,
+                          'structural_vulnerability': None}
+        with self.assertRaises(ValueError) as ctx:
+            readinput.get_exposure(oqparam)
+        self.assertIn("node costType: Got 'aggregate', expected "
+                      "aggregated|per_area|per_asset, line 7",
                       str(ctx.exception))
 
 
