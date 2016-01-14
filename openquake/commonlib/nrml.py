@@ -195,13 +195,16 @@ def float_or_flag(value, isAbsolute=None):
         return valid.boolean(isAbsolute)
 
 
+costType_type = valid.Choice('aggregated', 'per_area', 'per_asset')
+
+
 @nodefactory.add('exposureModel')
 class ExposureDataNode(LiteralNode):
     validators = dict(
         id=valid.simple_id,
         description=valid.utf8,
         name=valid.cost_type,
-        type=valid.name,
+        type=costType_type,
         insuranceLimit=float_or_flag,
         deductible=float_or_flag,
         occupants=valid.positivefloat,
