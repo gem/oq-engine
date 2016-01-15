@@ -65,7 +65,7 @@ DEFAULT_WEIGHTING = [(0.185, -1.), (0.63, 0.), (0.185, 1.)]
 
 
 def get_weighted_poes(gsim, sctx, rctx, dctx, imt, imls, truncation_level,
-        weighting=DEFAULT_WEIGHTING):
+                      weighting=DEFAULT_WEIGHTING):
     """
     This function implements the NGA West 2 GMPE epistemic uncertainty
     adjustment factor without re-calculating the actual GMPE each time.
@@ -77,14 +77,14 @@ def get_weighted_poes(gsim, sctx, rctx, dctx, imt, imls, truncation_level,
     """
     if truncation_level is not None and truncation_level < 0:
         raise ValueError('truncation level must be zero, positive number '
-                             'or None')
+                         'or None')
     gsim._check_imt(imt)
     # Boore et al. (2014) has only rjb - catch this case
     if hasattr(dctx, "rrup"):
         adjustment = nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup)
     else:
         adjustment = nga_west2_epistemic_adjustment(rctx.mag, dctx.rjb)
-        
+
     adjustment = adjustment.reshape(adjustment.shape + (1, ))
     if truncation_level == 0:
         # zero truncation mode, just compare imls to mean
@@ -94,7 +94,7 @@ def get_weighted_poes(gsim, sctx, rctx, dctx, imt, imls, truncation_level,
         output = np.zeros([mean.shape[0], imls.shape[0]])
         for (wgt, fct) in weighting:
             output += (wgt *
-                (imls <= (mean + (fct * adjustment))).astype(float))
+                       (imls <= (mean + (fct * adjustment))).astype(float))
         return output
     else:
         # use real normal distribution
@@ -167,7 +167,7 @@ class AbrahamsonEtAl2014NSHMPMean(AbrahamsonEtAl2014):
         weighted sum of the PoEs from the epistemic uncertainty adjustment
         """
         return get_weighted_poes(self, sctx, rctx, dctx, imt, imls,
-            truncation_level)
+                                 truncation_level)
 
 
 class BooreEtAl2014NSHMPUpper(BooreEtAl2014):
@@ -209,6 +209,7 @@ class BooreEtAl2014NSHMPLower(BooreEtAl2014):
         return mean - nga_west2_epistemic_adjustment(rctx.mag, dctx.rjb),\
             stddevs
 
+
 class BooreEtAl2014NSHMPMean(BooreEtAl2014):
     """
     Implements the Boore et al (2014) GMPE for application to the
@@ -221,7 +222,7 @@ class BooreEtAl2014NSHMPMean(BooreEtAl2014):
         weighted sum of the PoEs from the epistemic uncertainty adjustment
         """
         return get_weighted_poes(self, sctx, rctx, dctx, imt, imls,
-            truncation_level)
+                                 truncation_level)
 
 
 class CampbellBozorgnia2014NSHMPUpper(CampbellBozorgnia2014):
@@ -263,6 +264,7 @@ class CampbellBozorgnia2014NSHMPLower(CampbellBozorgnia2014):
         return mean - nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
             stddevs
 
+
 class CampbellBozorgnia2014NSHMPMean(CampbellBozorgnia2014):
     """
     Implements the Campbell & Bozorgnia (2014) GMPE for application to the
@@ -275,7 +277,7 @@ class CampbellBozorgnia2014NSHMPMean(CampbellBozorgnia2014):
         weighted sum of the PoEs from the epistemic uncertainty adjustment
         """
         return get_weighted_poes(self, sctx, rctx, dctx, imt, imls,
-            truncation_level)
+                                 truncation_level)
 
 
 class ChiouYoungs2014NSHMPUpper(ChiouYoungs2014):
@@ -330,7 +332,7 @@ class ChiouYoungs2014NSHMPMean(ChiouYoungs2014):
         weighted sum of the PoEs from the epistemic uncertainty adjustment
         """
         return get_weighted_poes(self, sctx, rctx, dctx, imt, imls,
-            truncation_level)
+                                 truncation_level)
 
 
 class Idriss2014NSHMPUpper(Idriss2014):
@@ -385,5 +387,4 @@ class Idriss2014NSHMPMean(Idriss2014):
         weighted sum of the PoEs from the epistemic uncertainty adjustment
         """
         return get_weighted_poes(self, sctx, rctx, dctx, imt, imls,
-            truncation_level)
-
+                                 truncation_level)
