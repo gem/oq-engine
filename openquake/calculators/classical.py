@@ -277,13 +277,8 @@ class ClassicalCalculator(base.HazardCalculator):
                          for rec in self.source_info}
             for src_idx, dt in calc_times:
                 src = sources[src_idx]
-                try:
-                    info = info_dict[src.trt_model_id, src.source_id]
-                except KeyError:
-                    logging.error('source_info for (%s, %s) not found??',
-                                  src.trt_model_id, src.source_id)
-                else:
-                    info['calc_time'] += dt
+                info = info_dict[src.trt_model_id, src.source_id]
+                info['calc_time'] += dt
             self.source_info = numpy.array(
                 sorted(info_dict.values(), key=operator.itemgetter(7),
                        reverse=True))
