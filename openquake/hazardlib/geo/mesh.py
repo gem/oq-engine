@@ -91,10 +91,8 @@ class Mesh(object):
         """
         Return the shape of this mesh.
 
-        :returns:
-            The shape of this mesh.
-        :rtype:
-            tuple in the following format (rows, columns)
+        :returns tuple:
+            The shape of this mesh as (rows, columns)
         """
         return self.lons.shape
 

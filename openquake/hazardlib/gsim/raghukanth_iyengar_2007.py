@@ -42,7 +42,7 @@ class RaghukanthIyengar2007(GMPE):
     significant seismic hazard (see Section 1 "Introduction", p. 199 and
     Section 2 "Seismological model", p. 200)
 
-    Reference:
+    Page number citations in this documentation refer to:
 
     Raghukanth, S. and Iyengar, R. (2007). Estimation of seismic spectral
     acceleration in peninsular India. Journal of Earth System Science,
@@ -91,25 +91,32 @@ class RaghukanthIyengar2007(GMPE):
     #: approximately 1.5% by making the following changes to what may be
     #: typographical errors in the published coefficients. In each case the
     #: value sugstituted is interpolated from neighbouring values.
-    #
+    #:
     #: RaghukanthIyengar2007 COEFFS_BEDROCK (Table 3) at 1.200 s:
-    #:      change c1 from 0.2904 to 0.1904
+    #:
+    #: * change c1 from 0.2904 to 0.1904
+    #:
     #: RaghukanthIyengar2007 COEFFS_NEHRP_C (Table 5) at 0.750 s:
-    #:      change a1 from 0.36 to -0.30
+    #:
+    #: * change a1 from 0.36 to -0.30
+    #:
     #: RaghukanthIyengar2007Southern COEFFS_BEDROCK (Table 2(b)) at 2.000 s:
-    #:      change c4 from 0.0001 to 0.0010
+    #:
+    #: * change c4 from 0.0001 to 0.0010
     #:
     #: Note that these would be in addition to the following more obvious
     #: correction which was implemented.
     #:
     #: RaghukanthIyengar2007Southern COEFFS_BEDROCK (Table 2(b)) at 0.150 s:
-    #:      change c1 from .1941 to 2.1941
+    #:
+    #: * change c1 from .1941 to 2.1941
     #:
     #: Note that since test data was dervied from Figures 3 and 5, PGA is
     #: not covered.
     non_verified = True
 
     def get_mean_and_stddevs(self, sites, rup, dists, im_type, stddev_types):
+        # pylint: disable=too-many-arguments
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
@@ -120,8 +127,6 @@ class RaghukanthIyengar2007(GMPE):
         Equation (8) on p. 203 for the bedrock ground motion:
 
         ``ln(y_br) = c1 + c2*(M - 6) + c3*(M - 6)**2 - lnR - c4*R + ln(ε_br)``
-                     =============================== ==============
-                            magnitude terms          distance terms
 
         Equation (9) on p. 207 gives the site amplification factor:
 
@@ -167,6 +172,7 @@ class RaghukanthIyengar2007(GMPE):
         return coeffs['c1'] + coeffs['c2']*adj_mag + coeffs['c3']*adj_mag**2
 
     def _compute_distance_terms(self, dists, coeffs):
+        # pylint: disable=no-self-use
         """
         Fourth and fifth terms of equation (8) on p. 203:
 
@@ -175,8 +181,9 @@ class RaghukanthIyengar2007(GMPE):
         return - np.log(dists.rhypo) - coeffs['c4']*dists.rhypo
 
     def _compute_site_amplification(self, ln_mean_bedrock, coeffs):
+        # pylint: disable=no-self-use
         """
-         Equation (9) on p. 207 gives the site amplification factor:
+        Equation (9) on p. 207 gives the site amplification factor:
 
         ``ln(F_s) = a1*y_br + a2 + ln(δ_site)``
         """
@@ -426,6 +433,7 @@ class RaghukanthIyengar2007(GMPE):
 
 
 class RaghukanthIyengar2007KoynaWarna(RaghukanthIyengar2007):
+    # pylint: disable=too-few-public-methods
     """
     Implements GMPE of Raghukanth & Iyengar (2007) for the Koyna-Warna
     region of India.
@@ -470,6 +478,7 @@ class RaghukanthIyengar2007KoynaWarna(RaghukanthIyengar2007):
 
 
 class RaghukanthIyengar2007Southern(RaghukanthIyengar2007):
+    # pylint: disable=too-few-public-methods
     """
     Implements GMPE of Raghukanth & Iyengar (2007) for southern India.
 
@@ -517,6 +526,7 @@ class RaghukanthIyengar2007Southern(RaghukanthIyengar2007):
 
 
 class RaghukanthIyengar2007WesternCentral(RaghukanthIyengar2007):
+    # pylint: disable=too-few-public-methods
     """
     Implements GMPE of Raghukanth & Iyengar (2007) for western-central India.
 
