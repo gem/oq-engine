@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.commonlib.node import read_nodes
-from openquake.commonlib import logictree, sourceconverter, parallel
+from openquake.commonlib import logictree, sourceconverter, parallel, valid
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
 MAX_INT = 2 ** 31 - 1
@@ -726,7 +726,7 @@ SourceInfo.__iadd__ = source_info_iadd
 
 source_info_dt = numpy.dtype([
     ('trt_model_id', numpy.uint32),  # 0
-    ('source_id', (bytes, 20)),      # 1
+    ('source_id', (bytes, valid.MAX_ID_LENGTH)),  # 1
     ('source_class', (bytes, 20)),   # 2
     ('weight', numpy.float32),       # 3
     ('split_num', numpy.uint32),     # 4
