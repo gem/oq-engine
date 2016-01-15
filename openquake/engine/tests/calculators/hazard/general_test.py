@@ -108,7 +108,7 @@ class NonEmptyQuantileTestCase(unittest.TestCase):
     def test(self):
         cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         with mock.patch('openquake.engine.logs.LOG.warn') as warn:
-            helpers.run_job(cfg, number_of_logic_tree_samples=1,
+            helpers.run_job(cfg, number_of_logic_tree_samples='1',
                             quantile_hazard_curves='0.1 0.2',
                             hazard_maps='', uniform_hazard_spectra='')
         msg = warn.call_args[0][0]
