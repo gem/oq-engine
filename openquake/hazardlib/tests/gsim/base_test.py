@@ -428,7 +428,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
     def test_unknown_site_param_error(self):
         self.gsim_class.REQUIRES_SITES_PARAMETERS.add('unknown!')
         err = "ContextMaker requires unknown site parameter 'unknown!'"
-        sites = SiteCollection([self.site1])
+        sites = SiteCollection([self.site1, self.site2])
         self._assert_value_error(self.make_contexts, err,
                                  site_collection=sites, rupture=self.rupture)
 
@@ -441,8 +441,8 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
 
     def test_unknown_distance_error(self):
         self.gsim_class.REQUIRES_DISTANCES.add('jump height')
-        err = "ContextMaker requires unknown distance measure 'jump height'"
-        sites = SiteCollection([self.site1])
+        err = "Unknown distance measure 'jump height'"
+        sites = SiteCollection([self.site1, self.site2])
         self._assert_value_error(self.make_contexts, err,
                                  site_collection=sites, rupture=self.rupture)
 

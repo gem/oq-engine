@@ -1,6 +1,7 @@
 import time
 import unittest
 import pickle
+import numpy
 from openquake.baselib.performance import PerformanceMonitor
 
 
@@ -38,7 +39,8 @@ class MonitorTestCase(unittest.TestCase):
         with mon2:  # called twice on purpose
             time.sleep(0.1)
 
-        data = self.mon.get_data()
+        data = numpy.concatenate([mon.get_data() for mon in self.mon.children])
+        self.assertEqual(list(data['counts']), [1, 2])
         total_time = data['time_sec'].sum()
         self.assertGreaterEqual(total_time, 0.3)
         self.mon.flush()
