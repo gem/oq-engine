@@ -55,7 +55,7 @@ class NodalPlane(object):
         and raise ``ValueError`` otherwise.
         """
         if not 0 < dip <= 90:
-            raise ValueError('dip is out of range (0, 90]')
+            raise ValueError('dip %g is out of range (0, 90]' % dip)
 
     @classmethod
     def check_strike(cls, strike):
@@ -64,7 +64,7 @@ class NodalPlane(object):
         and raise ``ValueError`` otherwise.
         """
         if not 0 <= strike < 360:
-            raise ValueError('strike is out of range [0, 360)')
+            raise ValueError('strike %g is out of range [0, 360)' % strike)
 
     @classmethod
     def check_rake(cls, rake):
@@ -73,4 +73,4 @@ class NodalPlane(object):
         and raise ``ValueError`` otherwise.
         """
         if not -180 < rake <= 180:
-            raise ValueError('rake is out of range (-180, 180]')
+            raise ValueError('rake %g is out of range (-180, 180]' % rake)
