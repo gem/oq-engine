@@ -207,4 +207,4 @@ class NoSourcesTestCase(unittest.TestCase):
         cfg = helpers.get_data_path('classical_job.ini')
         with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
             with self.assertRaises(RuntimeError):
-                helpers.run_job(cfg, maximum_distance=1)
+                helpers.run_job(cfg, maximum_distance='1')
