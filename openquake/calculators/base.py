@@ -298,7 +298,7 @@ class HazardCalculator(BaseCalculator):
                                  self.job_info['output_weight'])
                     logging.info('Total weight of the sources=%s',
                                  self.job_info['input_weight'])
-                with self.monitor('sending the sources', autoflush=True):
+                with self.monitor('managing sources', autoflush=True):
                     self.send_sources()
                 self.manager.store_source_info(self.datastore)
                 attrs = self.datastore.hdf5['composite_source_model'].attrs
