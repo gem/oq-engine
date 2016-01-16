@@ -433,7 +433,8 @@ def split_sources(sources, maxweight, splitmap):
             try:
                 srcs = splitmap[key]
             except KeyError:
-                logging.info('Splitting %s of weight %s', src, src.weight)
+                logging.info('Splitting %s of weight %d > %d',
+                             src, src.weight, maxweight)
                 srcs = splitmap[key] = list(sourceconverter.split_source(src))
             ss.extend(srcs)
         else:
