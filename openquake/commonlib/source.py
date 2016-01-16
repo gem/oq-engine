@@ -758,7 +758,7 @@ class SourceManager(object):
         self.dstore = dstore
         self.monitor = monitor
         self.filter_sources = filter_sources
-        self.num_tiles = 1
+        self.num_tiles = num_tiles
         self.rlzs_assoc = csm.get_rlzs_assoc()
         self.split_map = {}
         self.source_chunks = []
