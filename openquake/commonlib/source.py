@@ -579,23 +579,20 @@ class CompositeSourceModel(collections.Sequence):
         """
         return len(self.get_sources())
 
-    def count_ruptures(self, really=False):
+    def count_ruptures(self):
         """
         Update the attribute .num_ruptures in each TRT model and set the
         .weight of the CompositeSourceModel.
-        This method is lazy, i.e. the number is not updated if it is already
-        set and nonzero, unless `really` is True.
         """
         self.weight = 0
         for trt_model in self.trt_models:
-            if trt_model.num_ruptures == 0 or really:
-                num_ruptures = 0
-                for src in trt_model:
-                    src.num_ruptures = nr = src.count_ruptures()
-                    self.weight += src.weight
-                    num_ruptures += nr
-                trt_model.num_ruptures = num_ruptures
-                logging.info('Processed %s', trt_model)
+            num_ruptures = 0
+            for src in trt_model:
+                src.num_ruptures = nr = src.count_ruptures()
+                self.weight += src.weight
+                num_ruptures += nr
+            trt_model.num_ruptures = num_ruptures
+            logging.info('Processed %s', trt_model)
 
     def get_info(self):
         """
@@ -730,8 +727,8 @@ def filter_and_split(src, sourceprocessor):
         if sourceprocessor.weight:
             t = time.time()
             ss.num_ruptures = ss.count_ruptures()
-            weight_time += time.time() - t
             weight += ss.weight
+            weight_time += time.time() - t
         out.append(ss)
     split_time = time.time() - t1 - weight_time
     return SourceInfo(src.trt_model_id, src.source_id, src.__class__.__name__,

@@ -464,14 +464,13 @@ class ClassicalTilingCalculator(ClassicalCalculator):
                      len(tiles), len(tiles[0]))
         sources = self.csm.get_sources()
         rlzs_assoc = self.csm.get_rlzs_assoc()
-        maxweight = math.ceil(self.csm.weight / (
-            self.oqparam.concurrent_tasks or 1))
+        ctasks = self.oqparam.concurrent_tasks or 1
+        maxweight = math.ceil(self.csm.weight / ctasks)
         siteidx = 0
         tmanagers = []
         maximum_distance = self.oqparam.maximum_distance
         # try to produce more tasks than self.oqparam.concurrent_tasks
-        num_blocks = math.ceil(
-            self.MORE_TASKS * self.oqparam.concurrent_tasks / len(tiles))
+        num_blocks = math.ceil(self.MORE_TASKS * ctasks / len(tiles))
         splitmap = {}
         for i, tile in enumerate(tiles, 1):
             monitor = self.monitor.new()
