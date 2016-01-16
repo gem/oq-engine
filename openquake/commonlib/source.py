@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
+import math
 import logging
 import operator
 import collections
@@ -842,6 +843,8 @@ class SourceManager(object):
         Only the sources affecting the sitecol as considered. Also,
         set the .seed attribute of each source.
         """
+        # try to produce 4 times more tasks than concurrent_tasks
+        maxweight = math.ceil(self.csm.maxweight * self.num_tiles / 4)
         for kind in ('light', 'heavy'):
             sources = list(self.get_sources(kind, sitecol))
             if not sources:
@@ -852,7 +855,7 @@ class SourceManager(object):
                 self.csm.filtered_weight += src.weight
             nblocks = 0
             for block in block_splitter(
-                    sources, self.csm.maxweight * self.num_tiles,
+                    sources, maxweight,
                     operator.attrgetter('weight'),
                     operator.attrgetter('trt_model_id')):
                 sent = self.tm.submit(block, sitecol, siteidx,
