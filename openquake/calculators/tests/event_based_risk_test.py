@@ -19,7 +19,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def assert_stats_ok(self, pkg, individual_curves='false'):
         out = self.run_calc(pkg.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv', individual_curves=individual_curves,
-                            concurrent_tasks=4)
+                            concurrent_tasks='4')
         # NB: it is important to use concurrent_tasks > 1 to test the
         # complications of concurrency (for instance the noncommutativity of
         # numpy.float32 addition when computing the average losses)
@@ -74,7 +74,7 @@ a3        8.574770E+01 2.790150E+01 1.441384E+02 0.000000E+00
     def test_case_2bis(self):
         # test for a single realization
         out = self.run_calc(case_2.__file__, 'job_loss.ini', exports='csv',
-                            concurrent_tasks=0)
+                            concurrent_tasks='0')
         # this also tests that concurrent_tasks=0 does not give issues
         [fname] = out['agg_loss_table', 'csv']
         self.assertEqualFiles(
@@ -84,7 +84,7 @@ a3        8.574770E+01 2.790150E+01 1.441384E+02 0.000000E+00
     def test_case_3(self):
         out = self.run_calc(case_3.__file__, 'job_haz.ini,job_risk.ini',
                             exports='xml', individual_curves='false',
-                            concurrent_tasks=4)
+                            concurrent_tasks='4')
         [fname] = out['agg_curve-stats', 'xml']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 

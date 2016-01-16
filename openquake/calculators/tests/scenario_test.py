@@ -71,7 +71,7 @@ class ScenarioHazardTestCase(CalculatorTestCase):
     def test_case_1bis(self):
         # 2 out of 3 sites were filtered out
         out = self.run_calc(case_1.__file__, 'job.ini',
-                            maximum_distance=0.1, exports='csv')
+                            maximum_distance='0.1', exports='csv')
         self.assertEqualFiles(
             'BooreAtkinson2008_gmf.csv', out['gmfs', 'csv'][0])
 

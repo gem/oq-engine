@@ -1,5 +1,9 @@
   [Michele Simionato] 
   * Refactored the source filtering/splitting mechanism and improved
+  * Added a validation on the cost type in the exposure
+  * Added a validation for missing region_grid_spacing
+  * Added a cross validation for the `time_event` parameter
+  * Added a validation for empty descriptions in fragility models
   * Changed the classical_tiling calculator to split the heavy sources first
   * Fixed the GMPETable GSIM and added an end-to-end test for it
     substantially the classical_tiling calculator
