@@ -1,5 +1,5 @@
   [Nick Ackerley]
-  * Implemented GMPE of Kanno et al. (2006) for shallow and dep earthquakes.
+  * Implemented GMPE of Kanno et al. (2006) for shallow and deep earthquakes.
 
   [Graeme Weatherill]
   * Implements Drouet (2015) GMPE for Brazil
