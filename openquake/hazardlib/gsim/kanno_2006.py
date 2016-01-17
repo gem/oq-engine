@@ -45,6 +45,10 @@ class Kanno2006Shallow(GMPE):
     category of shallow events" (p. 883) where "shallow" is defined as "focal
     depth of 30 km or less" (p. 895).
 
+    Verification of mean value data was done by digitizing Figures 4 and 5
+    using http://arohatgi.info/WebPlotDigitizer/ app/. The maximum error was
+    15% while the average error was 3-4%.
+
     Page number citations in this documentation refer to:
 
     Kanno, T., Narita, A., Morikawa, N., Fujiwara, H., and Fukushima, Y.
@@ -84,9 +88,6 @@ class Kanno2006Shallow(GMPE):
     #: observation site and is the hypocentral distance in the case of
     #: earthquakes for which the fault model is not available." (p. 880)
     REQUIRES_DISTANCES = set(('rrup',))
-
-    #: Verification of mean value data was done by digitizing Figures 4 and 5
-    #: using http://arohatgi.info/WebPlotDigitizer/ app/. Maximum error was ...
 
     def get_mean_and_stddevs(self, sites, rup, dists, im_type, stddev_types):
         # pylint: disable=too-many-arguments
