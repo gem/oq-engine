@@ -843,8 +843,7 @@ class SourceManager(object):
         Only the sources affecting the sitecol as considered. Also,
         set the .seed attribute of each source.
         """
-        # try to produce 4 times more tasks than concurrent_tasks
-        maxweight = math.ceil(self.csm.maxweight * self.num_tiles / 4)
+        maxweight = math.ceil(self.csm.maxweight * self.num_tiles)
         for kind in ('light', 'heavy'):
             sources = list(self.get_sources(kind, sitecol))
             if not sources:
