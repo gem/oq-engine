@@ -29,44 +29,54 @@ import numpy as np
 from scipy.constants import g
 from openquake.hazardlib import const, imt
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-
+from openquake.hazardlib.gsim.atkinson_boore_2003 \
+    import AtkinsonBoore2003SSlab
 
 class Gupta2010SSlab(GMPE):
     # pylint: disable=too-few-public-methods
     """
-    Implements GMPE of Implemented Gupta (2010) for Indo-Burmese intraslab
-    subduction.
+    Implements GMPE of Gupta (2010) for Indo-Burmese intraslab subduction.
 
-    Note that "both crustal and subduction interface events fall into the
-    category of shallow events" (p. 883) where "shallow" is defined as "focal
-    depth of 30 km or less" (p. 895).
+    This model is closely related to the model of Atkinson & Boore (2003).
+    In particular the functional form and coefficients ``C2``-``C7`` of
+    Gupta (2010) are the same as Atkinson & Boore (2003). The only
+    substantive changes are a) the horizontal component modeled is different
+    (as noted below) b) a coefficient ``C8`` and a dummy variable ``v``
+    are added to model vertical motion and c) the coefficient ``C1`` is
+    recalculated based on a database of "a total of 56 three-component
+    accelerograms at 37 different sites from three in-slab earthquakes
+    along the Indo-Burmese subduction zone" (p 370).
 
-    Verification of mean value data was done by digitizing Figures 4 and 5
-    using http://arohatgi.info/WebPlotDigitizer/ app/. The maximum error was
-    15% while the average error was 3-4%.
+    Page number citations in this documentation refer to Gupta (2010).
 
-    Page number citations in this documentation refer to:
+    References
+    ----------
 
     Gupta, I. (2010). Response spectral attenuation relations for in-slab
-    earthquakes in Indo-Burmese subduction zone. Soil Dynamics and Earthquake
-    Engineering, 30(5):368–377.
+    earthquakes in Indo-Burmese subduction zone. *Soil Dyn. Earthq. Eng.*,
+    30(5):368–377.
+
+    Atkinson, G. M. and Boore, D. M. (2003). Empirical ground-motion relations
+    for subduction-zone earthquakes and their application to Cascadia and other
+    regions. *Bull. Seism. Soc. Am.*, 93(4):1703–1729.
     """
 
-    #: As clearly stated in the title.
+    #: As stated in the title.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
-    #: "regression coefficients for the base model in equations (5) and (6)
-    #: for PGA , PGV , and 5% damped response spectral acceleration are given"
-    #: (p. 883)
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([imt.PGA, imt.PGV, imt.SA])
+    #: "The actual peak ground acceleration (PGA) from the corrected time
+    #: histories are taken as the response spectral amplitudes at a period of
+    #: 0.02 s (50 Hz frequency)." p. 371. Based on this comment, the
+    #: coefficients labeled as being for 0.02 s have been relabeld as PGA.
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([imt.PGA, imt.SA])
 
-    #: "The peak value is the peak square root of the sum of squares
-    #: of two orthogonal horizontal components in the time domain" (p. 880)
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.PEAK_SRSS_HORIZONTAL
+    #: Unlike Atkinson & Boore (2003), "rather than the random horizontal
+    #: component, the geometric mean of both the horizontal components has
+    #: been used in the modified attenuation relations." (p. 376)
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.MEDIAN_HORIZONTAL
 
-    #: Although interevent and intraevent residuals are separately discussed
-    #: in the context of focal depth and site conditions, only the total
-    #: standard deviation is tabulated.
+    #: Since the database is small only the total standard deviation is
+    #: reported.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
 
     #: "Coefficients p and q were derived by regression analysis on the
@@ -91,12 +101,12 @@ class Gupta2010SSlab(GMPE):
 
         Implements the following equations:
 
-        Equation (5) on p. 881 predicts ground motion for shallow events
-        (depth <= 30 km):
+        Equation (2) predicts spectral accelerations (slightly rearranged from
+        p. 373):
 
-        ``log(pre) = a*M + b*X - log(X + d*10^(e*M)) + c + epsilon``
+        ``log Y  = C1 + C2*M + C3*h + C4*R + g log R + C8*v + sigma``
 
-        "where pre is the predicted PGA (cm/sec^2), PGV (cm/sec), or 5%
+        "where Y is the predicted PGA (cm/sec^2), PGV (cm/sec), or 5%
         damped response spectral acceleration (cm/sec^2)" (p. 883) and a,
         b, c and d are tabulated regression coefficients. Note that
         subscripts on the regression coeffients have been dropped -
@@ -191,8 +201,7 @@ class Gupta2010SSlab(GMPE):
 
         return coeffs['epsilon']
 
-    #: Coefficients taken from Table 4, p. 372.
-    COEFFS = CoeffsTable(sa_damping=5., table="""\
+    COEFFS_SSLAB = CoeffsTable(sa_damping=5., table="""\
       IMT      C1       C2       C3       C4    C5    C6    C7      C8  sigma
      0.02  0.4598  0.69090  0.01130 -0.00202  0.19  0.24  0.29 -0.3312  0.347
      0.04  0.7382  0.63273  0.01275 -0.00234  0.15  0.20  0.20 -0.3090  0.343

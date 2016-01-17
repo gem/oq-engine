@@ -60,6 +60,7 @@ Built-in GSIMs
     geomatrix_1993
     ghofrani_atkinson_2014
     gsim_table
+    gupta_2010
     idriss_2014
     kanno_2006
     lin_lee_2008
