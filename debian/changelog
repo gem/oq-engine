@@ -1,5 +1,6 @@
   [Nick Ackerley]
   * Implemented GMPE of Kanno et al. (2006) for shallow and dep earthquakes.
+  * Implemented Gupta (2010) for Indo-Burmese intraslab subduction.
 
   [Graeme Weatherill]
   * Implements Drouet (2015) GMPE for Brazil
