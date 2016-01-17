@@ -20,8 +20,6 @@ Module
 defines
 :class:`Kanno2006ShallowTestCase`
 :class:`Kanno2006DeepTestCase`
-:class:`Kanno2006ShallowNortheastJapanTestCase`
-:class:`Kanno2006DeepNortheastJapanTestCase`
 for testing of
 :class:`openquake.hazardlib.gsim.kanno_2006.Kanno2006Shallow`
 and subclasses of same.
@@ -29,69 +27,50 @@ and subclasses of same.
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-from openquake.hazardlib.gsim.raghukanth_iyengar_2007 import (
+from openquake.hazardlib.gsim.kanno_2006 import (
     Kanno2006Shallow,
-    Kanno2006Deep,
-    Kanno2006ShallowNortheastJapan,
-    Kanno2006DeepNortheastJapan,
+    Kanno2006Deep
 )
 
 
 class Kanno2006ShallowTestCase(BaseGSIMTestCase):
     """
-    Mean value data obtained by digitizing Figure 5 using
+    Mean value data obtained by digitizing figures using
     http://arohatgi.info/WebPlotDigitizer/app/ .
     """
 
     GSIM_CLASS = Kanno2006Shallow
-    MEAN_FILE = 'KNMF06/KNMF06_S_MEAN.csv'
-    SIGMA_FILE = 'KNMF06/KNMF06_S_STD_TOTAL.csv'
-    TOL_PERCENT = 1.
+    MEAN_FILES = ['KNMF06/KNMF06_S_MEAN_FIG4.csv',
+                  'KNMF06/KNMF06_S_MEAN_FIG5.csv']
+    SIGMA_FILES = ['KNMF06/KNMF06_S_TOTAL_STDDEV_FIG4.csv',
+                   'KNMF06/KNMF06_S_TOTAL_STDDEV_FIG5.csv']
+    MEAN_TOL = 15.
+    SIGMA_TOL = 0.1
 
     def test_mean(self):
         """
         Ensure that means match reference dataset.
         """
-        self.check(self.MEAN_FILE, max_discrep_percentage=self.TOL_PERCENT)
+        for mean_file in self.MEAN_FILES:
+            self.check(mean_file, max_discrep_percentage=self.MEAN_TOL)
 
     def test_std_total(self):
         """
         Ensure that standard deviations match reference dataset.
         """
-        self.check(self.SIGMA_FILE, max_discrep_percentage=self.TOL_PERCENT)
+        for sigma_file in self.SIGMA_FILES:
+            self.check(sigma_file, max_discrep_percentage=self.SIGMA_TOL)
 
 
 class Kanno2006DeepTestCase(Kanno2006ShallowTestCase):
     # pylint: disable=too-few-public-methods
     """
-    Mean bedrock motions obtained by digitizing Figure 3 using
+    Mean bedrock motions obtained by digitizing figures using
     http://arohatgi.info/WebPlotDigitizer/app/ .
     """
 
     GSIM_CLASS = Kanno2006Deep
-    MEAN_FILE = 'KNMF06/KNMF06_D_MEAN.csv'
-    SIGMA_FILE = 'KNMF06/KNMF06_D_STD_TOTAL.csv'
-
-
-class Kanno2006ShallowNortheastJapanTestCase(Kanno2006ShallowTestCase):
-    # pylint: disable=too-few-public-methods
-    """
-    Mean bedrock motions obtained by digitizing Figure 3 using
-    http://arohatgi.info/WebPlotDigitizer/app/ .
-    """
-
-    GSIM_CLASS = Kanno2006ShallowNortheastJapan
-    MEAN_FILE = 'KNMF06/KNMF06_S_NE_MEAN.csv'
-    SIGMA_FILE = 'KNMF06/KNMF06_S_NE_STD_TOTAL.csv'
-
-
-class Kanno2006DeepNortheastJapanTestCase(Kanno2006ShallowTestCase):
-    # pylint: disable=too-few-public-methods
-    """
-    Mean bedrock motions obtained by digitizing Figure 3 using
-    http://arohatgi.info/WebPlotDigitizer/app/ .
-    """
-
-    GSIM_CLASS = Kanno2006DeepNortheastJapan
-    MEAN_FILE = 'KNMF06/KNMF06_WC_MEAN.csv'
-    SIGMA_FILE = 'KNMF06/KNMF06_WC_STD_TOTAL.csv'
+    MEAN_FILES = ['KNMF06/KNMF06_D_MEAN_FIG5.csv',
+                  'KNMF06/KNMF06_D_MEAN_FIG5.csv']
+    SIGMA_FILES = ['KNMF06/KNMF06_D_TOTAL_STDDEV_FIG4.csv',
+                   'KNMF06/KNMF06_D_TOTAL_STDDEV_FIG5.csv']

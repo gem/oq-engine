@@ -9,9 +9,3 @@ Kanno 2006
 
 .. autoclass:: Kanno2006Deep
     :members:
-
-.. autoclass:: Kanno2006ShallowNortheastJapan
-    :members:
-
-.. autoclass:: Kanno2006DeepNortheastJapan
-    :members:
