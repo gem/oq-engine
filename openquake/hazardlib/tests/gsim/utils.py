@@ -27,32 +27,28 @@ class BaseGSIMTestCase(unittest.TestCase):
     GSIM_CLASS = None
 
     def get_context_attributes(self, ctx):
-        att = inspect.getmembers(ctx, lambda a: not(inspect.isroutine(a)))
+        att = inspect.getmembers(ctx, lambda a: not inspect.isroutine(a))
         att = [
             k for k, v in att if not ('_abc' in k)
             and not ((k.startswith('_') and k.endswith('_')))
         ]
-
         return set(att)
 
     def check(self, filename, max_discrep_percentage):
-        assert self.GSIM_CLASS is not None
+        gsim = self.GSIM_CLASS()
         filename = os.path.join(self.BASE_DATA_PATH, filename)
         errors, stats, sctx, rctx, dctx, ctxs = check_gsim(
-            self.GSIM_CLASS, open(filename),
-            max_discrep_percentage
-        )
+            gsim.__class__, open(filename), max_discrep_percentage)
         s_att = self.get_context_attributes(sctx)
         r_att = self.get_context_attributes(rctx)
         d_att = self.get_context_attributes(dctx)
-        self.assertEqual(self.GSIM_CLASS.REQUIRES_SITES_PARAMETERS, s_att)
-        self.assertEqual(self.GSIM_CLASS.REQUIRES_RUPTURE_PARAMETERS, r_att)
-        self.assertEqual(self.GSIM_CLASS.REQUIRES_DISTANCES, d_att)
+        self.assertEqual(gsim.REQUIRES_SITES_PARAMETERS, s_att)
+        self.assertEqual(gsim.REQUIRES_RUPTURE_PARAMETERS, r_att)
+        self.assertEqual(gsim.REQUIRES_DISTANCES, d_att)
         self.assertTrue(
             numpy.all(ctxs),
-            msg='Contexts objects have been changed by method '\
-                'get_mean_and_stddevs'
-        )
+            msg='Contexts objects have been changed by method '
+                'get_mean_and_stddevs')
         if errors:
             raise AssertionError(stats)
         print()
