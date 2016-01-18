@@ -15,8 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import unittest
-import collections
-import mock
 
 import h5py
 import numpy as np
@@ -24,8 +22,9 @@ from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.gsim_table import (
-    SitesContext, RuptureContext, DistancesContext, GMPETable,
-    AmplificationTable, hdf_arrays_to_dict)
+    GMPETable, AmplificationTable, hdf_arrays_to_dict)
+from openquake.hazardlib.gsim.base import (
+    RuptureContext, SitesContext, DistancesContext)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib import imt as imt_module
 
@@ -408,13 +407,17 @@ class GSIMTableGoodTestCase(unittest.TestCase):
 
     def test_instantiation_without_file(self):
         """
-        Tests the case when no GMPE table file is coded into the GMPE, nor
-        is any provided - should raise an error
+        Tests the case when the GMPE table file is missing
         """
         with self.assertRaises(IOError) as ioe:
             GMPETable(gmpe_table=None)
         self.assertEqual(str(ioe.exception),
                          "GMPE Table Not Defined!")
+
+        with self.assertRaises(IOError) as ioe:
+            GMPETable(gmpe_table='/do/not/exists/table.hdf5')
+        self.assertEqual(str(ioe.exception),
+                         "Missing file '/do/not/exists/table.hdf5'")
 
     def test_retreival_tables_good_no_interp(self):
         """
@@ -624,7 +627,7 @@ class GSIMTableTestCaseRupture(unittest.TestCase):
                             expected_rupture_set)
         self.assertEqual(gsim.amplification.parameter, "rake")
         self.assertEqual(gsim.amplification.element, "Rupture")
-        self.assertSetEqual(gsim.REQUIRES_SITES_PARAMETERS, set(()))
+        self.assertSetEqual(gsim.REQUIRES_SITES_PARAMETERS, set())
 
     def test_get_mean_and_stddevs_good(self):
         """
@@ -667,7 +670,7 @@ class GSIMTableTestCaseBadFile(unittest.TestCase):
         Tests missing period information
         """
         with self.assertRaises(ValueError) as ve:
-            gsim = GMPETable(gmpe_table=self.TABLE_FILE)
+            GMPETable(gmpe_table=self.TABLE_FILE)
         self.assertEqual(str(ve.exception),
                          "Spectral Acceleration must be accompanied by periods"
                          )
