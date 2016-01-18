@@ -53,13 +53,12 @@ class Gupta2010SSlab(AtkinsonBoore2003SSlab):
     after fitting. Note that since "v=0 for horizontal and 1 for vertical
     motion", and since the current implementation only models horizontal
     motion, we can subclass directly from
-    :class:`openquake.hazardlib.gsim.atkinson_boore_2003LAtkinsonBoore2003SSl
-    ab`, modifying only the metadata constants and regression coefficients.
+    :class:`openquake.hazardlib.gsim.atkinson_boore_2003.AtkinsonBoore2003SSlab`,
+    modifying only the metadata constants and regression coefficients.
 
     Page number citations in this documentation refer to Gupta (2010).
 
-    References
-    ----------
+    **References**
 
     Gupta, I. (2010). Response spectral attenuation relations for in-slab
     earthquakes in Indo-Burmese subduction zone. *Soil Dyn. Earthq. Eng.*,
