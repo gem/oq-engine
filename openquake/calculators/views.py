@@ -113,6 +113,12 @@ def view_csm_info(token, dstore):
     return rst_table(rows, header)
 
 
+@view.add('slow_sources')
+def view_slow_sources(token, dstore):
+    info = dstore['source_info'][:10]
+    return rst_table(info, fmt='%g')
+
+
 @view.add('rupture_collections')
 def view_rupture_collections(token, dstore):
     rlzs_assoc = dstore['rlzs_assoc']
