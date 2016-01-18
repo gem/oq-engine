@@ -44,7 +44,7 @@ class Kanno2006ShallowTestCase(BaseGSIMTestCase):
                   'KNMF06/KNMF06_S_MEAN_FIG5.csv']
     SIGMA_FILES = ['KNMF06/KNMF06_S_TOTAL_STDDEV_FIG4.csv',
                    'KNMF06/KNMF06_S_TOTAL_STDDEV_FIG5.csv']
-    MEAN_TOL = 15.
+    MEAN_TOL = 0.15
     SIGMA_TOL = 0.1
 
     def test_mean(self):
