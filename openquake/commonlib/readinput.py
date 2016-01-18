@@ -679,16 +679,23 @@ def get_exposure_lazy(fname, ok_cost_types):
         area = LiteralNode('area', dict(type=''))
 
     # read the cost types and make some check
-    cost_types = [(ct['name'], ct['type'], ct['unit'])
-                  for ct in conversions.costTypes
-                  if ct['name'] in ok_cost_types]
+    cost_types = []
+    for ct in conversions.costTypes:
+        if ct['name'] in ok_cost_types:
+            with context(fname, ct):
+                cost_types.append(
+                    (ct['name'], valid_cost_type(ct['type']), ct['unit']))
     if 'occupants' in ok_cost_types:
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
+    time_events = set()
     return Exposure(
         exposure['id'], exposure['category'],
-        ~description, numpy.array(cost_types, cost_type_dt),
+        ~description, numpy.array(cost_types, cost_type_dt), time_events,
         ~inslimit, ~deductible, area.attrib, [], set()), exposure.assets
+
+
+valid_cost_type = valid.Choice('aggregated', 'per_area', 'per_asset')
 
 
 def get_exposure(oqparam):
@@ -788,10 +795,10 @@ def get_exposure(oqparam):
                 raise ValueError("Invalid Exposure. "
                                  "Missing cost %s for asset %s" % (
                                      missing, asset_id))
-
         tot_fatalities = 0
         for occupancy in occupancies:
             with context(fname, occupancy):
+                exposure.time_events.add(occupancy['period'])
                 fatalities = 'fatalities_%s' % occupancy['period']
                 values[fatalities] = occupancy['occupants']
                 tot_fatalities += values[fatalities]
@@ -819,9 +826,9 @@ def get_exposure(oqparam):
 
 
 Exposure = collections.namedtuple(
-    'Exposure', ['id', 'category', 'description', 'cost_types',
-                 'insurance_limit_is_absolute',
-                 'deductible_is_absolute', 'area', 'assets', 'taxonomies'])
+    'Exposure', ['id', 'category', 'description', 'cost_types', 'time_events',
+                 'insurance_limit_is_absolute', 'deductible_is_absolute',
+                 'area', 'assets', 'taxonomies'])
 
 
 def get_specific_assets(oqparam):
