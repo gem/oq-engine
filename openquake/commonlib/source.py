@@ -843,7 +843,11 @@ class SourceManager(object):
         Only the sources affecting the sitecol as considered. Also,
         set the .seed attribute of each source.
         """
-        maxweight = math.ceil(self.csm.maxweight * self.num_tiles)
+        if self.filter_sources and self.num_tiles > 1:
+            # reduce the maxweight by 4 to produce more tasks
+            maxweight = math.ceil(self.csm.maxweight * self.num_tiles / 4)
+        else:
+            maxweight = self.csm.maxweight
         for kind in ('light', 'heavy'):
             sources = list(self.get_sources(kind, sitecol))
             if not sources:
