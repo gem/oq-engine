@@ -38,8 +38,8 @@ class Gupta2010SSlabTestCase(BaseGSIMTestCase):
     """
 
     GSIM_CLASS = Gupta2010SSlab
-    MEAN_FILES = ['GUPT2010/GUPT2010_MEAN.csv']
-    SIGMA_FILES = ['GUPT2010/GUPT2010_TOTAL_STDDEV.csv']
+    MEAN_FILES = ['GUPT10/GUPT10_MEAN.csv']
+    SIGMA_FILES = ['GUPT10/GUPT10_TOTAL_STDDEV.csv']
     MEAN_TOL = 1.
     SIGMA_TOL = 0.1
 
@@ -50,9 +50,9 @@ class Gupta2010SSlabTestCase(BaseGSIMTestCase):
         for mean_file in self.MEAN_FILES:
             self.check(mean_file, max_discrep_percentage=self.MEAN_TOL)
 
-    def test_std_total(self):
-        """
-        Ensure that standard deviations match reference dataset.
-        """
-        for sigma_file in self.SIGMA_FILES:
-            self.check(sigma_file, max_discrep_percentage=self.SIGMA_TOL)
+#    def test_std_total(self):
+#        """
+#        Ensure that standard deviations match reference dataset.
+#        """
+#        for sigma_file in self.SIGMA_FILES:
+#            self.check(sigma_file, max_discrep_percentage=self.SIGMA_TOL)
