@@ -339,8 +339,10 @@ class HazardCalculator(BaseCalculator):
         logging.info('Reading the site collection')
         with self.monitor('reading site collection', autoflush=True):
             haz_sitecol = readinput.get_site_collection(self.oqparam)
-        inputs = self.oqparam.inputs
-        if 'exposure' in inputs:
+
+        oq_hazard = (OqParam.from_(self.datastore.parent.attrs)
+                     if self.datastore.parent else None)
+        if 'exposure' in self.oqparam.inputs:
             self.read_exposure()
             self.load_riskmodel()  # must be called *after* read_exposure
             num_assets = self.count_assets()
@@ -354,8 +356,7 @@ class HazardCalculator(BaseCalculator):
                 num_sites = len(self.sitecol)
                 logging.warn('Associated %d assets to %d sites, %d discarded',
                              ok_assets, num_sites, num_assets - ok_assets)
-        elif (self.datastore.parent and 'exposure' in
-              OqParam.from_(self.datastore.parent.attrs).inputs):
+        elif oq_hazard and 'exposure' in oq_hazard.inputs:
             logging.info('Re-using the already imported exposure')
             if not self.riskmodel:
                 self.load_riskmodel()
