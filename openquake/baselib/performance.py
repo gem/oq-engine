@@ -84,9 +84,14 @@ class PerformanceMonitor(object):
         self.measuremem = measuremem
         self.mem = 0
         self.duration = 0
-        self._start_time = time.time()
+        self._start_time = self._stop_time = time.time()
         self.children = []
         self.counts = 0
+
+    @property
+    def dt(self):
+        """Last time interval measured"""
+        return self._stop_time - self._start_time
 
     def measure_mem(self):
         """A memory measurement (in bytes)"""
@@ -107,21 +112,15 @@ class PerformanceMonitor(object):
     def get_data(self):
         """
         :returns:
-            an array of dtype perf_dt, with the information of the monitor
-            and its children (operation, time_sec, memory_mb, counts)
-
-        .. note::
-
-            at the moment only the direct children are retrieved, i.e.
-            get_data is not recursive.
+            an array of dtype perf_dt, with the information
+            of the monitor (operation, time_sec, memory_mb, counts);
+            the lenght of the array can be 0 (for counts=0) or 1 (otherwise).
         """
         data = []
-        monitors = [self] + self.children  # only direct children
-        for mon in monitors:
-            if mon.counts:
-                time_sec = mon.duration
-                memory_mb = mon.mem / 1024. / 1024. if mon.measuremem else 0
-                data.append((mon.operation, time_sec, memory_mb, mon.counts))
+        if self.counts:
+            time_sec = self.duration
+            memory_mb = self.mem / 1024. / 1024. if self.measuremem else 0
+            data.append((self.operation, time_sec, memory_mb, self.counts))
         return numpy.array(data, perf_dt)
 
     def __enter__(self):
@@ -136,7 +135,8 @@ class PerformanceMonitor(object):
         if self.measuremem:
             self.stop_mem = self.measure_mem()
             self.mem += self.stop_mem - self.start_mem
-        self.duration += time.time() - self._start_time
+        self._stop_time = time.time()
+        self.duration += self._stop_time - self._start_time
         self.counts += 1
         self.on_exit()
 
@@ -149,15 +149,17 @@ class PerformanceMonitor(object):
         """
         Save the measurements on the performance file (or on stdout)
         """
+        for child in self.children:
+            child.flush()
         data = self.get_data()
-        # reset monitors
-        for mon in ([self] + self.children):
-            mon.duration = 0
-            mon.mem = 0
-            mon.counts = 0
-
         if len(data) == 0:  # no information
-            return
+            return []
+
+        # reset monitor
+        self.duration = 0
+        self.mem = 0
+        self.counts = 0
+
         if self.hdf5path:
             h5 = h5py.File(self.hdf5path)
             try:
@@ -167,12 +169,22 @@ class PerformanceMonitor(object):
             pdata.extend(data)
             h5.close()
         else:  # print on stddout
-            for rec in data:
-                print(rec)
+            print(data[0])
 
-    def __call__(self, operation, **kw):
+        return data
+
+    # TODO: rename this as spawn; see what will break
+    def __call__(self, operation='no operation', **kw):
         """
         Return a child of the monitor usable for a different operation.
+        """
+        child = self.new(operation, **kw)
+        self.children.append(child)
+        return child
+
+    def new(self, operation='no operation', **kw):
+        """
+        Return a copy of the monitor usable for a different operation.
         """
         self_vars = vars(self).copy()
         del self_vars['operation']
@@ -181,7 +193,6 @@ class PerformanceMonitor(object):
         new = self.__class__(operation)
         vars(new).update(self_vars)
         vars(new).update(kw)
-        self.children.append(new)
         return new
 
     def __repr__(self):
@@ -201,15 +212,16 @@ class DummyMonitor(PerformanceMonitor):
     def __init__(self, operation='dummy', *args, **kw):
         self.operation = operation
         self.hdf5path = None
-
-    def __call__(self, operation, **kw):
-        return self.__class__(operation)
+        self.children = []
+        self.counts = 0
+        self._start_time = self._stop_time = time.time()
 
     def __enter__(self):
+        self._start_time = time.time()
         return self
 
     def __exit__(self, etype, exc, tb):
-        pass
+        self._stop_time = time.time()
 
     def flush(self):
         pass
