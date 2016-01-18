@@ -173,10 +173,10 @@ class SharmaEtAl2009(GMPE):
         "``H`` is 1 for a strike-slip mechanism and 0 for a reverse mechanism"
         (p. 1201).
 
-        :raises UserWarning:
-            If mechanism is determined to be normal faulting, since
-            as summarized in Table 2 on p. 1197 the data used for
-            regression included only reverse and stike-slip events.
+        Note:
+            UserWarning is raised if mechanism is determined to be normal
+            faulting, since as summarized in Table 2 on p. 1197 the data used
+            for regression included only reverse and stike-slip events.
         """
 
         # normal faulting
