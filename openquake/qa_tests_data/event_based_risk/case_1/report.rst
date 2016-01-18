@@ -1,7 +1,7 @@
 PEB QA test 1
 =============
 
-num_sites = 3
+num_sites = 3, sitecol = 485 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             0.3
 area_source_discretization   10.0       
 random_seed                  23         
 master_seed                  0          
-concurrent_tasks             32         
+concurrent_tasks             64         
 ============================ ===========
 
 Input files
@@ -65,7 +65,7 @@ Non-empty rupture collections
 === ========= ==================== ============
 col smlt_path TRT                  num_ruptures
 === ========= ==================== ============
-0   b1        Active Shallow Crust 20          
+0   b1        Active Shallow Crust 26          
 === ========= ==================== ============
 
 Collections <-> realizations
@@ -77,8 +77,9 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =======
-Number of tasks to generate        1      
-Estimated sources to send          2.74 KB
-Estimated hazard curves to receive 1 KB   
-================================== =======
+=========================== =======
+Number of tasks to generate 1      
+Sent data                   8.52 KB
+Total received data         10.8 KB
+Maximum received per task   10.8 KB
+=========================== =======

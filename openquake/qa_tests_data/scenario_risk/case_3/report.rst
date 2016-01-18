@@ -1,7 +1,7 @@
 Scenario QA Test 3
 ==================
 
-num_sites = 4
+num_sites = 4, sitecol = 509 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             None
 area_source_discretization   None         
 random_seed                  3            
 master_seed                  0            
-concurrent_tasks             32           
+concurrent_tasks             64           
 avg_losses                   False        
 ============================ =============
 

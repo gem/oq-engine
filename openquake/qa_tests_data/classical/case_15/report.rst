@@ -1,7 +1,7 @@
 Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
-num_sites = 3
+num_sites = 3, sitecol = 485 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0     
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             32       
+concurrent_tasks             64       
 ============================ =========
 
 Input files
@@ -74,25 +74,24 @@ Number of ruptures per tectonic region type
 ================== ====== ======================== =========== ============ ======
 source_model       trt_id trt                      num_sources num_ruptures weight
 ================== ====== ======================== =========== ============ ======
-source_model_1.xml 0      Active Shallow Crust     1           15           0.375 
-source_model_1.xml 1      Stable Continental Crust 1           15           0.375 
-source_model_2.xml 2      Active Shallow Crust     1           240          6.0   
-source_model_2.xml 3      Active Shallow Crust     1           240          6.0   
+source_model_1.xml 0      Active Shallow Crust     15          15           0.375 
+source_model_1.xml 1      Stable Continental Crust 15          15           0.375 
+source_model_2.xml 2      Active Shallow Crust     240         240          6.0   
+source_model_2.xml 3      Active Shallow Crust     240         240          6.0   
 ================== ====== ======================== =========== ============ ======
 
 =============== =====
 #TRT models     4    
 #sources        4    
 #ruptures       510  
-total weight    12.75
-filtered weight 12.75
+filtered_weight 12.75
 =============== =====
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 18       
-Sent data                   242.68 KB
+Sent data                   241.48 KB
 Total received data         35.31 KB 
 Maximum received per task   1.96 KB  
 =========================== =========

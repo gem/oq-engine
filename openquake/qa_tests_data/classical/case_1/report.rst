@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 1
 ================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   None     
 random_seed                  1066     
 master_seed                  0        
-concurrent_tasks             32       
+concurrent_tasks             64       
 ============================ =========
 
 Input files
@@ -58,17 +58,17 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources num_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      active shallow crust 1           1            0.025 
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ===============
+source_model     trt_id trt                  num_sources num_ruptures weight         
+================ ====== ==================== =========== ============ ===============
+source_model.xml 0      active shallow crust 1           1            0.0250000003725
+================ ====== ==================== =========== ============ ===============
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== =======
 Number of tasks to generate 1      
-Sent data                   6.08 KB
+Sent data                   6.1 KB 
 Total received data         1.61 KB
 Maximum received per task   1.61 KB
 =========================== =======

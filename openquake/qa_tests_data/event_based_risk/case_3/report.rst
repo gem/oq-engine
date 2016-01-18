@@ -1,7 +1,7 @@
 Event Based PSHA for Lisbon
 ===========================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -40,8 +40,8 @@ Composite source model
 ========= ====== ============================================ =============== ================
 smlt_path weight source_model_file                            gsim_logic_tree num_realizations
 ========= ====== ============================================ =============== ================
-b1        0.60   `SA_RA_CATAL1_00.xml <SA_RA_CATAL1_00.xml>`_ simple(2,0)     2/2             
-b2        0.40   `SA_RA_CATAL2_00.xml <SA_RA_CATAL2_00.xml>`_ complex(2,2)    4/4             
+b1        0.60   `SA_RA_CATAL1_00.xml <SA_RA_CATAL1_00.xml>`_ complex(2,2)    4/4             
+b2        0.40   `SA_RA_CATAL2_00.xml <SA_RA_CATAL2_00.xml>`_ simple(2,0)     2/2             
 ========= ====== ============================================ =============== ================
 
 Required parameters per tectonic region type
@@ -50,8 +50,8 @@ Required parameters per tectonic region type
 trt_id gsims                             distances siteparams ruptparams
 ====== ================================= ========= ========== ==========
 0      AkkarBommer2010 AtkinsonBoore2006 rjb rrup  vs30       rake mag  
+1      AkkarBommer2010 AtkinsonBoore2006 rjb rrup  vs30       rake mag  
 2      AkkarBommer2010 AtkinsonBoore2006 rjb rrup  vs30       rake mag  
-3      AkkarBommer2010 AtkinsonBoore2006 rjb rrup  vs30       rake mag  
 ====== ================================= ========= ========== ==========
 
 Realizations per (TRT, GSIM)
@@ -60,38 +60,39 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(6)
-  0,AkkarBommer2010: ['<1,b1,b2_@,w=0.18>']
-  0,AtkinsonBoore2006: ['<0,b1,b1_@,w=0.42>']
-  2,AkkarBommer2010: ['<4,b2,b2_b3,w=0.084>', '<5,b2,b2_b4,w=0.036>']
-  2,AtkinsonBoore2006: ['<2,b2,b1_b3,w=0.196>', '<3,b2,b1_b4,w=0.084>']
-  3,AkkarBommer2010: ['<3,b2,b1_b4,w=0.084>', '<5,b2,b2_b4,w=0.036>']
-  3,AtkinsonBoore2006: ['<2,b2,b1_b3,w=0.196>', '<4,b2,b2_b3,w=0.084>']>
+  0,AkkarBommer2010: ['<2,b1,b2_b3,w=0.126>', '<3,b1,b2_b4,w=0.054>']
+  0,AtkinsonBoore2006: ['<0,b1,b1_b3,w=0.294>', '<1,b1,b1_b4,w=0.126>']
+  1,AkkarBommer2010: ['<1,b1,b1_b4,w=0.126>', '<3,b1,b2_b4,w=0.054>']
+  1,AtkinsonBoore2006: ['<0,b1,b1_b3,w=0.294>', '<2,b1,b2_b3,w=0.126>']
+  2,AkkarBommer2010: ['<5,b2,b2_@,w=0.12>']
+  2,AtkinsonBoore2006: ['<4,b2,b1_@,w=0.28>']>
 
 Non-empty rupture collections
 -----------------------------
 === ========= ==================== ============
 col smlt_path TRT                  num_ruptures
 === ========= ==================== ============
-0   b1        Active Shallow Crust 2           
-2   b2        Active Shallow Crust 4           
-3   b2        Stable Shallow Crust 2           
+0   b1        Active Shallow Crust 3           
+1   b1        Stable Shallow Crust 2           
+2   b2        Active Shallow Crust 2           
 === ========= ==================== ============
 
 Collections <-> realizations
 ----------------------------
 =========== ============
 Collections Realizations
-0           0 1         
-2 3         2 3 4 5     
+0 1         0 1 2 3     
+2           4 5         
 =========== ============
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =======
-Number of tasks to generate        18     
-Estimated sources to send          4.32 MB
-Estimated hazard curves to receive 9 KB   
-================================== =======
+=========================== =========
+Number of tasks to generate 20       
+Sent data                   4.56 MB  
+Total received data         171.88 KB
+Maximum received per task   17.98 KB 
+=========================== =========
 
 Exposure model
 --------------
