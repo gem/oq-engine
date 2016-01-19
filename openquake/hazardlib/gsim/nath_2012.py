@@ -41,7 +41,8 @@ class NathEtAl2012Lower(GMPE):
     bars.
 
     Verification of mean value data was done by digitizing Figure 11 using
-    http://arohatgi.info/WebPlotDigitizer/app/.
+    http://arohatgi.info/WebPlotDigitizer/app/. Note that this independent
+    verification did not include magnitude dependence or standard deviations.
 
     **Reference**
 
@@ -174,10 +175,6 @@ class NathEtAl2012Upper(NathEtAl2012Lower):
         p. 484:
 
         ``P' = P x Correction_factor``
-
-        Using:
-
-        ``ln(P') = ln(P) + ln(Correction_factor)``
         """
 
         parent = super(NathEtAl2012Upper, self)

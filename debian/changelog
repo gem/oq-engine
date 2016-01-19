@@ -1,5 +1,6 @@
   [Nick Ackerley]
-  * Implemented Gupta (2010) for Indo-Burmese intraslab subduction.
+  * Implemented Nath (2012) for anomalous interface subduction in the
+    intraplate margin of the Shillong plateau in India.
 
   [Michele Simionato]
   * Added a .weight property to sources, as well as a .num_ruptures attribute
