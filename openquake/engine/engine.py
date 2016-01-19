@@ -569,7 +569,7 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
         oqparam.hazard_output_id = hazard_output_id
 
     if oqparam.risk_files:
-        riskmodels.get_risk_models(oqparam)
+        oqparam.set_risk_imtls(riskmodels.get_risk_models(oqparam))
     params = vars(oqparam).copy()
     if haz_job:
         params['hazard_calculation_id'] = haz_job.id
