@@ -285,7 +285,8 @@ class Workflow(object):
 
 
 # FIXME: remove the loss fractions after replacing the engine calculator
-@registry.add('classical_risk')
+@registry.add('classical_risk', 'classical', 'disaggregation',
+              'classical_tiling')
 class Classical(Workflow):
     """
     Classical PSHA-Based Workflow.
@@ -464,7 +465,7 @@ class Classical(Workflow):
         return all_outputs
 
 
-@registry.add('event_based_risk')
+@registry.add('event_based_risk', 'event_based', 'event_based_rupture')
 class ProbabilisticEventBased(Workflow):
     """
     Implements the Probabilistic Event Based workflow
@@ -706,61 +707,7 @@ class ClassicalBCR(Workflow):
                            else Classical.compute_all_outputs.__func__)
 
 
-@registry.add('event_based_bcr')
-class ProbabilisticEventBasedBCR(Workflow):
-    def __init__(self, imt, taxonomy,
-                 vulnerability_functions_orig,
-                 vulnerability_functions_retro,
-                 investigation_time,
-                 risk_investigation_time,
-                 number_of_logic_tree_samples,
-                 ses_per_logic_tree_path,
-                 loss_curve_resolution,
-                 interest_rate, asset_life_expectancy):
-        self.imt = imt
-        self.taxonomy = taxonomy
-        self.risk_functions = vulnerability_functions_orig
-        self.assets = None  # set a __call__ time
-        self.interest_rate = interest_rate
-        self.asset_life_expectancy = asset_life_expectancy
-        self.vf_orig = vulnerability_functions_orig
-        self.vf_retro = vulnerability_functions_retro
-        time_span = risk_investigation_time or investigation_time
-        self.curves = functools.partial(
-            scientific.event_based, curve_resolution=loss_curve_resolution,
-            time_span=time_span, tses=time_span * ses_per_logic_tree_path)
-        # TODO: add multiplication by number_of_logic_tree_samples or 1
-
-    def __call__(self, loss_type, assets, gmfs, epsilons, event_ids):
-        self.assets = assets
-
-        original_loss_curves = utils.numpy_map(
-            self.curves, self.vf_orig[loss_type].apply_to(gmfs, epsilons))
-        retrofitted_loss_curves = utils.numpy_map(
-            self.curves, self.vf_retro[loss_type].apply_to(gmfs, epsilons))
-
-        eal_original = utils.numpy_map(
-            scientific.average_loss, original_loss_curves)
-        eal_retrofitted = utils.numpy_map(
-            scientific.average_loss, retrofitted_loss_curves)
-
-        bcr_results = [
-            scientific.bcr(
-                eal_original[i], eal_retrofitted[i],
-                self.interest_rate, self.asset_life_expectancy,
-                asset.value(loss_type), asset.retrofitted(loss_type))
-            for i, asset in enumerate(assets)]
-
-        return scientific.Output(
-            assets, loss_type,
-            data=list(zip(eal_original, eal_retrofitted, bcr_results)))
-
-    compute_all_outputs = (
-        ProbabilisticEventBased.compute_all_outputs if sys.version > '3' else
-        ProbabilisticEventBased.compute_all_outputs.__func__)
-
-
-@registry.add('scenario_risk')
+@registry.add('scenario_risk', 'scenario')
 class Scenario(Workflow):
     """
     Implements the Scenario workflow

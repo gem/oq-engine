@@ -30,7 +30,7 @@ from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general
 from openquake.baselib.performance import DummyMonitor
 from openquake.commonlib import (
-    readinput, datastore, logictree, source, __version__)
+    readinput, riskmodels, datastore, logictree, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import apply_reduce, executor
 from openquake.risklib import riskinput
@@ -310,11 +310,17 @@ class HazardCalculator(BaseCalculator):
         The riskmodel can be empty for hazard calculations.
         Save the loss ratios (if any) in the datastore.
         """
-        self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
-        missing = set(self.taxonomies) - set(rm.taxonomies)
-        if rm and missing:
-            raise RuntimeError('The exposure contains the taxonomies %s '
-                               'which are not in the risk model' % missing)
+        rmdict = riskmodels.get_risk_models(self.oqparam)
+        self.oqparam.set_risk_imtls(rmdict)
+        # save risk_imtls in the datastore: this is crucial
+        self.datastore.hdf5.attrs['risk_imtls'] = repr(self.oqparam.risk_imtls)
+        self.riskmodel = rm = readinput.get_risk_model(self.oqparam, rmdict)
+        if 'taxonomies' in self.datastore:
+            # check that we are covering all the taxonomies in the exposure
+            missing = set(self.taxonomies) - set(rm.taxonomies)
+            if rm and missing:
+                raise RuntimeError('The exposure contains the taxonomies %s '
+                                   'which are not in the risk model' % missing)
 
         # save the loss ratios in the datastore
         pairs = [(cb.loss_type, (numpy.float64, len(cb.ratios)))
@@ -357,9 +363,9 @@ class HazardCalculator(BaseCalculator):
         elif (self.datastore.parent and 'exposure' in
               OqParam.from_(self.datastore.parent.attrs).inputs):
             logging.info('Re-using the already imported exposure')
-            if not self.riskmodel:
-                self.load_riskmodel()
+            self.load_riskmodel()
         else:  # no exposure
+            self.load_riskmodel()
             self.sitecol = haz_sitecol
 
         # save mesh and asset collection
