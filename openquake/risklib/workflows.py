@@ -707,7 +707,7 @@ class ClassicalBCR(Workflow):
                            else Classical.compute_all_outputs.__func__)
 
 
-@registry.add('scenario_risk')
+@registry.add('scenario_risk', 'scenario')
 class Scenario(Workflow):
     """
     Implements the Scenario workflow
