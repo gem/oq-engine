@@ -592,7 +592,7 @@ def get_risk_model(oqparam, rmdict):
     riskmodel = riskinput.RiskModel(wfs)
     if getattr(oqparam, 'limit_states', []):
         # classical_damage/scenario_damage calculator
-        if not oqparam.calculation_mode.endswith('_damage'):
+        if oqparam.calculation_mode in ('classical', 'scenario'):
             # case when the risk files are in the job_hazard.ini file
             oqparam.calculation_mode += '_damage'
         riskmodel.damage_states = ['no_damage'] + oqparam.limit_states

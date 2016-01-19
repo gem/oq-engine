@@ -247,7 +247,7 @@ class OqParamTestCase(unittest.TestCase):
                 maximum_distance='400',
                 intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
                 uniform_hazard_spectra='1',
-            ).validate()
+            ).set_risk_imtls({})
         self.assertIn("The `uniform_hazard_spectra` can be True only if "
-                      "the IMT set contains\nSA(...) or PGA",
+                      "the IMT set contains SA(...) or PGA",
                       str(ctx.exception))
