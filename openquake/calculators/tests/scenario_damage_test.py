@@ -55,7 +55,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_3(self):
         if old_geos:
             # in Ubuntu 12.04 avoid a mysterious finalization segfault
-            # due to HDF5 that only is happens in this test
+            # due to HDF5 that only happens in this test
             raise unittest.SkipTest
         self.assert_ok(case_3, 'job_risk.ini')
 
