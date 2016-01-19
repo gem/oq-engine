@@ -333,7 +333,7 @@ class OqParam(valid.ParamSet):
         In order to compute hazard curves, `intensity_measure_types_and_levels`
         must be set or extracted from the risk models.
         """
-        invalid = self.no_imls() and (
+        invalid = self.no_imls() and not self.risk_files and (
             self.hazard_curves_from_gmfs or self.calculation_mode in
             ('classical', 'classical_tiling', 'disaggregation'))
         return not invalid
