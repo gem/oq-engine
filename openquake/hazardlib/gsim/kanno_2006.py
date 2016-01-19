@@ -47,7 +47,7 @@ class Kanno2006Shallow(GMPE):
     depth of 30 km or less" (p. 895).
 
     Verification of mean value data was done by digitizing Figures 4 and 5
-    using http://arohatgi.info/WebPlotDigitizer/ app/. The maximum error was
+    using http://arohatgi.info/WebPlotDigitizer/app/. The maximum error was
     15% while the average error was 3-4%.
 
     Page number citations in this documentation refer to:
@@ -157,8 +157,8 @@ class Kanno2006Shallow(GMPE):
 
         return ln_mean, [ln_stddevs]
 
-    def _compute_mag_dist_terms(self, rup, dists, coeffs):
-        # pylint: disable=no-self-use
+    @classmethod
+    def _compute_mag_dist_terms(cls, rup, dists, coeffs):
         """
         Compute equation (5) and implcitly equation (6):
 
@@ -170,8 +170,8 @@ class Kanno2006Shallow(GMPE):
 
         return log_pre
 
-    def _compute_site_amplification(self, sites, coeffs):
-        # pylint: disable=no-self-use
+    @classmethod
+    def _compute_site_amplification(cls, sites, coeffs):
         """
         Compute equation (8):
 
