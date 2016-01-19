@@ -26,8 +26,10 @@ from __future__ import division
 import warnings
 import numpy as np
 from scipy.constants import g
+
+from openquake.hazardlib import const
+from openquake.hazardlib.imt import SA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib import const, imt
 
 
 class SharmaEtAl2009(GMPE):
@@ -60,7 +62,7 @@ class SharmaEtAl2009(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([imt.SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([SA])
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -84,7 +86,7 @@ class SharmaEtAl2009(GMPE):
     #: Required distance measure is Joyner-Boore distance, see p. 1200
     REQUIRES_DISTANCES = set(('rjb',))
 
-    def get_mean_and_stddevs(self, sites, rup, dists, im_type, stddev_types):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         # pylint: disable=too-many-arguments
         """
         See :meth:`superclass method
@@ -94,7 +96,7 @@ class SharmaEtAl2009(GMPE):
 
         # extract dictionary of coefficients specific to required
         # intensity measure type
-        coeffs = self.COEFFS[im_type]
+        coeffs = self.COEFFS[imt]
         coeffs.update(self.CONSTS)
 
         # equation (1) is in terms of common logarithm
