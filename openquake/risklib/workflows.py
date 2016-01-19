@@ -285,7 +285,8 @@ class Workflow(object):
 
 
 # FIXME: remove the loss fractions after replacing the engine calculator
-@registry.add('classical_risk', 'classical')
+@registry.add('classical_risk', 'classical', 'disaggregation',
+              'classical_tiling')
 class Classical(Workflow):
     """
     Classical PSHA-Based Workflow.
