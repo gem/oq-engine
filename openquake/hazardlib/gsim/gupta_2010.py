@@ -22,7 +22,8 @@ exports
 :class:`Gupta2010SSlab`
 """
 
-from openquake.hazardlib import const, imt
+from openquake.hazardlib import const
+from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.atkinson_boore_2003 \
     import AtkinsonBoore2003SSlab
@@ -76,7 +77,7 @@ class Gupta2010SSlab(AtkinsonBoore2003SSlab):
     #: histories are taken as the response spectral amplitudes at a period of
     #: 0.02 s (50 Hz frequency)." p. 371. Based on this comment, the
     #: coefficients labeled as being for 0.02 s have been relabeld as PGA.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([imt.PGA, imt.SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, SA])
 
     #: Unlike Atkinson & Boore (2003), "rather than the random horizontal
     #: component, the geometric mean of both the horizontal components has
