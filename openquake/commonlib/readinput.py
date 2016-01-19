@@ -32,7 +32,7 @@ from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import workflows, riskinput
 
 from openquake.commonlib.datastore import DataStore, Fake
-from openquake.commonlib.oqvalidation import OqParam, rmdict
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile, parallel
 from openquake.commonlib.riskmodels import get_risk_models
@@ -534,7 +534,6 @@ def get_job_info(oqparam, source_models, sitecol):
                        for src_model in source_models
                        for trt_model in src_model.trt_models
                        for src in trt_model)
-
     imtls = oqparam.imtls
     n_sites = len(sitecol) if sitecol else 0
 
@@ -587,14 +586,10 @@ def get_risk_model(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
+    rmdict = get_risk_models(oqparam)
     wfs = {}  # (imt, taxonomy) -> workflow
     riskmodel = riskinput.RiskModel(wfs)
-
-    if oqparam.calculation_mode not in workflows.registry:
-        # classical calculator: the riskmodel must be left empty
-        riskmodel.taxonomies = []
-        return riskmodel
-    elif oqparam.calculation_mode.endswith('_damage'):
+    if oqparam.calculation_mode.endswith('_damage'):
         # scenario damage calculator
         riskmodel.damage_states = ['no_damage'] + oqparam.limit_states
         delattr(oqparam, 'limit_states')
@@ -633,6 +628,9 @@ def get_risk_model(oqparam):
             if hasattr(vf, 'covs') and vf.covs.any():
                 riskmodel.covs += 1
     riskmodel.taxonomies = sorted(taxonomies)
+
+    # as a side effect
+    oqparam.set_imtls(riskmodel)
     return riskmodel
 
 # ########################### exposure ############################ #

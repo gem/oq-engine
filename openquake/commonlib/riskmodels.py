@@ -107,15 +107,15 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def get_risk_models(oqparam, kind):
+def get_risk_models(oqparam):
     """
     :param oqparam:
-        an OqParam instancs
-    :param kind:
-        "vulnerability"|"vulnerability_retrofitted"|"fragility"|"consequence"
+        an OqParam instance
     :returns:
         a dictionary imt_taxo -> loss_type -> function
     """
+    kind = oqparam.file_type
+    # vulnerability|vulnerability_retrofitted|fragility|consequence
     rmodels = {}
     for key in oqparam.inputs:
         mo = re.match('(occupants|%s)_%s$' % (COST_TYPE_REGEX, kind), key)

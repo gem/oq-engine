@@ -311,10 +311,12 @@ class HazardCalculator(BaseCalculator):
         Save the loss ratios (if any) in the datastore.
         """
         self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
-        missing = set(self.taxonomies) - set(rm.taxonomies)
-        if rm and missing:
-            raise RuntimeError('The exposure contains the taxonomies %s '
-                               'which are not in the risk model' % missing)
+        if 'taxonomies' in self.datastore:
+            # check that we are covering all the taxonomies in the exposure
+            missing = set(self.taxonomies) - set(rm.taxonomies)
+            if rm and missing:
+                raise RuntimeError('The exposure contains the taxonomies %s '
+                                   'which are not in the risk model' % missing)
 
         # save the loss ratios in the datastore
         pairs = [(cb.loss_type, (numpy.float64, len(cb.ratios)))
@@ -360,6 +362,7 @@ class HazardCalculator(BaseCalculator):
             if not self.riskmodel:
                 self.load_riskmodel()
         else:  # no exposure
+            self.load_riskmodel()
             self.sitecol = haz_sitecol
 
         # save mesh and asset collection
