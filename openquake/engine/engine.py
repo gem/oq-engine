@@ -46,7 +46,7 @@ from openquake.engine.db.schema.upgrades import upgrader
 
 from openquake import hazardlib, risklib, commonlib
 
-from openquake.commonlib import readinput, valid, datastore, export
+from openquake.commonlib import readinput, valid, datastore, export, riskmodels
 
 
 def get_calc_id(job_id=None):
@@ -568,6 +568,8 @@ def job_from_file(cfg_file_path, username, log_level='info', exports='',
             haz_job.id if haz_job and not hazard_output_id else None
         oqparam.hazard_output_id = hazard_output_id
 
+    if oqparam.risk_files:
+        oqparam.set_risk_imtls(riskmodels.get_risk_models(oqparam))
     params = vars(oqparam).copy()
     if haz_job:
         params['hazard_calculation_id'] = haz_job.id
