@@ -94,6 +94,8 @@ class SharmaEtAl2009(GMPE):
         for specification of input and result values.
         """
 
+        assert imt.__class__ in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+
         # extract dictionary of coefficients specific to required
         # intensity measure type
         coeffs = self.COEFFS[imt]
@@ -123,8 +125,8 @@ class SharmaEtAl2009(GMPE):
             stddevs.append(coeffs['sigma'] + np.zeros(num_sites))
         return np.array(stddevs)
 
-    def _compute_magnitude(self, rup, coeffs):
-        # pylint: disable=no-self-use
+    @classmethod
+    def _compute_magnitude(cls, rup, coeffs):
         """
         Compute first two terms of equation (1) on p. 1200:
 
@@ -132,8 +134,8 @@ class SharmaEtAl2009(GMPE):
         """
         return coeffs['b1'] + coeffs['b2']*rup.mag
 
-    def _compute_distance(self, dists, coeffs):
-        # pylint: disable=no-self-use
+    @classmethod
+    def _compute_distance(cls, dists, coeffs):
         """
         Compute third term of equation (1) on p. 1200:
 
