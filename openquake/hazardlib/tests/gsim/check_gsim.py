@@ -97,7 +97,10 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
                     result = numpy.exp(mean)
             else:
                 [result] = stddevs
-            assert isinstance(result, numpy.ndarray), result_type
+            assert (isinstance(result, numpy.ndarray) or
+                    isinstance(result, float)), \
+                'expected %s to be numpy.ndarray or float, ' % result_type + \
+                'instead it is %s' % type(result)
 
             discrep_percentage = numpy.abs(
                 result / expected_result * 100 - 100
