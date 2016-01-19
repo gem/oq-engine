@@ -601,6 +601,10 @@ class FragilityFunctionList(list):
         list.__init__(self, elements)
         vars(self).update(attrs)
 
+    def mean_loss_ratios_with_steps(self, steps):
+        """For compatibility with vulnerability functions"""
+        return fine_graining(self.imls, steps)
+
     def __repr__(self):
         kvs = ['%s=%s' % item for item in vars(self).items()]
         return '<FragilityFunctionList %s>' % ', '.join(kvs)

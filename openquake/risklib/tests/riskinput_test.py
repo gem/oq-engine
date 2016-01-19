@@ -2,7 +2,7 @@ import mock
 import unittest
 import numpy
 from openquake.baselib.general import writetmp
-from openquake.commonlib import readinput, readers
+from openquake.commonlib import readinput, readers, riskmodels
 from openquake.risklib import riskinput
 from openquake.calculators import event_based
 from openquake.calculators.tests import get_datastore
@@ -32,7 +32,8 @@ class RiskInputTestCase(unittest.TestCase):
         cls.oqparam.insured_losses = True
         cls.sitecol, cls.assets_by_site = readinput.get_sitecol_assets(
             cls.oqparam, readinput.get_exposure(cls.oqparam))
-        cls.riskmodel = readinput.get_risk_model(cls.oqparam)
+        rmdict = riskmodels.get_risk_models(cls.oqparam)
+        cls.riskmodel = readinput.get_risk_model(cls.oqparam, rmdict)
 
     def test_assetcol(self):
         expected = writetmp('''\

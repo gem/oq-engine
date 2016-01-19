@@ -22,7 +22,7 @@ import collections
 import numpy
 
 from openquake.commonlib import valid, parallel, logictree
-from openquake.commonlib.riskmodels import get_risk_files, get_risk_models
+from openquake.commonlib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
@@ -35,13 +35,6 @@ RISK_CALCULATORS = [
     'classical_bcr', 'scenario_damage', 'classical_damage']
 
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
-
-# this global dictionary is populated with the risk model every time
-# an OqParam instance is created (i.e. once per calculation);
-# this is a suboptimal design but it is the best we can do without
-# being forced to rethink a lot of code; it has the advantage that
-# the risk model files are read only once per calculation
-rmdict = collections.defaultdict(dict)
 
 
 class OqParam(valid.ParamSet):
@@ -152,11 +145,8 @@ class OqParam(valid.ParamSet):
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
-        file_type, file_by_ct = get_risk_files(self.inputs)
-        rmdict.clear()
-        rmodels = get_risk_models(self, file_type)
-        rmdict.update(rmodels)
-        self.set_imtls(rmdict)
+        self.file_type, self.risk_files = get_risk_files(self.inputs)
+        self.risk_imtls = {}  # to be overridden later by get_risk_models
 
         # check the IMTs vs the GSIMs
         if 'gsim_logic_tree' in self.inputs:
@@ -234,20 +224,20 @@ class OqParam(valid.ParamSet):
         Return the cost types of the computation (including `occupants`
         if it is there) in order.
         """
-        return sorted(get_risk_files(self.inputs)[1])
+        return sorted(self.risk_files)
 
-    def set_imtls(self, ddict):
+    def set_imtls(self, risk_models):
         """
-        :param ddict:
+        :param risk_models:
             a dictionary (imt, taxo) -> loss_type -> risk_function
 
-        Set the attributes risk_imtls and hazard_imtls.
+        Set the attribute risk_imtls.
         """
         # NB: different loss types may have different IMLs for the same IMT
         # in that case we merge the IMLs
         imtls = {}
-        for (imt, taxonomy), dic in ddict.items():
-            for loss_type, rf in dic.items():
+        for (imt, taxonomy), risk_functions in risk_models.items():
+            for loss_type, rf in risk_functions.items():
                 imls = list(rf.imls)
                 if imt in imtls and imtls[imt] != imls:
                     logging.info(
@@ -314,8 +304,8 @@ class OqParam(valid.ParamSet):
         """
         The maximum_distance must be set for all hazard calculators
         """
-        return (self.calculation_mode not in HAZARD_CALCULATORS
-                or getattr(self, 'maximum_distance', None))
+        return (self.calculation_mode not in HAZARD_CALCULATORS or
+                getattr(self, 'maximum_distance', None))
 
     def is_valid_intensity_measure_types(self):
         """
@@ -330,10 +320,9 @@ class OqParam(valid.ParamSet):
                     raise ValueError(
                         'Correlation model %s does not accept IMT=%s' % (
                             self.ground_motion_correlation_model, imt))
-        _, risk_files = get_risk_files(self.inputs)
-        if risk_files:  # IMTLs extracted from the risk files
-            return (self.intensity_measure_types is None
-                    and self.intensity_measure_types_and_levels is None)
+        if self.risk_files:  # IMTLs extracted from the risk files
+            return (self.intensity_measure_types is None and
+                    self.intensity_measure_types_and_levels is None)
         elif not hasattr(self, 'hazard_imtls') and not hasattr(
                 self, 'risk_imtls'):
             return False
@@ -344,7 +333,7 @@ class OqParam(valid.ParamSet):
         In order to compute hazard curves, `intensity_measure_types_and_levels`
         must be set or extracted from the risk models.
         """
-        invalid = self.no_imls() and (
+        invalid = self.no_imls() and not self.risk_files and (
             self.hazard_curves_from_gmfs or self.calculation_mode in
             ('classical', 'classical_tiling', 'disaggregation'))
         return not invalid
