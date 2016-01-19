@@ -579,18 +579,22 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
-def get_risk_model(oqparam):
+def get_risk_model(oqparam, rmdict):
     """
     Return a :class:`openquake.risklib.riskinput.RiskModel` instance
 
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+   :param rmdict:
+        a dictionary (imt, taxonomy) -> loss_type -> risk_function
     """
-    rmdict = get_risk_models(oqparam)
     wfs = {}  # (imt, taxonomy) -> workflow
     riskmodel = riskinput.RiskModel(wfs)
-    if oqparam.calculation_mode.endswith('_damage'):
-        # scenario damage calculator
+    if getattr(oqparam, 'limit_states', []):
+        # classical_damage/scenario_damage calculator
+        if not oqparam.calculation_mode.endswith('_damage'):
+            # case when the risk files are in the job_hazard.ini file
+            oqparam.calculation_mode += '_damage'
         riskmodel.damage_states = ['no_damage'] + oqparam.limit_states
         delattr(oqparam, 'limit_states')
         for imt_taxo, ffs_by_lt in rmdict.items():
@@ -628,9 +632,6 @@ def get_risk_model(oqparam):
             if hasattr(vf, 'covs') and vf.covs.any():
                 riskmodel.covs += 1
     riskmodel.taxonomies = sorted(taxonomies)
-
-    # as a side effect
-    oqparam.set_imtls(riskmodel)
     return riskmodel
 
 # ########################### exposure ############################ #
@@ -948,14 +949,16 @@ def get_hcurves_from_csv(oqparam, fname):
     :returns:
         the site collection and the hazard curves read by the .txt file
     """
-    imts = list(oqparam.imtls)
-    if not imts:
-        raise ValueError('Missing intensity_measure_types_and_levels in %s',
-                         oqparam.inputs['job_ini'])
+    if not oqparam.imtls:
+        get_risk_models(oqparam)  # set .risk_imtls
+    if not oqparam.imtls:
+        raise ValueError('Missing intensity_measure_types_and_levels in %s'
+                         % oqparam.inputs['job_ini'])
     num_values = list(map(len, list(oqparam.imtls.values())))
     with open(oqparam.inputs['hazard_curves']) as csvfile:
         mesh, hcurves_by_imt = get_mesh_csvdata(
-            csvfile, imts, num_values, valid.decreasing_probabilities)
+            csvfile, list(oqparam.imtls), num_values,
+            valid.decreasing_probabilities)
     sitecol = get_site_collection(oqparam, mesh)
     return sitecol, hcurves_by_imt
 

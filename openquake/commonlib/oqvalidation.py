@@ -226,18 +226,18 @@ class OqParam(valid.ParamSet):
         """
         return sorted(self.risk_files)
 
-    def set_imtls(self, composite_risk_model):
+    def set_imtls(self, risk_models):
         """
-        :param composite_risk_model:
-            a dictionary (imt, taxo) -> workflow
+        :param risk_models:
+            a dictionary (imt, taxo) -> loss_type -> risk_function
 
         Set the attribute risk_imtls.
         """
         # NB: different loss types may have different IMLs for the same IMT
         # in that case we merge the IMLs
         imtls = {}
-        for (imt, taxonomy), workflow in composite_risk_model.items():
-            for loss_type, rf in workflow.risk_functions.items():
+        for (imt, taxonomy), risk_functions in risk_models.items():
+            for loss_type, rf in risk_functions.items():
                 imls = list(rf.imls)
                 if imt in imtls and imtls[imt] != imls:
                     logging.info(

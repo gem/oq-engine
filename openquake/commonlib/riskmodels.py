@@ -116,6 +116,8 @@ def get_risk_models(oqparam, kind=None):
         if None it is extracted from the oqparam.file_type attribute
     :returns:
         a dictionary imt_taxo -> loss_type -> function
+
+    NB: as a side effect, set oqparam.risk_imtls
     """
     kind = kind or oqparam.file_type
     rmodels = {}
@@ -167,6 +169,7 @@ def get_risk_models(oqparam, kind=None):
         for loss_type, rm in rmodels.items():
             for imt_taxo, rf in rm.items():
                 rdict[imt_taxo][loss_type] = rf
+    oqparam.set_imtls(rdict)
     return rdict
 
 
