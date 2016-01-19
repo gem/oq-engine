@@ -311,6 +311,7 @@ class HazardCalculator(BaseCalculator):
         Save the loss ratios (if any) in the datastore.
         """
         rmdict = riskmodels.get_risk_models(self.oqparam)
+        self.oqparam.set_risk_imtls(rmdict)
         # save risk_imtls in the datastore: this is crucial
         self.datastore.attrs['risk_imtls'] = repr(self.oqparam.risk_imtls)
         self.riskmodel = rm = readinput.get_risk_model(self.oqparam, rmdict)
