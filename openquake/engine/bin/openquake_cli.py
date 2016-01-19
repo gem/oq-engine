@@ -396,13 +396,11 @@ def export(output_id, target_dir, export_type):
         print ("Exporting output produced by a job which did not run "
                "successfully. Results might be uncomplete")
 
-    try:
-        the_file = core.export(output_id, target_dir, export_type)
-        print 'File Exported:'
-        print the_file
-    except NotImplementedError as err:
-        print err
-        print 'This feature is probably not implemented yet'
+    the_file = core.export(output_id, target_dir, export_type)
+    if the_file.endswith('.zip'):
+        print 'Files Exported in', os.path.dirname(the_file)
+    else:
+        print 'File exported:', the_file
 
 
 def _touch_log_file(log_file):

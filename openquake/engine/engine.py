@@ -241,9 +241,8 @@ def _do_run_calc(calc, exports, hazard_calculation_id):
     :param exports:
         a (potentially empty) comma-separated string of export targets
     """
-    if hasattr(calc, 'save_params'):
-        calc.save_params()
-    calc.run(hazard_calculation_id=hazard_calculation_id)
+    calc.save_params()
+    calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id)
     calc.job.status = 'complete'
 
 
