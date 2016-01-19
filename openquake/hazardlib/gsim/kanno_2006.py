@@ -26,10 +26,11 @@ exports
 # :class:`Kanno2006DeepNortheastJapan`
 
 from __future__ import division
-import warnings
 import numpy as np
 from scipy.constants import g
-from openquake.hazardlib import const, imt
+
+from openquake.hazardlib import const
+from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 # from openquake.hazardlib.gsim.si_midorikawa_1999 \
 #    import _get_min_distance_to_sub_trench
@@ -65,7 +66,7 @@ class Kanno2006Shallow(GMPE):
     #: "regression coefficients for the base model in equations (5) and (6)
     #: for PGA , PGV , and 5% damped response spectral acceleration are given"
     #: (p. 883)
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([imt.PGA, imt.PGV, imt.SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
 
     #: "The peak value is the peak square root of the sum of squares
     #: of two orthogonal horizontal components in the time domain" (p. 880)
@@ -89,7 +90,7 @@ class Kanno2006Shallow(GMPE):
     #: earthquakes for which the fault model is not available." (p. 880)
     REQUIRES_DISTANCES = set(('rrup',))
 
-    def get_mean_and_stddevs(self, sites, rup, dists, im_type, stddev_types):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         # pylint: disable=too-many-arguments
         """
         See :meth:`superclass method
@@ -128,22 +129,14 @@ class Kanno2006Shallow(GMPE):
 
         """
 
-        assert im_type.__class__ in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+        assert imt.__class__ in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
 
         # obtain coefficients for required intensity measure type (IMT)
-        coeffs = self.COEFFS_BASE[im_type].copy()
-        coeffs.update(self.COEFFS_SITE[im_type])
+        coeffs = self.COEFFS_BASE[imt].copy()
+        coeffs.update(self.COEFFS_SITE[imt])
 
         # obtain IMT-independent coefficients
         coeffs.update(self.CONSTS)
-
-        # raise warning outside applicable range
-        is_valid = ~((dists.rrup < coeffs['R_valid']) &
-                     (rup.mag > coeffs['M_valid']))
-        if not is_valid.all():
-            warnings.warn('%s used outside applicable range for M=%g at %g km'
-                          % (self.__class__.__name__,
-                             rup.mag, dists.rrup[is_valid][0]))
 
         # compute bedrock motion, equation (5)
         log_mean = self._compute_mag_dist_terms(rup, dists, coeffs)
@@ -159,7 +152,7 @@ class Kanno2006Shallow(GMPE):
         ln_stddevs = log_stddevs*np.log(10)
 
         # convert accelerations from cm/s^2 to g
-        if im_type.__class__.__name__ != 'PGV':
+        if not isinstance(imt, PGV):
             ln_mean -= np.log(100*g)
 
         return ln_mean, [ln_stddevs]
@@ -288,14 +281,8 @@ class Kanno2006Shallow(GMPE):
 
     #: "coefficient e_1 = 0.5 was selected for all periods in the present
     #: study." (p. 881)
-    #: "the region within several tens of kilometers from the subduction
-    #: interface of a large magnitude event is out of the applicable range,
-    #: [so] predicted values for M w + 8.0 and a distance of less than 20 km
-    #: are indicated by dotted lines in Figure 4". (p. 883)
     CONSTS = {
         'e': 0.5,
-        'M_valid': 8.,
-        'R_valid': 20.,
     }
 
 
@@ -399,7 +386,7 @@ class Kanno2006Deep(Kanno2006Shallow):
 #    #: so results cannot be verified without a dataset from the authors.
 #    non_verified = True
 #
-#    def get_mean_and_stddevs(self, sites, rup, dists, im_type, stddev_types):
+#    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 #        # pylint: disable=too-many-arguments
 #        """
 #        See :meth:`superclass method
@@ -428,10 +415,10 @@ class Kanno2006Deep(Kanno2006Shallow):
 #        # compute mean and standard deviations as per parent class
 #        parent = super(Kanno2006ShallowNortheastJapan, self)
 #        ln_mean, [ln_stddevs] = parent.get_mean_and_stddevs(
-#            sites, rup, dists, im_type, stddev_types)
+#            sites, rup, dists, imt, stddev_types)
 #
 #        # compute site corrections, equation (9)
-#        coeffs = self.COEFFS_NORTHEAST[im_type].copy()
+#        coeffs = self.COEFFS_NORTHEAST[imt].copy()
 #        log_amp = self._compute_depth_correction(sites, rup, coeffs)
 #
 #        # convert correction factor from common to natural logarithm
