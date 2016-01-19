@@ -144,6 +144,8 @@ class RaghukanthIyengar2007(GMPE):
 
         """
 
+        assert imt.__class__ in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+
         # obtain coefficients for required intensity measure type
         coeffs = self.COEFFS_BEDROCK[imt].copy()
 
@@ -173,8 +175,8 @@ class RaghukanthIyengar2007(GMPE):
         adj_mag = rup.mag - self.CONSTS['ref_mag']
         return coeffs['c1'] + coeffs['c2']*adj_mag + coeffs['c3']*adj_mag**2
 
-    def _compute_distance_terms(self, dists, coeffs):
-        # pylint: disable=no-self-use
+    @classmethod
+    def _compute_distance_terms(cls, dists, coeffs):
         """
         Fourth and fifth terms of equation (8) on p. 203:
 
@@ -182,8 +184,8 @@ class RaghukanthIyengar2007(GMPE):
         """
         return - np.log(dists.rhypo) - coeffs['c4']*dists.rhypo
 
-    def _compute_site_amplification(self, ln_mean_bedrock, coeffs):
-        # pylint: disable=no-self-use
+    @classmethod
+    def _compute_site_amplification(cls, ln_mean_bedrock, coeffs):
         """
         Equation (9) on p. 207 gives the site amplification factor:
 
