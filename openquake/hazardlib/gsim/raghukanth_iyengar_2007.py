@@ -28,8 +28,10 @@ exports
 from __future__ import division
 import warnings
 import numpy as np
+
+from openquake.hazardlib import const
+from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib import const, imt
 
 
 class RaghukanthIyengar2007(GMPE):
@@ -57,7 +59,7 @@ class RaghukanthIyengar2007(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from
     #: module :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([imt.SA, imt.PGA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([SA, PGA])
 
     #: This is not clear in the paper, but Figure 7 shows the model
     #: "compared with the average of the response spectrum of
@@ -115,7 +117,7 @@ class RaghukanthIyengar2007(GMPE):
     #: not covered.
     non_verified = True
 
-    def get_mean_and_stddevs(self, sites, rup, dists, im_type, stddev_types):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         # pylint: disable=too-many-arguments
         """
         See :meth:`superclass method
@@ -143,10 +145,10 @@ class RaghukanthIyengar2007(GMPE):
         """
 
         # obtain coefficients for required intensity measure type
-        coeffs = self.COEFFS_BEDROCK[im_type].copy()
+        coeffs = self.COEFFS_BEDROCK[imt].copy()
 
         # obtain site-class specific coefficients
-        a_1, a_2, sigma_site = self._get_site_coeffs(sites, im_type)
+        a_1, a_2, sigma_site = self._get_site_coeffs(sites, imt)
         coeffs.update({'a1': a_1, 'a2': a_2, 'sigma_site': sigma_site})
 
         # compute bedrock motion, equation (8)
@@ -200,7 +202,7 @@ class RaghukanthIyengar2007(GMPE):
 
         return np.sqrt(coeffs['sigma_bedrock']**2 + coeffs['sigma_site']**2)
 
-    def _get_site_coeffs(self, sites, im_type):
+    def _get_site_coeffs(self, sites, imt):
         """
         Extracts correct coefficients for each site from Table 5 on p. 208
         for each site.
@@ -223,9 +225,9 @@ class RaghukanthIyengar2007(GMPE):
         sigma = np.nan*np.ones_like(sites.vs30)
         for key in self.COEFFS_NEHRP.keys():
             indices = (site_classes == key) & ~is_bedrock
-            a_1[indices] = self.COEFFS_NEHRP[key][im_type]['a1']
-            a_2[indices] = self.COEFFS_NEHRP[key][im_type]['a2']
-            sigma[indices] = self.COEFFS_NEHRP[key][im_type]['sigma']
+            a_1[indices] = self.COEFFS_NEHRP[key][imt]['a1']
+            a_2[indices] = self.COEFFS_NEHRP[key][imt]['a2']
+            sigma[indices] = self.COEFFS_NEHRP[key][imt]['sigma']
 
         a_1[is_bedrock] = 0.
         a_2[is_bedrock] = 0.
