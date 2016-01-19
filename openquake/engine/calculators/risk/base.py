@@ -25,6 +25,7 @@ from openquake.baselib import general
 from openquake.commonlib import risk_parsers
 from openquake.hazardlib.imt import from_string
 from openquake.commonlib.readinput import get_risk_model
+from openquake.commonlib.riskmodels import get_risk_models
 
 from openquake.engine import logs
 from openquake.engine.db import models
@@ -277,4 +278,4 @@ class RiskCalculator(base.Calculator):
         """
         :returns: a :class:`openquake.risklib.riskinput.RiskModel` dictionary
         """
-        return get_risk_model(self.oqparam)
+        return get_risk_model(self.oqparam, get_risk_models(self.oqparam))
