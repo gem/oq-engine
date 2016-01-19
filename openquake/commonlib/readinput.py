@@ -1018,6 +1018,8 @@ def get_gmfs_from_txt(oqparam, fname):
                 'The first line of %s is expected to contain comma separated'
                 'ordered coordinates, got %s instead' % (fname, firstline))
         sitecol = sitecol_from_coords(oqparam, coords)
+        if not oqparam.imtls:
+            get_risk_models(oqparam)  # set .risk_imtls
         imts = list(oqparam.imtls)
         imt_dt = numpy.dtype([(imt, float) for imt in imts])
         num_gmfs = oqparam.number_of_ground_motion_fields
@@ -1073,6 +1075,8 @@ def get_scenario_from_nrml(oqparam, fname):
     :returns:
         a triple (sitecol, rupture_tags, gmf array)
     """
+    if not oqparam.imtls:
+        get_risk_models(oqparam)  # set .risk_imtls
     imts = list(oqparam.imtls)
     imt_dt = numpy.dtype([(imt, float) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet

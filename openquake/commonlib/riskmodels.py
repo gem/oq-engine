@@ -163,13 +163,14 @@ def get_risk_models(oqparam, kind=None):
                 # below, used in classical_damage
                 ffl.steps_per_interval = oqparam.steps_per_interval
         oqparam.limit_states = limit_states
+        oqparam.set_imtls(rdict)
     elif kind == 'consequence':
         rdict = rmodels
     else:  # vulnerability
         for loss_type, rm in rmodels.items():
             for imt_taxo, rf in rm.items():
                 rdict[imt_taxo][loss_type] = rf
-    oqparam.set_imtls(rdict)
+        oqparam.set_imtls(rdict)
     return rdict
 
 
