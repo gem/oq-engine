@@ -950,7 +950,7 @@ def get_hcurves_from_csv(oqparam, fname):
         the site collection and the hazard curves read by the .txt file
     """
     if not oqparam.imtls:
-        get_risk_models(oqparam)  # set .risk_imtls
+        oqparam.set_risk_imtls(get_risk_models(oqparam))
     if not oqparam.imtls:
         raise ValueError('Missing intensity_measure_types_and_levels in %s'
                          % oqparam.inputs['job_ini'])
@@ -1019,7 +1019,7 @@ def get_gmfs_from_txt(oqparam, fname):
                 'ordered coordinates, got %s instead' % (fname, firstline))
         sitecol = sitecol_from_coords(oqparam, coords)
         if not oqparam.imtls:
-            get_risk_models(oqparam)  # set .risk_imtls
+            oqparam.set_risk_imtls(get_risk_models(oqparam))
         imts = list(oqparam.imtls)
         imt_dt = numpy.dtype([(imt, float) for imt in imts])
         num_gmfs = oqparam.number_of_ground_motion_fields
@@ -1076,7 +1076,7 @@ def get_scenario_from_nrml(oqparam, fname):
         a triple (sitecol, rupture_tags, gmf array)
     """
     if not oqparam.imtls:
-        get_risk_models(oqparam)  # set .risk_imtls
+        oqparam.set_risk_imtls(get_risk_models(oqparam))
     imts = list(oqparam.imtls)
     imt_dt = numpy.dtype([(imt, float) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet

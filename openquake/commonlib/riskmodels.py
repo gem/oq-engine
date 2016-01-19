@@ -116,8 +116,6 @@ def get_risk_models(oqparam, kind=None):
         if None it is extracted from the oqparam.file_type attribute
     :returns:
         a dictionary imt_taxo -> loss_type -> function
-
-    NB: as a side effect, set oqparam.risk_imtls
     """
     kind = kind or oqparam.file_type
     rmodels = {}
@@ -163,7 +161,6 @@ def get_risk_models(oqparam, kind=None):
                 # below, used in classical_damage
                 ffl.steps_per_interval = oqparam.steps_per_interval
         oqparam.limit_states = limit_states
-        oqparam.set_risk_imtls(rdict)
     elif kind == 'consequence':
         rdict = rmodels
     else:  # vulnerability
@@ -173,7 +170,6 @@ def get_risk_models(oqparam, kind=None):
                 # or rf.strictly_increasing() if classical_risk else rf
                 # TODO: ask Anirudh; perhaps we should remove the `if`,
                 # but then event_based_risk/case_4 has to be fixed
-        oqparam.set_risk_imtls(rdict)
     return rdict
 
 
