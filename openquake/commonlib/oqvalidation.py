@@ -226,7 +226,7 @@ class OqParam(valid.ParamSet):
         """
         return sorted(self.risk_files)
 
-    def set_imtls(self, risk_models):
+    def set_risk_imtls(self, risk_models):
         """
         :param risk_models:
             a dictionary (imt, taxo) -> loss_type -> risk_function
