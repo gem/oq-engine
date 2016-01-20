@@ -53,7 +53,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             ('loss_maps-rlzs', 'geojson'),
 
             ('agg_curve-stats', 'xml'),
-            ('agg_curve-rlzs', 'xml'),
         ]
         for ekey in ekeys:
             export(ekey, self.calc.datastore)
