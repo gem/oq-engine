@@ -1200,7 +1200,7 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
     :param int steps:
         Number of steps between loss ratios.
     """
-    vf = vulnerability_function.strictly_increasing()
+    vf = vulnerability_function  #.strictly_increasing()
     imls = vf.mean_imls()
     loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
 
@@ -1292,28 +1292,6 @@ def insured_losses(losses, deductible, insured_limit):
         [0, insured_limit - deductible, lambda x: x - deductible])
 
 
-def insured_loss_curve_old(curve, deductible, insured_limit):
-    """
-    Compute an insured loss ratio curve given a loss ratio curve
-
-    :param curve: an array 2 x R (where R is the curve resolution)
-    :param float deductible: the deductible limit in fraction form
-    :param float insured_limit: the insured limit in fraction form
-
-    >>> losses = numpy.array([3, 20, 101])
-    >>> poes = numpy.array([0.9, 0.5, 0.1])
-    >>> insured_loss_curve_old(numpy.array([losses, poes]), 5, 100)
-    array([[  3.        ,  20.        ],
-           [  0.85294118,   0.5       ]])
-    """
-    losses, poes = curve[:, curve[0] <= insured_limit]
-    limit_poe = interpolate.interp1d(
-        *curve, bounds_error=False, fill_value=1)(deductible)
-    return numpy.array([
-        losses,
-        numpy.piecewise(poes, [poes > limit_poe], [limit_poe, lambda x: x])])
-
-
 def insured_loss_curve(curve, deductible, insured_limit):
     """
     Compute an insured loss ratio curve given a loss ratio curve
@@ -1325,11 +1303,16 @@ def insured_loss_curve(curve, deductible, insured_limit):
     >>> losses = numpy.array([3, 20, 101])
     >>> poes = numpy.array([0.9, 0.5, 0.1])
     >>> insured_loss_curve(numpy.array([losses, poes]), 5, 100)
-    array([[  0. ,  15. ,  95. ],
-           [  0.9,   0.5,   0.1]])
+    array([[  3.        ,  20.        ],
+           [  0.85294118,   0.5       ]])
     """
-    return numpy.array([insured_losses(curve[0], deductible, insured_limit),
-                        curve[1]])
+    losses, poes = curve[:, curve[0] <= insured_limit]
+    limit_poe = interpolate.interp1d(
+        *curve, bounds_error=False, fill_value=1)(deductible)
+    return numpy.array([
+        losses,
+        numpy.piecewise(poes, [poes > limit_poe], [limit_poe, lambda x: x])])
+
 
 #
 # Benefit Cost Ratio Analysis
