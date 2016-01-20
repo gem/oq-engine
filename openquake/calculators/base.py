@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014-2015, GEM Foundation
+#  Copyright (c) 2014-2016, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -322,21 +322,18 @@ class HazardCalculator(BaseCalculator):
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
 
-        return
         # save the loss ratios in the datastore
         pairs = [(cb.loss_type, (numpy.float64, len(cb.ratios)))
                  for cb in rm.curve_builders if cb.user_provided]
         if not pairs:
             return
-        loss_ratios = numpy.zeros(len(rm), numpy.dtype(pairs))
         for cb in rm.curve_builders:
             if cb.user_provided:
-                loss_ratios_lt = loss_ratios[cb.loss_type]
                 for i, imt_taxo in enumerate(sorted(rm)):
-                    loss_ratios_lt[i] = rm[imt_taxo].loss_ratios[cb.loss_type]
-        self.datastore['loss_ratios'] = loss_ratios
-        self.datastore['loss_ratios'].attrs['imt_taxos'] = sorted(rm)
-        self.datastore['loss_ratios'].attrs['nbytes'] = loss_ratios.nbytes
+                    loss_ratios = rm[imt_taxo].loss_ratios[cb.loss_type]
+                    key = 'loss_ratios/%s-%s-%s' % (imt_taxo + (cb.loss_type,))
+                    self.datastore[key] = loss_ratios
+                    self.datastore[key].attrs['nbytes'] = loss_ratios.nbytes
 
     def read_risk_data(self):
         """
