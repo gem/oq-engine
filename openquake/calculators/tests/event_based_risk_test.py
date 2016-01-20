@@ -6,7 +6,7 @@ from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.export import export
 from openquake.qa_tests_data.event_based_risk import (
-    case_1, case_2, case_3, case_4, case_4a, occupants)
+    case_1, case_2, case_3, case_4, case_4a, case_master, occupants)
 
 
 def strip_calc_id(fname):
@@ -16,9 +16,9 @@ def strip_calc_id(fname):
 
 class EventBasedRiskTestCase(CalculatorTestCase):
 
-    def assert_stats_ok(self, pkg, individual_curves='false'):
-        out = self.run_calc(pkg.__file__, 'job_haz.ini,job_risk.ini',
-                            exports='csv', individual_curves=individual_curves,
+    def assert_stats_ok(self, pkg, job_ini, individual_curves='false'):
+        out = self.run_calc(pkg.__file__, job_ini, exports='csv',
+                            individual_curves=individual_curves,
                             concurrent_tasks='4')
         # NB: it is important to use concurrent_tasks > 1 to test the
         # complications of concurrency (for instance the noncommutativity of
@@ -26,7 +26,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         all_csv = []
         for fnames in out.values():
             for fname in fnames:
-                if fname.endswith('.csv') and any(x in fname for x in (
+                if 'rlz' in fname and individual_curves == 'false':
+                    continue
+                elif fname.endswith('.csv') and any(x in fname for x in (
                         'loss_curve', 'loss_map', 'agg_loss', 'avg_loss')):
                     all_csv.append(fname)
         assert all_csv, 'Could not find any CSV file??'
@@ -36,7 +38,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        self.assert_stats_ok(case_1)
+        self.assert_stats_ok(case_1, 'job_haz.ini,job_risk.ini')
 
         # make sure the XML and JSON exporters run
         ekeys = [
@@ -51,14 +53,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             ('loss_maps-rlzs', 'geojson'),
 
             ('agg_curve-stats', 'xml'),
-            ('agg_curve-rlzs', 'xml'),
         ]
         for ekey in ekeys:
             export(ekey, self.calc.datastore)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
-        self.assert_stats_ok(case_2, individual_curves='true')
+        self.assert_stats_ok(case_2, 'job_haz.ini,job_risk.ini',
+                             individual_curves='true')
         text = view('mean_avg_losses', self.calc.datastore)
         self.assertEqual(text, '''\
 ========= ============ ============ ============ ==============
@@ -106,6 +108,10 @@ a3        8.574770E+01 2.790150E+01 1.294835E+02 0.000000E+00
         assert fnames, 'Nothing exported??'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+    @attr('qa', 'risk', 'event_based_risk')
+    def test_case_master(self):
+        self.assert_stats_ok(case_master, 'job.ini')
 
     # now a couple of hazard tests
 

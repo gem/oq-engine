@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Now the flag `individual_curves` is honored for aggregate curves
+    in the event based risk calculator
+  * Fixed a bug breaking the compution of statistics of aggregate curves
+    with insured losses
   * Added a validation on the cost type in the exposure
   * Added a validation for missing region_grid_spacing
   * Added a cross validation for the `time_event` parameter
