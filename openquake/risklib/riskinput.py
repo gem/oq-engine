@@ -150,7 +150,7 @@ class RiskModel(collections.Mapping):
         loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
         return loss_curve_dt, loss_maps_dt
 
-    # TODO: scheduled for removal once we change agg_curve to be built from
+    # FIXME: scheduled for removal once we change agg_curve to be built from
     # the user-provided loss ratios
     def build_all_loss_dtypes(self, curve_resolution, conditional_loss_poes,
                               insured_losses=False):

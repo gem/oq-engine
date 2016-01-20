@@ -29,6 +29,8 @@ from openquake.risklib import utils, scientific
 
 registry = CallableDict()
 
+F32 = numpy.float32
+
 
 class CostCalculator(object):
     """
@@ -222,9 +224,6 @@ def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
     Yield lists out_by_rlz
     """
     out_by_rlz = List()
-    out_by_rlz.imt_taxo = (workflow.imt, workflow.taxonomy)
-    out_by_rlz.curve_resolution = len(
-        workflow.loss_ratios[loss_type]) if workflow.loss_ratios else 0
     out_by_rlz.loss_type = loss_type
     out_by_rlz.assets = assets
     # extract the realizations from the first asset
@@ -396,6 +395,31 @@ class Classical(Workflow):
         self.loss_ratios = {
             lt: vf.mean_loss_ratios_with_steps(lrem_steps_per_interval)
             for lt, vf in vulnerability_functions.items()}
+        self.loss_curve_dt, self.loss_maps_dt = self.build_dtypes()
+
+    def build_dtypes(self):
+        """
+        :returns:
+           loss_curve_dt and loss_maps_dt
+        """
+        lst = [('poe~%s' % poe, F32) for poe in self.conditional_loss_poes]
+        if self.insured_losses:
+            lst += [(name + '_ins', pair) for name, pair in lst]
+        lm_dt = numpy.dtype(lst)
+        lc_list = []
+        lm_list = []
+        for loss_type, loss_ratios in self.loss_ratios.items():
+            C = len(loss_ratios)
+            pairs = [('losses', (F32, C)),
+                     ('poes', (F32, C)),
+                     ('avg', F32)]
+            if self.insured_losses:
+                pairs += [(name + '_ins', pair) for name, pair in pairs]
+            lc_list.append((loss_type, numpy.dtype(pairs)))
+            lm_list.append((loss_type, lm_dt))
+        loss_curve_dt = numpy.dtype(sorted(lc_list))
+        loss_maps_dt = numpy.dtype(sorted(lm_list))
+        return loss_curve_dt, loss_maps_dt
 
     def __call__(self, loss_type, assets, hazard_curves, _epsilons=None,
                  _tags=None):
@@ -466,6 +490,15 @@ class Classical(Workflow):
             out.weight = hazard.weight
             all_outputs.append(out)
         return all_outputs
+
+    def gen_out_by_rlz(self, assets, hazards, epsilons, tags):
+        out_by_rlz = List(
+            Workflow.gen_out_by_rlz(self, assets, hazards, epsilons, tags))
+        n = len(out_by_rlz[0].assets)
+        r = len(out_by_rlz[0])
+        out_by_rlz.loss_curve = numpy.zeros((n, r), self.loss_curve_dt)
+        out_by_rlz.loss_map = numpy.zeros((n, r), self.loss_map_dt)
+        return out_by_rlz
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture')
