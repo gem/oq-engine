@@ -64,8 +64,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_5(self):
-        # test with different curve resolutions for different taxonomies
-        raise unittest.SkipTest
+        # test with different curve resolution for insured losses
         out = self.run_calc(case_5.__file__, 'job_h.ini,job_r.ini',
                             exports='csv')
         print out['loss_curves-rlzs', 'csv']

@@ -212,6 +212,7 @@ class VulnerabilityFunction(object):
         return utils.numpy_map(
             vulnerability_function._apply, ground_motion_values)
 
+    @utils.memoized
     def strictly_increasing(self):
         """
         :returns:
@@ -1199,9 +1200,9 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
     :param int steps:
         Number of steps between loss ratios.
     """
-    imls = vulnerability_function.mean_imls()
-    loss_ratios, lrem = vulnerability_function.loss_ratio_exceedance_matrix(
-        steps)
+    vf = vulnerability_function.strictly_increasing()
+    imls = vf.mean_imls()
+    loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
 
     # saturate imls to hazard imls
     min_val, max_val = hazard_imls[0], hazard_imls[-1]
@@ -1298,9 +1299,14 @@ def insured_loss_curve(curve, deductible, insured_limit):
     :param curve: an array 2 x R (where R is the curve resolution)
     :param float deductible: the deductible limit in fraction form
     :param float insured_limit: the insured limit in fraction form
+
+    >>> losses = numpy.array([3, 20, 101])
+    >>> poes = numpy.array([0.9, 0.5, 0.1])
+    >>> insured_loss_curve(numpy.array([losses, poes]), 5, 100)
+    array([[  3.        ,  20.        ],
+           [  0.85294118,   0.5       ]])
     """
-    losses, poes = curve
-    losses[losses > insured_limit] = 0
+    losses, poes = curve[:, curve[0] <= insured_limit]
     limit_poe = interpolate.interp1d(
         *curve, bounds_error=False, fill_value=1)(deductible)
     return numpy.array([
