@@ -167,9 +167,6 @@ def get_risk_models(oqparam, kind=None):
         for loss_type, rm in rmodels.items():
             for imt_taxo, rf in rm.items():
                 rdict[imt_taxo][loss_type] = rf
-                # or rf.strictly_increasing() if classical_risk else rf
-                # TODO: ask Anirudh; perhaps we should remove the `if`,
-                # but then event_based_risk/case_4 has to be fixed
     return rdict
 
 
