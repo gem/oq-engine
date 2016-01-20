@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2014-2016, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -76,11 +76,11 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
 
         # compute statistics
         if len(out_by_rlz) > 1:
-            cb = riskmodel.curve_builders[l]
+            C = out_by_rlz.curve_resolution
             statsbuilder = scientific.StatsBuilder(
                 oq.quantile_loss_curves,
                 oq.conditional_loss_poes, oq.poes_disagg,
-                cb.curve_resolution, insured_losses=oq.insured_losses)
+                C, insured_losses=oq.insured_losses)
             stats = statsbuilder.build(out_by_rlz)
             stat_curves, stat_maps = statsbuilder.get_curves_maps(stats)
             for asset, stat_curve, stat_map in zip(

@@ -322,6 +322,7 @@ class HazardCalculator(BaseCalculator):
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
 
+        return
         # save the loss ratios in the datastore
         pairs = [(cb.loss_type, (numpy.float64, len(cb.ratios)))
                  for cb in rm.curve_builders if cb.user_provided]
