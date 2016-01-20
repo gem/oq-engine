@@ -1277,14 +1277,19 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
 
 def insured_losses(losses, deductible, insured_limit):
     """
-    Compute insured losses for the given asset and losses
-
     :param losses: an array of ground-up loss ratios
     :param float deductible: the deductible limit in fraction form
     :param float insured_limit: the insured limit in fraction form
 
+    Compute insured losses for the given asset and losses, from the point
+    of view of the insurance company. For instance:
+
     >>> insured_losses(numpy.array([3, 20, 101]), 5, 100)
     array([ 0, 15, 95])
+
+    - if the loss is 3 (< 5) the company does not pay anything
+    - if the loss is 20 the company pays 20 - 5 = 15
+    - if the loss is 101 the company pays 100 - 5 = 95
     """
     return numpy.piecewise(
         losses,
