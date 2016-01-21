@@ -246,6 +246,8 @@ class OqParam(valid.ParamSet):
                 else:
                     imtls[imt] = imls
         self.risk_imtls = imtls
+        if self.uniform_hazard_spectra:
+            self.check_uniform_hazard_spectra()
 
     def no_imls(self):
         """
@@ -408,13 +410,10 @@ class OqParam(valid.ParamSet):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
         return True
 
-    def is_valid_uniform_hazard_spectra(self):
-        """
-        The `uniform_hazard_spectra` can be True only if the IMT set contains
-        SA(...) or PGA.
-        """
+    def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or
                    imt.startswith('SA')]
-        if not self.uniform_hazard_spectra:
-            return True
-        return bool(ok_imts)
+        if not ok_imts:
+            raise ValueError('The `uniform_hazard_spectra` can be True only '
+                             'if the IMT set contains SA(...) or PGA, got %s'
+                             % list(self.imtls))
