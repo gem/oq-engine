@@ -2,4 +2,4 @@
 Database Models
 ###############
 
-.. automodule:: openquake.engine.db.models
+.. automodule:: openquake.server.db.models

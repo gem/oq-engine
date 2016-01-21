@@ -23,7 +23,7 @@ if __name__ == "__main__":
     # DJANGO_SETTINGS_MODULE environment variable, causing the irritating
     # CommandError: You must set settings.ALLOWED_HOSTS if DEBUG is False.
 
-    from openquake.engine.db import models
+    from openquake.server.db import models
     models.getcursor('job_init').execute(
         # cleanup of the flag oq_job.is_running
         'UPDATE uiapi.oq_job SET is_running=false WHERE is_running')

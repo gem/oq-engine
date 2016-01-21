@@ -38,7 +38,7 @@ from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib import nrml, readinput, valid
 from openquake.commonlib.parallel import safely_call
 from openquake.engine import engine as oq_engine, __version__ as oqversion
-from openquake.engine.db import models as oqe_models
+from openquake.server.db import models as oqe_models
 from openquake.engine.export import core
 from openquake.engine.export.core import export_output, DataStoreExportError
 from openquake.server import tasks, executor, utils

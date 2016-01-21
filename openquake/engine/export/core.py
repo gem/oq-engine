@@ -20,7 +20,7 @@ file formats."""
 
 import os
 import zipfile
-from openquake.engine.db import models
+from openquake.server.db import models
 from openquake.engine.logs import LOG
 from openquake.baselib.general import CallableDict
 from openquake.commonlib.export import export as ds_export
@@ -119,16 +119,16 @@ def makedirs(path):
 
 
 def get_outputs(job_id, output_type=None):
-    """Get all :class:`openquake.engine.db.models.Output` objects associated
+    """Get all :class:`openquake.server.db.models.Output` objects associated
     with the specified job and output_type.
 
     :param int job_id:
-        ID of a :class:`openquake.engine.db.models.OqJob`.
+        ID of a :class:`openquake.server.db.models.OqJob`.
     :param str output_type:
         the output type; if None, return all outputs
     :returns:
         :class:`django.db.models.query.QuerySet` of
-        :class:`openquake.engine.db.models.Output` objects.
+        :class:`openquake.server.db.models.Output` objects.
     """
     queryset = models.Output.objects.filter(oq_job=job_id)
     if output_type:
