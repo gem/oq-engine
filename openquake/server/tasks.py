@@ -25,7 +25,7 @@ import urllib
 import urllib2
 
 from openquake.engine import engine
-from openquake.engine.db import models as oqe_models
+from openquake.server.db import models as oqe_models
 
 from openquake.server.settings import DEBUG
 

@@ -42,7 +42,7 @@ import openquake.engine
 from openquake.engine import __version__
 from openquake.engine import engine, logs
 from openquake.calculators import views
-from openquake.engine.db import models, upgrade_manager
+from openquake.server.db import models, upgrade_manager
 from openquake.engine.export import core
 from openquake.engine.tools.import_hazard_curves import import_hazard_curves
 from openquake.engine.tools import save_hazards, load_hazards

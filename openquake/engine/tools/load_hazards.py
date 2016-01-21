@@ -23,7 +23,7 @@ import gzip
 import logging
 import os
 
-from openquake.engine.db import models
+from openquake.server.db import models
 from django.db.models import fields
 
 log = logging.getLogger()

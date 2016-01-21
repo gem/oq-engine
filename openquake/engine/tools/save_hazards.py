@@ -43,7 +43,7 @@ sufficient permissions). Then run again ``restore_hazards.py``.
 import gzip
 import itertools
 import os
-from openquake.engine.db import models
+from openquake.server.db import models
 import logging
 
 log = logging.getLogger()

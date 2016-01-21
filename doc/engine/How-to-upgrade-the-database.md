@@ -9,7 +9,7 @@ To help the users wondering if they should migrate to a newer version
 of OpenQuake or not, a command-line switch ``--what-if-I-upgrade``
 has been be added to the ``oq-engine`` script: when invoked, this
 command will look at the [directory containing the upgrade scripts]
-(https://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades) on GitHub and figure out which migrations are missing in your version
+(https://github.com/gem/oq-engine/tree/master/openquake/server/db/schema/upgrades) on GitHub and figure out which migrations are missing in your version
 of OpenQuake. The name of the upgrade scripts follow the following
 convention:
 
@@ -26,12 +26,12 @@ something like that:
 Your database is at version 0007.
 Please note that the following scripts could be slow:
 
-https://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrade/0011-slow-set-rupture_id-not-null.sql
+https://github.com/gem/oq-engine/tree/master/openquake/server/db/schema/upgrade/0011-slow-set-rupture_id-not-null.sql
 ...
 
 Please note that the following scripts are potentially dangerous and could destroy your data:
 
-https://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrade/0012-danger-drop-gmf_data.sql
+https://github.com/gem/oq-engine/tree/master/openquake/server/db/schema/upgrade/0012-danger-drop-gmf_data.sql
 ...
 
 Click on the links if you want to know what exactly the scripts are doing.
