@@ -96,9 +96,9 @@ def set_array(longarray, shortarray):
     :param longarray: an array of length L >= l
     :param shortarray: an array of length l
 
-    Fill `longarray` with the values of `shortarray`, starting from left.
-    If `shortarry` is shorter than `longarray`, then the reaining values on the
-    right are filled with `numpy.nan`.
+    Fill `longarray` with the values of `shortarray`, starting from the left.
+    If `shortarry` is shorter than `longarray`, then the remaining elements on
+    the right are filled with `numpy.nan` values.
     """
     longarray[:len(shortarray)] = shortarray
     longarray[len(shortarray):] = numpy.nan
