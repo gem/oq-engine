@@ -91,19 +91,6 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     return result
 
 
-def set_array(longarray, shortarray):
-    """
-    :param longarray: an array of length L >= l
-    :param shortarray: an array of length l
-
-    Fill `longarray` with the values of `shortarray`, starting from the left.
-    If `shortarry` is shorter than `longarray`, then the remaining elements on
-    the right are filled with `numpy.nan` values.
-    """
-    longarray[:len(shortarray)] = shortarray
-    longarray[len(shortarray):] = numpy.nan
-
-
 @base.calculators.add('classical_risk')
 class ClassicalRiskCalculator(base.RiskCalculator):
     """
@@ -164,14 +151,14 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         :param result: aggregated result of the task classical_risk
         """
         ltypes = self.riskmodel.loss_types
-        loss_curves = numpy.empty((self.N, self.R), self.loss_curve_dt)
+        loss_curves = numpy.zeros((self.N, self.R), self.loss_curve_dt)
         for l, r, aid, lcurve in result['loss_curves']:
             loss_curves_lt = loss_curves[ltypes[l]]
             for i, name in enumerate(loss_curves_lt.dtype.names):
                 if name.startswith('avg'):
                     loss_curves_lt[name][aid, r] = lcurve[i]
                 else:
-                    set_array(loss_curves_lt[name][aid, r], lcurve[i])
+                    base.set_array(loss_curves_lt[name][aid, r], lcurve[i])
         self.datastore['loss_curves-rlzs'] = loss_curves
 
         # loss curves stats
