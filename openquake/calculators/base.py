@@ -330,7 +330,8 @@ class HazardCalculator(BaseCalculator):
         for cb in rm.curve_builders:
             if cb.user_provided:
                 for i, imt_taxo in enumerate(sorted(rm)):
-                    loss_ratios = rm[imt_taxo].loss_ratios[cb.loss_type]
+                    loss_ratios = numpy.array(
+                        rm[imt_taxo].loss_ratios[cb.loss_type])
                     key = 'loss_ratios/%s-%s-%s' % (imt_taxo + (cb.loss_type,))
                     self.datastore[key] = loss_ratios
                     self.datastore[key].attrs['nbytes'] = loss_ratios.nbytes
