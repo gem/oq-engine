@@ -1277,14 +1277,19 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
 
 def insured_losses(losses, deductible, insured_limit):
     """
-    Compute insured losses for the given asset and losses
-
     :param losses: an array of ground-up loss ratios
     :param float deductible: the deductible limit in fraction form
     :param float insured_limit: the insured limit in fraction form
 
+    Compute insured losses for the given asset and losses, from the point
+    of view of the insurance company. For instance:
+
     >>> insured_losses(numpy.array([3, 20, 101]), 5, 100)
     array([ 0, 15, 95])
+
+    - if the loss is 3 (< 5) the company does not pay anything
+    - if the loss is 20 the company pays 20 - 5 = 15
+    - if the loss is 101 the company pays 100 - 5 = 95
     """
     return numpy.piecewise(
         losses,
@@ -1299,11 +1304,16 @@ def insured_loss_curve(curve, deductible, insured_limit):
     :param curve: an array 2 x R (where R is the curve resolution)
     :param float deductible: the deductible limit in fraction form
     :param float insured_limit: the insured limit in fraction form
+
+    >>> losses = numpy.array([3, 20, 101])
+    >>> poes = numpy.array([0.9, 0.5, 0.1])
+    >>> insured_loss_curve(numpy.array([losses, poes]), 5, 100)
+    array([[  3.        ,  20.        ],
+           [  0.85294118,   0.5       ]])
     """
     losses, poes = curve[:, curve[0] <= insured_limit]
     limit_poe = interpolate.interp1d(
-        *curve,
-        bounds_error=False, fill_value=1)(deductible)
+        *curve, bounds_error=False, fill_value=1)(deductible)
     return numpy.array([
         losses,
         numpy.piecewise(poes, [poes > limit_poe], [limit_poe, lambda x: x])])

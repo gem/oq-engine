@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings">
+    <description>Exposure model for CITY C</description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" unit="EUR" type="aggregated"/>
+      </costTypes>
+      <deductible isAbsolute="false"/>
+      <insuranceLimit isAbsolute="false"/>
+    </conversions>
+    <assets>
+      <asset id="a6" taxonomy="MC-RLSB-2">
+        <location lon="-78.168002" lat="15.593287"/>
+        <costs>
+          <cost type="structural" value="124522.486" deductible="0.1" insuranceLimit="0.9" />
+        </costs>
+      </asset>
+      <asset id="a7" taxonomy="MS-SLSB-1">
+        <location lon="-78.168117" lat="15.59329"/>
+        <costs>
+          <cost type="structural" value="32911.55171" deductible="0.1" insuranceLimit="0.9" />
+        </costs>
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>

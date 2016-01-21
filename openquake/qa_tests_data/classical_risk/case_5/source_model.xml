@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+  <sourceModel name="DISS Fault Model">
+
+    <pointSource id="A" name="Point A" tectonicRegion="Active Shallow Crust">
+        <pointGeometry>
+            <gml:Point>
+                <gml:pos>-78.182 15.615</gml:pos>
+            </gml:Point>
+            <upperSeismoDepth>0.0</upperSeismoDepth>
+            <lowerSeismoDepth>10.0</lowerSeismoDepth>
+        </pointGeometry>
+        <magScaleRel>WC1994</magScaleRel>
+        <ruptAspectRatio>2.0</ruptAspectRatio>
+        <truncGutenbergRichterMFD aValue="2.47" bValue="0.48" minMag="4.0" maxMag="8.5" />
+        <nodalPlaneDist>
+            <nodalPlane probability="1.0" strike="90.0" dip="45.0" rake="90.0" />
+        </nodalPlaneDist>
+        <hypoDepthDist>
+            <hypoDepth probability="1.0" depth="8.0" />
+        </hypoDepthDist>
+    </pointSource>
+    <pointSource id="B" name="Point B" tectonicRegion="Subduction Interface">
+        <pointGeometry>
+            <gml:Point>
+                <gml:pos>-77.08 16.90</gml:pos>
+            </gml:Point>
+            <upperSeismoDepth>0.0</upperSeismoDepth>
+            <lowerSeismoDepth>10.0</lowerSeismoDepth>
+        </pointGeometry>
+        <magScaleRel>WC1994</magScaleRel>
+        <ruptAspectRatio>2.0</ruptAspectRatio>
+        <truncGutenbergRichterMFD aValue="2.47" bValue="0.48" minMag="4.0" maxMag="8.5" />
+        <nodalPlaneDist>
+            <nodalPlane probability="1.0" strike="90.0" dip="45.0" rake="90.0" />
+        </nodalPlaneDist>
+        <hypoDepthDist>
+            <hypoDepth probability="1.0" depth="8.0" />
+        </hypoDepthDist>
+    </pointSource>
+  </sourceModel>
+</nrml>
