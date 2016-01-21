@@ -27,7 +27,7 @@ Model representations of the OpenQuake DB tables.
 import collections
 from datetime import datetime
 from openquake.commonlib.oqvalidation import OqParam, RISK_CALCULATORS
-from openquake.engine.db import fields
+from openquake.server.db import fields
 import django
 if hasattr(django, 'setup'):
     django.setup()  # for Django >= 1.7
@@ -232,7 +232,7 @@ class OqJob(djm.Model):
 
 def oqparam(job_id):
     """
-    :param job_id: ID of :class:`openquake.engine.db.models.OqJob`
+    :param job_id: ID of :class:`openquake.server.db.models.OqJob`
     :returns: instance of :class:`openquake.commonlib.oqvalidation.OqParam`
     """
     return OqJob.objects.get(pk=job_id).get_oqparam()

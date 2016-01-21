@@ -25,7 +25,7 @@ from openquake.engine.utils import config
 # DEBUG = True
 DB_SECTION = config.get_section('database')
 
-INSTALLED_APPS = ('openquake.engine.db',)
+INSTALLED_APPS = ('openquake.server.db',)
 
 
 def _db_cfg(db_name):
@@ -77,7 +77,7 @@ DATABASES['default'] = {
     'PORT': DB_SECTION.get('port', '5432'),
 }
 
-DATABASE_ROUTERS = ['openquake.engine.db.routers.OQRouter']
+DATABASE_ROUTERS = ['openquake.server.db.routers.OQRouter']
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
