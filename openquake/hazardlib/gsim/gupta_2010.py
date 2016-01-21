@@ -103,3 +103,8 @@ class Gupta2010SSlab(AtkinsonBoore2003SSlab):
      2.00 -2.0677  0.99640  0.00364 -0.00118  0.10  0.25  0.40 -0.2674  0.347
      3.00 -3.4227  1.11690  0.00615 -0.00045  0.10  0.25  0.36 -0.3942  0.351
     """)
+
+    #: Mean value data obtained from author matched well at 1 s and below but
+    #: not at longer periods. As a temporary measure the reference test result
+    #: has been generated from the current implementation.
+    non_verified = True
