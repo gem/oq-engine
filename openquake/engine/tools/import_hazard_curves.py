@@ -5,7 +5,7 @@ from cStringIO import StringIO
 from django.db import connections
 
 from openquake.commonlib import nrml
-from openquake.engine.db import models
+from openquake.server.db import models
 from openquake.engine import engine
 
 
@@ -18,8 +18,8 @@ def import_hazard_curves(fileobj):
     :param fileobj:
         a file-like object associated to an XML file
     :returns:
-        the generated :class:`openquake.engine.db.models.Output` object
-        and the generated :class:`openquake.engine.db.models.OqJob` object.
+        the generated :class:`openquake.server.db.models.Output` object
+        and the generated :class:`openquake.server.db.models.OqJob` object.
     """
     fname = fileobj.name
     hazcurves = nrml.read(fileobj).hazardCurves

@@ -138,7 +138,7 @@ class LogDatabaseHandler(logging.Handler):
     Log stream handler
     """
     def __init__(self, job):
-        from openquake.engine.db.models import getcursor
+        from openquake.server.db.models import getcursor
         # avoid circular imports
         self.getcursor = getcursor
         super(LogDatabaseHandler, self).__init__()
@@ -162,7 +162,7 @@ def handle(job, log_level='info', log_file=None):
     Context manager adding and removing log handlers.
 
     :param job:
-         a :class:`openquake.engine.db.models.OqJob` instance
+         a :class:`openquake.server.db.models.OqJob` instance
     :param log_level:
          one of debug, info, warn, progress, error, critical
     :param log_file:

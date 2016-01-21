@@ -21,7 +21,7 @@ import unittest
 from StringIO import StringIO
 import mock
 
-from openquake.engine.db import models
+from openquake.server.db import models
 from django.core import exceptions
 
 from openquake.engine import engine
