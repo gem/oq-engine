@@ -2,8 +2,8 @@ import os
 import re
 import time
 import urllib
+import logging
 import importlib
-from openquake.engine import logs
 
 
 class DuplicatedVersion(RuntimeError):
@@ -94,7 +94,7 @@ def apply_sql_script(conn, fname):
     try:
         conn.cursor().execute(sql)
     except:
-        logs.LOG.error('Error executing %s' % fname)
+        logging.error('Error executing %s' % fname)
         raise
 
 
@@ -147,7 +147,7 @@ class UpgradeManager(object):
 
         :param conn: a DB API 2 connection
         """
-        logs.LOG.info('Creating the versioning table %s', self.version_table)
+        logging.info('Creating the versioning table %s', self.version_table)
         conn.cursor().execute(CREATE_VERSIONING % self.version_table)
         self._insert_script(self.read_scripts()[0], conn)
 
@@ -158,7 +158,7 @@ class UpgradeManager(object):
         :param conn: a DB API 2 connection
         """
         base = self.read_scripts()[0]['fname']
-        logs.LOG.info('Creating the initial schema from %s',  base)
+        logging.info('Creating the initial schema from %s',  base)
         apply_sql_script(conn, os.path.join(self.upgrade_dir, base))
         self.install_versioning(conn)
 
@@ -184,7 +184,7 @@ class UpgradeManager(object):
         versions_applied = []
         for script in scripts:  # script is a dictionary
             fullname = os.path.join(self.upgrade_dir, script['fname'])
-            logs.LOG.info('Executing %s', fullname)
+            logging.info('Executing %s', fullname)
             if script['ext'] == 'py':  # Python script with a upgrade(conn)
                 globs = {}
                 execfile(fullname, globs)
@@ -334,7 +334,7 @@ def upgrade_db(conn, pkg_name='openquake.engine.db.schema.upgrades',
     else:
         conn.commit()
     dt = time.time() - t0
-    logs.LOG.info('Upgrade completed in %s seconds', dt)
+    logging.info('Upgrade completed in %s seconds', dt)
     return versions_applied
 
 
