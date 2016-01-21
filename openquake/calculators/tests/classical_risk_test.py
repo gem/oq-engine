@@ -6,8 +6,6 @@ from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.writers import scientificformat
 from openquake.commonlib.datastore import view
 
-import numpy.testing
-
 
 class ClassicalRiskTestCase(CalculatorTestCase):
 
@@ -68,8 +66,8 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqual(text, '''========= ============= ============ ===================================================
 asset_ref lon           lat          structural                                         
 ========= ============= ============ ===================================================
-a6        -7.816800E+01 1.559329E+01 8.191557E+01 8.201540E+01 8.201366E+01 8.201540E+01
-a7        -7.816812E+01 1.559329E+01 2.164981E+01 2.167619E+01 2.167573E+01 2.167619E+01
+a6        -7.816800E+01 1.559329E+01 2.837295E-03 2.886262E-03 2.872555E-03 2.889799E-03
+a7        -7.816812E+01 1.559329E+01 1.073631E-06 1.110482E-06 1.096380E-06 1.115112E-06
 ========= ============= ============ ===================================================''')
 
     # TODO: tests with more than a loss type

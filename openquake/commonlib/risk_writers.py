@@ -20,6 +20,7 @@ Module containing writers for risk output artifacts.
 import json
 import operator
 import collections
+import numpy
 
 from xml.etree import ElementTree as et
 
@@ -28,6 +29,10 @@ from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib.node import Node
 from openquake.commonlib import nrml
 
+
+def notnan(value):
+    """True if the value is not numpy.nan"""
+    return not numpy.isnan(value)
 
 DmgState = collections.namedtuple("DmgState", 'dmg_state lsi')
 
@@ -164,16 +169,17 @@ class LossCurveXMLWriter(object):
                 loss_curve.set("assetRef", curve.asset_ref)
 
                 poes = et.SubElement(loss_curve, "poEs")
-                poes.text = " ".join([str(p) for p in curve.poes])
+                poes.text = " ".join(str(p) for p in curve.poes if notnan(p))
 
                 losses = et.SubElement(loss_curve, "losses")
-                losses.text = " ".join([str(p) for p in curve.losses])
+                losses.text = " ".join(str(p) for p in curve.losses
+                                       if notnan(p))
 
                 if curve.loss_ratios is not None:
                     loss_ratios = et.SubElement(loss_curve, "lossRatios")
 
                     loss_ratios.text = " ".join(
-                        ['%.3f' % p for p in curve.loss_ratios])
+                        ['%.3f' % p for p in curve.loss_ratios if notnan(p)])
 
                 losses = et.SubElement(loss_curve, "averageLoss")
                 losses.text = "%.4e" % curve.average_loss

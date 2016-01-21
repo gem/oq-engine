@@ -201,7 +201,8 @@ class RiskModel(collections.Mapping):
                                  '\n'.join(lines))
                 cb = scientific.CurveBuilder(
                     loss_type, all_ratios[0], True,
-                    oqparam.conditional_loss_poes, oqparam.insured_losses)
+                    oqparam.conditional_loss_poes, oqparam.insured_losses,
+                    curve_resolution=max(curve_resolutions))
             elif loss_type in oqparam.loss_ratios:  # loss_ratios provided
                 cb = scientific.CurveBuilder(
                     loss_type, oqparam.loss_ratios[loss_type], True,
