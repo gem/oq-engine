@@ -76,11 +76,11 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
 
         # compute statistics
         if len(out_by_rlz) > 1:
-            C = out_by_rlz.curve_resolution
+            curve_resolution = out.loss_curves.shape[-1]
             statsbuilder = scientific.StatsBuilder(
                 oq.quantile_loss_curves,
                 oq.conditional_loss_poes, oq.poes_disagg,
-                C, insured_losses=oq.insured_losses)
+                curve_resolution, insured_losses=oq.insured_losses)
             stats = statsbuilder.build(out_by_rlz)
             stat_curves, stat_maps = statsbuilder.get_curves_maps(stats)
             for asset, stat_curve, stat_map in zip(
