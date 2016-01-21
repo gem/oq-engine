@@ -222,9 +222,6 @@ def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
     Yield lists out_by_rlz
     """
     out_by_rlz = List()
-    out_by_rlz.imt_taxo = (workflow.imt, workflow.taxonomy)
-    out_by_rlz.curve_resolution = len(
-        workflow.loss_ratios[loss_type]) if workflow.loss_ratios else 0
     out_by_rlz.loss_type = loss_type
     out_by_rlz.assets = assets
     # extract the realizations from the first asset
