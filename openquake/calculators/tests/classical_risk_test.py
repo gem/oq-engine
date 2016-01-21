@@ -6,6 +6,8 @@ from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.writers import scientificformat
 from openquake.commonlib.datastore import view
 
+import numpy.testing
+
 
 class ClassicalRiskTestCase(CalculatorTestCase):
 
