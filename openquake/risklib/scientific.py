@@ -212,7 +212,6 @@ class VulnerabilityFunction(object):
         return utils.numpy_map(
             vulnerability_function._apply, ground_motion_values)
 
-    @utils.memoized
     def strictly_increasing(self):
         """
         :returns:
