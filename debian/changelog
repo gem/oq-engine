@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * If `use_celery` is true, use celery to determine a good default for
+    the parameter `concurrent_tasks`
   * Made celery required only in cluster situations
   * Replaced all classical calculators with their lite counterparts
   * Fixed the site-ordering in the UHS exporter (by lon-lat)
