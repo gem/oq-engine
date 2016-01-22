@@ -5,8 +5,8 @@ import psycopg2
 import importlib
 from contextlib import contextmanager
 
-from openquake.engine.db.models import getcursor
-from openquake.engine.db.upgrade_manager import (
+from openquake.server.db.models import getcursor
+from openquake.server.db.upgrade_manager import (
     upgrade_db, version_db, what_if_I_upgrade,
     VersionTooSmall, DuplicatedVersion)
 
@@ -115,7 +115,7 @@ class UpgradeManagerTestCase(unittest.TestCase):
         expected = '''\
 Your database is at version 0000.
 The following scripts can be applied safely:
-https://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0001-uniq-ruptures.sql
+https://github.com/gem/oq-engine/tree/master/openquake/server/db/schema/upgrades/0001-uniq-ruptures.sql
 Click on the links if you want to know what exactly the scripts are doing.'''
         self.check_message('''
 >0000-base_schema.sql<
@@ -125,9 +125,9 @@ Click on the links if you want to know what exactly the scripts are doing.'''
         expected = '''\
 Your database is at version 0000.
 Please note that the following scripts could be slow:
-https://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0001-slow-uniq-ruptures.sql
+https://github.com/gem/oq-engine/tree/master/openquake/server/db/schema/upgrades/0001-slow-uniq-ruptures.sql
 Please note that the following scripts are potentially dangerous and could destroy your data:
-https://github.com/gem/oq-engine/tree/master/openquake/engine/db/schema/upgrades/0002-danger-drop-gmf.sql
+https://github.com/gem/oq-engine/tree/master/openquake/server/db/schema/upgrades/0002-danger-drop-gmf.sql
 Click on the links if you want to know what exactly the scripts are doing.
 Even slow script can be fast if your database is small or the upgrade affects tables that are empty.
 Even dangerous scripts are fine if they affect empty tables or data you are not interested in.'''

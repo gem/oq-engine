@@ -35,11 +35,11 @@ from django import db as django_db
 
 from openquake.baselib.performance import PerformanceMonitor
 from openquake.engine import logs
-from openquake.engine.db import models
+from openquake.server.db import models
 from openquake.engine.utils import config, tasks
 from openquake.engine.celery_node_monitor import CeleryNodeMonitor
 from openquake.engine.settings import DATABASES
-from openquake.engine.db.schema.upgrades import upgrader
+from openquake.server.db.schema.upgrades import upgrader
 
 from openquake import hazardlib, risklib, commonlib
 
@@ -68,6 +68,8 @@ UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 TERMINATE = valid.boolean(
     config.get('celery', 'terminate_workers_on_revoke') or 'false')
 
+USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
+
 
 class InvalidCalculationID(Exception):
     pass
@@ -81,6 +83,7 @@ RISK_HAZARD_MAP = dict(
     event_based_risk=['event_based', 'event_based_risk'])
 
 
+# this is called only if USE_CELERY is True
 def cleanup_after_job(job, terminate, task_ids=()):
     """
     Release the resources used by an openquake job.
@@ -105,14 +108,9 @@ def cleanup_after_job(job, terminate, task_ids=()):
 def job_stats(job):
     """
     A context manager saving information such as the number of sites
-    and the disk space occupation in the job_stats table. The information
-    is saved at the end of the job, even if the job fails.
+    in the job_stats table. The information is saved at the end of the
+    job, even if the job fails.
     """
-    dbname = DATABASES['default']['NAME']
-    curs = models.getcursor('job_init')
-    curs.execute("select pg_database_size(%s)", (dbname,))
-    dbsize = curs.fetchall()[0][0]
-
     js = job.jobstats
     try:
         yield
@@ -131,12 +129,10 @@ def job_stats(job):
         # taking further action, so that the real error can propagate
         try:
             job.save()
-            curs.execute("select pg_database_size(%s)", (dbname,))
-            new_dbsize = curs.fetchall()[0][0]
-            js.disk_space = new_dbsize - dbsize
             js.stop_time = datetime.utcnow()
             js.save()
-            cleanup_after_job(job, TERMINATE, tasks.OqTaskManager.task_ids)
+            if USE_CELERY:
+                cleanup_after_job(job, TERMINATE, tasks.OqTaskManager.task_ids)
         except:
             # log the finalization error only if there is not real error
             if tb == 'None\n':
@@ -164,7 +160,7 @@ def create_job(user_name="openquake", log_level='progress', hc_id=None):
     :param hc_id:
         If not None, then the created job is a risk job
     :returns:
-        :class:`openquake.engine.db.models.OqJob` instance.
+        :class:`openquake.server.db.models.OqJob` instance.
     """
     job = models.OqJob.objects.create(
         id=get_calc_id() + 1,
@@ -200,7 +196,7 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
     Run a calculation.
 
     :param job:
-        :class:`openquake.engine.db.model.OqJob` instance
+        :class:`openquake.server.db.model.OqJob` instance
     :param str log_level:
         The desired logging level. Valid choices are 'debug', 'info',
         'progress', 'warn', 'error', and 'critical'.
@@ -251,7 +247,7 @@ def del_calc(job_id):
     Delete a calculation and all associated outputs.
 
     :param job_id:
-        ID of a :class:`~openquake.engine.db.models.OqJob`.
+        ID of a :class:`~openquake.server.db.models.OqJob`.
     """
     try:
         job = models.OqJob.objects.get(id=job_id)
@@ -295,7 +291,7 @@ def del_calc(job_id):
 def list_outputs(job_id, full=True):
     """
     List the outputs for a given
-    :class:`~openquake.engine.db.models.OqJob`.
+    :class:`~openquake.server.db.models.OqJob`.
 
     :param job_id:
         ID of a calculation.
@@ -317,7 +313,7 @@ def print_results(job_id, duration, list_outputs):
 
 def print_outputs_summary(outputs, full=True):
     """
-    List of :class:`openquake.engine.db.models.Output` objects.
+    List of :class:`openquake.server.db.models.Output` objects.
     """
     if len(outputs) > 0:
         truncated = False
@@ -455,7 +451,7 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
         Extra parameters (used only in the tests to override the params)
 
     :returns:
-        :class:`openquake.engine.db.models.OqJob` object
+        :class:`openquake.server.db.models.OqJob` object
     :raises:
         `RuntimeError` if the input job configuration is not valid
     """
@@ -480,6 +476,6 @@ def get_outputs(job_id):
     :param job_id:
         ID of a calculation.
     :returns:
-        A sequence of :class:`openquake.engine.db.models.Output` objects
+        A sequence of :class:`openquake.server.db.models.Output` objects
     """
     return models.Output.objects.filter(oq_job=job_id)

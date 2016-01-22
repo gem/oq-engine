@@ -99,5 +99,5 @@ ALTER TABLE hzrdr.ses_collection DROP COLUMN lt_model_id;
 ALTER TABLE hzrdr.probabilistic_rupture DROP COLUMN trt_model_id;""")
 
 if __name__ == '__main__':
-    from openquake.engine.db.upgrade_manager import check_script
+    from openquake.server.db.upgrade_manager import check_script
     check_script(upgrade, rollback=True)
