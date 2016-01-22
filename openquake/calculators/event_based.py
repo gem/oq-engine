@@ -414,9 +414,9 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         """
         oq = self.oqparam
         self.manager = self.SourceManager(
-            self.csm, self.core_task.__func__, oq.concurrent_tasks,
+            self.csm, self.core_task.__func__,
             oq.maximum_distance, self.datastore,
-            self.monitor.new(oqparam=oq), oq.random_seed)
+            self.monitor.new(oqparam=oq), oq.random_seed, oq.filter_sources)
         self.manager.submit_sources(self.sitecol)
 
     def post_execute(self, result):

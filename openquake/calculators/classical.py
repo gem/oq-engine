@@ -423,8 +423,6 @@ class ClassicalTilingCalculator(ClassicalCalculator):
     """
     Classical Tiling calculator
     """
-    MORE_TASKS = 4  # multiplier to produce more tasks
-
     def send_sources(self):
         oq = self.oqparam
         hint = math.ceil(len(self.sitecol) / oq.sites_per_tile)
@@ -433,11 +431,12 @@ class ClassicalTilingCalculator(ClassicalCalculator):
                      len(tiles), len(tiles[0]))
         self.manager = source.SourceManager(
             self.csm, self.core_task.__func__,
-            oq.concurrent_tasks * self.MORE_TASKS / len(tiles),
-            oq.maximum_distance, self.datastore, self.monitor.new(oqparam=oq))
+            oq.maximum_distance, self.datastore,
+            self.monitor.new(oqparam=oq),
+            filter_sources=oq.filter_sources, num_tiles=len(tiles))
         siteidx = 0
         for i, tile in enumerate(tiles, 1):
-            logging.info('Filtering sources against tile %d', i)
+            logging.info('Processing tile %d', i)
             self.manager.submit_sources(tile, siteidx)
             siteidx += len(tile)
 

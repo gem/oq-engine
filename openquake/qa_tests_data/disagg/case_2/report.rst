@@ -1,7 +1,7 @@
 QA test for disaggregation case_2
 =================================
 
-num_sites = 2
+num_sites = 2, sitecol = 461 B
 
 Parameters
 ----------
@@ -66,16 +66,26 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================== ====== ==================== =========== ============
-source_model       trt_id trt                  num_sources num_ruptures
-================== ====== ==================== =========== ============
-source_model_1.xml 0      Subduction IntraSlab 121         1815        
-source_model_1.xml 1      Active Shallow Crust 242         3630        
-source_model_2.xml 2      Active Shallow Crust 15          1420        
-================== ====== ==================== =========== ============
+================== ====== ==================== =========== ============ ======
+source_model       trt_id trt                  num_sources num_ruptures weight
+================== ====== ==================== =========== ============ ======
+source_model_1.xml 0      Subduction IntraSlab 1815        1815         45.375
+source_model_1.xml 1      Active Shallow Crust 3630        3630         90.75 
+source_model_2.xml 2      Active Shallow Crust 1420        1420         1420.0
+================== ====== ==================== =========== ============ ======
 
-=========== ====
-#TRT models 3   
-#sources    378 
-#ruptures   6865
-=========== ====
+=============== ========
+#TRT models     3       
+#sources        4       
+#ruptures       6865    
+filtered_weight 1556.125
+=============== ========
+
+Expected data transfer for the sources
+--------------------------------------
+=========================== =========
+Number of tasks to generate 14       
+Sent data                   136.72 KB
+Total received data         27.17 KB 
+Maximum received per task   1.94 KB  
+=========================== =========

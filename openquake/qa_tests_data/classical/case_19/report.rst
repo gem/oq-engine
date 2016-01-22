@@ -1,7 +1,7 @@
 SHARE OpenQuake Computational Settings
 ======================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -77,29 +77,28 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-============================ ====== ==================== =========== ============ ========
-source_model                 trt_id trt                  num_sources num_ruptures weight  
-============================ ====== ==================== =========== ============ ========
-simple_area_source_model.xml 0      Subduction Interface 2           42624        42624   
-simple_area_source_model.xml 1      Volcanic             2           210          5.25    
-simple_area_source_model.xml 2      Shield               3           96802        2420.1  
-simple_area_source_model.xml 3      Stable Shallow Crust 4           81154        2028.85 
-simple_area_source_model.xml 4      Subduction Inslab    7           93219        2330.475
-============================ ====== ==================== =========== ============ ========
+============================ ====== ==================== =========== ============ ======
+source_model                 trt_id trt                  num_sources num_ruptures weight
+============================ ====== ==================== =========== ============ ======
+simple_area_source_model.xml 0      Subduction Interface 42624       42624        0     
+simple_area_source_model.xml 1      Volcanic             210         210          0     
+simple_area_source_model.xml 2      Shield               96804       96804        0     
+simple_area_source_model.xml 3      Stable Shallow Crust 81154       81154        0     
+simple_area_source_model.xml 4      Subduction Inslab    93219       93219        194.25
+============================ ====== ==================== =========== ============ ======
 
-=============== =========
-#TRT models     5        
-#sources        18       
-#ruptures       314009   
-total weight    49408.675
-filtered weight 194.25   
-=============== =========
+=============== ======
+#TRT models     5     
+#sources        1     
+#ruptures       314011
+filtered_weight 194.25
+=============== ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 1       
-Sent data                   53.93 KB
+Sent data                   52.99 KB
 Total received data         2.37 KB 
 Maximum received per task   2.37 KB 
 =========================== ========

@@ -1,7 +1,7 @@
 Event Based Hazard
 ==================
 
-num_sites = 1
+num_sites = 1, sitecol = 604 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0       
 random_seed                  24         
 master_seed                  0          
-concurrent_tasks             32         
+concurrent_tasks             64         
 ============================ ===========
 
 Input files
@@ -64,7 +64,7 @@ Non-empty rupture collections
 === ========= ==================== ============
 col smlt_path TRT                  num_ruptures
 === ========= ==================== ============
-0   b1        Active Shallow Crust 10          
+0   b1        Active Shallow Crust 6           
 === ========= ==================== ============
 
 Collections <-> realizations
@@ -76,11 +76,12 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ========
-Number of tasks to generate        15      
-Estimated sources to send          38.81 KB
-Estimated hazard curves to receive 1 KB    
-================================== ========
+=========================== =========
+Number of tasks to generate 15       
+Sent data                   112.01 KB
+Total received data         48.54 KB 
+Maximum received per task   12.59 KB 
+=========================== =========
 
 Exposure model
 --------------

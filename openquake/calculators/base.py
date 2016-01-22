@@ -430,8 +430,9 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         self.manager = self.SourceManager(
-            self.csm, self.core_task.__func__, oq.concurrent_tasks,
-            oq.maximum_distance, self.datastore, self.monitor.new(oqparam=oq))
+            self.csm, self.core_task.__func__,
+            oq.maximum_distance, self.datastore,
+            self.monitor.new(oqparam=oq), filter_sources=oq.filter_sources)
         self.manager.submit_sources(self.sitecol)
 
     def post_process(self):

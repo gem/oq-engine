@@ -1,7 +1,7 @@
 Classical PSHA-Based Hazard
 ===========================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   20.0     
 random_seed                  42       
 master_seed                  0        
-concurrent_tasks             32       
+concurrent_tasks             64       
 ============================ =========
 
 Input files
@@ -60,19 +60,20 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============
-source_model     trt_id trt                  num_sources num_ruptures
-================ ====== ==================== =========== ============
-source_model.xml 0      Active Shallow Crust 15          1694        
-================ ====== ==================== =========== ============
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources num_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust 1694        1694         1694.0
+================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ========
-Number of tasks to generate        14      
-Estimated sources to send          25.17 KB
-Estimated hazard curves to receive 3 KB    
-================================== ========
+=========================== ========
+Number of tasks to generate 14      
+Sent data                   95.66 KB
+Total received data         33.51 KB
+Maximum received per task   2.39 KB 
+=========================== ========
 
 Exposure model
 --------------

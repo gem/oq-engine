@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
+import math
 import logging
 import operator
 import collections
@@ -747,14 +748,17 @@ class SourceManager(object):
     Manager associated to a CompositeSourceModel instance.
     Filter and split sources and send them to the worker tasks.
     """
-    def __init__(self, csm, taskfunc, concurrent_tasks, maximum_distance,
-                 dstore, monitor, random_seed=None):
+    def __init__(self, csm, taskfunc, maximum_distance,
+                 dstore, monitor, random_seed=None,
+                 filter_sources=True, num_tiles=1):
         self.tm = parallel.TaskManager(taskfunc)
         self.csm = csm
         self.maximum_distance = maximum_distance
         self.random_seed = random_seed
         self.dstore = dstore
         self.monitor = monitor
+        self.filter_sources = filter_sources
+        self.num_tiles = num_tiles
         self.rlzs_assoc = csm.get_rlzs_assoc()
         self.split_map = {}
         self.source_chunks = []
@@ -782,13 +786,14 @@ class SourceManager(object):
         filter_mon = self.monitor('filtering sources')
         split_mon = self.monitor('splitting sources')
         for src in self.csm.get_sources(kind):
-            with filter_mon:
-                sites = src.filter_sites_by_distance_to_source(
-                    self.maximum_distance, sitecol)
-            filter_time = filter_mon.dt
-            split_time = 0
-            if sites is None:
-                continue
+            filter_time = split_time = 0
+            if self.filter_sources:
+                with filter_mon:
+                    sites = src.filter_sites_by_distance_to_source(
+                        self.maximum_distance, sitecol)
+                filter_time = filter_mon.dt
+                if sites is None:
+                    continue
             if kind == 'heavy':
                 if src.id not in self.split_map:
                     logging.info('splitting %s of weight %s',
@@ -838,6 +843,11 @@ class SourceManager(object):
         Only the sources affecting the sitecol as considered. Also,
         set the .seed attribute of each source.
         """
+        if self.filter_sources and self.num_tiles > 1:
+            # reduce the maxweight by 4 to produce more tasks
+            maxweight = math.ceil(self.csm.maxweight * self.num_tiles / 4)
+        else:
+            maxweight = self.csm.maxweight
         for kind in ('light', 'heavy'):
             sources = list(self.get_sources(kind, sitecol))
             if not sources:
@@ -848,7 +858,7 @@ class SourceManager(object):
                 self.csm.filtered_weight += src.weight
             nblocks = 0
             for block in block_splitter(
-                    sources, self.csm.maxweight,
+                    sources, maxweight,
                     operator.attrgetter('weight'),
                     operator.attrgetter('trt_model_id')):
                 sent = self.tm.submit(block, sitecol, siteidx,
@@ -891,7 +901,8 @@ class DummySourceManager(SourceManager):
     A SourceManager submitting do-nothing tasks: this is useful to stress
     the calculation in case of a large data transfer, and to measure it.
     """
-    def __init__(self, csm, taskfunc, concurrent_tasks, maximum_distance,
-                 dstore, monitor):
-        SourceManager.__init__(self, csm, dummy_task, concurrent_tasks,
-                               maximum_distance, dstore, monitor)
+    def __init__(self, csm, taskfunc, maximum_distance, dstore, monitor,
+                 random_seed=None, filter_sources=True, num_tiles=1):
+        SourceManager.__init__(self, csm, dummy_task, maximum_distance,
+                               dstore, monitor, random_seed, filter_sources,
+                               num_tiles)
