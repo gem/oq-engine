@@ -410,7 +410,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         builder = scientific.StatsBuilder(
             oq.quantile_loss_curves, oq.conditional_loss_poes, [],
-            oq.loss_curve_resolution, scientific.normalize_curves_eb)
+            oq.loss_curve_resolution, scientific.normalize_curves_eb,
+            oq.insured_losses)
 
         # build an aggregate loss curve per realization plus statistics
         with self.monitor('building agg_curve'):
@@ -465,11 +466,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         agg_curve = numpy.zeros(self.R, loss_curve_dt)
         for l, r, name in result:
             agg_curve[lts[l]][name][r] = result[l, r, name]
-        self.datastore['agg_curve-rlzs'] = agg_curve
-        self.saved['agg_curve-rlzs'] = agg_curve.nbytes
+        if oq.individual_curves:
+            self.datastore['agg_curve-rlzs'] = agg_curve
+            self.saved['agg_curve-rlzs'] = agg_curve.nbytes
 
         if self.R > 1:
-            self.build_agg_curve_stats(builder, loss_curve_dt)
+            self.build_agg_curve_stats(builder, agg_curve, loss_curve_dt)
 
     # ################### methods to compute statistics  #################### #
 
@@ -555,15 +557,18 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         self.datastore.hdf5.flush()
 
-    def build_agg_curve_stats(self, builder, loss_curve_dt):
+    def build_agg_curve_stats(self, builder, agg_curve, loss_curve_dt):
         """
         Build and save `agg_curve-stats` in the HDF5 file.
 
         :param builder:
             :class:`openquake.risklib.scientific.StatsBuilder` instance
+        :param agg_curve:
+            array of aggregate curves, one per realization
+        :param loss_curve_dt:
+            numpy dtype for loss curves
         """
         rlzs = self.datastore['rlzs_assoc'].realizations
-        agg_curve = self.datastore['agg_curve-rlzs']
         Q1 = len(builder.mean_quantiles)
         agg_curve_stats = numpy.zeros(Q1, loss_curve_dt)
         for l, loss_type in enumerate(self.riskmodel.loss_types):

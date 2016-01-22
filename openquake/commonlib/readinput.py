@@ -33,7 +33,7 @@ from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import workflows, riskinput
 
 from openquake.commonlib.datastore import DataStore
-from openquake.commonlib.oqvalidation import OqParam, rmdict
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile
 from openquake.commonlib.riskmodels import get_risk_models
@@ -533,7 +533,6 @@ def get_job_info(oqparam, source_models, sitecol):
                        for src_model in source_models
                        for trt_model in src_model.trt_models
                        for src in trt_model)
-
     imtls = oqparam.imtls
     n_sites = len(sitecol) if sitecol else 0
 
@@ -579,22 +578,22 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
-def get_risk_model(oqparam):
+def get_risk_model(oqparam, rmdict):
     """
     Return a :class:`openquake.risklib.riskinput.RiskModel` instance
 
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+   :param rmdict:
+        a dictionary (imt, taxonomy) -> loss_type -> risk_function
     """
     wfs = {}  # (imt, taxonomy) -> workflow
     riskmodel = riskinput.RiskModel(wfs)
-
-    if oqparam.calculation_mode not in workflows.registry:
-        # classical calculator: the riskmodel must be left empty
-        riskmodel.taxonomies = []
-        return riskmodel
-    elif oqparam.calculation_mode.endswith('_damage'):
-        # scenario damage calculator
+    if getattr(oqparam, 'limit_states', []):
+        # classical_damage/scenario_damage calculator
+        if oqparam.calculation_mode in ('classical', 'scenario'):
+            # case when the risk files are in the job_hazard.ini file
+            oqparam.calculation_mode += '_damage'
         riskmodel.damage_states = ['no_damage'] + oqparam.limit_states
         delattr(oqparam, 'limit_states')
         for imt_taxo, ffs_by_lt in rmdict.items():
@@ -949,14 +948,16 @@ def get_hcurves_from_csv(oqparam, fname):
     :returns:
         the site collection and the hazard curves read by the .txt file
     """
-    imts = list(oqparam.imtls)
-    if not imts:
-        raise ValueError('Missing intensity_measure_types_and_levels in %s',
-                         oqparam.inputs['job_ini'])
+    if not oqparam.imtls:
+        oqparam.set_risk_imtls(get_risk_models(oqparam))
+    if not oqparam.imtls:
+        raise ValueError('Missing intensity_measure_types_and_levels in %s'
+                         % oqparam.inputs['job_ini'])
     num_values = list(map(len, list(oqparam.imtls.values())))
     with open(oqparam.inputs['hazard_curves']) as csvfile:
         mesh, hcurves_by_imt = get_mesh_csvdata(
-            csvfile, imts, num_values, valid.decreasing_probabilities)
+            csvfile, list(oqparam.imtls), num_values,
+            valid.decreasing_probabilities)
     sitecol = get_site_collection(oqparam, mesh)
     return sitecol, hcurves_by_imt
 
@@ -1016,6 +1017,8 @@ def get_gmfs_from_txt(oqparam, fname):
                 'The first line of %s is expected to contain comma separated'
                 'ordered coordinates, got %s instead' % (fname, firstline))
         sitecol = sitecol_from_coords(oqparam, coords)
+        if not oqparam.imtls:
+            oqparam.set_risk_imtls(get_risk_models(oqparam))
         imts = list(oqparam.imtls)
         imt_dt = numpy.dtype([(imt, float) for imt in imts])
         num_gmfs = oqparam.number_of_ground_motion_fields
@@ -1071,6 +1074,8 @@ def get_scenario_from_nrml(oqparam, fname):
     :returns:
         a triple (sitecol, rupture_tags, gmf array)
     """
+    if not oqparam.imtls:
+        oqparam.set_risk_imtls(get_risk_models(oqparam))
     imts = list(oqparam.imtls)
     imt_dt = numpy.dtype([(imt, float) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet

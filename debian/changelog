@@ -1,5 +1,11 @@
   [Michele Simionato] 
   * Refactored the source filtering/splitting mechanism and improved
+  * Managed correctly the case of vulnerability functions with a different
+    number of loss ratios
+  * Now the flag `individual_curves` is honored for aggregate curves
+    in the event based risk calculator
+  * Fixed a bug breaking the compution of statistics of aggregate curves
+    with insured losses
   * Added a validation on the cost type in the exposure
   * Added a validation for missing region_grid_spacing
   * Added a cross validation for the `time_event` parameter

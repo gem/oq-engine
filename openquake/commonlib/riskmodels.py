@@ -107,15 +107,17 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def get_risk_models(oqparam, kind):
+def get_risk_models(oqparam, kind=None):
     """
     :param oqparam:
-        an OqParam instancs
+        an OqParam instance
     :param kind:
-        "vulnerability"|"vulnerability_retrofitted"|"fragility"|"consequence"
+        vulnerability|vulnerability_retrofitted|fragility|consequence;
+        if None it is extracted from the oqparam.file_type attribute
     :returns:
         a dictionary imt_taxo -> loss_type -> function
     """
+    kind = kind or oqparam.file_type
     rmodels = {}
     for key in oqparam.inputs:
         mo = re.match('(occupants|%s)_%s$' % (COST_TYPE_REGEX, kind), key)
@@ -162,9 +164,13 @@ def get_risk_models(oqparam, kind):
     elif kind == 'consequence':
         rdict = rmodels
     else:  # vulnerability
+        cl_risk = oqparam.calculation_mode in ('classical', 'classical_risk')
+        # only for classical_risk reduce the loss_ratios
+        # to make sure they are strictly increasing
         for loss_type, rm in rmodels.items():
             for imt_taxo, rf in rm.items():
-                rdict[imt_taxo][loss_type] = rf
+                rdict[imt_taxo][loss_type] = (
+                    rf.strictly_increasing() if cl_risk else rf)
     return rdict
 
 

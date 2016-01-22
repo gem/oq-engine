@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014-2015, GEM Foundation
+#  Copyright (c) 2014-2016, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,7 @@ from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general
 from openquake.baselib.performance import DummyMonitor
 from openquake.commonlib import (
-    readinput, datastore, logictree, source, __version__)
+    readinput, riskmodels, datastore, logictree, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import apply_reduce, executor
 from openquake.risklib import riskinput
@@ -52,6 +52,19 @@ class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
 rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('weight', float)])
+
+
+def set_array(longarray, shortarray):
+    """
+    :param longarray: a numpy array of floats of length L >= l
+    :param shortarray: a numpy array of floats of length l
+
+    Fill `longarray` with the values of `shortarray`, starting from the left.
+    If `shortarry` is shorter than `longarray`, then the remaining elements on
+    the right are filled with `numpy.nan` values.
+    """
+    longarray[:len(shortarray)] = shortarray
+    longarray[len(shortarray):] = numpy.nan
 
 
 class BaseCalculator(with_metaclass(abc.ABCMeta)):
@@ -329,14 +342,20 @@ class HazardCalculator(BaseCalculator):
         The riskmodel can be empty for hazard calculations.
         Save the loss ratios (if any) in the datastore.
         """
-        self.riskmodel = rm = readinput.get_risk_model(self.oqparam)
-        missing = set(self.taxonomies) - set(rm.taxonomies)
-        if rm and missing:
-            raise RuntimeError('The exposure contains the taxonomies %s '
-                               'which are not in the risk model' % missing)
+        rmdict = riskmodels.get_risk_models(self.oqparam)
+        self.oqparam.set_risk_imtls(rmdict)
+        # save risk_imtls in the datastore: this is crucial
+        self.datastore.hdf5.attrs['risk_imtls'] = repr(self.oqparam.risk_imtls)
+        self.riskmodel = rm = readinput.get_risk_model(self.oqparam, rmdict)
+        if 'taxonomies' in self.datastore:
+            # check that we are covering all the taxonomies in the exposure
+            missing = set(self.taxonomies) - set(rm.taxonomies)
+            if rm and missing:
+                raise RuntimeError('The exposure contains the taxonomies %s '
+                                   'which are not in the risk model' % missing)
 
         # save the loss ratios in the datastore
-        pairs = [(cb.loss_type, (numpy.float64, len(cb.ratios)))
+        pairs = [(cb.loss_type, (numpy.float64, cb.curve_resolution))
                  for cb in rm.curve_builders if cb.user_provided]
         if not pairs:
             return
@@ -345,7 +364,9 @@ class HazardCalculator(BaseCalculator):
             if cb.user_provided:
                 loss_ratios_lt = loss_ratios[cb.loss_type]
                 for i, imt_taxo in enumerate(sorted(rm)):
-                    loss_ratios_lt[i] = rm[imt_taxo].loss_ratios[cb.loss_type]
+                    ratios = rm[imt_taxo].loss_ratios.get(
+                        cb.loss_type, numpy.array([]))
+                    set_array(loss_ratios_lt[i], ratios)
         self.datastore['loss_ratios'] = loss_ratios
         self.datastore['loss_ratios'].attrs['imt_taxos'] = sorted(rm)
         self.datastore['loss_ratios'].attrs['nbytes'] = loss_ratios.nbytes
@@ -358,8 +379,10 @@ class HazardCalculator(BaseCalculator):
         logging.info('Reading the site collection')
         with self.monitor('reading site collection', autoflush=True):
             haz_sitecol = readinput.get_site_collection(self.oqparam)
-        inputs = self.oqparam.inputs
-        if 'exposure' in inputs:
+
+        oq_hazard = (OqParam.from_(self.datastore.parent.attrs)
+                     if self.datastore.parent else None)
+        if 'exposure' in self.oqparam.inputs:
             self.read_exposure()
             self.load_riskmodel()  # must be called *after* read_exposure
             num_assets = self.count_assets()
@@ -373,12 +396,11 @@ class HazardCalculator(BaseCalculator):
                 num_sites = len(self.sitecol)
                 logging.warn('Associated %d assets to %d sites, %d discarded',
                              ok_assets, num_sites, num_assets - ok_assets)
-        elif (self.datastore.parent and 'exposure' in
-              OqParam.from_(self.datastore.parent.attrs).inputs):
+        elif oq_hazard and 'exposure' in oq_hazard.inputs:
             logging.info('Re-using the already imported exposure')
-            if not self.riskmodel:
-                self.load_riskmodel()
+            self.load_riskmodel()
         else:  # no exposure
+            self.load_riskmodel()
             self.sitecol = haz_sitecol
 
         # save mesh and asset collection

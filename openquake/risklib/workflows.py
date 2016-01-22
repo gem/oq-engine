@@ -198,12 +198,7 @@ def get_values(loss_type, assets, time_event=None):
         a numpy array with the values for the given assets, depending on the
         loss_type.
     """
-    if hasattr(assets[0], 'values'):  # special case for oq-lite
-        values = numpy.array([a.value(loss_type, time_event)
-                              for a in assets])
-    else:  # in the engine
-        values = numpy.array([a.value(loss_type) for a in assets])
-    return values
+    return numpy.array([a.value(loss_type, time_event) for a in assets])
 
 
 class List(list):
@@ -284,8 +279,21 @@ class Workflow(object):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
 
 
+def rescale(curves, values):
+    """
+    Multiply the losses in each curve of kind (losses, poes) by the
+    corresponding value.
+    """
+    n = len(curves)
+    assert n == len(values), (n, len(values))
+    losses = [curves[i, 0] * values[i] for i in range(n)]
+    poes = curves[:, 1]
+    return numpy.array([[losses[i], poes[i]] for i in range(n)])
+
+
 # FIXME: remove the loss fractions after replacing the engine calculator
-@registry.add('classical_risk')
+@registry.add('classical_risk', 'classical', 'disaggregation',
+              'classical_tiling')
 class Classical(Workflow):
     """
     Classical PSHA-Based Workflow.
@@ -411,14 +419,15 @@ class Classical(Workflow):
         curves = utils.numpy_map(self.curves[loss_type], hazard_curves)
         average_losses = utils.numpy_map(scientific.average_loss, curves)
         maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
-        fractions = scientific.loss_map_matrix(self.poes_disagg, curves)
+        values = get_values(loss_type, assets)
 
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
 
-            insured_curves = utils.numpy_map(
-                scientific.insured_loss_curve, curves, deductibles, limits)
+            insured_curves = rescale(
+                utils.numpy_map(scientific.insured_loss_curve,
+                                curves, deductibles, limits), values)
             average_insured_losses = utils.numpy_map(
                 scientific.average_loss, insured_curves)
         else:
@@ -426,10 +435,12 @@ class Classical(Workflow):
             average_insured_losses = None
 
         return scientific.Output(
-            assets, loss_type, loss_curves=curves,
-            average_losses=average_losses, insured_curves=insured_curves,
+            assets, loss_type,
+            loss_curves=rescale(curves, values),
+            average_losses=values * average_losses,
+            insured_curves=insured_curves,
             average_insured_losses=average_insured_losses,
-            loss_maps=maps, loss_fractions=fractions)
+            loss_maps=values * maps)
 
     # FIXME: remove this after removal of the old calculator
     def statistics(self, all_outputs, quantiles=()):
@@ -464,7 +475,7 @@ class Classical(Workflow):
         return all_outputs
 
 
-@registry.add('event_based_risk')
+@registry.add('event_based_risk', 'event_based', 'event_based_rupture')
 class ProbabilisticEventBased(Workflow):
     """
     Implements the Probabilistic Event Based workflow
@@ -706,61 +717,7 @@ class ClassicalBCR(Workflow):
                            else Classical.compute_all_outputs.__func__)
 
 
-@registry.add('event_based_bcr')
-class ProbabilisticEventBasedBCR(Workflow):
-    def __init__(self, imt, taxonomy,
-                 vulnerability_functions_orig,
-                 vulnerability_functions_retro,
-                 investigation_time,
-                 risk_investigation_time,
-                 number_of_logic_tree_samples,
-                 ses_per_logic_tree_path,
-                 loss_curve_resolution,
-                 interest_rate, asset_life_expectancy):
-        self.imt = imt
-        self.taxonomy = taxonomy
-        self.risk_functions = vulnerability_functions_orig
-        self.assets = None  # set a __call__ time
-        self.interest_rate = interest_rate
-        self.asset_life_expectancy = asset_life_expectancy
-        self.vf_orig = vulnerability_functions_orig
-        self.vf_retro = vulnerability_functions_retro
-        time_span = risk_investigation_time or investigation_time
-        self.curves = functools.partial(
-            scientific.event_based, curve_resolution=loss_curve_resolution,
-            time_span=time_span, tses=time_span * ses_per_logic_tree_path)
-        # TODO: add multiplication by number_of_logic_tree_samples or 1
-
-    def __call__(self, loss_type, assets, gmfs, epsilons, event_ids):
-        self.assets = assets
-
-        original_loss_curves = utils.numpy_map(
-            self.curves, self.vf_orig[loss_type].apply_to(gmfs, epsilons))
-        retrofitted_loss_curves = utils.numpy_map(
-            self.curves, self.vf_retro[loss_type].apply_to(gmfs, epsilons))
-
-        eal_original = utils.numpy_map(
-            scientific.average_loss, original_loss_curves)
-        eal_retrofitted = utils.numpy_map(
-            scientific.average_loss, retrofitted_loss_curves)
-
-        bcr_results = [
-            scientific.bcr(
-                eal_original[i], eal_retrofitted[i],
-                self.interest_rate, self.asset_life_expectancy,
-                asset.value(loss_type), asset.retrofitted(loss_type))
-            for i, asset in enumerate(assets)]
-
-        return scientific.Output(
-            assets, loss_type,
-            data=list(zip(eal_original, eal_retrofitted, bcr_results)))
-
-    compute_all_outputs = (
-        ProbabilisticEventBased.compute_all_outputs if sys.version > '3' else
-        ProbabilisticEventBased.compute_all_outputs.__func__)
-
-
-@registry.add('scenario_risk')
+@registry.add('scenario_risk', 'scenario')
 class Scenario(Workflow):
     """
     Implements the Scenario workflow

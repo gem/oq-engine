@@ -212,7 +212,6 @@ class VulnerabilityFunction(object):
         return utils.numpy_map(
             vulnerability_function._apply, ground_motion_values)
 
-    @utils.memoized
     def strictly_increasing(self):
         """
         :returns:
@@ -602,6 +601,10 @@ class FragilityFunctionList(list):
         list.__init__(self, elements)
         vars(self).update(attrs)
 
+    def mean_loss_ratios_with_steps(self, steps):
+        """For compatibility with vulnerability functions"""
+        return fine_graining(self.imls, steps)
+
     def __repr__(self):
         kvs = ['%s=%s' % item for item in vars(self).items()]
         return '<FragilityFunctionList %s>' % ', '.join(kvs)
@@ -960,11 +963,12 @@ class CurveBuilder(object):
       counts = builder.build_counts(loss_matrix)
     """
     def __init__(self, loss_type, loss_ratios, user_provided,
-                 conditional_loss_poes=(), insured_losses=False):
+                 conditional_loss_poes=(), insured_losses=False,
+                 curve_resolution=None):
         self.loss_type = loss_type
         self.ratios = numpy.array(loss_ratios, F32)
         self.user_provided = user_provided
-        self.curve_resolution = C = len(loss_ratios)
+        self.curve_resolution = C = curve_resolution or len(loss_ratios)
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
         self.I = insured_losses + 1
@@ -1196,7 +1200,9 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
     :param int steps:
         Number of steps between loss ratios.
     """
-    vf = vulnerability_function.strictly_increasing()
+    assert len(hazard_imls) == len(hazard_poes), (
+        len(hazard_imls), len(hazard_poes))
+    vf = vulnerability_function
     imls = vf.mean_imls()
     loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
 
@@ -1213,7 +1219,6 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
     lrem_po = numpy.empty(lrem.shape)
     for idx, po in enumerate(pos):
         lrem_po[:, idx] = lrem[:, idx] * po  # column * po
-
     return numpy.array([loss_ratios, lrem_po.sum(axis=1)])
 
 
@@ -1273,14 +1278,19 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
 
 def insured_losses(losses, deductible, insured_limit):
     """
-    Compute insured losses for the given asset and losses
-
     :param losses: an array of ground-up loss ratios
     :param float deductible: the deductible limit in fraction form
     :param float insured_limit: the insured limit in fraction form
 
+    Compute insured losses for the given asset and losses, from the point
+    of view of the insurance company. For instance:
+
     >>> insured_losses(numpy.array([3, 20, 101]), 5, 100)
     array([ 0, 15, 95])
+
+    - if the loss is 3 (< 5) the company does not pay anything
+    - if the loss is 20 the company pays 20 - 5 = 15
+    - if the loss is 101 the company pays 100 - 5 = 95
     """
     return numpy.piecewise(
         losses,
@@ -1295,11 +1305,16 @@ def insured_loss_curve(curve, deductible, insured_limit):
     :param curve: an array 2 x R (where R is the curve resolution)
     :param float deductible: the deductible limit in fraction form
     :param float insured_limit: the insured limit in fraction form
+
+    >>> losses = numpy.array([3, 20, 101])
+    >>> poes = numpy.array([0.9, 0.5, 0.1])
+    >>> insured_loss_curve(numpy.array([losses, poes]), 5, 100)
+    array([[  3.        ,  20.        ],
+           [  0.85294118,   0.5       ]])
     """
     losses, poes = curve[:, curve[0] <= insured_limit]
     limit_poe = interpolate.interp1d(
-        *curve,
-        bounds_error=False, fill_value=1)(deductible)
+        *curve, bounds_error=False, fill_value=1)(deductible)
     return numpy.array([
         losses,
         numpy.piecewise(poes, [poes > limit_poe], [limit_poe, lambda x: x])])

@@ -1,11 +1,11 @@
+import numpy
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.classical_risk import (
-    case_1, case_2, case_3, case_4)
+    case_1, case_2, case_3, case_4, case_5)
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.writers import scientificformat
-
-import numpy.testing
+from openquake.commonlib.datastore import view
 
 
 class ClassicalRiskTestCase(CalculatorTestCase):
@@ -61,5 +61,23 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-000.csv', fnames[0])
         self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
 
+    @attr('qa', 'risk', 'classical_risk')
+    def test_case_5(self):
+        # test with different curve resolution for different taxonomies
+        out = self.run_calc(case_5.__file__, 'job_h.ini,job_r.ini',
+                            exports='xml', individual_curves='false')
+
+        # check mean loss curves
+        [fname] = out['loss_curves-stats', 'xml']
+        self.assertEqualFiles('expected/loss_curves-mean.xml', fname)
+
+        # check individual avg losses
+        text = view('loss_curves_avg', self.calc.datastore)
+        self.assertEqual(text, '''========= ============= ============ ===================================================
+asset_ref lon           lat          structural                                         
+========= ============= ============ ===================================================
+a6        -7.816800E+01 1.559329E+01 2.837295E-03 2.886262E-03 2.872555E-03 2.889799E-03
+a7        -7.816812E+01 1.559329E+01 1.073631E-06 1.110482E-06 1.096380E-06 1.115112E-06
+========= ============= ============ ===================================================''')
+
     # TODO: tests with more than a loss type
-    # tests with more than one pair IMT, taxo
