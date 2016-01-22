@@ -345,8 +345,9 @@ class HazardCalculator(BaseCalculator):
             if cb.user_provided:
                 loss_ratios_lt = loss_ratios[cb.loss_type]
                 for i, imt_taxo in enumerate(sorted(rm)):
-                    set_array(loss_ratios_lt[i],
-                              rm[imt_taxo].loss_ratios[cb.loss_type])
+                    ratios = rm[imt_taxo].loss_ratios.get(
+                        cb.loss_type, numpy.array([]))
+                    set_array(loss_ratios_lt[i], ratios)
         self.datastore['loss_ratios'] = loss_ratios
         self.datastore['loss_ratios'].attrs['imt_taxos'] = sorted(rm)
         self.datastore['loss_ratios'].attrs['nbytes'] = loss_ratios.nbytes

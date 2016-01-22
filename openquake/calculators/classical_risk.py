@@ -83,7 +83,7 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
             stat_curves, stat_maps = statsbuilder.get_curves_maps(stats)
             for i, asset in enumerate(out_by_rlz.assets):
                 result['stat_curves'].append((l, asset.idx, stat_curves[i]))
-                if stat_maps:
+                if len(stat_maps):
                     result['stat_maps'].append((l, asset.idx, stat_maps[i]))
 
     return result
