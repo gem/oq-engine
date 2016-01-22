@@ -33,8 +33,7 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR"):
     sys.modules['openquake'].__dict__["__path__"].insert(
         0, os.path.join(os.path.dirname(__file__), "openquake"))
 
-from openquake.engine.utils import config, get_core_modules
-from openquake import engine
+from openquake.engine.utils import config
 
 config.abort_if_no_config_available()
 
@@ -76,22 +75,22 @@ CELERY_MAX_CACHED_RESULTS = 1
 
 CELERY_ACCEPT_CONTENT = ['pickle', 'json']
 
-CELERY_IMPORTS = get_core_modules(engine) + [
-    "openquake.engine.calculators.hazard.general"] + [
+CELERY_IMPORTS = [
     "openquake.calculators.classical",
     "openquake.calculators.classical_risk",
     "openquake.calculators.classical_damage",
+    "openquake.calculators.classical_bcr",
     "openquake.calculators.event_based",
     "openquake.calculators.event_based_risk",
+    "openquake.calculators.scenario",
     "openquake.calculators.scenario_risk",
     "openquake.calculators.scenario_damage",
     ]
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.engine.settings"
-
 try:
     from openquake.engine.utils import tasks
     # as a side effect, this import replaces the litetask with oqtask
-    # this is hackish, but bear with until we remove the old calculators
+    # this is hackish, but we need it for task registration
 except ImportError:  # circular import with celery 2, only affecting nose
     pass

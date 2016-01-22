@@ -17,6 +17,3 @@
 This package contains functionality for querying and exporting calculation
 results
 """
-
-# don't remove, we are registering the export functions here!
-from openquake.engine.export import core, hazard, risk

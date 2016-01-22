@@ -116,8 +116,7 @@ def run_calc(job_id, calc_dir,
         raise
     finally:
         logging.root.removeHandler(progress_handler)
-    if hasattr(calc, 'datastore'):
-        calc.datastore.close()
+    calc.datastore.close()
     shutil.rmtree(calc_dir)
 
 
