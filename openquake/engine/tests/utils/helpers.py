@@ -42,7 +42,7 @@ from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.baselib.general import writetmp as touch
 
-from openquake.engine.db import models
+from openquake.server.db import models
 from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine.utils import config
@@ -300,7 +300,7 @@ def get_job(cfg, username="openquake", hazard_calculation_id=None,
     """
     Given a path to a config file and a hazard_calculation_id
     (or, alternatively, a hazard_output_id, create a
-    :class:`openquake.engine.db.models.OqJob` object for a risk calculation.
+    :class:`openquake.server.db.models.OqJob` object for a risk calculation.
     """
     if hazard_output_id and not hazard_calculation_id:
         hazard_calculation_id = models.Output.objects.get(
