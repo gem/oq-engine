@@ -68,6 +68,8 @@ UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 TERMINATE = valid.boolean(
     config.get('celery', 'terminate_workers_on_revoke') or 'false')
 
+USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
+
 
 class InvalidCalculationID(Exception):
     pass
@@ -81,6 +83,7 @@ RISK_HAZARD_MAP = dict(
     event_based_risk=['event_based', 'event_based_risk'])
 
 
+# this is called only if USE_CELERY is True
 def cleanup_after_job(job, terminate, task_ids=()):
     """
     Release the resources used by an openquake job.
@@ -105,14 +108,9 @@ def cleanup_after_job(job, terminate, task_ids=()):
 def job_stats(job):
     """
     A context manager saving information such as the number of sites
-    and the disk space occupation in the job_stats table. The information
-    is saved at the end of the job, even if the job fails.
+    in the job_stats table. The information is saved at the end of the
+    job, even if the job fails.
     """
-    dbname = DATABASES['default']['NAME']
-    curs = models.getcursor('job_init')
-    curs.execute("select pg_database_size(%s)", (dbname,))
-    dbsize = curs.fetchall()[0][0]
-
     js = job.jobstats
     try:
         yield
@@ -131,12 +129,10 @@ def job_stats(job):
         # taking further action, so that the real error can propagate
         try:
             job.save()
-            curs.execute("select pg_database_size(%s)", (dbname,))
-            new_dbsize = curs.fetchall()[0][0]
-            js.disk_space = new_dbsize - dbsize
             js.stop_time = datetime.utcnow()
             js.save()
-            cleanup_after_job(job, TERMINATE, tasks.OqTaskManager.task_ids)
+            if USE_CELERY:
+                cleanup_after_job(job, TERMINATE, tasks.OqTaskManager.task_ids)
         except:
             # log the finalization error only if there is not real error
             if tb == 'None\n':
