@@ -44,8 +44,6 @@ from openquake.engine import engine, logs
 from openquake.calculators import views
 from openquake.server.db import models, upgrade_manager
 from openquake.engine.export import core
-from openquake.engine.tools.import_hazard_curves import import_hazard_curves
-from openquake.engine.tools import save_hazards, load_hazards
 from openquake.engine.tools.make_html_report import make_report
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
@@ -244,16 +242,6 @@ def set_up_arg_parser():
         '--ero',
         help='Export all the outputs to the specified directory [deprecated]',
         nargs=2, metavar=('RISK_CALCULATION_ID', 'TARGET_DIR'))
-    save_load_grp = parser.add_argument_group('Save/Load')
-    save_load_grp.add_argument(
-        '--save-hazard-calculation', '--shc',
-        help=('Save a hazard calculation to a new created directory.'),
-        nargs=2, metavar=('HAZARD_CALCULATION_ID', 'DUMP_DIR'))
-    save_load_grp.add_argument(
-        '--load-hazard-calculation',
-        help=("Load a hazard calculation from a saved import. "
-              "Only SES outputs currently supported"),
-        metavar=('DUMP_DIR'))
 
     import_grp = parser.add_argument_group('Import')
     import_grp.add_argument(
@@ -609,22 +597,10 @@ def main():
         deprecate('--export-risk-outputs', '--export-outputs')
         job_id, target_dir = args.export_risk_outputs
         export_outputs(get_hc_id(job_id), expanduser(target_dir), exports)
-    # import
-    elif args.load_curve is not None:
-        with open(args.load_curve) as f:
-            out = import_hazard_curves(f)
-            print 'Added output id=%d of type %s; hazard_calculation_id=%d'\
-                % (out.id, out.output_type, out.oq_job.id)
     elif args.list_imported_outputs:
         list_imported_outputs()
     elif args.delete_uncompleted_calculations:
         delete_uncompleted_calculations()
-    elif args.save_hazard_calculation:
-        save_hazards.main(*args.save_hazard_calculation)
-    elif args.load_hazard_calculation:
-        job_ids = load_hazards.hazard_load(
-            models.getcursor('admin').connection, args.load_hazard_calculation)
-        print "Load hazard calculation with IDs: %s" % job_ids
     else:
         arg_parser.print_usage()
 
