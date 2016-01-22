@@ -56,8 +56,8 @@ rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('weight', float)])
 
 def set_array(longarray, shortarray):
     """
-    :param longarray: an array of length L >= l
-    :param shortarray: an array of length l
+    :param longarray: a numpy array of floats of length L >= l
+    :param shortarray: a numpy array of floats of length l
 
     Fill `longarray` with the values of `shortarray`, starting from the left.
     If `shortarry` is shorter than `longarray`, then the remaining elements on
