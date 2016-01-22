@@ -2,8 +2,8 @@ import os
 import re
 import time
 import urllib
+import logging
 import importlib
-from openquake.engine import logs
 
 
 class DuplicatedVersion(RuntimeError):
@@ -69,7 +69,7 @@ def check_script(upgrade, dry_run=True, debug=True):
     :param dry_run: if True, do not change the database
     :param debug: if True, print the queries which are executed
     """
-    from openquake.engine.db.models import getcursor
+    from openquake.server.db.models import getcursor
     conn = WrappedConnection(getcursor('admin').connection, debug=debug)
     try:
         upgrade(conn)
@@ -94,7 +94,7 @@ def apply_sql_script(conn, fname):
     try:
         conn.cursor().execute(sql)
     except:
-        logs.LOG.error('Error executing %s' % fname)
+        logging.error('Error executing %s' % fname)
         raise
 
 
@@ -114,7 +114,7 @@ class UpgradeManager(object):
         a regulation expression for the script version number (\d\d\d\d)
     """
     ENGINE_URL = 'https://github.com/gem/oq-engine/tree/master/'
-    UPGRADES = 'openquake/engine/db/schema/upgrades/'
+    UPGRADES = 'openquake/server/db/schema/upgrades/'
 
     def __init__(self, upgrade_dir, version_table='public.revision_info',
                  version_pattern='\d\d\d\d', flag_pattern='(-slow|-danger)?'):
@@ -147,7 +147,7 @@ class UpgradeManager(object):
 
         :param conn: a DB API 2 connection
         """
-        logs.LOG.info('Creating the versioning table %s', self.version_table)
+        logging.info('Creating the versioning table %s', self.version_table)
         conn.cursor().execute(CREATE_VERSIONING % self.version_table)
         self._insert_script(self.read_scripts()[0], conn)
 
@@ -158,7 +158,7 @@ class UpgradeManager(object):
         :param conn: a DB API 2 connection
         """
         base = self.read_scripts()[0]['fname']
-        logs.LOG.info('Creating the initial schema from %s',  base)
+        logging.info('Creating the initial schema from %s',  base)
         apply_sql_script(conn, os.path.join(self.upgrade_dir, base))
         self.install_versioning(conn)
 
@@ -184,7 +184,7 @@ class UpgradeManager(object):
         versions_applied = []
         for script in scripts:  # script is a dictionary
             fullname = os.path.join(self.upgrade_dir, script['fname'])
-            logs.LOG.info('Executing %s', fullname)
+            logging.info('Executing %s', fullname)
             if script['ext'] == 'py':  # Python script with a upgrade(conn)
                 globs = {}
                 execfile(fullname, globs)
@@ -282,7 +282,7 @@ class UpgradeManager(object):
             yield self.parse_script_name(scriptname)
 
     @classmethod
-    def instance(cls, conn, pkg_name='openquake.engine.db.schema.upgrades'):
+    def instance(cls, conn, pkg_name='openquake.server.db.schema.upgrades'):
         """
         Return an :class:`UpgradeManager` instance.
 
@@ -313,7 +313,7 @@ class UpgradeManager(object):
         return upgrader
 
 
-def upgrade_db(conn, pkg_name='openquake.engine.db.schema.upgrades',
+def upgrade_db(conn, pkg_name='openquake.server.db.schema.upgrades',
                skip_versions=()):
     """
     Upgrade a database by running several scripts in a single transaction.
@@ -334,11 +334,11 @@ def upgrade_db(conn, pkg_name='openquake.engine.db.schema.upgrades',
     else:
         conn.commit()
     dt = time.time() - t0
-    logs.LOG.info('Upgrade completed in %s seconds', dt)
+    logging.info('Upgrade completed in %s seconds', dt)
     return versions_applied
 
 
-def version_db(conn, pkg_name='openquake.engine.db.schema.upgrades'):
+def version_db(conn, pkg_name='openquake.server.db.schema.upgrades'):
     """
     :param conn: a DB API 2 connection
     :param str pkg_name: the name of the package with the upgrade scripts
@@ -348,7 +348,7 @@ def version_db(conn, pkg_name='openquake.engine.db.schema.upgrades'):
     return max(upgrader.get_db_versions(conn))
 
 
-def what_if_I_upgrade(conn, pkg_name='openquake.engine.db.schema.upgrades',
+def what_if_I_upgrade(conn, pkg_name='openquake.server.db.schema.upgrades',
                       extract_scripts='extract_upgrade_scripts'):
     """
     :param conn:
