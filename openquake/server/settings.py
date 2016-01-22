@@ -28,7 +28,7 @@ STATICFILES_DIRS = [
 DATABASES = oqe_settings.DATABASES
 
 DATABASE_ROUTERS = ['openquake.server.routers.AuthRouter',
-                    'openquake.engine.db.routers.OQRouter', ]
+                    'openquake.server.db.routers.OQRouter', ]
 
 
 ALLOWED_HOSTS = ['*']
