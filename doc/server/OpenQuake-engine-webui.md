@@ -73,12 +73,12 @@ LOCKDOWN = True
 ```
 #### Sessions and users DB bootstrap
 ```bash
-DJANGO_SETTINGS_MODULE="openquake.server.settings" python manage.py syncdb --database=auth_db
+python manage.py syncdb --database=auth_db
 ```
 
 #### Add a new local superuser
 ```bash
-DJANGO_SETTINGS_MODULE="openquake.server.settings" python manage.py createsuperuser --database=auth_db
+python manage.py createsuperuser --database=auth_db
 ```
 
 #### PAM
