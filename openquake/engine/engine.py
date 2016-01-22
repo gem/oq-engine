@@ -38,7 +38,6 @@ from openquake.engine import logs
 from openquake.server.db import models
 from openquake.engine.utils import config, tasks
 from openquake.engine.celery_node_monitor import CeleryNodeMonitor
-from openquake.engine.settings import DATABASES
 from openquake.server.db.schema.upgrades import upgrader
 
 from openquake import hazardlib, risklib, commonlib

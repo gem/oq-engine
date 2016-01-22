@@ -27,6 +27,7 @@ import celery.task.control
 from openquake.engine import logs
 from openquake.engine.utils import config
 from openquake.commonlib.valid import boolean
+from openquake.commonlib.oqvalidation import OqParam
 
 USE_CELERY = boolean(config.get('celery', 'use_celery'))
 
@@ -90,11 +91,22 @@ class CeleryNodeMonitor(object):
         self.th = None
         MasterKilled.register_handlers()
 
+    # this is called only is use_celery is True
+    def set_concurrent_tasks_default(self):
+        """
+        Set the default for concurrent_tasks to twice the number of workers.
+        Returns the number of live celery nodes (i.e. the number of machines).
+        """
+        stats = celery.task.control.inspect(timeout=1).stats()
+        num_workers = sum(stats[k]['pool']['max-concurrency'] for k in stats)
+        OqParam.concurrent_tasks.default = 2 * num_workers
+        return set(stats)
+
     def __enter__(self):
         if self.no_distribute:
             return self  # do nothing
         elif self.use_celery:
-            self.live_nodes = self.ping(timeout=1)
+            self.live_nodes = self.set_concurrent_tasks_default()
             if not self.live_nodes:
                 sys.exit("No live compute nodes, aborting calculation")
             self.th = threading.Thread(None, self.check_nodes)
@@ -106,6 +118,7 @@ class CeleryNodeMonitor(object):
         if self.th:
             self.th.join()
 
+    # this is called only is use_celery is True
     def ping(self, timeout):
         """
         Ping the celery nodes by using .interval as timeout parameter
