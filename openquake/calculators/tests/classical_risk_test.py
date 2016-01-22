@@ -1,5 +1,4 @@
 import numpy
-import unittest
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.classical_risk import (
@@ -64,7 +63,6 @@ class ClassicalRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_5(self):
-        raise unittest.SkipTest
         # test with different curve resolution for different taxonomies
         self.run_calc(case_5.__file__, 'job_h.ini,job_r.ini')
         text = view('loss_curves_avg', self.calc.datastore)
