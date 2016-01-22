@@ -83,10 +83,10 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                 curve_resolution, insured_losses=oq.insured_losses)
             stats = statsbuilder.build(out_by_rlz)
             stat_curves, stat_maps = statsbuilder.get_curves_maps(stats)
-            for asset, stat_curve, stat_map in zip(
-                    out_by_rlz.assets, stat_curves, stat_maps):
-                result['stat_curves'].append((l, asset.idx, stat_curve))
-                result['stat_maps'].append((l, asset.idx, stat_map))
+            for i, asset in enumerate(out_by_rlz.assets):
+                result['stat_curves'].append((l, asset.idx, stat_curves[i]))
+                if stat_maps:
+                    result['stat_maps'].append((l, asset.idx, stat_maps[i]))
 
     return result
 
@@ -168,7 +168,11 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 stat_curves_lt = stat_curves[ltypes[l]]
                 for name in stat_curves_lt.dtype.names:
                     for s in range(self.Q1):
-                        stat_curves_lt[name][s, aid] = statcurve[name][s]
+                        if name.startswith('avg'):
+                            stat_curves_lt[name][s, aid] = statcurve[name][s]
+                        else:
+                            base.set_array(stat_curves_lt[name][s, aid],
+                                           statcurve[name][s])
             self.datastore['loss_curves-stats'] = stat_curves
 
     def save_loss_maps(self, result):

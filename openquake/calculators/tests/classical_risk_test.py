@@ -64,7 +64,14 @@ class ClassicalRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'classical_risk')
     def test_case_5(self):
         # test with different curve resolution for different taxonomies
-        self.run_calc(case_5.__file__, 'job_h.ini,job_r.ini')
+        out = self.run_calc(case_5.__file__, 'job_h.ini,job_r.ini',
+                            exports='xml', individual_curves='false')
+
+        # check mean loss curves
+        [fname] = out['loss_curves-stats', 'xml']
+        self.assertEqualFiles('expected/loss_curves-mean.xml', fname)
+
+        # check individual avg losses
         text = view('loss_curves_avg', self.calc.datastore)
         self.assertEqual(text, '''========= ============= ============ ===================================================
 asset_ref lon           lat          structural                                         
