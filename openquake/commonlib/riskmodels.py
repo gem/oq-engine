@@ -164,7 +164,7 @@ def get_risk_models(oqparam, kind=None):
     elif kind == 'consequence':
         rdict = rmodels
     else:  # vulnerability
-        cl_risk = oqparam.calculation_mode == 'classical_risk'
+        cl_risk = oqparam.calculation_mode in ('classical', 'classical_risk')
         # only for classical_risk reduce the loss_ratios
         # to make sure they are strictly increasing
         for loss_type, rm in rmodels.items():

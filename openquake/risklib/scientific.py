@@ -1200,6 +1200,8 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
     :param int steps:
         Number of steps between loss ratios.
     """
+    assert len(hazard_imls) == len(hazard_poes), (
+        len(hazard_imls), len(hazard_poes))
     vf = vulnerability_function
     imls = vf.mean_imls()
     loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
