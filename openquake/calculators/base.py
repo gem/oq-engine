@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014-2015, GEM Foundation
+#  Copyright (c) 2014-2016, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -52,6 +52,19 @@ class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
 rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('weight', float)])
+
+
+def set_array(longarray, shortarray):
+    """
+    :param longarray: a numpy array of floats of length L >= l
+    :param shortarray: a numpy array of floats of length l
+
+    Fill `longarray` with the values of `shortarray`, starting from the left.
+    If `shortarry` is shorter than `longarray`, then the remaining elements on
+    the right are filled with `numpy.nan` values.
+    """
+    longarray[:len(shortarray)] = shortarray
+    longarray[len(shortarray):] = numpy.nan
 
 
 class BaseCalculator(with_metaclass(abc.ABCMeta)):
@@ -323,7 +336,7 @@ class HazardCalculator(BaseCalculator):
                                    'which are not in the risk model' % missing)
 
         # save the loss ratios in the datastore
-        pairs = [(cb.loss_type, (numpy.float64, len(cb.ratios)))
+        pairs = [(cb.loss_type, (numpy.float64, cb.curve_resolution))
                  for cb in rm.curve_builders if cb.user_provided]
         if not pairs:
             return
@@ -332,7 +345,9 @@ class HazardCalculator(BaseCalculator):
             if cb.user_provided:
                 loss_ratios_lt = loss_ratios[cb.loss_type]
                 for i, imt_taxo in enumerate(sorted(rm)):
-                    loss_ratios_lt[i] = rm[imt_taxo].loss_ratios[cb.loss_type]
+                    ratios = rm[imt_taxo].loss_ratios.get(
+                        cb.loss_type, numpy.array([]))
+                    set_array(loss_ratios_lt[i], ratios)
         self.datastore['loss_ratios'] = loss_ratios
         self.datastore['loss_ratios'].attrs['imt_taxos'] = sorted(rm)
         self.datastore['loss_ratios'].attrs['nbytes'] = loss_ratios.nbytes

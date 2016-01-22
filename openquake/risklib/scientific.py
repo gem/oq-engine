@@ -212,7 +212,6 @@ class VulnerabilityFunction(object):
         return utils.numpy_map(
             vulnerability_function._apply, ground_motion_values)
 
-    @utils.memoized
     def strictly_increasing(self):
         """
         :returns:
@@ -964,11 +963,12 @@ class CurveBuilder(object):
       counts = builder.build_counts(loss_matrix)
     """
     def __init__(self, loss_type, loss_ratios, user_provided,
-                 conditional_loss_poes=(), insured_losses=False):
+                 conditional_loss_poes=(), insured_losses=False,
+                 curve_resolution=None):
         self.loss_type = loss_type
         self.ratios = numpy.array(loss_ratios, F32)
         self.user_provided = user_provided
-        self.curve_resolution = C = len(loss_ratios)
+        self.curve_resolution = C = curve_resolution or len(loss_ratios)
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
         self.I = insured_losses + 1
@@ -1200,7 +1200,9 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
     :param int steps:
         Number of steps between loss ratios.
     """
-    vf = vulnerability_function.strictly_increasing()
+    assert len(hazard_imls) == len(hazard_poes), (
+        len(hazard_imls), len(hazard_poes))
+    vf = vulnerability_function
     imls = vf.mean_imls()
     loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
 
@@ -1217,7 +1219,6 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, steps=10):
     lrem_po = numpy.empty(lrem.shape)
     for idx, po in enumerate(pos):
         lrem_po[:, idx] = lrem[:, idx] * po  # column * po
-
     return numpy.array([loss_ratios, lrem_po.sum(axis=1)])
 
 

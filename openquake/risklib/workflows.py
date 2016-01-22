@@ -198,12 +198,7 @@ def get_values(loss_type, assets, time_event=None):
         a numpy array with the values for the given assets, depending on the
         loss_type.
     """
-    if hasattr(assets[0], 'values'):  # special case for oq-lite
-        values = numpy.array([a.value(loss_type, time_event)
-                              for a in assets])
-    else:  # in the engine
-        values = numpy.array([a.value(loss_type) for a in assets])
-    return values
+    return numpy.array([a.value(loss_type, time_event) for a in assets])
 
 
 class List(list):
@@ -222,7 +217,6 @@ def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
     Yield lists out_by_rlz
     """
     out_by_rlz = List()
-    out_by_rlz.imt_taxo = (workflow.imt, workflow.taxonomy)
     out_by_rlz.loss_type = loss_type
     out_by_rlz.assets = assets
     # extract the realizations from the first asset
@@ -283,6 +277,18 @@ class Workflow(object):
 
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
+
+
+def rescale(curves, values):
+    """
+    Multiply the losses in each curve of kind (losses, poes) by the
+    corresponding value.
+    """
+    n = len(curves)
+    assert n == len(values), (n, len(values))
+    losses = [curves[i, 0] * values[i] for i in range(n)]
+    poes = curves[:, 1]
+    return numpy.array([[losses[i], poes[i]] for i in range(n)])
 
 
 # FIXME: remove the loss fractions after replacing the engine calculator
@@ -413,14 +419,15 @@ class Classical(Workflow):
         curves = utils.numpy_map(self.curves[loss_type], hazard_curves)
         average_losses = utils.numpy_map(scientific.average_loss, curves)
         maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
-        fractions = scientific.loss_map_matrix(self.poes_disagg, curves)
+        values = get_values(loss_type, assets)
 
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
 
-            insured_curves = utils.numpy_map(
-                scientific.insured_loss_curve, curves, deductibles, limits)
+            insured_curves = rescale(
+                utils.numpy_map(scientific.insured_loss_curve,
+                                curves, deductibles, limits), values)
             average_insured_losses = utils.numpy_map(
                 scientific.average_loss, insured_curves)
         else:
@@ -428,10 +435,12 @@ class Classical(Workflow):
             average_insured_losses = None
 
         return scientific.Output(
-            assets, loss_type, loss_curves=curves,
-            average_losses=average_losses, insured_curves=insured_curves,
+            assets, loss_type,
+            loss_curves=rescale(curves, values),
+            average_losses=values * average_losses,
+            insured_curves=insured_curves,
             average_insured_losses=average_insured_losses,
-            loss_maps=maps, loss_fractions=fractions)
+            loss_maps=values * maps)
 
     # FIXME: remove this after removal of the old calculator
     def statistics(self, all_outputs, quantiles=()):

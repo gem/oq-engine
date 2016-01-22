@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Managed correctly the case of vulnerability functions with a different
+    number of loss ratios
   * Now the flag `individual_curves` is honored for aggregate curves
     in the event based risk calculator
   * Fixed a bug breaking the compution of statistics of aggregate curves

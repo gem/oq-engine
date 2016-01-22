@@ -635,7 +635,7 @@ def get_paths(rlz):
     dic = {}
     if hasattr(rlz, 'sm_lt_path'):  # composite realization
         dic['source_model_tree_path'] = '_'.join(rlz.sm_lt_path)
-        dic['gsim_tree_path'] = '_'.join(rlz.sm_lt_path)
+        dic['gsim_tree_path'] = '_'.join(rlz.gsim_lt_path)
     else:  # simple GSIM realization
         dic['source_model_tree_path'] = ''
         dic['gsim_tree_path'] = '_'.join(rlz.lt_path)

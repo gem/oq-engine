@@ -150,7 +150,7 @@ class RiskModel(collections.Mapping):
         loss_maps_dt = numpy.dtype(lm_list) if lm_list else None
         return loss_curve_dt, loss_maps_dt
 
-    # TODO: scheduled for removal once we change agg_curve to be built from
+    # FIXME: scheduled for removal once we change agg_curve to be built from
     # the user-provided loss ratios
     def build_all_loss_dtypes(self, curve_resolution, conditional_loss_poes,
                               insured_losses=False):
@@ -188,20 +188,23 @@ class RiskModel(collections.Mapping):
             0, 1, oqparam.loss_curve_resolution + 1)[1:]
         loss_types = self._get_loss_types()
         for l, loss_type in enumerate(loss_types):
-            if oqparam.calculation_mode == 'classical_risk':
-                all_ratios = [self[key].loss_ratios[loss_type]
-                              for key in sorted(self)]
-                curve_resolutions = map(len, all_ratios)
-                if len(set(curve_resolutions)) > 1:
-                    lines = []
-                    for wf, cr in zip(self.values(), curve_resolutions):
-                        lines.append(
-                            '%s %d' % (wf.risk_functions[loss_type], cr))
-                    logging.warn('Inconsistent num_loss_ratios:\n%s',
-                                 '\n'.join(lines))
+            if oqparam.calculation_mode in ('classical', 'classical_risk'):
+                curve_resolutions = set()
+                lines = []
+                for key in sorted(self):
+                    wf = self[key]
+                    if loss_type in wf.loss_ratios:
+                        ratios = wf.loss_ratios[loss_type]
+                        curve_resolutions.add(len(ratios))
+                        lines.append('%s %d' % (
+                            wf.risk_functions[loss_type], len(ratios)))
+                if len(curve_resolutions) > 1:
+                    logging.info(
+                        'Different num_loss_ratios:\n%s', '\n'.join(lines))
                 cb = scientific.CurveBuilder(
-                    loss_type, all_ratios[0], True,
-                    oqparam.conditional_loss_poes, oqparam.insured_losses)
+                    loss_type, ratios, True,
+                    oqparam.conditional_loss_poes, oqparam.insured_losses,
+                    curve_resolution=max(curve_resolutions))
             elif loss_type in oqparam.loss_ratios:  # loss_ratios provided
                 cb = scientific.CurveBuilder(
                     loss_type, oqparam.loss_ratios[loss_type], True,
