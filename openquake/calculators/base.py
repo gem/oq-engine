@@ -336,7 +336,7 @@ class HazardCalculator(BaseCalculator):
                                    'which are not in the risk model' % missing)
 
         # save the loss ratios in the datastore
-        pairs = [(cb.loss_type, (numpy.float64, len(cb.ratios)))
+        pairs = [(cb.loss_type, (numpy.float64, cb.curve_resolution))
                  for cb in rm.curve_builders if cb.user_provided]
         if not pairs:
             return
