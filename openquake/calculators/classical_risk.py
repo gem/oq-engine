@@ -50,21 +50,19 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         loss_curves=[], loss_maps=[], stat_curves=[], stat_maps=[])
     for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         l = lti[out_by_rlz.loss_type]
-        values = workflows.get_values(out_by_rlz.loss_type, out_by_rlz.assets)
         for out in out_by_rlz:
             r = out.hid
             for i, asset in enumerate(out.assets):
                 aid = asset.idx
-                val = values[i]
-                avg = out.average_losses[i] * val
-                avg_ins = (out.average_insured_losses[i] * val
+                avg = out.average_losses[i]
+                avg_ins = (out.average_insured_losses[i]
                            if ins else numpy.nan)
                 lcurve = (
-                    out.loss_curves[i, 0] * val,
+                    out.loss_curves[i, 0],
                     out.loss_curves[i, 1], avg)
                 if ins:
                     lcurve += (
-                        out.insured_curves[i, 0] * val,
+                        out.insured_curves[i, 0],
                         out.insured_curves[i, 1], avg_ins)
                 else:
                     lcurve += (None, None, None)
@@ -72,7 +70,7 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
 
                 # no insured, shape (P, N)
                 result['loss_maps'].append(
-                    (l, r, aid, out.loss_maps[:, i] * val))
+                    (l, r, aid, out.loss_maps[:, i]))
 
         # compute statistics
         if len(out_by_rlz) > 1:
