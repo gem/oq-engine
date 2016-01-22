@@ -37,7 +37,7 @@ class CeleryNodeMonitorTestCase(unittest.TestCase):
             time.sleep(1.1)
             ping.return_value = {}
             time.sleep(1)
-            # two pings was done in the thread
+            # two pings were done in the thread
             self.assertEqual(ping.call_count, 2)
 
             # check that LOG.warn was called
