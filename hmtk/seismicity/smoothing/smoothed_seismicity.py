@@ -150,7 +150,7 @@ def _get_adjustment(mag, year, mmin, completeness_year, t_f, mag_inc=0.1):
         (0.0 otherwise)
     '''
     if len(completeness_year) == 1:
-        if mag >= mmin:
+        if (mag >= mmin) and (year >= completeness_year[0]):
             # No adjustment needed - event weight == 1
             return 1.0
         else:
@@ -313,7 +313,7 @@ class SmoothedSeismicity(object):
         smoothed_data, sum_data, sum_smooth = self.kernel.smooth_data(
             self.data, config, self.use_3d)
         print 'Smoothing Total Rate Comparison - ' \
-            'Observed: %.6e, Smoothed: %.6e' % (sum_data, sum_smooth)
+            'Observed: %.6g, Smoothed: %.6g' % (sum_data, sum_smooth)
         self.data = np.column_stack([self.data, smoothed_data])
         return self.data
 
@@ -500,12 +500,16 @@ class SmoothedSeismicity(object):
         # Write to file
         writer.writerow(headers)
         for row in self.data:
-            row_dict = {'Longitude': '%.5f' % row[0],
-                        'Latitude': '%.5f' % row[1],
-                        'Depth': '%.3f' % row[2],
-                        'Observed Count': '%.5e' % row[3],
-                        'Smoothed Rate': '%.5e' % row[4],
-                        'b-value': '%.4f' % self.bval}
+            # institute crude compression by omitting points with no seismicity
+            # and taking advantage of the %g format
+            if row[4] == 0:
+                continue
+            row_dict = {'Longitude': '%g' % row[0],
+                        'Latitude': '%g' % row[1],
+                        'Depth': '%g' % row[2],
+                        'Observed Count': '%d' % row[3],
+                        'Smoothed Rate': '%.6g' % row[4],
+                        'b-value': '%g' % self.bval}
             writer.writerow(row_dict)
         fid.close()
 
