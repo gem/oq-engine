@@ -10,32 +10,35 @@ class CeleryNodeMonitorTestCase(unittest.TestCase):
         self.inspect = self.patch.start()
 
     def test_all_nodes_were_down(self):
-        ping = self.inspect().ping
-        ping.return_value = {}
+        stats = self.inspect().stats
+        stats.return_value = {}
         mon = CeleryNodeMonitor(no_distribute=False, interval=1, use_celery=1)
         with self.assertRaises(SystemExit):
             mon.__enter__()
-        self.assertEqual(ping.call_count, 1)  # called only once
+        self.assertEqual(stats.call_count, 1)  # called only once
 
     def test_all_nodes_are_up(self):
+        stats = self.inspect().stats
         ping = self.inspect().ping
-        ping.return_value = {'node1': []}
+        stats.return_value = {'node1': {'pool': {'max-concurrency': 32}}}
         mon = CeleryNodeMonitor(no_distribute=False, interval=1, use_celery=1)
         with mon:
             time.sleep(1.1)
-        # one ping was done in the thread, plus one at the beginning
-        self.assertEqual(ping.call_count, 2)
+        # one ping was done in the thread
+        self.assertEqual(ping.call_count, 1)
 
     def test_one_node_went_down(self):
+        stats = self.inspect().stats
         ping = self.inspect().ping
+        stats.return_value = {'node1': {'pool': {'max-concurrency': 32}}}
         ping.return_value = {'node1': []}
         mon = CeleryNodeMonitor(no_distribute=False, interval=1, use_celery=1)
         with mon, mock.patch('openquake.engine.logs.LOG') as log:
             time.sleep(1.1)
             ping.return_value = {}
             time.sleep(1)
-            # two pings was done in the thread, plus 1 at the beginning
-            self.assertEqual(ping.call_count, 3)
+            # two pings were done in the thread
+            self.assertEqual(ping.call_count, 2)
 
             # check that LOG.warn was called
             self.assertTrue(log.warn.called)
