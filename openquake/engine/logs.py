@@ -22,6 +22,7 @@ Set up some system-wide loggers
 
 import os.path
 import logging
+from datetime import datetime
 from contextlib import contextmanager
 
 # Place the new level between info and warning
@@ -137,19 +138,22 @@ class LogDatabaseHandler(logging.Handler):
     Log stream handler
     """
     def __init__(self, job):
-        from openquake.engine.db.models import Log  # avoid circular imports
-        self.Log = Log
+        from openquake.engine.db.models import getcursor
+        # avoid circular imports
+        self.getcursor = getcursor
         super(LogDatabaseHandler, self).__init__()
         self.job_type = job.job_type
         self.job = job
 
     def emit(self, record):  # pylint: disable=E0202
         if record.levelno >= logging.INFO:
-            self.Log.objects.create(
-                job=self.job,
-                level=record.levelname,
-                process='%s/%s' % (record.processName, record.process),
-                message=record.getMessage())
+            self.getcursor('job_init').execute(
+                """INSERT INTO uiapi.log
+                (job_id, timestamp, level, process, message)
+                VALUES (%s, %s, %s, %s, %s)""",
+                (self.job.id, datetime.utcnow(), record.levelname,
+                 '%s/%s' % (record.processName, record.process),
+                 record.getMessage()))
 
 
 @contextmanager
@@ -186,20 +190,3 @@ def handle(job, log_level='info', log_file=None):
             logging.root.warn('The log file %s is empty!?' % log_file)
         for handler in handlers:
             logging.root.removeHandler(handler)
-            
-
-class tracing(object):
-    """
-    Simple context manager util to handle tracing. E.g.
-
-    with log("exports"):
-       do_export()
-    """
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __enter__(self):
-        LOG.debug('starting ' + self.msg)
-
-    def __exit__(self, *args):
-        LOG.debug('ending ' + self.msg)

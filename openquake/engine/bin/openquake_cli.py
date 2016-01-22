@@ -40,7 +40,8 @@ except ImportError:
 import openquake.engine
 
 from openquake.engine import __version__
-from openquake.engine import engine, logs, views
+from openquake.engine import engine, logs
+from openquake.calculators import views
 from openquake.engine.db import models, upgrade_manager
 from openquake.engine.export import core
 from openquake.engine.tools.import_hazard_curves import import_hazard_curves
@@ -110,11 +111,6 @@ def set_up_arg_parser():
         '--make-html-report', '-r',
         help='Build an HTML report of the computation at the given date',
         metavar='YYYY-MM-DD|today')
-
-    general_grp.add_argument(
-        '--lite', action='store_true',
-        help='Use lite version of the calculator, if possible'
-    )
 
     db_grp = parser.add_argument_group('Database')
     db_grp.add_argument(
@@ -400,13 +396,11 @@ def export(output_id, target_dir, export_type):
         print ("Exporting output produced by a job which did not run "
                "successfully. Results might be uncomplete")
 
-    try:
-        the_file = core.export(output_id, target_dir, export_type)
-        print 'File Exported:'
-        print the_file
-    except NotImplementedError as err:
-        print err
-        print 'This feature is probably not implemented yet'
+    the_file = core.export(output_id, target_dir, export_type)
+    if the_file.endswith('.zip'):
+        print 'Files Exported in', os.path.dirname(the_file)
+    else:
+        print 'File exported:', the_file
 
 
 def _touch_log_file(log_file):
@@ -508,11 +502,10 @@ def main():
         print upgrade_manager.what_if_I_upgrade(conn)
         sys.exit(0)
 
-    run_job = engine.run_job_lite if args.lite else engine.run_job
+    run_job = engine.run_job
 
-    if args.lite and args.hazard_output_id:
-        sys.exit('The --hazard-output-id option is not supported with the '
-                 '--lite option')
+    if args.hazard_output_id:
+        sys.exit('The --hazard-output-id option is not supported anymore')
 
     if args.list_inputs:
         list_inputs(args.list_inputs)
