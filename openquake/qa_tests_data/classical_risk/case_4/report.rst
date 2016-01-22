@@ -69,12 +69,12 @@ source_model.xml 0      Active Shallow Crust 91021       91021        160.125
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== ========
-Number of tasks to generate 2       
-Sent data                   16.64 KB
-Total received data         5.2 KB  
-Maximum received per task   2.6 KB  
-=========================== ========
+=========================== =======
+Number of tasks to generate 2      
+Sent data                   16.6 KB
+Total received data         5.14 KB
+Maximum received per task   2.57 KB
+=========================== =======
 
 Exposure model
 --------------

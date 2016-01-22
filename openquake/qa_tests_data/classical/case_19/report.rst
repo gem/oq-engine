@@ -98,7 +98,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 1       
-Sent data                   52.99 KB
-Total received data         2.37 KB 
-Maximum received per task   2.37 KB 
+Sent data                   53.14 KB
+Total received data         2.53 KB 
+Maximum received per task   2.53 KB 
 =========================== ========

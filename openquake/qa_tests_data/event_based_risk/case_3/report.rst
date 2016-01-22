@@ -90,8 +90,8 @@ Expected data transfer for the sources
 =========================== =========
 Number of tasks to generate 20       
 Sent data                   4.56 MB  
-Total received data         171.88 KB
-Maximum received per task   17.98 KB 
+Total received data         176.79 KB
+Maximum received per task   18.26 KB 
 =========================== =========
 
 Exposure model

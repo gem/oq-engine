@@ -5,21 +5,21 @@ num_sites = 7, sitecol = 581 B
 
 Parameters
 ----------
-============================ =========
-calculation_mode             classical
-number_of_logic_tree_samples 0        
-maximum_distance             200.0    
-investigation_time           50.0     
-ses_per_logic_tree_path      1        
-truncation_level             3.0      
-rupture_mesh_spacing         1.0      
-complex_fault_mesh_spacing   1.0      
-width_of_mfd_bin             0.1      
-area_source_discretization   20.0     
-random_seed                  42       
-master_seed                  0        
-concurrent_tasks             64       
-============================ =========
+============================ ================
+calculation_mode             classical_damage
+number_of_logic_tree_samples 0               
+maximum_distance             200.0           
+investigation_time           50.0            
+ses_per_logic_tree_path      1               
+truncation_level             3.0             
+rupture_mesh_spacing         1.0             
+complex_fault_mesh_spacing   1.0             
+width_of_mfd_bin             0.1             
+area_source_discretization   20.0            
+random_seed                  42              
+master_seed                  0               
+concurrent_tasks             32              
+============================ ================
 
 Input files
 -----------
@@ -70,9 +70,9 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 14      
-Sent data                   97.39 KB
-Total received data         33.26 KB
-Maximum received per task   2.38 KB 
+Sent data                   99.31 KB
+Total received data         35.38 KB
+Maximum received per task   2.53 KB 
 =========================== ========
 
 Exposure model
