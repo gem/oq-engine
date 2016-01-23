@@ -58,10 +58,10 @@ else:  # Ubuntu 12.04
 
 
 executor = ProcessPoolExecutor()
-# the num_tasks_hint is chosen to be 8 times bigger than the name of
-# cores; it is a heuristic number to get a distribution of the
-# load good for our cluster; it has no more significance than that
-executor.num_tasks_hint = executor._max_workers * 8
+# the num_tasks_hint is chosen to be 4 times bigger than the name of
+# cores; it is a heuristic number to get a good distribution;
+# it has no more significance than that
+executor.num_tasks_hint = executor._max_workers * 4
 
 
 def no_distribute():
