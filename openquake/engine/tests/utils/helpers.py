@@ -156,7 +156,7 @@ def assertDeepAlmostEqual(test_case, expected, actual, *args, **kwargs):
         'assert' methods.
     :type test_case: :py:class:`unittest.TestCase` object
     """
-    is_root = not '__trace' in kwargs
+    is_root = '__trace' not in kwargs
     trace = kwargs.pop('__trace', 'ROOT')
     try:
         if isinstance(expected, (int, float, long, complex)):
@@ -198,7 +198,7 @@ def assertModelAlmostEqual(test_case, expected, actual):
     :type actual: dict
     """
 
-    from django.contrib.gis.db import models as gis_models
+    from django.db import models as gis_models
 
     test_case.assertEqual(type(expected), type(actual))
 
