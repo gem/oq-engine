@@ -183,7 +183,6 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         self.assertRaises(RuntimeError, engine.del_calc, hazard_job.id)
 
     def test_del_calc_referenced_by_risk_calc(self):
-        raise unittest.SkipTest
         # Test the case where a risk calculation is referencing the hazard
         # calculation we want to delete.
         # In this case, deletion is not allowed and should raise an exception.
@@ -195,7 +194,6 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         self.assertRaises(RuntimeError, engine.del_calc, hc.id)
 
     def test_del_calc_output_referenced_by_risk_calc(self):
-        raise unittest.SkipTest
         # Test the case where a risk calculation is referencing one of the
         # belonging to the hazard calculation we want to delete.
         # In this case, deletion is not allowed and should raise an exception.
@@ -217,7 +215,6 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
             'classical_psha_based_risk/job.ini')
 
     def test_del_calc(self):
-        raise unittest.SkipTest
         risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
             output_type='curve', username=getpass.getuser()
@@ -251,7 +248,6 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         self.assertRaises(RuntimeError, engine.del_calc, -1)
 
     def test_del_calc_no_access(self):
-        raise unittest.SkipTest
         # Test the case where we try to delete a risk calculation which does
         # not belong to current user.
         # In this case, deletion is now allowed and should raise an exception.
