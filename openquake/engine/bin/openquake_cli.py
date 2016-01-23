@@ -243,17 +243,6 @@ def set_up_arg_parser():
         help='Export all the outputs to the specified directory [deprecated]',
         nargs=2, metavar=('RISK_CALCULATION_ID', 'TARGET_DIR'))
 
-    import_grp = parser.add_argument_group('Import')
-    import_grp.add_argument(
-        '--load-curve',
-        help=('Load hazard curves from an XML file.'),
-        metavar='CURVE_FILE',
-    )
-    import_grp.add_argument(
-        '--list-imported-outputs', action='store_true',
-        help=('List outputs which were imported from a file, not calculated '
-              'from a job'))
-
     return parser
 
 
@@ -312,18 +301,6 @@ def list_calculations(job_type):
             )
             print ('%6d | %10s | %s| %s' % (
                 job.id, status, last_update, descr)).encode('utf-8')
-
-
-# TODO: the command-line switches are not tested, included this one
-def list_imported_outputs():
-    """
-    List outputs which were imported from a file, not calculated from a job
-    """
-    jobs = [jp.job.id for jp in models.JobParam.objects.filter(
-            value__contains=' importer, file ', name='description',
-            job__user_name=getpass.getuser())]
-    outputs = models.Output.objects.filter(oq_job__in=jobs)
-    engine.print_outputs_summary(outputs)
 
 
 def get_hc_id(hc_id):
@@ -597,8 +574,6 @@ def main():
         deprecate('--export-risk-outputs', '--export-outputs')
         job_id, target_dir = args.export_risk_outputs
         export_outputs(get_hc_id(job_id), expanduser(target_dir), exports)
-    elif args.list_imported_outputs:
-        list_imported_outputs()
     elif args.delete_uncompleted_calculations:
         delete_uncompleted_calculations()
     else:
