@@ -62,7 +62,7 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources num_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1640        1640         41.0  
+source_model.xml 0      Active Shallow Crust 1           1640         41.0  
 ================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
@@ -70,6 +70,4 @@ Expected data transfer for the sources
 =========================== =========
 Number of tasks to generate 18       
 Sent data                   368.41 KB
-Total received data         47 KB    
-Maximum received per task   2.61 KB  
 =========================== =========

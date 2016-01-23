@@ -868,9 +868,12 @@ class SourceManager(object):
             logging.info('Sent %d sources in %d block(s)',
                          len(sources), nblocks)
 
-    def store_source_info(self, dstore):
+    def store_source_info(self, dstore, task_name):
         """
-        Save the `source_info` array and its attributes in the datastore
+        Save the `source_info` array and its attributes in the datastore.
+
+        :param dstore: the datastore
+        :param task_name: the name of the task who is receiving the sources
         """
         if self.infos:
             values = self.infos.values()
@@ -888,6 +891,7 @@ class SourceManager(object):
             attrs = dstore['source_chunks'].attrs
             attrs['nbytes'] = sc.nbytes
             attrs['sent'] = sc['sent'].sum()
+            attrs['task_name'] = task_name
             del self.source_chunks
 
 

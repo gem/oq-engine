@@ -80,11 +80,11 @@ Number of ruptures per tectonic region type
 ============================ ====== ==================== =========== ============ ======
 source_model                 trt_id trt                  num_sources num_ruptures weight
 ============================ ====== ==================== =========== ============ ======
-simple_area_source_model.xml 0      Subduction Interface 42624       42624        0     
-simple_area_source_model.xml 1      Volcanic             210         210          0     
-simple_area_source_model.xml 2      Shield               96804       96804        0     
-simple_area_source_model.xml 3      Stable Shallow Crust 81154       81154        0     
-simple_area_source_model.xml 4      Subduction Inslab    93219       93219        194.25
+simple_area_source_model.xml 0      Subduction Interface 0           42624        0     
+simple_area_source_model.xml 1      Volcanic             0           210          0     
+simple_area_source_model.xml 2      Shield               0           96804        0     
+simple_area_source_model.xml 3      Stable Shallow Crust 0           81154        0     
+simple_area_source_model.xml 4      Subduction Inslab    1           93219        194.25
 ============================ ====== ==================== =========== ============ ======
 
 =============== ======
@@ -99,6 +99,4 @@ Expected data transfer for the sources
 =========================== ========
 Number of tasks to generate 1       
 Sent data                   53.14 KB
-Total received data         2.53 KB 
-Maximum received per task   2.53 KB 
 =========================== ========

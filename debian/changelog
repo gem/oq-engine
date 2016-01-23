@@ -2,6 +2,7 @@
   * Source filtering is now on demand, depending on the parameter
     `filter_sources`.
   * Refactored the source filtering/splitting mechanism and improved
+    substantially the classical_tiling calculator
   * Managed correctly the case of vulnerability functions with a different
     number of loss ratios
   * Now the flag `individual_curves` is honored for aggregate curves
@@ -14,7 +15,6 @@
   * Added a validation for empty descriptions in fragility models
   * Changed the classical_tiling calculator to split the heavy sources first
   * Fixed the GMPETable GSIM and added an end-to-end test for it
-    substantially the classical_tiling calculator
   * Changed the management of the seeds in the event based calculator:
     now we generate a seed per each rupture
   * Worked around a bug in h5py.Group.visitems in Ubuntu 12.04

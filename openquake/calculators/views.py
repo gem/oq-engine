@@ -160,7 +160,7 @@ def view_ruptures_per_trt(token, dstore):
             weight = w.get(trt_model.id, 0)
             tot_weight += weight
             tbl.append((sm.name, trt_model.id, trt_model.trt,
-                        num_ruptures, num_ruptures, weight))
+                        num_sources, num_ruptures, weight))
     rows = [('#TRT models', num_trts),
             ('#sources', tot_sources),
             ('#ruptures', tot_ruptures),
@@ -217,10 +217,12 @@ def source_data_transfer(token, dstore):
     sc = dstore['source_chunks']
     tbl = [
         ('Number of tasks to generate', len(sc)),
-        ('Sent data', humansize(sc.attrs['sent'])),
-        ('Total received data', humansize(sc.attrs['tot_received'])),
-        ('Maximum received per task', humansize(sc.attrs['max_received'])),
-    ]
+        ('Sent data', humansize(sc.attrs['sent']))]
+    if sc.attrs['task_name'] != 'dummy_task':
+        tbl.extend([
+            ('Total received data', humansize(sc.attrs['tot_received'])),
+            ('Maximum received per task', humansize(sc.attrs['max_received'])),
+        ])
     return rst_table(tbl)
 
 

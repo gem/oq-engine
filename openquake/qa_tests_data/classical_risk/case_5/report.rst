@@ -18,7 +18,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   10.0     
 random_seed                  1024     
 master_seed                  0        
-concurrent_tasks             32       
+concurrent_tasks             16       
 ============================ =========
 
 Input files
@@ -66,8 +66,8 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ==============
 source_model     trt_id trt                  num_sources num_ruptures weight        
 ================ ====== ==================== =========== ============ ==============
-source_model.xml 0      Active Shallow Crust 23          23           0.574999988079
-source_model.xml 1      Subduction Interface 23          23           0.574999988079
+source_model.xml 0      Active Shallow Crust 1           23           0.574999988079
+source_model.xml 1      Subduction Interface 1           23           0.574999988079
 ================ ====== ==================== =========== ============ ==============
 
 =============== =============
@@ -82,6 +82,4 @@ Expected data transfer for the sources
 =========================== ========
 Number of tasks to generate 2       
 Sent data                   16.66 KB
-Total received data         4.05 KB 
-Maximum received per task   2.03 KB 
 =========================== ========

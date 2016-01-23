@@ -69,9 +69,9 @@ Number of ruptures per tectonic region type
 ================== ====== ==================== =========== ============ ======
 source_model       trt_id trt                  num_sources num_ruptures weight
 ================== ====== ==================== =========== ============ ======
-source_model_1.xml 0      Subduction IntraSlab 1815        1815         45.375
-source_model_1.xml 1      Active Shallow Crust 3630        3630         90.75 
-source_model_2.xml 2      Active Shallow Crust 1420        1420         1420.0
+source_model_1.xml 0      Subduction IntraSlab 1           1815         45.375
+source_model_1.xml 1      Active Shallow Crust 2           3630         90.75 
+source_model_2.xml 2      Active Shallow Crust 1           1420         1420.0
 ================== ====== ==================== =========== ============ ======
 
 =============== ========
@@ -83,9 +83,7 @@ filtered_weight 1556.125
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== =========
-Number of tasks to generate 14       
-Sent data                   139.59 KB
-Total received data         30.28 KB 
-Maximum received per task   2.16 KB  
-=========================== =========
+=========================== ========
+Number of tasks to generate 14      
+Sent data                   139.7 KB
+=========================== ========

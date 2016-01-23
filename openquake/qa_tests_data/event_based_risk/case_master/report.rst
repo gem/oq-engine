@@ -18,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0            
 random_seed                  24              
 master_seed                  0               
-concurrent_tasks             32              
+concurrent_tasks             16              
 avg_losses                   True            
 ============================ ================
 
@@ -91,15 +91,15 @@ Collections Realizations
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
-Number of tasks to generate 28       
-Sent data                   409.14 KB
-Total received data         159.96 KB
+Number of tasks to generate 22       
+Sent data                   325.7 KB 
+Total received data         129.33 KB
 Maximum received per task   15.2 KB  
 =========================== =========
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 6 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 32 tasks = 105 KB
+7 asset(s) x 6 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 16 tasks = 52.5 KB
 
 Exposure model
 --------------

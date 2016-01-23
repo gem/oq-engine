@@ -18,7 +18,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   10.0     
 random_seed                  106      
 master_seed                  0        
-concurrent_tasks             32       
+concurrent_tasks             16       
 ============================ =========
 
 Input files
@@ -139,33 +139,33 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources num_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 444         444          444.0 
-source_model.xml 1      Active Shallow Crust 208         208          208.0 
-source_model.xml 2      Active Shallow Crust 149         149          149.0 
-source_model.xml 3      Active Shallow Crust 534         534          534.0 
-source_model.xml 4      Active Shallow Crust 298         298          298.0 
-source_model.xml 5      Active Shallow Crust 239         239          239.0 
-source_model.xml 6      Active Shallow Crust 474         474          474.0 
-source_model.xml 7      Active Shallow Crust 238         238          238.0 
-source_model.xml 8      Active Shallow Crust 179         179          179.0 
-source_model.xml 9      Active Shallow Crust 409         409          409.0 
-source_model.xml 10     Active Shallow Crust 173         173          173.0 
-source_model.xml 11     Active Shallow Crust 114         114          114.0 
-source_model.xml 12     Active Shallow Crust 465         465          465.0 
-source_model.xml 13     Active Shallow Crust 229         229          229.0 
-source_model.xml 14     Active Shallow Crust 170         170          170.0 
-source_model.xml 15     Active Shallow Crust 411         411          411.0 
-source_model.xml 16     Active Shallow Crust 175         175          175.0 
-source_model.xml 17     Active Shallow Crust 116         116          116.0 
-source_model.xml 18     Active Shallow Crust 483         483          483.0 
-source_model.xml 19     Active Shallow Crust 247         247          247.0 
-source_model.xml 20     Active Shallow Crust 188         188          188.0 
-source_model.xml 21     Active Shallow Crust 582         582          582.0 
-source_model.xml 22     Active Shallow Crust 346         346          346.0 
-source_model.xml 23     Active Shallow Crust 287         287          287.0 
-source_model.xml 24     Active Shallow Crust 516         516          516.0 
-source_model.xml 25     Active Shallow Crust 280         280          280.0 
-source_model.xml 26     Active Shallow Crust 221         221          221.0 
+source_model.xml 0      Active Shallow Crust 2           444          444.0 
+source_model.xml 1      Active Shallow Crust 2           208          208.0 
+source_model.xml 2      Active Shallow Crust 2           149          149.0 
+source_model.xml 3      Active Shallow Crust 2           534          534.0 
+source_model.xml 4      Active Shallow Crust 2           298          298.0 
+source_model.xml 5      Active Shallow Crust 2           239          239.0 
+source_model.xml 6      Active Shallow Crust 2           474          474.0 
+source_model.xml 7      Active Shallow Crust 2           238          238.0 
+source_model.xml 8      Active Shallow Crust 2           179          179.0 
+source_model.xml 9      Active Shallow Crust 2           409          409.0 
+source_model.xml 10     Active Shallow Crust 2           173          173.0 
+source_model.xml 11     Active Shallow Crust 2           114          114.0 
+source_model.xml 12     Active Shallow Crust 2           465          465.0 
+source_model.xml 13     Active Shallow Crust 2           229          229.0 
+source_model.xml 14     Active Shallow Crust 2           170          170.0 
+source_model.xml 15     Active Shallow Crust 2           411          411.0 
+source_model.xml 16     Active Shallow Crust 2           175          175.0 
+source_model.xml 17     Active Shallow Crust 2           116          116.0 
+source_model.xml 18     Active Shallow Crust 2           483          483.0 
+source_model.xml 19     Active Shallow Crust 2           247          247.0 
+source_model.xml 20     Active Shallow Crust 2           188          188.0 
+source_model.xml 21     Active Shallow Crust 2           582          582.0 
+source_model.xml 22     Active Shallow Crust 2           346          346.0 
+source_model.xml 23     Active Shallow Crust 2           287          287.0 
+source_model.xml 24     Active Shallow Crust 2           516          516.0 
+source_model.xml 25     Active Shallow Crust 2           280          280.0 
+source_model.xml 26     Active Shallow Crust 2           221          221.0 
 ================ ====== ==================== =========== ============ ======
 
 =============== ======
@@ -177,9 +177,7 @@ filtered_weight 8175.0
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== ========
-Number of tasks to generate 49      
-Sent data                   12.06 MB
-Total received data         83.12 KB
-Maximum received per task   1.7 KB  
-=========================== ========
+=========================== =======
+Number of tasks to generate 30     
+Sent data                   1.35 MB
+=========================== =======

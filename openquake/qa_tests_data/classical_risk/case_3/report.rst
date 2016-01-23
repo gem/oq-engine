@@ -64,7 +64,7 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ============
 source_model     trt_id trt                  num_sources num_ruptures weight      
 ================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 868805      868805       1660.4750042
+source_model.xml 0      Active Shallow Crust 24          868805       1660.4750042
 ================ ====== ==================== =========== ============ ============
 
 Expected data transfer for the sources

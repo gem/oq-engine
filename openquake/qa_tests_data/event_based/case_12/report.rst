@@ -18,7 +18,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   10.0       
 random_seed                  1066       
 master_seed                  0          
-concurrent_tasks             32         
+concurrent_tasks             16         
 ============================ ===========
 
 Input files
@@ -78,7 +78,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 2        
-Sent data                   13.85 KB 
+Sent data                   13.84 KB 
 Total received data         551.8 KB 
 Maximum received per task   282.48 KB
 =========================== =========

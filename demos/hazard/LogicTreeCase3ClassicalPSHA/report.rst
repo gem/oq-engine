@@ -18,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0      
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             64       
+concurrent_tasks             16       
 ============================ =========
 
 Input files
@@ -121,24 +121,24 @@ Number of ruptures per tectonic region type
 ================ ====== ======================== =========== ============ =======
 source_model     trt_id trt                      num_sources num_ruptures weight 
 ================ ====== ======================== =========== ============ =======
-source_model.xml 0      Active Shallow Crust     1334        1334         1334.0 
-source_model.xml 1      Stable Continental Crust 4100        4100         102.5  
-source_model.xml 2      Active Shallow Crust     1339        1339         1339.0 
-source_model.xml 3      Stable Continental Crust 5125        5125         128.125
-source_model.xml 4      Active Shallow Crust     1344        1344         1344.0 
-source_model.xml 5      Stable Continental Crust 6150        6150         153.75 
-source_model.xml 6      Active Shallow Crust     1334        1334         1334.0 
-source_model.xml 7      Stable Continental Crust 4100        4100         102.5  
-source_model.xml 8      Active Shallow Crust     1339        1339         1339.0 
-source_model.xml 9      Stable Continental Crust 5125        5125         128.125
-source_model.xml 10     Active Shallow Crust     1344        1344         1344.0 
-source_model.xml 11     Stable Continental Crust 6150        6150         153.75 
-source_model.xml 12     Active Shallow Crust     1334        1334         1334.0 
-source_model.xml 13     Stable Continental Crust 4100        4100         102.5  
-source_model.xml 14     Active Shallow Crust     1339        1339         1339.0 
-source_model.xml 15     Stable Continental Crust 5125        5125         128.125
-source_model.xml 16     Active Shallow Crust     1344        1344         1344.0 
-source_model.xml 17     Stable Continental Crust 6150        6150         153.75 
+source_model.xml 0      Active Shallow Crust     1           1334         1334.0 
+source_model.xml 1      Stable Continental Crust 1           4100         102.5  
+source_model.xml 2      Active Shallow Crust     1           1339         1339.0 
+source_model.xml 3      Stable Continental Crust 1           5125         128.125
+source_model.xml 4      Active Shallow Crust     1           1344         1344.0 
+source_model.xml 5      Stable Continental Crust 1           6150         153.75 
+source_model.xml 6      Active Shallow Crust     1           1334         1334.0 
+source_model.xml 7      Stable Continental Crust 1           4100         102.5  
+source_model.xml 8      Active Shallow Crust     1           1339         1339.0 
+source_model.xml 9      Stable Continental Crust 1           5125         128.125
+source_model.xml 10     Active Shallow Crust     1           1344         1344.0 
+source_model.xml 11     Stable Continental Crust 1           6150         153.75 
+source_model.xml 12     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 13     Stable Continental Crust 1           4100         102.5  
+source_model.xml 14     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 15     Stable Continental Crust 1           5125         128.125
+source_model.xml 16     Active Shallow Crust     1           1344         1344.0 
+source_model.xml 17     Stable Continental Crust 1           6150         153.75 
 ================ ====== ======================== =========== ============ =======
 
 =============== =========
@@ -150,9 +150,7 @@ filtered_weight 13204.125
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== =========
-Number of tasks to generate 72       
-Sent data                   49.28 MB 
-Total received data         137.39 KB
-Maximum received per task   1.91 KB  
-=========================== =========
+=========================== ========
+Number of tasks to generate 27      
+Sent data                   47.76 MB
+=========================== ========

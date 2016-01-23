@@ -112,17 +112,17 @@ Number of ruptures per tectonic region type
 ========================= ====== ==================== =========== ============ =============
 source_model              trt_id trt                  num_sources num_ruptures weight       
 ========================= ====== ==================== =========== ============ =============
-models/src/as_model.xml   0      Shield               2808        2808         0            
-models/src/as_model.xml   1      Subduction Interface 334         334          0            
-models/src/as_model.xml   2      Subduction IntraSlab 18585       18585        0            
-models/src/as_model.xml   3      Volcanic             14          14           0            
-models/src/as_model.xml   4      Active Shallow Crust 32481       32481        96.9000015259
-models/src/as_model.xml   5      Stable Shallow Crust 28746       28746        0            
-models/src/fsbg_model.xml 6      Shield               20124       20124        0            
-models/src/fsbg_model.xml 7      Volcanic             42          42           0            
-models/src/fsbg_model.xml 8      Stable Shallow Crust 1572        1572         0            
-models/src/fsbg_model.xml 9      Active Shallow Crust 16635       16635        51.5250000954
-models/src/ss_model.xml   10     Active Shallow Crust 27          27           0            
+models/src/as_model.xml   0      Shield               0           2808         0            
+models/src/as_model.xml   1      Subduction Interface 0           334          0            
+models/src/as_model.xml   2      Subduction IntraSlab 0           18585        0            
+models/src/as_model.xml   3      Volcanic             0           14           0            
+models/src/as_model.xml   4      Active Shallow Crust 1           32481        96.9000015259
+models/src/as_model.xml   5      Stable Shallow Crust 0           28746        0            
+models/src/fsbg_model.xml 6      Shield               0           20124        0            
+models/src/fsbg_model.xml 7      Volcanic             0           42           0            
+models/src/fsbg_model.xml 8      Stable Shallow Crust 0           1572         0            
+models/src/fsbg_model.xml 9      Active Shallow Crust 2           16635        51.5250000954
+models/src/ss_model.xml   10     Active Shallow Crust 0           27           0            
 ========================= ====== ==================== =========== ============ =============
 
 =============== =============
@@ -134,9 +134,7 @@ filtered_weight 148.425001621
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== ========
-Number of tasks to generate 15      
-Sent data                   2.96 MB 
-Total received data         58.01 KB
-Maximum received per task   3.87 KB 
-=========================== ========
+=========================== =======
+Number of tasks to generate 15     
+Sent data                   2.96 MB
+=========================== =======

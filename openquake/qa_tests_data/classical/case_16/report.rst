@@ -88,16 +88,16 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources num_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1925        1925         48.125
-source_model.xml 1      Active Shallow Crust 2025        2025         50.625
-source_model.xml 2      Active Shallow Crust 2135        2135         53.375
-source_model.xml 3      Active Shallow Crust 2035        2035         50.875
-source_model.xml 4      Active Shallow Crust 1865        1865         46.625
-source_model.xml 5      Active Shallow Crust 2085        2085         52.125
-source_model.xml 6      Active Shallow Crust 2075        2075         51.875
-source_model.xml 7      Active Shallow Crust 2185        2185         54.625
-source_model.xml 8      Active Shallow Crust 1905        1905         47.625
-source_model.xml 9      Active Shallow Crust 2025        2025         50.625
+source_model.xml 0      Active Shallow Crust 5           1925         48.125
+source_model.xml 1      Active Shallow Crust 5           2025         50.625
+source_model.xml 2      Active Shallow Crust 5           2135         53.375
+source_model.xml 3      Active Shallow Crust 5           2035         50.875
+source_model.xml 4      Active Shallow Crust 5           1865         46.625
+source_model.xml 5      Active Shallow Crust 5           2085         52.125
+source_model.xml 6      Active Shallow Crust 5           2075         51.875
+source_model.xml 7      Active Shallow Crust 5           2185         54.625
+source_model.xml 8      Active Shallow Crust 5           1905         47.625
+source_model.xml 9      Active Shallow Crust 5           2025         50.625
 ================ ====== ==================== =========== ============ ======
 
 =============== =====
@@ -111,7 +111,5 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 22       
-Sent data                   548.85 KB
-Total received data         42.3 KB  
-Maximum received per task   1.92 KB  
+Sent data                   550.04 KB
 =========================== =========

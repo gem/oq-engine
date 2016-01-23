@@ -313,7 +313,8 @@ class HazardCalculator(BaseCalculator):
                                  self.job_info['input_weight'])
                 with self.monitor('managing sources', autoflush=True):
                     self.send_sources()
-                self.manager.store_source_info(self.datastore)
+                self.manager.store_source_info(
+                    self.datastore, self.core_task.__func__.__name__)
                 attrs = self.datastore.hdf5['composite_source_model'].attrs
                 attrs['weight'] = self.csm.weight
                 attrs['filtered_weight'] = self.csm.filtered_weight

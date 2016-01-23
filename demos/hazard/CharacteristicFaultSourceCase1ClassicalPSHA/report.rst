@@ -18,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0      
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             64       
+concurrent_tasks             16       
 ============================ =========
 
 Input files
@@ -66,9 +66,7 @@ source_model.xml 0      Active Shallow Crust 1           1            1.0
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== ========
-Number of tasks to generate 1       
-Sent data                   224.9 KB
-Total received data         3.38 KB 
-Maximum received per task   3.38 KB 
-=========================== ========
+=========================== =========
+Number of tasks to generate 1        
+Sent data                   224.93 KB
+=========================== =========
