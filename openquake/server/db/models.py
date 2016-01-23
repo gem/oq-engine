@@ -24,14 +24,14 @@
 '''
 Model representations of the OpenQuake DB tables.
 '''
+import ast
 import collections
 from datetime import datetime
 from openquake.commonlib.oqvalidation import OqParam, RISK_CALCULATORS
-from openquake.server.db import fields
 import django
 if hasattr(django, 'setup'):
     django.setup()  # for Django >= 1.7
-from django.contrib.gis.db import models as djm
+from django.db import models as djm
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import connections
 
@@ -108,6 +108,25 @@ def getcursor(route):
 
 class MissingParameter(KeyError):
     """Raised by OqJob.get_param when a parameter is missing in the database"""
+
+
+class LiteralField(djm.Field):
+    """
+    Convert from Postgres TEXT to Python objects and viceversa by using
+    `ast.literal_eval` and `repr`.
+    """
+
+    __metaclass__ = djm.SubfieldBase
+
+    def db_type(self, connection=None):
+        return 'text'
+
+    def to_python(self, value):
+        if value is not None:
+            return ast.literal_eval(value)
+
+    def get_prep_value(self, value):
+        return repr(value)
 
 
 # Tables in the 'uiapi' schema.
@@ -258,7 +277,7 @@ class JobParam(djm.Model):
     '''
     job = djm.ForeignKey('OqJob')
     name = djm.TextField(null=False)
-    value = fields.LiteralField(null=False)
+    value = LiteralField(null=False)
 
     class Meta:
         db_table = 'uiapi\".\"job_param'
