@@ -298,7 +298,7 @@ def list_calculations(job_type):
         print ('job_id |     status |         last_update | '
                '        description')
         for job in jobs:
-            descr = job.get_param('description', None)
+            descr = job.description
             latest_job = job
             if latest_job.is_running:
                 status = 'pending'

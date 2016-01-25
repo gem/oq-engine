@@ -24,9 +24,12 @@
 '''
 Model representations of the OpenQuake DB tables.
 '''
+import os
 import ast
 import collections
 from datetime import datetime
+
+from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.oqvalidation import OqParam, RISK_CALCULATORS
 import django
 if hasattr(django, 'setup'):
@@ -135,17 +138,9 @@ class OqJob(djm.Model):
     '''
     An OpenQuake engine run started by the user
     '''
+    description = djm.TextField()
     user_name = djm.TextField()
     hazard_calculation = djm.ForeignKey('OqJob', null=True)
-    LOG_LEVEL_CHOICES = (
-        (u'debug', u'Debug'),
-        (u'info', u'Info'),
-        (u'progress', u'Progress'),
-        (u'warn', u'Warn'),
-        (u'error', u'Error'),
-        (u'critical', u'Critical'),
-    )
-    log_level = djm.TextField(choices=LOG_LEVEL_CHOICES, default='progress')
     STATUS_CHOICES = (
         (u'created', u'Created'),
         (u'pre_executing', u'Pre-Executing'),
@@ -157,35 +152,26 @@ class OqJob(djm.Model):
         (u'complete', u'Complete'),
     )
     status = djm.TextField(choices=STATUS_CHOICES, default='pre_executing')
-    oq_version = djm.TextField(null=True, blank=True)
-    hazardlib_version = djm.TextField(null=True, blank=True)
-    commonlib_version = djm.TextField(null=True, blank=True)
-    risklib_version = djm.TextField(null=True, blank=True)
     is_running = djm.BooleanField(default=True)
-    duration = djm.IntegerField(default=0)
-    job_pid = djm.IntegerField(default=0)
-    supervisor_pid = djm.IntegerField(default=0)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
+    start_time = djm.DateTimeField(editable=False, default=datetime.utcnow)
+    stop_time = djm.DateTimeField(editable=False)
     relevant = djm.BooleanField(null=False, default=True)
-    ds_calc_dir = djm.TextField(null=True, blank=True)  # datastore calc_dir
+    ds_calc_dir = djm.TextField(null=False, blank=True)  # datastore calc_dir
 
     class Meta:
-        db_table = 'uiapi\".\"oq_job'
-
-    def risk_calculation(self):
-        return self.get_oqparam()
+        db_table = 'job'
 
     @property
     def job_type(self):
         """
         'hazard' or 'risk'
         """
-        calcmode = self.get_param('calculation_mode', 'unknown')
+        calcmode = self.get_oqparam().calculation_mode
         # the calculation mode can be unknown if the job parameters
         # have not been written on the database yet
         return 'risk' if calcmode in RISK_CALCULATORS else 'hazard'
 
-    def get_or_create_output(self, display_name, output_type):
+    def get_or_create_output(self, display_name, output_type, ds_key):
         """
         :param disp_name: display name of the output
         :param output_type: the output type
@@ -197,52 +183,17 @@ class OqJob(djm.Model):
                 output_type=output_type)
         except ObjectDoesNotExist:
             output = Output.objects.create_output(
-                self, display_name, output_type)
+                self, display_name, output_type, ds_key)
         return output
-
-    def get_param(self, name, missing=RAISE_EXC):
-        """
-        `job.get_param(name)` returns the value of the requested parameter
-        or raise a MissingParameter exception if the parameter does not
-        exist in the database.
-
-        `job.get_param(name, missing)` returns the value of the requested
-        parameter or the `missing` value if the parameter does not
-        exist in the database.
-
-        :param name: the name of the parameter
-        :param missing: value returned if the parameter is missing
-
-        NB: since job_param.value is NOT NULL, `.get_param(name)`
-        can return None only if the parameter is missing.
-        """
-        try:
-            return JobParam.objects.get(job=self, name=name).value
-        except ObjectDoesNotExist:
-            if missing is RAISE_EXC:
-                raise MissingParameter(name)
-            return missing
 
     def get_oqparam(self):
         """
         Return an OqParam object as read from the database
         """
-        oqparam = object.__new__(OqParam)
-        for row in JobParam.objects.filter(job=self):
-            setattr(oqparam, row.name, row.value)
+        datadir = os.path.dirname(self.ds_calc_dir)
+        dstore = DataStore(self.id, datadir, mode='r')
+        oqparam = OqParam.from_(dstore.attrs)
         return oqparam
-
-    def save_params(self, params):
-        """
-        Save on the database table job_params the given parameters.
-
-        :param job: an :class:`OqJob` instance
-        :param params: a dictionary {name: string} of parameters
-        """
-        for name, value in params.iteritems():
-            if name == 'gsim':  # special case
-                value = str(value)
-            JobParam.objects.create(job=self, name=name, value=repr(value))
 
     def __repr__(self):
         return '<%s %d, %s>' % (self.__class__.__name__,
@@ -255,32 +206,6 @@ def oqparam(job_id):
     :returns: instance of :class:`openquake.commonlib.oqvalidation.OqParam`
     """
     return OqJob.objects.get(pk=job_id).get_oqparam()
-
-
-class JobStats(djm.Model):
-    '''
-    Capture various statistics about a job.
-    '''
-    oq_job = djm.OneToOneField('OqJob')
-    start_time = djm.DateTimeField(editable=False, default=datetime.utcnow)
-    stop_time = djm.DateTimeField(editable=False)
-    # The disk space occupation in bytes
-    disk_space = djm.IntegerField(null=True)
-
-    class Meta:
-        db_table = 'uiapi\".\"job_stats'
-
-
-class JobParam(djm.Model):
-    '''
-    The parameters of a job
-    '''
-    job = djm.ForeignKey('OqJob')
-    name = djm.TextField(null=False)
-    value = LiteralField(null=False)
-
-    class Meta:
-        db_table = 'uiapi\".\"job_param'
 
 
 class Performance(djm.Model):
@@ -307,12 +232,20 @@ class Log(djm.Model):
     '''
     job = djm.ForeignKey('OqJob', null=True)
     timestamp = djm.DateTimeField(editable=False, default=datetime.utcnow)
-    level = djm.TextField(choices=OqJob.LOG_LEVEL_CHOICES)
+    LOG_LEVEL_CHOICES = (
+        (u'debug', u'Debug'),
+        (u'info', u'Info'),
+        (u'progress', u'Progress'),
+        (u'warn', u'Warn'),
+        (u'error', u'Error'),
+        (u'critical', u'Critical'),
+    )
+    level = djm.TextField(choices=LOG_LEVEL_CHOICES)
     process = djm.TextField(null=False)
     message = djm.TextField(null=False)
 
     class Meta:
-        db_table = 'uiapi\".\"log'
+        db_table = 'log'
 
 
 def extract_from(objlist, attr):
@@ -337,14 +270,15 @@ class OutputManager(djm.Manager):
     """
     Manager class to filter and create Output objects
     """
-    def create_output(self, job, display_name, output_type):
+    def create_output(self, job, display_name, output_type, ds_key):
         """
         Create an output for the given `job`, `display_name` and
         `output_type` (default to hazard_curve)
         """
         return self.create(oq_job=job,
                            display_name=display_name,
-                           output_type=output_type)
+                           output_type=output_type,
+                           ds_key=ds_key)
 
 
 class Output(djm.Model):
@@ -405,7 +339,7 @@ class Output(djm.Model):
     output_type = djm.TextField(
         choices=HAZARD_OUTPUT_TYPE_CHOICES + RISK_OUTPUT_TYPE_CHOICES)
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-    ds_key = djm.TextField(null=True, blank=True)  # datastore key
+    ds_key = djm.TextField(null=False, blank=True)  # datastore key
 
     objects = OutputManager()
 
@@ -413,7 +347,7 @@ class Output(djm.Model):
         return "%d||%s||%s" % (self.id, self.output_type, self.display_name)
 
     class Meta:
-        db_table = 'uiapi\".\"output'
+        db_table = 'output'
         ordering = ['id']
 
     def is_hazard_curve(self):
