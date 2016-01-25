@@ -91,7 +91,6 @@ sig_hand () {
     if [ "$lxc_name" != "" ]; then
         set +e
         scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation"
-        scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
         upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
@@ -249,7 +248,6 @@ _pkgbuild_innervm_run () {
 #                     - installs oq-engine sources on lxc
 #                     - set up postgres
 #                     - upgrade db
-#                     - runs celeryd
 #                     - runs tests
 #                     - runs coverage
 #                     - collects all tests output files from lxc
@@ -323,43 +321,7 @@ _devtest_innervm_run () {
     ssh $lxc_ip "set -e ; sudo su postgres -c \"cd oq-engine ; openquake/engine/bin/oq_create_db --yes --db-name=openquake2\""
     ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine ; bin/oq-engine --upgrade-db --yes"
 
-    # run celeryd daemon
-    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
-
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
-        # wait for celeryd startup time
-        ssh $lxc_ip "
-celeryd_wait() {
-    local cw_nloop=\"\$1\" cw_ret cw_i
-
-    if command -v celeryctl &> /dev/null; then
-        # celery 2.4
-        celery=celeryctl
-    elif command -v celery &> /dev/null; then
-        # celery 3
-        celery=celery
-    else
-        echo \"ERROR: no Celery available\"
-        return 1
-    fi
-
-    for cw_i in \$(seq 1 \$cw_nloop); do
-        cw_ret=\"\$(\$celery status)\"
-        if echo \"\$cw_ret\" | grep -iq '^error:'; then
-            if echo \"\$cw_ret\" | grep -ivq '^error: no nodes replied'; then
-                return 1
-            fi
-        else
-            return 0
-        fi
-        sleep 1
-    done
-
-    return 1
-}
-
-celeryd_wait $GEM_MAXLOOP"
-
         if [ -n "$GEM_DEVTEST_SKIP_SLOW_TESTS" ]; then
             # skip slow tests
             skip_tests="!slow,"
@@ -451,7 +413,6 @@ _builddoc_innervm_run () {
 #                     - performs package tests (install, remove, reinstall ..)
 #                     - set up postgres
 #                     - upgrade db
-#                     - runs celeryd
 #                     - executes demos
 #
 #      <lxc_ip>    the IP address of lxc instance
@@ -547,13 +508,6 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo service postgresql restart"
     # XXX: should the --upgrade-db command go in the postint script?
     ssh $lxc_ip "set -e; oq-engine --upgrade-db --yes"
-
-    # run celeryd daemon
-    ssh $lxc_ip "cd /usr/share/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
-
-    # FIXME
-    echo "Wait some seconds to allow celery come alive..."
-    sleep 30s
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run all of the hazard and risk demos
@@ -805,7 +759,6 @@ devtest_run () {
     inner_ret=$?
 
     scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation.dev" || true
-    scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/devtest.history"
 
     sudo $LXC_TERM -n $lxc_name
@@ -977,7 +930,6 @@ EOF
     inner_ret=$?
 
     scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation.pkg" || true
-    scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
 
     sudo $LXC_TERM -n $lxc_name
