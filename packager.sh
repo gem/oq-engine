@@ -90,7 +90,7 @@ sig_hand () {
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
-        if [ -z $GEM_USE_CELERY ]; then
+        if [ "$GEM_USE_CELERY" ]; then
             scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
         fi
         scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation"
@@ -515,7 +515,7 @@ _pkgtest_innervm_run () {
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # Is the GEM_USE_CELERY flag is set, use celery to run the demos
-        if [ -z "$GEM_USE_CELERY" ]; then
+        if [ "$GEM_USE_CELERY" ]; then
             ssh $lxc_ip "sed -i /etc/openquake/openquake.cfg 's/use_celery = false/use_celery = true/g'"
             # run celeryd daemon
             ssh $lxc_ip "cd /usr/share/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
@@ -974,7 +974,7 @@ EOF
     _pkgtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
-    if [ -z $GEM_USE_CELERY ]; then
+    if [ "$GEM_USE_CELERY" ]; then
         scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
     fi
     scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation.pkg" || true
