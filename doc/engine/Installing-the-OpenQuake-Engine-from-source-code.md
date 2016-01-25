@@ -6,7 +6,7 @@ The easiest way to install the primary dependencies for OQ Engine is to install 
 
 Here's how:
 ```bash
-sudo apt-get install python-software-properties
+sudo apt-get install software-properties-common
 sudo add-apt-repository ppa:openquake-automatic-team/latest-master
 sudo apt-get update
 sudo apt-get install python-oq-engine
