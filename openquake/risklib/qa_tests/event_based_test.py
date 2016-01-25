@@ -21,7 +21,7 @@ import mock
 
 import numpy
 
-from openquake.risklib import scientific, workflows
+from openquake.risklib import scientific, riskmodels
 from openquake.risklib.tests.utils import vectors_from_csv
 
 THISDIR = os.path.dirname(__file__)
@@ -29,7 +29,7 @@ THISDIR = os.path.dirname(__file__)
 gmf = vectors_from_csv('gmf', THISDIR)
 
 # two identical assets
-assets = [workflows.Asset(
+assets = [riskmodels.Asset(
           1, 'SOME-TAXONOMY', 1, (0, 0),
           dict(structural=10),
           insurance_limits=dict(structural=1250),
@@ -60,7 +60,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         self.assertAlmostEqual(0.500993631, first_curve_integral)
 
-        wf = workflows.ProbabilisticEventBased(
+        wf = riskmodels.ProbabilisticEventBased(
             'PGA', 'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
             investigation_time=50,
@@ -72,7 +72,7 @@ class EventBasedTestCase(unittest.TestCase):
             insured_losses=False
             )
         wf.riskmodel = mock.MagicMock()
-        # NB: we need a MagicMock since the workflow instance makes a call
+        # NB: we need a MagicMock since the riskmodel instance makes a call
         # self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
         out = wf(self.loss_type, assets, gmvs, epsilons, [1, 2, 3, 4, 5])
         numpy.testing.assert_almost_equal(
@@ -96,7 +96,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         self.assertAlmostEqual(0.48983614471, first_curve_integral)
 
-        wf = workflows.ProbabilisticEventBased(
+        wf = riskmodels.ProbabilisticEventBased(
             'PGA', 'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
             investigation_time=50,
@@ -132,7 +132,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         self.assertAlmostEqual(0.483041416, first_curve_integral)
 
-        wf = workflows.ProbabilisticEventBased(
+        wf = riskmodels.ProbabilisticEventBased(
             'PGA', 'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
             investigation_time=50,
@@ -218,7 +218,7 @@ class EventBasedTestCase(unittest.TestCase):
         numpy.testing.assert_allclose([0.05667045, 0.02542965],
                                       insured_average_losses)
 
-        wf = workflows.ProbabilisticEventBased(
+        wf = riskmodels.ProbabilisticEventBased(
             'PGA', 'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
             investigation_time=50,

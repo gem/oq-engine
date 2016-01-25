@@ -20,7 +20,7 @@ import logging
 
 import numpy
 
-from openquake.risklib import workflows, scientific, riskinput
+from openquake.risklib import riskmodels, scientific, riskinput
 from openquake.commonlib import readinput, parallel, datastore, logictree
 from openquake.calculators import base
 

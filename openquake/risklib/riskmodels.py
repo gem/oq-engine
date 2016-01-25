@@ -205,9 +205,9 @@ class List(list):
     # this is ugly, but we already did that, and there is no other easy way
 
 
-def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
+def out_by_rlz(riskmodel, assets, hazards, epsilons, tags, loss_type):
     """
-    :param workflow: a RiskModel instance
+    :param riskmodel: a RiskModel instance
     :param assets: an array of assets of homogeneous taxonomy
     :param hazards: an array of dictionaries per each asset
     :param epsilons: an array of epsilons per each asset
@@ -221,7 +221,7 @@ def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
     # extract the realizations from the first asset
     for rlz in sorted(hazards[0]):
         hazs = [haz[rlz] for haz in hazards]  # hazard per each asset
-        out = workflow(loss_type, assets, hazs, epsilons, tags)
+        out = riskmodel(loss_type, assets, hazs, epsilons, tags)
         out.hid = rlz.ordinal
         out.weight = rlz.weight
         out_by_rlz.append(out)
@@ -358,9 +358,9 @@ class Classical(RiskModel):
                  insured_losses=False):
         """
         :param imt:
-            Intensity Measure Type for this workflow
+            Intensity Measure Type for this riskmodel
         :param taxonomy:
-            Taxonomy for this workflow
+            Taxonomy for this riskmodel
         :param vulnerability_functions:
             Dictionary of vulnerability functions by loss type
         :param hazard_imtls:
@@ -440,7 +440,7 @@ class Classical(RiskModel):
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture')
 class ProbabilisticEventBased(RiskModel):
     """
-    Implements the Probabilistic Event Based workflow
+    Implements the Probabilistic Event Based riskmodel
 
     Per-realization Output are saved into
     :class:`openquake.risklib.scientific.ProbabilisticEventBased.Output`
@@ -644,7 +644,7 @@ class ClassicalBCR(RiskModel):
 @registry.add('scenario_risk', 'scenario')
 class Scenario(RiskModel):
     """
-    Implements the Scenario workflow
+    Implements the Scenario riskmodel
     """
     def __init__(self, imt, taxonomy, vulnerability_functions,
                  insured_losses, time_event=None):
@@ -690,7 +690,7 @@ class Scenario(RiskModel):
 @registry.add('scenario_damage')
 class Damage(RiskModel):
     """
-    Implements the ScenarioDamage workflow
+    Implements the ScenarioDamage riskmodel
     """
     def __init__(self, imt, taxonomy, fragility_functions):
         self.imt = imt
@@ -729,7 +729,7 @@ class Damage(RiskModel):
 @registry.add('classical_damage')
 class ClassicalDamage(Damage):
     """
-    Implements the ClassicalDamage workflow
+    Implements the ClassicalDamage riskmodel
     """
     def __init__(self, imt, taxonomy, fragility_functions,
                  hazard_imtls, investigation_time,
@@ -761,13 +761,13 @@ class ClassicalDamage(Damage):
 
 
 # NB: the approach used here relies on the convention of having the
-# names of the arguments of the workflow class to be equal to the
+# names of the arguments of the riskmodel class to be equal to the
 # names of the parameter in the oqparam object. This is view as a
 # feature, since it forces people to be consistent with the names,
 # in the spirit of the 'convention over configuration' philosophy
-def get_workflow(imt, taxonomy, oqparam, **extra):
+def get_riskmodel(imt, taxonomy, oqparam, **extra):
     """
-    Return an instance of the correct workflow class, depending on the
+    Return an instance of the correct riskmodel class, depending on the
     attribute `calculation_mode` of the object `oqparam`.
 
     :param imt:
@@ -775,13 +775,13 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
     :param taxonomy:
         a taxonomy string
     :param oqparam:
-        an object containing the parameters needed by the workflow class
+        an object containing the parameters needed by the riskmodel class
     :param extra:
-        extra parameters to pass to the workflow class
+        extra parameters to pass to the riskmodel class
     """
-    workflow_class = registry[oqparam.calculation_mode]
-    # arguments needed to instantiate the workflow class
-    argnames = inspect.getargspec(workflow_class.__init__).args[3:]
+    riskmodel_class = registry[oqparam.calculation_mode]
+    # arguments needed to instantiate the riskmodel class
+    argnames = inspect.getargspec(riskmodel_class.__init__).args[3:]
 
     # arguments extracted from oqparam
     known_args = set(name for name, value in
@@ -799,4 +799,4 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
     if missing:
         raise TypeError('Missing parameter: %s' % ', '.join(missing))
 
-    return workflow_class(imt, taxonomy, **all_args)
+    return riskmodel_class(imt, taxonomy, **all_args)

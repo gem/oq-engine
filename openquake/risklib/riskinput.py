@@ -99,14 +99,14 @@ def build_asset_collection(assets_by_site, time_event=None):
 
 class CompositeRiskModel(collections.Mapping):
     """
-    A container (imt, taxonomy) -> workflow.
+    A container (imt, taxonomy) -> riskmodel.
 
-    :param workflows: a dictionary (imt, taxonomy) -> workflow
+    :param riskmodels: a dictionary (imt, taxonomy) -> riskmodel
     :param damage_states: None or a list of damage states
     """
-    def __init__(self, workflows, damage_states=None):
+    def __init__(self, riskmodels, damage_states=None):
         self.damage_states = damage_states  # not None for damage calculations
-        self._workflows = workflows
+        self._riskmodels = riskmodels
         self.loss_types = []
         self.curve_builders = []
         self.lti = {}  # loss_type -> idx
@@ -251,13 +251,13 @@ class CompositeRiskModel(collections.Mapping):
         return list(dic.items())
 
     def __getitem__(self, imt_taxo):
-        return self._workflows[imt_taxo]
+        return self._riskmodels[imt_taxo]
 
     def __iter__(self):
-        return iter(sorted(self._workflows))
+        return iter(sorted(self._riskmodels))
 
     def __len__(self):
-        return len(self._workflows)
+        return len(self._riskmodels)
 
     def build_input(self, imt, hazards_by_site, assets_by_site, eps_dict):
         """
@@ -301,7 +301,7 @@ class CompositeRiskModel(collections.Mapping):
                     assets_by_site=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
-        underlying workflows. Yield the outputs generated as dictionaries
+        underlying riskmodels. Yield the outputs generated as dictionaries
         out_by_rlz.
 
         :param riskinputs: a list of riskinputs with consistent IMT
@@ -328,8 +328,8 @@ class CompositeRiskModel(collections.Mapping):
                                 epsilons.append(epsilon)
                         if not assets:
                             continue
-                        workflow = self[imt, taxonomy]
-                        for out_by_rlz in workflow.gen_out_by_rlz(
+                        riskmodel = self[imt, taxonomy]
+                        for out_by_rlz in riskmodel.gen_out_by_rlz(
                                 assets, hazards, epsilons, riskinput.tags):
                             yield out_by_rlz
 
