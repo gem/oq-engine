@@ -246,27 +246,6 @@ def set_up_arg_parser():
     return parser
 
 
-def list_inputs(input_type):
-    """
-    Print a list of available input models
-    """
-
-    if input_type == "exposure":
-        model = models.ExposureModel
-    else:
-        sys.exit("Wrong input type. Available input types: exposure")
-
-    inputs = model.objects.all()
-
-    if not inputs.count():
-        print "No inputs found of type %s" % input_type
-        return
-    print ('model id | name')
-
-    for inp in inputs:
-        print "%9d|%s" % (inp.id, inp.name)
-
-
 def list_calculations(job_type):
     """
     Print a summary of past calculations.
@@ -471,9 +450,6 @@ def main():
 
     if args.hazard_output_id:
         sys.exit('The --hazard-output-id option is not supported anymore')
-
-    if args.list_inputs:
-        list_inputs(args.list_inputs)
 
     # hazard or hazard+risk
     hc_id = args.hazard_calculation_id
