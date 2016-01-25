@@ -90,6 +90,9 @@ sig_hand () {
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
+        if [ -z $GEM_USE_CELERY ]; then
+            scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
+        fi
         scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation"
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
@@ -413,6 +416,7 @@ _builddoc_innervm_run () {
 #                     - performs package tests (install, remove, reinstall ..)
 #                     - set up postgres
 #                     - upgrade db
+#                     - runs celeryd is GEM_USE_CELERY is set
 #                     - executes demos
 #
 #      <lxc_ip>    the IP address of lxc instance
@@ -510,6 +514,46 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "set -e; oq-engine --upgrade-db --yes"
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
+        # Is the GEM_USE_CELERY flag is set, use celery to run the demos
+        if [ -z "$GEM_USE_CELERY" ]; then
+            ssh $lxc_ip "sed -i /etc/openquake/openquake.cfg 's/use_celery = false/use_celery = true/g'"
+            # run celeryd daemon
+            ssh $lxc_ip "cd /usr/share/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
+
+            # wait for celeryd startup time
+            ssh $lxc_ip "
+celeryd_wait() {
+    local cw_nloop=\"\$1\" cw_ret cw_i
+
+    if command -v celeryctl &> /dev/null; then
+        # celery 2.4
+        celery=celeryctl
+    elif command -v celery &> /dev/null; then
+        # celery 3
+        celery=celery
+    else
+        echo \"ERROR: no Celery available\"
+        return 1
+    fi
+
+    for cw_i in \$(seq 1 \$cw_nloop); do
+        cw_ret=\"\$(\$celery status)\"
+        if echo \"\$cw_ret\" | grep -iq '^error:'; then
+            if echo \"\$cw_ret\" | grep -ivq '^error: no nodes replied'; then
+                return 1
+            fi
+        else
+            return 0
+        fi
+        sleep 1
+    done
+
+    return 1
+}
+
+celeryd_wait $GEM_MAXLOOP"
+        fi
+
         # run all of the hazard and risk demos
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
         set -e
@@ -550,6 +594,7 @@ _pkgtest_innervm_run () {
             fi
         done"
     fi
+
     ssh $lxc_ip "oq-engine --make-html-report today"
     scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
@@ -929,6 +974,9 @@ EOF
     _pkgtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
+    if [ -z $GEM_USE_CELERY ]; then
+        scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
+    fi
     scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation.pkg" || true
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
 
