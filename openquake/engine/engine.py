@@ -33,16 +33,16 @@ import openquake.engine
 from django.core import exceptions
 from django import db as django_db
 
-from openquake.baselib.performance import PerformanceMonitor
+from openquake.baselib.performance import (
+    PerformanceMonitor as EnginePerformanceMonitor)
 from openquake.engine import logs
 from openquake.server.db import models
 from openquake.engine.utils import config, tasks
 from openquake.engine.celery_node_monitor import CeleryNodeMonitor
 from openquake.server.db.schema.upgrades import upgrader
 
-from openquake import hazardlib, risklib, commonlib
-
 from openquake.commonlib import readinput, valid, datastore, export
+from openquake.calculators import base
 
 
 def get_calc_id(job_id=None):
@@ -110,7 +110,6 @@ def job_stats(job):
     in the job_stats table. The information is saved at the end of the
     job, even if the job fails.
     """
-    js = job.jobstats
     try:
         yield
     finally:
@@ -127,9 +126,8 @@ def job_stats(job):
         # in such a situation, we simply log the cleanup error without
         # taking further action, so that the real error can propagate
         try:
+            job.stop_time = datetime.utcnow()
             job.save()
-            js.stop_time = datetime.utcnow()
-            js.save()
             if USE_CELERY:
                 cleanup_after_job(job, TERMINATE, tasks.OqTaskManager.task_ids)
         except:
@@ -145,48 +143,29 @@ def job_stats(job):
                 sys.stderr.write(tb)
 
 
-def create_job(user_name="openquake", log_level='progress', hc_id=None):
+def create_job(user_name="openquake", hc_id=None):
     """
     Create job for the given user, return it.
 
     :param str username:
         Username of the user who owns/started this job. If the username doesn't
         exist, a user record for this name will be created.
-    :param str log_level:
-        Defaults to 'progress'. Specify a logging level for this job. This
-        level can be passed, for example, from the command line interface using
-        the `--log-level` directive.
     :param hc_id:
         If not None, then the created job is a risk job
     :returns:
         :class:`openquake.server.db.models.OqJob` instance.
     """
+    calc_id = get_calc_id() + 1
+    dstore = datastore.DataStore(calc_id, mode='w')
     job = models.OqJob.objects.create(
-        id=get_calc_id() + 1,
+        id=calc_id,
+        description='A job',
         user_name=user_name,
-        log_level=log_level,
-        oq_version=openquake.engine.__version__,
-        hazardlib_version=hazardlib.__version__,
-        risklib_version=risklib.__version__,
-        commonlib_version=commonlib.__version__)
+        ds_calc_dir=dstore.calc_dir)
     if hc_id:
         job.hazard_calculation = models.OqJob.objects.get(pk=hc_id)
+    job.save()
     return job
-
-
-class EnginePerformanceMonitor(PerformanceMonitor):
-    """
-    PerformanceMonitor that writes both in the datastore and in the database
-    """
-    def flush(self):
-        curs = models.getcursor('job_init')
-        data = PerformanceMonitor.flush(self)
-        for rec in data:
-            curs.execute("""INSERT INTO uiapi.performance
-            (oq_job_id, operation, start_time, duration, pymemory)
-            VALUES (%s, %s, %s, %s, %s)""", (
-                self.job_id, rec['operation'], self.start_time,
-                rec['time_sec'], rec['memory_mb']))
 
 
 # used by bin/openquake and openquake.server.views
@@ -209,7 +188,6 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
     # the reason is that the command `$ oq-engine --upgrade-db`
     # does not need them and would raise strange errors during installation
     # time if the PYTHONPATH is not set and commonlib is not visible
-    from openquake.calculators import base
     calculator = base.calculators(job.get_oqparam(), calc_id=job.id)
     calculator.job = job
     calculator.monitor = EnginePerformanceMonitor(
@@ -220,8 +198,6 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
     upgrader.check_versions(django_db.connections['admin'])
     with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
         _do_run_calc(calculator, exports, hazard_calculation_id)
-        job.ds_calc_dir = calculator.datastore.calc_dir
-        job.save()
         expose_outputs(calculator.datastore, job)
     return calculator
 
@@ -236,7 +212,6 @@ def _do_run_calc(calc, exports, hazard_calculation_id):
     :param exports:
         a (potentially empty) comma-separated string of export targets
     """
-    calc.save_params()
     calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id)
     calc.job.status = 'complete'
 
@@ -357,8 +332,6 @@ def run_job(cfg_file, log_level, log_file, exports='',
             cfg_file, getpass.getuser(), log_level, exports,
             hazard_output_id=hazard_output_id,
             hazard_calculation_id=hazard_calculation_id)
-        job.ds_calc_dir = datastore.DataStore(job.id).calc_dir
-        job.save()
         t0 = time.time()
         run_calc(job, log_level, log_file, exports,
                  hazard_calculation_id=hazard_calculation_id)
@@ -381,25 +354,23 @@ def expose_outputs(dstore, job):
     :param job: an OqJob instance
     """
     exportable = set(ekey[0] for ekey in export.export)
+    oq = job.get_oqparam()
 
     # small hack: remove the sescollection outputs from scenario
     # calculators, as requested by Vitor
-    calcmode = job.get_param('calculation_mode')
+    calcmode = oq.calculation_mode
     if 'scenario' in calcmode and 'sescollection' in exportable:
         exportable.remove('sescollection')
-    uhs = job.get_param('uniform_hazard_spectra', False)
+    uhs = oq.uniform_hazard_spectra
     if uhs and 'hmaps' in dstore:
-        out = models.Output.objects.create_output(
-            job, 'uhs', output_type='datastore')
-        out.ds_key = 'uhs'
-        out.save()
+        models.Output.objects.create_output(
+            job, 'uhs', output_type='datastore', ds_key='uhs')
 
     for key in dstore:
         if key in exportable:
-            out = models.Output.objects.create_output(
-                job, DISPLAY_NAME.get(key, key), output_type='datastore')
-            out.ds_key = key
-            out.save()
+            models.Output.objects.create_output(
+                job, DISPLAY_NAME.get(key, key), output_type='datastore',
+                ds_key=key)
 
 
 def check_hazard_risk_consistency(haz_job, risk_mode):
@@ -454,18 +425,16 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
     :raises:
         `RuntimeError` if the input job configuration is not valid
     """
-    from openquake.calculators import base
     # create the current job
-    job = create_job(username, log_level, hazard_calculation_id)
-    models.JobStats.objects.create(oq_job=job)
+    job = create_job(username, hazard_calculation_id)
     with logs.handle(job, log_level):
         # read calculation params and create the calculation profile
         params = readinput.get_params([cfg_file])
         params.update(extras)
         # build and validate an OqParam object
-        oqparam = readinput.get_oqparam(params, calculators=base.calculators)
-        job.save_params(vars(oqparam))
-        job.save()
+        oq = readinput.get_oqparam(params)
+        calc = base.calculators(oq, calc_id=job.id)
+        calc.save_params()
     return job
 
 

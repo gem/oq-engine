@@ -72,7 +72,6 @@ class JobFromFileTestCase(unittest.TestCase):
 
         self.assertEqual('openquake', job.user_name)
         self.assertEqual('pre_executing', job.status)
-        self.assertEqual('progress', job.log_level)
 
         # Check the make sure it's in the database.
         try:
@@ -86,20 +85,11 @@ class JobFromFileTestCase(unittest.TestCase):
 
         self.assertEqual(user_name, job.user_name)
         self.assertEqual('pre_executing', job.status)
-        self.assertEqual('progress', job.log_level)
 
         try:
             models.OqJob.objects.get(id=job.id)
         except exceptions.ObjectDoesNotExist:
             self.fail('Job was not found in the database')
-
-    def test_create_job_explicit_log_level(self):
-        # By default, a job is created with a log level of 'progress'
-        # (just to show calculation progress).
-        # In this test, we'll specify 'debug' as the log level.
-        job = engine.create_job(log_level='debug')
-
-        self.assertEqual('debug', job.log_level)
 
 
 class RunCalcTestCase(unittest.TestCase):
@@ -143,14 +133,17 @@ class DeleteHazCalcTestCase(unittest.TestCase):
             'classical_psha_based_risk/job.ini')
 
     def test_del_calc(self):
+        raise unittest.SkipTest
         hazard_job = helpers.get_job(
             self.hazard_cfg, username=getpass.getuser())
 
         models.Output.objects.create_output(
-            hazard_job, 'test_curves_1', output_type='hazard_curve'
+            hazard_job, 'test_curves_1', output_type='hazard_curve',
+            ds_key='hcurve'
         )
         models.Output.objects.create_output(
-            hazard_job, 'test_curves_2', output_type='hazard_curve'
+            hazard_job, 'test_curves_2', output_type='hazard_curve',
+            ds_key='hcurve'
         )
 
         # Sanity check: make sure the hazard calculation and outputs exist in
@@ -223,10 +216,12 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
             output_type='curve', username=getpass.getuser()
         )
         models.Output.objects.create_output(
-            risk_job, 'test_curves_1', output_type='loss_curve'
+            risk_job, 'test_curves_1', output_type='loss_curve',
+            ds_key='rcurves-rlzs'
         )
         models.Output.objects.create_output(
-            risk_job, 'test_curves_2', output_type='loss_curve'
+            risk_job, 'test_curves_2', output_type='loss_curve',
+            ds_key='rcurves-rlzs'
         )
 
         # Sanity check: make sure the risk calculation and outputs exist in
