@@ -292,8 +292,7 @@ def rescale(curves, values):
 
 
 # FIXME: remove the loss fractions after replacing the engine calculator
-@registry.add('classical_risk', 'classical', 'disaggregation',
-              'classical_tiling')
+@registry.add('classical_risk', 'classical', 'disaggregation')
 class Classical(Workflow):
     """
     Classical PSHA-Based Workflow.

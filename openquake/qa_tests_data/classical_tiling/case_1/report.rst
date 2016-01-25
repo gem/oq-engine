@@ -6,7 +6,7 @@ num_sites = 6, sitecol = 557 B
 Parameters
 ----------
 ============================ ================
-calculation_mode             classical_tiling
+calculation_mode             classical
 number_of_logic_tree_samples 0               
 maximum_distance             200.0           
 investigation_time           50.0            

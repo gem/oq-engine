@@ -19,6 +19,7 @@
 import sys
 import abc
 import pdb
+import math
 import logging
 import operator
 import traceback
@@ -430,11 +431,26 @@ class HazardCalculator(BaseCalculator):
         Filter/split and send the sources to the worker tasks.
         """
         oq = self.oqparam
-        self.manager = self.SourceManager(
+        tiles = [self.sitecol]
+        num_tiles = 1
+        if oq.calculation_mode == 'classical':
+            hint = math.ceil(len(self.sitecol) / oq.sites_per_tile)
+            tiles = self.sitecol.split_in_tiles(hint)
+            if len(tiles) > 1:
+                num_tiles = len(tiles)
+                logging.info('Generating %d tiles of %d sites each',
+                             num_tiles, len(tiles[0]))
+        self.manager = source.SourceManager(
             self.csm, self.core_task.__func__,
             oq.maximum_distance, self.datastore,
-            self.monitor.new(oqparam=oq), filter_sources=oq.filter_sources)
-        self.manager.submit_sources(self.sitecol)
+            self.monitor.new(oqparam=oq),
+            filter_sources=oq.filter_sources, num_tiles=num_tiles)
+        siteidx = 0
+        for i, tile in enumerate(tiles, 1):
+            if num_tiles > 1:
+                logging.info('Processing tile %d', i)
+            self.manager.submit_sources(tile, siteidx)
+            siteidx += len(tile)
 
     def post_process(self):
         """For compatibility with the engine"""

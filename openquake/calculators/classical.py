@@ -223,8 +223,16 @@ class ClassicalCalculator(base.HazardCalculator):
         return acc
 
     def agg_curves(self, acc, val):
-        for key in val:
-            acc[key] = agg_curves(acc[key], val[key])
+        """
+        Aggregate the hazard curves. If tiling is enabled, expand them
+        first to the full site collection.
+        """
+        n = len(self.sitecol)
+        tiling = (self.oqparam.calculation_mode == 'classical' and
+                  n > self.oqparam.sites_per_tile)
+        for k, v in val.items():
+            acc[k] = agg_curves(acc[k], expand(v, n, val.siteslice)
+                                if tiling else v)
 
     @staticmethod
     def is_effective_trt_model(result_dict, trt_model):
@@ -416,31 +424,3 @@ def split_sources(sources, maxweight, splitmap):
         else:
             ss.append(src)
     return ss
-
-
-@base.calculators.add('classical_tiling')
-class ClassicalTilingCalculator(ClassicalCalculator):
-    """
-    Classical Tiling calculator
-    """
-    def send_sources(self):
-        oq = self.oqparam
-        hint = math.ceil(len(self.sitecol) / oq.sites_per_tile)
-        tiles = self.sitecol.split_in_tiles(hint)
-        logging.info('Generating %d tiles of %d sites each',
-                     len(tiles), len(tiles[0]))
-        self.manager = source.SourceManager(
-            self.csm, self.core_task.__func__,
-            oq.maximum_distance, self.datastore,
-            self.monitor.new(oqparam=oq),
-            filter_sources=oq.filter_sources, num_tiles=len(tiles))
-        siteidx = 0
-        for i, tile in enumerate(tiles, 1):
-            logging.info('Processing tile %d', i)
-            self.manager.submit_sources(tile, siteidx)
-            siteidx += len(tile)
-
-    def agg_curves(self, acc, val):
-        n = len(self.sitecol)
-        for key in val:
-            acc[key] = agg_curves(acc[key], expand(val[key], n, val.siteslice))
