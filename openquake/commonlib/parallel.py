@@ -79,12 +79,12 @@ def check_mem_usage(soft_percent=90, hard_percent=100):
     :param int mem_percent: the memory limit as a percentage
     """
     used_mem_percent = virtual_memory().percent
-    if used_mem_percent > soft_percent:
-        logging.warn('Using over %d%% of the memory!', used_mem_percent)
     if used_mem_percent > hard_percent:
         raise MemoryError('Using more memory than allowed by configuration '
                           '(Used: %d%% / Allowed: %d%%)! Shutting down.' %
                           (used_mem_percent, hard_percent))
+    elif used_mem_percent > soft_percent:
+        logging.warn('Using over %d%% of the memory!', used_mem_percent)
 
 
 def safely_call(func, args, pickle=False):
