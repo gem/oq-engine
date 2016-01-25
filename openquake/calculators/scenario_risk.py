@@ -40,7 +40,7 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     :param riskinputs:
         a list of :class:`openquake.risklib.riskinput.RiskInput` objects
     :param riskmodel:
-        a :class:`openquake.risklib.riskinput.RiskModel` instance
+        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param rlzs_assoc:
         a class:`openquake.commonlib.source.RlzsAssoc` instance
     :param monitor:

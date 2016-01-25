@@ -207,7 +207,7 @@ class List(list):
 
 def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
     """
-    :param workflow: a Workflow instance
+    :param workflow: a RiskModel instance
     :param assets: an array of assets of homogeneous taxonomy
     :param hazards: an array of dictionaries per each asset
     :param epsilons: an array of epsilons per each asset
@@ -228,7 +228,7 @@ def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
     return out_by_rlz
 
 
-class Workflow(object):
+class RiskModel(object):
     """
     Base class. Can be used in the tests as a mock.
     """
@@ -292,9 +292,9 @@ def rescale(curves, values):
 
 @registry.add('classical_risk', 'classical', 'disaggregation',
               'classical_tiling')
-class Classical(Workflow):
+class Classical(RiskModel):
     """
-    Classical PSHA-Based Workflow.
+    Classical PSHA-Based RiskModel.
 
     1) Compute loss curves, loss maps for each realization.
     2) Compute (if more than one realization is given) mean and
@@ -438,7 +438,7 @@ class Classical(Workflow):
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture')
-class ProbabilisticEventBased(Workflow):
+class ProbabilisticEventBased(RiskModel):
     """
     Implements the Probabilistic Event Based workflow
 
@@ -590,7 +590,7 @@ class ProbabilisticEventBased(Workflow):
 
 
 @registry.add('classical_bcr')
-class ClassicalBCR(Workflow):
+class ClassicalBCR(RiskModel):
     def __init__(self, imt, taxonomy,
                  vulnerability_functions_orig,
                  vulnerability_functions_retro,
@@ -642,7 +642,7 @@ class ClassicalBCR(Workflow):
 
 
 @registry.add('scenario_risk', 'scenario')
-class Scenario(Workflow):
+class Scenario(RiskModel):
     """
     Implements the Scenario workflow
     """
@@ -688,7 +688,7 @@ class Scenario(Workflow):
 
 
 @registry.add('scenario_damage')
-class Damage(Workflow):
+class Damage(RiskModel):
     """
     Implements the ScenarioDamage workflow
     """

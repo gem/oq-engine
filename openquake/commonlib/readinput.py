@@ -580,7 +580,7 @@ def get_imts(oqparam):
 
 def get_risk_model(oqparam, rmdict):
     """
-    Return a :class:`openquake.risklib.riskinput.RiskModel` instance
+    Return a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
 
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -588,7 +588,7 @@ def get_risk_model(oqparam, rmdict):
         a dictionary (imt, taxonomy) -> loss_type -> risk_function
     """
     wfs = {}  # (imt, taxonomy) -> workflow
-    riskmodel = riskinput.RiskModel(wfs)
+    riskmodel = riskinput.CompositeRiskModel(wfs)
     if getattr(oqparam, 'limit_states', []):
         # classical_damage/scenario_damage calculator
         if oqparam.calculation_mode in ('classical', 'scenario'):

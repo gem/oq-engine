@@ -97,7 +97,7 @@ def build_asset_collection(assets_by_site, time_event=None):
     return assetcol
 
 
-class RiskModel(collections.Mapping):
+class CompositeRiskModel(collections.Mapping):
     """
     A container (imt, taxonomy) -> workflow.
 
@@ -228,7 +228,7 @@ class RiskModel(collections.Mapping):
 
     def get_taxonomies(self, imt=None):
         """
-        :returns: the set of taxonomies which are part of the RiskModel
+        :returns: the set of taxonomies which are part of the CompositeRiskModel
         """
         if imt is None:
             return set(taxonomy for imt, taxonomy in self)
