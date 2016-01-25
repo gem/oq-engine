@@ -143,7 +143,6 @@ class DeleteHazCalcTestCase(unittest.TestCase):
             'classical_psha_based_risk/job.ini')
 
     def test_del_calc(self):
-        raise unittest.SkipTest
         hazard_job = helpers.get_job(
             self.hazard_cfg, username=getpass.getuser())
 
