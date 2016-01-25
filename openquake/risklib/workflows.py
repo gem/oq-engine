@@ -16,7 +16,6 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 from __future__ import division
-import sys
 import inspect
 import functools
 import collections
@@ -291,17 +290,15 @@ def rescale(curves, values):
     return numpy.array([[losses[i], poes[i]] for i in range(n)])
 
 
-# FIXME: remove the loss fractions after replacing the engine calculator
 @registry.add('classical_risk', 'classical', 'disaggregation',
               'classical_tiling')
 class Classical(Workflow):
     """
     Classical PSHA-Based Workflow.
 
-    1) Compute loss curves, loss maps, loss fractions for each
-       realization.
+    1) Compute loss curves, loss maps for each realization.
     2) Compute (if more than one realization is given) mean and
-       quantiles loss curves, maps and fractions.
+       quantiles loss curves and maps.
 
     Per-realization Outputs contain the following fields:
 
@@ -320,9 +317,6 @@ class Classical(Workflow):
     :attr loss_maps:
       a numpy array of P elements holding N loss maps where P is the
       number of `conditional_loss_poes` considered. Shape: (P, N)
-    :attr loss_fractions:
-      a numpy array of D elements holding N loss fraction values where D is the
-      number of `poes_disagg`. Shape: (D, N)
 
     The statistical outputs are stored into
     :class:`openquake.risklib.scientific.Output`,
@@ -441,38 +435,6 @@ class Classical(Workflow):
             insured_curves=insured_curves,
             average_insured_losses=average_insured_losses,
             loss_maps=values * maps)
-
-    # FIXME: remove this after removal of the old calculator
-    def statistics(self, all_outputs, quantiles=()):
-        """
-        :param quantiles:
-            quantile levels used to compute quantile outputs
-        :returns:
-            a :class:`openquake.risklib.scientific.Output`
-            instance holding statistical outputs (e.g. mean loss curves).
-        """
-        if len(all_outputs) == 1:  # single realization
-            return
-        stats = scientific.StatsBuilder(
-            quantiles, self.conditional_loss_poes, self.poes_disagg)
-        return stats.build(all_outputs)
-
-    def compute_all_outputs(self, getter, loss_type):
-        """
-        :param getter:
-            a getter object
-        :param str loss_type:
-            a string identifying the loss type we are considering
-        :returns:
-            a number of outputs equal to the number of realizations
-        """
-        all_outputs = []
-        for hazard in getter.get_hazards():  # for each realization
-            out = self(loss_type, getter.assets, hazard.data)
-            out.hid = hazard.hid
-            out.weight = hazard.weight
-            all_outputs.append(out)
-        return all_outputs
 
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture')
@@ -626,41 +588,6 @@ class ProbabilisticEventBased(Workflow):
             insured_counts_matrix=icounts,
             tags=event_ids)
 
-    def compute_all_outputs(self, getter, loss_type):
-        """
-        :param getter:
-            a getter object
-        :param str loss_type:
-            a string identifying the loss type we are considering
-        :returns:
-            a number of outputs equal to the number of realizations
-        """
-        for hazard in getter.get_hazards():  # for each realization
-            out = self(loss_type, getter.assets, hazard.data,
-                       getter.get_epsilons(), getter.rupture_ids)
-            out.hid = hazard.hid
-            out.weight = hazard.weight
-            yield out
-
-    def statistics(self, all_outputs, quantiles):
-        """
-        :returns:
-            a :class:`openquake.risklib.scientific.Output`
-            instance holding statistical outputs (e.g. mean loss curves).
-        :param quantiles:
-            quantile levels used to compute quantile outputs
-        """
-        if len(all_outputs) == 1:  # single realization
-            return
-        stats = scientific.StatsBuilder(
-            quantiles, self.conditional_loss_poes, [],
-            scientific.normalize_curves_eb)
-        out = stats.build(all_outputs)
-        out.event_loss_table = sum(
-            (out.event_loss_table for out in all_outputs),
-            collections.Counter())
-        return out
-
 
 @registry.add('classical_bcr')
 class ClassicalBCR(Workflow):
@@ -712,9 +639,6 @@ class ClassicalBCR(Workflow):
         return scientific.Output(
             assets, loss_type,
             data=list(zip(eal_original, eal_retrofitted, bcr_results)))
-
-    compute_all_outputs = (Classical.compute_all_outputs if sys.version > '3'
-                           else Classical.compute_all_outputs.__func__)
 
 
 @registry.add('scenario_risk', 'scenario')
@@ -834,10 +758,6 @@ class ClassicalDamage(Damage):
                 risk_investigation_time=self.risk_investigation_time)
             for asset, curve in zip(assets, hazard_curves)]
         return scientific.Output(assets, loss_type, damages=damages)
-
-    compute_all_outputs = (
-        Classical.compute_all_outputs if sys.version > '3' else
-        Classical.compute_all_outputs.__func__)
 
 
 # NB: the approach used here relies on the convention of having the
