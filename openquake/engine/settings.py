@@ -49,7 +49,7 @@ def _db_cfg(db_name):
     """
 
     return dict(
-        ENGINE='django.contrib.gis.db.backends.postgis',
+        ENGINE='django.db.backends.postgresql_psycopg2',
         NAME=DB_SECTION.get('name', 'openquake'),
         USER=DB_SECTION.get('%s_user' % db_name, 'openquake'),
         PASSWORD=DB_SECTION.get('%s_password' % db_name, ''),
