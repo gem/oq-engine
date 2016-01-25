@@ -536,6 +536,8 @@ celeryd_wait() {
         return 1
     fi
 
+    cd /usr/share/openquake/engine
+
     for cw_i in \$(seq 1 \$cw_nloop); do
         cw_ret=\"\$(\$celery status)\"
         if echo \"\$cw_ret\" | grep -iq '^error:'; then
