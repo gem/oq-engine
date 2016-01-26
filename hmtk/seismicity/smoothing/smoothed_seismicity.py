@@ -152,7 +152,7 @@ def _get_adjustment(mag, year, mmin, completeness_year, t_f, mag_inc=0.1):
     if len(completeness_year) == 1:
         if (mag >= mmin) and (year >= completeness_year[0]):
             # No adjustment needed - event weight == 1
-            return 1.0
+            return t_f
         else:
             # Event should not be counted
             return False
