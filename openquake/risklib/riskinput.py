@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2015, GEM Foundation
+#  Copyright (c) 2015-2016, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -192,12 +192,12 @@ class CompositeRiskModel(collections.Mapping):
                 curve_resolutions = set()
                 lines = []
                 for key in sorted(self):
-                    wf = self[key]
-                    if loss_type in wf.loss_ratios:
-                        ratios = wf.loss_ratios[loss_type]
+                    rm = self[key]
+                    if loss_type in rm.loss_ratios:
+                        ratios = rm.loss_ratios[loss_type]
                         curve_resolutions.add(len(ratios))
                         lines.append('%s %d' % (
-                            wf.risk_functions[loss_type], len(ratios)))
+                            rm.risk_functions[loss_type], len(ratios)))
                 if len(curve_resolutions) > 1:
                     logging.info(
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
@@ -222,13 +222,14 @@ class CompositeRiskModel(collections.Mapping):
         :returns: a sorted list with all the loss_types contained in the model
         """
         ltypes = set()
-        for wf in self.values():
-            ltypes.update(wf.loss_types)
+        for rm in self.values():
+            ltypes.update(rm.loss_types)
         return sorted(ltypes)
 
     def get_taxonomies(self, imt=None):
         """
-        :returns: the set of taxonomies which are part of the CompositeRiskModel
+        :returns:
+            the set of taxonomies which are part of the CompositeRiskModel
         """
         if imt is None:
             return set(taxonomy for imt, taxonomy in self)
