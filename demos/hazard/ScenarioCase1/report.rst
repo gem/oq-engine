@@ -1,7 +1,7 @@
 Scenario Calculation with Simple Fault Rupture
 ==============================================
 
-num_sites = 121
+num_sites = 121, sitecol = 3.25 KB
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             None
 area_source_discretization   None    
 random_seed                  3       
 master_seed                  0       
-concurrent_tasks             32      
+concurrent_tasks             16      
 ============================ ========
 
 Input files

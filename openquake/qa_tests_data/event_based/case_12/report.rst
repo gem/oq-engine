@@ -1,7 +1,7 @@
 Event Based QA Test, Case 12
 ============================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   10.0       
 random_seed                  1066       
 master_seed                  0          
-concurrent_tasks             32         
+concurrent_tasks             16         
 ============================ ===========
 
 Input files
@@ -63,8 +63,8 @@ Non-empty rupture collections
 === ========= ==================== ============
 col smlt_path TRT                  num_ruptures
 === ========= ==================== ============
-0   b1        active shallow crust 3420        
-1   b1        stable continental   3346        
+0   b1        active shallow crust 3536        
+1   b1        stable continental   3370        
 === ========= ==================== ============
 
 Collections <-> realizations
@@ -76,8 +76,9 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ======
-Number of tasks to generate        2     
-Estimated sources to send          3.9 KB
-Estimated hazard curves to receive 48 B  
-================================== ======
+=========================== =========
+Number of tasks to generate 2        
+Sent data                   13.84 KB 
+Total received data         551.8 KB 
+Maximum received per task   282.48 KB
+=========================== =========

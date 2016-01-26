@@ -23,10 +23,10 @@ import operator
 import itertools
 import numpy
 
-from openquake.baselib.general import groupby, split_in_blocks, humansize
-from openquake.baselib.performance import PerformanceMonitor, perf_dt
+from openquake.baselib.general import humansize, groupby
+from openquake.baselib.performance import perf_dt
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import parallel, util
+from openquake.commonlib import util
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import (
@@ -113,6 +113,12 @@ def view_csm_info(token, dstore):
     return rst_table(rows, header)
 
 
+@view.add('slow_sources')
+def view_slow_sources(token, dstore):
+    info = dstore['source_info'][:10]
+    return rst_table(info, fmt='%g')
+
+
 @view.add('rupture_collections')
 def view_rupture_collections(token, dstore):
     rlzs_assoc = dstore['rlzs_assoc']
@@ -133,19 +139,32 @@ def view_rupture_collections(token, dstore):
 @view.add('ruptures_per_trt')
 def view_ruptures_per_trt(token, dstore):
     tbl = []
-    header = 'source_model trt_id trt num_sources num_ruptures'.split()
+    header = 'source_model trt_id trt num_sources num_ruptures weight'.split()
     num_trts = 0
-    num_sources = 0
-    num_ruptures = 0
-    for sm in dstore['composite_source_model']:
+    tot_sources = 0
+    tot_ruptures = 0
+    tot_weight = 0
+    source_info = dstore['source_info'].value
+    csm_info = dstore['rlzs_assoc'].csm_info
+    w = groupby(source_info, operator.itemgetter('trt_model_id'),
+                lambda rows: sum(r['weight'] for r in rows))
+    n = groupby(source_info, operator.itemgetter('trt_model_id'),
+                lambda rows: sum(1 for r in rows))
+    for sm in csm_info.source_models:
         for trt_model in sm.trt_models:
             num_trts += 1
-            num_sources += len(trt_model.sources)
-            num_ruptures += trt_model.num_ruptures
+            num_sources = n.get(trt_model.id, 0)
+            tot_sources += num_sources
+            num_ruptures = trt_model.num_ruptures
+            tot_ruptures += num_ruptures
+            weight = w.get(trt_model.id, 0)
+            tot_weight += weight
             tbl.append((sm.name, trt_model.id, trt_model.trt,
-                        len(trt_model.sources), trt_model.num_ruptures))
-    rows = [('#TRT models', num_trts), ('#sources', num_sources),
-            ('#ruptures', num_ruptures)]
+                        num_sources, num_ruptures, weight))
+    rows = [('#TRT models', num_trts),
+            ('#sources', tot_sources),
+            ('#ruptures', tot_ruptures),
+            ('filtered_weight', tot_weight)]
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:
@@ -188,40 +207,6 @@ def view_inputs(token, dstore):
         build_links(list(inputs.items()) + source_models),
         header=['Name', 'File'])
 
-block_dt = numpy.dtype([('num_srcs', numpy.uint32),
-                        ('weight', numpy.float32)])
-
-
-def get_data_transfer(dstore):
-    """
-    Determine the amount of data transferred from the controller node
-    to the workers and back in a classical calculation.
-
-    :param dstore: a :class:`openquake.commonlib.datastore.DataStore` instance
-    :returns: (block_info, to_send_forward, to_send_back)
-    """
-    oqparam = OqParam.from_(dstore.attrs)
-    sitecol = dstore['sitecol']
-    rlzs_assoc = dstore['rlzs_assoc']
-    info = dstore['job_info']
-    sources = dstore['composite_source_model'].get_sources()
-    num_gsims_by_trt = groupby(rlzs_assoc, operator.itemgetter(0),
-                               lambda group: sum(1 for row in group))
-    gsims_assoc = rlzs_assoc.gsims_by_trt_id
-    to_send_forward = 0
-    to_send_back = 0
-    block_info = []
-    for block in split_in_blocks(sources, oqparam.concurrent_tasks or 1,
-                                 operator.attrgetter('weight'),
-                                 operator.attrgetter('trt_model_id')):
-        num_gsims = num_gsims_by_trt.get(block[0].trt_model_id, 0)
-        back = info['n_sites'] * info['n_levels'] * info['n_imts'] * num_gsims
-        to_send_back += back * 8  # 8 bytes per float
-        args = (block, sitecol, gsims_assoc, PerformanceMonitor(''))
-        to_send_forward += sum(len(p) for p in parallel.pickle_sequence(args))
-        block_info.append((len(block), block.weight))
-    return numpy.array(block_info, block_dt), to_send_forward, to_send_back
-
 
 @view.add('source_data_transfer')
 def source_data_transfer(token, dstore):
@@ -229,11 +214,15 @@ def source_data_transfer(token, dstore):
     Determine the amount of data transferred from the controller node
     to the workers and back in a classical calculation.
     """
-    block_info, to_send_forward, to_send_back = get_data_transfer(dstore)
+    sc = dstore['source_chunks']
     tbl = [
-        ('Number of tasks to generate', len(block_info)),
-        ('Estimated sources to send', humansize(to_send_forward)),
-        ('Estimated hazard curves to receive', humansize(to_send_back))]
+        ('Number of tasks to generate', len(sc)),
+        ('Sent data', humansize(sc.attrs['sent']))]
+    if sc.attrs['task_name'] != 'dummy_task':
+        tbl.extend([
+            ('Total received data', humansize(sc.attrs['tot_received'])),
+            ('Maximum received per task', humansize(sc.attrs['max_received'])),
+        ])
     return rst_table(tbl)
 
 
@@ -251,31 +240,6 @@ def avglosses_data_transfer(token, dstore):
     size_bytes = N * R * L * 2 * 8 * ct  # two 8 byte floats, loss and ins_loss
     return ('%d asset(s) x %d realization(s) x %d loss type(s) x 2 losses x '
             '8 bytes x %d tasks = %s' % (N, R, L, ct, humansize(size_bytes)))
-
-
-# this is used by the ebr calculator
-@view.add('old_avg_losses')
-def view_old_avg_losses(token, dstore):
-    stats = 'specific/loss_curves-stats' in dstore
-    group = (dstore['specific/loss_curves-stats'] if stats
-             else dstore['specific/loss_curves-rlzs'])
-    loss_types = group.dtype.names
-    assets = dstore['assetcol']['asset_ref']
-
-    data_by_lt = {}
-    for lt in loss_types:
-        loss_curves = group[lt]['mean'] if stats else group[lt]['rlz-000']
-        data = loss_curves.value['avg']
-        data_by_lt[lt] = dict(zip(assets, data))
-    dt_list = [('asset_ref', '|S100')] + [(str(ltype), numpy.float32)
-                                          for ltype in sorted(data_by_lt)]
-    avg_loss_dt = numpy.dtype(dt_list)
-    losses = numpy.zeros(len(data_by_lt[lt]), avg_loss_dt)
-    for lt, loss_by_asset in data_by_lt.items():
-        assets = sorted(loss_by_asset)
-        losses[lt] = [loss_by_asset[a] for a in assets]
-    losses['asset_ref'] = assets
-    return rst_table(losses)
 
 
 # for scenario_risk

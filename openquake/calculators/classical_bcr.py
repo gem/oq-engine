@@ -58,7 +58,7 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
     """
     Classical BCR Risk calculator
     """
-    core_func = classical_bcr
+    core_task = classical_bcr
 
     def pre_execute(self):
         super(ClassicalBCRCalculator, self).pre_execute()

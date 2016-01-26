@@ -58,10 +58,10 @@ else:  # Ubuntu 12.04
 
 
 executor = ProcessPoolExecutor()
-# the num_tasks_hint is chosen to be 8 times bigger than the name of
-# cores; it is a heuristic number to get a distribution of the
-# load good for our cluster; it has no more significance than that
-executor.num_tasks_hint = executor._max_workers * 8
+# the num_tasks_hint is chosen to be 4 times bigger than the name of
+# cores; it is a heuristic number to get a good distribution;
+# it has no more significance than that
+executor.num_tasks_hint = executor._max_workers * 4
 
 
 def no_distribute():
@@ -311,12 +311,15 @@ class TaskManager(object):
         check_mem_usage()
         # log a warning if too much memory is used
         if self.no_distribute:
+            sent = 0
             res = safely_call(self.task_func, args)
         else:
             piks = pickle_sequence(args)
-            self.sent += sum(len(p) for p in piks)
+            sent = sum(len(p) for p in piks)
             res = self._submit(piks)
+            self.sent += sent
         self.results.append(res)
+        return sent
 
     def _submit(self, piks):
         # submit tasks by using the ProcessPoolExecutor
@@ -354,10 +357,10 @@ class TaskManager(object):
         :param acc: the initial value of the accumulator
         :returns: the final value of the accumulator
         """
+        num_tasks = len(self.results)
         if acc is None:
             acc = AccumDict()
-        log_percent = log_percent_gen(
-            self.name, len(self.results), self.progress)
+        log_percent = log_percent_gen(self.name, num_tasks, self.progress)
         next(log_percent)
 
         def agg_and_percent(acc, triple):
@@ -372,10 +375,11 @@ class TaskManager(object):
         if self.no_distribute:
             agg_result = reduce(agg_and_percent, self.results, acc)
         else:
-            self.progress('Sent %s of data', humansize(self.sent))
+            self.progress('Sent %s of data in %d task(s)',
+                          humansize(self.sent), num_tasks)
             agg_result = self.aggregate_result_set(agg_and_percent, acc)
-            self.progress('Received %s of data', humansize(sum(self.received)))
-            self.progress('Maximum task output: %s',
+            self.progress('Received %s of data, maximum per task %s',
+                          humansize(sum(self.received)),
                           humansize(max(self.received)))
         self.results = []
         return agg_result

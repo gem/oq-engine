@@ -1,7 +1,7 @@
 Event Based PSHA using Area Source
 ==================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0        
 random_seed                  23         
 master_seed                  0          
-concurrent_tasks             32         
+concurrent_tasks             16         
 ============================ ===========
 
 Input files
@@ -34,11 +34,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ====== ====================================== =============== ================ ===========
-smlt_path weight source_model_file                      gsim_logic_tree num_realizations num_sources
-========= ====== ====================================== =============== ================ ===========
-b1        1.00   `source_model.xml <source_model.xml>`_ trivial(1)      1/1              205        
-========= ====== ====================================== =============== ================ ===========
+========= ====== ====================================== =============== ================
+smlt_path weight source_model_file                      gsim_logic_tree num_realizations
+========= ====== ====================================== =============== ================
+b1        1.00   `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -61,7 +61,7 @@ Non-empty rupture collections
 === ========= ==================== ============
 col smlt_path TRT                  num_ruptures
 === ========= ==================== ============
-0   b1        Active Shallow Crust 156         
+0   b1        Active Shallow Crust 184         
 === ========= ==================== ============
 
 Collections <-> realizations
@@ -73,8 +73,9 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =========
-Number of tasks to generate        35       
-Estimated sources to send          123.94 KB
-Estimated hazard curves to receive 5 KB     
-================================== =========
+=========================== =========
+Number of tasks to generate 18       
+Sent data                   360.17 KB
+Total received data         185.85 KB
+Maximum received per task   15.5 KB  
+=========================== =========

@@ -1,11 +1,17 @@
 tag:|S100,structural,structural_ins
-col=05~ses=0001~src=AS_TRAS334-108~rup=001-01,3.113443E+04,       NAN
-col=05~ses=0001~src=AS_TRAS334-119~rup=004-01,2.498660E+05,       NAN
-col=05~ses=0001~src=AS_TRAS334-60~rup=005-01,1.050826E+05,       NAN
-col=05~ses=0001~src=AS_TRAS334-63~rup=001-01,4.573877E+04,       NAN
-col=05~ses=0001~src=AS_TRAS334-84~rup=003-01,1.378130E+05,       NAN
-col=05~ses=0001~src=AS_TRAS360-71~rup=007-01,3.573161E+05,       NAN
-col=05~ses=0001~src=AS_TRAS360-72~rup=003-01,7.054001E+04,       NAN
-col=05~ses=0001~src=AS_TRAS360-92~rup=007-01,2.379191E+06,       NAN
-col=05~ses=0001~src=AS_TRAS395-20~rup=027-01,5.844830E+05,       NAN
-col=05~ses=0001~src=AS_TRAS395-87~rup=008-01,1.889707E+05,       NAN
+col=05~ses=0001~src=AS_TRAS334~rup=619366-01,8.061377E+04,       NAN
+col=05~ses=0001~src=AS_TRAS334~rup=621103-01,1.903157E+05,       NAN
+col=05~ses=0001~src=AS_TRAS360~rup=629301-01,6.753302E+05,       NAN
+col=05~ses=0001~src=AS_TRAS360~rup=629637-01,6.543924E+05,       NAN
+col=05~ses=0001~src=AS_TRAS360~rup=630213-01,5.238463E+05,       NAN
+col=05~ses=0001~src=AS_TRAS360~rup=631228-01,1.794981E+06,       NAN
+col=05~ses=0001~src=AS_TRAS360~rup=631656-01,3.258442E+06,       NAN
+col=05~ses=0001~src=AS_TRAS360~rup=631857-01,2.304610E+05,       NAN
+col=05~ses=0001~src=AS_TRAS360~rup=634441-01,2.605430E+05,       NAN
+col=05~ses=0001~src=AS_TRAS395~rup=635014-01,3.941415E+05,       NAN
+col=05~ses=0001~src=AS_TRAS395~rup=636358-01,1.285929E+05,       NAN
+col=05~ses=0001~src=AS_TRAS395~rup=636406-01,3.806008E+05,       NAN
+col=05~ses=0001~src=AS_TRAS395~rup=636407-01,5.172915E+04,       NAN
+col=05~ses=0001~src=AS_TRAS395~rup=636838-01,1.041811E+05,       NAN
+col=05~ses=0001~src=AS_TRAS395~rup=637279-01,7.355026E+05,       NAN
+col=05~ses=0001~src=AS_TRAS395~rup=637371-01,3.661969E+05,       NAN

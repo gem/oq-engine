@@ -1,25 +1,25 @@
 Classical PSHA-Based Hazard
 ===========================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
-============================ =========
-calculation_mode             classical
-number_of_logic_tree_samples 0        
-maximum_distance             200.0    
-investigation_time           50.0     
-ses_per_logic_tree_path      1        
-truncation_level             3.0      
-rupture_mesh_spacing         1.0      
-complex_fault_mesh_spacing   1.0      
-width_of_mfd_bin             0.1      
-area_source_discretization   20.0     
-random_seed                  42       
-master_seed                  0        
-concurrent_tasks             32       
-============================ =========
+============================ ================
+calculation_mode             classical_damage
+number_of_logic_tree_samples 0               
+maximum_distance             200.0           
+investigation_time           50.0            
+ses_per_logic_tree_path      1               
+truncation_level             3.0             
+rupture_mesh_spacing         1.0             
+complex_fault_mesh_spacing   1.0             
+width_of_mfd_bin             0.1             
+area_source_discretization   20.0            
+random_seed                  42              
+master_seed                  0               
+concurrent_tasks             16              
+============================ ================
 
 Input files
 -----------
@@ -60,19 +60,18 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============
-source_model     trt_id trt                  num_sources num_ruptures
-================ ====== ==================== =========== ============
-source_model.xml 0      Active Shallow Crust 15          1694        
-================ ====== ==================== =========== ============
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources num_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust 1           1694         1694.0
+================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ========
-Number of tasks to generate        14      
-Estimated sources to send          25.17 KB
-Estimated hazard curves to receive 2 KB    
-================================== ========
+=========================== ========
+Number of tasks to generate 13      
+Sent data                   88.23 KB
+=========================== ========
 
 Exposure model
 --------------

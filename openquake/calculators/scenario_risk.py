@@ -101,7 +101,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     """
     Run a scenario risk calculation
     """
-    core_func = scenario_risk
+    core_task = scenario_risk
     epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
     pre_calculator = 'scenario'
     is_stochastic = True

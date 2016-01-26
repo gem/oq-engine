@@ -38,8 +38,7 @@ class Print(object):
 
 
 class InfoTestCase(unittest.TestCase):
-    EXPECTED = '''Reading the source model...
-<CompositionInfo
+    EXPECTED = '''<CompositionInfo
 b1, x15.xml, trt=[0], weight=1.00: 1 realization(s)>
 See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst for an explanation
 <RlzsAssoc(1)
@@ -50,35 +49,6 @@ See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst
         with Print.patch() as p:
             info(path)
         self.assertEqual(self.EXPECTED, str(p))
-
-    def test_zip_filtering(self):
-        path = os.path.join(DATADIR, 'frenchbug.zip')
-        with Print.patch() as p:
-            info(path, filtersources=True)
-        exp = self.EXPECTED + '''
-n_sites 1
-n_sources 1
-n_levels 29
-output_weight 29.0
-n_realizations 1
-n_imts 1
-curve_matrix_size 232 B'''
-        self.assertEqual(exp, str(p))
-
-    def test_zip_weighting(self):
-        path = os.path.join(DATADIR, 'frenchbug.zip')
-        with Print.patch() as p:
-            info(path, weightsources=True)
-        exp = self.EXPECTED + '''
-n_sites 1
-n_sources 1
-input_weight 43.05
-n_levels 29
-output_weight 29.0
-n_realizations 1
-n_imts 1
-curve_matrix_size 232 B'''
-        self.assertEqual(exp, str(p))
 
 
 class RunShowExportTestCase(unittest.TestCase):

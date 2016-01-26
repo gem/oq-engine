@@ -1,7 +1,7 @@
 Calculation of the ground motion fields for a scenario
 ======================================================
 
-num_sites = 11
+num_sites = 11, sitecol = 834 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             None
 area_source_discretization   None    
 random_seed                  3       
 master_seed                  0       
-concurrent_tasks             32      
+concurrent_tasks             16      
 ============================ ========
 
 Input files

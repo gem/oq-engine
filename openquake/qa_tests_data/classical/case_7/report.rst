@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 7
 ================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   10.0     
 random_seed                  1066     
 master_seed                  0        
-concurrent_tasks             32       
+concurrent_tasks             16       
 ============================ =========
 
 Input files
@@ -62,23 +62,23 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================== ====== ==================== =========== ============
-source_model       trt_id trt                  num_sources num_ruptures
-================== ====== ==================== =========== ============
-source_model_1.xml 0      active shallow crust 2           1386        
-source_model_2.xml 1      active shallow crust 1           901         
-================== ====== ==================== =========== ============
+================== ====== ==================== =========== ============ ======
+source_model       trt_id trt                  num_sources num_ruptures weight
+================== ====== ==================== =========== ============ ======
+source_model_1.xml 0      active shallow crust 2           1386         1386.0
+source_model_2.xml 1      active shallow crust 1           901          901.0 
+================== ====== ==================== =========== ============ ======
 
-=========== ====
-#TRT models 2   
-#sources    3   
-#ruptures   2287
-=========== ====
+=============== ======
+#TRT models     2     
+#sources        3     
+#ruptures       2287  
+filtered_weight 2287.0
+=============== ======
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =======
-Number of tasks to generate        3      
-Estimated sources to send          5.48 KB
-Estimated hazard curves to receive 72 B   
-================================== =======
+=========================== ========
+Number of tasks to generate 3       
+Sent data                   22.16 KB
+=========================== ========

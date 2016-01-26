@@ -1,7 +1,7 @@
 QA test for disaggregation case_1, taken from the disagg demo
 =============================================================
 
-num_sites = 2
+num_sites = 2, sitecol = 461 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   10.0          
 random_seed                  9000          
 master_seed                  0             
-concurrent_tasks             32            
+concurrent_tasks             16            
 ============================ ==============
 
 Input files
@@ -58,8 +58,15 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============
-source_model     trt_id trt                  num_sources num_ruptures
-================ ====== ==================== =========== ============
-source_model.xml 0      Active Shallow Crust 209         2236        
-================ ====== ==================== =========== ============
+================ ====== ==================== =========== ============ =======
+source_model     trt_id trt                  num_sources num_ruptures weight 
+================ ====== ==================== =========== ============ =======
+source_model.xml 0      Active Shallow Crust 4           2236         817.375
+================ ====== ==================== =========== ============ =======
+
+Expected data transfer for the sources
+--------------------------------------
+=========================== =========
+Number of tasks to generate 14       
+Sent data                   185.21 KB
+=========================== =========

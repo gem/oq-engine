@@ -1,7 +1,7 @@
 Classical Tiling for Turkey reduced
 ===================================
 
-num_sites = 83
+num_sites = 83, sitecol = 4.61 KB
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   25.0            
 random_seed                  323             
 master_seed                  0               
-concurrent_tasks             64              
+concurrent_tasks             4               
 ============================ ================
 
 Input files
@@ -109,24 +109,32 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-========================= ====== ==================== =========== ============
-source_model              trt_id trt                  num_sources num_ruptures
-========================= ====== ==================== =========== ============
-models/src/as_model.xml   0      Shield               1           2808        
-models/src/as_model.xml   1      Subduction Interface 1           334         
-models/src/as_model.xml   2      Subduction IntraSlab 1           18585       
-models/src/as_model.xml   3      Volcanic             1           14          
-models/src/as_model.xml   4      Active Shallow Crust 3           32481       
-models/src/as_model.xml   5      Stable Shallow Crust 6           28746       
-models/src/fsbg_model.xml 6      Shield               1           20124       
-models/src/fsbg_model.xml 7      Volcanic             1           42          
-models/src/fsbg_model.xml 8      Stable Shallow Crust 2           1572        
-models/src/fsbg_model.xml 9      Active Shallow Crust 13          16635       
-models/src/ss_model.xml   10     Active Shallow Crust 1           27          
-========================= ====== ==================== =========== ============
+========================= ====== ==================== =========== ============ =============
+source_model              trt_id trt                  num_sources num_ruptures weight       
+========================= ====== ==================== =========== ============ =============
+models/src/as_model.xml   0      Shield               0           2808         0            
+models/src/as_model.xml   1      Subduction Interface 0           334          0            
+models/src/as_model.xml   2      Subduction IntraSlab 0           18585        0            
+models/src/as_model.xml   3      Volcanic             0           14           0            
+models/src/as_model.xml   4      Active Shallow Crust 1           32481        96.9000015259
+models/src/as_model.xml   5      Stable Shallow Crust 0           28746        0            
+models/src/fsbg_model.xml 6      Shield               0           20124        0            
+models/src/fsbg_model.xml 7      Volcanic             0           42           0            
+models/src/fsbg_model.xml 8      Stable Shallow Crust 0           1572         0            
+models/src/fsbg_model.xml 9      Active Shallow Crust 2           16635        51.5250000954
+models/src/ss_model.xml   10     Active Shallow Crust 0           27           0            
+========================= ====== ==================== =========== ============ =============
 
-=========== ======
-#TRT models 11    
-#sources    31    
-#ruptures   121368
-=========== ======
+=============== =============
+#TRT models     11           
+#sources        3            
+#ruptures       121368       
+filtered_weight 148.425001621
+=============== =============
+
+Expected data transfer for the sources
+--------------------------------------
+=========================== =======
+Number of tasks to generate 15     
+Sent data                   2.96 MB
+=========================== =======

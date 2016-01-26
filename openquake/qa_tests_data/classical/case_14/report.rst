@@ -1,7 +1,7 @@
 Classical PSHA QA test with sites_csv
 =====================================
 
-num_sites = 10
+num_sites = 10, sitecol = 653 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0     
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             32       
+concurrent_tasks             16       
 ============================ =========
 
 Input files
@@ -60,16 +60,15 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============
-source_model     trt_id trt                  num_sources num_ruptures
-================ ====== ==================== =========== ============
-simple_fault.xml 0      Active Shallow Crust 15          447         
-================ ====== ==================== =========== ============
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources num_ruptures weight
+================ ====== ==================== =========== ============ ======
+simple_fault.xml 0      Active Shallow Crust 1           447          447.0 
+================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =======
-Number of tasks to generate        13     
-Estimated sources to send          27.5 KB
-Estimated hazard curves to receive 26 KB  
-================================== =======
+=========================== ========
+Number of tasks to generate 12      
+Sent data                   83.55 KB
+=========================== ========

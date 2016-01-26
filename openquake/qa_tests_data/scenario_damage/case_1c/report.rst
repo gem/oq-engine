@@ -1,7 +1,7 @@
 Scenario Damage
 ===============
 
-num_sites = 7
+num_sites = 7, sitecol = 690 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             None
 area_source_discretization   None           
 random_seed                  42             
 master_seed                  0              
-concurrent_tasks             32             
+concurrent_tasks             16             
 ============================ ===============
 
 Input files

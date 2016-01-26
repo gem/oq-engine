@@ -1,7 +1,7 @@
 Scenario QA Test with No Spatial Correlation
 ============================================
 
-num_sites = 2
+num_sites = 2, sitecol = 461 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             None
 area_source_discretization   None    
 random_seed                  3       
 master_seed                  0       
-concurrent_tasks             32      
+concurrent_tasks             16      
 ============================ ========
 
 Input files

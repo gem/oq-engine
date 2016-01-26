@@ -5,10 +5,14 @@ Utilities to build a report writer generating a .rst report for a calculation
 from __future__ import print_function
 import os
 import sys
+import mock
+import logging
 
-from openquake.commonlib import readinput, datastore
-from openquake.calculators import base, views
+
+from openquake.baselib.general import humansize
+from openquake.commonlib import readinput, datastore, source
 from openquake.commonlib.oqvalidation import OqParam
+from openquake.calculators import base, views
 
 
 def indent(text):
@@ -37,7 +41,9 @@ class ReportWriter(object):
         self.dstore = dstore
         self.oq = oq = OqParam.from_(dstore.attrs)
         self.text = oq.description + '\n' + '=' * len(oq.description)
-        self.text += '\n\nnum_sites = %d' % len(dstore['sitemesh'])
+        sitecol_size = humansize(len(dstore.hdf5['sitecol'].value))
+        self.text += '\n\nnum_sites = %d, sitecol = %s' % (
+            len(dstore['sitemesh']), sitecol_size)
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""
@@ -66,8 +72,7 @@ class ReportWriter(object):
             self.add('col_rlz_assocs')
         elif 'composite_source_model' in ds:
             self.add('ruptures_per_trt')
-        if oq.calculation_mode in ('classical', 'event_based',
-                                   'event_based_risk'):
+        if 'scenario' not in oq.calculation_mode:
             self.add('source_data_transfer')
         if oq.calculation_mode in ('event_based_risk',):
             self.add('avglosses_data_transfer')
@@ -83,7 +88,8 @@ class ReportWriter(object):
 
 def build_report(job_ini, output_dir=None):
     """
-    Write a `report.csv` file with information about the calculation.
+    Write a `report.csv` file with information about the calculation
+    without running it
 
     :param job_ini:
         full pathname of the job.ini file
@@ -93,13 +99,19 @@ def build_report(job_ini, output_dir=None):
     oq = readinput.get_oqparam(job_ini)
     output_dir = output_dir or os.path.dirname(job_ini)
     calc = base.calculators(oq)
-    calc.pre_execute()
+    # some taken is care so that the real calculation is not run:
+    # the goal is to extract information about the source management only
+    calc.SourceManager = source.DummySourceManager
+    calc.is_effective_trt_model = lambda result_dict, trt_model: True
+    with mock.patch.object(calc.__class__, 'core_task', source.dummy_task):
+        calc.pre_execute()
+    with mock.patch.object(logging.root, 'info'):  # reduce logging
+        calc.execute()
     calc.save_params()
-    ds = datastore.DataStore(calc.datastore.calc_id)
-    rw = ReportWriter(ds)
+    rw = ReportWriter(calc.datastore)
     rw.make_report()
     report = (os.path.join(output_dir, 'report.rst') if output_dir
-              else ds.export_path('report.rst'))
+              else calc.datastore.export_path('report.rst'))
     try:
         rw.save(report)
     except IOError as exc:  # permission error

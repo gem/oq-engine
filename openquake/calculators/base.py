@@ -84,7 +84,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('taxonomies')
     job_info = datastore.persistent_attribute('job_info')
-    source_chunks = datastore.persistent_attribute('source_chunks')
     performance = datastore.persistent_attribute('performance')
     csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
@@ -99,7 +98,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
 
     def save_params(self, **kw):
         """
-        Update the current calculation parameters
+        Update the current calculation parameters and save oqlite_version
         """
         vars(self.oqparam).update(kw)
         for name, val in self.oqparam.to_params():
@@ -146,7 +145,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.clean_up()
         return exported
 
-    def core_func(*args):
+    def core_task(*args):
         """
         Core routine running on the workers.
         """
@@ -234,9 +233,8 @@ class HazardCalculator(BaseCalculator):
     Base class for hazard calculators based on source models
     """
     riskmodel = datastore.persistent_attribute('riskmodel')
-
+    SourceManager = source.SourceManager
     mean_curves = None  # to be overridden
-    SourceProcessor = source.SourceFilterSplitter
 
     def assoc_assets_sites(self, sitecol):
         """
@@ -298,7 +296,29 @@ class HazardCalculator(BaseCalculator):
 
         else:  # we are in a basic calculator
             self.read_risk_data()
-            self.read_sources()
+            if 'source' in self.oqparam.inputs:
+                logging.info('Reading the composite source model')
+                with self.monitor(
+                        'reading composite source model', autoflush=True):
+                    self.csm = readinput.get_composite_source_model(
+                        self.oqparam)
+                    self.rlzs_assoc = self.csm.get_rlzs_assoc()
+
+                    # we could manage limits here
+                    self.job_info = readinput.get_job_info(
+                        self.oqparam, self.csm, self.sitecol)
+                    logging.info('Expected output size=%s',
+                                 self.job_info['output_weight'])
+                    logging.info('Total weight of the sources=%s',
+                                 self.job_info['input_weight'])
+                with self.monitor('managing sources', autoflush=True):
+                    self.send_sources()
+                self.manager.store_source_info(
+                    self.datastore, self.core_task.__func__.__name__)
+                attrs = self.datastore.hdf5['composite_source_model'].attrs
+                attrs['weight'] = self.csm.weight
+                attrs['filtered_weight'] = self.csm.filtered_weight
+                attrs['maxweight'] = self.csm.maxweight
         self.datastore.hdf5.flush()
 
     def read_exposure(self):
@@ -405,30 +425,16 @@ class HazardCalculator(BaseCalculator):
             mesh_dt = numpy.dtype([('lon', F32), ('lat', F32)])
             self.sitemesh = numpy.array(list(zip(col.lons, col.lats)), mesh_dt)
 
-    def read_sources(self):
+    def send_sources(self):
         """
-        Read the composite source model (if any).
-        This method must be called after read_risk_data, to be able
-        to filter to sources according to the site collection.
+        Filter/split and send the sources to the worker tasks.
         """
-        if 'source' in self.oqparam.inputs:
-            logging.info('Reading the composite source model')
-            with self.monitor(
-                    'reading composite source model', autoflush=True):
-                self.csm = readinput.get_composite_source_model(
-                    self.oqparam, self.sitecol, self.SourceProcessor,
-                    self.monitor, dstore=self.datastore)
-                # we could manage limits here
-                self.job_info = readinput.get_job_info(
-                    self.oqparam, self.csm, self.sitecol)
-                self.rlzs_assoc = self.csm.get_rlzs_assoc()
-
-                logging.info(
-                    'Total weight of the sources=%s',
-                    self.job_info['input_weight'])
-                logging.info(
-                    'Expected output size=%s',
-                    self.job_info['output_weight'])
+        oq = self.oqparam
+        self.manager = self.SourceManager(
+            self.csm, self.core_task.__func__,
+            oq.maximum_distance, self.datastore,
+            self.monitor.new(oqparam=oq), filter_sources=oq.filter_sources)
+        self.manager.submit_sources(self.sitecol)
 
     def post_process(self):
         """For compatibility with the engine"""
@@ -510,7 +516,7 @@ class RiskCalculator(HazardCalculator):
     def execute(self):
         """
         Parallelize on the riskinputs and returns a dictionary of results.
-        Require a `.core_func` to be defined with signature
+        Require a `.core_task` to be defined with signature
         (riskinputs, riskmodel, rlzs_assoc, monitor).
         """
         # add fatalities as side effect
@@ -523,7 +529,7 @@ class RiskCalculator(HazardCalculator):
         all_args = ((self.riskinputs, self.riskmodel, self.rlzs_assoc) +
                     self.extra_args + (self.monitor,))
         res = apply_reduce(
-            self.core_func.__func__, all_args,
+            self.core_task.__func__, all_args,
             concurrent_tasks=self.oqparam.concurrent_tasks,
             weight=get_weight, key=self.riskinput_key)
         return res

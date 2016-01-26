@@ -1,7 +1,7 @@
 Event Based Hazard for Turkey reduced
 =====================================
 
-num_sites = 14
+num_sites = 14, sitecol = 1.22 KB
 
 Parameters
 ----------
@@ -76,8 +76,8 @@ Non-empty rupture collections
 === ======================== ==================== ============
 col smlt_path                TRT                  num_ruptures
 === ======================== ==================== ============
-5   AreaSource               Active Shallow Crust 24          
-9   FaultSourceAndBackground Active Shallow Crust 14          
+5   AreaSource               Active Shallow Crust 25          
+9   FaultSourceAndBackground Active Shallow Crust 11          
 === ======================== ==================== ============
 
 Collections <-> realizations
@@ -90,11 +90,12 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ========
-Number of tasks to generate        22      
-Estimated sources to send          30.54 MB
-Estimated hazard curves to receive 866 KB  
-================================== ========
+=========================== ========
+Number of tasks to generate 4       
+Sent data                   1.17 MB 
+Total received data         47.93 KB
+Maximum received per task   25.35 KB
+=========================== ========
 
 Exposure model
 --------------

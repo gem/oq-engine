@@ -1,7 +1,7 @@
 Probabilistic Event-Based QA Test with Spatial Correlation, case 2
 ==================================================================
 
-num_sites = 2
+num_sites = 2, sitecol = 461 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0       
 random_seed                  123456789  
 master_seed                  0          
-concurrent_tasks             32         
+concurrent_tasks             16         
 ============================ ===========
 
 Input files
@@ -61,7 +61,7 @@ Non-empty rupture collections
 === ========= ==================== ============
 col smlt_path TRT                  num_ruptures
 === ========= ==================== ============
-0   b1        Active Shallow Crust 22331       
+0   b1        Active Shallow Crust 22566       
 === ========= ==================== ============
 
 Collections <-> realizations
@@ -73,8 +73,9 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =======
-Number of tasks to generate        1      
-Estimated sources to send          1.89 KB
-Estimated hazard curves to receive 0 B    
-================================== =======
+=========================== =======
+Number of tasks to generate 1      
+Sent data                   6.57 KB
+Total received data         1.84 MB
+Maximum received per task   1.84 MB
+=========================== =======

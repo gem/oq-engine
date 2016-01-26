@@ -1,7 +1,7 @@
 Event Based Hazard QA Test, Case 17
 ===================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   10.0       
 random_seed                  106        
 master_seed                  0          
-concurrent_tasks             32         
+concurrent_tasks             16         
 ============================ ===========
 
 Input files
@@ -38,7 +38,7 @@ Composite source model
 ========= ====== ========================================== =============== ================
 smlt_path weight source_model_file                          gsim_logic_tree num_realizations
 ========= ====== ========================================== =============== ================
-b1        0.2    `source_model_1.xml <source_model_1.xml>`_ trivial(0)      1/0             
+b1        0.2    `source_model_1.xml <source_model_1.xml>`_ trivial(1)      1/1             
 b2        0.2    `source_model_2.xml <source_model_2.xml>`_ trivial(1)      4/1             
 ========= ====== ========================================== =============== ================
 
@@ -47,6 +47,7 @@ Required parameters per tectonic region type
 ====== ============== ========= ========== ==========
 trt_id gsims          distances siteparams ruptparams
 ====== ============== ========= ========== ==========
+0      SadighEtAl1997 rrup      vs30       rake mag  
 1      SadighEtAl1997 rrup      vs30       rake mag  
 ====== ============== ========= ========== ==========
 
@@ -55,7 +56,8 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
+  <RlzsAssoc(2)
+  0,SadighEtAl1997: ['<0,b1,b1,w=0.2>']
   1,SadighEtAl1997: ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']>
 
 Non-empty rupture collections
@@ -63,17 +65,18 @@ Non-empty rupture collections
 === ========= ==================== ============
 col smlt_path TRT                  num_ruptures
 === ========= ==================== ============
-1   b2        active shallow crust 2816        
-2   b2        active shallow crust 2775        
-3   b2        active shallow crust 2736        
-4   b2        active shallow crust 2649        
+0   b1        active shallow crust 2           
+1   b2        active shallow crust 2838        
+2   b2        active shallow crust 2672        
+3   b2        active shallow crust 2770        
+4   b2        active shallow crust 2665        
 === ========= ==================== ============
 
 Collections <-> realizations
 ----------------------------
 =========== ============
 Collections Realizations
-            0           
+0           0           
 1           1           
 2           2           
 3           3           
@@ -82,8 +85,9 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ====
-Number of tasks to generate        2   
-Estimated sources to send          4 KB
-Estimated hazard curves to receive 24 B
-================================== ====
+=========================== =========
+Number of tasks to generate 2        
+Sent data                   16.41 KB 
+Total received data         894.29 KB
+Maximum received per task   890.23 KB
+=========================== =========

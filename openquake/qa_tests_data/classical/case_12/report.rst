@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 12
 =================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   10.0     
 random_seed                  1066     
 master_seed                  0        
-concurrent_tasks             32       
+concurrent_tasks             16       
 ============================ =========
 
 Input files
@@ -60,23 +60,23 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============
-source_model     trt_id trt                  num_sources num_ruptures
-================ ====== ==================== =========== ============
-source_model.xml 0      active shallow crust 1           1           
-source_model.xml 1      stable continental   1           1           
-================ ====== ==================== =========== ============
+================ ====== ==================== =========== ============ ===============
+source_model     trt_id trt                  num_sources num_ruptures weight         
+================ ====== ==================== =========== ============ ===============
+source_model.xml 0      active shallow crust 1           1            0.0250000003725
+source_model.xml 1      stable continental   1           1            0.0250000003725
+================ ====== ==================== =========== ============ ===============
 
-=========== =
-#TRT models 2
-#sources    2
-#ruptures   2
-=========== =
+=============== ===============
+#TRT models     2              
+#sources        2              
+#ruptures       2              
+filtered_weight 0.0500000007451
+=============== ===============
 
 Expected data transfer for the sources
 --------------------------------------
-================================== ======
-Number of tasks to generate        2     
-Estimated sources to send          3.9 KB
-Estimated hazard curves to receive 48 B  
-================================== ======
+=========================== ========
+Number of tasks to generate 2       
+Sent data                   13.52 KB
+=========================== ========

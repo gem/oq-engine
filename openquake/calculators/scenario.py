@@ -54,7 +54,7 @@ class ScenarioCalculator(base.HazardCalculator):
     """
     Scenario hazard calculator
     """
-    core_func = calc_gmfs
+    core_task = calc_gmfs
     tags = datastore.persistent_attribute('tags')
     sescollection = datastore.persistent_attribute('sescollection')
     is_stochastic = True
@@ -97,7 +97,7 @@ class ScenarioCalculator(base.HazardCalculator):
         with self.monitor('computing gmfs', autoflush=True):
             args = (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs'))
             gmf_by_tag = parallel.apply_reduce(
-                self.core_func.__func__, args,
+                self.core_task.__func__, args,
                 concurrent_tasks=self.oqparam.concurrent_tasks)
             return gmf_by_tag
     

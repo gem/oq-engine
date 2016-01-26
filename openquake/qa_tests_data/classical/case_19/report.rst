@@ -1,7 +1,7 @@
 SHARE OpenQuake Computational Settings
 ======================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -34,53 +34,69 @@ source_model_logic_tree `simple_source_model_logic_tree.xml <simple_source_model
 
 Composite source model
 ----------------------
-========= ====== ============================================================== ===================== ================
-smlt_path weight source_model_file                                              gsim_logic_tree       num_realizations
-========= ====== ============================================================== ===================== ================
-b1        1.0    `simple_area_source_model.xml <simple_area_source_model.xml>`_ simple(0,4,0,0,0,0,0) 4/4             
-========= ====== ============================================================== ===================== ================
+========= ====== ============================================================== ====================== ================
+smlt_path weight source_model_file                                              gsim_logic_tree        num_realizations
+========= ====== ============================================================== ====================== ================
+b1        1.0    `simple_area_source_model.xml <simple_area_source_model.xml>`_ complex(4,4,1,0,0,5,2) 160/160         
+========= ====== ============================================================== ====================== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ============================================================================ ========== ========== ==============
-trt_id gsims                                                                        distances  siteparams ruptparams    
-====== ============================================================================ ========== ========== ==============
-4      AtkinsonBoore2003SSlab LinLee2008SSlab YoungsEtAl1997SSlab ZhaoEtAl2006SSlab rhypo rrup vs30       hypo_depth mag
-====== ============================================================================ ========== ========== ==============
+====== ====================================================================================== ================= ======================= =================
+trt_id gsims                                                                                  distances         siteparams              ruptparams       
+====== ====================================================================================== ================= ======================= =================
+0      AtkinsonBoore2003SInter LinLee2008SInter YoungsEtAl1997SInter ZhaoEtAl2006SInter       rhypo rrup        vs30                    hypo_depth mag   
+1      FaccioliEtAl2010                                                                       rrup              vs30                    rake mag         
+2      Campbell2003SHARE ToroEtAl2002SHARE                                                    rjb rrup                                  rake mag         
+3      AkkarBommer2010 Campbell2003SHARE CauzziFaccioli2008 ChiouYoungs2008 ToroEtAl2002SHARE rhypo rjb rx rrup vs30measured z1pt0 vs30 ztor mag rake dip
+4      AtkinsonBoore2003SSlab LinLee2008SSlab YoungsEtAl1997SSlab ZhaoEtAl2006SSlab           rhypo rrup        vs30                    hypo_depth mag   
+====== ====================================================================================== ================= ======================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(4)
-  4,AtkinsonBoore2003SSlab: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>']
-  4,LinLee2008SSlab: ['<1,b1,@_@_@_@_b52_@_@,w=0.2>']
-  4,YoungsEtAl1997SSlab: ['<2,b1,@_@_@_@_b53_@_@,w=0.2>']
-  4,ZhaoEtAl2006SSlab: ['<3,b1,@_@_@_@_b54_@_@,w=0.4>']>
+  <RlzsAssoc(16)
+  0,AtkinsonBoore2003SInter: ['40 realizations']
+  0,LinLee2008SInter: ['40 realizations']
+  0,YoungsEtAl1997SInter: ['40 realizations']
+  0,ZhaoEtAl2006SInter: ['40 realizations']
+  1,FaccioliEtAl2010: ['160 realizations']
+  2,Campbell2003SHARE: ['80 realizations']
+  2,ToroEtAl2002SHARE: ['80 realizations']
+  3,AkkarBommer2010: ['32 realizations']
+  3,Campbell2003SHARE: ['32 realizations']
+  3,CauzziFaccioli2008: ['32 realizations']
+  3,ChiouYoungs2008: ['32 realizations']
+  3,ToroEtAl2002SHARE: ['32 realizations']
+  4,AtkinsonBoore2003SSlab: ['40 realizations']
+  4,LinLee2008SSlab: ['40 realizations']
+  4,YoungsEtAl1997SSlab: ['40 realizations']
+  4,ZhaoEtAl2006SSlab: ['40 realizations']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-============================ ====== ==================== =========== ============
-source_model                 trt_id trt                  num_sources num_ruptures
-============================ ====== ==================== =========== ============
-simple_area_source_model.xml 0      Subduction Interface 0           0           
-simple_area_source_model.xml 1      Volcanic             0           0           
-simple_area_source_model.xml 2      Shield               0           0           
-simple_area_source_model.xml 3      Stable Shallow Crust 0           0           
-simple_area_source_model.xml 4      Subduction Inslab    370         7770        
-============================ ====== ==================== =========== ============
+============================ ====== ==================== =========== ============ ======
+source_model                 trt_id trt                  num_sources num_ruptures weight
+============================ ====== ==================== =========== ============ ======
+simple_area_source_model.xml 0      Subduction Interface 0           42624        0     
+simple_area_source_model.xml 1      Volcanic             0           210          0     
+simple_area_source_model.xml 2      Shield               0           96804        0     
+simple_area_source_model.xml 3      Stable Shallow Crust 0           81154        0     
+simple_area_source_model.xml 4      Subduction Inslab    1           93219        194.25
+============================ ====== ==================== =========== ============ ======
 
-=========== ====
-#TRT models 5   
-#sources    370 
-#ruptures   7770
-=========== ====
+=============== ======
+#TRT models     5     
+#sources        1     
+#ruptures       314011
+filtered_weight 194.25
+=============== ======
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =========
-Number of tasks to generate        29       
-Estimated sources to send          132.17 KB
-Estimated hazard curves to receive 70 KB    
-================================== =========
+=========================== ========
+Number of tasks to generate 1       
+Sent data                   53.14 KB
+=========================== ========

@@ -19,7 +19,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </gml:pos>
             </gml:Point>
             <poEs>
-                4.569207385E-01 5.776446641E-02 5.982035946E-03
+                4.750750610E-01 5.304149114E-02 9.455017557E-03
             </poEs>
         </hazardCurve>
     </hazardCurves>

@@ -1,7 +1,7 @@
 Classical PSHA with non-trivial logic tree (1 source model + relative uncertainties on G-R b value and maximum magnitude and 2 GMPEs per tectonic region type)
 ==============================================================================================================================================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0      
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             32       
+concurrent_tasks             16       
 ============================ =========
 
 Input files
@@ -34,19 +34,19 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-=========== ========== ====================================== =============== ================ ===========
-smlt_path   weight     source_model_file                      gsim_logic_tree num_realizations num_sources
-=========== ========== ====================================== =============== ================ ===========
-b11_b21_b31 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b21_b32 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b21_b33 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1549       
-b11_b22_b31 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b22_b32 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b22_b33 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1549       
-b11_b23_b31 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b23_b32 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b23_b33 0.11155600 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1549       
-=========== ========== ====================================== =============== ================ ===========
+=========== ========== ====================================== =============== ================
+smlt_path   weight     source_model_file                      gsim_logic_tree num_realizations
+=========== ========== ====================================== =============== ================
+b11_b21_b31 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33 0.11155600 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+=========== ========== ====================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -118,39 +118,39 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-=========== =====
-#TRT models 18   
-#sources    13896
-#ruptures   58176
-=========== =====
+================ ====== ======================== =========== ============ =======
+source_model     trt_id trt                      num_sources num_ruptures weight 
+================ ====== ======================== =========== ============ =======
+source_model.xml 0      Active Shallow Crust     1           1334         1334.0 
+source_model.xml 1      Stable Continental Crust 1           4100         102.5  
+source_model.xml 2      Active Shallow Crust     1           1339         1339.0 
+source_model.xml 3      Stable Continental Crust 1           5125         128.125
+source_model.xml 4      Active Shallow Crust     1           1344         1344.0 
+source_model.xml 5      Stable Continental Crust 1           6150         153.75 
+source_model.xml 6      Active Shallow Crust     1           1334         1334.0 
+source_model.xml 7      Stable Continental Crust 1           4100         102.5  
+source_model.xml 8      Active Shallow Crust     1           1339         1339.0 
+source_model.xml 9      Stable Continental Crust 1           5125         128.125
+source_model.xml 10     Active Shallow Crust     1           1344         1344.0 
+source_model.xml 11     Stable Continental Crust 1           6150         153.75 
+source_model.xml 12     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 13     Stable Continental Crust 1           4100         102.5  
+source_model.xml 14     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 15     Stable Continental Crust 1           5125         128.125
+source_model.xml 16     Active Shallow Crust     1           1344         1344.0 
+source_model.xml 17     Stable Continental Crust 1           6150         153.75 
+================ ====== ======================== =========== ============ =======
 
-================ ====== ======================== =========== ============
-source_model     trt_id trt                      num_sources num_ruptures
-================ ====== ======================== =========== ============
-source_model.xml 0      Active Shallow Crust     1334        1334        
-source_model.xml 1      Stable Continental Crust 205         4100        
-source_model.xml 2      Active Shallow Crust     1339        1339        
-source_model.xml 3      Stable Continental Crust 205         5125        
-source_model.xml 4      Active Shallow Crust     1344        1344        
-source_model.xml 5      Stable Continental Crust 205         6150        
-source_model.xml 6      Active Shallow Crust     1334        1334        
-source_model.xml 7      Stable Continental Crust 205         4100        
-source_model.xml 8      Active Shallow Crust     1339        1339        
-source_model.xml 9      Stable Continental Crust 205         5125        
-source_model.xml 10     Active Shallow Crust     1344        1344        
-source_model.xml 11     Stable Continental Crust 205         6150        
-source_model.xml 12     Active Shallow Crust     1334        1334        
-source_model.xml 13     Stable Continental Crust 205         4100        
-source_model.xml 14     Active Shallow Crust     1339        1339        
-source_model.xml 15     Stable Continental Crust 205         5125        
-source_model.xml 16     Active Shallow Crust     1344        1344        
-source_model.xml 17     Stable Continental Crust 205         6150        
-================ ====== ======================== =========== ============
+=============== =========
+#TRT models     18       
+#sources        18       
+#ruptures       58176    
+filtered_weight 13204.125
+=============== =========
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =======
-Number of tasks to generate        45     
-Estimated sources to send          46.9 MB
-Estimated hazard curves to receive 13 KB  
-================================== =======
+=========================== ========
+Number of tasks to generate 27      
+Sent data                   47.76 MB
+=========================== ========

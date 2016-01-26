@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Source filtering is now on demand, depending on the parameter
+    `filter_sources`.
+  * Refactored the source filtering/splitting mechanism and improved
+    substantially the classical_tiling calculator
   * Managed correctly the case of vulnerability functions with a different
     number of loss ratios
   * Now the flag `individual_curves` is honored for aggregate curves
@@ -13,7 +17,7 @@
   * Fixed the GMPETable GSIM and added an end-to-end test for it
   * Changed the management of the seeds in the event based calculator:
     now we generate a seed per each rupture
-  * Worked around a bug in h5File.visitems in Ubuntu 12.04
+  * Worked around a bug in h5py.Group.visitems in Ubuntu 12.04
   * Reduced the precision of the site mesh to 32 bits
   * The source model logic tree parser supports NRML 0.5
   * Reduced the precision of the scenario_damage outputs to 32 bits

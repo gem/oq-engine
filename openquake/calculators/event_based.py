@@ -15,7 +15,7 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+import time
 import os.path
 import random
 import operator
@@ -37,8 +37,7 @@ from openquake.commonlib.util import max_rel_diff_index
 from openquake.calculators import base, views
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.calculators.calc import MAX_INT, gmvs_to_haz_curve
-from openquake.calculators.classical import (
-    ClassicalCalculator, store_source_chunks)
+from openquake.calculators.classical import ClassicalCalculator
 
 # ######################## rupture calculator ############################ #
 
@@ -268,43 +267,52 @@ class SESRupture(object):
 
 
 @parallel.litetask
-def compute_ruptures(sources, sitecol, info, monitor):
+def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     """
     :param sources:
         List of commonlib.source.Source tuples
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param info:
-        a :class:`openquake.commonlib.source.CompositionInfo` instance
+    :param siteidx:
+        always equal to 0
+    :param rlzs_assoc:
+        a :class:`openquake.commonlib.source.RlzsAssoc` instance
     :param monitor:
         monitor instance
     :returns:
         a dictionary trt_model_id -> [Rupture instances]
     """
+    assert siteidx == 0, (
+        'siteidx can be nonzero only for the classical_tiling calculations: '
+        'tiling with the EventBasedRuptureCalculator is an error')
     # NB: by construction each block is a non-empty list with
     # sources of the same trt_model_id
     trt_model_id = sources[0].trt_model_id
     oq = monitor.oqparam
     sesruptures = []
+    calc_times = []
 
     # Compute and save stochastic event sets
     for src in sources:
+        t0 = time.time()
         s_sites = src.filter_sites_by_distance_to_source(
             oq.maximum_distance, sitecol)
         if s_sites is None:
             continue
 
         num_occ_by_rup = sample_ruptures(
-            src, oq.ses_per_logic_tree_path, info)
+            src, oq.ses_per_logic_tree_path, rlzs_assoc.csm_info)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-
         for rup, rups in build_ses_ruptures(
                 src, num_occ_by_rup, s_sites, oq.maximum_distance, sitecol):
             sesruptures.extend(rups)
-
-    return {trt_model_id: sesruptures}
+        dt = time.time() - t0
+        calc_times.append((src.id, dt))
+    res = AccumDict({trt_model_id: sesruptures})
+    res.calc_times = calc_times
+    return res
 
 
 def sample_ruptures(src, num_ses, info):
@@ -324,7 +332,8 @@ def sample_ruptures(src, num_ses, info):
     num_occ_by_rup = collections.defaultdict(AccumDict)
     # generating ruptures for the given source
     for rup_no, rup in enumerate(src.iter_ruptures()):
-        numpy.random.seed(src.seeds[rup_no])
+        rup.seed = seed = src.seed[rup_no]
+        numpy.random.seed(seed)
         for col_id in col_ids:
             for ses_idx in range(1, num_ses + 1):
                 num_occurrences = rup.sample_number_of_occurrences()
@@ -341,7 +350,6 @@ def build_ses_ruptures(
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated SESRuptures>)
     """
-    rnd = random.Random(src.seeds[0])
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         # filtering ruptures
         r_sites = filter_sites_by_distance_to_rupture(
@@ -355,12 +363,13 @@ def build_ses_ruptures(
 
         # creating SESRuptures
         sesruptures = []
+        rnd = random.Random(rup.seed)
         for (col_id, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
                 seed = rnd.randint(0, MAX_INT)
-                tag = 'col=%02d~ses=%04d~src=%s~rup=%03d-%02d' % (
-                    col_id, ses_idx, src.source_id, rup.rup_no, occ_no)
+                tag = 'col=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
+                    col_id, ses_idx, src.source_id, rup.seed, occ_no)
                 sesruptures.append(
                     SESRupture(rup, indices, seed, tag, col_id))
         if sesruptures:
@@ -368,61 +377,62 @@ def build_ses_ruptures(
 
 
 @base.calculators.add('event_based_rupture')
-class EventBasedRuptureCalculator(base.HazardCalculator):
+class EventBasedRuptureCalculator(ClassicalCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
-    core_func = compute_ruptures
+    core_task = compute_ruptures
     tags = datastore.persistent_attribute('tags')
     sescollection = datastore.persistent_attribute('sescollection')
     num_ruptures = datastore.persistent_attribute('num_ruptures')
     counts_per_rlz = datastore.persistent_attribute('counts_per_rlz')
     is_stochastic = True
 
-    def pre_execute(self):
+    @staticmethod
+    def is_effective_trt_model(ruptures_by_trt_id, trt_model):
         """
-        Set a seed on each source
+        Returns the number of tectonic region types
+        with ID contained in the ruptures_by_trt_id.
+
+        :param ruptures_by_trt_id: a dictionary with key trt_id
+        :param trt_model: a TrtModel instance
         """
-        super(EventBasedRuptureCalculator, self).pre_execute()
-        numpy.random.seed(self.oqparam.random_seed)
-        for src in self.csm.get_sources():
-            src.seeds = numpy.array(numpy.random.randint(
-                0, MAX_INT, size=src.count_ruptures()), dtype=numpy.uint32)
+        return sum(1 for key, val in ruptures_by_trt_id.items()
+                   if trt_model.id == key and val)
 
-    def execute(self):
+    def agg_curves(self, acc, val):
         """
-        Run in parallel `core_func(sources, sitecol, info, monitor)`, by
-        parallelizing on the sources according to their weight and
-        tectonic region type.
+        For the rupture calculator, just increment the AccumDict
+        trt_id -> ruptures
         """
-        monitor = self.monitor(self.core_func.__name__)
-        monitor.oqparam = self.oqparam
-        sources = self.csm.get_sources()
-        ruptures_by_trt = parallel.apply_reduce(
-            self.core_func.__func__,
-            (sources, self.sitecol, self.rlzs_assoc.csm_info, monitor),
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=operator.attrgetter('weight'),
-            key=operator.attrgetter('trt_model_id'))
+        acc += val
 
-        store_source_chunks(self.datastore)
-        logging.info('Generated %d SESRuptures',
-                     sum(len(v) for v in ruptures_by_trt.values()))
-
-        self.rlzs_assoc = self.csm.get_rlzs_assoc(
-            lambda trt: len(ruptures_by_trt.get(trt.id, [])))
-
-        return ruptures_by_trt
+    def send_sources(self):
+        """
+        Filter, split and set the seed array for each source, then send it the
+        workers
+        """
+        oq = self.oqparam
+        self.manager = self.SourceManager(
+            self.csm, self.core_task.__func__,
+            oq.maximum_distance, self.datastore,
+            self.monitor.new(oqparam=oq), oq.random_seed, oq.filter_sources)
+        self.manager.submit_sources(self.sitecol)
 
     def post_execute(self, result):
         """
         Save the SES collection and the array counts_per_rlz
         """
+        logging.info('Generated %d SESRuptures',
+                     sum(len(v) for v in result.values()))
         nc = self.rlzs_assoc.csm_info.num_collections
         sescollection = numpy.array([{} for col_id in range(nc)])
         tags = []
         ordinal = 0
         for trt_id in sorted(result):
+            if isinstance(trt_id, tuple):
+                # a pair (trt_id, gsim), skip
+                continue
             for sr in sorted(result[trt_id]):
                 sr.ordinal = ordinal
                 ordinal += 1
@@ -556,7 +566,7 @@ class EventBasedCalculator(ClassicalCalculator):
     Event based PSHA calculator generating the ruptures only
     """
     pre_calculator = 'event_based_rupture'
-    core_func = compute_gmfs_and_curves
+    core_task = compute_gmfs_and_curves
     is_stochastic = True
 
     def pre_execute(self):
@@ -611,20 +621,20 @@ class EventBasedCalculator(ClassicalCalculator):
 
     def execute(self):
         """
-        Run in parallel `core_func(sources, sitecol, monitor)`, by
+        Run in parallel `core_task(sources, sitecol, monitor)`, by
         parallelizing on the ruptures according to their weight and
         tectonic region type.
         """
         oq = self.oqparam
         if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
             return
-        monitor = self.monitor(self.core_func.__name__)
+        monitor = self.monitor(self.core_task.__name__)
         monitor.oqparam = oq
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
         self.nbytes = 0
         curves_by_trt_gsim = parallel.apply_reduce(
-            self.core_func.__func__,
+            self.core_task.__func__,
             (self.sesruptures, self.sitecol, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             acc=zerodict, agg=self.combine_curves_and_save_gmfs,
@@ -657,7 +667,10 @@ class EventBasedCalculator(ClassicalCalculator):
             # use a different datastore
             self.cl = ClassicalCalculator(oq, self.monitor)
             self.cl.datastore.parent = self.datastore
-            result = self.cl.run(pre_execute=False)
+            # TODO: perhaps it is possible to avoid reprocessing the source
+            # model, however usually this is quite fast and do not dominate
+            # the computation
+            result = self.cl.run()
             for imt in self.mean_curves.dtype.fields:
                 rdiff, index = max_rel_diff_index(
                     self.cl.mean_curves[imt], self.mean_curves[imt])

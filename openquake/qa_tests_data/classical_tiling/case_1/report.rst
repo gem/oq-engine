@@ -1,7 +1,7 @@
 Classical PSHA using Area Source
 ================================
 
-num_sites = 6
+num_sites = 6, sitecol = 557 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   5.0             
 random_seed                  23              
 master_seed                  0               
-concurrent_tasks             32              
+concurrent_tasks             4               
 ============================ ================
 
 Input files
@@ -59,8 +59,15 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============
-source_model     trt_id trt                  num_sources num_ruptures
-================ ====== ==================== =========== ============
-source_model.xml 0      Active Shallow Crust 1           1640        
-================ ====== ==================== =========== ============
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources num_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust 1           1640         41.0  
+================ ====== ==================== =========== ============ ======
+
+Expected data transfer for the sources
+--------------------------------------
+=========================== =========
+Number of tasks to generate 18       
+Sent data                   368.41 KB
+=========================== =========

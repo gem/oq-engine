@@ -1,7 +1,7 @@
 Classical PSHA with non-trivial logic tree (1 source model + absolute uncertainties on G-R a and b values and maximum magnitude and 2 GMPEs per tectonic region type)
 =====================================================================================================================================================================
 
-num_sites = 1
+num_sites = 1, sitecol = 437 B
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0      
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             32       
+concurrent_tasks             16       
 ============================ =========
 
 Input files
@@ -34,91 +34,91 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-=================== ================ ====================================== =============== ================ ===========
-smlt_path           weight           source_model_file                      gsim_logic_tree num_realizations num_sources
-=================== ================ ====================================== =============== ================ ===========
-b11_b21_b31_b41_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b21_b31_b41_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b21_b31_b41_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b21_b31_b42_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b21_b31_b42_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b21_b31_b42_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b21_b31_b43_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b21_b31_b43_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b21_b31_b43_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b21_b32_b41_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b21_b32_b41_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b21_b32_b41_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b21_b32_b42_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b21_b32_b42_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b21_b32_b42_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b21_b32_b43_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b21_b32_b43_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b21_b32_b43_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b21_b33_b41_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b21_b33_b41_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b21_b33_b41_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b21_b33_b42_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b21_b33_b42_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b21_b33_b42_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b21_b33_b43_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b21_b33_b43_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b21_b33_b43_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b22_b31_b41_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b22_b31_b41_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b22_b31_b41_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b22_b31_b42_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b22_b31_b42_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b22_b31_b42_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b22_b31_b43_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b22_b31_b43_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b22_b31_b43_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b22_b32_b41_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b22_b32_b41_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b22_b32_b41_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b22_b32_b42_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b22_b32_b42_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b22_b32_b42_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b22_b32_b43_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b22_b32_b43_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b22_b32_b43_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b22_b33_b41_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b22_b33_b41_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b22_b33_b41_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b22_b33_b42_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b22_b33_b42_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b22_b33_b42_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b22_b33_b43_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b22_b33_b43_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b22_b33_b43_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b23_b31_b41_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b23_b31_b41_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b23_b31_b41_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b23_b31_b42_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b23_b31_b42_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b23_b31_b42_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b23_b31_b43_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b23_b31_b43_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b23_b31_b43_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b23_b32_b41_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b23_b32_b41_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b23_b32_b41_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b23_b32_b42_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b23_b32_b42_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b23_b32_b42_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b23_b32_b43_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b23_b32_b43_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b23_b32_b43_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b23_b33_b41_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b23_b33_b41_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b23_b33_b41_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b23_b33_b42_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b23_b33_b42_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b23_b33_b42_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-b11_b23_b33_b43_b51 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1539       
-b11_b23_b33_b43_b52 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1542       
-b11_b23_b33_b43_b53 0.01244474113600 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4              1544       
-=================== ================ ====================================== =============== ================ ===========
+=================== ================ ====================================== =============== ================
+smlt_path           weight           source_model_file                      gsim_logic_tree num_realizations
+=================== ================ ====================================== =============== ================
+b11_b21_b31_b41_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b41_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b41_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b42_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b42_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b42_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b43_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b43_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b43_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b41_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b41_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b41_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b42_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b42_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b42_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b43_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b43_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b43_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b41_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b41_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b41_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b42_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b42_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b42_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b43_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b43_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b43_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b41_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b41_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b41_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b42_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b42_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b42_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b43_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b43_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b43_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b41_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b41_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b41_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b42_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b42_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b42_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b43_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b43_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b43_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b41_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b41_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b41_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b42_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b42_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b42_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b43_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b43_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b43_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b41_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b41_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b41_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b42_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b42_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b42_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b43_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b43_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b43_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b41_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b41_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b41_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b42_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b42_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b42_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b43_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b43_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b43_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b41_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b41_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b41_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b42_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b42_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b42_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b43_b51 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b43_b52 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b43_b53 0.01244474113600 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+=================== ================ ====================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -622,183 +622,183 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-=========== ======
-#TRT models 162   
-#sources    124875
-#ruptures   490185
-=========== ======
+================ ====== ======================== =========== ============ =======
+source_model     trt_id trt                      num_sources num_ruptures weight 
+================ ====== ======================== =========== ============ =======
+source_model.xml 0      Active Shallow Crust     1           1334         1334.0 
+source_model.xml 1      Stable Continental Crust 1           4100         102.5  
+source_model.xml 2      Active Shallow Crust     1           1337         1337.0 
+source_model.xml 3      Stable Continental Crust 1           4100         102.5  
+source_model.xml 4      Active Shallow Crust     1           1339         1339.0 
+source_model.xml 5      Stable Continental Crust 1           4100         102.5  
+source_model.xml 6      Active Shallow Crust     1           1334         1334.0 
+source_model.xml 7      Stable Continental Crust 1           4715         117.875
+source_model.xml 8      Active Shallow Crust     1           1337         1337.0 
+source_model.xml 9      Stable Continental Crust 1           4715         117.875
+source_model.xml 10     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 11     Stable Continental Crust 1           4715         117.875
+source_model.xml 12     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 13     Stable Continental Crust 1           5330         133.25 
+source_model.xml 14     Active Shallow Crust     1           1337         1337.0 
+source_model.xml 15     Stable Continental Crust 1           5330         133.25 
+source_model.xml 16     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 17     Stable Continental Crust 1           5330         133.25 
+source_model.xml 18     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 19     Stable Continental Crust 1           4100         102.5  
+source_model.xml 20     Active Shallow Crust     1           1337         1337.0 
+source_model.xml 21     Stable Continental Crust 1           4100         102.5  
+source_model.xml 22     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 23     Stable Continental Crust 1           4100         102.5  
+source_model.xml 24     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 25     Stable Continental Crust 1           4715         117.875
+source_model.xml 26     Active Shallow Crust     1           1337         1337.0 
+source_model.xml 27     Stable Continental Crust 1           4715         117.875
+source_model.xml 28     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 29     Stable Continental Crust 1           4715         117.875
+source_model.xml 30     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 31     Stable Continental Crust 1           5330         133.25 
+source_model.xml 32     Active Shallow Crust     1           1337         1337.0 
+source_model.xml 33     Stable Continental Crust 1           5330         133.25 
+source_model.xml 34     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 35     Stable Continental Crust 1           5330         133.25 
+source_model.xml 36     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 37     Stable Continental Crust 1           4100         102.5  
+source_model.xml 38     Active Shallow Crust     1           1337         1337.0 
+source_model.xml 39     Stable Continental Crust 1           4100         102.5  
+source_model.xml 40     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 41     Stable Continental Crust 1           4100         102.5  
+source_model.xml 42     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 43     Stable Continental Crust 1           4715         117.875
+source_model.xml 44     Active Shallow Crust     1           1337         1337.0 
+source_model.xml 45     Stable Continental Crust 1           4715         117.875
+source_model.xml 46     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 47     Stable Continental Crust 1           4715         117.875
+source_model.xml 48     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 49     Stable Continental Crust 1           5330         133.25 
+source_model.xml 50     Active Shallow Crust     1           1337         1337.0 
+source_model.xml 51     Stable Continental Crust 1           5330         133.25 
+source_model.xml 52     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 53     Stable Continental Crust 1           5330         133.25 
+source_model.xml 54     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 55     Stable Continental Crust 1           4100         102.5  
+source_model.xml 56     Active Shallow Crust     1           1337         1337.0 
+source_model.xml 57     Stable Continental Crust 1           4100         102.5  
+source_model.xml 58     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 59     Stable Continental Crust 1           4100         102.5  
+source_model.xml 60     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 61     Stable Continental Crust 1           4715         117.875
+source_model.xml 62     Active Shallow Crust     1           1337         1337.0 
+source_model.xml 63     Stable Continental Crust 1           4715         117.875
+source_model.xml 64     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 65     Stable Continental Crust 1           4715         117.875
+source_model.xml 66     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 67     Stable Continental Crust 1           5330         133.25 
+source_model.xml 68     Active Shallow Crust     1           1337         1337.0 
+source_model.xml 69     Stable Continental Crust 1           5330         133.25 
+source_model.xml 70     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 71     Stable Continental Crust 1           5330         133.25 
+source_model.xml 72     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 73     Stable Continental Crust 1           4100         102.5  
+source_model.xml 74     Active Shallow Crust     1           1337         1337.0 
+source_model.xml 75     Stable Continental Crust 1           4100         102.5  
+source_model.xml 76     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 77     Stable Continental Crust 1           4100         102.5  
+source_model.xml 78     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 79     Stable Continental Crust 1           4715         117.875
+source_model.xml 80     Active Shallow Crust     1           1337         1337.0 
+source_model.xml 81     Stable Continental Crust 1           4715         117.875
+source_model.xml 82     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 83     Stable Continental Crust 1           4715         117.875
+source_model.xml 84     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 85     Stable Continental Crust 1           5330         133.25 
+source_model.xml 86     Active Shallow Crust     1           1337         1337.0 
+source_model.xml 87     Stable Continental Crust 1           5330         133.25 
+source_model.xml 88     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 89     Stable Continental Crust 1           5330         133.25 
+source_model.xml 90     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 91     Stable Continental Crust 1           4100         102.5  
+source_model.xml 92     Active Shallow Crust     1           1337         1337.0 
+source_model.xml 93     Stable Continental Crust 1           4100         102.5  
+source_model.xml 94     Active Shallow Crust     1           1339         1339.0 
+source_model.xml 95     Stable Continental Crust 1           4100         102.5  
+source_model.xml 96     Active Shallow Crust     1           1334         1334.0 
+source_model.xml 97     Stable Continental Crust 1           4715         117.875
+source_model.xml 98     Active Shallow Crust     1           1337         1337.0 
+source_model.xml 99     Stable Continental Crust 1           4715         117.875
+source_model.xml 100    Active Shallow Crust     1           1339         1339.0 
+source_model.xml 101    Stable Continental Crust 1           4715         117.875
+source_model.xml 102    Active Shallow Crust     1           1334         1334.0 
+source_model.xml 103    Stable Continental Crust 1           5330         133.25 
+source_model.xml 104    Active Shallow Crust     1           1337         1337.0 
+source_model.xml 105    Stable Continental Crust 1           5330         133.25 
+source_model.xml 106    Active Shallow Crust     1           1339         1339.0 
+source_model.xml 107    Stable Continental Crust 1           5330         133.25 
+source_model.xml 108    Active Shallow Crust     1           1334         1334.0 
+source_model.xml 109    Stable Continental Crust 1           4100         102.5  
+source_model.xml 110    Active Shallow Crust     1           1337         1337.0 
+source_model.xml 111    Stable Continental Crust 1           4100         102.5  
+source_model.xml 112    Active Shallow Crust     1           1339         1339.0 
+source_model.xml 113    Stable Continental Crust 1           4100         102.5  
+source_model.xml 114    Active Shallow Crust     1           1334         1334.0 
+source_model.xml 115    Stable Continental Crust 1           4715         117.875
+source_model.xml 116    Active Shallow Crust     1           1337         1337.0 
+source_model.xml 117    Stable Continental Crust 1           4715         117.875
+source_model.xml 118    Active Shallow Crust     1           1339         1339.0 
+source_model.xml 119    Stable Continental Crust 1           4715         117.875
+source_model.xml 120    Active Shallow Crust     1           1334         1334.0 
+source_model.xml 121    Stable Continental Crust 1           5330         133.25 
+source_model.xml 122    Active Shallow Crust     1           1337         1337.0 
+source_model.xml 123    Stable Continental Crust 1           5330         133.25 
+source_model.xml 124    Active Shallow Crust     1           1339         1339.0 
+source_model.xml 125    Stable Continental Crust 1           5330         133.25 
+source_model.xml 126    Active Shallow Crust     1           1334         1334.0 
+source_model.xml 127    Stable Continental Crust 1           4100         102.5  
+source_model.xml 128    Active Shallow Crust     1           1337         1337.0 
+source_model.xml 129    Stable Continental Crust 1           4100         102.5  
+source_model.xml 130    Active Shallow Crust     1           1339         1339.0 
+source_model.xml 131    Stable Continental Crust 1           4100         102.5  
+source_model.xml 132    Active Shallow Crust     1           1334         1334.0 
+source_model.xml 133    Stable Continental Crust 1           4715         117.875
+source_model.xml 134    Active Shallow Crust     1           1337         1337.0 
+source_model.xml 135    Stable Continental Crust 1           4715         117.875
+source_model.xml 136    Active Shallow Crust     1           1339         1339.0 
+source_model.xml 137    Stable Continental Crust 1           4715         117.875
+source_model.xml 138    Active Shallow Crust     1           1334         1334.0 
+source_model.xml 139    Stable Continental Crust 1           5330         133.25 
+source_model.xml 140    Active Shallow Crust     1           1337         1337.0 
+source_model.xml 141    Stable Continental Crust 1           5330         133.25 
+source_model.xml 142    Active Shallow Crust     1           1339         1339.0 
+source_model.xml 143    Stable Continental Crust 1           5330         133.25 
+source_model.xml 144    Active Shallow Crust     1           1334         1334.0 
+source_model.xml 145    Stable Continental Crust 1           4100         102.5  
+source_model.xml 146    Active Shallow Crust     1           1337         1337.0 
+source_model.xml 147    Stable Continental Crust 1           4100         102.5  
+source_model.xml 148    Active Shallow Crust     1           1339         1339.0 
+source_model.xml 149    Stable Continental Crust 1           4100         102.5  
+source_model.xml 150    Active Shallow Crust     1           1334         1334.0 
+source_model.xml 151    Stable Continental Crust 1           4715         117.875
+source_model.xml 152    Active Shallow Crust     1           1337         1337.0 
+source_model.xml 153    Stable Continental Crust 1           4715         117.875
+source_model.xml 154    Active Shallow Crust     1           1339         1339.0 
+source_model.xml 155    Stable Continental Crust 1           4715         117.875
+source_model.xml 156    Active Shallow Crust     1           1334         1334.0 
+source_model.xml 157    Stable Continental Crust 1           5330         133.25 
+source_model.xml 158    Active Shallow Crust     1           1337         1337.0 
+source_model.xml 159    Stable Continental Crust 1           5330         133.25 
+source_model.xml 160    Active Shallow Crust     1           1339         1339.0 
+source_model.xml 161    Stable Continental Crust 1           5330         133.25 
+================ ====== ======================== =========== ============ =======
 
-================ ====== ======================== =========== ============
-source_model     trt_id trt                      num_sources num_ruptures
-================ ====== ======================== =========== ============
-source_model.xml 0      Active Shallow Crust     1334        1334        
-source_model.xml 1      Stable Continental Crust 205         4100        
-source_model.xml 2      Active Shallow Crust     1337        1337        
-source_model.xml 3      Stable Continental Crust 205         4100        
-source_model.xml 4      Active Shallow Crust     1339        1339        
-source_model.xml 5      Stable Continental Crust 205         4100        
-source_model.xml 6      Active Shallow Crust     1334        1334        
-source_model.xml 7      Stable Continental Crust 205         4715        
-source_model.xml 8      Active Shallow Crust     1337        1337        
-source_model.xml 9      Stable Continental Crust 205         4715        
-source_model.xml 10     Active Shallow Crust     1339        1339        
-source_model.xml 11     Stable Continental Crust 205         4715        
-source_model.xml 12     Active Shallow Crust     1334        1334        
-source_model.xml 13     Stable Continental Crust 205         5330        
-source_model.xml 14     Active Shallow Crust     1337        1337        
-source_model.xml 15     Stable Continental Crust 205         5330        
-source_model.xml 16     Active Shallow Crust     1339        1339        
-source_model.xml 17     Stable Continental Crust 205         5330        
-source_model.xml 18     Active Shallow Crust     1334        1334        
-source_model.xml 19     Stable Continental Crust 205         4100        
-source_model.xml 20     Active Shallow Crust     1337        1337        
-source_model.xml 21     Stable Continental Crust 205         4100        
-source_model.xml 22     Active Shallow Crust     1339        1339        
-source_model.xml 23     Stable Continental Crust 205         4100        
-source_model.xml 24     Active Shallow Crust     1334        1334        
-source_model.xml 25     Stable Continental Crust 205         4715        
-source_model.xml 26     Active Shallow Crust     1337        1337        
-source_model.xml 27     Stable Continental Crust 205         4715        
-source_model.xml 28     Active Shallow Crust     1339        1339        
-source_model.xml 29     Stable Continental Crust 205         4715        
-source_model.xml 30     Active Shallow Crust     1334        1334        
-source_model.xml 31     Stable Continental Crust 205         5330        
-source_model.xml 32     Active Shallow Crust     1337        1337        
-source_model.xml 33     Stable Continental Crust 205         5330        
-source_model.xml 34     Active Shallow Crust     1339        1339        
-source_model.xml 35     Stable Continental Crust 205         5330        
-source_model.xml 36     Active Shallow Crust     1334        1334        
-source_model.xml 37     Stable Continental Crust 205         4100        
-source_model.xml 38     Active Shallow Crust     1337        1337        
-source_model.xml 39     Stable Continental Crust 205         4100        
-source_model.xml 40     Active Shallow Crust     1339        1339        
-source_model.xml 41     Stable Continental Crust 205         4100        
-source_model.xml 42     Active Shallow Crust     1334        1334        
-source_model.xml 43     Stable Continental Crust 205         4715        
-source_model.xml 44     Active Shallow Crust     1337        1337        
-source_model.xml 45     Stable Continental Crust 205         4715        
-source_model.xml 46     Active Shallow Crust     1339        1339        
-source_model.xml 47     Stable Continental Crust 205         4715        
-source_model.xml 48     Active Shallow Crust     1334        1334        
-source_model.xml 49     Stable Continental Crust 205         5330        
-source_model.xml 50     Active Shallow Crust     1337        1337        
-source_model.xml 51     Stable Continental Crust 205         5330        
-source_model.xml 52     Active Shallow Crust     1339        1339        
-source_model.xml 53     Stable Continental Crust 205         5330        
-source_model.xml 54     Active Shallow Crust     1334        1334        
-source_model.xml 55     Stable Continental Crust 205         4100        
-source_model.xml 56     Active Shallow Crust     1337        1337        
-source_model.xml 57     Stable Continental Crust 205         4100        
-source_model.xml 58     Active Shallow Crust     1339        1339        
-source_model.xml 59     Stable Continental Crust 205         4100        
-source_model.xml 60     Active Shallow Crust     1334        1334        
-source_model.xml 61     Stable Continental Crust 205         4715        
-source_model.xml 62     Active Shallow Crust     1337        1337        
-source_model.xml 63     Stable Continental Crust 205         4715        
-source_model.xml 64     Active Shallow Crust     1339        1339        
-source_model.xml 65     Stable Continental Crust 205         4715        
-source_model.xml 66     Active Shallow Crust     1334        1334        
-source_model.xml 67     Stable Continental Crust 205         5330        
-source_model.xml 68     Active Shallow Crust     1337        1337        
-source_model.xml 69     Stable Continental Crust 205         5330        
-source_model.xml 70     Active Shallow Crust     1339        1339        
-source_model.xml 71     Stable Continental Crust 205         5330        
-source_model.xml 72     Active Shallow Crust     1334        1334        
-source_model.xml 73     Stable Continental Crust 205         4100        
-source_model.xml 74     Active Shallow Crust     1337        1337        
-source_model.xml 75     Stable Continental Crust 205         4100        
-source_model.xml 76     Active Shallow Crust     1339        1339        
-source_model.xml 77     Stable Continental Crust 205         4100        
-source_model.xml 78     Active Shallow Crust     1334        1334        
-source_model.xml 79     Stable Continental Crust 205         4715        
-source_model.xml 80     Active Shallow Crust     1337        1337        
-source_model.xml 81     Stable Continental Crust 205         4715        
-source_model.xml 82     Active Shallow Crust     1339        1339        
-source_model.xml 83     Stable Continental Crust 205         4715        
-source_model.xml 84     Active Shallow Crust     1334        1334        
-source_model.xml 85     Stable Continental Crust 205         5330        
-source_model.xml 86     Active Shallow Crust     1337        1337        
-source_model.xml 87     Stable Continental Crust 205         5330        
-source_model.xml 88     Active Shallow Crust     1339        1339        
-source_model.xml 89     Stable Continental Crust 205         5330        
-source_model.xml 90     Active Shallow Crust     1334        1334        
-source_model.xml 91     Stable Continental Crust 205         4100        
-source_model.xml 92     Active Shallow Crust     1337        1337        
-source_model.xml 93     Stable Continental Crust 205         4100        
-source_model.xml 94     Active Shallow Crust     1339        1339        
-source_model.xml 95     Stable Continental Crust 205         4100        
-source_model.xml 96     Active Shallow Crust     1334        1334        
-source_model.xml 97     Stable Continental Crust 205         4715        
-source_model.xml 98     Active Shallow Crust     1337        1337        
-source_model.xml 99     Stable Continental Crust 205         4715        
-source_model.xml 100    Active Shallow Crust     1339        1339        
-source_model.xml 101    Stable Continental Crust 205         4715        
-source_model.xml 102    Active Shallow Crust     1334        1334        
-source_model.xml 103    Stable Continental Crust 205         5330        
-source_model.xml 104    Active Shallow Crust     1337        1337        
-source_model.xml 105    Stable Continental Crust 205         5330        
-source_model.xml 106    Active Shallow Crust     1339        1339        
-source_model.xml 107    Stable Continental Crust 205         5330        
-source_model.xml 108    Active Shallow Crust     1334        1334        
-source_model.xml 109    Stable Continental Crust 205         4100        
-source_model.xml 110    Active Shallow Crust     1337        1337        
-source_model.xml 111    Stable Continental Crust 205         4100        
-source_model.xml 112    Active Shallow Crust     1339        1339        
-source_model.xml 113    Stable Continental Crust 205         4100        
-source_model.xml 114    Active Shallow Crust     1334        1334        
-source_model.xml 115    Stable Continental Crust 205         4715        
-source_model.xml 116    Active Shallow Crust     1337        1337        
-source_model.xml 117    Stable Continental Crust 205         4715        
-source_model.xml 118    Active Shallow Crust     1339        1339        
-source_model.xml 119    Stable Continental Crust 205         4715        
-source_model.xml 120    Active Shallow Crust     1334        1334        
-source_model.xml 121    Stable Continental Crust 205         5330        
-source_model.xml 122    Active Shallow Crust     1337        1337        
-source_model.xml 123    Stable Continental Crust 205         5330        
-source_model.xml 124    Active Shallow Crust     1339        1339        
-source_model.xml 125    Stable Continental Crust 205         5330        
-source_model.xml 126    Active Shallow Crust     1334        1334        
-source_model.xml 127    Stable Continental Crust 205         4100        
-source_model.xml 128    Active Shallow Crust     1337        1337        
-source_model.xml 129    Stable Continental Crust 205         4100        
-source_model.xml 130    Active Shallow Crust     1339        1339        
-source_model.xml 131    Stable Continental Crust 205         4100        
-source_model.xml 132    Active Shallow Crust     1334        1334        
-source_model.xml 133    Stable Continental Crust 205         4715        
-source_model.xml 134    Active Shallow Crust     1337        1337        
-source_model.xml 135    Stable Continental Crust 205         4715        
-source_model.xml 136    Active Shallow Crust     1339        1339        
-source_model.xml 137    Stable Continental Crust 205         4715        
-source_model.xml 138    Active Shallow Crust     1334        1334        
-source_model.xml 139    Stable Continental Crust 205         5330        
-source_model.xml 140    Active Shallow Crust     1337        1337        
-source_model.xml 141    Stable Continental Crust 205         5330        
-source_model.xml 142    Active Shallow Crust     1339        1339        
-source_model.xml 143    Stable Continental Crust 205         5330        
-source_model.xml 144    Active Shallow Crust     1334        1334        
-source_model.xml 145    Stable Continental Crust 205         4100        
-source_model.xml 146    Active Shallow Crust     1337        1337        
-source_model.xml 147    Stable Continental Crust 205         4100        
-source_model.xml 148    Active Shallow Crust     1339        1339        
-source_model.xml 149    Stable Continental Crust 205         4100        
-source_model.xml 150    Active Shallow Crust     1334        1334        
-source_model.xml 151    Stable Continental Crust 205         4715        
-source_model.xml 152    Active Shallow Crust     1337        1337        
-source_model.xml 153    Stable Continental Crust 205         4715        
-source_model.xml 154    Active Shallow Crust     1339        1339        
-source_model.xml 155    Stable Continental Crust 205         4715        
-source_model.xml 156    Active Shallow Crust     1334        1334        
-source_model.xml 157    Stable Continental Crust 205         5330        
-source_model.xml 158    Active Shallow Crust     1337        1337        
-source_model.xml 159    Stable Continental Crust 205         5330        
-source_model.xml 160    Active Shallow Crust     1339        1339        
-source_model.xml 161    Stable Continental Crust 205         5330        
-================ ====== ======================== =========== ============
+=============== ==========
+#TRT models     162       
+#sources        162       
+#ruptures       490185    
+filtered_weight 117817.875
+=============== ==========
 
 Expected data transfer for the sources
 --------------------------------------
-================================== =========
-Number of tasks to generate        162      
-Estimated sources to send          419.96 MB
-Estimated hazard curves to receive 48 KB    
-================================== =========
+=========================== ========
+Number of tasks to generate 162     
+Sent data                   46.52 MB
+=========================== ========
