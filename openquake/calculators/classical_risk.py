@@ -20,7 +20,7 @@ import logging
 
 import numpy
 
-from openquake.risklib import workflows, scientific, riskinput
+from openquake.risklib import riskmodels, scientific, riskinput
 from openquake.commonlib import readinput, parallel, datastore, logictree
 from openquake.calculators import base
 
@@ -36,7 +36,7 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     :param riskinputs:
         a list of :class:`openquake.risklib.riskinput.RiskInput` objects
     :param riskmodel:
-        a :class:`openquake.risklib.riskinput.RiskModel` instance
+        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param rlzs_assoc:
         associations (trt_id, gsim) -> realizations
     :param monitor:

@@ -27,7 +27,7 @@ EXAMPLES_DIR = os.path.dirname(nrml_examples.__file__)
 FF_DIR = os.path.dirname(case_4b.__file__)
 
 
-class ParseRiskModelTestCase(unittest.TestCase):
+class ParseCompositeRiskModelTestCase(unittest.TestCase):
 
     def test_different_levels_ok(self):
         # the same IMT can appear with different levels in different

@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2015, GEM Foundation
+#  Copyright (c) 2015-2016, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -97,16 +97,16 @@ def build_asset_collection(assets_by_site, time_event=None):
     return assetcol
 
 
-class RiskModel(collections.Mapping):
+class CompositeRiskModel(collections.Mapping):
     """
-    A container (imt, taxonomy) -> workflow.
+    A container (imt, taxonomy) -> riskmodel.
 
-    :param workflows: a dictionary (imt, taxonomy) -> workflow
+    :param riskmodels: a dictionary (imt, taxonomy) -> riskmodel
     :param damage_states: None or a list of damage states
     """
-    def __init__(self, workflows, damage_states=None):
+    def __init__(self, riskmodels, damage_states=None):
         self.damage_states = damage_states  # not None for damage calculations
-        self._workflows = workflows
+        self._riskmodels = riskmodels
         self.loss_types = []
         self.curve_builders = []
         self.lti = {}  # loss_type -> idx
@@ -192,12 +192,12 @@ class RiskModel(collections.Mapping):
                 curve_resolutions = set()
                 lines = []
                 for key in sorted(self):
-                    wf = self[key]
-                    if loss_type in wf.loss_ratios:
-                        ratios = wf.loss_ratios[loss_type]
+                    rm = self[key]
+                    if loss_type in rm.loss_ratios:
+                        ratios = rm.loss_ratios[loss_type]
                         curve_resolutions.add(len(ratios))
                         lines.append('%s %d' % (
-                            wf.risk_functions[loss_type], len(ratios)))
+                            rm.risk_functions[loss_type], len(ratios)))
                 if len(curve_resolutions) > 1:
                     logging.info(
                         'Different num_loss_ratios:\n%s', '\n'.join(lines))
@@ -222,13 +222,14 @@ class RiskModel(collections.Mapping):
         :returns: a sorted list with all the loss_types contained in the model
         """
         ltypes = set()
-        for wf in self.values():
-            ltypes.update(wf.loss_types)
+        for rm in self.values():
+            ltypes.update(rm.loss_types)
         return sorted(ltypes)
 
     def get_taxonomies(self, imt=None):
         """
-        :returns: the set of taxonomies which are part of the RiskModel
+        :returns:
+            the set of taxonomies which are part of the CompositeRiskModel
         """
         if imt is None:
             return set(taxonomy for imt, taxonomy in self)
@@ -251,13 +252,13 @@ class RiskModel(collections.Mapping):
         return list(dic.items())
 
     def __getitem__(self, imt_taxo):
-        return self._workflows[imt_taxo]
+        return self._riskmodels[imt_taxo]
 
     def __iter__(self):
-        return iter(sorted(self._workflows))
+        return iter(sorted(self._riskmodels))
 
     def __len__(self):
-        return len(self._workflows)
+        return len(self._riskmodels)
 
     def build_input(self, imt, hazards_by_site, assets_by_site, eps_dict):
         """
@@ -301,7 +302,7 @@ class RiskModel(collections.Mapping):
                     assets_by_site=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
-        underlying workflows. Yield the outputs generated as dictionaries
+        underlying riskmodels. Yield the outputs generated as dictionaries
         out_by_rlz.
 
         :param riskinputs: a list of riskinputs with consistent IMT
@@ -328,8 +329,8 @@ class RiskModel(collections.Mapping):
                                 epsilons.append(epsilon)
                         if not assets:
                             continue
-                        workflow = self[imt, taxonomy]
-                        for out_by_rlz in workflow.gen_out_by_rlz(
+                        riskmodel = self[imt, taxonomy]
+                        for out_by_rlz in riskmodel.gen_out_by_rlz(
                                 assets, hazards, epsilons, riskinput.tags):
                             yield out_by_rlz
 

@@ -30,7 +30,7 @@ from shapely import wkt, geometry
 
 from openquake.hazardlib import geo, site, correlation, imt
 from openquake.hazardlib.calc.hazard_curve import zero_curves
-from openquake.risklib import workflows, riskinput
+from openquake.risklib import riskmodels, riskinput
 
 from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.oqvalidation import OqParam
@@ -580,24 +580,24 @@ def get_imts(oqparam):
 
 def get_risk_model(oqparam, rmdict):
     """
-    Return a :class:`openquake.risklib.riskinput.RiskModel` instance
+    Return a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
 
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
    :param rmdict:
         a dictionary (imt, taxonomy) -> loss_type -> risk_function
     """
-    wfs = {}  # (imt, taxonomy) -> workflow
-    riskmodel = riskinput.RiskModel(wfs)
+    riskmod = {}  # (imt, taxonomy) -> riskmodel
+    crm = riskinput.CompositeRiskModel(riskmod)
     if getattr(oqparam, 'limit_states', []):
         # classical_damage/scenario_damage calculator
         if oqparam.calculation_mode in ('classical', 'scenario'):
             # case when the risk files are in the job_hazard.ini file
             oqparam.calculation_mode += '_damage'
-        riskmodel.damage_states = ['no_damage'] + oqparam.limit_states
+        crm.damage_states = ['no_damage'] + oqparam.limit_states
         delattr(oqparam, 'limit_states')
         for imt_taxo, ffs_by_lt in rmdict.items():
-            wfs[imt_taxo] = workflows.get_workflow(
+            riskmod[imt_taxo] = riskmodels.get_riskmodel(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 fragility_functions=ffs_by_lt)
     elif oqparam.calculation_mode.endswith('_bcr'):
@@ -606,7 +606,7 @@ def get_risk_model(oqparam, rmdict):
         for (imt_taxo, vf_orig), (imt_taxo_, vf_retro) in \
                 zip(rmdict.items(), retro.items()):
             assert imt_taxo == imt_taxo_  # same imt and taxonomy
-            wfs[imt_taxo] = workflows.get_workflow(
+            riskmod[imt_taxo] = riskmodels.get_riskmodel(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 vulnerability_functions_orig=vf_orig,
                 vulnerability_functions_retro=vf_retro)
@@ -617,21 +617,21 @@ def get_risk_model(oqparam, rmdict):
                 # set the seed; this is important for the case of
                 # VulnerabilityFunctionWithPMF
                 vf.seed = oqparam.random_seed
-            wfs[imt_taxo] = workflows.get_workflow(
+            riskmod[imt_taxo] = riskmodels.get_riskmodel(
                 imt_taxo[0], imt_taxo[1], oqparam,
                 vulnerability_functions=vfs)
 
-    riskmodel.make_curve_builders(oqparam)
+    crm.make_curve_builders(oqparam)
     taxonomies = set()
-    for imt_taxo, workflow in wfs.items():
+    for imt_taxo, riskmodel in riskmod.items():
         taxonomies.add(imt_taxo[1])
-        workflow.riskmodel = riskmodel
+        riskmodel.compositemodel = crm
         # save the number of nonzero coefficients of variation
-        for vf in workflow.risk_functions.values():
+        for vf in riskmodel.risk_functions.values():
             if hasattr(vf, 'covs') and vf.covs.any():
-                riskmodel.covs += 1
-    riskmodel.taxonomies = sorted(taxonomies)
-    return riskmodel
+                crm.covs += 1
+    crm.taxonomies = sorted(taxonomies)
+    return crm
 
 # ########################### exposure ############################ #
 
@@ -699,7 +699,7 @@ valid_cost_type = valid.Choice('aggregated', 'per_area', 'per_asset')
 def get_exposure(oqparam):
     """
     Read the full exposure in memory and build a list of
-    :class:`openquake.risklib.workflows.Asset` instances.
+    :class:`openquake.risklib.riskmodels.Asset` instances.
     If you don't want to keep everything in memory, use
     get_exposure_lazy instead (for experts only).
 
@@ -716,7 +716,7 @@ def get_exposure(oqparam):
     all_cost_types = set(oqparam.all_cost_types)
     fname = oqparam.inputs['exposure']
     exposure, assets_node = get_exposure_lazy(fname, all_cost_types)
-    cc = workflows.CostCalculator(
+    cc = riskmodels.CostCalculator(
         {}, {}, exposure.deductible_is_absolute,
         exposure.insurance_limit_is_absolute)
     for ct in exposure.cost_types:
@@ -803,7 +803,7 @@ def get_exposure(oqparam):
         if occupancies:  # store average fatalities
             values['fatalities_None'] = tot_fatalities / len(occupancies)
         area = float(asset.attrib.get('area', 1))
-        ass = workflows.Asset(
+        ass = riskmodels.Asset(
             asset_id, taxonomy, number, location, values, area,
             deductibles, insurance_limits, retrofitting_values, cc)
         exposure.assets.append(ass)

@@ -7,7 +7,7 @@ import tempfile
 import numpy
 from scipy.stats import mstats
 from openquake.commonlib import writers, tests
-from openquake.risklib import scientific, workflows
+from openquake.risklib import scientific, riskmodels
 
 aaae = numpy.testing.assert_array_almost_equal
 
@@ -177,7 +177,7 @@ class NormalizeTestCase(unittest.TestCase):
 def asset(ref, value, deductibles=None,
           insurance_limits=None,
           retrofitting_values=None):
-    return workflows.Asset(ref, 'taxonomy', 1, (0, 0), dict(structural=value),
+    return riskmodels.Asset(ref, 'taxonomy', 1, (0, 0), dict(structural=value),
                            1, deductibles, insurance_limits,
                            retrofitting_values)
 

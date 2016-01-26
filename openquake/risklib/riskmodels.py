@@ -16,7 +16,6 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 from __future__ import division
-import sys
 import inspect
 import functools
 import collections
@@ -206,9 +205,9 @@ class List(list):
     # this is ugly, but we already did that, and there is no other easy way
 
 
-def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
+def out_by_rlz(riskmodel, assets, hazards, epsilons, tags, loss_type):
     """
-    :param workflow: a Workflow instance
+    :param riskmodel: a RiskModel instance
     :param assets: an array of assets of homogeneous taxonomy
     :param hazards: an array of dictionaries per each asset
     :param epsilons: an array of epsilons per each asset
@@ -222,19 +221,19 @@ def out_by_rlz(workflow, assets, hazards, epsilons, tags, loss_type):
     # extract the realizations from the first asset
     for rlz in sorted(hazards[0]):
         hazs = [haz[rlz] for haz in hazards]  # hazard per each asset
-        out = workflow(loss_type, assets, hazs, epsilons, tags)
+        out = riskmodel(loss_type, assets, hazs, epsilons, tags)
         out.hid = rlz.ordinal
         out.weight = rlz.weight
         out_by_rlz.append(out)
     return out_by_rlz
 
 
-class Workflow(object):
+class RiskModel(object):
     """
     Base class. Can be used in the tests as a mock.
     """
     time_event = None  # used in scenario_risk
-    riskmodel = None  # set by get_risk_model
+    compositemodel = None  # set by get_risk_model
 
     def __init__(self, imt, taxonomy, risk_functions):
         self.imt = imt
@@ -291,17 +290,15 @@ def rescale(curves, values):
     return numpy.array([[losses[i], poes[i]] for i in range(n)])
 
 
-# FIXME: remove the loss fractions after replacing the engine calculator
 @registry.add('classical_risk', 'classical', 'disaggregation',
               'classical_tiling')
-class Classical(Workflow):
+class Classical(RiskModel):
     """
-    Classical PSHA-Based Workflow.
+    Classical PSHA-Based RiskModel.
 
-    1) Compute loss curves, loss maps, loss fractions for each
-       realization.
+    1) Compute loss curves, loss maps for each realization.
     2) Compute (if more than one realization is given) mean and
-       quantiles loss curves, maps and fractions.
+       quantiles loss curves and maps.
 
     Per-realization Outputs contain the following fields:
 
@@ -320,9 +317,6 @@ class Classical(Workflow):
     :attr loss_maps:
       a numpy array of P elements holding N loss maps where P is the
       number of `conditional_loss_poes` considered. Shape: (P, N)
-    :attr loss_fractions:
-      a numpy array of D elements holding N loss fraction values where D is the
-      number of `poes_disagg`. Shape: (D, N)
 
     The statistical outputs are stored into
     :class:`openquake.risklib.scientific.Output`,
@@ -364,9 +358,9 @@ class Classical(Workflow):
                  insured_losses=False):
         """
         :param imt:
-            Intensity Measure Type for this workflow
+            Intensity Measure Type for this riskmodel
         :param taxonomy:
-            Taxonomy for this workflow
+            Taxonomy for this riskmodel
         :param vulnerability_functions:
             Dictionary of vulnerability functions by loss type
         :param hazard_imtls:
@@ -442,43 +436,11 @@ class Classical(Workflow):
             average_insured_losses=average_insured_losses,
             loss_maps=values * maps)
 
-    # FIXME: remove this after removal of the old calculator
-    def statistics(self, all_outputs, quantiles=()):
-        """
-        :param quantiles:
-            quantile levels used to compute quantile outputs
-        :returns:
-            a :class:`openquake.risklib.scientific.Output`
-            instance holding statistical outputs (e.g. mean loss curves).
-        """
-        if len(all_outputs) == 1:  # single realization
-            return
-        stats = scientific.StatsBuilder(
-            quantiles, self.conditional_loss_poes, self.poes_disagg)
-        return stats.build(all_outputs)
-
-    def compute_all_outputs(self, getter, loss_type):
-        """
-        :param getter:
-            a getter object
-        :param str loss_type:
-            a string identifying the loss type we are considering
-        :returns:
-            a number of outputs equal to the number of realizations
-        """
-        all_outputs = []
-        for hazard in getter.get_hazards():  # for each realization
-            out = self(loss_type, getter.assets, hazard.data)
-            out.hid = hazard.hid
-            out.weight = hazard.weight
-            all_outputs.append(out)
-        return all_outputs
-
 
 @registry.add('event_based_risk', 'event_based', 'event_based_rupture')
-class ProbabilisticEventBased(Workflow):
+class ProbabilisticEventBased(RiskModel):
     """
-    Implements the Probabilistic Event Based workflow
+    Implements the Probabilistic Event Based riskmodel
 
     Per-realization Output are saved into
     :class:`openquake.risklib.scientific.ProbabilisticEventBased.Output`
@@ -596,7 +558,8 @@ class ProbabilisticEventBased(Workflow):
         average_losses = loss_matrix.sum(axis=1) * self.ses_ratio
         values = get_values(loss_type, assets)
         ela = loss_matrix.T * values  # matrix with T x N elements
-        cb = self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
+        cb = self.compositemodel.curve_builders[
+            self.compositemodel.lti[loss_type]]
         # FIXME: ugly workaround for qa_tests.event_based_test; in Ubuntu 12.04
         # MagicMock does not work well, so len(cb.ratios) gives an error
         nratios = 1 if isinstance(cb, mock.Mock) else len(cb.ratios)
@@ -626,44 +589,9 @@ class ProbabilisticEventBased(Workflow):
             insured_counts_matrix=icounts,
             tags=event_ids)
 
-    def compute_all_outputs(self, getter, loss_type):
-        """
-        :param getter:
-            a getter object
-        :param str loss_type:
-            a string identifying the loss type we are considering
-        :returns:
-            a number of outputs equal to the number of realizations
-        """
-        for hazard in getter.get_hazards():  # for each realization
-            out = self(loss_type, getter.assets, hazard.data,
-                       getter.get_epsilons(), getter.rupture_ids)
-            out.hid = hazard.hid
-            out.weight = hazard.weight
-            yield out
-
-    def statistics(self, all_outputs, quantiles):
-        """
-        :returns:
-            a :class:`openquake.risklib.scientific.Output`
-            instance holding statistical outputs (e.g. mean loss curves).
-        :param quantiles:
-            quantile levels used to compute quantile outputs
-        """
-        if len(all_outputs) == 1:  # single realization
-            return
-        stats = scientific.StatsBuilder(
-            quantiles, self.conditional_loss_poes, [],
-            scientific.normalize_curves_eb)
-        out = stats.build(all_outputs)
-        out.event_loss_table = sum(
-            (out.event_loss_table for out in all_outputs),
-            collections.Counter())
-        return out
-
 
 @registry.add('classical_bcr')
-class ClassicalBCR(Workflow):
+class ClassicalBCR(RiskModel):
     def __init__(self, imt, taxonomy,
                  vulnerability_functions_orig,
                  vulnerability_functions_retro,
@@ -713,14 +641,11 @@ class ClassicalBCR(Workflow):
             assets, loss_type,
             data=list(zip(eal_original, eal_retrofitted, bcr_results)))
 
-    compute_all_outputs = (Classical.compute_all_outputs if sys.version > '3'
-                           else Classical.compute_all_outputs.__func__)
-
 
 @registry.add('scenario_risk', 'scenario')
-class Scenario(Workflow):
+class Scenario(RiskModel):
     """
-    Implements the Scenario workflow
+    Implements the Scenario riskmodel
     """
     def __init__(self, imt, taxonomy, vulnerability_functions,
                  insured_losses, time_event=None):
@@ -764,9 +689,9 @@ class Scenario(Workflow):
 
 
 @registry.add('scenario_damage')
-class Damage(Workflow):
+class Damage(RiskModel):
     """
-    Implements the ScenarioDamage workflow
+    Implements the ScenarioDamage riskmodel
     """
     def __init__(self, imt, taxonomy, fragility_functions):
         self.imt = imt
@@ -805,7 +730,7 @@ class Damage(Workflow):
 @registry.add('classical_damage')
 class ClassicalDamage(Damage):
     """
-    Implements the ClassicalDamage workflow
+    Implements the ClassicalDamage riskmodel
     """
     def __init__(self, imt, taxonomy, fragility_functions,
                  hazard_imtls, investigation_time,
@@ -835,19 +760,15 @@ class ClassicalDamage(Damage):
             for asset, curve in zip(assets, hazard_curves)]
         return scientific.Output(assets, loss_type, damages=damages)
 
-    compute_all_outputs = (
-        Classical.compute_all_outputs if sys.version > '3' else
-        Classical.compute_all_outputs.__func__)
-
 
 # NB: the approach used here relies on the convention of having the
-# names of the arguments of the workflow class to be equal to the
+# names of the arguments of the riskmodel class to be equal to the
 # names of the parameter in the oqparam object. This is view as a
 # feature, since it forces people to be consistent with the names,
 # in the spirit of the 'convention over configuration' philosophy
-def get_workflow(imt, taxonomy, oqparam, **extra):
+def get_riskmodel(imt, taxonomy, oqparam, **extra):
     """
-    Return an instance of the correct workflow class, depending on the
+    Return an instance of the correct riskmodel class, depending on the
     attribute `calculation_mode` of the object `oqparam`.
 
     :param imt:
@@ -855,13 +776,13 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
     :param taxonomy:
         a taxonomy string
     :param oqparam:
-        an object containing the parameters needed by the workflow class
+        an object containing the parameters needed by the riskmodel class
     :param extra:
-        extra parameters to pass to the workflow class
+        extra parameters to pass to the riskmodel class
     """
-    workflow_class = registry[oqparam.calculation_mode]
-    # arguments needed to instantiate the workflow class
-    argnames = inspect.getargspec(workflow_class.__init__).args[3:]
+    riskmodel_class = registry[oqparam.calculation_mode]
+    # arguments needed to instantiate the riskmodel class
+    argnames = inspect.getargspec(riskmodel_class.__init__).args[3:]
 
     # arguments extracted from oqparam
     known_args = set(name for name, value in
@@ -879,4 +800,4 @@ def get_workflow(imt, taxonomy, oqparam, **extra):
     if missing:
         raise TypeError('Missing parameter: %s' % ', '.join(missing))
 
-    return workflow_class(imt, taxonomy, **all_args)
+    return riskmodel_class(imt, taxonomy, **all_args)
