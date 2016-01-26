@@ -32,7 +32,7 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
 
 class NathEtAl2012Lower(GMPE):
-    # pylint: disable=too-few-public-methods
+    # pylint: disable=too-few-public-methods, no-init
     """
     Implements GMPE of Nath et. al (2012) for intraplate margin seismicity in
     the Shillong Plateau of India at 25-45 km deph.
@@ -96,10 +96,6 @@ class NathEtAl2012Lower(GMPE):
         ``ln(P) = c1 + c2*M + c3*(10 - M)^3 + c4*ln(R + c5*exp(c6*M)``
         """
 
-        assert imt.__class__ in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-
         # obtain coefficients for required intensity measure type (IMT)
         coeffs = self.COEFFS_BEDROCK[imt].copy()
 
@@ -110,7 +106,7 @@ class NathEtAl2012Lower(GMPE):
         ln_mean = self._compute_mean(rup, dists, coeffs)
 
         # obtain standard deviation
-        ln_stddev = self._get_stddevs(coeffs)
+        ln_stddev = self._get_stddevs(coeffs, stddev_types)
 
         return ln_mean, [ln_stddev]
 
@@ -126,15 +122,21 @@ class NathEtAl2012Lower(GMPE):
 
         return ln_p
 
-    @classmethod
-    def _get_stddevs(cls, coeffs):
+    def _get_stddevs(self, coeffs, stddev_types):
         """
-        Look up from Table 5 on p. 483. Although the value is listed as
-        "sigma_log(Y)" in that table it is assumed that this is a natural
-        logarihm as for ln_p in equation (11) rather than the common logarithm.
+        Look up values from Table 5 on p. 483 and convert to natural logarithm.
+        Interpretation of "sigma_log(Y)" as the common logarithm is based on
+        the order of magnitude of the values and consistent use of "log" and
+        "ln" to denote common and natural logarithm elsewhere in the paper.
         """
 
-        return coeffs['sigma']
+        for stddev_type in stddev_types:
+            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+
+        log_stddev = coeffs['sigma']
+        ln_stddev = log_stddev*np.log(10)
+
+        return ln_stddev
 
     #: Coefficients taken from Table 5, p. 483.
     COEFFS_BEDROCK = CoeffsTable(sa_damping=5., table="""\
@@ -155,7 +157,7 @@ class NathEtAl2012Lower(GMPE):
 
 
 class NathEtAl2012Upper(NathEtAl2012Lower):
-    # pylint: disable=too-few-public-methods
+    # pylint: disable=too-few-public-methods, no-init
     """
     Implements GMPE of Nath et. al (2012) for intraplate margin seismicity in
     the Shillong Plateau of India above 25 km deph.
