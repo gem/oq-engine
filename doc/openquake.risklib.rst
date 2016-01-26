@@ -17,10 +17,10 @@ risklib Package
     :undoc-members:
     :show-inheritance:
 
-:mod:`workflows` Module
+:mod:`riskmodels` Module
 -----------------------
 
-.. automodule:: openquake.risklib.workflows
+.. automodule:: openquake.risklib.riskmodels
     :members:
     :undoc-members:
     :show-inheritance:

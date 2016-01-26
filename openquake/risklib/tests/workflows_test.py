@@ -22,7 +22,7 @@ import mock
 
 import numpy
 
-from openquake.risklib import workflows
+from openquake.risklib import riskmodels
 
 aaae = numpy.testing.assert_array_almost_equal
 
@@ -30,7 +30,7 @@ aaae = numpy.testing.assert_array_almost_equal
 def asset(values, deductibles=None,
           insurance_limits=None,
           retrofitting_values=None):
-    return workflows.Asset('a1', 'taxonomy', 1, (0, 0), values,
+    return riskmodels.Asset('a1', 'taxonomy', 1, (0, 0), values,
                            1, deductibles, insurance_limits,
                            retrofitting_values)
 
@@ -40,7 +40,7 @@ class ScenarioTestCase(unittest.TestCase):
 
     def test_call(self):
         vf = mock.MagicMock()
-        calc = workflows.Scenario('PGA', 'TAXO', vf, True)
+        calc = riskmodels.Scenario('PGA', 'TAXO', vf, True)
 
         assets = [asset(
             dict(structural=10),
@@ -59,7 +59,7 @@ class ScenarioTestCase(unittest.TestCase):
 
     def test_call_no_insured(self):
         vf = mock.MagicMock()
-        calc = workflows.Scenario('PGA', 'TAXO', vf, False)
+        calc = riskmodels.Scenario('PGA', 'TAXO', vf, False)
 
         assets = [asset(dict(structural=10))] * 4
         vf = calc.risk_functions[self.loss_type]
@@ -77,7 +77,7 @@ class DamageTest(unittest.TestCase):
     def test_generator(self):
         with mock.patch('openquake.risklib.scientific.scenario_damage') as m:
             fragility_functions = mock.Mock()
-            calc = workflows.Damage(
+            calc = riskmodels.Damage(
                 'PGA', 'TAXO', dict(damage=fragility_functions))
             calc('damage', 'assets', 'hazard', None)
             self.assertEqual(m.call_count, 6)  # called 3 x 2 times
