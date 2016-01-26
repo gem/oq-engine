@@ -1,9 +1,14 @@
+  [Graeme Weatherill]
+  * Adds version of NSHMP Western US (NGA West) GMPEs to calculated the
+   weighted mean of the epistemic uncertainty adjustment factor
+  
   [Nick Ackerley]
-  * Implemented Nath (2012) for anomalous interface subduction in the
+  * Give more feedback in error messages on validation.
+  * Implemented GMPE of Nath (2012) for anomalous interface subduction in the
     intraplate margin of the Shillong plateau in India.
   * Implemented GMPE of Sharma et al. (2009) for active shallow crust of
     Indian Himalayas.
-  * Give more feedback in error messages on validation.
+  * Implemented GMPE of Gupta (2010) for Indo-Burmese intraslab subduction.
 
   [Michele Simionato]
   * Added a .weight property to sources, as well as a .num_ruptures attribute
