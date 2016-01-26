@@ -1,6 +1,11 @@
+  [Graeme Weatherill]
+  * Adds version of NSHMP Western US (NGA West) GMPEs to calculated the
+   weighted mean of the epistemic uncertainty adjustment factor
+
   [Nick Ackerley]
   * Implemented GMPE of Raghukanth & Iyengar (2007) for stable continental
     regions of peninsular India.
+  * Implemented GMPE of Gupta (2010) for Indo-Burmese intraslab subduction.
   * Implemented GMPE of Sharma et al. (2009) for active shallow crust of
     Indian Himalayas.
   * Give more feedback in error messages on validation.
