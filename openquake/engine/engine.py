@@ -23,7 +23,6 @@ import getpass
 import itertools
 import operator
 import traceback
-from contextlib import contextmanager
 from datetime import datetime
 
 import celery.task.control
@@ -144,22 +143,12 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
     :param exports:
         A comma-separated string of export types.
     """
-    # let's import the calculator classes here, when they are needed;
-    # the reason is that the command `$ oq-engine --upgrade-db`
-    # does not need them and would raise strange errors during installation
-    # time if the PYTHONPATH is not set and commonlib is not visible
-    calculator = base.calculators(job.get_oqparam(), calc_id=job.id)
-    calculator.job = job
-    calculator.monitor = EnginePerformanceMonitor(
-        '', calculator.datastore.hdf5path)
-    calculator.monitor.job_id = job.id
-
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
     with logs.handle(job, log_level, log_file):  # run the job
         tb = 'None\n'
         try:
-            _do_run_calc(calculator, exports, hazard_calculation_id)
+            _do_run_calc(job, exports, hazard_calculation_id)
         except:
             tb = traceback.format_exc()
             try:
@@ -182,22 +171,22 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
                 # log the finalization error only if there is no real error
                 if tb == 'None\n':
                     logs.LOG.error('finalizing', exc_info=True)
-        expose_outputs(calculator.datastore, job)
-    return calculator
+        expose_outputs(job.calc.datastore, job)
+    return job.calc
 
 
-def _do_run_calc(calc, exports, hazard_calculation_id):
+def _do_run_calc(job, exports, hazard_calculation_id):
     """
     Step through all of the phases of a calculation, updating the job
     status at each phase.
 
     :param calc:
-        An :class:`~openquake.engine.calculators.base.Calculator` instance.
+        An :class:`~openquake.calculators.base.Calculator` instance.
     :param exports:
         a (potentially empty) comma-separated string of export targets
     """
-    calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id)
-    calc.job.status = 'complete'
+    job.calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id)
+    job.status = 'complete'
 
 
 def del_calc(job_id):
@@ -419,6 +408,7 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
         oq = readinput.get_oqparam(params)
         calc = base.calculators(oq, calc_id=job.id)
         calc.save_params()
+        job.calc = calc
     return job
 
 
