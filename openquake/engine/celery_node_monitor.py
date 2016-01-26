@@ -98,6 +98,8 @@ class CeleryNodeMonitor(object):
         Returns the number of live celery nodes (i.e. the number of machines).
         """
         stats = celery.task.control.inspect(timeout=1).stats()
+        if not stats:
+            sys.exit("No live compute nodes, aborting calculation")
         num_workers = sum(stats[k]['pool']['max-concurrency'] for k in stats)
         OqParam.concurrent_tasks.default = 2 * num_workers
         return set(stats)
@@ -107,8 +109,6 @@ class CeleryNodeMonitor(object):
             return self  # do nothing
         elif self.use_celery:
             self.live_nodes = self.set_concurrent_tasks_default()
-            if not self.live_nodes:
-                sys.exit("No live compute nodes, aborting calculation")
             self.th = threading.Thread(None, self.check_nodes)
             self.th.start()
         return self
