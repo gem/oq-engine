@@ -71,7 +71,7 @@ class EventBasedTestCase(unittest.TestCase):
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
             )
-        wf.riskmodel = mock.MagicMock()
+        wf.compositemodel = mock.MagicMock()
         # NB: we need a MagicMock since the riskmodel instance makes a call
         # self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
         out = wf(self.loss_type, assets, gmvs, epsilons, [1, 2, 3, 4, 5])
@@ -107,7 +107,7 @@ class EventBasedTestCase(unittest.TestCase):
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
             )
-        wf.riskmodel = mock.MagicMock()
+        wf.compositemodel = mock.MagicMock()
         out = wf(self.loss_type, assets, gmvs, epsilons, [1, 2, 3, 4, 5])
         numpy.testing.assert_almost_equal(
             out.average_losses, [0.01987912, 0.01929152])
@@ -143,7 +143,7 @@ class EventBasedTestCase(unittest.TestCase):
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
             )
-        wf.riskmodel = mock.MagicMock()
+        wf.compositemodel = mock.MagicMock()
         out = wf(self.loss_type, assets, gmvs, epsilons, [1, 2, 3, 4, 5])
         numpy.testing.assert_almost_equal(
             out.average_losses, [0.01952035, 0.01952035])
@@ -229,7 +229,7 @@ class EventBasedTestCase(unittest.TestCase):
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=True
             )
-        wf.riskmodel = mock.MagicMock()
+        wf.compositemodel = mock.MagicMock()
         out = wf(self.loss_type, assets, gmf[0:2], epsilons, [1, 2, 3, 4, 5])
         numpy.testing.assert_almost_equal(
             out.average_losses, [0.00473820568, 0.0047437959417])
