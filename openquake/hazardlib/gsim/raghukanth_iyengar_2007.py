@@ -144,8 +144,6 @@ class RaghukanthIyengar2007(GMPE):
 
         """
 
-        assert imt.__class__ in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
-
         # obtain coefficients for required intensity measure type
         coeffs = self.COEFFS_BEDROCK[imt].copy()
 
