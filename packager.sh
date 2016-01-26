@@ -416,7 +416,7 @@ _builddoc_innervm_run () {
 #                     - performs package tests (install, remove, reinstall ..)
 #                     - set up postgres
 #                     - upgrade db
-#                     - runs celeryd is GEM_USE_CELERY is set
+#                     - runs celeryd if GEM_USE_CELERY is set
 #                     - executes demos
 #
 #      <lxc_ip>    the IP address of lxc instance
