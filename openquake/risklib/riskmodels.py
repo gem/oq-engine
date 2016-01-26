@@ -233,7 +233,7 @@ class RiskModel(object):
     Base class. Can be used in the tests as a mock.
     """
     time_event = None  # used in scenario_risk
-    riskmodel = None  # set by get_risk_model
+    compositemodel = None  # set by get_risk_model
 
     def __init__(self, imt, taxonomy, risk_functions):
         self.imt = imt
@@ -558,7 +558,8 @@ class ProbabilisticEventBased(RiskModel):
         average_losses = loss_matrix.sum(axis=1) * self.ses_ratio
         values = get_values(loss_type, assets)
         ela = loss_matrix.T * values  # matrix with T x N elements
-        cb = self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
+        cb = self.compositemodel.curve_builders[
+            self.compositemodel.lti[loss_type]]
         # FIXME: ugly workaround for qa_tests.event_based_test; in Ubuntu 12.04
         # MagicMock does not work well, so len(cb.ratios) gives an error
         nratios = 1 if isinstance(cb, mock.Mock) else len(cb.ratios)

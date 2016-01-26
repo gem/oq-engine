@@ -625,7 +625,7 @@ def get_risk_model(oqparam, rmdict):
     taxonomies = set()
     for imt_taxo, riskmodel in riskmod.items():
         taxonomies.add(imt_taxo[1])
-        riskmodel.riskmodel = crm
+        riskmodel.compositemodel = crm
         # save the number of nonzero coefficients of variation
         for vf in riskmodel.risk_functions.values():
             if hasattr(vf, 'covs') and vf.covs.any():
