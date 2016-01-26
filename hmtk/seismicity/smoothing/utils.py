@@ -194,6 +194,6 @@ def get_even_magnitude_completeness(completeness_table, catalogue=None):
         else:
             completeness_table = np.vstack([completeness_table,
                                             temp_table])
-    #completeness_table = np.vstack([completeness_table,
+    # completeness_table = np.vstack([completeness_table,
     #    np.array([[cyear[-1], cmag[-1]]])])
     return completeness_table, 0.1
