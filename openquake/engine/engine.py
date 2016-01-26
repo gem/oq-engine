@@ -103,46 +103,6 @@ def cleanup_after_job(job, terminate, task_ids=()):
         logs.LOG.debug('Revoked task %s', tid)
 
 
-@contextmanager
-def job_stats(job):
-    """
-    A context manager saving information such as the number of sites
-    in the job_stats table. The information is saved at the end of the
-    job, even if the job fails.
-    """
-    try:
-        yield
-    finally:
-        tb = traceback.format_exc()  # get the traceback of the error, if any
-        job.is_running = False
-        if tb != 'None\n':
-            # rollback the transactions; unfortunately, for mysterious reasons,
-            # this is not enough and an OperationalError may still show up in
-            # the finalization phase when forks are involved
-            for conn in django_db.connections.all():
-                conn.rollback()
-        # try to save the job stats on the database and then clean up;
-        # if there was an error in the calculation, this part may fail;
-        # in such a situation, we simply log the cleanup error without
-        # taking further action, so that the real error can propagate
-        try:
-            job.stop_time = datetime.utcnow()
-            job.save()
-            if USE_CELERY:
-                cleanup_after_job(job, TERMINATE, tasks.OqTaskManager.task_ids)
-        except:
-            # log the finalization error only if there is not real error
-            if tb == 'None\n':
-                logs.LOG.error('finalizing', exc_info=True)
-
-        # log the real error, if any
-        if tb != 'None\n':
-            try:
-                logs.LOG.critical(tb)
-            except:  # an OperationalError may always happen
-                sys.stderr.write(tb)
-
-
 def create_job(user_name="openquake", hc_id=None):
     """
     Create job for the given user, return it.
@@ -196,8 +156,32 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
 
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
-    with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
-        _do_run_calc(calculator, exports, hazard_calculation_id)
+    with logs.handle(job, log_level, log_file):  # run the job
+        tb = 'None\n'
+        try:
+            _do_run_calc(calculator, exports, hazard_calculation_id)
+        except:
+            tb = traceback.format_exc()
+            try:
+                logs.LOG.critical(tb)
+            except:  # an OperationalError may always happen
+                sys.stderr.write(tb)
+            raise
+        finally:
+            # try to save the job stats on the database and then clean up;
+            # if there was an error in the calculation, this part may fail;
+            # in such a situation, we simply log the cleanup error without
+            # taking further action, so that the real error can propagate
+            try:
+                job.is_running = False
+                job.stop_time = datetime.utcnow()
+                if USE_CELERY:
+                    cleanup_after_job(
+                        job, TERMINATE, tasks.OqTaskManager.task_ids)
+            except:
+                # log the finalization error only if there is no real error
+                if tb == 'None\n':
+                    logs.LOG.error('finalizing', exc_info=True)
         expose_outputs(calculator.datastore, job)
     return calculator
 
