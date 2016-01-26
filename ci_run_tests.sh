@@ -305,7 +305,7 @@ EOF
                  echo \"c = get_config()\"                      >> ~/.ipython/profile_default/ipython_config.py
                  echo \"c.InteractiveShell.colors = 'NoColor'\" >> ~/.ipython/profile_default/ipython_config.py
 
-                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-nrmllib:\$PWD/oq-ipynb-runner\"
+                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-nrmllib:\$PWD/oq-ipynb-runner:\$PWD/hmtk\"
                  cd $GEM_GIT_PACKAGE
                  nosetests --with-xunit --xunit-file=nosetests.xml -v --with-coverage || true
                  cd -

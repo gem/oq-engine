@@ -40,6 +40,8 @@ nosetests.xml
 *.settings
 *.metadata
 
+# File produced by ci_run_tests.sh
+.gem_init.sh
 
 # Emacs stuff
 .\#*
