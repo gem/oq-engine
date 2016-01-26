@@ -31,7 +31,7 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, source, datastore, sourceconverter
+from openquake.commonlib import parallel, datastore, sourceconverter
 from openquake.baselib.general import AccumDict
 
 from openquake.calculators import base, calc
@@ -228,8 +228,7 @@ class ClassicalCalculator(base.HazardCalculator):
         first to the full site collection.
         """
         n = len(self.sitecol)
-        tiling = (self.oqparam.calculation_mode == 'classical' and
-                  n > self.oqparam.sites_per_tile)
+        tiling = self.is_tiling()
         for k, v in val.items():
             acc[k] = agg_curves(acc[k], expand(v, n, val.siteslice)
                                 if tiling else v)

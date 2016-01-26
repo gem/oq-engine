@@ -5,21 +5,21 @@ num_sites = 83, sitecol = 4.61 KB
 
 Parameters
 ----------
-============================ ================
+============================ =========
 calculation_mode             classical
-number_of_logic_tree_samples 0               
-maximum_distance             100.0           
-investigation_time           10.0            
-ses_per_logic_tree_path      1               
-truncation_level             3.0             
-rupture_mesh_spacing         15.0            
-complex_fault_mesh_spacing   15.0            
-width_of_mfd_bin             0.1             
-area_source_discretization   25.0            
-random_seed                  323             
-master_seed                  0               
-concurrent_tasks             4               
-============================ ================
+number_of_logic_tree_samples 0        
+maximum_distance             100.0    
+investigation_time           10.0     
+ses_per_logic_tree_path      1        
+truncation_level             3.0      
+rupture_mesh_spacing         15.0     
+complex_fault_mesh_spacing   15.0     
+width_of_mfd_bin             0.1      
+area_source_discretization   25.0     
+random_seed                  323      
+master_seed                  0        
+concurrent_tasks             4        
+============================ =========
 
 Input files
 -----------
@@ -135,6 +135,6 @@ filtered_weight 148.425001621
 Expected data transfer for the sources
 --------------------------------------
 =========================== =======
-Number of tasks to generate 15     
-Sent data                   2.96 MB
+Number of tasks to generate 13     
+Sent data                   2.57 MB
 =========================== =======

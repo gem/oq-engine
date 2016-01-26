@@ -426,6 +426,13 @@ class HazardCalculator(BaseCalculator):
             mesh_dt = numpy.dtype([('lon', F32), ('lat', F32)])
             self.sitemesh = numpy.array(list(zip(col.lons, col.lats)), mesh_dt)
 
+    def is_tiling(self):
+        """
+        Return True if the calculator should use more than one tile
+        """
+        return (self.oqparam.calculation_mode == 'classical' and
+                len(self.sitecol) > self.oqparam.sites_per_tile)
+
     def send_sources(self):
         """
         Filter/split and send the sources to the worker tasks.
@@ -433,13 +440,12 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         tiles = [self.sitecol]
         num_tiles = 1
-        if oq.calculation_mode == 'classical':
+        if self.is_tiling():
             hint = math.ceil(len(self.sitecol) / oq.sites_per_tile)
             tiles = self.sitecol.split_in_tiles(hint)
-            if len(tiles) > 1:
-                num_tiles = len(tiles)
-                logging.info('Generating %d tiles of %d sites each',
-                             num_tiles, len(tiles[0]))
+            num_tiles = len(tiles)
+            logging.info('Generating %d tiles of %d sites each',
+                         num_tiles, len(tiles[0]))
         self.manager = source.SourceManager(
             self.csm, self.core_task.__func__,
             oq.maximum_distance, self.datastore,
