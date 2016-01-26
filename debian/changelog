@@ -1,5 +1,5 @@
   [Nick Ackerley]
-  * Give more feedback in error messages on validation.
+  * Implemented Gupta (2010) for Indo-Burmese intraslab subduction.
   * Implemented GMPE of Sharma et al. (2009) for active shallow crust of
     Indian Himalayas.
 
