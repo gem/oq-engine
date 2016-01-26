@@ -230,8 +230,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     """
     pre_calculator = 'event_based'
     core_task = event_based_risk
-
-    epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
     is_stochastic = True
 
     def pre_execute(self):
@@ -263,7 +261,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             # do not generate epsilons
             eps = FakeMatrix(self.N, self.E)
         else:
-            self.epsilon_matrix = eps = riskinput.make_eps(
+            eps = riskinput.make_eps(
                 assets_by_site, self.E, oq.master_seed,
                 oq.asset_correlation)
             logging.info('Generated %s epsilons', eps.shape)

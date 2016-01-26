@@ -102,7 +102,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     Run a scenario risk calculation
     """
     core_task = scenario_risk
-    epsilon_matrix = datastore.persistent_attribute('epsilon_matrix')
     pre_calculator = 'scenario'
     is_stochastic = True
 
@@ -117,10 +116,10 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         check_time_event(self.datastore)
 
         logging.info('Building the epsilons')
-        self.epsilon_matrix = self.make_eps(
+        epsilon_matrix = self.make_eps(
             self.oqparam.number_of_ground_motion_fields)
         sitecol, gmfs = base.get_gmfs(self)
-        self.riskinputs = self.build_riskinputs(gmfs, self.epsilon_matrix)
+        self.riskinputs = self.build_riskinputs(gmfs, epsilon_matrix)
 
     def post_execute(self, result):
         """
