@@ -129,8 +129,6 @@ class Kanno2006Shallow(GMPE):
 
         """
 
-        assert imt.__class__ in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
-
         # obtain coefficients for required intensity measure type (IMT)
         coeffs = self.COEFFS_BASE[imt].copy()
         coeffs.update(self.COEFFS_SITE[imt])
