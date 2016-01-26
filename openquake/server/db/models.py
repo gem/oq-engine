@@ -101,35 +101,9 @@ INPUT_TYPE_CHOICES = (
      u'Structural Vulnerability Retrofitted'))
 
 
-RAISE_EXC = object()  # sentinel used in OqJob.get_param
-
-
 def getcursor(route):
     """Return a cursor from a Django route"""
     return connections[route].cursor()
-
-
-class MissingParameter(KeyError):
-    """Raised by OqJob.get_param when a parameter is missing in the database"""
-
-
-class LiteralField(djm.Field):
-    """
-    Convert from Postgres TEXT to Python objects and viceversa by using
-    `ast.literal_eval` and `repr`.
-    """
-
-    __metaclass__ = djm.SubfieldBase
-
-    def db_type(self, connection=None):
-        return 'text'
-
-    def to_python(self, value):
-        if value is not None:
-            return ast.literal_eval(value)
-
-    def get_prep_value(self, value):
-        return repr(value)
 
 
 # Tables in the 'uiapi' schema.

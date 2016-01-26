@@ -33,9 +33,6 @@ class FakeJob(object):
         self.job_type = job_type
         self.calculation_mode = calculation_mode
 
-    def get_param(self, dummy):
-        return self.calculation_mode
-
 
 class CheckHazardRiskConsistencyTestCase(unittest.TestCase):
     def test_ok(self):
