@@ -32,8 +32,6 @@ import openquake.engine
 from django.core import exceptions
 from django import db as django_db
 
-from openquake.baselib.performance import (
-    PerformanceMonitor as EnginePerformanceMonitor)
 from openquake.engine import logs
 from openquake.server.db import models
 from openquake.engine.utils import config, tasks
@@ -115,12 +113,11 @@ def create_job(user_name="openquake", hc_id=None):
         :class:`openquake.server.db.models.OqJob` instance.
     """
     calc_id = get_calc_id() + 1
-    dstore = datastore.DataStore(calc_id, mode='w')
     job = models.OqJob.objects.create(
         id=calc_id,
         description='A job',
         user_name=user_name,
-        ds_calc_dir=dstore.calc_dir)
+        ds_calc_dir=os.path.join(datastore.DATADIR, 'calc_%s' % calc_id))
     if hc_id:
         job.hazard_calculation = models.OqJob.objects.get(pk=hc_id)
     job.save()
@@ -149,10 +146,12 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
         tb = 'None\n'
         try:
             _do_run_calc(job, exports, hazard_calculation_id)
+            job.status = 'complete'
         except:
             tb = traceback.format_exc()
             try:
                 logs.LOG.critical(tb)
+                job.status = 'failed'
             except:  # an OperationalError may always happen
                 sys.stderr.write(tb)
             raise
@@ -164,6 +163,7 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
             try:
                 job.is_running = False
                 job.stop_time = datetime.utcnow()
+                job.save()
                 if USE_CELERY:
                     cleanup_after_job(
                         job, TERMINATE, tasks.OqTaskManager.task_ids)
@@ -175,18 +175,9 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
     return job.calc
 
 
+# keep this as a private function, since it is mocked by engine_test.py
 def _do_run_calc(job, exports, hazard_calculation_id):
-    """
-    Step through all of the phases of a calculation, updating the job
-    status at each phase.
-
-    :param calc:
-        An :class:`~openquake.calculators.base.Calculator` instance.
-    :param exports:
-        a (potentially empty) comma-separated string of export targets
-    """
     job.calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id)
-    job.status = 'complete'
 
 
 def del_calc(job_id):
@@ -362,7 +353,7 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
                          'in the .ini file' % (risk_mode, risk_mode))
 
     # check calculation_mode consistency
-    prev_mode = haz_job.get_param('calculation_mode')
+    prev_mode = haz_job.get_oqparam().calculation_mode
     ok_mode = RISK_HAZARD_MAP[risk_mode]
     if prev_mode not in ok_mode:
         raise InvalidCalculationID(
@@ -408,6 +399,7 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
         oq = readinput.get_oqparam(params)
         calc = base.calculators(oq, calc_id=job.id)
         calc.save_params()
+        job.description = oq.description
         job.calc = calc
     return job
 
