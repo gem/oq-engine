@@ -220,10 +220,8 @@ class Point(object):
         """
         Check if this point is defined on the surface (depth is 0.0).
 
-        :returns:
+        :returns bool:
             True if this point is on the surface, false otherwise.
-        :rtype:
-            boolean
         """
         return self.depth == 0.0
 

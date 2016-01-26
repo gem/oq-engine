@@ -72,10 +72,8 @@ class Line(object):
         Check if this line is defined on the surface (i.e. all points
         are on the surfance, depth=0.0).
 
-        :returns:
+        :returns bool:
             True if this line is on the surface, false otherwise.
-        :rtype:
-            boolean
         """
         return all(point.on_surface() for point in self.points)
 

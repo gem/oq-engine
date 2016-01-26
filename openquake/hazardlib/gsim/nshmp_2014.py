@@ -79,12 +79,7 @@ def get_weighted_poes(gsim, sctx, rctx, dctx, imt, imls, truncation_level,
         raise ValueError('truncation level must be zero, positive number '
                          'or None')
     gsim._check_imt(imt)
-    # Boore et al. (2014) has only rjb - catch this case
-    if hasattr(dctx, "rrup"):
-        adjustment = nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup)
-    else:
-        adjustment = nga_west2_epistemic_adjustment(rctx.mag, dctx.rjb)
-
+    adjustment = nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup)
     adjustment = adjustment.reshape(adjustment.shape + (1, ))
     if truncation_level == 0:
         # zero truncation mode, just compare imls to mean
@@ -175,6 +170,10 @@ class BooreEtAl2014NSHMPUpper(BooreEtAl2014):
     Implements the positive NSHMP adjustment factor for the Boore et al.
     (2014) NGA West 2 GMPE
     """
+    # Originally Boore et al. (2014) requires only Rjb, but the epistemic
+    # adjustment factors are given in terms of Rrup, so both are required here
+    REQUIRES_DISTANCES = set(("rjb", "rrup"))
+
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -186,7 +185,7 @@ class BooreEtAl2014NSHMPUpper(BooreEtAl2014):
             get_mean_and_stddevs(sctx, rctx, dctx, imt, stddev_types)
         # Return mean, increased by the adjustment factor,
         # and standard devation
-        return mean + nga_west2_epistemic_adjustment(rctx.mag, dctx.rjb),\
+        return mean + nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
             stddevs
 
 
@@ -195,6 +194,9 @@ class BooreEtAl2014NSHMPLower(BooreEtAl2014):
     Implements the negative NSHMP adjustment factor for the Boore et al.
     (2014) NGA West 2 GMPE
     """
+    # See similar comment above
+    REQUIRES_DISTANCES = set(("rjb", "rrup"))
+
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -206,7 +208,7 @@ class BooreEtAl2014NSHMPLower(BooreEtAl2014):
             get_mean_and_stddevs(sctx, rctx, dctx, imt, stddev_types)
         # Return mean, increased by the adjustment factor,
         # and standard devation
-        return mean - nga_west2_epistemic_adjustment(rctx.mag, dctx.rjb),\
+        return mean - nga_west2_epistemic_adjustment(rctx.mag, dctx.rrup),\
             stddevs
 
 
@@ -215,6 +217,9 @@ class BooreEtAl2014NSHMPMean(BooreEtAl2014):
     Implements the Boore et al (2014) GMPE for application to the
     weighted mean case
     """
+    # See similar comment above
+    REQUIRES_DISTANCES = set(("rjb", "rrup"))
+
     def get_poes(self, sctx, rctx, dctx, imt, imls, truncation_level):
         """
         Adapts the original `get_poes()` from the :class:
