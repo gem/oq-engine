@@ -428,7 +428,8 @@ class HazardCalculator(BaseCalculator):
 
     def is_tiling(self):
         """
-        Return True if the calculator should use more than one tile
+        :returns:
+            True if the calculator produce more than one tile, False otherwise
         """
         return (self.oqparam.calculation_mode == 'classical' and
                 len(self.sitecol) > self.oqparam.sites_per_tile)
