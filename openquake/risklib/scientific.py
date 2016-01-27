@@ -381,15 +381,15 @@ class VulnerabilityFunctionWithPMF(object):
     :param str vf_id: vulnerability function ID
     :param str imt: Intensity Measure Type
     :param imls: intensity measure levels (L)
-    :param ratios: mean ratios (M)
-    :param probs: a matrix of probabilities of shape (M, L)
+    :param ratios: an array of mean ratios (M)
+    :param probs: a matrix of probabilities of shape (N, L)
     """
     def __init__(self, vf_id, imt, imls, loss_ratios, probs, seed=42):
         self.id = vf_id
         self.imt = imt
         self._check_vulnerability_data(imls, loss_ratios, probs)
         self.imls = imls
-        self.mean_loss_ratios = numpy.array(loss_ratios)
+        self.mean_loss_ratios = loss_ratios
         self.probs = probs
         self.seed = seed
         self.distribution_name = "PM"
