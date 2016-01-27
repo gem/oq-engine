@@ -45,9 +45,9 @@ console_end () {
     local result="$1" t_delta="$2"
 
     if [ $result -eq 0 ]; then
-        echo "ok (${t_delta} sec)."
+        echo "ok (${t_delta}s)."
     else
-        echo "failed (${t_delta} sec)."
+        echo "failed (${t_delta}s)."
     fi
 }
 
@@ -57,7 +57,7 @@ USAGE:
 
 # set PYTHONPATH properly
 # cd git repository base directory
-./openquake/risklib/tests/bin/bash_tests.sh <all|<name of the test>>
+./openquake/risklib/tests/bin/bash_tests.sh <all|<name of the test>> [<xunit_fname>]
 
 EOF
 
@@ -91,15 +91,14 @@ fi
 for tst in ${available_tests[@]}; do
     if [ "$whattest" = "$tst" -o "$whattest" = "all" ]; then
         console_begin "$tst"
-        t_pre="$(date +%s)"
+        t_pre="$(date +%s%3N)"
         # test_dump="$($(dirname "$0")/${tst}.sh)"
         test_dump="$($(dirname "$0")/${tst}.sh 2>&1)"
         ret=$?
-        t_post="$(date +%s)"
-        t_delta=$((t_post - t_pre))
-        if [ $t_delta -lt 1 ]; then
-            t_delta=1
-        fi
+        t_post="$(date +%s%3N)"
+        t_delta="$((t_post - t_pre))"
+        fraz="$(echo "$((1000 + t_delta % 1000))" | sed 's/^.//g')"
+        t_delta="$((t_delta / 1000)).$fraz"
         some_test=1
         console_end $ret $t_delta
         if [ $ret -eq 0 ]; then
