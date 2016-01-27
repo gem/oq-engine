@@ -27,8 +27,7 @@ from openquake.commonlib.riskmodels import get_risk_files
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
 HAZARD_CALCULATORS = [
-    'classical', 'disaggregation', 'event_based', 'scenario',
-    'classical_tiling']
+    'classical', 'disaggregation', 'event_based', 'scenario']
 
 RISK_CALCULATORS = [
     'classical_risk', 'event_based_risk', 'scenario_risk',
@@ -337,7 +336,7 @@ class OqParam(valid.ParamSet):
         """
         invalid = self.no_imls() and not self.risk_files and (
             self.hazard_curves_from_gmfs or self.calculation_mode in
-            ('classical', 'classical_tiling', 'disaggregation'))
+            ('classical', 'disaggregation'))
         return not invalid
 
     def is_valid_sites_disagg(self):
