@@ -94,8 +94,6 @@ class SharmaEtAl2009(GMPE):
         for specification of input and result values.
         """
 
-        assert imt.__class__ in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES
-
         # extract dictionary of coefficients specific to required
         # intensity measure type
         coeffs = self.COEFFS[imt]
