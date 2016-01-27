@@ -41,6 +41,4 @@ else:
                                              result=r))
 
     def concurrent_futures_process_monkeypatch():
-        global process, _process_worker
-
         process._process_worker = _process_worker
