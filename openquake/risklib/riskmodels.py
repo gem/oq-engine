@@ -26,6 +26,7 @@ from openquake.baselib.general import CallableDict
 from openquake.commonlib import valid
 from openquake.risklib import utils, scientific
 
+F32 = numpy.float32
 registry = CallableDict()
 
 
@@ -234,6 +235,7 @@ class RiskModel(object):
     """
     time_event = None  # used in scenario_risk
     compositemodel = None  # set by get_risk_model
+    kind = None  # must be set in subclasses
 
     def __init__(self, imt, taxonomy, risk_functions):
         self.imt = imt
@@ -273,6 +275,47 @@ class RiskModel(object):
                 epsilons_ = epsilons[ok]
             yield out_by_rlz(
                 self, assets_, hazards, epsilons_, tags, loss_type)
+
+    def to_array(self):
+        """
+        Convert the underlying risk functions into a composite array
+        """
+        if self.kind == 'vulnerability':
+            lst = []
+            for lt in self.loss_types:
+                rf = self.risk_functions[lt]
+                dt = numpy.dtype([('iml', F32),
+                                  ('ratio', F32),
+                                  ('cov', F32)])
+                lst.append((lt, dt))
+            array = numpy.zeros(len(rf.imls), numpy.dtype(lst))
+            for lt in self.loss_types:
+                rf = self.risk_functions[lt]
+                array[lt]['iml'] = rf.imls
+                array[lt]['ratio'] = rf.mean_loss_ratios
+                array[lt]['cov'] = rf.covs
+        elif self.kind == 'fragility':
+            num_limit_states = len(self.compositemodel.damage_states) - 1
+            lst = []
+            for lt in self.loss_types:
+                rf = self.risk_functions[lt]  # FragilityFunctionList
+                dt = numpy.dtype([('iml', F32),
+                                  ('poes', F32, num_limit_states)])
+                lst.append((lt, dt))
+            array = numpy.zeros(len(rf.imls), numpy.dtype(lst))
+            for lt in self.loss_types:
+                rf = self.risk_functions[lt]
+                array[lt]['iml'] = rf.imls
+                poes = array[lt]['poes']
+                for i, iml in enumerate(rf.imls):
+                    if rf.format == 'continuous':
+                        poes[i] = tuple(ff(iml) for ff in rf)
+                    else:  # discrete
+                        poes[i] = tuple(ff.poes[i] for ff in rf)
+        else:
+            raise ValueError('RiskModel kind must be vulnerability or '
+                             'fragility, got %s' % self.kind)
+        return array
 
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
@@ -352,6 +395,8 @@ class Classical(RiskModel):
     :attr quantile_average_insured_losses:
        A numpy array shaped (Q, N) with average insured losses
     """
+    kind = 'vulnerability'
+
     def __init__(self, imt, taxonomy, vulnerability_functions,
                  hazard_imtls, lrem_steps_per_interval,
                  conditional_loss_poes, poes_disagg,
@@ -482,6 +527,8 @@ class ProbabilisticEventBased(RiskModel):
     The statistical outputs are stored into
     :class:`openquake.risklib.scientific.Output` objects.
     """
+    kind = 'vulnerability'
+
     def __init__(
             self, imt, taxonomy,
             vulnerability_functions,
@@ -592,6 +639,9 @@ class ProbabilisticEventBased(RiskModel):
 
 @registry.add('classical_bcr')
 class ClassicalBCR(RiskModel):
+
+    kind = 'vulnerability'
+
     def __init__(self, imt, taxonomy,
                  vulnerability_functions_orig,
                  vulnerability_functions_retro,
@@ -647,6 +697,8 @@ class Scenario(RiskModel):
     """
     Implements the Scenario riskmodel
     """
+    kind = 'vulnerability'
+
     def __init__(self, imt, taxonomy, vulnerability_functions,
                  insured_losses, time_event=None):
         self.imt = imt
@@ -693,6 +745,8 @@ class Damage(RiskModel):
     """
     Implements the ScenarioDamage riskmodel
     """
+    kind = 'fragility'
+
     def __init__(self, imt, taxonomy, fragility_functions):
         self.imt = imt
         self.taxonomy = taxonomy
@@ -732,6 +786,8 @@ class ClassicalDamage(Damage):
     """
     Implements the ClassicalDamage riskmodel
     """
+    kind = 'fragility'
+
     def __init__(self, imt, taxonomy, fragility_functions,
                  hazard_imtls, investigation_time,
                  risk_investigation_time):

@@ -356,21 +356,12 @@ class HazardCalculator(BaseCalculator):
                                    'which are not in the risk model' % missing)
 
         # save the loss ratios in the datastore
-        pairs = [(cb.loss_type, (numpy.float64, cb.curve_resolution))
-                 for cb in rm.curve_builders if cb.user_provided]
-        if not pairs:
-            return
-        loss_ratios = numpy.zeros(len(rm), numpy.dtype(pairs))
-        for cb in rm.curve_builders:
-            if cb.user_provided:
-                loss_ratios_lt = loss_ratios[cb.loss_type]
-                for i, imt_taxo in enumerate(sorted(rm)):
-                    ratios = rm[imt_taxo].loss_ratios.get(
-                        cb.loss_type, numpy.array([]))
-                    set_array(loss_ratios_lt[i], ratios)
-        self.datastore['loss_ratios'] = loss_ratios
-        self.datastore['loss_ratios'].attrs['imt_taxos'] = sorted(rm)
-        self.datastore['loss_ratios'].attrs['nbytes'] = loss_ratios.nbytes
+        for imt_taxo, rmodel in rm.items():
+            key = 'crm/%s-%s' % imt_taxo
+            self.datastore[key] = array = rmodel.to_array()
+            self.datastore[key].attrs['nbytes'] = array.nbytes
+        if hasattr(rm, 'damage_states'):
+            self.datastore['crm'].attrs['limit_states'] = rm.damage_states[1:]
 
     def read_risk_data(self):
         """
