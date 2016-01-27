@@ -1,6 +1,6 @@
-=========
-Nath 2012
-=========
+================
+Nath et al. 2012
+================
 
 .. module:: openquake.hazardlib.gsim.nath_2012
 
