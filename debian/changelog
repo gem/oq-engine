@@ -1,6 +1,6 @@
   [Graeme Weatherill]
   * Adds version of NSHMP Western US (NGA West) GMPEs to calculated the
-   weighted mean of the epistemic uncertainty adjustment factor
+    weighted mean of the epistemic uncertainty adjustment factor
 
   [Nick Ackerley]
   * Implemented GMPE of Raghukanth & Iyengar (2007) for stable continental
