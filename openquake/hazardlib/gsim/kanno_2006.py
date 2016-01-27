@@ -46,15 +46,16 @@ class Kanno2006Shallow(GMPE):
     category of shallow events" (p. 883) where "shallow" is defined as "focal
     depth of 30 km or less" (p. 895).
 
-    Verification of mean value data was done by digitizing Figures 4 and 5
-    using http://arohatgi.info/WebPlotDigitizer/app/. The maximum error was
-    15% while the average error was 3-4%.
+    Verification of mean value data was performed against a test vector kindly
+    provided by the lead author.
+
+    **Reference**
 
     Page number citations in this documentation refer to:
 
     Kanno, T., Narita, A., Morikawa, N., Fujiwara, H., and Fukushima, Y.
     (2006). A new attenuation relation for strong ground motion in Japan based
-    on recorded data. Bull. Seism. Soc. Am. 96(3):879–897.
+    on recorded data. *Bull. Seism. Soc. Am.* 96(3):879–897.
     """
 
     #: This model is generally considered to be intended for subduction
@@ -187,8 +188,8 @@ class Kanno2006Shallow(GMPE):
 
         return coeffs['epsilon']
 
-    #: Coefficients obtained from author, personal communcation, slightly more
-    #: precision than Table 3, p. 884.
+    #: Coefficients obtained from author via personal communcation with
+    #: slightly more precision than Table 3, p. 884.
     COEFFS_BASE = CoeffsTable(sa_damping=5., table="""\
       IMT      a         b       c        d  epsilon
       pga  0.556 -0.003070  0.2560  0.00547    0.366
@@ -232,8 +233,8 @@ class Kanno2006Shallow(GMPE):
       pgv  0.702 -0.000925 -1.9300  0.00217    0.321
     """)
 
-    #: Coefficients obtained from author, personal communcation, slightly more
-    #: precision than Table 5, p. 888.
+    #: Coefficients obtained from author via personal communcation with
+    #: slightly more precision Table 5, p. 888.
     COEFFS_SITE = CoeffsTable(sa_damping=5., table="""\
       IMT       p       q
       pga -0.5514  1.3490
@@ -300,8 +301,8 @@ class Kanno2006Deep(Kanno2006Shallow):
     #: events." (p. 881)
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
-    #: Coefficients obtained from author, personal communcation, slightly more
-    #: precision than Table 4, p. 884.
+    #: Coefficients obtained from author via personal communcation with
+    #: slightly more precision than Table 4, p. 884.
     COEFFS_BASE = CoeffsTable(sa_damping=5., table="""\
       IMT      a        b       c  d  epsilon
       pga  0.409 -0.00389  1.5600  0    0.397
@@ -443,8 +444,8 @@ class Kanno2006Deep(Kanno2006Shallow):
 #    #: distinguish between shallow and deep events.
 #    REF_DEPTH_KM = 30
 #
-#    #: Coefficients obtained from author, personal communcation, slightly more
-#    #: precision than Table 6, p. 890.
+#    #: Coefficients obtained from author via personal communcation with
+#    #: slightly more precision than Table 6, p. 890.
 #    COEFFS_NORTHEAST = CoeffsTable(sa_damping=5., table="""\
 #      IMT         alpha      beta
 #      pga -6.725997e-05  0.020897
