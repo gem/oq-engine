@@ -360,7 +360,7 @@ class HazardCalculator(BaseCalculator):
             key = 'crm/%s-%s' % imt_taxo
             self.datastore[key] = array = rmodel.to_array()
             self.datastore[key].attrs['nbytes'] = array.nbytes
-        if hasattr(rm, 'damage_states'):
+        if rm.damage_states:
             self.datastore['crm'].attrs['limit_states'] = rm.damage_states[1:]
 
     def read_risk_data(self):
