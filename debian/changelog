@@ -1,8 +1,8 @@
   [Matteo Nastasi]
   * Add framework to run bash scripts tests and collect associated xunit report
-  * Add concurrent_futures_process_monkeypatch() using prctl library to avoid
-    forked processes became sons of init instead finish when parent process
-    dies unexpectedly
+  * Add concurrent_futures_process_monkeypatch() using python-prctl library
+    to avoid forked processes became sons of init instead finish when parent
+    process dies unexpectedly
 
   [Michele Simionato]
   * Managed correctly the case of vulnerability functions with a different
