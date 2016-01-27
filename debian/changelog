@@ -1,3 +1,9 @@
+  [Matteo Nastasi]
+  * Add framework to run bash scripts tests and collect associated xunit report
+  * Add concurrent_futures_process_monkeypatch() using python-prctl library
+    to avoid forked processes became sons of init instead finish when parent
+    process dies unexpectedly
+
   [Michele Simionato]
   * Unified the calculators classical and classical_tiling
   * The epsilon_matrix is not saved anymore
