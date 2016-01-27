@@ -284,16 +284,24 @@ class RiskModel(object):
             lst = []
             for lt in self.loss_types:
                 rf = self.risk_functions[lt]
-                dt = numpy.dtype([('iml', F32),
-                                  ('ratio', F32),
-                                  ('cov', F32)])
-                lst.append((lt, dt))
+                ls = [('iml', F32)]
+                if hasattr(rf, 'mean_loss_ratios'):
+                    ls.append(('ratio', F32))
+                    ls.append(('cov', F32))
+                else:  # vulnerability with PMF
+                    for lr in rf.loss_ratios:
+                        ls.append(('prob~%s' % lr, F32))
+                lst.append((lt, numpy.dtype(ls)))
             array = numpy.zeros(len(rf.imls), numpy.dtype(lst))
             for lt in self.loss_types:
                 rf = self.risk_functions[lt]
                 array[lt]['iml'] = rf.imls
-                array[lt]['ratio'] = rf.mean_loss_ratios
-                array[lt]['cov'] = rf.covs
+                if hasattr(rf, 'mean_loss_ratios'):
+                    array[lt]['ratio'] = rf.mean_loss_ratios
+                    array[lt]['cov'] = rf.covs
+                else:  # vulnerability with PMF
+                    for i, lr in enumerate(rf.loss_ratios):
+                        array[lt]['prob~%s' % lr] = rf.probs[i]
         elif self.kind == 'fragility':
             num_limit_states = len(self.compositemodel.damage_states) - 1
             lst = []

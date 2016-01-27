@@ -382,14 +382,14 @@ class VulnerabilityFunctionWithPMF(object):
     :param str imt: Intensity Measure Type
     :param imls: intensity measure levels (L)
     :param ratios: an array of mean ratios (M)
-    :param probs: a matrix of probabilities of shape (N, L)
+    :param probs: a matrix of probabilities of shape (M, L)
     """
     def __init__(self, vf_id, imt, imls, loss_ratios, probs, seed=42):
         self.id = vf_id
         self.imt = imt
         self._check_vulnerability_data(imls, loss_ratios, probs)
         self.imls = imls
-        self.mean_loss_ratios = loss_ratios
+        self.loss_ratios = loss_ratios
         self.probs = probs
         self.seed = seed
         self.distribution_name = "PM"
@@ -422,14 +422,14 @@ class VulnerabilityFunctionWithPMF(object):
         return mat
 
     def __getstate__(self):
-        return (self.id, self.imt, self.imls, self.mean_loss_ratios,
+        return (self.id, self.imt, self.imls, self.loss_ratios,
                 self.probs, self.distribution_name, self.seed)
 
     def __setstate__(self, state):
         self.id = state[0]
         self.imt = state[1]
         self.imls = state[2]
-        self.mean_loss_ratios = state[3]
+        self.loss_ratios = state[3]
         self.probs = state[4]
         self.distribution_name = state[5]
         self.seed = state[6]
@@ -471,7 +471,7 @@ class VulnerabilityFunctionWithPMF(object):
         probs = self._probs_i1d(imls_curve)
 
         # apply uncertainty
-        ret[idxs] = self.distribution.sample(self.mean_loss_ratios, probs)
+        ret[idxs] = self.distribution.sample(self.loss_ratios, probs)
         return ret
 
     @utils.memoized
