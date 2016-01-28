@@ -249,8 +249,17 @@ class RiskModel(object):
         """
         return sorted(self.risk_functions)
 
-    def gen_out_by_rlz(self, assets, hazards, epsilons, tags):
+    def get_loss_types(self, imt):
         """
+        :param imt: Intensity Measure Type string
+        :returns: loss types with risk functions of the given imt
+        """
+        return [lt for lt in self.loss_types
+                if self.risk_functions[lt].imt == imt]
+
+    def gen_out_by_rlz(self, imt, assets, hazards, epsilons, tags):
+        """
+        :param imt: restrict the risk functions to this IMT
         :param assets: an array of assets of homogeneous taxonomy
         :param hazards: an array of dictionaries per each asset
         :param epsilons: an array of epsilons per each asset
@@ -258,7 +267,7 @@ class RiskModel(object):
 
         Yield lists out_by_rlz.
         """
-        for loss_type in self.loss_types:
+        for loss_type in self.get_loss_types(imt):
             assets_ = assets
             epsilons_ = epsilons
             values = get_values(loss_type, assets, self.time_event)
@@ -747,8 +756,9 @@ class Damage(RiskModel):
              for gmvs in gmfs])
         return scientific.Output(assets, loss_type, damages=damages)
 
-    def gen_out_by_rlz(self, assets, hazards, epsilons, tags):
+    def gen_out_by_rlz(self, imt, assets, hazards, epsilons, tags):
         """
+        :param imt: restrict the risk functions to this IMT
         :param assets: an array of assets of homogeneous taxonomy
         :param hazards: an array of dictionaries per each asset
         :param epsilons: an array of epsilons per each asset
@@ -756,7 +766,7 @@ class Damage(RiskModel):
 
         Yield a single list of outputs
         """
-        for loss_type in self.loss_types:
+        for loss_type in self.get_loss_types(imt):
             yield out_by_rlz(self, assets, hazards, epsilons, tags, loss_type)
 
 

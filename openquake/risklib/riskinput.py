@@ -316,7 +316,7 @@ class CompositeRiskModel(collections.Mapping):
                         if not assets:
                             continue
                         for out_by_rlz in self[taxonomy].gen_out_by_rlz(
-                                assets, hazards, epsilons, tags):
+                                imt, assets, hazards, epsilons, tags):
                             yield out_by_rlz
 
     def __repr__(self):
