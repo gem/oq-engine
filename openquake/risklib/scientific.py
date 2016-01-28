@@ -731,8 +731,8 @@ class FragilityModel(dict):
             configuration parameter
         """
         newfm = copy.copy(self)
-        for imt_taxo, ff in self.items():
-            newfm[imt_taxo] = new = copy.copy(ff)
+        for key, ff in self.items():
+            newfm[key] = new = copy.copy(ff)
             # TODO: this is complicated: check with Anirudh
             add_zero = (ff.format == 'discrete' and
                         ff.nodamage is not None and ff.nodamage < ff.imls[0])

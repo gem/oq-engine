@@ -226,8 +226,8 @@ class CompositeRiskModel(collections.Mapping):
             ltypes.update(rm.loss_types)
         return sorted(ltypes)
 
-    def __getitem__(self, imt_taxo):
-        return self._riskmodels[imt_taxo]
+    def __getitem__(self, taxonomy):
+        return self._riskmodels[taxonomy]
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))
