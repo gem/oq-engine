@@ -21,7 +21,7 @@ import ast
 
 import numpy
 
-from openquake.commonlib import parallel, datastore
+from openquake.commonlib import parallel
 from openquake.risklib import scientific
 from openquake.calculators import base
 

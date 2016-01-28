@@ -357,11 +357,10 @@ class HazardCalculator(BaseCalculator):
                                    'which are not in the risk model' % missing)
 
         # save the loss ratios in the datastore
-        for imt_taxo, rmodel in rm.items():
+        for taxonomy, rmodel in rm.items():
             items = rmodel.to_array_attrs().items()
             for loss_type, (array, attrs) in sorted(items):
-                key = 'composite_risk_model/%s-%s-%s' % (
-                    imt_taxo + (loss_type,))
+                key = 'composite_risk_model/%s-%s' % (taxonomy, loss_type)
                 self.datastore[key] = array
                 for k, v in attrs.items():
                     self.datastore[key].attrs[k] = v

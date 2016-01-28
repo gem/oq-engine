@@ -115,7 +115,7 @@ def get_risk_models(oqparam, kind=None):
         vulnerability|vulnerability_retrofitted|fragility|consequence;
         if None it is extracted from the oqparam.file_type attribute
     :returns:
-        a dictionary imt_taxo -> loss_type -> function
+        a dictionary taxonomy -> loss_type -> function
     """
     kind = kind or oqparam.file_type
     rmodels = {}
@@ -149,14 +149,14 @@ def get_risk_models(oqparam, kind=None):
             # build a copy of the FragilityModel with different IM levels
             newfm = fm.build(oqparam.continuous_fragility_discretization,
                              oqparam.steps_per_interval)
-            for imt_taxo, ffl in newfm.items():
+            for (imt, taxo), ffl in newfm.items():
                 if not limit_states:
                     limit_states.extend(fm.limitStates)
                 # we are rejecting the case of loss types with different
                 # limit states; this may change in the future
                 assert limit_states == fm.limitStates, (
                     limit_states, fm.limitStates)
-                rdict[imt_taxo][loss_type] = ffl
+                rdict[taxo][loss_type] = ffl
                 # TODO: see if it is possible to remove the attribute
                 # below, used in classical_damage
                 ffl.steps_per_interval = oqparam.steps_per_interval
@@ -168,8 +168,8 @@ def get_risk_models(oqparam, kind=None):
         # only for classical_risk reduce the loss_ratios
         # to make sure they are strictly increasing
         for loss_type, rm in rmodels.items():
-            for imt_taxo, rf in rm.items():
-                rdict[imt_taxo][loss_type] = (
+            for (imt, taxo), rf in rm.items():
+                rdict[taxo][loss_type] = (
                     rf.strictly_increasing() if cl_risk else rf)
     return rdict
 
