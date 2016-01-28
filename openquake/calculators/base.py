@@ -357,10 +357,13 @@ class HazardCalculator(BaseCalculator):
 
         # save the loss ratios in the datastore
         for imt_taxo, rmodel in rm.items():
-            for loss_type, array in sorted(rmodel.to_array().items()):
+            items = rmodel.to_array_attrs().items()
+            for loss_type, (array, attrs) in sorted(items):
                 key = 'composite_risk_model/%s-%s-%s' % (
                     imt_taxo + (loss_type,))
                 self.datastore[key] = array
+                for k, v in attrs.items():
+                    self.datastore[key].attrs[k] = v
                 self.datastore[key].attrs['nbytes'] = array.nbytes
         if rm.damage_states:
             self.datastore['composite_risk_model'].attrs[

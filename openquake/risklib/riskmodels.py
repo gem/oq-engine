@@ -276,37 +276,20 @@ class RiskModel(object):
             yield out_by_rlz(
                 self, assets_, hazards, epsilons_, tags, loss_type)
 
-    def to_array(self, retrofitted=False):
+    def to_array_attrs(self, retrofitted=False):
         """
-        Convert the underlying risk functions into a dictionary of arrays
+        Convert the underlying risk functions into a dictionary of pairs
+        (array, attrs)
         """
         assert self.kind in ('vulnerability', 'fragility'), self.kind
-        to_array = getattr(self, '_' + self.kind)
+        to_array_attrs = getattr(self, '_' + self.kind)
         if retrofitted:
-            return to_array(self.retro_functions)
+            return to_array_attrs(self.retro_functions)
         else:
-            return to_array(self.risk_functions)
+            return to_array_attrs(self.risk_functions)
 
     def _vulnerability(self, functions):
-        dic = {}
-        for lt in self.loss_types:
-            vf = functions[lt]
-            ls = [('iml', F32)]
-            if hasattr(vf, 'mean_loss_ratios'):
-                ls.append(('ratio', F32))
-                ls.append(('cov', F32))
-            else:  # vulnerability with PMF
-                for lr in vf.loss_ratios:
-                    ls.append(('prob~%s' % lr, F32))
-            dic[lt] = numpy.zeros(len(vf.imls), numpy.dtype(ls))
-            dic[lt]['iml'] = vf.imls
-            if hasattr(vf, 'mean_loss_ratios'):
-                dic[lt]['ratio'] = vf.mean_loss_ratios
-                dic[lt]['cov'] = vf.covs
-            else:  # vulnerability with PMF
-                for i, lr in enumerate(vf.loss_ratios):
-                    dic[lt]['prob~%s' % lr] = vf.probs[i]
-        return dic
+        return {lt: functions[lt].to_array_attrs() for lt in self.loss_types}
 
     def _fragility(self, functions):
         num_limit_states = len(self.compositemodel.damage_states) - 1
@@ -314,9 +297,11 @@ class RiskModel(object):
         dic = {}
         for lt in self.loss_types:
             ffl = functions[lt]
-            dic[lt] = numpy.zeros(len(ffl.imls), dt)
-            dic[lt]['iml'] = ffl.imls
-            poes = dic[lt]['poes']
+            attrs = {'imt': ffl.imt}
+            array = numpy.zeros(len(ffl.imls), dt)
+            dic[lt] = (array, attrs)
+            array['iml'] = ffl.imls
+            poes = array['poes']
             for i, iml in enumerate(ffl.imls):
                 if ffl.format == 'continuous':
                     poes[i] = tuple(ff(iml) for ff in ffl)
