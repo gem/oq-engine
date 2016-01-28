@@ -229,15 +229,16 @@ class OqParam(valid.ParamSet):
     def set_risk_imtls(self, risk_models):
         """
         :param risk_models:
-            a dictionary (imt, taxo) -> loss_type -> risk_function
+            a dictionary taxonomy -> loss_type -> risk_function
 
         Set the attribute risk_imtls.
         """
         # NB: different loss types may have different IMLs for the same IMT
         # in that case we merge the IMLs
         imtls = {}
-        for (imt, taxonomy), risk_functions in risk_models.items():
+        for taxonomy, risk_functions in risk_models.items():
             for loss_type, rf in risk_functions.items():
+                imt = rf.imt
                 imls = list(rf.imls)
                 if imt in imtls and imtls[imt] != imls:
                     logging.info(

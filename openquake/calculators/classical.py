@@ -374,6 +374,8 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         self._store('hcurves/' + kind, curves, rlz, nbytes=curves.nbytes)
+        self.datastore['hcurves'].attrs['imtls'] = [
+            (imt, len(imls)) for imt, imls in self.oqparam.imtls.items()]
         if oq.hazard_maps or oq.uniform_hazard_spectra:
             # hmaps is a composite array of shape (N, P)
             hmaps = self.hazard_maps(curves)

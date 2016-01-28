@@ -14,7 +14,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='xml')
 
         # check loss ratios
-        lrs = self.calc.datastore['composite_risk_model/PGA-VF-structural']
+        lrs = self.calc.datastore['composite_risk_model/VF-structural']
         got = scientificformat(lrs['loss_ratio'], '%.2f')
         self.assertEqual(got, '0.05 0.10 0.20 0.40 0.80')
 
