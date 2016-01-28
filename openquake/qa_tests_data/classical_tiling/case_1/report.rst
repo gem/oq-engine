@@ -5,21 +5,21 @@ num_sites = 6, sitecol = 557 B
 
 Parameters
 ----------
-============================ ================
-calculation_mode             classical_tiling
-number_of_logic_tree_samples 0               
-maximum_distance             200.0           
-investigation_time           50.0            
-ses_per_logic_tree_path      1               
-truncation_level             3.0             
-rupture_mesh_spacing         2.0             
-complex_fault_mesh_spacing   2.0             
-width_of_mfd_bin             0.2             
-area_source_discretization   5.0             
-random_seed                  23              
-master_seed                  0               
-concurrent_tasks             4               
-============================ ================
+============================ =========
+calculation_mode             classical
+number_of_logic_tree_samples 0        
+maximum_distance             200.0    
+investigation_time           50.0     
+ses_per_logic_tree_path      1        
+truncation_level             3.0      
+rupture_mesh_spacing         2.0      
+complex_fault_mesh_spacing   2.0      
+width_of_mfd_bin             0.2      
+area_source_discretization   5.0      
+random_seed                  23       
+master_seed                  0        
+concurrent_tasks             4        
+============================ =========
 
 Input files
 -----------
@@ -69,5 +69,5 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 18       
-Sent data                   368.41 KB
+Sent data                   365.07 KB
 =========================== =========

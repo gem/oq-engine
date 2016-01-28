@@ -563,7 +563,9 @@ def to_haz_curves(num_sites, gmvs_by_sid, gs, imtls,
 @base.calculators.add('event_based')
 class EventBasedCalculator(ClassicalCalculator):
     """
-    Event based PSHA calculator generating the ruptures only
+    Event based PSHA calculator generating the ground motion fields and
+    the hazard curves from the ruptures, depending on the configuration
+    parameters.
     """
     pre_calculator = 'event_based_rupture'
     core_task = compute_gmfs_and_curves
