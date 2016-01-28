@@ -1,5 +1,12 @@
+  [Matteo Nastasi]
+  * Added framework to run bash scripts tests and collect associated
+    xunit report
+  * Introduced the python-prctl library to automatically kill process when
+    the parent dies unexpectedly (linux-only)
+
   [Michele Simionato]
   * Saved the risk models in HDF5 format
+  * Unified the calculators classical and classical_tiling
   * The epsilon_matrix is not saved anymore
   * Source filtering is now on demand, depending on the parameter
     `filter_sources`.
