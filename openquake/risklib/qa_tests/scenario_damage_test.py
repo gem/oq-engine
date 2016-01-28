@@ -58,10 +58,10 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
                    scientific.FragilityFunctionContinuous('LS2', 0.40, 0.12)]}
 
         calculator_rm = riskmodels.Damage(
-            'PGA', 'RM', dict(damage=fragility_model['RM']))
+            'RM', dict(damage=fragility_model['RM']))
 
         calculator_rc = riskmodels.Damage(
-            'PGA', 'RC', dict(damage=fragility_model['RC']))
+            'RC', dict(damage=fragility_model['RC']))
 
         out = calculator_rm(
             'damage', ['a1'], [self.hazard['a1']])
@@ -113,7 +113,7 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
                     'LS2', [0.1, 0.2, 0.3, 0.5], [0.0003, 0.05, 0.40, 0.86])]}
 
         calculator_rm = riskmodels.Damage(
-            'PGA', 'RM', dict(damage=fragility_model['RM']))
+            'RM', dict(damage=fragility_model['RM']))
 
         [asset_output_a1] = calculator_rm(
             'damage', ['a1'], [self.hazard['a1']]).damages
@@ -132,7 +132,7 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
         rm = asset_output_a1 * 3000 + asset_output_a3 * 1000
 
         calculator_rc = riskmodels.Damage(
-            'PGA', 'RC', dict(damage=fragility_model['RC']))
+            'RC', dict(damage=fragility_model['RC']))
         [asset_output_a2] = calculator_rc(
             'damage', ['a2'], [self.hazard['a2']]).damages
 

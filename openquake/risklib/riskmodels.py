@@ -306,6 +306,9 @@ class RiskModel(object):
         for lt in self.loss_types:
             ffl = functions[lt]
             attrs = {'imt': ffl.imt}
+            if ffl.format == 'continuous':
+                attrs['mean'] = [ff.mean for ff in ffl]
+                attrs['stddev'] = [ff.stddev for ff in ffl]
             array = numpy.zeros(len(ffl.imls), dt)
             dic[lt] = (array, attrs)
             array['iml'] = ffl.imls

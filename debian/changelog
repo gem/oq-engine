@@ -1,7 +1,7 @@
   [Matteo Nastasi]
   * Added framework to run bash scripts tests and collect associated
     xunit report
-  * Introduced the python-prctl library to automatically kill process when
+  * Used the python-prctl library to automatically kill processes when
     the parent dies unexpectedly (linux-only)
 
   [Michele Simionato]
