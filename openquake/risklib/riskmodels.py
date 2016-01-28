@@ -651,6 +651,7 @@ class ClassicalBCR(RiskModel):
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
         self.hazard_imtls = hazard_imtls
+        self.lrem_steps_per_interval = lrem_steps_per_interval
 
     def __call__(self, loss_type, assets, hazard, _eps=None, _tags=None):
         self.assets = assets
