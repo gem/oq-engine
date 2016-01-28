@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013-2014, GEM Foundation.
+# Copyright (c) 2013-2016, GEM Foundation.
 #
 # OpenQuake Risklib is free software: you can redistribute it and/or
 # modify it under the terms of the GNU Affero General Public License
@@ -276,54 +276,53 @@ class RiskModel(object):
             yield out_by_rlz(
                 self, assets_, hazards, epsilons_, tags, loss_type)
 
-    def to_array(self):
+    def to_array(self, retrofitted=False):
         """
-        Convert the underlying risk functions into a composite array
+        Convert the underlying risk functions into a dictionary of arrays
         """
-        if self.kind == 'vulnerability':
-            lst = []
-            for lt in self.loss_types:
-                rf = self.risk_functions[lt]
-                ls = [('iml', F32)]
-                if hasattr(rf, 'mean_loss_ratios'):
-                    ls.append(('ratio', F32))
-                    ls.append(('cov', F32))
-                else:  # vulnerability with PMF
-                    for lr in rf.loss_ratios:
-                        ls.append(('prob~%s' % lr, F32))
-                lst.append((lt, numpy.dtype(ls)))
-            array = numpy.zeros(len(rf.imls), numpy.dtype(lst))
-            for lt in self.loss_types:
-                rf = self.risk_functions[lt]
-                array[lt]['iml'] = rf.imls
-                if hasattr(rf, 'mean_loss_ratios'):
-                    array[lt]['ratio'] = rf.mean_loss_ratios
-                    array[lt]['cov'] = rf.covs
-                else:  # vulnerability with PMF
-                    for i, lr in enumerate(rf.loss_ratios):
-                        array[lt]['prob~%s' % lr] = rf.probs[i]
-        elif self.kind == 'fragility':
-            num_limit_states = len(self.compositemodel.damage_states) - 1
-            lst = []
-            for lt in self.loss_types:
-                rf = self.risk_functions[lt]  # FragilityFunctionList
-                dt = numpy.dtype([('iml', F32),
-                                  ('poes', F32, num_limit_states)])
-                lst.append((lt, dt))
-            array = numpy.zeros(len(rf.imls), numpy.dtype(lst))
-            for lt in self.loss_types:
-                rf = self.risk_functions[lt]
-                array[lt]['iml'] = rf.imls
-                poes = array[lt]['poes']
-                for i, iml in enumerate(rf.imls):
-                    if rf.format == 'continuous':
-                        poes[i] = tuple(ff(iml) for ff in rf)
-                    else:  # discrete
-                        poes[i] = tuple(ff.poes[i] for ff in rf)
+        assert self.kind in ('vulnerability', 'fragility'), self.kind
+        to_array = getattr(self, '_' + self.kind)
+        if retrofitted:
+            return to_array(self.retro_functions)
         else:
-            raise ValueError('RiskModel kind must be vulnerability or '
-                             'fragility, got %s' % self.kind)
-        return array
+            return to_array(self.risk_functions)
+
+    def _vulnerability(self, functions):
+        dic = {}
+        for lt in self.loss_types:
+            vf = functions[lt]
+            ls = [('iml', F32)]
+            if hasattr(vf, 'mean_loss_ratios'):
+                ls.append(('ratio', F32))
+                ls.append(('cov', F32))
+            else:  # vulnerability with PMF
+                for lr in vf.loss_ratios:
+                    ls.append(('prob~%s' % lr, F32))
+            dic[lt] = numpy.zeros(len(vf.imls), numpy.dtype(ls))
+            dic[lt]['iml'] = vf.imls
+            if hasattr(vf, 'mean_loss_ratios'):
+                dic[lt]['ratio'] = vf.mean_loss_ratios
+                dic[lt]['cov'] = vf.covs
+            else:  # vulnerability with PMF
+                for i, lr in enumerate(vf.loss_ratios):
+                    dic[lt]['prob~%s' % lr] = vf.probs[i]
+        return dic
+
+    def _fragility(self, functions):
+        num_limit_states = len(self.compositemodel.damage_states) - 1
+        dt = numpy.dtype([('iml', F32), ('poes', F32, num_limit_states)])
+        dic = {}
+        for lt in self.loss_types:
+            ffl = functions[lt]
+            dic[lt] = numpy.zeros(len(ffl.imls), dt)
+            dic[lt]['iml'] = ffl.imls
+            poes = dic[lt]['poes']
+            for i, iml in enumerate(ffl.imls):
+                if ffl.format == 'continuous':
+                    poes[i] = tuple(ff(iml) for ff in ffl)
+                else:  # discrete
+                    poes[i] = tuple(ff.poes[i] for ff in ffl)
+        return dic
 
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
@@ -659,6 +658,7 @@ class ClassicalBCR(RiskModel):
         self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions_orig
+        self.retro_functions = vulnerability_functions_retro
         self.assets = None  # set a __call__ time
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy

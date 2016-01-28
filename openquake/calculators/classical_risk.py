@@ -20,7 +20,7 @@ import logging
 
 import numpy
 
-from openquake.risklib import riskmodels, scientific, riskinput
+from openquake.risklib import scientific, riskinput
 from openquake.commonlib import readinput, parallel, datastore, logictree
 from openquake.calculators import base
 
@@ -82,9 +82,9 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
             stats = statsbuilder.build(out_by_rlz)
             stat_curves, stat_maps = statsbuilder.get_curves_maps(stats)
             for i, asset in enumerate(out_by_rlz.assets):
-                result['stat_curves'].append((l, asset.idx, stat_curves[i]))
+                result['stat_curves'].append((l, asset.idx, stat_curves[:, i]))
                 if len(stat_maps):
-                    result['stat_maps'].append((l, asset.idx, stat_maps[i]))
+                    result['stat_maps'].append((l, asset.idx, stat_maps[:, i]))
 
     return result
 
