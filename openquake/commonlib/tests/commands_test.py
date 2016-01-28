@@ -90,7 +90,8 @@ lon,lat
 
         with Print.patch() as p:
             show_attrs(self.datastore.calc_id, 'hcurves')
-        self.assertEqual('nbytes 48', str(p))
+        self.assertEqual("imtls [['PGA' '3']\n ['SA(0.1)' '3']]\nnbytes 48",
+                         str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
