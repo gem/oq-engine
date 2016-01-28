@@ -34,13 +34,15 @@ from openquake.commonlib import sourceconverter as s
 from openquake.commonlib.source import parse_source_model, DuplicatedID
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.node import read_nodes
-from openquake.baselib.general import assert_close
+from openquake.baselib.general import assert_close, assert_close_seq
 
 # directory where the example files are
 NRML_DIR = os.path.dirname(nrml_examples.__file__)
 
 # Test NRML to use (contains 1 of each source type).
 MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
+ALT_MFDS_SRC_MODEL = os.path.join(NRML_DIR,
+                                  'source_model/alternative-mfds.xml')
 
 DUPLICATE_ID_SRC_MODEL = os.path.join(
     os.path.dirname(__file__), 'data', 'invalid_source_model.xml')
@@ -548,6 +550,37 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         np, = read_nodes(NONPARAMETRIC_SOURCE, filter_sources, ValidNode)
         converter.convert_node(np)
 
+    def test_alternative_mfds(self):
+        converter = s.SourceConverter(
+            investigation_time=1.,
+            rupture_mesh_spacing=1,  # km
+            complex_fault_mesh_spacing=5,  # km
+            width_of_mfd_bin=0.1,  # for Truncated GR MFDs
+            area_source_discretization=1.)
+        source_nodes = read_nodes(ALT_MFDS_SRC_MODEL,
+                                  filter_sources,
+                                  ValidNode)
+        [cplx1, sflt1, sflt2] = map(converter.convert_node, source_nodes)
+        # Check the values
+        # Arbitrary MFD
+        assert_close_seq(cplx1.mfd.magnitudes, [8.6, 8.8, 9.0], 1.0E-7, 0)
+        assert_close_seq(cplx1.mfd.occurrence_rates,
+                         [0.0006, 0.0008, 0.0004],
+                         1.0E-7,
+                         0)
+        # Youngs & Coppersmith from characteristic rate
+        self.assertAlmostEqual(sflt1.mfd.b_val, 1.0)
+        self.assertAlmostEqual(sflt1.mfd.a_val, 3.3877843113)
+        self.assertAlmostEqual(sflt1.mfd.char_mag, 7.0)
+        self.assertAlmostEqual(sflt1.mfd.char_rate, 0.005)
+        self.assertAlmostEqual(sflt1.mfd.min_mag, 5.0)
+        # Youngs & Coppersmith from total moment rate
+        self.assertAlmostEqual(sflt2.mfd.b_val, 1.0)
+        self.assertAlmostEqual(sflt2.mfd.a_val, 5.0800, 3)
+        self.assertAlmostEqual(sflt2.mfd.char_mag, 7.0)
+        self.assertAlmostEqual(sflt2.mfd.char_rate, 0.24615, 5)
+        self.assertAlmostEqual(sflt2.mfd.min_mag, 5.0)
+ 
 
 class AreaToPointsTestCase(unittest.TestCase):
     """
