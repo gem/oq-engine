@@ -380,7 +380,7 @@ class VulnerabilityFunction(object):
         array['iml'] = self.imls
         array['loss_ratio'] = self.mean_loss_ratios
         array['cov'] = self.covs
-        return array, {'id': self.id, 'imt': self.imt}
+        return array, {'taxonomy': self.id, 'imt': self.imt}
 
     def __repr__(self):
         return '<VulnerabilityFunction(%s, %s)>' % (self.id, self.imt)
@@ -509,7 +509,7 @@ class VulnerabilityFunctionWithPMF(object):
         array['iml'] = self.imls
         for i, lr in enumerate(self.loss_ratios):
             array['prob~%s' % lr] = self.probs[i]
-        return array, {'id': self.id, 'imt': self.imt}
+        return array, {'taxonomy': self.id, 'imt': self.imt}
 
     def __repr__(self):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
