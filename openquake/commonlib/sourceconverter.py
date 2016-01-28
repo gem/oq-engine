@@ -499,12 +499,12 @@ class SourceConverter(RuptureConverter):
                 elif "characteristicRate" in mfd_node.attrib.keys():
                     # Return Youngs & Coppersmith from the total moment rate
                     return mfd.YoungsCoppersmith1985MFD.\
-                            from_characteristic_rate(
-                                min_mag=mfd_node["minMag"],
-                                b_val=mfd_node["bValue"],
-                                char_mag=mfd_node["characteristicMag"],
-                                char_rate=mfd_node["characteristicRate"],
-                                bin_width=mfd_node["binWidth"])
+                        from_characteristic_rate(
+                            min_mag=mfd_node["minMag"],
+                            b_val=mfd_node["bValue"],
+                            char_mag=mfd_node["characteristicMag"],
+                            char_rate=mfd_node["characteristicRate"],
+                            bin_width=mfd_node["binWidth"])
 
     def convert_npdist(self, node):
         """
