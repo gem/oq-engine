@@ -61,6 +61,7 @@ Built-in GSIMs
     ghofrani_atkinson_2014
     gsim_table
     idriss_2014
+    kanno_2006
     lin_lee_2008
     lin_2009
     mcverry_2006
