@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Saved the risk models in HDF5 format
   * The epsilon_matrix is not saved anymore
   * Source filtering is now on demand, depending on the parameter
     `filter_sources`.
