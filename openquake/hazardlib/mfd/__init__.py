@@ -29,3 +29,4 @@ from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from openquake.hazardlib.mfd.youngs_coppersmith_1985 import (
     YoungsCoppersmith1985MFD
 )
+from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD

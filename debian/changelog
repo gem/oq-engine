@@ -1,4 +1,5 @@
   [Graeme Weatherill]
+  * Adds `arbitrary' magnitude frequency distribution
   * Adds version of NSHMP Western US (NGA West) GMPEs to calculated the
     weighted mean of the epistemic uncertainty adjustment factor
 
