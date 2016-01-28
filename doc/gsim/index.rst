@@ -57,6 +57,7 @@ Built-in GSIMs
     frankel_1996
     fukushima_tanaka_1990
     garcia_2005
+    gupta_2010
     geomatrix_1993
     ghofrani_atkinson_2014
     gsim_table
