@@ -101,6 +101,12 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
             self.assertEqual(arr.dtype, bool)
         self.assertEqual(len(cll), 2)
 
+        # test __toh5__ and __fromh5__
+        array, attrs = cll.__toh5__()
+        newcll = cll.__new__(cll.__class__)
+        newcll.__fromh5__(array, attrs)
+        self.assertEqual(newcll, cll)
+
     def test_from_points(self):
         lons = [10, -1.2]
         lats = [20, -3.4]
