@@ -61,7 +61,7 @@ class EventBasedTestCase(unittest.TestCase):
         self.assertAlmostEqual(0.500993631, first_curve_integral)
 
         wf = riskmodels.ProbabilisticEventBased(
-            'PGA', 'SOME-TAXONOMY',
+            'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
             investigation_time=50,
             risk_investigation_time=50,
@@ -97,7 +97,7 @@ class EventBasedTestCase(unittest.TestCase):
         self.assertAlmostEqual(0.48983614471, first_curve_integral)
 
         wf = riskmodels.ProbabilisticEventBased(
-            'PGA', 'SOME-TAXONOMY',
+            'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
             investigation_time=50,
             risk_investigation_time=50,
@@ -133,7 +133,7 @@ class EventBasedTestCase(unittest.TestCase):
         self.assertAlmostEqual(0.483041416, first_curve_integral)
 
         wf = riskmodels.ProbabilisticEventBased(
-            'PGA', 'SOME-TAXONOMY',
+            'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
             investigation_time=50,
             risk_investigation_time=50,
@@ -219,7 +219,7 @@ class EventBasedTestCase(unittest.TestCase):
                                       insured_average_losses)
 
         wf = riskmodels.ProbabilisticEventBased(
-            'PGA', 'SOME-TAXONOMY',
+            'SOME-TAXONOMY',
             vulnerability_functions={self.loss_type: vf},
             investigation_time=50,
             risk_investigation_time=50,

@@ -125,6 +125,8 @@ def fine_graining(points, steps):
 
 
 class VulnerabilityFunction(object):
+    dtype = numpy.dtype([('iml', F32), ('loss_ratio', F32), ('cov', F32)])
+
     def __init__(self, vf_id, imt, imls, mean_loss_ratios, covs=None,
                  distribution="LN"):
         """
@@ -370,6 +372,16 @@ class VulnerabilityFunction(object):
             [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
             [self.imls[-1] + (self.imls[-1] - self.imls[-2]) / 2.])
 
+    def to_array_attrs(self):
+        """
+        :returns: a pair (array, attrs) suitable for storage in HDF5 format
+        """
+        array = numpy.zeros(len(self.imls), self.dtype)
+        array['iml'] = self.imls
+        array['loss_ratio'] = self.mean_loss_ratios
+        array['cov'] = self.covs
+        return array, {'taxonomy': self.id, 'imt': self.imt}
+
     def __repr__(self):
         return '<VulnerabilityFunction(%s, %s)>' % (self.id, self.imt)
 
@@ -381,7 +393,7 @@ class VulnerabilityFunctionWithPMF(object):
     :param str vf_id: vulnerability function ID
     :param str imt: Intensity Measure Type
     :param imls: intensity measure levels (L)
-    :param ratios: mean ratios (M)
+    :param ratios: an array of mean ratios (M)
     :param probs: a matrix of probabilities of shape (M, L)
     """
     def __init__(self, vf_id, imt, imls, loss_ratios, probs, seed=42):
@@ -397,6 +409,9 @@ class VulnerabilityFunctionWithPMF(object):
         # to be set in .init(), called also by __setstate__
         (self._probs_i1d, self.distribution) = None, None
         self.init()
+
+        ls = [('iml', F32)] + [('prob~%s' % lr, F32) for lr in loss_ratios]
+        self.dtype = numpy.dtype(ls)
 
     def init(self):
         self._probs_i1d = interpolate.interp1d(self.imls, self.probs)
@@ -485,6 +500,16 @@ class VulnerabilityFunctionWithPMF(object):
         """
         # TODO: to be implemented if the classical risk calculator
         # needs to support the pmf vulnerability format
+
+    def to_array_attrs(self):
+        """
+        :returns: a pair (array, attrs) suitable for storage in HDF5 format
+        """
+        array = numpy.zeros(len(self.imls), self.dtype)
+        array['iml'] = self.imls
+        for i, lr in enumerate(self.loss_ratios):
+            array['prob~%s' % lr] = self.probs[i]
+        return array, {'taxonomy': self.id, 'imt': self.imt}
 
     def __repr__(self):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
@@ -706,8 +731,8 @@ class FragilityModel(dict):
             configuration parameter
         """
         newfm = copy.copy(self)
-        for imt_taxo, ff in self.items():
-            newfm[imt_taxo] = new = copy.copy(ff)
+        for key, ff in self.items():
+            newfm[key] = new = copy.copy(ff)
             # TODO: this is complicated: check with Anirudh
             add_zero = (ff.format == 'discrete' and
                         ff.nodamage is not None and ff.nodamage < ff.imls[0])

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013-2014, GEM Foundation.
+# Copyright (c) 2013-2016, GEM Foundation.
 #
 # OpenQuake Risklib is free software: you can redistribute it and/or
 # modify it under the terms of the GNU Affero General Public License
@@ -26,6 +26,7 @@ from openquake.baselib.general import CallableDict
 from openquake.commonlib import valid
 from openquake.risklib import utils, scientific
 
+F32 = numpy.float32
 registry = CallableDict()
 
 
@@ -143,8 +144,8 @@ class Asset(object):
         """
         :returns: the total asset value for `loss_type`
         """
-        if loss_type == 'fatalities':
-            return self.values['fatalities_' + str(time_event)]
+        if loss_type == 'occupants':
+            return self.values['occupants_' + str(time_event)]
         try:
             val = self._cost[loss_type]
         except KeyError:
@@ -179,8 +180,8 @@ class Asset(object):
         """
         :returns: the asset retrofitted value for `loss_type`
         """
-        if loss_type == 'fatalities':
-            return self.values['fatalities_' + str(time_event)]
+        if loss_type == 'occupants':
+            return self.values['occupants_' + str(time_event)]
         return self.calc(loss_type, self.retrofitting_values,
                          self.area, self.number)
 
@@ -234,9 +235,9 @@ class RiskModel(object):
     """
     time_event = None  # used in scenario_risk
     compositemodel = None  # set by get_risk_model
+    kind = None  # must be set in subclasses
 
-    def __init__(self, imt, taxonomy, risk_functions):
-        self.imt = imt
+    def __init__(self, taxonomy, risk_functions):
         self.taxonomy = taxonomy
         self.risk_functions = risk_functions
 
@@ -248,8 +249,17 @@ class RiskModel(object):
         """
         return sorted(self.risk_functions)
 
-    def gen_out_by_rlz(self, assets, hazards, epsilons, tags):
+    def get_loss_types(self, imt):
         """
+        :param imt: Intensity Measure Type string
+        :returns: loss types with risk functions of the given imt
+        """
+        return [lt for lt in self.loss_types
+                if self.risk_functions[lt].imt == imt]
+
+    def gen_out_by_rlz(self, imt, assets, hazards, epsilons, tags):
+        """
+        :param imt: restrict the risk functions to this IMT
         :param assets: an array of assets of homogeneous taxonomy
         :param hazards: an array of dictionaries per each asset
         :param epsilons: an array of epsilons per each asset
@@ -257,7 +267,7 @@ class RiskModel(object):
 
         Yield lists out_by_rlz.
         """
-        for loss_type in self.loss_types:
+        for loss_type in self.get_loss_types(imt):
             assets_ = assets
             epsilons_ = epsilons
             values = get_values(loss_type, assets, self.time_event)
@@ -273,6 +283,42 @@ class RiskModel(object):
                 epsilons_ = epsilons[ok]
             yield out_by_rlz(
                 self, assets_, hazards, epsilons_, tags, loss_type)
+
+    def to_array_attrs(self, retrofitted=False):
+        """
+        Convert the underlying risk functions into a dictionary of pairs
+        (array, attrs)
+        """
+        assert self.kind in ('vulnerability', 'fragility'), self.kind
+        to_array_attrs = getattr(self, '_' + self.kind)
+        if retrofitted:
+            return to_array_attrs(self.retro_functions)
+        else:
+            return to_array_attrs(self.risk_functions)
+
+    def _vulnerability(self, functions):
+        return {lt: functions[lt].to_array_attrs() for lt in self.loss_types}
+
+    def _fragility(self, functions):
+        num_limit_states = len(self.compositemodel.damage_states) - 1
+        dt = numpy.dtype([('iml', F32), ('poes', F32, num_limit_states)])
+        dic = {}
+        for lt in self.loss_types:
+            ffl = functions[lt]
+            attrs = {'imt': ffl.imt}
+            if ffl.format == 'continuous':
+                attrs['mean'] = [ff.mean for ff in ffl]
+                attrs['stddev'] = [ff.stddev for ff in ffl]
+            array = numpy.zeros(len(ffl.imls), dt)
+            dic[lt] = (array, attrs)
+            array['iml'] = ffl.imls
+            poes = array['poes']
+            for i, iml in enumerate(ffl.imls):
+                if ffl.format == 'continuous':
+                    poes[i] = tuple(ff(iml) for ff in ffl)
+                else:  # discrete
+                    poes[i] = tuple(ff.poes[i] for ff in ffl)
+        return dic
 
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
@@ -351,7 +397,9 @@ class Classical(RiskModel):
     :attr quantile_average_insured_losses:
        A numpy array shaped (Q, N) with average insured losses
     """
-    def __init__(self, imt, taxonomy, vulnerability_functions,
+    kind = 'vulnerability'
+
+    def __init__(self, taxonomy, vulnerability_functions,
                  hazard_imtls, lrem_steps_per_interval,
                  conditional_loss_poes, poes_disagg,
                  insured_losses=False):
@@ -377,15 +425,9 @@ class Classical(RiskModel):
         See :func:`openquake.risklib.scientific.classical` for a description
         of the other parameters.
         """
-        self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
-        imls = hazard_imtls[self.imt]
-        self.curves = dict(
-            (loss_type,
-             functools.partial(scientific.classical, vf, imls,
-                               steps=lrem_steps_per_interval))
-            for loss_type, vf in vulnerability_functions.items())
+        self.hazard_imtls = hazard_imtls
         self.lrem_steps_per_interval = lrem_steps_per_interval
         self.conditional_loss_poes = conditional_loss_poes
         self.poes_disagg = poes_disagg
@@ -409,12 +451,16 @@ class Classical(RiskModel):
         :returns:
             a :class:`openquake.risklib.scientific.Classical.Output` instance.
         """
-        curves = utils.numpy_map(self.curves[loss_type], hazard_curves)
+        vf = self.risk_functions[loss_type]
+        imls = self.hazard_imtls[vf.imt]
+        build = functools.partial(scientific.classical, vf, imls,
+                                  steps=self.lrem_steps_per_interval)
+        curves = utils.numpy_map(build, hazard_curves)
         average_losses = utils.numpy_map(scientific.average_loss, curves)
         maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
         values = get_values(loss_type, assets)
 
-        if self.insured_losses and loss_type != 'fatalities':
+        if self.insured_losses and loss_type != 'occupants':
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
 
@@ -481,8 +527,10 @@ class ProbabilisticEventBased(RiskModel):
     The statistical outputs are stored into
     :class:`openquake.risklib.scientific.Output` objects.
     """
+    kind = 'vulnerability'
+
     def __init__(
-            self, imt, taxonomy,
+            self, taxonomy,
             vulnerability_functions,
             investigation_time,
             risk_investigation_time,
@@ -499,7 +547,6 @@ class ProbabilisticEventBased(RiskModel):
         time_span = risk_investigation_time or investigation_time
         self.ses_ratio = time_span / (
             investigation_time * ses_per_logic_tree_path)
-        self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.loss_curve_resolution = loss_curve_resolution
@@ -562,7 +609,7 @@ class ProbabilisticEventBased(RiskModel):
         # FIXME: ugly workaround for qa_tests.event_based_test; in Ubuntu 12.04
         # MagicMock does not work well, so len(cb.ratios) gives an error
         nratios = 1 if isinstance(cb, mock.Mock) else len(cb.ratios)
-        if self.insured_losses and loss_type != 'fatalities':
+        if self.insured_losses and loss_type != 'occupants':
             deductibles = numpy.array(
                 [a.deductible(loss_type) for a in assets])
             limits = numpy.array(
@@ -591,37 +638,35 @@ class ProbabilisticEventBased(RiskModel):
 
 @registry.add('classical_bcr')
 class ClassicalBCR(RiskModel):
-    def __init__(self, imt, taxonomy,
+
+    kind = 'vulnerability'
+
+    def __init__(self, taxonomy,
                  vulnerability_functions_orig,
                  vulnerability_functions_retro,
                  hazard_imtls,
                  lrem_steps_per_interval,
                  interest_rate, asset_life_expectancy):
-        self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions_orig
+        self.retro_functions = vulnerability_functions_retro
         self.assets = None  # set a __call__ time
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
-        imls = hazard_imtls[self.imt]
-        self.curves_orig = dict(
-            (loss_type,
-             functools.partial(scientific.classical, vf, imls,
-                               steps=lrem_steps_per_interval))
-            for loss_type, vf in vulnerability_functions_orig.items())
-        self.curves_retro = dict(
-            (loss_type,
-             functools.partial(scientific.classical, vf, imls,
-                               steps=lrem_steps_per_interval))
-            for loss_type, vf in vulnerability_functions_retro.items())
+        self.hazard_imtls = hazard_imtls
+        self.lrem_steps_per_interval = lrem_steps_per_interval
 
     def __call__(self, loss_type, assets, hazard, _eps=None, _tags=None):
         self.assets = assets
-
-        original_loss_curves = utils.numpy_map(
-            self.curves_orig[loss_type], hazard)
-        retrofitted_loss_curves = utils.numpy_map(
-            self.curves_retro[loss_type], hazard)
+        vf = self.risk_functions[loss_type]
+        imls = self.hazard_imtls[vf.imt]
+        vf_retro = self.retro_functions[loss_type]
+        curves_orig = functools.partial(scientific.classical, vf, imls,
+                                        steps=self.lrem_steps_per_interval)
+        curves_retro = functools.partial(scientific.classical, vf_retro, imls,
+                                         steps=self.lrem_steps_per_interval)
+        original_loss_curves = utils.numpy_map(curves_orig, hazard)
+        retrofitted_loss_curves = utils.numpy_map(curves_retro, hazard)
 
         eal_original = utils.numpy_map(
             scientific.average_loss, original_loss_curves)
@@ -646,9 +691,10 @@ class Scenario(RiskModel):
     """
     Implements the Scenario riskmodel
     """
-    def __init__(self, imt, taxonomy, vulnerability_functions,
+    kind = 'vulnerability'
+
+    def __init__(self, taxonomy, vulnerability_functions,
                  insured_losses, time_event=None):
-        self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.insured_losses = insured_losses
@@ -666,7 +712,7 @@ class Scenario(RiskModel):
         # an array of E elements
         aggregate_losses = loss_matrix.sum(axis=0)
 
-        if self.insured_losses and loss_type != "fatalities":
+        if self.insured_losses and loss_type != "occupants":
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
             insured_loss_ratio_matrix = utils.numpy_map(
@@ -692,8 +738,9 @@ class Damage(RiskModel):
     """
     Implements the ScenarioDamage riskmodel
     """
-    def __init__(self, imt, taxonomy, fragility_functions):
-        self.imt = imt
+    kind = 'fragility'
+
+    def __init__(self, taxonomy, fragility_functions):
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
 
@@ -713,8 +760,9 @@ class Damage(RiskModel):
              for gmvs in gmfs])
         return scientific.Output(assets, loss_type, damages=damages)
 
-    def gen_out_by_rlz(self, assets, hazards, epsilons, tags):
+    def gen_out_by_rlz(self, imt, assets, hazards, epsilons, tags):
         """
+        :param imt: restrict the risk functions to this IMT
         :param assets: an array of assets of homogeneous taxonomy
         :param hazards: an array of dictionaries per each asset
         :param epsilons: an array of epsilons per each asset
@@ -722,7 +770,7 @@ class Damage(RiskModel):
 
         Yield a single list of outputs
         """
-        for loss_type in self.loss_types:
+        for loss_type in self.get_loss_types(imt):
             yield out_by_rlz(self, assets, hazards, epsilons, tags, loss_type)
 
 
@@ -731,13 +779,14 @@ class ClassicalDamage(Damage):
     """
     Implements the ClassicalDamage riskmodel
     """
-    def __init__(self, imt, taxonomy, fragility_functions,
+    kind = 'fragility'
+
+    def __init__(self, taxonomy, fragility_functions,
                  hazard_imtls, investigation_time,
                  risk_investigation_time):
-        self.imt = imt
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
-        self.hazard_imls = hazard_imtls[imt]
+        self.hazard_imtls = hazard_imtls
         self.investigation_time = investigation_time
         self.risk_investigation_time = risk_investigation_time
 
@@ -751,9 +800,11 @@ class ClassicalDamage(Damage):
 
         where N is the number of points and D the number of damage states.
         """
+        ffl = self.risk_functions[loss_type]
+        hazard_imls = self.hazard_imtls[ffl.imt]
         damages = [
             asset.number * scientific.classical_damage(
-                self.risk_functions[loss_type], self.hazard_imls, curve,
+                ffl, hazard_imls, curve,
                 investigation_time=self.investigation_time,
                 risk_investigation_time=self.risk_investigation_time)
             for asset, curve in zip(assets, hazard_curves)]
@@ -765,13 +816,11 @@ class ClassicalDamage(Damage):
 # names of the parameter in the oqparam object. This is view as a
 # feature, since it forces people to be consistent with the names,
 # in the spirit of the 'convention over configuration' philosophy
-def get_riskmodel(imt, taxonomy, oqparam, **extra):
+def get_riskmodel(taxonomy, oqparam, **extra):
     """
     Return an instance of the correct riskmodel class, depending on the
     attribute `calculation_mode` of the object `oqparam`.
 
-    :param imt:
-        an intensity measure type string
     :param taxonomy:
         a taxonomy string
     :param oqparam:
@@ -799,4 +848,4 @@ def get_riskmodel(imt, taxonomy, oqparam, **extra):
     if missing:
         raise TypeError('Missing parameter: %s' % ', '.join(missing))
 
-    return riskmodel_class(imt, taxonomy, **all_args)
+    return riskmodel_class(taxonomy, **all_args)

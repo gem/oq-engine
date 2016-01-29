@@ -45,12 +45,12 @@ def build_asset_collection(assets_by_site, time_event=None):
         raise ValueError('There are no assets!')
     candidate_loss_types = list(first_asset.values)
     loss_types = []
-    the_fatalities = 'fatalities_%s' % time_event
+    the_occupants = 'occupants_%s' % time_event
     for candidate in candidate_loss_types:
-        if candidate.startswith('fatalities'):
-            if candidate == the_fatalities:
-                loss_types.append('fatalities')
-            # discard fatalities for different time periods
+        if candidate.startswith('occupants'):
+            if candidate == the_occupants:
+                loss_types.append('occupants')
+            # discard occupants for different time periods
         else:
             loss_types.append(candidate)
     deductible_d = first_asset.deductibles or {}
@@ -85,8 +85,8 @@ def build_asset_collection(assets_by_site, time_event=None):
                     value = asset.id
                 elif field == 'site_id':
                     value = sid
-                elif field == 'fatalities':
-                    value = asset.values[the_fatalities]
+                elif field == 'occupants':
+                    value = asset.values[the_occupants]
                 else:
                     try:
                         name, lt = field.split('~')
@@ -226,39 +226,25 @@ class CompositeRiskModel(collections.Mapping):
             ltypes.update(rm.loss_types)
         return sorted(ltypes)
 
-    def get_taxonomies(self, imt=None):
-        """
-        :returns:
-            the set of taxonomies which are part of the CompositeRiskModel
-        """
-        if imt is None:
-            return set(taxonomy for imt, taxonomy in self)
-        return set(taxonomy for imt_str, taxonomy in self if imt_str == imt)
-
-    def get_imts(self, taxonomy=None):
-        if taxonomy is None:
-            return set(imt for imt, taxonomy in self)
-        return set(imt for imt, taxo in self if taxo == taxonomy)
-
-    def get_imt_taxonomies(self):
-        """
-        For each IMT in the risk model, yield pairs (imt, taxonomies)
-        with the taxonomies associated to the IMT. For fragility functions,
-        there is a single taxonomy for each IMT.
-        """
-        by_imt = operator.itemgetter(0)
-        by_taxo = operator.itemgetter(1)
-        dic = groupby(self, by_imt, lambda group: list(map(by_taxo, group)))
-        return list(dic.items())
-
-    def __getitem__(self, imt_taxo):
-        return self._riskmodels[imt_taxo]
+    def __getitem__(self, taxonomy):
+        return self._riskmodels[taxonomy]
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))
 
     def __len__(self):
         return len(self._riskmodels)
+
+    def get_imt_taxonomies(self, imt=None):
+        """
+        :returns: sorted list of pairs (imt, taxonomies)
+        """
+        imt_taxonomies = collections.defaultdict(set)
+        for taxonomy, riskmodel in self.items():
+            for loss_type, rf in sorted(riskmodel.risk_functions.items()):
+                if imt is None or imt == rf.imt:
+                    imt_taxonomies[rf.imt].add(riskmodel.taxonomy)
+        return sorted(imt_taxonomies.items())
 
     def build_input(self, imt, hazards_by_site, assets_by_site, eps_dict):
         """
@@ -268,9 +254,8 @@ class CompositeRiskModel(collections.Mapping):
         :param eps_dict: a dictionary of epsilons
         :returns: a :class:`RiskInput` instance
         """
-        imt_taxonomies = [(imt, self.get_taxonomies(imt))]
-        return RiskInput(imt_taxonomies, hazards_by_site, assets_by_site,
-                         eps_dict)
+        return RiskInput(self.get_imt_taxonomies(imt),
+                         hazards_by_site, assets_by_site, eps_dict)
 
     def build_inputs_from_ruptures(self, sitecol, all_ruptures,
                                    gsims_by_col, trunc_level, correl_model,
@@ -286,7 +271,7 @@ class CompositeRiskModel(collections.Mapping):
 
         Yield :class:`RiskInputFromRuptures` instances.
         """
-        imt_taxonomies = list(self.get_imt_taxonomies())
+        imt_taxonomies = self.get_imt_taxonomies()
         by_col = operator.attrgetter('col_id')
         rup_start = rup_stop = 0
         for ses_ruptures in split_in_blocks(
@@ -312,6 +297,7 @@ class CompositeRiskModel(collections.Mapping):
         mon_hazard = monitor('getting hazard')
         mon_risk = monitor('computing individual risk')
         for riskinput in riskinputs:
+            tags = riskinput.tags
             assets_by_site = getattr(
                 riskinput, 'assets_by_site', assets_by_site)
             with mon_hazard:
@@ -329,9 +315,8 @@ class CompositeRiskModel(collections.Mapping):
                                 epsilons.append(epsilon)
                         if not assets:
                             continue
-                        riskmodel = self[imt, taxonomy]
-                        for out_by_rlz in riskmodel.gen_out_by_rlz(
-                                assets, hazards, epsilons, riskinput.tags):
+                        for out_by_rlz in self[taxonomy].gen_out_by_rlz(
+                                imt, assets, hazards, epsilons, tags):
                             yield out_by_rlz
 
     def __repr__(self):
@@ -352,6 +337,9 @@ class RiskInput(object):
     """
     def __init__(self, imt_taxonomies, hazard_by_site, assets_by_site,
                  eps_dict):
+        if not imt_taxonomies:
+            self.weight = 0
+            return
         [(self.imt, taxonomies)] = imt_taxonomies
         self.hazard_by_site = hazard_by_site
         self.assets_by_site = [

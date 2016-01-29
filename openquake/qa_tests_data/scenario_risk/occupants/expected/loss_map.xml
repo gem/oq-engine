@@ -6,7 +6,7 @@ xmlns:gml="http://www.opengis.net/gml"
     <lossMap
     gsimTreePath="@"
     investigationTime="None"
-    lossType="fatalities"
+    lossType="occupants"
     poE="None"
     unit="people"
     >

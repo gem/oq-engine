@@ -39,7 +39,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
     <vulnerabilityModel>
         <discreteVulnerabilitySet vulnerabilitySetID="PAGER"
                                   assetCategory="population"
-                                  lossCategory="fatalities">
+                                  lossCategory="occupants">
             <IML IMT="PGA">0.005 0.007 0.0098 0.0137</IML>
             <discreteVulnerability vulnerabilityFunctionID="RC/A"
                                    probabilisticDistribution="LN">
@@ -50,7 +50,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
         </discreteVulnerabilitySet>
         <discreteVulnerabilitySet vulnerabilitySetID="PAGER"
                                   assetCategory="population"
-                                  lossCategory="fatalities">
+                                  lossCategory="occupants">
             <IML IMT="PGA">0.004 0.008 0.037</IML>
             <discreteVulnerability vulnerabilityFunctionID="RC/B"
                                    probabilisticDistribution="LN">
@@ -80,7 +80,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
     <vulnerabilityModel>
         <discreteVulnerabilitySet vulnerabilitySetID="PAGER"
                                   assetCategory="population"
-                                  lossCategory="fatalities">
+                                  lossCategory="occupants">
             <IML IMT="PGA">0.005 0.007 0.0098 0.0137</IML>
             <discreteVulnerability vulnerabilityFunctionID="A"
                                    probabilisticDistribution="LN">
@@ -91,7 +91,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
         </discreteVulnerabilitySet>
         <discreteVulnerabilitySet vulnerabilitySetID="PAGER"
                                   assetCategory="population"
-                                  lossCategory="fatalities">
+                                  lossCategory="occupants">
             <IML IMT="MMI">0.005 0.007 0.0098 0.0137</IML>
             <discreteVulnerability vulnerabilityFunctionID="A"
                                    probabilisticDistribution="LN">
@@ -118,7 +118,7 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
     <vulnerabilityModel>
         <discreteVulnerabilitySet vulnerabilitySetID="PAGER"
                                   assetCategory="population"
-                                  lossCategory="fatalities">
+                                  lossCategory="occupants">
             <IML IMT="PGV">0.005 0.007 0.0098 0.0137</IML>
             <discreteVulnerability vulnerabilityFunctionID="A"
                                    probabilisticDistribution="LN">

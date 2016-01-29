@@ -37,7 +37,7 @@ class RiskInputTestCase(unittest.TestCase):
 
     def test_assetcol(self):
         expected = writetmp('''\
-asset_ref:|S100:,site_id:uint32:,taxonomy:uint32:,fatalities:float64:,structural:float64:,deductible~structural:float64:,insurance_limit~structural:float64:
+asset_ref:|S100:,site_id:uint32:,taxonomy:uint32:,occupants:float64:,structural:float64:,deductible~structural:float64:,insurance_limit~structural:float64:
 a0,0,1,10,3000,.25,1.0
 a1,1,0,20,2000,0.25,0.5
 a2,2,2,30,1000,0.2,0.8
@@ -51,7 +51,8 @@ a4,3,1,50,500000,2.0,6.0
     def test_get_all(self):
         self.assertEqual(
             list(self.riskmodel.get_imt_taxonomies()),
-            [('PGA', ['RM']), ('SA(0.2)', ['RC']), ('SA(0.5)', ['W'])])
+            [('PGA', set(['RM'])), ('SA(0.2)', set(['RC'])),
+             ('SA(0.5)', set(['W']))])
         self.assertEqual(len(self.sitecol), 4)
         hazard_by_site = [{}] * 4
 
