@@ -370,9 +370,11 @@ class HazardCalculator(BaseCalculator):
                 self.datastore[key].attrs['nbytes'] = array.nbytes
                 nbytes += array.nbytes
         attrs = self.datastore['composite_risk_model'].attrs
-        attrs['nbytes'] = nbytes
+        attrs['loss_types'] = rm.loss_types
         if rm.damage_states:
-            attrs['limit_states'] = rm.damage_states[1:]
+            attrs['damage_states'] = rm.damage_states
+        attrs['nbytes'] = nbytes
+        self.datastore['loss_ratios'] = rm.get_loss_ratios()
         self.datastore.hdf5.flush()
 
     def read_risk_data(self):

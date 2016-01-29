@@ -217,6 +217,19 @@ class CompositeRiskModel(collections.Mapping):
             self.loss_types.append(loss_type)
             self.lti[loss_type] = l
 
+    def get_loss_ratios(self):
+        """
+        :returns: a 1-dimensional composite array with loss ratios by loss type
+        """
+        lst = [('user_provided', numpy.bool)]
+        for cb in self.curve_builders:
+            lst.append((cb.loss_type, F32, len(cb.ratios)))
+        loss_ratios = numpy.zeros(1, numpy.dtype(lst))
+        for cb in self.curve_builders:
+            loss_ratios['user_provided'] = cb.user_provided
+            loss_ratios[cb.loss_type] = tuple(cb.ratios)
+        return loss_ratios
+
     def _get_loss_types(self):
         """
         :returns: a sorted list with all the loss_types contained in the model
