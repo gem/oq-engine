@@ -2,12 +2,13 @@
   * Introduced a serialization protocol to save objects in the datastore
 
   [Matteo Nastasi]
-  * Add framework to run bash scripts tests and collect associated xunit report
-  * Add concurrent_futures_process_monkeypatch() using python-prctl library
-    to avoid forked processes became sons of init instead finish when parent
-    process dies unexpectedly
+  * Added framework to run bash scripts tests and collect associated
+    xunit report
+  * Used the python-prctl library to automatically kill processes when
+    the parent dies unexpectedly (linux-only)
 
   [Michele Simionato]
+  * Saved the risk models in HDF5 format
   * Unified the calculators classical and classical_tiling
   * The epsilon_matrix is not saved anymore
   * Source filtering is now on demand, depending on the parameter

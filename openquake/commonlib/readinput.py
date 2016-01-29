@@ -587,7 +587,7 @@ def get_risk_model(oqparam, rmdict):
    :param rmdict:
         a dictionary (imt, taxonomy) -> loss_type -> risk_function
     """
-    riskmod = {}  # (imt, taxonomy) -> riskmodel
+    riskmod = {}  # taxonomy -> riskmodel
     crm = riskinput.CompositeRiskModel(riskmod)
     if getattr(oqparam, 'limit_states', []):
         # classical_damage/scenario_damage calculator
@@ -596,35 +596,33 @@ def get_risk_model(oqparam, rmdict):
             oqparam.calculation_mode += '_damage'
         crm.damage_states = ['no_damage'] + oqparam.limit_states
         delattr(oqparam, 'limit_states')
-        for imt_taxo, ffs_by_lt in rmdict.items():
-            riskmod[imt_taxo] = riskmodels.get_riskmodel(
-                imt_taxo[0], imt_taxo[1], oqparam,
-                fragility_functions=ffs_by_lt)
+        for taxonomy, ffs_by_lt in rmdict.items():
+            riskmod[taxonomy] = riskmodels.get_riskmodel(
+                taxonomy, oqparam, fragility_functions=ffs_by_lt)
     elif oqparam.calculation_mode.endswith('_bcr'):
         # classical_bcr calculator
         retro = get_risk_models(oqparam, 'vulnerability_retrofitted')
-        for (imt_taxo, vf_orig), (imt_taxo_, vf_retro) in \
+        for (taxonomy, vf_orig), (taxonomy_, vf_retro) in \
                 zip(rmdict.items(), retro.items()):
-            assert imt_taxo == imt_taxo_  # same imt and taxonomy
-            riskmod[imt_taxo] = riskmodels.get_riskmodel(
-                imt_taxo[0], imt_taxo[1], oqparam,
+            assert taxonomy == taxonomy_  # same imt and taxonomy
+            riskmod[taxonomy] = riskmodels.get_riskmodel(
+                taxonomy, oqparam,
                 vulnerability_functions_orig=vf_orig,
                 vulnerability_functions_retro=vf_retro)
     else:
         # classical, event based and scenario calculators
-        for imt_taxo, vfs in rmdict.items():
+        for taxonomy, vfs in rmdict.items():
             for vf in vfs.values():
                 # set the seed; this is important for the case of
                 # VulnerabilityFunctionWithPMF
                 vf.seed = oqparam.random_seed
-            riskmod[imt_taxo] = riskmodels.get_riskmodel(
-                imt_taxo[0], imt_taxo[1], oqparam,
-                vulnerability_functions=vfs)
+            riskmod[taxonomy] = riskmodels.get_riskmodel(
+                taxonomy, oqparam, vulnerability_functions=vfs)
 
     crm.make_curve_builders(oqparam)
     taxonomies = set()
-    for imt_taxo, riskmodel in riskmod.items():
-        taxonomies.add(imt_taxo[1])
+    for taxonomy, riskmodel in riskmod.items():
+        taxonomies.add(taxonomy)
         riskmodel.compositemodel = crm
         # save the number of nonzero coefficients of variation
         for vf in riskmodel.risk_functions.values():

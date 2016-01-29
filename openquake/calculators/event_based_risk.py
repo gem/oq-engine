@@ -25,7 +25,7 @@ import numpy
 
 from openquake.baselib.general import AccumDict, humansize
 from openquake.calculators import base
-from openquake.commonlib import readinput, parallel, datastore
+from openquake.commonlib import readinput, parallel
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import apply_reduce
 
@@ -142,7 +142,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
                 for aid, groundloss, insuredloss in zip(
                         asset_ids, all_losses, ins_losses):
                     if groundloss > 0:
-                        loss2 = numpy.array([groundloss, insuredloss])
+                        loss2 = (groundloss, insuredloss)
                         ass_losses.append((r, rup_id, aid, l, loss2))
 
             # dictionaries asset_idx -> array of counts

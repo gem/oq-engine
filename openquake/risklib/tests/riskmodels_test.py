@@ -31,8 +31,8 @@ def asset(values, deductibles=None,
           insurance_limits=None,
           retrofitting_values=None):
     return riskmodels.Asset('a1', 'taxonomy', 1, (0, 0), values,
-                           1, deductibles, insurance_limits,
-                           retrofitting_values)
+                            1, deductibles, insurance_limits,
+                            retrofitting_values)
 
 
 class ScenarioTestCase(unittest.TestCase):
@@ -40,7 +40,7 @@ class ScenarioTestCase(unittest.TestCase):
 
     def test_call(self):
         vf = mock.MagicMock()
-        calc = riskmodels.Scenario('PGA', 'TAXO', vf, True)
+        calc = riskmodels.Scenario('TAXO', vf, True)
 
         assets = [asset(
             dict(structural=10),
@@ -59,7 +59,7 @@ class ScenarioTestCase(unittest.TestCase):
 
     def test_call_no_insured(self):
         vf = mock.MagicMock()
-        calc = riskmodels.Scenario('PGA', 'TAXO', vf, False)
+        calc = riskmodels.Scenario('TAXO', vf, False)
 
         assets = [asset(dict(structural=10))] * 4
         vf = calc.risk_functions[self.loss_type]
@@ -77,7 +77,6 @@ class DamageTest(unittest.TestCase):
     def test_generator(self):
         with mock.patch('openquake.risklib.scientific.scenario_damage') as m:
             fragility_functions = mock.Mock()
-            calc = riskmodels.Damage(
-                'PGA', 'TAXO', dict(damage=fragility_functions))
+            calc = riskmodels.Damage('TAXO', dict(damage=fragility_functions))
             calc('damage', 'assets', 'hazard', None)
             self.assertEqual(m.call_count, 6)  # called 3 x 2 times

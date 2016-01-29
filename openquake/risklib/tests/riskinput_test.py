@@ -51,7 +51,8 @@ a4,3,1,50,500000,2.0,6.0
     def test_get_all(self):
         self.assertEqual(
             list(self.riskmodel.get_imt_taxonomies()),
-            [('PGA', ['RM']), ('SA(0.2)', ['RC']), ('SA(0.5)', ['W'])])
+            [('PGA', set(['RM'])), ('SA(0.2)', set(['RC'])),
+             ('SA(0.5)', set(['W']))])
         self.assertEqual(len(self.sitecol), 4)
         hazard_by_site = [{}] * 4
 
