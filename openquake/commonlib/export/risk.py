@@ -497,7 +497,7 @@ def export_loss_maps_xml_geojson(ekey, dstore):
     writercls = (risk_writers.LossMapGeoJSONWriter
                  if export_type == 'geojson' else
                  risk_writers.LossMapXMLWriter)
-    loss_types = loss_maps.dtype.names[1:]
+    loss_types = loss_maps.dtype.names
     L = len(loss_types)
     for lt in loss_types:
         loss_maps_lt = loss_maps[lt]
