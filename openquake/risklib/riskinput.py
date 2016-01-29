@@ -45,12 +45,12 @@ def build_asset_collection(assets_by_site, time_event=None):
         raise ValueError('There are no assets!')
     candidate_loss_types = list(first_asset.values)
     loss_types = []
-    the_fatalities = 'fatalities_%s' % time_event
+    the_occupants = 'occupants_%s' % time_event
     for candidate in candidate_loss_types:
-        if candidate.startswith('fatalities'):
-            if candidate == the_fatalities:
-                loss_types.append('fatalities')
-            # discard fatalities for different time periods
+        if candidate.startswith('occupants'):
+            if candidate == the_occupants:
+                loss_types.append('occupants')
+            # discard occupants for different time periods
         else:
             loss_types.append(candidate)
     deductible_d = first_asset.deductibles or {}
@@ -85,8 +85,8 @@ def build_asset_collection(assets_by_site, time_event=None):
                     value = asset.id
                 elif field == 'site_id':
                     value = sid
-                elif field == 'fatalities':
-                    value = asset.values[the_fatalities]
+                elif field == 'occupants':
+                    value = asset.values[the_occupants]
                 else:
                     try:
                         name, lt = field.split('~')

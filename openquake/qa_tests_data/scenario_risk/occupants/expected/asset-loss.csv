@@ -1,4 +1,4 @@
 LossType,Unit,Asset,Mean,Standard Deviation
-fatalities,people,a1,3.6863307E-01,1.9894274E-01
-fatalities,people,a2,1.5895147E+00,1.8570952E+00
-fatalities,people,a3,1.1278906E+00,6.9815299E-01
+occupants,people,a1,3.6863307E-01,1.9894274E-01
+occupants,people,a2,1.5895147E+00,1.8570952E+00
+occupants,people,a3,1.1278906E+00,6.9815299E-01

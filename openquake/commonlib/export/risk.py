@@ -442,9 +442,8 @@ PerAssetLoss = collections.namedtuple(
 
 @export.add(('loss_map-rlzs', 'csv'))
 def export_loss_map(ekey, dstore):
-    unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
-                  for ct in dstore['cost_types']}
-    unit_by_lt['fatalities'] = 'people'
+    unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
+    unit_by_lt['occupants'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
     avglosses = dstore[ekey[0]]
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
@@ -484,9 +483,8 @@ class Location(object):
             ('loss_maps-stats', 'xml'), ('loss_maps-stats', 'geojson'))
 def export_loss_maps_xml_geojson(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
-    unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
-                  for ct in dstore['cost_types']}
-    unit_by_lt['fatalities'] = 'people'
+    unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
+    unit_by_lt['occupants'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
     loss_maps = dstore[ekey[0]]
     assetcol = dstore['assetcol']
@@ -532,9 +530,8 @@ def export_loss_maps_xml_geojson(ekey, dstore):
 @export.add(('loss_map-rlzs', 'xml'), ('loss_map-rlzs', 'geojson'))
 def export_loss_map_xml_geojson(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
-    unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
-                  for ct in dstore['cost_types']}
-    unit_by_lt['fatalities'] = 'people'
+    unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
+    unit_by_lt['occupants'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
     loss_map = dstore[ekey[0]]
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
@@ -578,9 +575,8 @@ def export_loss_map_xml_geojson(ekey, dstore):
 # this is used by scenario_risk
 @export.add(('agglosses-rlzs', 'csv'))
 def export_agglosses(ekey, dstore):
-    unit_by_lt = {riskmodels.cost_type_to_loss_type(ct['name']): ct['unit']
-                  for ct in dstore['cost_types']}
-    unit_by_lt['fatalities'] = 'people'
+    unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
+    unit_by_lt['occupants'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
     agglosses = dstore[ekey[0]]
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
@@ -646,7 +642,7 @@ def _gen_writers(dstore, writercls, root):
     cost_types = dstore['cost_types']
     L, R = len(cost_types), len(rlzs)
     for l, ct in enumerate(cost_types):
-        loss_type = riskmodels.cost_type_to_loss_type(ct['name'])
+        loss_type = ct['name']
         for ins in range(oq.insured_losses + 1):
             if root.endswith('-rlzs'):
                 for rlz in rlzs:

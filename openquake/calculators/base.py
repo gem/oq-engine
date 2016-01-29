@@ -539,7 +539,7 @@ class RiskCalculator(HazardCalculator):
         Require a `.core_task` to be defined with signature
         (riskinputs, riskmodel, rlzs_assoc, monitor).
         """
-        # add fatalities as side effect
+        # add occupants as side effect
         riskinput.build_asset_collection(
             self.assets_by_site, self.oqparam.time_event)
         self.monitor.oqparam = self.oqparam

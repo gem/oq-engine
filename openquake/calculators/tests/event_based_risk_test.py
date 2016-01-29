@@ -105,7 +105,7 @@ a3        8.574770E+01 2.790150E+01 1.441384E+02 0.000000E+00
         out = self.run_calc(occupants.__file__, 'job_h.ini,job_r.ini',
                             exports='xml', individual_curves='true')
         fnames = out['loss_maps-rlzs', 'xml'] + out['agg_curve-rlzs', 'xml']
-        self.assertEqual(len(fnames), 3)
+        self.assertEqual(len(fnames), 3)  # 2 loss_maps + 1 agg_curve
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 

@@ -144,8 +144,8 @@ class Asset(object):
         """
         :returns: the total asset value for `loss_type`
         """
-        if loss_type == 'fatalities':
-            return self.values['fatalities_' + str(time_event)]
+        if loss_type == 'occupants':
+            return self.values['occupants_' + str(time_event)]
         try:
             val = self._cost[loss_type]
         except KeyError:
@@ -180,8 +180,8 @@ class Asset(object):
         """
         :returns: the asset retrofitted value for `loss_type`
         """
-        if loss_type == 'fatalities':
-            return self.values['fatalities_' + str(time_event)]
+        if loss_type == 'occupants':
+            return self.values['occupants_' + str(time_event)]
         return self.calc(loss_type, self.retrofitting_values,
                          self.area, self.number)
 
@@ -424,7 +424,7 @@ class Classical(RiskModel):
         maps = scientific.loss_map_matrix(self.conditional_loss_poes, curves)
         values = get_values(loss_type, assets)
 
-        if self.insured_losses and loss_type != 'fatalities':
+        if self.insured_losses and loss_type != 'occupants':
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
 
@@ -573,7 +573,7 @@ class ProbabilisticEventBased(RiskModel):
         # FIXME: ugly workaround for qa_tests.event_based_test; in Ubuntu 12.04
         # MagicMock does not work well, so len(cb.ratios) gives an error
         nratios = 1 if isinstance(cb, mock.Mock) else len(cb.ratios)
-        if self.insured_losses and loss_type != 'fatalities':
+        if self.insured_losses and loss_type != 'occupants':
             deductibles = numpy.array(
                 [a.deductible(loss_type) for a in assets])
             limits = numpy.array(
@@ -676,7 +676,7 @@ class Scenario(RiskModel):
         # an array of E elements
         aggregate_losses = loss_matrix.sum(axis=0)
 
-        if self.insured_losses and loss_type != "fatalities":
+        if self.insured_losses and loss_type != "occupants":
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
             insured_loss_ratio_matrix = utils.numpy_map(

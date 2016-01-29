@@ -1,5 +1,7 @@
   [Michele Simionato]
   * Saved the site collection and the risk models in HDF5 format
+  * Renamed `fatalities` to `occupants` to be consistent with the
+    convention on the file names of the risk models
   * Introduced a serialization protocol to save objects in the datastore
 
   [Matteo Nastasi]
