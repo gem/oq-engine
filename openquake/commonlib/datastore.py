@@ -19,6 +19,7 @@
 import os
 import re
 import ast
+import pydoc
 from openquake.baselib.python3compat import pickle
 import collections
 
@@ -107,7 +108,7 @@ def get_last_calc_id(datadir):
 
 class DataStore(collections.MutableMapping):
     """
-    DataStore class to store the inputs/outputs of each calculation on the
+    DataStore class to store the inputs/outputs of a calculation on the
     filesystem.
 
     Here is a minimal example of usage:
@@ -120,6 +121,12 @@ class DataStore(collections.MutableMapping):
 
     When reading the items, the DataStore will return a generator. The
     items will be ordered lexicographically according to their name.
+
+    There is a serialization protocol to store objects in the datastore.
+    An object is serializable if it has a method `__toh5__` returning
+    an array and a dictionary, and a method `__fromh5__` taking an array
+    and a dictionary and populating the object.
+    For an example of use see :class:`openquake.hazardlib.site.SiteCollection`.
     """
     def __init__(self, calc_id=None, datadir=DATADIR, parent=(),
                  export_dir='.', params=(), mode=None):
@@ -259,12 +266,22 @@ class DataStore(collections.MutableMapping):
             shape = val.shape
         except AttributeError:  # val is a group
             return val
+        if '__pyclass__' in val.attrs:  # serialized object
+            value, attrs = val.value, dict(val.attrs)
+            cls = pydoc.locate(attrs.pop('__pyclass__'))
+            val = cls.__new__(cls)
+            val.__fromh5__(value, attrs)
         if not shape:
             val = pickle.loads(val.value)
         return val
 
     def __setitem__(self, key, value):
-        if (not isinstance(value, numpy.ndarray) or
+        attrs = {}
+        if hasattr(value, '__toh5__') and hasattr(value, '__fromh5__'):
+            val, attrs = value.__toh5__()
+            attrs['__pyclass__'] = '.'.join([value.__class__.__module__,
+                                             value.__class__.__name__])
+        elif (not isinstance(value, numpy.ndarray) or
                 value.dtype is numpy.dtype(object)):
             val = numpy.array(pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
         else:
@@ -279,6 +296,9 @@ class DataStore(collections.MutableMapping):
         except RuntimeError as exc:
             raise RuntimeError('Could not save %s: %s in %s' %
                                (key, exc, self.hdf5path))
+        # save attributes if any
+        for k, v in attrs.items():
+            self.hdf5[key].attrs[k] = v
 
     def __delitem__(self, key):
         if (h5py.version.version <= '2.0.1' and not

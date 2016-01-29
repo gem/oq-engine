@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Introduced a serialization protocol to save objects in the datastore
+
   [Matteo Nastasi]
   * Add framework to run bash scripts tests and collect associated xunit report
   * Add concurrent_futures_process_monkeypatch() using python-prctl library
