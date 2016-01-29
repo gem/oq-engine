@@ -359,21 +359,14 @@ class HazardCalculator(BaseCalculator):
                                    'which are not in the risk model' % missing)
 
         # save the loss ratios in the datastore
-        nbytes = 0
         for taxonomy, rmodel in rm.items():
-            items = rmodel.to_array_attrs().items()
-            for loss_type, (array, attrs) in sorted(items):
+            for loss_type, rf in sorted(rmodel.risk_functions.items()):
                 key = 'composite_risk_model/%s-%s' % (taxonomy, loss_type)
-                self.datastore[key] = array
-                for k, v in attrs.items():
-                    self.datastore[key].attrs[k] = v
-                self.datastore[key].attrs['nbytes'] = array.nbytes
-                nbytes += array.nbytes
+                self.datastore[key] = rf
         attrs = self.datastore['composite_risk_model'].attrs
         attrs['loss_types'] = rm.loss_types
         if rm.damage_states:
             attrs['damage_states'] = rm.damage_states
-        attrs['nbytes'] = nbytes
         self.datastore['loss_ratios'] = rm.get_loss_ratios()
         self.datastore.hdf5.flush()
 

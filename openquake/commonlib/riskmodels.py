@@ -358,7 +358,6 @@ def get_fragility_model(node, fname):
         array, attrs = ffconvert(fname, limit_states, ff)
         ffl = scientific.FragilityFunctionList(array)
         vars(ffl).update(attrs)
-        ffl.limit_states = limit_states
         fmodel[imt_taxo] = ffl
     return fmodel
 
