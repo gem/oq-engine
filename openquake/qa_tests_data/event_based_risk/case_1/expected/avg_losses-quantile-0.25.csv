@@ -1,4 +1,4 @@
-asset_ref:|S20,lon,lat,contents,fatalities,nonstructural,structural
+asset_ref:|S20,lon,lat,contents,occupants,nonstructural,structural
 a0,8.129850E+01,2.910980E+01,2.920942E+01,1.922287E-01,4.021675E+01,1.220731E+02
 a1,8.308230E+01,2.790060E+01,6.110299E+01,5.663147E-01,3.582866E+01,1.038372E+02
 a2,8.574770E+01,2.790150E+01,2.724915E+01,2.396632E-01,1.214077E+01,1.222590E+02

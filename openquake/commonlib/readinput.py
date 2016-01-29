@@ -753,7 +753,7 @@ def get_exposure(oqparam):
                     number = 1
                 else:
                     if 'occupants' in all_cost_types:
-                        values['fatalities_None'] = number
+                        values['occupants_None'] = number
             location = asset.location['lon'], asset.location['lat']
             if region and not geometry.Point(*location).within(region):
                 out_of_region += 1
@@ -793,15 +793,15 @@ def get_exposure(oqparam):
                 raise ValueError("Invalid Exposure. "
                                  "Missing cost %s for asset %s" % (
                                      missing, asset_id))
-        tot_fatalities = 0
+        tot_occupants = 0
         for occupancy in occupancies:
             with context(fname, occupancy):
                 exposure.time_events.add(occupancy['period'])
-                fatalities = 'fatalities_%s' % occupancy['period']
-                values[fatalities] = occupancy['occupants']
-                tot_fatalities += values[fatalities]
-        if occupancies:  # store average fatalities
-            values['fatalities_None'] = tot_fatalities / len(occupancies)
+                occupants = 'occupants_%s' % occupancy['period']
+                values[occupants] = occupancy['occupants']
+                tot_occupants += values[occupants]
+        if occupancies:  # store average occupants
+            values['occupants_None'] = tot_occupants / len(occupancies)
         area = float(asset.attrib.get('area', 1))
         ass = riskmodels.Asset(
             asset_id, taxonomy, number, location, values, area,

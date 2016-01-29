@@ -6,7 +6,7 @@ xmlns:gml="http://www.opengis.net/gml"
     <aggregateLossCurve
     gsimTreePath="b1"
     investigationTime="10000.0"
-    lossType="fatalities"
+    lossType="occupants"
     sourceModelTreePath="b1"
     unit="people"
     >

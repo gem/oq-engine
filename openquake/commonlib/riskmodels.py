@@ -66,27 +66,6 @@ def get_risk_files(inputs):
     return names.pop(), vfs
 
 
-# loss types (in the risk models) and cost types (in the exposure)
-# are the sames except for fatalities -> occupants
-
-def loss_type_to_cost_type(lt):
-    """
-    Convert a loss_type string into a cost_type string.
-
-    :param lt: loss type
-    """
-    return 'occupants' if lt == 'fatalities' else lt
-
-
-def cost_type_to_loss_type(ct):
-    """
-    Convert a cost_type string into a loss_type string
-
-    :param ct: loss type
-    """
-    return 'fatalities' if ct == 'occupants' else ct
-
-
 # ########################### vulnerability ############################## #
 
 def filter_vset(elem):
@@ -125,7 +104,7 @@ def get_risk_models(oqparam, kind=None):
             key_type = mo.group(1)  # the cost_type in the key
             # can be occupants, structural, nonstructural, ...
             rmodel = nrml.parse(oqparam.inputs[key])
-            rmodels[cost_type_to_loss_type(key_type)] = rmodel
+            rmodels[key_type] = rmodel
             if rmodel.lossCategory is None:  # NRML 0.4
                 continue
             cost_type = str(rmodel.lossCategory)
