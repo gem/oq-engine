@@ -233,7 +233,6 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    riskmodel = datastore.persistent_attribute('riskmodel')
     SourceManager = source.SourceManager
     mean_curves = None  # to be overridden
 
@@ -288,6 +287,8 @@ class HazardCalculator(BaseCalculator):
                 precalc.run()
                 if 'scenario' not in self.oqparam.calculation_mode:
                     self.csm = precalc.csm
+                if 'riskmodel' in vars(precalc):
+                    self.riskmodel = precalc.riskmodel
             else:  # read previously computed data
                 parent = datastore.DataStore(precalc_id)
                 self.datastore.set_parent(parent)
