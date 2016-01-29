@@ -30,6 +30,13 @@ Youngs Coppersmith 1985
     :members:
     :private-members:
 
+---------
+Arbitrary
+---------
+
+.. automodule:: openquake.hazardlib.mfd.arbitrary_mfd
+    :members:
+
 
 
 --------------------------
