@@ -225,51 +225,6 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1,
     return block_splitter(items, math.ceil(total_weight / hint), weight, key)
 
 
-def split_in_blocks_2(long_sequence, short_sequence, hint,
-                      weight=lambda item: 1,
-                      key=lambda item: 'Unspecified'):
-    """
-    Split two sequences in blocks. The first sequence has to be longer
-    than the second. Yield pairs (block_from_seq_1, block_from_seq_2).
-
-    :param long_sequence: a finite sequence of items of size N
-    :param short_sequence: a finite sequence of items of size n <=N
-    :param hint: an integer suggesting the number of blocks to generate
-    :param weight: a function returning the weigth of a given item
-    :param key: a function returning the key of a given item
-
-    A few examples will explain how it works:
-
-    >>> for b1, b2 in split_in_blocks_2(range(10), 'ABC', 3):
-    ...      print(b1, b2)
-    [0, 1, 2, 3] ['A']
-    [4, 5, 6, 7] ['B']
-    [8, 9] ['C']
-
-    >>> for b1, b2 in split_in_blocks_2(range(10), 'ABC', 2):
-    ...      print(b1, b2)
-    [0, 1, 2, 3, 4] ['A', 'B']
-    [5, 6, 7, 8, 9] ['C']
-
-    If the second sequence is so short that it cannot be splitted in enough
-    blocks (i.e. n < hint), then its blocks will be repeated to produce a
-    number of blocks equal to the number of blocks of the first sequence:
-
-    >>> for b1, b2 in split_in_blocks_2(range(10), 'ABC', 4):
-    ...      print(b1, b2)
-    [0, 1, 2] ['A']
-    [3, 4, 5] ['B']
-    [6, 7, 8] ['C']
-    [9] ['A']
-    """
-    N, n = len(long_sequence), len(short_sequence)
-    assert N >= n
-    long_blocks = split_in_blocks(long_sequence, hint, weight, key)
-    short_blocks = split_in_blocks(short_sequence, hint)
-    for long_, short in zip(long_blocks, itertools.cycle(short_blocks)):
-        yield list(long_), list(short)
-
-
 def assert_close_seq(seq1, seq2, rtol, atol, context=None):
     """
     Compare two sequences of the same length.
