@@ -27,34 +27,12 @@ import operator
 import traceback
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from decorator import FunctionMaker
-import psutil
 
 from openquake.baselib.python3compat import pickle
-from openquake.baselib.performance import PerformanceMonitor, DummyMonitor
+from openquake.baselib.performance import (
+    PerformanceMonitor, DummyMonitor, virtual_memory)
 from openquake.baselib.general import split_in_blocks, AccumDict, humansize
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
-
-
-if psutil.__version__ > '2.0.0':  # Ubuntu 14.10
-    def virtual_memory():
-        return psutil.virtual_memory()
-
-    def memory_info(proc):
-        return proc.memory_info()
-
-elif psutil.__version__ >= '1.2.1':  # Ubuntu 14.04
-    def virtual_memory():
-        return psutil.virtual_memory()
-
-    def memory_info(proc):
-        return proc.get_memory_info()
-
-else:  # Ubuntu 12.04
-    def virtual_memory():
-        return psutil.phymem_usage()
-
-    def memory_info(proc):
-        return proc.get_memory_info()
 
 
 executor = ProcessPoolExecutor()

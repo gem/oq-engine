@@ -2,6 +2,7 @@ import os
 import unittest
 import tempfile
 from io import BytesIO
+from openquake.baselib.performance import memory_info
 from openquake.commonlib.writers import tostring, StreamingXMLWriter, write_csv
 from openquake.commonlib.node import LiteralNode
 from xml.etree import ElementTree as etree
@@ -58,7 +59,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             raise unittest.SkipTest('psutil not installed')
         proc = psutil.Process(os.getpid())
         try:
-            rss = proc.get_memory_info().rss
+            rss = memory_info(proc).rss
         except psutil.AccessDenied:
             raise unittest.SkipTest('Memory info not accessible')
         devnull = open(os.devnull, 'w')
