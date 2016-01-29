@@ -62,15 +62,13 @@ class ArbitraryMFD(BaseMFD):
             raise ValueError('at least one occurrence rate must be positive')
         if not len(self.magnitudes) == len(self.occurrence_rates):
             raise ValueError(
-                'lists of magnitudes and rates must have same length'
-                             )
+                'lists of magnitudes and rates must have same length')
 
     def get_annual_occurrence_rates(self):
         """
         Returns the predefined annual occurrence rates.
         """
-        return [(self.magnitudes[i], self.occurrence_rates[i])
-                 for i in range(len(self.occurrence_rates))]
+        return zip(self.magnitudes, self.occurrence_rates) 
 
     def get_min_max_mag(self):
         """
@@ -83,11 +81,8 @@ class ArbitraryMFD(BaseMFD):
         Applies absolute modification of the MFD from the ``magnitudes``,
         ``occurrence_rates`` modification.
 
-        :param min_mag:
-            Positive float value representing the middle point of the first
-            bin in the histogram.
-        :param bin_width:
-            A positive float value -- the width of a single histogram bin.
+        :param magnitudes:
+            List of magnitudes
         :param occurrence_rates:
             The list of non-negative float values representing the actual
             annual occurrence rates. The resulting histogram has as many bins
