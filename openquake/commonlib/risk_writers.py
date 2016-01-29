@@ -76,7 +76,7 @@ class LossCurveXMLWriter(object):
     :param str loss_type:
         Loss type used in risk model input for the calculation producing this
         output (examples: structural, non-structural, business-interruption,
-        fatalities)
+        occupants)
     :param str source_model_tree_path:
         Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
@@ -236,7 +236,7 @@ class AggregateLossCurveXMLWriter(object):
     :param str loss_type:
         Loss type used in risk model input for the calculation producing this
         output (examples: structural, non-structural, business-interruption,
-        fatalities)
+        occupants)
     :param str source_model_tree_path:
         Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
@@ -361,7 +361,7 @@ class LossMapWriter(object):
     :param str loss_type:
         Loss type used in risk model input for the calculation producing this
         output (examples: structural, non-structural, business-interruption,
-        fatalities)
+        occupants)
     :param str source_model_tree_path:
         Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
@@ -590,7 +590,7 @@ class LossFractionsWriter(object):
     :param str loss_type:
         Loss type used in risk model input for the calculation producing this
         output (examples: structural, non-structural, business-interruption,
-        fatalities)
+        occupants)
     :attr str loss_category:
         Attribute describing the category (economic, population, buildings,
         etc..) of the losses producing this loss map.
@@ -696,7 +696,7 @@ class BCRMapXMLWriter(object):
     :param str loss_type:
         Loss type used in risk model input for the calculation producing this
         output (examples: structural, non-structural, business-interruption,
-        fatalities)
+        occupants)
     :param str source_model_tree_path:
         Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
