@@ -22,6 +22,68 @@ from openquake.baselib.slots import with_slots
 from openquake.baselib.python3compat import with_metaclass
 
 
+class SourceGroupCollection(object):
+    """
+    :parameter list grp_list:
+        A list of :class:`openquake.hazardlib.source.base.SourceGroup`
+        instances
+    :parameter str name:
+        The name of the group
+    :parameter str grp_interdep:
+        Interdependence between groups of sources can be either 'indep' or
+        'mutex'.
+    """
+    def __init__(self, grp_list, name='', grp_interdep='indep'):
+        self.name = name
+        self.grp_list = grp_list
+        self.grp_interdep = grp_interdep
+
+    def __iter__(self):
+        return iter(self.src_list)
+
+
+class SourceGroup(object):
+    """
+    :parameter str name:
+        The name of the group
+    :parameter src_list:
+        A list containing seismic sources
+    :parameter weights:
+        A dictionary whose keys are the source IDs of the cluster and the
+        values are the weights associated with each source
+    :parameter src_indep:
+        A string specifying if the sources in this cluster are independent or
+        mutually exclusive
+    :parameter rup_indep:
+        A string specifying if the ruptures within each source of the cluster
+        are independent or mutually exclusive
+    :parameter name:
+        A string used to indicate the name of the group of sources
+    """
+
+    def __init__(self, src_list, name='', src_interdep='indep',
+                 rup_interdep='indep', weights=None):
+        # checks
+        self._check_init_variables(src_list, name='', src_interdep='indep',
+                                   rup_interdep='indep', weights=None)
+        # set instance parameters
+        self.src_list = src_list
+        self.name = name
+        self.src_interdep = src_interdep
+        self.rup_interdep = rup_interdep
+        self.weights = weights
+
+    def _check_init_variables(self, src_list, name, src_interdep, rup_interdep, 
+                              weights):
+        assert isinstance(src_list, list)
+        assert issubclass(type(src_list[0]), BaseSeismicSource)
+        assert set(['indep', 'mutex']) & set([src_interdep])
+        assert set(['indep', 'mutex']) & set([rup_interdep])
+
+    def __iter__(self):
+        return iter(self.src_list)
+
+
 @with_slots
 class BaseSeismicSource(with_metaclass(abc.ABCMeta)):
     """
@@ -196,8 +258,8 @@ class ParametricSeismicSource(with_metaclass(abc.ABCMeta, BaseSeismicSource)):
         and vice versa.
     :param temporal_occurrence_model:
         Instance of
-        :class:`openquake.hazardlib.tom.PoissonTOM` defining temporal occurrence
-        model for calculating rupture occurrence probabilities
+        :class:`openquake.hazardlib.tom.PoissonTOM` defining temporal
+        occurrence model for calculating rupture occurrence probabilities
 
     :raises ValueError:
         If either rupture aspect ratio or rupture mesh spacing is not positive
