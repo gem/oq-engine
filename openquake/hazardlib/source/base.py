@@ -34,9 +34,18 @@ class SourceGroupCollection(object):
         'mutex'.
     """
     def __init__(self, grp_list, name='', grp_interdep='indep'):
+        # checks
+        self._check_init_variables(grp_list, name, grp_interdep)
+        # set instance parameters
         self.name = name
         self.grp_list = grp_list
         self.grp_interdep = grp_interdep
+
+    def _check_init_variables(self, grp_list, name, grp_interdep):
+        assert isinstance(grp_list, list)
+        print type(grp_list[0])
+        assert issubclass(type(grp_list[0]), SourceGroup)
+        assert set(['indep', 'mutex']) & set([grp_interdep])
 
     def __iter__(self):
         return iter(self.src_list)
@@ -64,8 +73,8 @@ class SourceGroup(object):
     def __init__(self, src_list, name='', src_interdep='indep',
                  rup_interdep='indep', weights=None):
         # checks
-        self._check_init_variables(src_list, name='', src_interdep='indep',
-                                   rup_interdep='indep', weights=None)
+        self._check_init_variables(src_list, name, src_interdep, rup_interdep,
+                                   weights)
         # set instance parameters
         self.src_list = src_list
         self.name = name
@@ -73,7 +82,7 @@ class SourceGroup(object):
         self.rup_interdep = rup_interdep
         self.weights = weights
 
-    def _check_init_variables(self, src_list, name, src_interdep, rup_interdep, 
+    def _check_init_variables(self, src_list, name, src_interdep, rup_interdep,
                               weights):
         assert isinstance(src_list, list)
         assert issubclass(type(src_list[0]), BaseSeismicSource)
