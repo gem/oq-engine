@@ -308,8 +308,9 @@ class RlzsAssoc(collections.Mapping):
         return set(tm.id for sm in self.csm_info.source_models
                    for tm in sm.trt_models if sm.path == rlz.sm_lt_path)
 
-    def _add_realizations(self, idx, lt_model, realizations, trts):
+    def _add_realizations(self, idx, lt_model, realizations):
         gsim_lt = lt_model.gsim_lt
+        trts = gsim_lt.tectonic_region_types
         rlzs = []
         for i, gsim_rlz in enumerate(realizations):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
@@ -637,7 +638,7 @@ class CompositeSourceModel(collections.Sequence):
             else:  # full enumeration
                 rlzs = logictree.get_effective_rlzs(smodel.gsim_lt)
             if rlzs:
-                idx = assoc._add_realizations(idx, smodel, rlzs, trts)
+                idx = assoc._add_realizations(idx, smodel, rlzs)
                 for trt_model in smodel.trt_models:
                     trt_model.gsims = smodel.gsim_lt.values[trt_model.trt]
             else:
