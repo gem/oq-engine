@@ -141,6 +141,27 @@ class Choices(Choice):
 export_formats = Choices('', 'xml', 'csv', 'geojson')
 
 
+def hazard_id(value):
+    """
+    >>> hazard_id('')
+    ()
+    >>> hazard_id('-1')
+    (-1,)
+    >>> hazard_id('42')
+    (42,)
+    >>> hazard_id('42,3')
+    (42, 3)
+    >>> hazard_id('42,3,4')
+    (42, 3, 4)
+    """
+    if not value:
+        return ()
+    mo = re.match(r'(-?\d+)(,\d+)*', value)
+    if mo is None:
+        raise ValueError('Invalid hazard_id %r' % value)
+    return tuple(map(int, value.split(',')))
+
+
 class Regex(object):
     """
     Compare the value with the given regex
