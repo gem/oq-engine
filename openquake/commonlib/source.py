@@ -70,7 +70,8 @@ class LtRealization(object):
 def get_skeleton(sm):
     """
     Return a copy of the source model `sm` which is empty, i.e. without
-    sources.
+    sources, but with the proper attributes (i.e. num_ruptures) for
+    each TrtModel contained within.
     """
     trt_models = [TrtModel(tm.trt, [], tm.num_ruptures, tm.min_mag,
                            tm.max_mag, tm.gsims, tm.id)
@@ -268,6 +269,31 @@ class RlzsAssoc(collections.Mapping):
         self.gsims_by_trt_id = {}
         self.col_ids_by_rlz = collections.defaultdict(set)
 
+    def _init(self):
+        """
+        Finalize the initialization of the RlzsAssoc object by setting
+        the (reduced) weights of the realizations and the attribute
+        gsims_by_trt_id.
+        """
+        num_samples = self.csm_info.source_model_lt.num_samples
+        if num_samples:
+            assert len(self.realizations) == num_samples
+            for rlz in self.realizations:
+                rlz.weight = 1. / num_samples
+        else:
+            tot_weight = sum(rlz.weight for rlz in self.realizations)
+            if tot_weight == 0:
+                raise ValueError('All realizations have zero weight??')
+            elif abs(tot_weight - 1) > 1E-12:  # allow for rounding errors
+                logging.warn('Some source models are not contributing, '
+                             'weights are being rescaled')
+            for rlz in self.realizations:
+                rlz.weight = rlz.weight / tot_weight
+
+        self.gsims_by_trt_id = groupby(
+            self.rlzs_assoc, operator.itemgetter(0),
+            lambda group: sorted(gsim for trt_id, gsim in group))
+
     @property
     def num_samples(self):
         """
@@ -329,6 +355,21 @@ class RlzsAssoc(collections.Mapping):
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
         return idx
+
+    def extract(self, rlz_indices):
+        """
+        Extract a RlzsAssoc instance containing only the given realizations.
+
+        :param rlz_indices: a list of realization indices from 0 to R - 1
+        """
+        assoc = self.__class__(self.csm_info)
+        smodel_from = {sm.smpath: sm for sm in self.csm_info.source_models}
+        for idx in rlz_indices:
+            rlz = self.realizations[idx]
+            smodel = smodel_from[rlz.sm_lt_path]
+            assoc._add_realizations(idx, smodel, [rlz.gsim_rlz])
+        assoc._init()
+        return assoc
 
     def combine_curves(self, results, agg, acc):
         """
@@ -559,25 +600,9 @@ class CompositionInfo(object):
             else:
                 logging.warn('No realizations for %s, %s',
                              '_'.join(smodel.path), smodel.name)
+        # NB: realizations could be filtered away by logic tree reduction
         if assoc.realizations:
-            if num_samples:
-                assert len(assoc.realizations) == num_samples
-                for rlz in assoc.realizations:
-                    rlz.weight = 1. / num_samples
-            else:
-                tot_weight = sum(rlz.weight for rlz in assoc.realizations)
-                if tot_weight == 0:
-                    raise ValueError('All realizations have zero weight??')
-                elif abs(tot_weight - 1) > 1E-12:  # allow for rounding errors
-                    logging.warn('Some source models are not contributing, '
-                                 'weights are being rescaled')
-                for rlz in assoc.realizations:
-                    rlz.weight = rlz.weight / tot_weight
-
-        assoc.gsims_by_trt_id = groupby(
-            assoc.rlzs_assoc, operator.itemgetter(0),
-            lambda group: sorted(gsim for trt_id, gsim in group))
-
+            assoc._init()
         return assoc
 
     def __repr__(self):
@@ -606,10 +631,6 @@ class CompositeSourceModel(collections.Sequence):
         self.split_map = {}
         if set_weight:
             self.set_weights()
-
-        # NB: this must go after set_weights
-        self.info = CompositionInfo(
-            source_model_lt, list(map(get_skeleton, source_models)))
 
     @property
     def trt_models(self):
@@ -661,6 +682,9 @@ class CompositeSourceModel(collections.Sequence):
             trt_model.sources = sorted(
                 trt_model, key=operator.attrgetter('source_id'))
             self.weight += weight
+
+        self.info = CompositionInfo(
+            self.source_model_lt, list(map(get_skeleton, self.source_models)))
 
     def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
         """
