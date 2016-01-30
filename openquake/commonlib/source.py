@@ -526,6 +526,60 @@ class CompositionInfo(object):
         for col_id, col in enumerate(self.cols):
             yield col['trt_id'], col['sample'], col_id
 
+    def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
+        """
+        Return a RlzsAssoc with fields realizations, gsim_by_trt,
+        rlz_idx and trt_gsims.
+
+        :param get_weight: a function trt_model -> positive number
+        """
+        assoc = RlzsAssoc(self)
+        random_seed = self.source_model_lt.seed
+        num_samples = self.source_model_lt.num_samples
+        idx = 0
+        for smodel in self.source_models:
+            # collect the effective tectonic region types
+            trts = set(tm.trt for tm in smodel.trt_models if get_weight(tm))
+            # recompute the GSIM logic tree if needed
+            if trts != set(smodel.gsim_lt.tectonic_region_types):
+                before = smodel.gsim_lt.get_num_paths()
+                smodel.gsim_lt.reduce(trts)
+                after = smodel.gsim_lt.get_num_paths()
+                logging.warn('Reducing the logic tree of %s from %d to %d '
+                             'realizations', smodel.name, before, after)
+            if num_samples:  # sampling
+                rnd = random.Random(random_seed + idx)
+                rlzs = logictree.sample(smodel.gsim_lt, smodel.samples, rnd)
+            else:  # full enumeration
+                rlzs = logictree.get_effective_rlzs(smodel.gsim_lt)
+            if rlzs:
+                idx = assoc._add_realizations(idx, smodel, rlzs)
+                for trt_model in smodel.trt_models:
+                    trt_model.gsims = smodel.gsim_lt.values[trt_model.trt]
+            else:
+                logging.warn('No realizations for %s, %s',
+                             '_'.join(smodel.path), smodel.name)
+        if assoc.realizations:
+            if num_samples:
+                assert len(assoc.realizations) == num_samples
+                for rlz in assoc.realizations:
+                    rlz.weight = 1. / num_samples
+            else:
+                tot_weight = sum(rlz.weight for rlz in assoc.realizations)
+                if tot_weight == 0:
+                    raise ValueError('All realizations have zero weight??')
+                elif abs(tot_weight - 1) > 1E-12:  # allow for rounding errors
+                    logging.warn('Some source models are not contributing, '
+                                 'weights are being rescaled')
+                for rlz in assoc.realizations:
+                    rlz.weight = rlz.weight / tot_weight
+
+        assoc.gsims_by_trt_id = groupby(
+            assoc.rlzs_assoc, operator.itemgetter(0),
+            lambda group: sorted(gsim for trt_id, gsim in group))
+
+        return assoc
+
     def __repr__(self):
         info_by_model = collections.OrderedDict(
             (sm.path, ('_'.join(sm.path), sm.name,
@@ -618,52 +672,7 @@ class CompositeSourceModel(collections.Sequence):
 
         :param get_weight: a function trt_model -> positive number
         """
-        assoc = RlzsAssoc(self.get_info())
-        random_seed = self.source_model_lt.seed
-        num_samples = self.source_model_lt.num_samples
-        idx = 0
-        for smodel in self.source_models:
-            # collect the effective tectonic region types
-            trts = set(tm.trt for tm in smodel.trt_models if get_weight(tm))
-            # recompute the GSIM logic tree if needed
-            if trts != set(smodel.gsim_lt.tectonic_region_types):
-                before = smodel.gsim_lt.get_num_paths()
-                smodel.gsim_lt.reduce(trts)
-                after = smodel.gsim_lt.get_num_paths()
-                logging.warn('Reducing the logic tree of %s from %d to %d '
-                             'realizations', smodel.name, before, after)
-            if num_samples:  # sampling
-                rnd = random.Random(random_seed + idx)
-                rlzs = logictree.sample(smodel.gsim_lt, smodel.samples, rnd)
-            else:  # full enumeration
-                rlzs = logictree.get_effective_rlzs(smodel.gsim_lt)
-            if rlzs:
-                idx = assoc._add_realizations(idx, smodel, rlzs)
-                for trt_model in smodel.trt_models:
-                    trt_model.gsims = smodel.gsim_lt.values[trt_model.trt]
-            else:
-                logging.warn('No realizations for %s, %s',
-                             '_'.join(smodel.path), smodel.name)
-        if assoc.realizations:
-            if num_samples:
-                assert len(assoc.realizations) == num_samples
-                for rlz in assoc.realizations:
-                    rlz.weight = 1. / num_samples
-            else:
-                tot_weight = sum(rlz.weight for rlz in assoc.realizations)
-                if tot_weight == 0:
-                    raise ValueError('All realizations have zero weight??')
-                elif abs(tot_weight - 1) > 1E-12:  # allow for rounding errors
-                    logging.warn('Some source models are not contributing, '
-                                 'weights are being rescaled')
-                for rlz in assoc.realizations:
-                    rlz.weight = rlz.weight / tot_weight
-
-        assoc.gsims_by_trt_id = groupby(
-            assoc.rlzs_assoc, operator.itemgetter(0),
-            lambda group: sorted(gsim for trt_id, gsim in group))
-
-        return assoc
+        return self.get_info().get_rlzs_assoc(get_weight)
 
     def __repr__(self):
         """
