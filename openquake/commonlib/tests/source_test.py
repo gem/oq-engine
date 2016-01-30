@@ -783,6 +783,15 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         col_ids_last = rlzs_assoc.get_col_ids(rlzs[-1])
         self.assertEqual(col_ids_last, set([16, 17]))
 
+        # test the method extract
+        assoc = rlzs_assoc.extract([1, 5])
+        self.assertEqual(str(assoc), """\
+<RlzsAssoc(4)
+0,SadighEtAl1997: ['<1,b1_b3_b6,b2_b3,w=0.5>']
+1,ChiouYoungs2008: ['<1,b1_b3_b6,b2_b3,w=0.5>']
+4,SadighEtAl1997: ['<5,b1_b3_b8,b2_b3,w=0.5>']
+5,ChiouYoungs2008: ['<5,b1_b3_b8,b2_b3,w=0.5>']>""")
+
         # removing 9 trt_models out of 18
         for smodel in csm.info.source_models:
             for trt_model in smodel.trt_models:

@@ -363,7 +363,7 @@ class RlzsAssoc(collections.Mapping):
         :param rlz_indices: a list of realization indices from 0 to R - 1
         """
         assoc = self.__class__(self.csm_info)
-        smodel_from = {sm.smpath: sm for sm in self.csm_info.source_models}
+        smodel_from = {sm.path: sm for sm in self.csm_info.source_models}
         for idx in rlz_indices:
             rlz = self.realizations[idx]
             smodel = smodel_from[rlz.sm_lt_path]
