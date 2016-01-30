@@ -363,11 +363,12 @@ class RlzsAssoc(collections.Mapping):
         :param rlz_indices: a list of realization indices from 0 to R - 1
         """
         assoc = self.__class__(self.csm_info)
+        realizations = operator.itemgetter(*rlz_indices)(self.realizations)
+        rlzs_smpath = groupby(realizations, operator.attrgetter('sm_lt_path'))
         smodel_from = {sm.path: sm for sm in self.csm_info.source_models}
-        for idx in rlz_indices:
-            rlz = self.realizations[idx]
-            smodel = smodel_from[rlz.sm_lt_path]
-            assoc._add_realizations(idx, smodel, [rlz.gsim_rlz])
+        for smpath, rlzs in rlzs_smpath.items():
+            assoc._add_realizations(rlzs[0].ordinal, smodel_from[smpath],
+                                    [rlz.gsim_rlz for rlz in rlzs])
         assoc._init()
         return assoc
 
@@ -631,6 +632,9 @@ class CompositeSourceModel(collections.Sequence):
         self.split_map = {}
         if set_weight:
             self.set_weights()
+        # must go after set_weights to have the correct .num_ruptures
+        self.info = CompositionInfo(
+            self.source_model_lt, list(map(get_skeleton, self.source_models)))
 
     @property
     def trt_models(self):
@@ -682,9 +686,6 @@ class CompositeSourceModel(collections.Sequence):
             trt_model.sources = sorted(
                 trt_model, key=operator.attrgetter('source_id'))
             self.weight += weight
-
-        self.info = CompositionInfo(
-            self.source_model_lt, list(map(get_skeleton, self.source_models)))
 
     def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
         """
