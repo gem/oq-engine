@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2015, GEM Foundation.
+# Copyright (c) 2010-2016, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -607,6 +607,10 @@ class CompositeSourceModel(collections.Sequence):
         if set_weight:
             self.set_weights()
 
+        # NB: this must go after set_weights
+        self.info = CompositionInfo(
+            source_model_lt, list(map(get_skeleton, source_models)))
+
     @property
     def trt_models(self):
         """
@@ -658,13 +662,6 @@ class CompositeSourceModel(collections.Sequence):
                 trt_model, key=operator.attrgetter('source_id'))
             self.weight += weight
 
-    def get_info(self):
-        """
-        Return a CompositionInfo instance for the current composite model
-        """
-        return CompositionInfo(
-            self.source_model_lt, list(map(get_skeleton, self.source_models)))
-
     def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
@@ -672,7 +669,7 @@ class CompositeSourceModel(collections.Sequence):
 
         :param get_weight: a function trt_model -> positive number
         """
-        return self.get_info().get_rlzs_assoc(get_weight)
+        return self.info.get_rlzs_assoc(get_weight)
 
     def __repr__(self):
         """
