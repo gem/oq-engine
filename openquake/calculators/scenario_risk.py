@@ -82,20 +82,6 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     return result
 
 
-def check_time_event(dstore):
-    """
-    Check the `time_event` parameter in the datastore, by comparing
-    with the periods found in the exposure.
-    """
-    time_event = dstore.attrs.get('time_event')
-    time_events = dstore['time_events']
-    if time_event and ast.literal_eval(time_event) not in time_events:
-        inputs = ast.literal_eval(dstore.attrs['inputs'])
-        raise ValueError(
-            'time_event is %s in %s, but the exposure contains %s' %
-            (time_event, inputs['job_ini'], ', '.join(time_events)))
-
-
 @base.calculators.add('scenario_risk')
 class ScenarioRiskCalculator(base.RiskCalculator):
     """
@@ -113,7 +99,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        check_time_event(self.datastore)
 
         logging.info('Building the epsilons')
         epsilon_matrix = self.make_eps(

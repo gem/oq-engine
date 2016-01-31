@@ -245,10 +245,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         correl_model = readinput.get_correl_model(oq)
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
-        assets_by_site = self.assets_by_site
-        # the following is needed to set the asset idx attribute
-        self.assetcol = riskinput.build_asset_collection(
-            assets_by_site, oq.time_event)
 
         logging.info('Populating the risk inputs')
         rup_by_tag = sum(self.datastore['sescollection'], AccumDict())
@@ -262,7 +258,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             eps = FakeMatrix(self.N, self.E)
         else:
             eps = riskinput.make_eps(
-                assets_by_site, self.E, oq.master_seed,
+                self.assets_by_site, self.E, oq.master_seed,
                 oq.asset_correlation)
             logging.info('Generated %s epsilons', eps.shape)
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(

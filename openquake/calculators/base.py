@@ -18,6 +18,7 @@
 
 import sys
 import abc
+import ast
 import pdb
 import math
 import logging
@@ -80,7 +81,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     sitecol = datastore.persistent_attribute('sitecol')
     rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
     realizations = datastore.persistent_attribute('realizations')
-    assets_by_site = datastore.persistent_attribute('assets_by_site')
+    # assets_by_site = datastore.persistent_attribute('assets_by_site')
     assetcol = datastore.persistent_attribute('assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('taxonomies')
@@ -229,6 +230,20 @@ def _set_nbytes(dkey, dstore):
     group.attrs['nbytes'] = group[key].attrs['nbytes'] * len(group)
 
 
+def check_time_event(dstore):
+    """
+    Check the `time_event` parameter in the datastore, by comparing
+    with the periods found in the exposure.
+    """
+    time_event = dstore.attrs.get('time_event')
+    time_events = dstore['time_events']
+    if time_event and ast.literal_eval(time_event) not in time_events:
+        inputs = ast.literal_eval(dstore.attrs['inputs'])
+        raise ValueError(
+            'time_event is %s in %s, but the exposure contains %s' %
+            (time_event, inputs['job_ini'], ', '.join(time_events)))
+
+
 class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
@@ -287,8 +302,11 @@ class HazardCalculator(BaseCalculator):
                 precalc.run()
                 if 'scenario' not in self.oqparam.calculation_mode:
                     self.csm = precalc.csm
-                if 'riskmodel' in vars(precalc):
-                    self.riskmodel = precalc.riskmodel
+                pre_attrs = vars(precalc)
+                for name in ('riskmodel', 'assets_by_site'):
+                    if name in pre_attrs:
+                        setattr(self, name, getattr(precalc, name))
+
             else:  # read previously computed data
                 parent = datastore.DataStore(precalc_id)
                 self.datastore.set_parent(parent)
@@ -410,6 +428,15 @@ class HazardCalculator(BaseCalculator):
             self.load_riskmodel()
             self.sitecol = haz_sitecol
 
+        if oq_hazard:
+            # TODO: move check_time_event outside the if
+            check_time_event(self.datastore)
+            if oq_hazard.time_event != self.oqparam.time_event:
+                raise ValueError(
+                    'The risk configuration file has time_event=%s but the '
+                    'hazard was computed with time_event=%s' % (
+                        self.oqparam.time_event, oq_hazard.time_event))
+
         # save mesh and asset collection
         self.save_mesh()
         if hasattr(self, 'assets_by_site'):
@@ -420,6 +447,9 @@ class HazardCalculator(BaseCalculator):
             if unknown:
                 raise ValueError('The specific asset(s) %s are not in the '
                                  'exposure' % ', '.join(unknown))
+        elif hasattr(self, 'assetcol'):
+            self.assets_by_site = riskinput.build_assets_by_site(
+                self.assetcol, self.taxonomies, self.oqparam.time_event)
 
     def save_mesh(self):
         """
