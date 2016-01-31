@@ -40,7 +40,7 @@ def setUpModule():
 
 
 def tearDownModule():
-    if sys.exc_info()[0] is None:  # remove TMP
+    if sys.exc_info()[0] is None and os.path.exists(path):  # remove TMP
         os.remove(path)
 
 
