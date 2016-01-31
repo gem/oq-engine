@@ -26,9 +26,43 @@ import numpy
 from openquake.baselib.general import groupby, split_in_blocks
 from openquake.baselib.performance import DummyMonitor
 from openquake.hazardlib.gsim.base import gsim_imt_dt
-from openquake.risklib import scientific
+from openquake.risklib import scientific, riskmodels
 
 F32 = numpy.float32
+
+
+def build_assets_by_site(assetcol, taxonomies):
+    """
+    Build the list assets_by_site from the assetcol and list of taxonomies
+    """
+    fields = assetcol.dtype.names
+    site_ids = sorted(set(assetcol['site_id']))
+    deduc = [n for n in fields if n.startswith('deductible~')]
+    i_lim = [n for n in fields if n.startswith('insurance_limit~')]
+    retro = [n for n in fields if n.startswith('retrofitted~')]
+    loss_types = [d.split('~')[1] for d in deduc]
+    assert loss_types == [i.split('~')[1] for i in i_lim]
+    assert loss_types == [r.split('~')[1] for r in retro]
+    assets_by_site = [[] for sid in site_ids]
+    index = dict(zip(site_ids, range(len(site_ids))))
+    for idx, a in enumerate(assetcol):
+        sid = a['site_id']
+        asset = riskmodels.Asset(
+            a['asset_ref'],
+            taxonomies[a['taxonomy']],
+            number=a['occupants'],
+            location=(a['lon'], a['lat']),
+            values={lt: a[lt] for lt in loss_types},
+            area=a['area'],
+            deductibles={lt: a['deductible~' + lt]
+                         for lt in loss_types},
+            insurance_limits={lt: a['insurance_limit~' + lt]
+                              for lt in loss_types},
+            retrofitting_values={lt: a['retrofitted~' + lt]
+                                 for lt in loss_types},
+            idx=idx)
+        assets_by_site[index[sid]].append(asset)
+    return assets_by_site
 
 
 def build_asset_collection(assets_by_site, time_event=None):
@@ -66,13 +100,14 @@ def build_asset_collection(assets_by_site, time_event=None):
             taxonomies.add(asset.taxonomy)
     sorted_taxonomies = sorted(taxonomies)
     asset_dt = numpy.dtype(
-        [('asset_ref', '|S100'), ('site_id', numpy.uint32),
-         ('taxonomy', numpy.uint32)] +
+        [('asset_ref', '|S100'),
+         ('lon', F32), ('lat', F32), ('site_id', numpy.uint32),
+         ('taxonomy', numpy.uint32), ('area', F32)] +
         [(name, float) for name in float_fields])
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
     asset_ordinal = 0
-    fields = ['taxonomy', 'asset_ref', 'site_id'] + float_fields
+    fields = set(asset_dt.fields)
     for sid, assets_ in enumerate(assets_by_site):
         for asset in sorted(assets_, key=operator.attrgetter('id')):
             asset.idx = asset_ordinal
@@ -81,10 +116,16 @@ def build_asset_collection(assets_by_site, time_event=None):
             for field in fields:
                 if field == 'taxonomy':
                     value = sorted_taxonomies.index(asset.taxonomy)
+                elif field == 'area':
+                    value = asset.area
                 elif field == 'asset_ref':
                     value = asset.id
                 elif field == 'site_id':
                     value = sid
+                elif field == 'lon':
+                    value = asset.location[0]
+                elif field == 'lat':
+                    value = asset.location[1]
                 elif field == 'occupants':
                     value = asset.values[the_occupants]
                 else:
