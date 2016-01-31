@@ -106,6 +106,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             haz_sitecol, haz_curves = readinput.get_hcurves(self.oqparam)
             self.read_exposure()  # define .assets_by_site
             self.load_riskmodel()
+            self.assetcol = riskinput.build_asset_collection(
+                self.assets_by_site, self.oqparam.time_event)
             self.sitecol, self.assets_by_site = self.assoc_assets_sites(
                 haz_sitecol)
             curves_by_trt_gsim = {(0, 'FromFile'): haz_curves}
@@ -119,11 +121,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 for key, curves in dset.items():
                     trt_id, gsim = key.split('-')
                     curves_by_trt_gsim[int(trt_id), gsim] = curves.value
-            self.assets_by_site = riskinput.build_assets_by_site(
-                self.assetcol, self.taxonomies, self.oqparam.time_event)
-        if 'assetcol' not in self.datastore:
-            self.assetcol = riskinput.build_asset_collection(
-                self.assets_by_site, self.oqparam.time_event)
         self.riskinputs = self.build_riskinputs(curves_by_trt_gsim)
         self.monitor.oqparam = self.oqparam
 
