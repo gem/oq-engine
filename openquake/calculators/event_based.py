@@ -383,7 +383,6 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
     """
     core_task = compute_ruptures
     tags = datastore.persistent_attribute('tags')
-    sescollection = datastore.persistent_attribute('sescollection')
     num_ruptures = datastore.persistent_attribute('num_ruptures')
     counts_per_rlz = datastore.persistent_attribute('counts_per_rlz')
     is_stochastic = True
@@ -426,6 +425,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         logging.info('Generated %d SESRuptures',
                      sum(len(v) for v in result.values()))
         nc = self.rlzs_assoc.csm_info.num_collections
+        cols = self.rlzs_assoc.csm_info.cols  # pairs (trt_id, idx)
         sescollection = numpy.array([{} for col_id in range(nc)])
         tags = []
         ordinal = 0
@@ -446,7 +446,8 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         logging.info('Saving the SES collection')
         with self.monitor('saving ruptures', autoflush=True):
             self.tags = numpy.array(tags, (bytes, 100))
-            self.sescollection = sescollection
+            for sc, seskey in zip(sescollection, cols):
+                self.datastore['sescollection/%s-%s' % tuple(seskey)] = sc
         with self.monitor('counts_per_rlz'):
             self.num_ruptures = numpy.array(list(map(len, sescollection)))
             self.counts_per_rlz = counts_per_rlz(
@@ -581,7 +582,9 @@ class EventBasedCalculator(ClassicalCalculator):
         self.sesruptures = []
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
         self.datasets = {}
-        for col_id, sescol in enumerate(self.datastore['sescollection']):
+        for col_id, seskey in enumerate(
+                self.datastore['sescollection'].keys()):
+            sescol = self.datastore['sescollection/' + seskey]
             gmf_dt = gsim_imt_dt(gsims_by_col[col_id], self.oqparam.imtls)
             for tag, sesrup in sorted(sescol.items()):
                 sesrup = sescol[tag]

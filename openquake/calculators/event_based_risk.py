@@ -251,7 +251,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             assets_by_site, oq.time_event)
 
         logging.info('Populating the risk inputs')
-        rup_by_tag = sum(self.datastore['sescollection'], AccumDict())
+        rup_by_tag = AccumDict()
+        for seskey in self.datastore['sescollection']:
+            rup_by_tag += self.datastore['sescollection/' + seskey]
         all_ruptures = [rup_by_tag[tag] for tag in sorted(rup_by_tag)]
         for i, rup in enumerate(all_ruptures):
             rup.ordinal = i
