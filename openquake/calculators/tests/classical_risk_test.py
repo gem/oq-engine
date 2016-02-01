@@ -55,9 +55,9 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_maps-b1,b1.csv', fnames[0])
         self.assertEqualFiles('expected/loss_maps-b1,b2.csv', fnames[1])
 
-        # fnames = out['loss_curves-rlzs', 'csv']
-        # self.assertEqualFiles('expected/loss_curves-000.csv', fnames[0])
-        # self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
+        fnames = out['loss_curves-rlzs', 'csv']
+        self.assertEqualFiles('expected/loss_curves-000.csv', fnames[0])
+        self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_5(self):
