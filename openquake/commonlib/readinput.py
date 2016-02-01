@@ -694,6 +694,15 @@ def get_exposure_lazy(fname, ok_cost_types):
 valid_cost_type = valid.Choice('aggregated', 'per_area', 'per_asset')
 
 
+def get_cost_calculator(oqparam):
+    all_cost_types = set(oqparam.all_cost_types)
+    fname = oqparam.inputs['exposure']
+    exposure, assets_node = get_exposure_lazy(fname, all_cost_types)
+    return riskmodels.CostCalculator(
+        {}, {}, exposure.deductible_is_absolute,
+        exposure.insurance_limit_is_absolute)
+
+
 def get_exposure(oqparam):
     """
     Read the full exposure in memory and build a list of

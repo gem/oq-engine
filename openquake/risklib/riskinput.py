@@ -34,11 +34,12 @@ FIELDS = ('site_id', 'lon', 'lat', 'asset_ref', 'taxonomy', 'area', 'number',
           'occupants', 'deductible~', 'insurance_limit~', 'retrofitted~')
 
 
-def build_assets_by_site(assetcol, taxonomies, time_event):
+def build_assets_by_site(assetcol, taxonomies, time_event, cc):
     """
     :param assetcol: the asset collection as a composite array
     :param taxomies: an array of taxonomy strings
     :param time_event: time event string (or None)
+    :param cc: :class:`openquake.risklib.riskmodels.CostCalculator` instance
     :returns: an array of lists with the assets by each site
     """
     fields = assetcol.dtype.names
@@ -64,6 +65,7 @@ def build_assets_by_site(assetcol, taxonomies, time_event):
             deductibles={lt: a[lt] for lt in deduc},
             insurance_limits={lt: a[lt] for lt in i_lim},
             retrofitting_values={lt: a[lt] for lt in retro},
+            calc=cc,
             idx=idx)
         assets_by_site[index[sid]].append(asset)
     return numpy.array(assets_by_site)

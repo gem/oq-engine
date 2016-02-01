@@ -349,6 +349,8 @@ class HazardCalculator(BaseCalculator):
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
             self.exposure = readinput.get_exposure(self.oqparam)
+            self.datastore['cost_calculator'] = readinput.get_cost_calculator(
+                self.oqparam)
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
             if len(self.exposure.cost_types):
@@ -401,13 +403,14 @@ class HazardCalculator(BaseCalculator):
         Read the exposure (if any), the risk model (if any) and then the
         site collection, possibly extracted from the exposure.
         """
+        oq = self.oqparam
         logging.info('Reading the site collection')
         with self.monitor('reading site collection', autoflush=True):
-            haz_sitecol = readinput.get_site_collection(self.oqparam)
+            haz_sitecol = readinput.get_site_collection(oq)
 
         oq_hazard = (OqParam.from_(self.datastore.parent.attrs)
                      if self.datastore.parent else None)
-        if 'exposure' in self.oqparam.inputs:
+        if 'exposure' in oq.inputs:
             self.read_exposure()
             self.load_riskmodel()  # must be called *after* read_exposure
             num_assets = self.count_assets()
@@ -431,25 +434,26 @@ class HazardCalculator(BaseCalculator):
         if oq_hazard:
             # TODO: move check_time_event outside the if
             check_time_event(self.datastore)
-            if oq_hazard.time_event != self.oqparam.time_event:
+            if oq_hazard.time_event != oq.time_event:
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
                     'hazard was computed with time_event=%s' % (
-                        self.oqparam.time_event, oq_hazard.time_event))
+                        oq.time_event, oq_hazard.time_event))
 
         # save mesh and asset collection
         self.save_mesh()
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.build_asset_collection(
-                self.assets_by_site, self.oqparam.time_event)
-            spec = set(self.oqparam.specific_assets)
+                self.assets_by_site, oq.time_event)
+            spec = set(oq.specific_assets)
             unknown = spec - set(self.assetcol['asset_ref'])
             if unknown:
                 raise ValueError('The specific asset(s) %s are not in the '
                                  'exposure' % ', '.join(unknown))
         elif hasattr(self, 'assetcol'):
+            cc = self.datastore['cost_calculator']
             self.assets_by_site = riskinput.build_assets_by_site(
-                self.assetcol, self.taxonomies, self.oqparam.time_event)
+                self.assetcol, self.taxonomies, oq.time_event, cc)
 
     def save_mesh(self):
         """
