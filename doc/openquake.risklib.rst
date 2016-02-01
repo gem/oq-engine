@@ -18,7 +18,7 @@ risklib Package
     :show-inheritance:
 
 :mod:`riskmodels` Module
------------------------
+------------------------
 
 .. automodule:: openquake.risklib.riskmodels
     :members:
