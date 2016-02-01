@@ -340,7 +340,7 @@ class RlzsAssoc(collections.Mapping):
         rlzs = []
         for i, gsim_rlz in enumerate(realizations):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
-            rlz = LtRealization(idx, lt_model.path, gsim_rlz, weight)
+            rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight)
             self.gsim_by_trt.append(dict(
                 zip(gsim_lt.all_trts, gsim_rlz.value)))
             for trt_model in lt_model.trt_models:
@@ -351,10 +351,8 @@ class RlzsAssoc(collections.Mapping):
                 if lt_model.samples > 1:  # oversampling
                     col_id = self.csm_info.col_ids_by_trt_id[trt_model.id][i]
                     self.col_ids_by_rlz[rlz].add(col_id)
-            idx += 1
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
-        return idx
 
     def extract(self, rlz_indices):
         """
@@ -367,8 +365,9 @@ class RlzsAssoc(collections.Mapping):
         rlzs_smpath = groupby(realizations, operator.attrgetter('sm_lt_path'))
         smodel_from = {sm.path: sm for sm in self.csm_info.source_models}
         for smpath, rlzs in rlzs_smpath.items():
-            assoc._add_realizations(rlzs[0].ordinal, smodel_from[smpath],
-                                    [rlz.gsim_rlz for rlz in rlzs])
+            assoc._add_realizations(
+                [r.ordinal for r in rlzs], smodel_from[smpath],
+                [rlz.gsim_rlz for rlz in rlzs])
         assoc._init()
         return assoc
 
@@ -595,7 +594,9 @@ class CompositionInfo(object):
             else:  # full enumeration
                 rlzs = logictree.get_effective_rlzs(smodel.gsim_lt)
             if rlzs:
-                idx = assoc._add_realizations(idx, smodel, rlzs)
+                indices = numpy.arange(idx, idx + len(rlzs))
+                idx += len(indices)
+                assoc._add_realizations(indices, smodel, rlzs)
                 for trt_model in smodel.trt_models:
                     trt_model.gsims = smodel.gsim_lt.values[trt_model.trt]
             else:
