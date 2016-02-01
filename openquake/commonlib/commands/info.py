@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014-2015, GEM Foundation
+#  Copyright (c) 2014-2016, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -32,7 +32,7 @@ def print_csm_info(fname):
     """
     oqparam = readinput.get_oqparam(fname)
     csm = readinput.get_composite_source_model(oqparam, in_memory=False)
-    print(csm.get_info())
+    print(csm.info)
     print('See https://github.com/gem/oq-risklib/blob/master/doc/'
           'effective-realizations.rst for an explanation')
     print(csm.get_rlzs_assoc())

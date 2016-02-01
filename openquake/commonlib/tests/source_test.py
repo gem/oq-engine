@@ -778,8 +778,7 @@ class CompositeSourceModelTestCase(unittest.TestCase):
 Active Shallow Crust,b1,SadighEtAl1997,w=0.5
 Active Shallow Crust,b2,ChiouYoungs2008,w=0.5
 Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
-        assoc = csm.get_rlzs_assoc(
-            lambda trtmod: sum(src.count_ruptures() for src in trtmod.sources))
+        assoc = csm.get_rlzs_assoc()
         [rlz] = assoc.realizations
         self.assertEqual(assoc.gsim_by_trt[rlz.ordinal],
                          {'Subduction Interface': 'SadighEtAl1997',
@@ -801,6 +800,8 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         csm = readinput.get_composite_source_model(oqparam, sitecol)
         self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths;
         # there are 2 distinct tectonic region types, so 18 trt_models
+        self.assertEqual(sum(1 for tm in csm.trt_models), 18)
+
         rlzs_assoc = csm.get_rlzs_assoc()
         rlzs = rlzs_assoc.realizations
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
@@ -815,12 +816,21 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         col_ids_last = rlzs_assoc.get_col_ids(rlzs[-1])
         self.assertEqual(col_ids_last, set([16, 17]))
 
-        # removing 9 trt_models out of 18
-        for trt_model in csm.trt_models:
-            if trt_model.trt == 'Active Shallow Crust':  # no ruptures
-                trt_model.num_ruptures = 0
-        assoc = csm.get_rlzs_assoc()
+        # test the method extract
+        assoc = rlzs_assoc.extract([1, 5])
+        self.assertEqual(str(assoc), """\
+<RlzsAssoc(4)
+0,SadighEtAl1997: ['<1,b1_b3_b6,b2_b3,w=0.5>']
+1,ChiouYoungs2008: ['<1,b1_b3_b6,b2_b3,w=0.5>']
+4,SadighEtAl1997: ['<5,b1_b3_b8,b2_b3,w=0.5>']
+5,ChiouYoungs2008: ['<5,b1_b3_b8,b2_b3,w=0.5>']>""")
 
+        # removing 9 trt_models out of 18
+        for smodel in csm.info.source_models:
+            for trt_model in smodel.trt_models:
+                if trt_model.trt == 'Active Shallow Crust':  # no ruptures
+                    trt_model.num_ruptures = 0
+        assoc = csm.get_rlzs_assoc()
         expected_assoc = """\
 <RlzsAssoc(9)
 0,SadighEtAl1997: ['<0,b1_b3_b6,@_b3,w=0.04>']
@@ -836,9 +846,10 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         self.assertEqual(len(assoc.realizations), 9)
 
         # removing all trt_models
-        for trt_model in csm.trt_models:
-            if trt_model.trt == 'Subduction Interface':  # no ruptures
-                trt_model.num_ruptures = 0
+        for smodel in csm.info.source_models:
+            for trt_model in smodel.trt_models:
+                if trt_model.trt == 'Subduction Interface':  # no ruptures
+                    trt_model.num_ruptures = 0
         self.assertEqual(csm.get_rlzs_assoc().realizations, [])
 
     def test_oversampling(self):
