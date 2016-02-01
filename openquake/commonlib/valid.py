@@ -153,13 +153,17 @@ def hazard_id(value):
     (42, 3)
     >>> hazard_id('42,3,4')
     (42, 3, 4)
+    >>> hazard_id('42:3')
+    Traceback (most recent call last):
+       ...
+    ValueError: Invalid hazard_id '42:3'
     """
     if not value:
         return ()
-    mo = re.match(r'(-?\d+)(,\d+)*', value)
-    if mo is None:
+    try:
+        return tuple(map(int, value.split(',')))
+    except:
         raise ValueError('Invalid hazard_id %r' % value)
-    return tuple(map(int, value.split(',')))
 
 
 class Regex(object):
