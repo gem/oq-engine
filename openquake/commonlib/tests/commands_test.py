@@ -120,7 +120,7 @@ class ReduceTestCase(unittest.TestCase):
         shutil.copy(os.path.join(self.TESTDIR, 'source_model.xml'), tempdir)
         with Print.patch() as p:
             reduce(dest, 0.5)
-        self.assertIn('Extracted 196 nodes out of 398', str(p))
+        self.assertIn('Extracted 9 nodes out of 15', str(p))
         shutil.rmtree(tempdir)
 
     def test_site_model(self):
