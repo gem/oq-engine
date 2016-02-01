@@ -1,3 +1,7 @@
+  [Graeme Weatherill]
+  * Incorporated ArbitraryMFD and YoungsCoppersmithMFD into the supported
+    MFDs
+
   [Michele Simionato]
   * Renamed `fatalities` to `occupants` to be consistent with the
     convention on the file names for the risk models

@@ -34,7 +34,7 @@ from openquake.commonlib import sourceconverter as s
 from openquake.commonlib.source import parse_source_model, DuplicatedID
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.node import read_nodes
-from openquake.baselib.general import assert_close, assert_close_seq
+from openquake.baselib.general import assert_close
 
 # directory where the example files are
 NRML_DIR = os.path.dirname(nrml_examples.__file__)
@@ -563,11 +563,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         [cplx1, sflt1, sflt2] = map(converter.convert_node, source_nodes)
         # Check the values
         # Arbitrary MFD
-        assert_close_seq(cplx1.mfd.magnitudes, [8.6, 8.8, 9.0], 1.0E-7, 0)
-        assert_close_seq(cplx1.mfd.occurrence_rates,
-                         [0.0006, 0.0008, 0.0004],
-                         1.0E-7,
-                         0)
+        assert_close(cplx1.mfd.magnitudes, [8.6, 8.8, 9.0])
+        assert_close(cplx1.mfd.occurrence_rates, [0.0006, 0.0008, 0.0004])
         # Youngs & Coppersmith from characteristic rate
         self.assertAlmostEqual(sflt1.mfd.b_val, 1.0)
         self.assertAlmostEqual(sflt1.mfd.a_val, 3.3877843113)
