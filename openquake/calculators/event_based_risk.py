@@ -309,6 +309,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.saved = collections.Counter()  # nbytes per HDF5 key
         self.ass_bytes = 0
         self.agg_bytes = 0
+        rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
+        if rlz_ids:
+            self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
         return apply_reduce(
             self.core_task.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc,

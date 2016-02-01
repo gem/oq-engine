@@ -361,7 +361,10 @@ class RlzsAssoc(collections.Mapping):
         :param rlz_indices: a list of realization indices from 0 to R - 1
         """
         assoc = self.__class__(self.csm_info)
-        realizations = operator.itemgetter(*rlz_indices)(self.realizations)
+        if len(rlz_indices) == 1:
+            realizations = [self.realizations[rlz_indices[0]]]
+        else:
+            realizations = operator.itemgetter(*rlz_indices)(self.realizations)
         rlzs_smpath = groupby(realizations, operator.attrgetter('sm_lt_path'))
         smodel_from = {sm.path: sm for sm in self.csm_info.source_models}
         for smpath, rlzs in rlzs_smpath.items():
