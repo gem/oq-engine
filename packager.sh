@@ -163,6 +163,7 @@ _pkgbuild_innervm_run () {
     scp -r * $lxc_ip:build-deb
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
     ssh $lxc_ip sudo apt-get update
+    ssh $lxc_ip sudo apt-get -y upgrade
     ssh $lxc_ip sudo apt-get -y install build-essential dpatch fakeroot devscripts equivs lintian quilt
     ssh $lxc_ip "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
