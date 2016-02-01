@@ -29,10 +29,10 @@ aaae = numpy.testing.assert_array_almost_equal
 
 def asset(values, deductibles=None,
           insurance_limits=None,
-          retrofitting_values=None):
+          retrofitteds=None):
     return riskmodels.Asset('a1', 'taxonomy', 1, (0, 0), values,
                             1, deductibles, insurance_limits,
-                            retrofitting_values)
+                            retrofitteds)
 
 
 class ScenarioTestCase(unittest.TestCase):

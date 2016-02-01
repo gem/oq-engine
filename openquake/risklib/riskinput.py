@@ -64,7 +64,7 @@ def build_assets_by_site(assetcol, taxonomies, time_event, cc):
             area=a['area'],
             deductibles={lt: a[lt] for lt in deduc},
             insurance_limits={lt: a[lt] for lt in i_lim},
-            retrofitting_values={lt: a[lt] for lt in retro},
+            retrofitteds={lt: a[lt] for lt in retro},
             calc=cc,
             idx=idx)
         assets_by_site[index[sid]].append(asset)
@@ -95,7 +95,7 @@ def build_asset_collection(assets_by_site, time_event=None):
             loss_types.append(candidate)
     deductible_d = first_asset.deductibles or {}
     limit_d = first_asset.insurance_limits or {}
-    retrofitting_d = first_asset.retrofitting_values or {}
+    retrofitting_d = first_asset.retrofitteds or {}
     deductibles = ['deductible~%s' % name for name in deductible_d]
     limits = ['insurance_limit~%s' % name for name in limit_d]
     retrofittings = ['retrofitted~%s' % n for n in retrofitting_d]
@@ -141,7 +141,7 @@ def build_asset_collection(assets_by_site, time_event=None):
                         name, lt = field.split('~')
                     except ValueError:  # no ~ in field
                         name, lt = 'value', field
-                    value = getattr(asset, name)(lt)
+                    value = getattr(asset, name + 's')[lt]
                 record[field] = value
     return assetcol
 
