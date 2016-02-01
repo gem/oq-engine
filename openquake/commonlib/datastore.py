@@ -183,6 +183,20 @@ class DataStore(collections.MutableMapping):
         for k, v in kw.items():
             self.hdf5[key].attrs[k] = v
 
+    def get_attr(self, key, name, default=None):
+        """
+        :param key: dataset path
+        :param name: name of the attribute
+        :param default: value to return if the attribute is missing
+        """
+        obj = self.hdf5[key]
+        try:
+            return obj.attrs[name]
+        except KeyError:
+            if default is None:
+                raise
+            return default
+
     def create_dset(self, key, dtype, size=None, compression=None):
         """
         Create a one-dimensional HDF5 dataset.

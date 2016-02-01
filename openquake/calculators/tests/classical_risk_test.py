@@ -15,7 +15,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
 
         # check loss ratios
         lrs = self.calc.datastore['composite_risk_model/VF-structural']
-        got = scientificformat(lrs['loss_ratio'], '%.2f')
+        got = scientificformat(lrs.mean_loss_ratios, '%.2f')
         self.assertEqual(got, '0.05 0.10 0.20 0.40 0.80')
 
         # check loss curves

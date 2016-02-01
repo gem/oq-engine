@@ -429,18 +429,19 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             pass  # TODO: build specific loss curves
 
         rlzs = self.rlzs_assoc.realizations
-        with self.monitor('building loss_maps-rlzs'):
-            if (self.oqparam.conditional_loss_poes and
-                    'rcurves-rlzs' in self.datastore):
-                loss_maps = numpy.zeros((N, R), self.loss_maps_dt)
-                rcurves = self.datastore['rcurves-rlzs']
-                for cb in self.riskmodel.curve_builders:
-                    if cb.user_provided:
-                        lm = loss_maps[cb.loss_type]
-                        for r, lmaps in cb.build_loss_maps(
-                                self.assetcol, rcurves):
-                            lm[:, r] = lmaps
-                self.datastore['loss_maps-rlzs'] = loss_maps
+        if self.loss_maps_dt:
+            with self.monitor('building loss_maps-rlzs'):
+                if (self.oqparam.conditional_loss_poes and
+                        'rcurves-rlzs' in self.datastore):
+                    loss_maps = numpy.zeros((N, R), self.loss_maps_dt)
+                    rcurves = self.datastore['rcurves-rlzs']
+                    for cb in self.riskmodel.curve_builders:
+                        if cb.user_provided:
+                            lm = loss_maps[cb.loss_type]
+                            for r, lmaps in cb.build_loss_maps(
+                                    self.assetcol, rcurves):
+                                lm[:, r] = lmaps
+                    self.datastore['loss_maps-rlzs'] = loss_maps
 
         if len(rlzs) > 1:
             self.Q1 = len(self.oqparam.quantile_loss_curves) + 1

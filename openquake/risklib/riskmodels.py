@@ -284,42 +284,6 @@ class RiskModel(object):
             yield out_by_rlz(
                 self, assets_, hazards, epsilons_, tags, loss_type)
 
-    def to_array_attrs(self, retrofitted=False):
-        """
-        Convert the underlying risk functions into a dictionary of pairs
-        (array, attrs)
-        """
-        assert self.kind in ('vulnerability', 'fragility'), self.kind
-        to_array_attrs = getattr(self, '_' + self.kind)
-        if retrofitted:
-            return to_array_attrs(self.retro_functions)
-        else:
-            return to_array_attrs(self.risk_functions)
-
-    def _vulnerability(self, functions):
-        return {lt: functions[lt].to_array_attrs() for lt in self.loss_types}
-
-    def _fragility(self, functions):
-        num_limit_states = len(self.compositemodel.damage_states) - 1
-        dt = numpy.dtype([('iml', F32), ('poes', F32, num_limit_states)])
-        dic = {}
-        for lt in self.loss_types:
-            ffl = functions[lt]
-            attrs = {'imt': ffl.imt}
-            if ffl.format == 'continuous':
-                attrs['mean'] = [ff.mean for ff in ffl]
-                attrs['stddev'] = [ff.stddev for ff in ffl]
-            array = numpy.zeros(len(ffl.imls), dt)
-            dic[lt] = (array, attrs)
-            array['iml'] = ffl.imls
-            poes = array['poes']
-            for i, iml in enumerate(ffl.imls):
-                if ffl.format == 'continuous':
-                    poes[i] = tuple(ff(iml) for ff in ffl)
-                else:  # discrete
-                    poes[i] = tuple(ff.poes[i] for ff in ffl)
-        return dic
-
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
 
