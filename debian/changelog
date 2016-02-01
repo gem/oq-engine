@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Removed the `asset_by_site` pickled array from the datastore
+  * Removed the `assets_by_site` pickled array from the datastore
   * Saved the site collection and the risk models in HDF5 format
   * Renamed `fatalities` to `occupants` to be consistent with the
     convention on the file names of the risk models
