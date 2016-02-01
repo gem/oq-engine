@@ -240,7 +240,7 @@ def make_uhs(maps, imtls, poes):
     """
     Make Uniform Hazard Spectra curves for each location.
 
-    It is assumed that the `lons` and `lats` for each of the ``maps`` are
+    It is assumed that the `lons` and `lats` for each of the `maps` are
     uniform.
 
     :param maps:
@@ -248,7 +248,7 @@ def make_uhs(maps, imtls, poes):
         sites and P is the number of poes in the hazard maps
     :param imtls:
         a dictionary of intensity measure types and levels
-   :param poes:
+    :param poes:
         a sequence of PoEs for the underlying hazard maps
     :returns:
         an composite array containing N uniform hazard maps

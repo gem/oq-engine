@@ -584,6 +584,9 @@ class RiskCalculator(HazardCalculator):
         if self.pre_calculator == 'event_based_rupture':
             self.monitor.assets_by_site = self.assets_by_site
             self.monitor.num_assets = self.count_assets()
+        rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
+        if rlz_ids:
+            self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
         all_args = ((self.riskinputs, self.riskmodel, self.rlzs_assoc) +
                     self.extra_args + (self.monitor,))
         res = apply_reduce(

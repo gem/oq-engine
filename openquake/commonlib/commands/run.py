@@ -93,18 +93,25 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports):
         'total runtime', measuremem=True)
 
     if len(job_inis) == 1:  # run hazard or risk
-        oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc)
-        if hc and hc < 0:  # interpret negative calculation ids
+        if hc:
+            hc_id = hc[0]
+            rlz_ids = hc[1:]
+        else:
+            hc_id = None
+            rlz_ids = ()
+        oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc_id)
+        if hc_id and hc_id < 0:  # interpret negative calculation ids
             calc_ids = datastore.get_calc_ids()
             try:
-                hc = calc_ids[hc]
+                hc_id = calc_ids[hc_id]
             except IndexError:
                 raise SystemExit('There are %d old calculations, cannot '
-                                 'retrieve the %s' % (len(calc_ids), hc))
+                                 'retrieve the %s' % (len(calc_ids), hc_id))
         calc = base.calculators(oqparam, monitor)
         with monitor:
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
-                     exports=exports, hazard_calculation_id=hc)
+                     exports=exports, hazard_calculation_id=hc_id,
+                     rlz_ids=rlz_ids)
     else:  # run hazard + risk
         calc = run2(
             job_inis[0], job_inis[1], concurrent_tasks, pdb, exports, monitor)
@@ -153,7 +160,7 @@ parser = sap.Parser(run)
 parser.arg('job_ini', 'calculation configuration file '
            '(or files, comma-separated)')
 parser.opt('slowest', 'profile and show the slowest operations', type=int)
-parser.opt('hc', 'previous calculation ID', type=int)
+parser.opt('hc', 'previous calculation ID', type=valid.hazard_id)
 parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
            type=int)
 parser.opt('exports', 'export formats as a comma-separated string',
