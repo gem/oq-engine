@@ -182,7 +182,7 @@ def export_agg_losses_ebr(ekey, dstore):
     """
     agg_losses = dstore[ekey[0]]
     rlzs = dstore['rlzs_assoc'].realizations
-    loss_types = dstore['riskmodel'].loss_types
+    loss_types = list(dstore.get_attr('composite_risk_model', 'loss_types'))
     tags = dstore['tags'].value
     ext_loss_types = loss_types + [lt + '_ins' for lt in loss_types]
     ext_dt = numpy.dtype(
@@ -243,7 +243,7 @@ def export_rcurves(ekey, dstore):
 @export.add(('loss_curves-rlzs', 'csv'))
 def export_loss_curves(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
-    loss_types = dstore['riskmodel'].loss_types
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     assets = get_assets_sites(dstore)
     curves = dstore[ekey[0]]
     name = ekey[0].split('-')[0]
@@ -258,20 +258,20 @@ def export_loss_curves(ekey, dstore):
 
 @export.add(('dmg_by_asset', 'xml'))
 def export_damage(ekey, dstore):
-    riskmodel = dstore['riskmodel']
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
     rlzs = dstore['rlzs_assoc'].realizations
     dmg_by_asset = dstore['dmg_by_asset']  # shape (N, L, R)
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
-    dmg_states = [DmgState(s, i)
-                  for i, s in enumerate(riskmodel.damage_states)]
+    dmg_states = [DmgState(s, i) for i, s in enumerate(damage_states)]
     D = len(dmg_states)
     N, R = dmg_by_asset.shape
-    L = len(riskmodel.loss_types)
+    L = len(loss_types)
     fnames = []
 
     for l, r in itertools.product(range(L), range(R)):
-        lt = riskmodel.loss_types[l]
+        lt = loss_types[l]
         rlz = rlzs[r]
         suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
 
@@ -301,19 +301,19 @@ def export_damage(ekey, dstore):
 
 @export.add(('dmg_by_taxon', 'xml'))
 def export_damage_taxon(ekey, dstore):
-    riskmodel = dstore['riskmodel']
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
     rlzs = dstore['rlzs_assoc'].realizations
     dmg_by_taxon = dstore['dmg_by_taxon']  # shape (T, L, R)
     taxonomies = dstore['taxonomies']
-    dmg_states = [DmgState(s, i)
-                  for i, s in enumerate(riskmodel.damage_states)]
+    dmg_states = [DmgState(s, i) for i, s in enumerate(damage_states)]
     D = len(dmg_states)
     T, R = dmg_by_taxon.shape
-    L = len(riskmodel.loss_types)
+    L = len(loss_types)
     fnames = []
 
     for l, r in itertools.product(range(L), range(R)):
-        lt = riskmodel.loss_types[l]
+        lt = loss_types[l]
         rlz = rlzs[r]
         suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
 
@@ -334,17 +334,17 @@ def export_damage_taxon(ekey, dstore):
 
 @export.add(('dmg_total', 'xml'))
 def export_damage_total(ekey, dstore):
-    riskmodel = dstore['riskmodel']
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
     rlzs = dstore['rlzs_assoc'].realizations
     dmg_total = dstore['dmg_total']
     R, = dmg_total.shape
-    L = len(riskmodel.loss_types)
-    dmg_states = [DmgState(s, i)
-                  for i, s in enumerate(riskmodel.damage_states)]
+    L = len(loss_types)
+    dmg_states = [DmgState(s, i) for i, s in enumerate(damage_states)]
     D = len(dmg_states)
     fnames = []
     for l, r in itertools.product(range(L), range(R)):
-        lt = riskmodel.loss_types[l]
+        lt = loss_types[l]
         rlz = rlzs[r]
         suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (rlz.uid, lt)
 
@@ -446,16 +446,16 @@ def export_loss_map(ekey, dstore):
     unit_by_lt['occupants'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
     avglosses = dstore[ekey[0]]
-    riskmodel = dstore['riskmodel']
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     assets = dstore['assetcol']['asset_ref']
     N, R = avglosses.shape
-    L = len(riskmodel.loss_types)
+    L = len(loss_types)
     fnames = []
-    for l, lt in enumerate(riskmodel.loss_types):
+    for l, lt in enumerate(loss_types):
         alosses = avglosses[lt]
         for r in range(R):
             rlz = rlzs[r]
-            lt = riskmodel.loss_types[l]
+            lt = loss_types[l]
             unit = unit_by_lt[lt]
             suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
                 rlz.uid, lt)
@@ -487,18 +487,16 @@ def export_loss_maps_xml_geojson(ekey, dstore):
     unit_by_lt['occupants'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
     loss_maps = dstore[ekey[0]]
-    riskmodel = dstore['riskmodel']
     assetcol = dstore['assetcol']
     R = len(rlzs)
     sitemesh = dstore['sitemesh']
-    L = len(riskmodel.loss_types)
     fnames = []
     export_type = ekey[1]
     writercls = (risk_writers.LossMapGeoJSONWriter
                  if export_type == 'geojson' else
                  risk_writers.LossMapXMLWriter)
-    loss_types = [cb.loss_type for cb in riskmodel.curve_builders
-                  if cb.user_provided]
+    loss_types = loss_maps.dtype.names
+    L = len(loss_types)
     for lt in loss_types:
         loss_maps_lt = loss_maps[lt]
         for r in range(R):
@@ -536,17 +534,16 @@ def export_loss_map_xml_geojson(ekey, dstore):
     unit_by_lt['occupants'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
     loss_map = dstore[ekey[0]]
-    riskmodel = dstore['riskmodel']
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     assetcol = dstore['assetcol']
     R = len(rlzs)
     sitemesh = dstore['sitemesh']
-    L = len(riskmodel.loss_types)
+    L = len(loss_types)
     fnames = []
     export_type = ekey[1]
     writercls = (risk_writers.LossMapGeoJSONWriter
                  if export_type == 'geojson' else
                  risk_writers.LossMapXMLWriter)
-    loss_types = riskmodel.loss_types
     for lt in loss_types:
         alosses = loss_map[lt]
         for ins in range(oq.insured_losses + 1):
@@ -582,11 +579,11 @@ def export_agglosses(ekey, dstore):
     unit_by_lt['occupants'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
     agglosses = dstore[ekey[0]]
-    riskmodel = dstore['riskmodel']
-    L = len(riskmodel.loss_types)
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    L = len(loss_types)
     R, = agglosses.shape
     fnames = []
-    for lt in riskmodel.loss_types:
+    for lt in loss_types:
         for r in range(R):
             rlz = rlzs[r]
             unit = unit_by_lt[lt]
@@ -693,26 +690,23 @@ def export_loss_curves_stats(ekey, dstore):
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
     loss_curves = dstore[ekey[0]]
-    builders = dstore['riskmodel'].curve_builders
+    ok_loss_types = loss_curves.dtype.names
+    [loss_ratios] = dstore['loss_ratios']
     fnames = []
     writercls = (risk_writers.LossCurveGeoJSONWriter
                  if ekey[0] == 'geojson' else
                  risk_writers.LossCurveXMLWriter)
     for writer, (ltype, s, insflag) in _gen_writers(
             dstore, writercls, ekey[0]):
-        for builder in builders:
-            if builder.user_provided and builder.loss_type == ltype:
-                loss_ratios = builder.ratios
-                break
-        else:  # no break, ignore loss type
-            continue
+        if ltype not in ok_loss_types:
+            continue  # ignore loss type
         ins = '_ins' if insflag else ''
         array = loss_curves[ltype][s]
         curves = []
         for ass, rec in zip(assetcol, array):
             loc = Location(sitemesh[ass['site_id']])
             curve = LossCurve(loc, ass['asset_ref'], rec['poes' + ins],
-                              rec['losses' + ins], loss_ratios,
+                              rec['losses' + ins], loss_ratios[ltype],
                               rec['avg' + ins], None)
             curves.append(curve)
         writer.serialize(curves)
@@ -727,26 +721,22 @@ def export_rcurves_rlzs(ekey, dstore):
     assetcol = dstore['assetcol']
     sitemesh = dstore['sitemesh']
     rcurves = dstore[ekey[0]]
-    cbuilders = dstore['riskmodel'].curve_builders
+    [loss_ratios] = dstore['loss_ratios']
     fnames = []
     writercls = (risk_writers.LossCurveGeoJSONWriter
                  if ekey[0] == 'geojson' else
                  risk_writers.LossCurveXMLWriter)
     for writer, (ltype, r, ins) in _gen_writers(dstore, writercls, ekey[0]):
-        for cb in cbuilders:
-            if cb.user_provided and cb.loss_type == ltype:
-                loss_ratios = cb.ratios
-                break
-        else:  # no break, ignore loss type
-            continue
+        if ltype not in loss_ratios.dtype.names:
+            continue  # ignore loss type
         array = rcurves[ltype][:, r, ins]
         curves = []
         for ass, poes in zip(assetcol, array):
             loc = Location(sitemesh[ass['site_id']])
-            losses = cb.ratios * ass[cb.loss_type]
+            losses = loss_ratios[ltype] * ass[ltype]
             avg = scientific.average_loss((losses, poes))
             curve = LossCurve(loc, ass['asset_ref'], poes,
-                              losses, loss_ratios, avg, None)
+                              losses, loss_ratios[ltype], avg, None)
             curves.append(curve)
         writer.serialize(curves)
         fnames.append(writer._dest)
@@ -795,7 +785,7 @@ def export_bcr_map_rlzs(ekey, dstore):
     N, R = bcr_data.shape
     oq = OqParam.from_(dstore.attrs)
     realizations = dstore['rlzs_assoc'].realizations
-    loss_types = dstore['riskmodel'].loss_types
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     writercls = risk_writers.BCRMapXMLWriter
     fnames = []
     for rlz in realizations:

@@ -634,7 +634,9 @@ class LossMapMatrixTest(unittest.TestCase):
 class ClassicalDamageTestCase(unittest.TestCase):
     def test_discrete(self):
         hazard_imls = [0.05, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4]
-        fragility_functions = scientific.FragilityFunctionList([
+        fragility_functions = scientific.FragilityFunctionList(
+            [], imls=hazard_imls, steps_per_interval=None)
+        fragility_functions.extend([
             scientific.FragilityFunctionDiscrete(
                 'slight', hazard_imls,
                 [0.0, 0.771, 0.95, 0.989, 0.997, 0.999, 1., 1.]),
@@ -647,7 +649,7 @@ class ClassicalDamageTestCase(unittest.TestCase):
             scientific.FragilityFunctionDiscrete(
                 'complete', hazard_imls,
                 [0, 0.097, 0.414, 0.661, 0.806, 0.887, 0.933, 0.959]),
-            ], imls=hazard_imls, steps_per_interval=None)
+        ])
         hazard_poes = numpy.array([
             0.999999999997518,
             0.077404949,
@@ -671,7 +673,9 @@ class ClassicalDamageTestCase(unittest.TestCase):
             [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6,
              0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.15, 1.2,
              1.25, 1.3, 1.35, 1.4])
-        fragility_functions = scientific.FragilityFunctionList([
+        fragility_functions = scientific.FragilityFunctionList(
+            [], imls=hazard_imls, steps_per_interval=None)
+        fragility_functions.extend([
             scientific.FragilityFunctionContinuous(
                 'slight', 0.160, 0.104),
             scientific.FragilityFunctionContinuous(
@@ -680,7 +684,7 @@ class ClassicalDamageTestCase(unittest.TestCase):
                 'extreme', 0.400, 0.300),
             scientific.FragilityFunctionContinuous(
                 'complete', 0.600, 0.480),
-            ], imls=hazard_imls, steps_per_interval=None)
+        ])
         hazard_poes = numpy.array([
             0.5917765421,
             0.2482053921,

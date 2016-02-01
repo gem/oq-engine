@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2012-2014, GEM Foundation.
+# Copyright (c) 2012-2016, GEM Foundation.
 #
 # OpenQuake Risklib is free software: you can redistribute it and/or
 # modify it under the terms of the GNU Affero General Public License
@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU Affero General Public
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
-
 
 """
 This module includes the scientific API of the oq-risklib
@@ -372,7 +371,7 @@ class VulnerabilityFunction(object):
             [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
             [self.imls[-1] + (self.imls[-1] - self.imls[-2]) / 2.])
 
-    def to_array_attrs(self):
+    def __toh5__(self):
         """
         :returns: a pair (array, attrs) suitable for storage in HDF5 format
         """
@@ -380,7 +379,14 @@ class VulnerabilityFunction(object):
         array['iml'] = self.imls
         array['loss_ratio'] = self.mean_loss_ratios
         array['cov'] = self.covs
-        return array, {'taxonomy': self.id, 'imt': self.imt}
+        return array, {'id': self.id, 'imt': self.imt,
+                       'distribution_name': self.distribution_name}
+
+    def __fromh5__(self, array, attrs):
+        vars(self).update(attrs)
+        self.imls = array['iml']
+        self.mean_loss_ratios = array['loss_ratio']
+        self.covs = array['cov']
 
     def __repr__(self):
         return '<VulnerabilityFunction(%s, %s)>' % (self.id, self.imt)
@@ -501,7 +507,7 @@ class VulnerabilityFunctionWithPMF(object):
         # TODO: to be implemented if the classical risk calculator
         # needs to support the pmf vulnerability format
 
-    def to_array_attrs(self):
+    def __toh5__(self):
         """
         :returns: a pair (array, attrs) suitable for storage in HDF5 format
         """
@@ -509,7 +515,15 @@ class VulnerabilityFunctionWithPMF(object):
         array['iml'] = self.imls
         for i, lr in enumerate(self.loss_ratios):
             array['prob~%s' % lr] = self.probs[i]
-        return array, {'taxonomy': self.id, 'imt': self.imt}
+        return array, {'id': self.id, 'imt': self.imt,
+                       'distribution_name': self.distribution_name}
+
+    def __fromh5__(self, array, attrs):
+        lrs = [n.split('~')[1] for n in array.dtype.names if '~' in n]
+        self.loss_ratios = map(float, lrs)
+        self.imls = array['iml']
+        self.probs = array
+        vars(self).update(attrs)
 
     def __repr__(self):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
@@ -622,13 +636,21 @@ class FragilityFunctionList(list):
     A list of fragility functions with common attributes; there is a
     function for each limit state.
     """
-    def __init__(self, elements, **attrs):
-        list.__init__(self, elements)
+    def __init__(self, array, **attrs):
+        self.array = array
         vars(self).update(attrs)
 
     def mean_loss_ratios_with_steps(self, steps):
         """For compatibility with vulnerability functions"""
         return fine_graining(self.imls, steps)
+
+    def __toh5__(self):
+        return self.array, {k: v for k, v in vars(self).items()
+                            if k != 'array' and v is not None}
+
+    def __fromh5__(self, array, attrs):
+        self.array = array
+        vars(self).update(attrs)
 
     def __repr__(self):
         kvs = ['%s=%s' % item for item in vars(self).items()]
@@ -741,20 +763,20 @@ class FragilityModel(dict):
                 new.interp_imls = build_imls(  # passed to classical_damage
                     new, continuous_fragility_discretization,
                     steps_per_interval)
-            range_ls = range(len(ff))
-            for i, ls, data in zip(range_ls, self.limitStates, ff):
+            for i, ls in enumerate(self.limitStates):
+                data = ff.array[i]
                 if ff.format == 'discrete':
                     if add_zero:
-                        new[i] = FragilityFunctionDiscrete(
+                        new.append(FragilityFunctionDiscrete(
                             ls, [ff.nodamage] + ff.imls,
                             numpy.concatenate([[0.], data]),
-                            ff.nodamage)
+                            ff.nodamage))
                     else:
-                        new[i] = FragilityFunctionDiscrete(
-                            ls, ff.imls, data, ff.nodamage)
+                        new.append(FragilityFunctionDiscrete(
+                            ls, ff.imls, data, ff.nodamage))
                 else:  # continuous
-                    new[i] = FragilityFunctionContinuous(
-                        ls, data['mean'], data['stddev'])
+                    new.append(FragilityFunctionContinuous(
+                        ls, data['mean'], data['stddev']))
         return newfm
 
 

@@ -233,7 +233,6 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
-    riskmodel = datastore.persistent_attribute('riskmodel')
     SourceManager = source.SourceManager
     mean_curves = None  # to be overridden
 
@@ -288,6 +287,8 @@ class HazardCalculator(BaseCalculator):
                 precalc.run()
                 if 'scenario' not in self.oqparam.calculation_mode:
                     self.csm = precalc.csm
+                if 'riskmodel' in vars(precalc):
+                    self.riskmodel = precalc.riskmodel
             else:  # read previously computed data
                 parent = datastore.DataStore(precalc_id)
                 self.datastore.set_parent(parent)
@@ -358,21 +359,23 @@ class HazardCalculator(BaseCalculator):
                 raise RuntimeError('The exposure contains the taxonomies %s '
                                    'which are not in the risk model' % missing)
 
-        # save the loss ratios in the datastore
-        nbytes = 0
+        # save the risk models and loss_ratios in the datastore
         for taxonomy, rmodel in rm.items():
-            items = rmodel.to_array_attrs().items()
-            for loss_type, (array, attrs) in sorted(items):
+            for loss_type, rf in sorted(rmodel.risk_functions.items()):
                 key = 'composite_risk_model/%s-%s' % (taxonomy, loss_type)
-                self.datastore[key] = array
-                for k, v in attrs.items():
-                    self.datastore[key].attrs[k] = v
-                self.datastore[key].attrs['nbytes'] = array.nbytes
-                nbytes += array.nbytes
+                self.datastore[key] = rf
+            if hasattr(rmodel, 'retro_functions'):
+                for loss_type, rf in sorted(rmodel.retro_functions.items()):
+                    key = 'composite_risk_model/%s-%s-retrofitted' % (
+                        taxonomy, loss_type)
+                    self.datastore[key] = rf
         attrs = self.datastore['composite_risk_model'].attrs
-        attrs['nbytes'] = nbytes
+        attrs['loss_types'] = rm.loss_types
         if rm.damage_states:
-            attrs['limit_states'] = rm.damage_states[1:]
+            attrs['damage_states'] = rm.damage_states
+        self.datastore['loss_ratios'] = rm.get_loss_ratios()
+        self.datastore.set_nbytes('composite_risk_model')
+        self.datastore.set_nbytes('loss_ratios')
         self.datastore.hdf5.flush()
 
     def read_risk_data(self):

@@ -29,7 +29,7 @@ def show_attrs(calc_id, key):
     """
     ds = datastore.DataStore(calc_id)
     try:
-        attrs = ds[key].attrs
+        attrs = ds.hdf5[key].attrs
     except KeyError:
         print('%r is not in %s' % (key, ds))
         return
