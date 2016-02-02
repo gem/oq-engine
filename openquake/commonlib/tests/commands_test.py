@@ -54,7 +54,7 @@ See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst
 
 
 class TidyTestCase(unittest.TestCase):
-    def test_tidy(self):
+    def test_ok(self):
         fname = writetmp('''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
@@ -95,6 +95,25 @@ xmlns:gml="http://www.opengis.net/gml"
     </gmfCollection>
 </nrml>
 ''')
+
+    def test_invalid(self):
+        fname = writetmp('''\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+<gmfCollection gsimTreePath="" sourceModelTreePath="">
+  <gmfSet stochasticEventSetId="1">
+    <gmf IMT="PGA" ruptureId="scenario-0">
+      <node gmv="0.012646" lon="12.12477995" lat="43.5812"/>
+      <node gmv="-0.012492" lon="12.12478193" lat="43.5812"/>
+    </gmf>
+  </gmfSet>
+</gmfCollection>
+</nrml>''')
+        with Print.patch() as p:
+            tidy(fname)
+        self.assertIn('Could not convert gmv->positivefloat: '
+                      'float -0.012492 < 0, line 8 of', str(p))
 
 
 class RunShowExportTestCase(unittest.TestCase):

@@ -21,14 +21,19 @@ from openquake.commonlib import sap, nrml
 
 def tidy(fname):
     """
-    Give information. You can pass the name of an available calculator,
-    a job.ini file, or a zip archive with the input files.
+    Reformat a NRML file in a canonical form. That also means reducing the
+    precision of the floats to a standard value. If the file is invalid,
+    a clear error message is shown.
     """
+    try:
+        nodes = nrml.read(fname).nodes
+    except ValueError as err:
+        print(err)
+        return
     with open(fname + '.bak', 'w') as f:
         f.write(open(fname).read())
-    node = nrml.read(fname)[0]
     with open(fname, 'w') as f:
-        nrml.write([node], f)
+        nrml.write(nodes, f)
     print('Reformatted %s, original left in %s.bak' % (fname, fname))
 
 parser = sap.Parser(tidy)
