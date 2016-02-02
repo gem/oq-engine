@@ -56,7 +56,6 @@ class ScenarioCalculator(base.HazardCalculator):
     """
     core_task = calc_gmfs
     tags = datastore.persistent_attribute('tags')
-    sescollection = datastore.persistent_attribute('sescollection')
     is_stochastic = True
 
     def pre_execute(self):
@@ -87,20 +86,22 @@ class ScenarioCalculator(base.HazardCalculator):
         rnd = random.Random(self.oqparam.random_seed)
         self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
                                for tag in self.tags]
-        self.sescollection = [{tag: Rupture(tag, seed, rupture)
-                               for tag, seed in self.tag_seed_pairs}]
+        self.datastore['sescollection/trtmod=0-0'] = {
+            tag: Rupture(tag, seed, rupture)
+            for tag, seed in self.tag_seed_pairs}
 
     def execute(self):
         """
         Compute the GMFs in parallel and return a dictionary gmf_by_tag
         """
         with self.monitor('computing gmfs', autoflush=True):
-            args = (self.tag_seed_pairs, self.computer, self.monitor('calc_gmfs'))
+            args = (self.tag_seed_pairs, self.computer,
+                    self.monitor('calc_gmfs'))
             gmf_by_tag = parallel.apply_reduce(
                 self.core_task.__func__, args,
                 concurrent_tasks=self.oqparam.concurrent_tasks)
             return gmf_by_tag
-    
+
     def post_execute(self, gmf_by_tag):
         """
         :param gmf_by_tag: a dictionary tag -> gmf
