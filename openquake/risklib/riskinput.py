@@ -257,6 +257,8 @@ class CompositeRiskModel(collections.Mapping):
             for loss_type, rf in sorted(riskmodel.risk_functions.items()):
                 if imt is None or imt == rf.imt:
                     imt_taxonomies[rf.imt].add(riskmodel.taxonomy)
+        if not imt_taxonomies:
+            raise ValueError('Could not find IMT=%s in %s' % (imt, self))
         return sorted(imt_taxonomies.items())
 
     def build_input(self, imt, hazards_by_site, assets_by_site, eps_dict):
