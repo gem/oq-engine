@@ -1,3 +1,7 @@
+  [Graeme Weatherill]
+  * Incorporated ArbitraryMFD and YoungsCoppersmithMFD into the supported
+    MFDs
+
   [Michele Simionato]
   * Saved the site collection and the risk models in HDF5 format
   * Renamed `fatalities` to `occupants` to be consistent with the
