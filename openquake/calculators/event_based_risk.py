@@ -247,7 +247,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
 
         logging.info('Populating the risk inputs')
-        rup_by_tag = sum(self.datastore['sescollection'], AccumDict())
+        rup_by_tag = AccumDict()
+        for colkey in self.datastore['sescollection']:
+            rup_by_tag += self.datastore['sescollection/' + colkey]
         all_ruptures = [rup_by_tag[tag] for tag in sorted(rup_by_tag)]
         for i, rup in enumerate(all_ruptures):
             rup.ordinal = i

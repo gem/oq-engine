@@ -176,6 +176,10 @@ class ValidNode(LiteralNode):
         weight=valid.probability,
         alongStrike=valid.probability,
         downDip=valid.probability,
+        totalMomentRate=valid.positivefloat,
+        characteristicRate=valid.positivefloat,
+        characteristicMag=valid.positivefloat,
+        magnitudes=valid.positivefloats,
         id=valid.simple_id,
         discretization=valid.compose(valid.positivefloat, valid.nonzero),
         )

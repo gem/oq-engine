@@ -1,3 +1,7 @@
+  [Graeme Weatherill]
+  * Incorporated ArbitraryMFD and YoungsCoppersmithMFD into the supported
+    MFDs
+
   [Michele Simionato]
   * Removed the `assets_by_site` pickled array from the datastore
   * Saved the site collection and the risk models in HDF5 format
