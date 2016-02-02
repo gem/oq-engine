@@ -3,6 +3,7 @@
     MFDs
 
   [Michele Simionato]
+  * Added a validation on the IMT for fragility functions in NRML 0.5 format
   * Fixed an ordering bug in `get_scenario_from_nrml`
   * Saved the site collection and the risk models in HDF5 format
   * Renamed `fatalities` to `occupants` to be consistent with the
