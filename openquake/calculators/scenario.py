@@ -86,7 +86,7 @@ class ScenarioCalculator(base.HazardCalculator):
         rnd = random.Random(self.oqparam.random_seed)
         self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
                                for tag in self.tags]
-        self.datastore['sescollection/tecmod0-0'] = {
+        self.datastore['sescollection/trtmod=0-0'] = {
             tag: Rupture(tag, seed, rupture)
             for tag, seed in self.tag_seed_pairs}
 

@@ -91,7 +91,7 @@ def export_ses_xml(ekey, dstore):
     fnames = []
     for sm in csm_info.source_models:
         for trt_model in sm.trt_models:
-            colkey = 'sescollection/tecmod%s-%s' % tuple(csm_info.cols[col_id])
+            colkey = 'sescollection/trtmod=%s-%s' % tuple(csm_info.cols[col_id])
             sesruptures = dstore[colkey].values()
             col_id += 1
             ses_coll = SESCollection(
