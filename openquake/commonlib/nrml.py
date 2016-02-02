@@ -176,6 +176,10 @@ class ValidNode(LiteralNode):
         weight=valid.probability,
         alongStrike=valid.probability,
         downDip=valid.probability,
+        totalMomentRate=valid.positivefloat,
+        characteristicRate=valid.positivefloat,
+        characteristicMag=valid.positivefloat,
+        magnitudes=valid.positivefloats,
         id=valid.simple_id,
         discretization=valid.compose(valid.positivefloat, valid.nonzero),
         )
@@ -226,6 +230,7 @@ class VulnerabilityNode(LiteralNode):
         # in the exposure model and it is not used by the engine
         lossCategory=valid.utf8,  # a description field
         IML=valid.IML,
+        imt=valid.intensity_measure_type,
         imls=lambda text, imt: valid.positivefloats(text),
         lr=valid.probability,
         lossRatio=valid.positivefloats,
@@ -252,6 +257,7 @@ class FragilityNode(LiteralNode):
         stddev=valid.positivefloat,
         lossCategory=valid.name,
         poes=lambda text, **kw: valid.positivefloats(text),
+        imt=valid.intensity_measure_type,
         IML=valid.IML,
         minIML=valid.positivefloat,
         maxIML=valid.positivefloat,

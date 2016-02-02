@@ -87,12 +87,12 @@ def export_ses_xml(ekey, dstore):
         csm_info = dstore['rlzs_assoc'].csm_info
     except AttributeError:  # for scenario calculators don't export
         return []
-    sescollection = dstore['sescollection']
     col_id = 0
     fnames = []
     for sm in csm_info.source_models:
         for trt_model in sm.trt_models:
-            sesruptures = list(sescollection[col_id].values())
+            colkey = 'sescollection/trtmod=%s-%s' % tuple(csm_info.cols[col_id])
+            sesruptures = dstore[colkey].values()
             col_id += 1
             ses_coll = SESCollection(
                 groupby(sesruptures, operator.attrgetter('ses_idx')),
@@ -549,7 +549,9 @@ def export_gmf(ekey, dstore):
     """
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['rlzs_assoc']
-    rupture_by_tag = sum(dstore['sescollection'], AccumDict())
+    rupture_by_tag = AccumDict()
+    for colkey in dstore['sescollection']:
+        rupture_by_tag += dstore['sescollection/' + colkey]
     all_tags = dstore['tags'].value
     oq = OqParam.from_(dstore.attrs)
     investigation_time = (None if oq.calculation_mode == 'scenario'

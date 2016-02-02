@@ -7,7 +7,9 @@ import unittest
 
 import numpy
 
+from openquake.baselib.general import writetmp
 from openquake.commonlib.commands.info import info
+from openquake.commonlib.commands.tidy import tidy
 from openquake.commonlib.commands.show import show
 from openquake.commonlib.commands.show_attrs import show_attrs
 from openquake.commonlib.commands.export import export
@@ -49,6 +51,69 @@ See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst
         with Print.patch() as p:
             info(path)
         self.assertEqual(self.EXPECTED, str(p))
+
+
+class TidyTestCase(unittest.TestCase):
+    def test_ok(self):
+        fname = writetmp('''\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+<gmfCollection gsimTreePath="" sourceModelTreePath="">
+  <gmfSet stochasticEventSetId="1">
+    <gmf IMT="PGA" ruptureId="scenario-0">
+      <node gmv="0.0126515007046" lon="12.12477995" lat="43.5812"/>
+      <node gmv="0.0124056290492" lon="12.12478193" lat="43.5812"/>
+    </gmf>
+  </gmfSet>
+</gmfCollection>
+</nrml>''')
+        with Print.patch() as p:
+            tidy(fname)
+        self.assertIn('Reformatted', str(p))
+        self.assertEqual(open(fname).read(), '''\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <gmfCollection
+    gsimTreePath=""
+    sourceModelTreePath=""
+    >
+        <gmfSet
+        stochasticEventSetId="1"
+        >
+            <gmf
+            IMT="PGA"
+            ruptureId="scenario-0"
+            >
+                <node gmv="1.2651501E-02" lat="4.3581200E+01" lon="1.2124780E+01"/>
+                <node gmv="1.2405629E-02" lat="4.3581200E+01" lon="1.2124780E+01"/>
+            </gmf>
+        </gmfSet>
+    </gmfCollection>
+</nrml>
+''')
+
+    def test_invalid(self):
+        fname = writetmp('''\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+<gmfCollection gsimTreePath="" sourceModelTreePath="">
+  <gmfSet stochasticEventSetId="1">
+    <gmf IMT="PGA" ruptureId="scenario-0">
+      <node gmv="0.012646" lon="12.12477995" lat="43.5812"/>
+      <node gmv="-0.012492" lon="12.12478193" lat="43.5812"/>
+    </gmf>
+  </gmfSet>
+</gmfCollection>
+</nrml>''')
+        with Print.patch() as p:
+            tidy(fname)
+        self.assertIn('Could not convert gmv->positivefloat: '
+                      'float -0.012492 < 0, line 8 of', str(p))
 
 
 class RunShowExportTestCase(unittest.TestCase):

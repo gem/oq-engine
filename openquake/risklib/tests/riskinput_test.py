@@ -85,7 +85,7 @@ a4,3,1,50,500000,2.0,6.0
         dstore = get_datastore(rupcalc)
 
         # this is case with a single SES collection
-        ses_ruptures = list(dstore['sescollection'][0].values())
+        ses_ruptures = dstore['sescollection/trtmod=0-0'].values()
 
         gsims_by_trt_id = rupcalc.rlzs_assoc.gsims_by_trt_id
 

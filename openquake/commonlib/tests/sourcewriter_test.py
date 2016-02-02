@@ -11,6 +11,11 @@ NONPARAM = os.path.join(os.path.dirname(__file__), 'data',
 MIXED = os.path.join(os.path.dirname(nrml_examples.__file__),
                      'source_model/mixed.xml')
 
+ALT_MFDS = os.path.join(
+    os.path.dirname(nrml_examples.__file__),
+    'source_model/alternative-mfds_4test.xml')
+
+
 
 def get_source_model(source_file, inv_time=50.0, simple_mesh_spacing=1.0,
                      complex_mesh_spacing=10.0, mfd_spacing=0.1,
@@ -40,3 +45,6 @@ class SourceWriterTestCase(unittest.TestCase):
 
     def test_nonparam(self):
         self.check_round_trip(NONPARAM)
+
+    def test_alt_mfds(self):
+        self.check_round_trip(ALT_MFDS)
