@@ -1095,11 +1095,8 @@ def get_scenario_from_nrml(oqparam, fname):
             imt = 'SA(%s)' % gmf['saPeriod']
         for node in gmf:
             sid = site_idx[node['lon'], node['lat']]
-            try:
-                gmf_by_imt[imt][i % num_events, sid] = node['gmv']
-            except IndexError:
-                raise InvalidFile('Something wrong in %s, line %d' %
-                                  (fname, node.lineno))
+            gmf_by_imt[imt][i % num_events, sid] = node['gmv']
+
     for tag, count in counts.items():
         if count < num_imts:
             raise InvalidFile('Found a missing tag %r in %s' %
