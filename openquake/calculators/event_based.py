@@ -446,8 +446,8 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         logging.info('Saving the SES collection')
         with self.monitor('saving ruptures', autoflush=True):
             self.tags = numpy.array(tags, (bytes, 100))
-            for sescol, seskey in zip(sescollection, cols):
-                self.datastore['sescollection/%s-%s' % tuple(seskey)] = sescol
+            for sescol, colkey in zip(sescollection, cols):
+                self.datastore['sescollection/tecmod%s-%s' % tuple(colkey)] = sescol
         with self.monitor('counts_per_rlz'):
             self.num_ruptures = numpy.array(list(map(len, sescollection)))
             self.counts_per_rlz = counts_per_rlz(
@@ -583,7 +583,7 @@ class EventBasedCalculator(ClassicalCalculator):
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
         self.datasets = {}
         for col_id, col in enumerate(self.rlzs_assoc.csm_info.cols):
-            sescol = self.datastore['sescollection/%s-%s' % tuple(col)]
+            sescol = self.datastore['sescollection/tecmod%s-%s' % tuple(col)]
             gmf_dt = gsim_imt_dt(gsims_by_col[col_id], self.oqparam.imtls)
             for tag, sesrup in sorted(sescol.items()):
                 sesrup = sescol[tag]

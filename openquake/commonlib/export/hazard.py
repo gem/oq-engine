@@ -91,8 +91,8 @@ def export_ses_xml(ekey, dstore):
     fnames = []
     for sm in csm_info.source_models:
         for trt_model in sm.trt_models:
-            seskey = 'sescollection/%s-%s' % tuple(csm_info.cols[col_id])
-            sesruptures = dstore[seskey].values()
+            colkey = 'sescollection/tecmod%s-%s' % tuple(csm_info.cols[col_id])
+            sesruptures = dstore[colkey].values()
             col_id += 1
             ses_coll = SESCollection(
                 groupby(sesruptures, operator.attrgetter('ses_idx')),
@@ -550,8 +550,8 @@ def export_gmf(ekey, dstore):
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['rlzs_assoc']
     rupture_by_tag = AccumDict()
-    for seskey in dstore['sescollection']:
-        rupture_by_tag += dstore['sescollection/' + seskey]
+    for colkey in dstore['sescollection']:
+        rupture_by_tag += dstore['sescollection/' + colkey]
     all_tags = dstore['tags'].value
     oq = OqParam.from_(dstore.attrs)
     investigation_time = (None if oq.calculation_mode == 'scenario'
