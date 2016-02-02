@@ -252,6 +252,7 @@ class FragilityNode(LiteralNode):
         stddev=valid.positivefloat,
         lossCategory=valid.name,
         poes=lambda text, **kw: valid.positivefloats(text),
+        imt=valid.intensity_measure_type,
         IML=valid.IML,
         minIML=valid.positivefloat,
         maxIML=valid.positivefloat,
