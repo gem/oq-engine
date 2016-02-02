@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Fixed the initial accumulator in the EventBasedRuptureCalculator
+  
   [Graeme Weatherill]
   * Incorporated ArbitraryMFD and YoungsCoppersmithMFD into the supported
     MFDs

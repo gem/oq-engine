@@ -406,6 +406,16 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         """
         acc += val
 
+    def zerodict(self):
+        """
+        Initial accumulator, a dictionary trt_model_id -> list of ruptures
+        """
+        smodels = self.rlzs_assoc.csm_info.source_models
+        zd = AccumDict((tm.id, []) for smodel in smodels
+                       for tm in smodel.trt_models)
+        zd.calc_times = []
+        return zd
+
     def send_sources(self):
         """
         Filter, split and set the seed array for each source, then send it the
@@ -430,9 +440,6 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         tags = []
         ordinal = 0
         for trt_id in sorted(result):
-            if isinstance(trt_id, tuple):
-                # a pair (trt_id, gsim), skip
-                continue
             for sr in sorted(result[trt_id]):
                 sr.ordinal = ordinal
                 ordinal += 1
@@ -446,8 +453,9 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         logging.info('Saving the SES collection')
         with self.monitor('saving ruptures', autoflush=True):
             self.tags = numpy.array(tags, (bytes, 100))
-            for col, colkey in zip(sescollection, cols):
-                self.datastore['sescollection/trtmod=%s-%s' % tuple(colkey)] = col
+            for sescol, col in zip(sescollection, cols):
+                self.datastore[
+                    'sescollection/trtmod=%s-%s' % tuple(col)] = sescol
         with self.monitor('counts_per_rlz'):
             self.num_ruptures = numpy.array(list(map(len, sescollection)))
             self.counts_per_rlz = counts_per_rlz(
