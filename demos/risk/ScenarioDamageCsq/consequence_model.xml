@@ -3,31 +3,31 @@
   <consequenceModel id="cm-italy" assetCategory="buildings" lossCategory="structural">
     <description>Consequence Model - Italy</description>
     <limitStates>slight moderate extreme collapse</limitStates>
-    <consequenceFunction id="RC" dist="LN">
+    <consequenceFunction id="Concrete" dist="LN">
       <params ls="slight" mean="0.04" stddev="0.00"/>
       <params ls="moderate" mean="0.31" stddev="0.00"/>
       <params ls="extreme" mean="0.60" stddev="0.00"/>
       <params ls="collapse" mean="1.00" stddev="0.00"/>
     </consequenceFunction>
-    <consequenceFunction id="UFB" dist="LN">
+    <consequenceFunction id="Unreinforced-Brick-Masonry" dist="LN">
       <params ls="slight" mean="0.04" stddev="0.00"/>
       <params ls="moderate" mean="0.31" stddev="0.00"/>
       <params ls="extreme" mean="0.60" stddev="0.00"/>
       <params ls="collapse" mean="1.00" stddev="0.00"/>
     </consequenceFunction>
-    <consequenceFunction id="W" dist="LN">
+    <consequenceFunction id="Wood" dist="LN">
       <params ls="slight" mean="0.04" stddev="0.00"/>
       <params ls="moderate" mean="0.31" stddev="0.00"/>
       <params ls="extreme" mean="0.60" stddev="0.00"/>
       <params ls="collapse" mean="1.00" stddev="0.00"/>
     </consequenceFunction>
-    <consequenceFunction id="A" dist="LN">
+    <consequenceFunction id="Adobe" dist="LN">
       <params ls="slight" mean="0.04" stddev="0.00"/>
       <params ls="moderate" mean="0.31" stddev="0.00"/>
       <params ls="extreme" mean="0.60" stddev="0.00"/>
       <params ls="collapse" mean="1.00" stddev="0.00"/>
     </consequenceFunction>
-    <consequenceFunction id="DS" dist="LN">
+    <consequenceFunction id="Stone-Masonry" dist="LN">
       <params ls="slight" mean="0.04" stddev="0.00"/>
       <params ls="moderate" mean="0.31" stddev="0.00"/>
       <params ls="extreme" mean="0.60" stddev="0.00"/>
