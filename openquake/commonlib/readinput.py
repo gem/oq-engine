@@ -1078,6 +1078,7 @@ def get_scenario_from_nrml(oqparam, fname):
     imt_dt = numpy.dtype([(imt, float) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet
     tags, oqparam.sites = _extract_tags_sites(gmfset)
+    site_idx = {lonlat: i for i, lonlat in enumerate(oqparam.sites)}
     oqparam.number_of_ground_motion_fields = num_events = len(tags)
     sitecol = get_site_collection(oqparam)
     num_sites = len(oqparam.sites)
@@ -1092,13 +1093,10 @@ def get_scenario_from_nrml(oqparam, fname):
         imt = gmf['IMT']
         if imt == 'SA':
             imt = 'SA(%s)' % gmf['saPeriod']
-        for site_idx, lon, lat, node in zip(
-                range(num_sites), sitecol.lons, sitecol.lats, gmf):
-            if (node['lon'], node['lat']) != (lon, lat):
-                raise InvalidFile('The site mesh is not ordered in %s, line %d'
-                                  % (fname, node.lineno))
+        for node in gmf:
+            sid = site_idx[node['lon'], node['lat']]
             try:
-                gmf_by_imt[imt][i % num_events, site_idx] = node['gmv']
+                gmf_by_imt[imt][i % num_events, sid] = node['gmv']
             except IndexError:
                 raise InvalidFile('Something wrong in %s, line %d' %
                                   (fname, node.lineno))
