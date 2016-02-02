@@ -76,6 +76,12 @@ def area_to_point_sources(area_src):
             min_mag=area_mfd.min_mag,
             bin_width=area_mfd.bin_width,
             occurrence_rates=new_occur_rates)
+    elif isinstance(area_mfd, mfd.ArbitraryMFD):
+        new_occur_rates = [float(x) / num_points
+                           for x in area_mfd.occurrence_rates]
+        new_mfd = mfd.ArbitraryMFD(
+            magnitudes=area.magnitudes,
+            occurrence_rates=new_occur_rates)
 
     for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
         pt = source.PointSource(
@@ -467,7 +473,8 @@ class SourceConverter(RuptureConverter):
         with context(self.fname, node):
             [mfd_node] = [subnode for subnode in node
                           if subnode.tag.endswith(
-                              ('incrementalMFD', 'truncGutenbergRichterMFD'))]
+                              ('incrementalMFD', 'truncGutenbergRichterMFD',
+                               'arbitraryMFD', 'YoungsCoppersmithMFD'))]
             if mfd_node.tag.endswith('incrementalMFD'):
                 return mfd.EvenlyDiscretizedMFD(
                     min_mag=mfd_node['minMag'], bin_width=mfd_node['binWidth'],
@@ -477,6 +484,27 @@ class SourceConverter(RuptureConverter):
                     a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],
                     min_mag=mfd_node['minMag'], max_mag=mfd_node['maxMag'],
                     bin_width=self.width_of_mfd_bin)
+            elif mfd_node.tag.endswith('arbitraryMFD'):
+                return mfd.ArbitraryMFD(
+                    magnitudes=~mfd_node.magnitudes,
+                    occurrence_rates=~mfd_node.occurRates)
+            elif mfd_node.tag.endswith('YoungsCoppersmithMFD'):
+                if "totalMomentRate" in mfd_node.attrib.keys():
+                    # Return Youngs & Coppersmith from the total moment rate
+                    return mfd.YoungsCoppersmith1985MFD.from_total_moment_rate(
+                        min_mag=mfd_node["minMag"], b_val=mfd_node["bValue"],
+                        char_mag=mfd_node["characteristicMag"],
+                        total_moment_rate=mfd_node["totalMomentRate"],
+                        bin_width=mfd_node["binWidth"])
+                elif "characteristicRate" in mfd_node.attrib.keys():
+                    # Return Youngs & Coppersmith from the total moment rate
+                    return mfd.YoungsCoppersmith1985MFD.\
+                        from_characteristic_rate(
+                            min_mag=mfd_node["minMag"],
+                            b_val=mfd_node["bValue"],
+                            char_mag=mfd_node["characteristicMag"],
+                            char_rate=mfd_node["characteristicRate"],
+                            bin_width=mfd_node["binWidth"])
 
     def convert_npdist(self, node):
         """

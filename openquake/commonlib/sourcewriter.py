@@ -171,6 +171,43 @@ def build_truncated_gr_mfd(mfd):
                         "minMag": mfd.min_mag, "maxMag": mfd.max_mag})
 
 
+@obj_to_node.add('ArbitraryMFD')
+def build_arbitrary_mfd(mfd):
+    """
+    Parses the arbitrary MFD as a Node
+    param mfd:
+        MFD as instance of :class:
+        openquake.hazardlib.mfd.arbitrary.ArbitraryMFD
+    :returns:
+        Instance of :class: openquake.commonlib.node.Node
+    """
+    magnitudes = LiteralNode("magnitudes", text=mfd.magnitudes)
+    occur_rates = LiteralNode("occurRates", text=mfd.occurrence_rates)
+    return LiteralNode("arbitraryMFD",
+                       nodes=[magnitudes, occur_rates])
+
+
+@obj_to_node.add("YoungsCoppersmith1985MFD")
+def build_youngs_coppersmith_mfd(mfd):
+    """
+    Parses the Youngs & Coppersmith MFD as a node. Note that the MFD does
+    not hold the total moment rate, but only the characteristic rate. Therefore
+    the node is written to the characteristic rate version regardless of
+    whether or not it was originally created from total moment rate
+    :param mfd:
+        MFD as instance of :class:
+        openquake.hazardlib.mfd.youngs_coppersmith_1985.
+        YoungsCoppersmith1985MFD
+    :returns:
+        Instance of :class: openquake.commonlib.node.Node
+    """
+    return LiteralNode("YoungsCoppersmithMFD",
+                       {"minMag": mfd.min_mag, "bValue": mfd.b_val,
+                        "characteristicMag": mfd.char_mag,
+                        "characteristicRate": mfd.char_rate,
+                        "binWidth": mfd.bin_width})
+
+
 def build_nodal_plane_dist(npd):
     """
     Returns the nodal plane distribution as a Node instance
