@@ -524,11 +524,12 @@ def IML(value, IMT, minIML=None, maxIML=None, imlUnit=None):
 
 def intensity_measure_type(value):
     """
-    Make sure `value` is a valid intensity measure type/
+    Make sure `value` is a valid intensity measure type and return it
+    in a normalized form
 
-    >>> intensity_measure_type('SA(0.10)')
+    >>> intensity_measure_type('SA(0.10)')  # NB: strips the trailing 0
     'SA(0.1)'
-    >>> intensity_measure_type('SA')
+    >>> intensity_measure_type('SA')  # this is invalid
     Traceback (most recent call last):
       ...
     ValueError: Invalid IMT: 'SA'
