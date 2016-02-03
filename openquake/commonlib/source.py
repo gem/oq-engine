@@ -498,12 +498,12 @@ class RlzsAssoc(collections.Mapping):
 col_dt = numpy.dtype([('trt_id', numpy.uint32), ('sample', numpy.uint32)])
 
 source_model_dt = numpy.dtype([
-    ('name', (str, 255)),
+    ('name', (bytes, 255)),
     ('weight', numpy.float32),
-    ('path', (str, 255)),
+    ('path', (bytes, 255)),
     ('num_rlzs', numpy.uint32),
-    ('trts', (str, 255)),
-    ('num_ruptures', (str, 255)),
+    ('trts', (bytes, 255)),
+    ('num_ruptures', (bytes, 255)),
     ('samples', numpy.uint32),
 ])
 

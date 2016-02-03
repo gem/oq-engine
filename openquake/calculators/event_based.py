@@ -454,8 +454,10 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         with self.monitor('saving ruptures', autoflush=True):
             self.tags = numpy.array(tags, (bytes, 100))
             for sescol, col in zip(sescollection, cols):
-                self.datastore[
-                    'sescollection/trtmod=%s-%s' % tuple(col)] = sescol
+                nr = len(sescol)
+                key = 'sescollection/trtmod=%s-%s' % tuple(col)
+                self.datastore[key] = sescol
+                self.datastore.set_attrs(key, num_ruptures=nr)
         with self.monitor('counts_per_rlz'):
             self.num_ruptures = numpy.array(list(map(len, sescollection)))
             self.counts_per_rlz = counts_per_rlz(
