@@ -46,12 +46,9 @@ from openquake.commonlib import valid
 from openquake.commonlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 
-from openquake.commonlib.node import (node_from_xml,
-                                      parse,
-                                      iterparse,
-                                      node_from_elem,
-                                      LiteralNode,
-                                      context)
+from openquake.commonlib.node import (
+    node_from_xml, node_from_dict, node_to_dict, parse, iterparse,
+    node_from_elem, LiteralNode, context)
 from openquake.baselib.python3compat import with_metaclass
 
 #: Minimum value for a seed number
@@ -1303,6 +1300,12 @@ class InvalidLogicTree(Exception):
     pass
 
 
+rlz_dt = numpy.dtype([
+    ('gsims', (str, 255)),
+    ('weight', numpy.float32),
+    ('paths', (str, 255))])
+
+
 class GsimLogicTree(object):
     """
     A GsimLogicTree instance is an iterable yielding `Realization`
@@ -1336,6 +1339,22 @@ class GsimLogicTree(object):
                 'Could not find branches with attribute '
                 "'applyToTectonicRegionType' in %s" %
                 set(tectonic_region_types))
+
+    def __toh5__(self):
+        attrs = dict(fname='datastore/csm_info',
+                     tectonic_region_types=self.tectonic_region_types,
+                     _ltnode=node_to_dict(self._ltnode))
+        lst = [
+            (' '.join(map(repr, rlz.value)),
+             numpy.float32(rlz.weight),
+             ' '.join(map(str, rlz.lt_path))) for rlz in self]
+        return numpy.array(lst, rlz_dt), attrs
+
+    def __fromh5__(self, array, attrs):
+        attrs['_ltnode'] = node_from_dict(attrs['_ltnode'])
+        vars(self).update(attrs)
+        self.values = collections.defaultdict(list)
+        self.all_trts, self.branches = self._build_trts_branches()
 
     def reduce(self, trts):
         """
