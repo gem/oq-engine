@@ -489,7 +489,7 @@ _pkgtest_innervm_run () {
         oq-lite run ClassicalRisk/job_hazard.ini,ClassicalRisk/job_risk.ini
 
         echo 'running ScenarioDamage...'
-        oq-lite run ScenarioDamageCsq/job.ini
+        oq-lite run ScenarioDamageCsq/job_hazard.ini,ScenarioDamageCsq/job_risk.ini
         oq-lite export -1 dmg_by_asset xml /tmp
 
         echo 'running ScenarioRisk...'
