@@ -768,15 +768,6 @@ class CompositeSourceModel(collections.Sequence):
                 trt_model, key=operator.attrgetter('source_id'))
             self.weight += weight
 
-    def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
-        """
-        Return a RlzsAssoc with fields realizations, gsim_by_trt,
-        rlz_idx and trt_gsims.
-
-        :param get_weight: a function trt_model -> positive number
-        """
-        return self.info.get_rlzs_assoc(get_weight)
-
     def __repr__(self):
         """
         Return a string representation of the composite model
@@ -872,7 +863,7 @@ class SourceManager(object):
         self.monitor = monitor
         self.filter_sources = filter_sources
         self.num_tiles = num_tiles
-        self.rlzs_assoc = csm.get_rlzs_assoc()
+        self.rlzs_assoc = csm.info.get_rlzs_assoc()
         self.split_map = {}
         self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple

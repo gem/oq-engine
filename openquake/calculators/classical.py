@@ -271,7 +271,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.agg_dicts, self.zerodict())
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(curves_by_trt_gsim)
-        self.rlzs_assoc = self.csm.get_rlzs_assoc(
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.is_effective_trt_model, curves_by_trt_gsim))
         return curves_by_trt_gsim
 

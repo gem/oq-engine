@@ -776,7 +776,7 @@ class CompositeSourceModelTestCase(unittest.TestCase):
 Active Shallow Crust,b1,SadighEtAl1997,w=0.5
 Active Shallow Crust,b2,ChiouYoungs2008,w=0.5
 Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
-        assoc = csm.get_rlzs_assoc()
+        assoc = csm.info.get_rlzs_assoc()
         [rlz] = assoc.realizations
         self.assertEqual(assoc.gsim_by_trt[rlz.ordinal],
                          {'Subduction Interface': 'SadighEtAl1997',
@@ -800,7 +800,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         # there are 2 distinct tectonic region types, so 18 trt_models
         self.assertEqual(sum(1 for tm in csm.trt_models), 18)
 
-        rlzs_assoc = csm.get_rlzs_assoc()
+        rlzs_assoc = csm.info.get_rlzs_assoc()
         rlzs = rlzs_assoc.realizations
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
         # counting the sources in each TRT model (unsplit)
@@ -828,7 +828,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
             for trt_model in smodel.trt_models:
                 if trt_model.trt == 'Active Shallow Crust':  # no ruptures
                     trt_model.num_ruptures = 0
-        assoc = csm.get_rlzs_assoc()
+        assoc = csm.info.get_rlzs_assoc()
         expected_assoc = """\
 <RlzsAssoc(9)
 0,SadighEtAl1997: ['<0,b1_b3_b6,@_b3,w=0.04>']
@@ -848,7 +848,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
             for trt_model in smodel.trt_models:
                 if trt_model.trt == 'Subduction Interface':  # no ruptures
                     trt_model.num_ruptures = 0
-        self.assertEqual(csm.get_rlzs_assoc().realizations, [])
+        self.assertEqual(csm.info.get_rlzs_assoc().realizations, [])
 
     def test_oversampling(self):
         from openquake.qa_tests_data.classical import case_17
@@ -860,7 +860,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         messages = [args[0][0] % args[0][1:] for args in warn.call_args_list]
         self.assertEqual(
             messages, ["The source path ('b2',) was sampled 4 times"])
-        assoc = csm.get_rlzs_assoc()
+        assoc = csm.info.get_rlzs_assoc()
         self.assertEqual(
             str(assoc),
             "<RlzsAssoc(2)\n"
