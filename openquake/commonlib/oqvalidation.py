@@ -82,7 +82,6 @@ class OqParam(valid.ParamSet):
     intensity_measure_types = valid.Param(valid.intensity_measure_types, None)
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
-    # hazard_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
     loss_curve_resolution = valid.Param(valid.positiveint, 50)
@@ -247,6 +246,7 @@ class OqParam(valid.ParamSet):
                 else:
                     imtls[imt] = imls
         self.risk_imtls = imtls
+
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
 

@@ -7,7 +7,7 @@
     <limitStates>
             slight moderate extreme complete
         </limitStates>
-    <fragilityFunction format="discrete" id="RC" shape="logncdf">
+    <fragilityFunction format="discrete" id="Concrete" shape="logncdf">
       <imls imt="PGA" noDamageLimit="5.0000000E-02">
                 0.0 0.2 0.4 0.6 0.8 1.0 1.2 1.4
             </imls>
@@ -24,7 +24,7 @@
                 0.0 0.109 0.441 0.686 0.825 0.9 0.942 0.965
             </poes>
     </fragilityFunction>
-    <fragilityFunction format="discrete" id="UFB" shape="logncdf">
+    <fragilityFunction format="discrete" id="Unreinforced-Brick-Masonry" shape="logncdf">
       <imls imt="PGA" noDamageLimit="5.0000000E-02">
                 0.0 0.2 0.4 0.6 0.8 1.0 1.2 1.4
             </imls>
@@ -41,7 +41,7 @@
                 0.0 0.097 0.414 0.661 0.806 0.887 0.933 0.959
             </poes>
     </fragilityFunction>
-    <fragilityFunction format="discrete" id="W" shape="logncdf">
+    <fragilityFunction format="discrete" id="Wood" shape="logncdf">
       <imls imt="PGA" noDamageLimit="5.0000000E-02">
                 0.0 0.2 0.4 0.6 0.8 1.0 1.2 1.4
             </imls>
@@ -58,7 +58,7 @@
                 0.0 0.007 0.088 0.236 0.394 0.532 0.642 0.728
             </poes>
     </fragilityFunction>
-    <fragilityFunction format="discrete" id="A" shape="logncdf">
+    <fragilityFunction format="discrete" id="Adobe" shape="logncdf">
       <imls imt="PGA" noDamageLimit="5.0000000E-02">
                 0.0 0.2 0.4 0.6 0.8 1.0 1.2 1.4
             </imls>
@@ -75,7 +75,7 @@
                 0.0 0.168 0.548 0.775 0.886 0.94 0.967 0.981
             </poes>
     </fragilityFunction>
-    <fragilityFunction format="discrete" id="DS" shape="logncdf">
+    <fragilityFunction format="discrete" id="Stone-Masonry" shape="logncdf">
       <imls imt="PGA" noDamageLimit="5.0000000E-02">
                 0.0 0.2 0.4 0.6 0.8 1.0 1.2 1.4
             </imls>
