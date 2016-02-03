@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
+import io
 import math
 import logging
 import operator
@@ -562,7 +563,7 @@ class CompositionInfo(object):
                for sm in self.source_models]
         return (numpy.array(lst, source_model_dt),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     gsim_file=sm.gsim_lt.fname))
+                     gsim_lt_xml=open(sm.gsim_lt.fname).read()))
 
     def __fromh5__(self, array, attrs):
         vars(self).update(attrs)
@@ -571,7 +572,8 @@ class CompositionInfo(object):
         for i, rec in enumerate(array):
             path = tuple(rec['path'].split('_'))
             trts = rec['trts'].split(',')
-            gsim_lt = logictree.GsimLogicTree(self.gsim_file, trts)
+            gsim_lt = logictree.GsimLogicTree(
+                io.BytesIO(self.gsim_lt_xml), trts)
             trtmodels = []
             for trt in trts:
                 tm = TrtModel(trt)
