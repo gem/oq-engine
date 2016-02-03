@@ -275,7 +275,7 @@ class RlzsAssoc(collections.Mapping):
         the (reduced) weights of the realizations and the attribute
         gsims_by_trt_id.
         """
-        num_samples = self.csm_info.source_model_lt.num_samples
+        num_samples = self.csm_info.num_samples
         if num_samples:
             assert len(self.realizations) == num_samples
             for rlz in self.realizations:
@@ -486,6 +486,14 @@ class RlzsAssoc(collections.Mapping):
 # collection <-> trt model associations
 col_dt = numpy.dtype([('trt_id', numpy.uint32), ('sample', numpy.uint32)])
 
+source_model_dt = numpy.dtype([
+    ('name', numpy.string_(100)),
+    ('weight', numpy.float32),
+    ('path', numpy.string_(255)),
+    ('num_rlzs', numpy.uint32),
+    ('samples', numpy.uint32),
+])
+
 
 class CompositionInfo(object):
     """
@@ -495,8 +503,9 @@ class CompositionInfo(object):
     :param source_model_lt: a SourceModelLogicTree object
     :param source_models: a list of SourceModel instances
     """
-    def __init__(self, source_model_lt, source_models):
-        self.source_model_lt = source_model_lt
+    def __init__(self, seed, num_samples, source_models):
+        self.seed = seed
+        self.num_samples = num_samples
         self.source_models = source_models
         cols = []
         col_id = 0
@@ -519,7 +528,13 @@ class CompositionInfo(object):
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
-        return self.source_model_lt, self.source_models
+        return self.seed, self.num_samples, self.source_models
+
+    def __toh5__(self):
+        array = numpy.array([
+            (sm.name, sm.weight, sm.path, len(sm.gsim_lt), sm.samples)
+            for sm in self.source_models], source_model_dt)
+        return array, dict(seed=self.seed, num_samples=self.num_samples)
 
     @property
     def num_collections(self):
@@ -578,8 +593,8 @@ class CompositionInfo(object):
         :param get_weight: a function trt_model -> positive number
         """
         assoc = RlzsAssoc(self)
-        random_seed = self.source_model_lt.seed
-        num_samples = self.source_model_lt.num_samples
+        random_seed = self.seed
+        num_samples = self.num_samples
         idx = 0
         for smodel in self.source_models:
             # collect the effective tectonic region types
@@ -638,7 +653,9 @@ class CompositeSourceModel(collections.Sequence):
             self.set_weights()
         # must go after set_weights to have the correct .num_ruptures
         self.info = CompositionInfo(
-            self.source_model_lt, list(map(get_skeleton, self.source_models)))
+            self.source_model_lt.seed,
+            self.source_model_lt.num_samples,
+            list(map(get_skeleton, self.source_models)))
 
     @property
     def trt_models(self):
