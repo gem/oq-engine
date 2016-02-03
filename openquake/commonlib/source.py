@@ -76,13 +76,13 @@ def get_skeleton(sm):
     trt_models = [TrtModel(tm.trt, [], tm.num_ruptures, tm.min_mag,
                            tm.max_mag, tm.gsims, tm.id)
                   for tm in sm.trt_models]
-    num_sources = sum(len(tm) for tm in sm.trt_models)
     return SourceModel(sm.name, sm.weight, sm.path, trt_models, sm.gsim_lt,
-                       sm.ordinal, sm.samples, num_sources)
+                       sm.ordinal, sm.samples)
 
 SourceModel = collections.namedtuple(
-    'SourceModel', 'name weight path trt_models gsim_lt ordinal samples '
-    'num_sources')
+    'SourceModel', 'name weight path trt_models gsim_lt ordinal samples')
+SourceModel.num_sources = property(
+    lambda self: sum(len(tm) for tm in self.trt_models))
 
 
 def capitalize(words):
@@ -530,6 +530,10 @@ class CompositionInfo(object):
         self.seed = seed
         self.num_samples = num_samples
         self.source_models = source_models
+        self.init()
+
+    def init(self):
+        """Fully initialize the CompositionInfo object"""
         cols = []
         col_id = 0
         self.col_ids_by_trt_id = collections.defaultdict(list)
@@ -546,7 +550,6 @@ class CompositionInfo(object):
                     col_id += 1
                 for i, gsim in enumerate(trt_model.gsims):
                     self.gsimdict[trt_model.id, str(i)] = gsim
-
         self.cols = numpy.array(cols, col_dt)
 
     def __getnewargs__(self):
@@ -558,7 +561,21 @@ class CompositionInfo(object):
                 sm.gsim_lt.get_num_paths(), get_trts(sm), sm.samples)
                for sm in self.source_models]
         return (numpy.array(lst, source_model_dt),
-                dict(seed=self.seed, num_samples=self.num_samples))
+                dict(seed=self.seed, num_samples=self.num_samples,
+                     gsim_file=sm.gsim_lt.fname))
+
+    def __fromh5__(self, array, attrs):
+        vars(self).update(attrs)
+        self.source_models = []
+        for i, rec in enumerate(array):
+            path = tuple(rec['path'].split('_'))
+            trts = rec['trts'].split(',')
+            gsim_lt = logictree.GsimLogicTree(self.gsim_file, trts)
+            trtmodels = [TrtModel(trt) for trt in trts]
+            sm = SourceModel(rec['name'], rec['weight'], path, trtmodels,
+                             gsim_lt, i, rec['samples'])
+            self.source_models.append(sm)
+        self.init()
 
     @property
     def num_collections(self):
