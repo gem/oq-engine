@@ -396,8 +396,9 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         :param ruptures_by_trt_id: a dictionary with key trt_id
         :param trt_model: a TrtModel instance
         """
-        return sum(1 for key, val in ruptures_by_trt_id.items()
-                   if trt_model.id == key and val)
+        return sum(
+            len(ruptures) for trt_id, ruptures in ruptures_by_trt_id.items()
+            if trt_model.id == trt_id)
 
     def agg_curves(self, acc, val):
         """

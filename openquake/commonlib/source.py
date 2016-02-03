@@ -504,6 +504,7 @@ source_model_dt = numpy.dtype([
     ('num_rlzs', numpy.uint32),
     ('trts', (bytes, 255)),
     ('num_ruptures', (bytes, 255)),
+    ('eff_ruptures', numpy.uint32),
     ('samples', numpy.uint32),
 ])
 
@@ -546,6 +547,7 @@ class CompositionInfo(object):
         """Fully initialize the CompositionInfo object"""
         cols = []
         col_id = 0
+        self.eff_ruptures = numpy.zeros(len(self.source_models), numpy.uint32)
         self.col_ids_by_trt_id = collections.defaultdict(list)
         self.tmdict = {}  # trt_id -> trt_model
         self.gsimdict = {}  # (trt_id, gsim_no) -> gsim instance
@@ -569,8 +571,8 @@ class CompositionInfo(object):
     def __toh5__(self):
         lst = [(sm.name, sm.weight, '_'.join(sm.path),
                 sm.gsim_lt.get_num_paths(), get_trts(sm),
-                get_num_ruptures(sm), sm.samples)
-               for sm in self.source_models]
+                get_num_ruptures(sm), self.eff_ruptures[i], sm.samples)
+               for i, sm in enumerate(self.source_models)]
         return (numpy.array(lst, source_model_dt),
                 dict(seed=self.seed, num_samples=self.num_samples,
                      gsim_lt_xml=open(sm.gsim_lt.fname).read()))
@@ -595,6 +597,7 @@ class CompositionInfo(object):
                              gsim_lt, i, rec['samples'])
             self.source_models.append(sm)
         self.init()
+        self.eff_ruptures = array['eff_ruptures']
 
     @property
     def num_collections(self):
@@ -656,7 +659,9 @@ class CompositionInfo(object):
         random_seed = self.seed
         num_samples = self.num_samples
         idx = 0
-        for smodel in self.source_models:
+        for i, smodel in enumerate(self.source_models):
+            self.eff_ruptures[i] = sum(
+                get_weight(tm) for tm in smodel.trt_models)
             # collect the effective tectonic region types
             trts = set(tm.trt for tm in smodel.trt_models if get_weight(tm))
             # recompute the GSIM logic tree if needed

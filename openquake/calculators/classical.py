@@ -273,6 +273,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.store_source_info(curves_by_trt_gsim)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.is_effective_trt_model, curves_by_trt_gsim))
+        self.datastore['csm_info'] = self.rlzs_assoc.csm_info
         return curves_by_trt_gsim
 
     def store_source_info(self, curves_by_trt_gsim):
