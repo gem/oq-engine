@@ -550,7 +550,7 @@ class CompositionInfo(object):
         """
         if source_model is None:
             return sum(self.get_num_rlzs(sm) for sm in self.source_models)
-        if self.source_model_lt.num_samples:
+        if self.num_samples:
             return source_model.samples
         return source_model.gsim_lt.get_num_paths()
 
