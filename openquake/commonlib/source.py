@@ -23,7 +23,6 @@ from xml.etree import ElementTree as etree
 import numpy
 
 from openquake.baselib.general import AccumDict, groupby, block_splitter
-from openquake.hazardlib.const import TRT
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import logictree, sourceconverter, parallel, valid
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
@@ -515,7 +514,7 @@ def get_trts(smodel):
     :param smodel: a :class:`openquake.commonlib.source.SourceModel` tuple
     :returns: a comma separated string of uppercase tectonic region types
     """
-    return ','.join(TRT[capitalize(tmodel.trt)]
+    return ','.join(capitalize(tmodel.trt)
                     for tmodel in smodel.trt_models)
 
 
