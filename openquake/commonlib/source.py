@@ -503,6 +503,7 @@ source_model_dt = numpy.dtype([
     ('path', (str, 255)),
     ('num_rlzs', numpy.uint32),
     ('trts', (str, 255)),
+    ('num_ruptures', (str, 255)),
     ('samples', numpy.uint32),
 ])
 
@@ -517,6 +518,14 @@ def get_trts(smodel):
     """
     return ','.join(capitalize(tmodel.trt)
                     for tmodel in smodel.trt_models)
+
+
+def get_num_ruptures(smodel):
+    """
+    Extract the number of ruptures per each tectonic region model (in order)
+    and return a single space separated string.
+    """
+    return ' '.join(str(tmodel.num_ruptures) for tmodel in smodel.trt_models)
 
 
 class CompositionInfo(object):
@@ -559,7 +568,8 @@ class CompositionInfo(object):
 
     def __toh5__(self):
         lst = [(sm.name, sm.weight, '_'.join(sm.path),
-                sm.gsim_lt.get_num_paths(), get_trts(sm), sm.samples)
+                sm.gsim_lt.get_num_paths(), get_trts(sm),
+                get_num_ruptures(sm), sm.samples)
                for sm in self.source_models]
         return (numpy.array(lst, source_model_dt),
                 dict(seed=self.seed, num_samples=self.num_samples,
@@ -575,9 +585,9 @@ class CompositionInfo(object):
             gsim_lt = logictree.GsimLogicTree(
                 io.BytesIO(self.gsim_lt_xml), trts)
             trtmodels = []
-            for trt in trts:
-                tm = TrtModel(trt)
-                tm.id = trt_id
+            num_ruptures = map(int, rec['num_ruptures'].split())
+            for nr, trt in zip(num_ruptures, trts):
+                tm = TrtModel(trt, num_ruptures=nr, id=trt_id)
                 tm.gsims = gsim_lt.values[trt]
                 trtmodels.append(tm)
                 trt_id += 1
