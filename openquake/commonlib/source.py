@@ -523,9 +523,9 @@ def get_trts(smodel):
 def get_num_ruptures(smodel):
     """
     Extract the number of ruptures per each tectonic region model (in order)
-    and return a single space separated string.
+    and return a single comma separated string.
     """
-    return ' '.join(str(tmodel.num_ruptures) for tmodel in smodel.trt_models)
+    return ','.join(str(tmodel.num_ruptures) for tmodel in smodel.trt_models)
 
 
 class CompositionInfo(object):
@@ -585,7 +585,7 @@ class CompositionInfo(object):
             gsim_lt = logictree.GsimLogicTree(
                 io.BytesIO(self.gsim_lt_xml), trts)
             trtmodels = []
-            num_ruptures = map(int, rec['num_ruptures'].split())
+            num_ruptures = map(int, rec['num_ruptures'].split(','))
             for nr, trt in zip(num_ruptures, trts):
                 tm = TrtModel(trt, num_ruptures=nr, id=trt_id)
                 tm.gsims = gsim_lt.values[trt]
