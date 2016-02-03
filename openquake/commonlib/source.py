@@ -23,6 +23,7 @@ from xml.etree import ElementTree as etree
 import numpy
 
 from openquake.baselib.general import AccumDict, groupby, block_splitter
+from openquake.hazardlib.const import TRT
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import logictree, sourceconverter, parallel, valid
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
@@ -83,6 +84,16 @@ def get_skeleton(sm):
 SourceModel = collections.namedtuple(
     'SourceModel', 'name weight path trt_models gsim_lt ordinal samples '
     'num_sources')
+
+
+def capitalize(words):
+    """
+    Capitalize words separated by spaces.
+
+    >>> capitalize('active shallow crust')
+    'Active Shallow Crust'
+    """
+    return ' '.join(w.capitalize() for w in words.split(' '))
 
 
 class TrtModel(collections.Sequence):
@@ -487,12 +498,25 @@ class RlzsAssoc(collections.Mapping):
 col_dt = numpy.dtype([('trt_id', numpy.uint32), ('sample', numpy.uint32)])
 
 source_model_dt = numpy.dtype([
-    ('name', (str, 100)),
+    ('name', (str, 255)),
     ('weight', numpy.float32),
     ('path', (str, 255)),
     ('num_rlzs', numpy.uint32),
+    ('trts', (str, 255)),
     ('samples', numpy.uint32),
 ])
+
+
+def get_trts(smodel):
+    """
+    Extract the tectonic region models contained in the source model,
+    as normalized names recognized by hazardlib.
+
+    :param smodel: a :class:`openquake.commonlib.source.SourceModel` tuple
+    :returns: a comma separated string of uppercase tectonic region types
+    """
+    return ','.join(TRT[capitalize(tmodel.trt)]
+                    for tmodel in smodel.trt_models)
 
 
 class CompositionInfo(object):
@@ -531,10 +555,11 @@ class CompositionInfo(object):
         return self.seed, self.num_samples, self.source_models
 
     def __toh5__(self):
-        array = numpy.array([
-            (sm.name, sm.weight, sm.path, len(sm.gsim_lt), sm.samples)
-            for sm in self.source_models], source_model_dt)
-        return array, dict(seed=self.seed, num_samples=self.num_samples)
+        lst = [(sm.name, sm.weight, '_'.join(sm.path),
+                sm.gsim_lt.get_num_paths(), get_trts(sm), sm.samples)
+               for sm in self.source_models]
+        return (numpy.array(lst, source_model_dt),
+                dict(seed=self.seed, num_samples=self.num_samples))
 
     @property
     def num_collections(self):

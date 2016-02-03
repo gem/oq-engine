@@ -47,7 +47,7 @@ from openquake.commonlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 
 from openquake.commonlib.node import (
-    node_from_xml, node_from_dict, node_to_dict, parse, iterparse,
+    node_from_xml, parse, iterparse,
     node_from_elem, LiteralNode, context)
 from openquake.baselib.python3compat import with_metaclass
 
