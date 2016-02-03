@@ -245,6 +245,20 @@ class ClassicalCalculator(base.HazardCalculator):
         return sum(1 for key, val in result_dict.items()
                    if trt_model.id == key[0] and nonzero(val))
 
+    def zerodict(self):
+        """
+        Initial accumulator, a dictionary (trt_id, gsim) -> curves
+        """
+        zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
+        zd = AccumDict((key, zc) for key in self.rlzs_assoc)
+        zd.calc_times = []
+        zd.bb_dict = {
+            (smodel.ordinal, site.id): BoundingBox(smodel.ordinal, site.id)
+            for site in self.sitecol
+            for smodel in self.csm.source_models
+        } if self.oqparam.poes_disagg else {}
+        return zd
+
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -253,15 +267,8 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor.new(self.core_task.__name__)
         monitor.oqparam = self.oqparam
-        zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
-        zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
-        zerodict.calc_times = []
-        zerodict.bb_dict = {
-            (smodel.ordinal, site.id): BoundingBox(smodel.ordinal, site.id)
-            for site in self.sitecol
-            for smodel in self.csm.source_models
-        } if self.oqparam.poes_disagg else {}
-        curves_by_trt_gsim = self.manager.tm.reduce(self.agg_dicts, zerodict)
+        curves_by_trt_gsim = self.manager.tm.reduce(
+            self.agg_dicts, self.zerodict())
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(curves_by_trt_gsim)
         self.rlzs_assoc = self.csm.get_rlzs_assoc(
