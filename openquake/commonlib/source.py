@@ -567,11 +567,18 @@ class CompositionInfo(object):
     def __fromh5__(self, array, attrs):
         vars(self).update(attrs)
         self.source_models = []
+        trt_id = 0
         for i, rec in enumerate(array):
             path = tuple(rec['path'].split('_'))
             trts = rec['trts'].split(',')
             gsim_lt = logictree.GsimLogicTree(self.gsim_file, trts)
-            trtmodels = [TrtModel(trt) for trt in trts]
+            trtmodels = []
+            for trt in trts:
+                tm = TrtModel(trt)
+                tm.id = trt_id
+                tm.gsims = gsim_lt.values[trt]
+                trtmodels.append(tm)
+                trt_id += 1
             sm = SourceModel(rec['name'], rec['weight'], path, trtmodels,
                              gsim_lt, i, rec['samples'])
             self.source_models.append(sm)

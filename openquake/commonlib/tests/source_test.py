@@ -19,7 +19,7 @@ import unittest
 from io import BytesIO
 
 import numpy
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 
 from openquake.hazardlib import site
 from openquake.hazardlib import geo
@@ -31,7 +31,8 @@ from openquake.hazardlib.tom import PoissonTOM
 
 from openquake.commonlib import tests, nrml_examples, readinput
 from openquake.commonlib import sourceconverter as s
-from openquake.commonlib.source import parse_source_model, DuplicatedID
+from openquake.commonlib.source import (
+    parse_source_model, DuplicatedID, CompositionInfo)
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.node import read_nodes
 from openquake.baselib.general import assert_close
@@ -871,3 +872,9 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         self.assertEqual(col_ids_first, set([0]))
         col_ids_last = assoc.get_col_ids(assoc.realizations[-1])
         self.assertEqual(col_ids_last, set([4]))
+
+        # check CompositionInfo serialization
+        array, attrs = assoc.csm_info.__toh5__()
+        new = object.__new__(CompositionInfo)
+        new.__fromh5__(array, attrs)
+        assert_equal(new.cols, assoc.csm_info.cols)
