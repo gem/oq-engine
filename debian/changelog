@@ -1,3 +1,8 @@
+  [Anirudh Rao]
+  * Removed the extra ScenarioDamage demo
+  * Removed unused parameters from the risk demo job files
+    (including `asset_hazard_distance` and `intensity_measure_types`)
+
   [Graeme Weatherill]
   * Incorporated ArbitraryMFD and YoungsCoppersmithMFD into the supported
     MFDs
