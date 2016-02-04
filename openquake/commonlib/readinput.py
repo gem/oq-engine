@@ -470,7 +470,7 @@ def get_source_models(oqparam, source_model_lt, in_memory=True):
             gsim_lt = logictree.DummyGsimLogicTree()
         weight = rlz.weight / num_samples
         logging.info('Read source model %d/%d with %d gsim realizations',
-                     i + 1, num_source_models, gsim_lt.get_num_paths())
+                     i + 1, num_source_models, len(gsim_lt))
         yield source.SourceModel(
             sm, weight, smpath, trt_models, gsim_lt, i, num_samples)
 
