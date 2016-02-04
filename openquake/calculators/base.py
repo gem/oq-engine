@@ -304,7 +304,8 @@ class HazardCalculator(BaseCalculator):
                         'reading composite source model', autoflush=True):
                     self.csm = readinput.get_composite_source_model(
                         self.oqparam)
-                    self.rlzs_assoc = self.csm.get_rlzs_assoc()
+                    self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
+                    self.datastore['csm_info'] = self.rlzs_assoc.csm_info
 
                     # we could manage limits here
                     self.job_info = readinput.get_job_info(

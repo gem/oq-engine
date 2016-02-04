@@ -234,16 +234,18 @@ class ClassicalCalculator(base.HazardCalculator):
                                 if tiling else v)
 
     @staticmethod
-    def is_effective_trt_model(result_dict, trt_model):
+    def count_ruptures(result_dict, trt_model):
         """
-        Returns the number of tectonic region types
-        with ID contained in the result_dict.
+        Returns the number of ruptures in the trt_model (after filtering)
+        or 0 if the trt_model has been filtered away.
 
         :param result_dict: a dictionary with keys (trt_id, gsim)
         :param trt_model: a TrtModel instance
         """
-        return sum(1 for key, val in result_dict.items()
-                   if trt_model.id == key[0] and nonzero(val))
+        for key in result_dict:
+            if trt_model.id == key[0] and nonzero(result_dict[key]):
+                return trt_model.num_ruptures
+        return 0
 
     def zerodict(self):
         """
@@ -271,8 +273,9 @@ class ClassicalCalculator(base.HazardCalculator):
             self.agg_dicts, self.zerodict())
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(curves_by_trt_gsim)
-        self.rlzs_assoc = self.csm.get_rlzs_assoc(
-            partial(self.is_effective_trt_model, curves_by_trt_gsim))
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
+            partial(self.count_ruptures, curves_by_trt_gsim))
+        self.datastore['csm_info'] = self.rlzs_assoc.csm_info
         return curves_by_trt_gsim
 
     def store_source_info(self, curves_by_trt_gsim):
