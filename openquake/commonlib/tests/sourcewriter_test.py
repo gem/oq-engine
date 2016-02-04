@@ -39,12 +39,14 @@ class SourceWriterTestCase(unittest.TestCase):
         self.check_round_trip(ALT_MFDS)
 
 
-# deep-copied sources must be serializable
 class DeepcopyTestCase(unittest.TestCase):
-    def test(self):
+    def test_is_writeable(self):
         parser = SourceModelParser(SourceConverter(50., 1., 10, 0.1, 10.))
         [sf, cf] = map(copy.deepcopy, parser.parse_sources(ALT_MFDS))
         # there are a SimpleFaultSource and a CharacteristicFaultSource
         fd, fname = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'w'):
             write_source_model(fname, [sf, cf], 'Test Source Model')
+        # NB: without Node.__deepcopy__ the serialization would fail
+        # with a RuntimeError: maximum recursion depth exceeded while
+        # calling a Python object
