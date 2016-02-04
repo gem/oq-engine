@@ -20,8 +20,6 @@ import operator
 
 from openquake.baselib.general import block_splitter
 from openquake.baselib.performance import PerformanceMonitor
-from openquake.hazardlib.source.point import PointSource
-from openquake.hazardlib.source.area import AreaSource
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import context, striptag
@@ -80,7 +78,7 @@ def area_to_point_sources(area_src):
         new_occur_rates = [float(x) / num_points
                            for x in area_mfd.occurrence_rates]
         new_mfd = mfd.ArbitraryMFD(
-            magnitudes=area.magnitudes,
+            magnitudes=area_mfd.magnitudes,
             occurrence_rates=new_occur_rates)
 
     for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):

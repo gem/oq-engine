@@ -32,7 +32,7 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib import tests, nrml_examples, readinput
 from openquake.commonlib import sourceconverter as s
 from openquake.commonlib.source import (
-    parse_source_model, DuplicatedID, CompositionInfo)
+    SourceModelParser, DuplicatedID, CompositionInfo)
 from openquake.commonlib.nrml import nodefactory
 from openquake.commonlib.node import read_nodes
 from openquake.baselib.general import assert_close
@@ -76,17 +76,17 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.converter = s.SourceConverter(
+        cls.parser = SourceModelParser(s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             complex_fault_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.,  # km
-        )
+        ))
         source_nodes = read_nodes(MIXED_SRC_MODEL, filter_sources, ValidNode)
         (cls.area, cls.point, cls.simple, cls.cmplx, cls.char_simple,
          cls.char_complex, cls.char_multi) = map(
-            cls.converter.convert_node, source_nodes)
+            cls.parser.converter.convert_node, source_nodes)
         # the parameters here would typically be specified in the job .ini
         cls.investigation_time = 50.
         cls.rupture_mesh_spacing = 1  # km
@@ -372,16 +372,15 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         assert_close(self._expected_char_multi, self.char_multi)
 
     def test_duplicate_id(self):
-        converter = s.SourceConverter(  # different from self.converter
+        parser = SourceModelParser(s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,
             complex_fault_mesh_spacing=1,
             width_of_mfd_bin=0.1,
             area_source_discretization=10,
-        )
+        ))
         with self.assertRaises(DuplicatedID):
-            parse_source_model(
-                DUPLICATE_ID_SRC_MODEL, converter)
+            parser.parse_sources(DUPLICATE_ID_SRC_MODEL)
 
     def test_raises_useful_error_1(self):
         area_file = BytesIO(b"""\
@@ -477,7 +476,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 """)
         [area] = read_nodes(area_file, filter_sources, ValidNode)
         with self.assertRaises(NameError) as ctx:
-            self.converter.convert_node(area)
+            self.parser.converter.convert_node(area)
         self.assertIn(
             "node areaSource: No subnode named 'nodalPlaneDist'"
             " found in 'areaSource', line 5 of", str(ctx.exception))
@@ -538,7 +537,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         msg = ('node simpleFaultSource: hypo_list and slip_list have to be '
                'both given')
         with self.assertRaises(ValueError) as ctx:
-            parse_source_model(simple_file, self.converter)
+            self.parser.parse_sources(simple_file)
         self.assertIn(msg, str(ctx.exception))
 
     def test_nonparametric_source_ok(self):
@@ -671,15 +670,14 @@ class TrtModelTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.converter = s.SourceConverter(
+        cls.parser = SourceModelParser(s.SourceConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             complex_fault_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
-            area_source_discretization=1.)
-        cls.source_collector = dict(
-            (sc.trt, sc) for sc in parse_source_model(
-                MIXED_SRC_MODEL, cls.converter, lambda src: None))
+            area_source_discretization=1.))
+        cls.source_collector = {
+            sc.trt: sc for sc in cls.parser.parse_trt_models(MIXED_SRC_MODEL)}
         cls.sitecol = site.SiteCollection(cls.SITES)
 
     def check(self, trt, attr, value):

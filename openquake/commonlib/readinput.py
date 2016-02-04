@@ -421,10 +421,12 @@ def get_source_models(oqparam, source_model_lt, in_memory=True):
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
+    parser = source.SourceModelParser(converter)
 
     # consider only the effective realizations
     rlzs = logictree.get_effective_rlzs(source_model_lt)
     samples_by_lt_path = source_model_lt.samples_by_lt_path()
+    num_source_models = len(rlzs)
     for i, rlz in enumerate(rlzs):
         sm = rlz.value  # name of the source model
         smpath = rlz.lt_path
@@ -436,8 +438,7 @@ def get_source_models(oqparam, source_model_lt, in_memory=True):
         if in_memory:
             apply_unc = source_model_lt.make_apply_uncertainties(smpath)
             try:
-                trt_models = source.parse_source_model(
-                    fname, converter, apply_unc, set_weight=in_memory)
+                trt_models = parser.parse_trt_models(fname, apply_unc)
             except ValueError as e:
                 if str(e) in ('Surface does not conform with Aki & '
                               'Richards convention',
@@ -468,8 +469,16 @@ def get_source_models(oqparam, source_model_lt, in_memory=True):
         else:
             gsim_lt = logictree.DummyGsimLogicTree()
         weight = rlz.weight / num_samples
+        n = num_samples if num_samples else gsim_lt.get_num_paths()
+        logging.info('Read source model %d/%d with %d gsim realization(s)',
+                     i + 1, num_source_models, n)
         yield source.SourceModel(
             sm, weight, smpath, trt_models, gsim_lt, i, num_samples)
+
+    # log if some source file is being used more than once
+    for fname, hits in parser.fname_hits.items():
+        if hits > 1:
+            logging.info('%s has been considered %d times', fname, hits)
 
 
 def get_composite_source_model(oqparam, in_memory=True):

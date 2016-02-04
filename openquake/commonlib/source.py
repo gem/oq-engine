@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
 import io
+import copy
 import math
 import logging
 import operator
@@ -201,45 +202,69 @@ class TrtModel(collections.Sequence):
         return len(self.sources)
 
 
-def parse_source_model(fname, converter,
-                       apply_uncertainties=lambda src: None,
-                       set_weight=False):
+class SourceModelParser(object):
     """
-    Parse a NRML source model and return an ordered list of TrtModel
-    instances.
+    A source model parser featuring a cache.
 
-    :param str fname:
-        the full pathname of the source model file
     :param converter:
         :class:`openquake.commonlib.source.SourceConverter` instance
-    :param apply_uncertainties:
-        a function modifying the sources (or do nothing)
-    :param set_weight:
-        if True, set the weight of the sources
     """
-    converter.fname = fname
-    source_stats_dict = {}
-    source_ids = set()
-    src_nodes = read_nodes(fname, lambda elem: 'Source' in elem.tag,
-                           nodefactory['sourceModel'])
-    for no, src_node in enumerate(src_nodes, 1):
-        src = converter.convert_node(src_node)
-        if src.source_id in source_ids:
-            raise DuplicatedID(
-                'The source ID %s is duplicated!' % src.source_id)
-        apply_uncertainties(src)
-        if set_weight:
-            src.num_ruptures = src.count_ruptures()
-        trt = src.tectonic_region_type
-        if trt not in source_stats_dict:
-            source_stats_dict[trt] = TrtModel(trt)
-        source_stats_dict[trt].update(src)
-        source_ids.add(src.source_id)
-        if no % 10000 == 0:  # log every 10,000 sources parsed
-            logging.info('Parsed %d sources from %s', no, fname)
+    def __init__(self, converter):
+        self.converter = converter
+        self.sources = {}  # cache fname -> sources
+        self.fname_hits = collections.Counter()  # fname -> number of calls
 
-    # return ordered TrtModels
-    return sorted(source_stats_dict.values())
+    def parse_trt_models(self, fname, apply_uncertainties=None):
+        """
+        :param fname:
+            the full pathname of the source model file
+        :param apply_uncertainties:
+            a function modifying the sources (or None)
+        """
+        try:
+            sources = self.sources[fname]
+        except KeyError:
+            sources = self.sources[fname] = self.parse_sources(fname)
+        # NB: deepcopy is *essential* here
+        sources = map(copy.deepcopy, sources)
+        for src in sources:
+            if apply_uncertainties:
+                apply_uncertainties(src)
+                src.num_ruptures = src.count_ruptures()
+        self.fname_hits[fname] += 1
+
+        # build ordered TrtModels
+        trts = {}
+        for src in sources:
+            trt = src.tectonic_region_type
+            if trt not in trts:
+                trts[trt] = TrtModel(trt)
+            trts[trt].update(src)
+        return sorted(trts.values())
+
+    def parse_sources(self, fname):
+        """
+        Parse all the sources and return them ordered by tectonic region type.
+        It does not count the ruptures, so it is relatively fast.
+
+        :param fname:
+            the full pathname of the source model file
+        """
+        sources = []
+        source_ids = set()
+        self.converter.fname = fname
+        src_nodes = read_nodes(fname, lambda elem: 'Source' in elem.tag,
+                               nodefactory['sourceModel'])
+        for no, src_node in enumerate(src_nodes, 1):
+            src = self.converter.convert_node(src_node)
+            if src.source_id in source_ids:
+                raise DuplicatedID(
+                    'The source ID %s is duplicated!' % src.source_id)
+            sources.append(src)
+            source_ids.add(src.source_id)
+            if no % 10000 == 0:  # log every 10,000 sources parsed
+                logging.info('Parsed %d sources from %s', no, fname)
+        return sorted(sources, key=operator.attrgetter('tectonic_region_type'))
 
 
 def agg_prob(acc, prob):
@@ -773,9 +798,8 @@ class CompositeSourceModel(collections.Sequence):
             weight = 0
             num_ruptures = 0
             for src in trt_model:
-                src.num_ruptures = nr = src.count_ruptures()
                 weight += src.weight
-                num_ruptures += nr
+                num_ruptures += src.num_ruptures
             trt_model.num_ruptures = num_ruptures
             trt_model.weight = weight
             trt_model.sources = sorted(
@@ -878,7 +902,7 @@ class SourceManager(object):
         self.filter_sources = filter_sources
         self.num_tiles = num_tiles
         self.rlzs_assoc = csm.info.get_rlzs_assoc()
-        self.split_map = {}
+        self.split_map = {}  # trt_model_id, source_id -> split sources
         self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
         if random_seed is not None:
@@ -913,21 +937,22 @@ class SourceManager(object):
                 if sites is None:
                     continue
             if kind == 'heavy':
-                if src.id not in self.split_map:
+                if (src.trt_model_id, src.id) not in self.split_map:
                     logging.info('splitting %s of weight %s',
                                  src, src.weight)
                     with split_mon:
                         sources = list(sourceconverter.split_source(src))
-                        self.split_map[src.id] = sources
+                        self.split_map[src.trt_model_id, src.id] = sources
                     split_time = split_mon.dt
                     self.set_seeds(src, sources)
-                for ss in self.split_map[src.id]:
+                for ss in self.split_map[src.trt_model_id, src.id]:
                     ss.id = src.id
                     yield ss
             else:
                 self.set_seeds(src)
                 yield src
-            split_sources = self.split_map.get(src.id, [src])
+            split_sources = self.split_map.get(
+                (src.trt_model_id, src.id), [src])
             info = SourceInfo(src.trt_model_id, src.source_id,
                               src.__class__.__name__,
                               src.weight, len(split_sources),

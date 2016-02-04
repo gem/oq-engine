@@ -14,6 +14,7 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import copy
 import pickle
 import unittest
 
@@ -156,6 +157,9 @@ param=yyy
         node = n.node_from_dict(input_dict)
         output_dict = n.node_to_dict(node)
         self.assertEqual(input_dict, output_dict)
+
+        # test deepcopy
+        self.assertEqual(node, copy.deepcopy(node))
 
     def test_can_pickle(self):
         node = n.Node('tag')
