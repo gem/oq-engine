@@ -428,7 +428,6 @@ def get_source_models(oqparam, source_model_lt, in_memory=True):
     samples_by_lt_path = source_model_lt.samples_by_lt_path()
     num_source_models = len(rlzs)
     for i, rlz in enumerate(rlzs):
-        logging.info('Reading source model %d/%d', i + 1, num_source_models)
         sm = rlz.value  # name of the source model
         smpath = rlz.lt_path
         num_samples = samples_by_lt_path[smpath]
@@ -470,6 +469,8 @@ def get_source_models(oqparam, source_model_lt, in_memory=True):
         else:
             gsim_lt = logictree.DummyGsimLogicTree()
         weight = rlz.weight / num_samples
+        logging.info('Read source model %d/%d with %d gsim realizations',
+                     i + 1, num_source_models, gsim_lt.get_num_paths())
         yield source.SourceModel(
             sm, weight, smpath, trt_models, gsim_lt, i, num_samples)
 
