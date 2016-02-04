@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
+import copy
 import math
 import logging
 import operator
@@ -188,6 +189,71 @@ class TrtModel(collections.Sequence):
 
     def __len__(self):
         return len(self.sources)
+
+
+class SourceModelParser(object):
+    """
+    A source model parser featuring a cache.
+
+    :param converter:
+        :class:`openquake.commonlib.source.SourceConverter` instance
+    """
+    def __init__(self, converter):
+        self.converter = converter
+        self.sources = {}  # cache fname -> sources
+        self.fname_hits = collections.Counter()  # fname -> number of calls
+
+    def parse_trt_models(self, fname, apply_uncertainties=None):
+        """
+        :param fname:
+            the full pathname of the source model file
+        :param apply_uncertainties:
+            a function modifying the sources (or None)
+        """
+        try:
+            sources = self.sources[fname]
+        except KeyError:
+            sources = []
+            for source in self.parse_sources(fname):
+                if apply_uncertainties:
+                    src = copy.copy(source)
+                    apply_uncertainties(src)
+                    src.num_ruptures = src.count_ruptures()
+                sources.append(src)
+            self.sources[fname] = sources
+        self.fname_hits[fname] += 1
+
+        # build ordered TrtModels
+        trts = {}
+        for src in sources:
+            trt = src.tectonic_region_type
+            if trt not in trts:
+                trts[trt] = TrtModel(trt)
+            trts[trt].update(src)
+        return sorted(trts.values())
+
+    def parse_sources(self, fname):
+        """
+        Parse all the sources and return them ordered by tectonic region type.
+
+        :param fname:
+            the full pathname of the source model file
+        """
+        sources = []
+        source_ids = set()
+        self.converter.fname = fname
+        src_nodes = read_nodes(fname, lambda elem: 'Source' in elem.tag,
+                               nodefactory['sourceModel'])
+        for no, src_node in enumerate(src_nodes, 1):
+            src = self.converter.convert_node(src_node)
+            if src.source_id in source_ids:
+                raise DuplicatedID(
+                    'The source ID %s is duplicated!' % src.source_id)
+            sources.append(src)
+            source_ids.add(src.source_id)
+            if no % 10000 == 0:  # log every 10,000 sources parsed
+                logging.info('Parsed %d sources from %s', no, fname)
+        return sorted(sources, key=operator.attrgetter('tectonic_region_type'))
 
 
 def parse_source_model(fname, converter,
