@@ -213,14 +213,12 @@ class SourceModelParser(object):
         try:
             sources = self.sources[fname]
         except KeyError:
-            sources = []
-            for source in self.parse_sources(fname):
-                if apply_uncertainties:
-                    src = copy.copy(source)
-                    apply_uncertainties(src)
-                    src.num_ruptures = src.count_ruptures()
-                sources.append(src)
-            self.sources[fname] = sources
+            sources = self.sources[fname] = self.parse_sources(fname)
+        sources = map(copy.deepcopy, sources)
+        for src in sources:
+            if apply_uncertainties:
+                apply_uncertainties(src)
+                src.num_ruptures = src.count_ruptures()
         self.fname_hits[fname] += 1
 
         # build ordered TrtModels
@@ -235,6 +233,7 @@ class SourceModelParser(object):
     def parse_sources(self, fname):
         """
         Parse all the sources and return them ordered by tectonic region type.
+        It does not count the ruptures, so it is relatively fast.
 
         :param fname:
             the full pathname of the source model file
@@ -701,6 +700,7 @@ class CompositeSourceModel(collections.Sequence):
         self.source_info = ()  # set by the SourceFilterSplitter
         self.split_map = {}
         if set_weight:
+            logging.info('')
             self.set_weights()
         # must go after set_weights to have the correct .num_ruptures
         self.info = CompositionInfo(
@@ -748,9 +748,8 @@ class CompositeSourceModel(collections.Sequence):
             weight = 0
             num_ruptures = 0
             for src in trt_model:
-                src.num_ruptures = nr = src.count_ruptures()
                 weight += src.weight
-                num_ruptures += nr
+                num_ruptures += src.num_ruptures
             trt_model.num_ruptures = num_ruptures
             trt_model.weight = weight
             trt_model.sources = sorted(
@@ -862,7 +861,7 @@ class SourceManager(object):
         self.filter_sources = filter_sources
         self.num_tiles = num_tiles
         self.rlzs_assoc = csm.get_rlzs_assoc()
-        self.split_map = {}
+        self.split_map = {}  # trt_model_id, source_id -> split sources
         self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
         if random_seed is not None:
@@ -897,21 +896,22 @@ class SourceManager(object):
                 if sites is None:
                     continue
             if kind == 'heavy':
-                if src.id not in self.split_map:
+                if (src.trt_model_id, src.id) not in self.split_map:
                     logging.info('splitting %s of weight %s',
                                  src, src.weight)
                     with split_mon:
                         sources = list(sourceconverter.split_source(src))
-                        self.split_map[src.id] = sources
+                        self.split_map[src.trt_model_id, src.id] = sources
                     split_time = split_mon.dt
                     self.set_seeds(src, sources)
-                for ss in self.split_map[src.id]:
+                for ss in self.split_map[src.trt_model_id, src.id]:
                     ss.id = src.id
                     yield ss
             else:
                 self.set_seeds(src)
                 yield src
-            split_sources = self.split_map.get(src.id, [src])
+            split_sources = self.split_map.get(
+                (src.trt_model_id, src.id), [src])
             info = SourceInfo(src.trt_model_id, src.source_id,
                               src.__class__.__name__,
                               src.weight, len(split_sources),
