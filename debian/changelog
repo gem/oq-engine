@@ -1,6 +1,7 @@
   [Michele Simionato]
+  * Serialized in HDF5 format the CompositionInfo object
   * Fixed the initial accumulator in the EventBasedRuptureCalculator
-  
+
   [Anirudh Rao]
   * Removed the extra ScenarioDamage demo
   * Removed unused parameters from the risk demo job files

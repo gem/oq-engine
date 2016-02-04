@@ -35,7 +35,7 @@ def print_csm_info(fname):
     print(csm.info)
     print('See https://github.com/gem/oq-risklib/blob/master/doc/'
           'effective-realizations.rst for an explanation')
-    print(csm.get_rlzs_assoc())
+    print(csm.info.get_rlzs_assoc())
 
 
 # the documentation about how to use this feature can be found

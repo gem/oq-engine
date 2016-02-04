@@ -291,7 +291,7 @@ class DataStore(collections.MutableMapping):
 
     def __setitem__(self, key, value):
         attrs = {}
-        if hasattr(value, '__toh5__') and hasattr(value, '__fromh5__'):
+        if hasattr(value, '__toh5__'):
             val, attrs = value.__toh5__()
             attrs['__pyclass__'] = '.'.join([value.__class__.__module__,
                                              value.__class__.__name__])

@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
+import io
 import math
 import logging
 import operator
@@ -76,13 +77,23 @@ def get_skeleton(sm):
     trt_models = [TrtModel(tm.trt, [], tm.num_ruptures, tm.min_mag,
                            tm.max_mag, tm.gsims, tm.id)
                   for tm in sm.trt_models]
-    num_sources = sum(len(tm) for tm in sm.trt_models)
     return SourceModel(sm.name, sm.weight, sm.path, trt_models, sm.gsim_lt,
-                       sm.ordinal, sm.samples, num_sources)
+                       sm.ordinal, sm.samples)
 
 SourceModel = collections.namedtuple(
-    'SourceModel', 'name weight path trt_models gsim_lt ordinal samples '
-    'num_sources')
+    'SourceModel', 'name weight path trt_models gsim_lt ordinal samples')
+SourceModel.num_sources = property(
+    lambda self: sum(len(tm) for tm in self.trt_models))
+
+
+def capitalize(words):
+    """
+    Capitalize words separated by spaces.
+
+    >>> capitalize('active shallow crust')
+    'Active Shallow Crust'
+    """
+    return ' '.join(w.capitalize() for w in words.split(' '))
 
 
 class TrtModel(collections.Sequence):
@@ -275,7 +286,7 @@ class RlzsAssoc(collections.Mapping):
         the (reduced) weights of the realizations and the attribute
         gsims_by_trt_id.
         """
-        num_samples = self.csm_info.source_model_lt.num_samples
+        num_samples = self.csm_info.num_samples
         if num_samples:
             assert len(self.realizations) == num_samples
             for rlz in self.realizations:
@@ -486,6 +497,39 @@ class RlzsAssoc(collections.Mapping):
 # collection <-> trt model associations
 col_dt = numpy.dtype([('trt_id', numpy.uint32), ('sample', numpy.uint32)])
 
+LENGTH = 256
+
+source_model_dt = numpy.dtype([
+    ('name', (bytes, LENGTH)),
+    ('weight', numpy.float32),
+    ('path', (bytes, LENGTH)),
+    ('num_rlzs', numpy.uint32),
+    ('trts', (bytes, LENGTH)),
+    ('num_ruptures', (bytes, LENGTH)),
+    ('eff_ruptures', (bytes, LENGTH)),
+    ('samples', numpy.uint32),
+])
+
+
+def get_trts(smodel):
+    """
+    Extract the tectonic region models contained in the source model,
+    as normalized names recognized by hazardlib.
+
+    :param smodel: a :class:`openquake.commonlib.source.SourceModel` tuple
+    :returns: a comma separated string of uppercase tectonic region types
+    """
+    return ','.join(capitalize(tmodel.trt)
+                    for tmodel in smodel.trt_models)
+
+
+def get_num_ruptures(smodel):
+    """
+    Extract the number of ruptures per each tectonic region model (in order)
+    and return a single comma separated string.
+    """
+    return ','.join(str(tmodel.num_ruptures) for tmodel in smodel.trt_models)
+
 
 class CompositionInfo(object):
     """
@@ -495,11 +539,18 @@ class CompositionInfo(object):
     :param source_model_lt: a SourceModelLogicTree object
     :param source_models: a list of SourceModel instances
     """
-    def __init__(self, source_model_lt, source_models):
-        self.source_model_lt = source_model_lt
+    def __init__(self, seed, num_samples, source_models):
+        self.seed = seed
+        self.num_samples = num_samples
         self.source_models = source_models
+        self.init()
+
+    def init(self):
+        """Fully initialize the CompositionInfo object"""
         cols = []
         col_id = 0
+        self.eff_ruptures = numpy.zeros(len(self.source_models),
+                                        (bytes, LENGTH))
         self.col_ids_by_trt_id = collections.defaultdict(list)
         self.tmdict = {}  # trt_id -> trt_model
         self.gsimdict = {}  # (trt_id, gsim_no) -> gsim instance
@@ -514,12 +565,42 @@ class CompositionInfo(object):
                     col_id += 1
                 for i, gsim in enumerate(trt_model.gsims):
                     self.gsimdict[trt_model.id, str(i)] = gsim
-
         self.cols = numpy.array(cols, col_dt)
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
-        return self.source_model_lt, self.source_models
+        return self.seed, self.num_samples, self.source_models
+
+    def __toh5__(self):
+        lst = [(sm.name, sm.weight, '_'.join(sm.path),
+                sm.gsim_lt.get_num_paths(), get_trts(sm),
+                get_num_ruptures(sm), self.eff_ruptures[i], sm.samples)
+               for i, sm in enumerate(self.source_models)]
+        return (numpy.array(lst, source_model_dt),
+                dict(seed=self.seed, num_samples=self.num_samples,
+                     gsim_lt_xml=open(sm.gsim_lt.fname).read()))
+
+    def __fromh5__(self, array, attrs):
+        vars(self).update(attrs)
+        self.source_models = []
+        trt_id = 0
+        for i, rec in enumerate(array):
+            path = tuple(rec['path'].split('_'))
+            trts = rec['trts'].split(',')
+            gsim_lt = logictree.GsimLogicTree(
+                io.BytesIO(self.gsim_lt_xml), trts)
+            trtmodels = []
+            num_ruptures = map(int, rec['num_ruptures'].split(','))
+            for nr, trt in zip(num_ruptures, trts):
+                tm = TrtModel(trt, num_ruptures=nr, id=trt_id)
+                tm.gsims = gsim_lt.values[trt]
+                trtmodels.append(tm)
+                trt_id += 1
+            sm = SourceModel(rec['name'], rec['weight'], path, trtmodels,
+                             gsim_lt, i, rec['samples'])
+            self.source_models.append(sm)
+        self.init()
+        self.eff_ruptures = array['eff_ruptures']
 
     @property
     def num_collections(self):
@@ -535,7 +616,7 @@ class CompositionInfo(object):
         """
         if source_model is None:
             return sum(self.get_num_rlzs(sm) for sm in self.source_models)
-        if self.source_model_lt.num_samples:
+        if self.num_samples:
             return source_model.samples
         return source_model.gsim_lt.get_num_paths()
 
@@ -570,22 +651,30 @@ class CompositionInfo(object):
         for col_id, col in enumerate(self.cols):
             yield col['trt_id'], col['sample'], col_id
 
-    def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
+    def get_rlzs_assoc(self, count_ruptures=lambda tm: tm.num_ruptures):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
         rlz_idx and trt_gsims.
 
-        :param get_weight: a function trt_model -> positive number
+        :param count_ruptures: a function trt_model -> num_ruptures
         """
         assoc = RlzsAssoc(self)
-        random_seed = self.source_model_lt.seed
-        num_samples = self.source_model_lt.num_samples
+        random_seed = self.seed
+        num_samples = self.num_samples
         idx = 0
-        for smodel in self.source_models:
-            # collect the effective tectonic region types
-            trts = set(tm.trt for tm in smodel.trt_models if get_weight(tm))
+        for i, smodel in enumerate(self.source_models):
+            # collect the effective tectonic region types and rupture counts
+            trts = []
+            rups = []
+            for tm in smodel.trt_models:
+                nr = count_ruptures(tm)
+                if nr:
+                    trts.append(tm.trt)
+                    rups.append(str(nr))
+            self.eff_ruptures[i] = ','.join(rups)
+
             # recompute the GSIM logic tree if needed
-            if trts != set(smodel.gsim_lt.tectonic_region_types):
+            if set(trts) != set(smodel.gsim_lt.tectonic_region_types):
                 before = smodel.gsim_lt.get_num_paths()
                 smodel.gsim_lt.reduce(trts)
                 after = smodel.gsim_lt.get_num_paths()
@@ -638,7 +727,9 @@ class CompositeSourceModel(collections.Sequence):
             self.set_weights()
         # must go after set_weights to have the correct .num_ruptures
         self.info = CompositionInfo(
-            self.source_model_lt, list(map(get_skeleton, self.source_models)))
+            self.source_model_lt.seed,
+            self.source_model_lt.num_samples,
+            list(map(get_skeleton, self.source_models)))
 
     @property
     def trt_models(self):
@@ -690,15 +781,6 @@ class CompositeSourceModel(collections.Sequence):
             trt_model.sources = sorted(
                 trt_model, key=operator.attrgetter('source_id'))
             self.weight += weight
-
-    def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
-        """
-        Return a RlzsAssoc with fields realizations, gsim_by_trt,
-        rlz_idx and trt_gsims.
-
-        :param get_weight: a function trt_model -> positive number
-        """
-        return self.info.get_rlzs_assoc(get_weight)
 
     def __repr__(self):
         """
@@ -795,7 +877,7 @@ class SourceManager(object):
         self.monitor = monitor
         self.filter_sources = filter_sources
         self.num_tiles = num_tiles
-        self.rlzs_assoc = csm.get_rlzs_assoc()
+        self.rlzs_assoc = csm.info.get_rlzs_assoc()
         self.split_map = {}
         self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple

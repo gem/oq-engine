@@ -469,7 +469,7 @@ def get_source_models(oqparam, source_model_lt, in_memory=True):
             gsim_lt = logictree.DummyGsimLogicTree()
         weight = rlz.weight / num_samples
         yield source.SourceModel(
-            sm, weight, smpath, trt_models, gsim_lt, i, num_samples, None)
+            sm, weight, smpath, trt_models, gsim_lt, i, num_samples)
 
 
 def get_composite_source_model(oqparam, in_memory=True):
