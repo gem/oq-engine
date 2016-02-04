@@ -1455,9 +1455,6 @@ class GsimLogicTree(object):
             yield Realization(tuple(value), weight, tuple(lt_path),
                               i, tuple(lt_uid))
 
-    def __len__(self):
-        return sum(1 for rlz in self)
-
     def __str__(self):
         lines = ['%s,%s,%s,w=%s' % (b.bset['applyToTectonicRegionType'],
                                     b.id, b.uncertainty, b.weight)
