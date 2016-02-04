@@ -749,7 +749,6 @@ class CompositeSourceModel(collections.Sequence):
         self.source_info = ()  # set by the SourceFilterSplitter
         self.split_map = {}
         if set_weight:
-            logging.info('')
             self.set_weights()
         # must go after set_weights to have the correct .num_ruptures
         self.info = CompositionInfo(
