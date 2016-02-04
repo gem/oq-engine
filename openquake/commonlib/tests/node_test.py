@@ -157,7 +157,9 @@ param=yyy
         node = n.node_from_dict(input_dict)
         output_dict = n.node_to_dict(node)
         self.assertEqual(input_dict, output_dict)
-        copy.deepcopy(node)  # check it does not raise an error
+
+        # test deepcopy
+        self.assertEqual(node, copy.deepcopy(node))
 
     def test_can_pickle(self):
         node = n.Node('tag')
