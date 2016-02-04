@@ -390,8 +390,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
     @staticmethod
     def count_ruptures(ruptures_by_trt_id, trt_model):
         """
-        Returns the number of tectonic region types
-        with ID contained in the ruptures_by_trt_id.
+        Returns the number of ruptures sampled in the given trt_model.
 
         :param ruptures_by_trt_id: a dictionary with key trt_id
         :param trt_model: a TrtModel instance

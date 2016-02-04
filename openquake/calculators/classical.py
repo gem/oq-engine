@@ -236,8 +236,8 @@ class ClassicalCalculator(base.HazardCalculator):
     @staticmethod
     def count_ruptures(result_dict, trt_model):
         """
-        Returns the number of tectonic region types
-        with ID contained in the result_dict.
+        Returns the number of ruptures in the trt_model (after filtering)
+        or 0 if the trt_model has been filtered away.
 
         :param result_dict: a dictionary with keys (trt_id, gsim)
         :param trt_model: a TrtModel instance
