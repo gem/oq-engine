@@ -426,7 +426,9 @@ def get_source_models(oqparam, source_model_lt, in_memory=True):
     # consider only the effective realizations
     rlzs = logictree.get_effective_rlzs(source_model_lt)
     samples_by_lt_path = source_model_lt.samples_by_lt_path()
+    num_source_models = len(rlzs)
     for i, rlz in enumerate(rlzs):
+        logging.info('Reading source model %d/%d', i + 1, num_source_models)
         sm = rlz.value  # name of the source model
         smpath = rlz.lt_path
         num_samples = samples_by_lt_path[smpath]

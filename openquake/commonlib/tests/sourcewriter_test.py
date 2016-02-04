@@ -43,8 +43,8 @@ class SourceWriterTestCase(unittest.TestCase):
 class DeepcopyTestCase(unittest.TestCase):
     def test(self):
         parser = SourceModelParser(SourceConverter(50., 1., 10, 0.1, 10.))
-        sources = map(copy.deepcopy, parser.parse_sources(ALT_MFDS))
-        sf, cf = sources  # SimpleFaultSource and CharacteristicFaultSource
+        [sf, cf] = map(copy.deepcopy, parser.parse_sources(ALT_MFDS))
+        # there are a SimpleFaultSource and a CharacteristicFaultSource
         fd, fname = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'w'):
-            write_source_model(fname, sources, 'Test Source Model')
+            write_source_model(fname, [sf, cf], 'Test Source Model')
