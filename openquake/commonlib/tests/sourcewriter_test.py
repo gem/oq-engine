@@ -1,9 +1,10 @@
 import os
+import copy
 import unittest
 import tempfile
 from openquake.commonlib.sourcewriter import write_source_model
 from openquake.commonlib.sourceconverter import SourceConverter
-from openquake.commonlib.source import parse_source_model
+from openquake.commonlib.source import SourceModelParser
 from openquake.commonlib import nrml_examples
 
 NONPARAM = os.path.join(os.path.dirname(__file__), 'data',
@@ -16,23 +17,11 @@ ALT_MFDS = os.path.join(
     'source_model/alternative-mfds_4test.xml')
 
 
-
-def get_source_model(source_file, inv_time=50.0, simple_mesh_spacing=1.0,
-                     complex_mesh_spacing=10.0, mfd_spacing=0.1,
-                     area_discretisation=10.0):
-    conv = SourceConverter(
-        inv_time, simple_mesh_spacing, complex_mesh_spacing, mfd_spacing,
-        area_discretisation)
-    return parse_source_model(source_file, conv)
-
-
 class SourceWriterTestCase(unittest.TestCase):
 
     def check_round_trip(self, fname):
-        sources = []
-        for trt_model in get_source_model(fname):
-            sources.extend(trt_model.sources)
-
+        parser = SourceModelParser(SourceConverter(50., 1., 10, 0.1, 10.))
+        sources = parser.parse_sources(fname)
         fd, name = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'w'):
             write_source_model(name, sources, 'Test Source Model')
@@ -48,3 +37,14 @@ class SourceWriterTestCase(unittest.TestCase):
 
     def test_alt_mfds(self):
         self.check_round_trip(ALT_MFDS)
+
+
+# deep-copied sources must be serializable
+class DeepcopyTestCase(unittest.TestCase):
+    def test(self):
+        parser = SourceModelParser(SourceConverter(50., 1., 10, 0.1, 10.))
+        sources = map(copy.deepcopy, parser.parse_sources(ALT_MFDS))
+        sf, cf = sources  # SimpleFaultSource and CharacteristicFaultSource
+        fd, fname = tempfile.mkstemp(suffix='.xml')
+        with os.fdopen(fd, 'w'):
+            write_source_model(fname, sources, 'Test Source Model')

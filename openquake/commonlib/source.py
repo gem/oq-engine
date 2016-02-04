@@ -256,47 +256,6 @@ class SourceModelParser(object):
         return sorted(sources, key=operator.attrgetter('tectonic_region_type'))
 
 
-def parse_source_model(fname, converter,
-                       apply_uncertainties=lambda src: None,
-                       set_weight=False):
-    """
-    Parse a NRML source model and return an ordered list of TrtModel
-    instances.
-
-    :param str fname:
-        the full pathname of the source model file
-    :param converter:
-        :class:`openquake.commonlib.source.SourceConverter` instance
-    :param apply_uncertainties:
-        a function modifying the sources (or do nothing)
-    :param set_weight:
-        if True, set the weight of the sources
-    """
-    converter.fname = fname
-    source_stats_dict = {}
-    source_ids = set()
-    src_nodes = read_nodes(fname, lambda elem: 'Source' in elem.tag,
-                           nodefactory['sourceModel'])
-    for no, src_node in enumerate(src_nodes, 1):
-        src = converter.convert_node(src_node)
-        if src.source_id in source_ids:
-            raise DuplicatedID(
-                'The source ID %s is duplicated!' % src.source_id)
-        apply_uncertainties(src)
-        if set_weight:
-            src.num_ruptures = src.count_ruptures()
-        trt = src.tectonic_region_type
-        if trt not in source_stats_dict:
-            source_stats_dict[trt] = TrtModel(trt)
-        source_stats_dict[trt].update(src)
-        source_ids.add(src.source_id)
-        if no % 10000 == 0:  # log every 10,000 sources parsed
-            logging.info('Parsed %d sources from %s', no, fname)
-
-    # return ordered TrtModels
-    return sorted(source_stats_dict.values())
-
-
 def agg_prob(acc, prob):
     """Aggregation function for probabilities"""
     return 1. - (1. - acc) * (1. - prob)

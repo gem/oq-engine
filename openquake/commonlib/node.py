@@ -142,9 +142,10 @@ generator. Finally, nodes containing lazy nodes will not be pickleable.
 """
 from openquake.baselib.python3compat import configparser, with_metaclass
 
-import sys
-import pprint as pp
 import io
+import sys
+import copy
+import pprint as pp
 from contextlib import contextmanager
 from openquake.baselib.python3compat import raise_, exec_
 from openquake.commonlib.writers import StreamingXMLWriter
@@ -358,6 +359,15 @@ class Node(object):
 
     if sys.version > '3':
         __bool__ = __nonzero__
+
+    def __deepcopy__(self, memo):
+        new = object.__new__(self.__class__)
+        new.tag = self.tag
+        new.attrib = self.attrib.copy()
+        new.text = copy.copy(self.text)
+        new.nodes = [copy.deepcopy(n, memo) for n in self.nodes]
+        new.lineno = self.lineno
+        return new
 
     def __getstate__(self):
         return dict((slot, getattr(self, slot))
