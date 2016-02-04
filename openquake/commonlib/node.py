@@ -263,6 +263,9 @@ class Node(object):
                 'A branch node cannot have a value, got %r' % self.text)
 
     def __getattr__(self, name):
+        if name.startswith('_'):
+            # do the magic only for public names
+            raise AttributeError(name)
         for node in self.nodes:
             if striptag(node.tag) == name:
                 return node

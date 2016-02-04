@@ -214,9 +214,8 @@ class SourceModelParser(object):
             sources = self.sources[fname]
         except KeyError:
             sources = self.sources[fname] = self.parse_sources(fname)
-        # NB: deepcopy causes an error
-        # No subnode named '__deepcopy__' found in 'surface'
-        sources = map(copy.copy, sources)
+        # NB: deepcopy is *essential* here
+        sources = map(copy.deepcopy, sources)
         for src in sources:
             if apply_uncertainties:
                 apply_uncertainties(src)
