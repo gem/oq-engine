@@ -364,14 +364,14 @@ def build_ses_ruptures(
         # creating SESRuptures
         sesruptures = []
         rnd = random.Random(rup.seed)
-        for (col_id, ses_idx), num_occ in sorted(
+        for (col_idx, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
-                seed = rnd.randint(0, MAX_INT)
                 tag = 'col=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-                    col_id, ses_idx, src.source_id, rup.seed, occ_no)
+                    col_idx, ses_idx, src.source_id, rup.seed, occ_no)
                 sesruptures.append(
-                    SESRupture(rup, indices, seed, tag, col_id))
+                    SESRupture(rup, indices, rnd.randint(0, MAX_INT),
+                               tag, col_idx))
         if sesruptures:
             yield rup, sesruptures
 
@@ -388,16 +388,16 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
     is_stochastic = True
 
     @staticmethod
-    def is_effective_trt_model(ruptures_by_trt_id, trt_model):
+    def count_ruptures(ruptures_by_trt_id, trt_model):
         """
-        Returns the number of tectonic region types
-        with ID contained in the ruptures_by_trt_id.
+        Returns the number of ruptures sampled in the given trt_model.
 
         :param ruptures_by_trt_id: a dictionary with key trt_id
         :param trt_model: a TrtModel instance
         """
-        return sum(1 for key, val in ruptures_by_trt_id.items()
-                   if trt_model.id == key and val)
+        return sum(
+            len(ruptures) for trt_id, ruptures in ruptures_by_trt_id.items()
+            if trt_model.id == trt_id)
 
     def agg_curves(self, acc, val):
         """
@@ -405,6 +405,16 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         trt_id -> ruptures
         """
         acc += val
+
+    def zerodict(self):
+        """
+        Initial accumulator, a dictionary trt_model_id -> list of ruptures
+        """
+        smodels = self.rlzs_assoc.csm_info.source_models
+        zd = AccumDict((tm.id, []) for smodel in smodels
+                       for tm in smodel.trt_models)
+        zd.calc_times = []
+        return zd
 
     def send_sources(self):
         """
@@ -430,9 +440,6 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         tags = []
         ordinal = 0
         for trt_id in sorted(result):
-            if isinstance(trt_id, tuple):
-                # a pair (trt_id, gsim), skip
-                continue
             for sr in sorted(result[trt_id]):
                 sr.ordinal = ordinal
                 ordinal += 1
@@ -446,8 +453,11 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         logging.info('Saving the SES collection')
         with self.monitor('saving ruptures', autoflush=True):
             self.tags = numpy.array(tags, (bytes, 100))
-            for col, colkey in zip(sescollection, cols):
-                self.datastore['sescollection/trtmod=%s-%s' % tuple(colkey)] = col
+            for sescol, col in zip(sescollection, cols):
+                nr = len(sescol)
+                key = 'sescollection/trtmod=%s-%s' % tuple(col)
+                self.datastore[key] = sescol
+                self.datastore.set_attrs(key, num_ruptures=nr)
         with self.monitor('counts_per_rlz'):
             self.num_ruptures = numpy.array(list(map(len, sescollection)))
             self.counts_per_rlz = counts_per_rlz(

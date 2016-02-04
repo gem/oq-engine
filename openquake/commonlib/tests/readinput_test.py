@@ -601,7 +601,7 @@ PGA 12.0 42.2 0.64 0.65
                                       [0.55, 0.51, 0.5]])
 
 
-class TestReadGmfTestCase(unittest.TestCase):
+class TestReadGmfCsvTestCase(unittest.TestCase):
     def setUp(self):
         self.oqparam = mock.Mock()
         self.oqparam.base_path = '/'
@@ -683,7 +683,7 @@ col=00|ses=0001|src=test|rup=001-02,X,2.67031000E-01
             readinput.get_gmfs_from_txt(self.oqparam, fname)
 
 
-class TestLoadGmfTestCase(unittest.TestCase):
+class TestReadGmfXmlTestCase(unittest.TestCase):
     """
     Read the GMF from a NRML file
     """
@@ -729,7 +729,52 @@ PGV:float64,PGA:float64
         fname = os.path.join(DATADIR,  'gmfdata_err2.xml')
         with self.assertRaises(readinput.InvalidFile) as ctx:
             readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertIn("Expected 4 sites, got 3 in", str(ctx.exception))
+        self.assertIn("Expected 4 sites, got 3 nodes in", str(ctx.exception))
+
+    def test_tricky_ordering(self):
+        # see https://github.com/gem/oq-risklib/issues/546
+        fname = general.writetmp('''\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+<gmfCollection gsimTreePath="" sourceModelTreePath="">
+  <gmfSet stochasticEventSetId="1">
+    <gmf IMT="PGA" ruptureId="scenario-0">
+      <node gmv="0.0124783118478" lon="12.1244171" lat="43.58248037"/>
+      <node gmv="0.0126515007046" lon="12.12477995" lat="43.58217888"/>
+      <node gmv="0.0124056290492" lon="12.12478193" lat="43.58120146"/>
+    </gmf>
+  </gmfSet>
+</gmfCollection>
+</nrml>''')
+        self.oqparam.imtls = {'PGA': None}
+        sitecol, _, _ = readinput.get_scenario_from_nrml(self.oqparam, fname)
+        self.assertEqual(zip(sitecol.lons, sitecol.lats),
+                         [(12.12442, 43.58248),
+                          (12.12478, 43.5812),
+                          (12.12478, 43.58218)])
+        # notice that the last two lats 43.5812, 43.58218 are inverted with
+        # respect to the original ordering, 43.58217888, 43.58120146
+
+    def test_two_nodes_on_the_same_point(self):
+        # after rounding of the coordinates two points can collide
+        fname = general.writetmp('''\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+<gmfCollection gsimTreePath="" sourceModelTreePath="">
+  <gmfSet stochasticEventSetId="1">
+    <gmf IMT="PGA" ruptureId="scenario-0">
+      <node gmv="0.0126515007046" lon="12.12477995" lat="43.5812"/>
+      <node gmv="0.0124056290492" lon="12.12478193" lat="43.5812"/>
+    </gmf>
+  </gmfSet>
+</gmfCollection>
+</nrml>''')
+        self.oqparam.imtls = {'PGA': None}
+        with self.assertRaises(readinput.InvalidFile) as ctx:
+            readinput.get_scenario_from_nrml(self.oqparam, fname)
+        self.assertIn("Expected 1 sites, got 2 nodes in", str(ctx.exception))
 
 
 class TestLoadCurvesTestCase(unittest.TestCase):

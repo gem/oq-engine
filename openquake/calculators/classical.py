@@ -234,16 +234,32 @@ class ClassicalCalculator(base.HazardCalculator):
                                 if tiling else v)
 
     @staticmethod
-    def is_effective_trt_model(result_dict, trt_model):
+    def count_ruptures(result_dict, trt_model):
         """
-        Returns the number of tectonic region types
-        with ID contained in the result_dict.
+        Returns the number of ruptures in the trt_model (after filtering)
+        or 0 if the trt_model has been filtered away.
 
         :param result_dict: a dictionary with keys (trt_id, gsim)
         :param trt_model: a TrtModel instance
         """
-        return sum(1 for key, val in result_dict.items()
-                   if trt_model.id == key[0] and nonzero(val))
+        for key in result_dict:
+            if trt_model.id == key[0] and nonzero(result_dict[key]):
+                return trt_model.num_ruptures
+        return 0
+
+    def zerodict(self):
+        """
+        Initial accumulator, a dictionary (trt_id, gsim) -> curves
+        """
+        zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
+        zd = AccumDict((key, zc) for key in self.rlzs_assoc)
+        zd.calc_times = []
+        zd.bb_dict = {
+            (smodel.ordinal, site.id): BoundingBox(smodel.ordinal, site.id)
+            for site in self.sitecol
+            for smodel in self.csm.source_models
+        } if self.oqparam.poes_disagg else {}
+        return zd
 
     def execute(self):
         """
@@ -253,19 +269,13 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor.new(self.core_task.__name__)
         monitor.oqparam = self.oqparam
-        zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
-        zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
-        zerodict.calc_times = []
-        zerodict.bb_dict = {
-            (smodel.ordinal, site.id): BoundingBox(smodel.ordinal, site.id)
-            for site in self.sitecol
-            for smodel in self.csm.source_models
-        } if self.oqparam.poes_disagg else {}
-        curves_by_trt_gsim = self.manager.tm.reduce(self.agg_dicts, zerodict)
+        curves_by_trt_gsim = self.manager.tm.reduce(
+            self.agg_dicts, self.zerodict())
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(curves_by_trt_gsim)
-        self.rlzs_assoc = self.csm.get_rlzs_assoc(
-            partial(self.is_effective_trt_model, curves_by_trt_gsim))
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
+            partial(self.count_ruptures, curves_by_trt_gsim))
+        self.datastore['csm_info'] = self.rlzs_assoc.csm_info
         return curves_by_trt_gsim
 
     def store_source_info(self, curves_by_trt_gsim):

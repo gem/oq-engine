@@ -421,10 +421,12 @@ def get_source_models(oqparam, source_model_lt, in_memory=True):
         oqparam.complex_fault_mesh_spacing,
         oqparam.width_of_mfd_bin,
         oqparam.area_source_discretization)
+    parser = source.SourceModelParser(converter)
 
     # consider only the effective realizations
     rlzs = logictree.get_effective_rlzs(source_model_lt)
     samples_by_lt_path = source_model_lt.samples_by_lt_path()
+    num_source_models = len(rlzs)
     for i, rlz in enumerate(rlzs):
         sm = rlz.value  # name of the source model
         smpath = rlz.lt_path
@@ -436,8 +438,7 @@ def get_source_models(oqparam, source_model_lt, in_memory=True):
         if in_memory:
             apply_unc = source_model_lt.make_apply_uncertainties(smpath)
             try:
-                trt_models = source.parse_source_model(
-                    fname, converter, apply_unc, set_weight=in_memory)
+                trt_models = parser.parse_trt_models(fname, apply_unc)
             except ValueError as e:
                 if str(e) in ('Surface does not conform with Aki & '
                               'Richards convention',
@@ -468,8 +469,16 @@ def get_source_models(oqparam, source_model_lt, in_memory=True):
         else:
             gsim_lt = logictree.DummyGsimLogicTree()
         weight = rlz.weight / num_samples
+        n = num_samples if num_samples else gsim_lt.get_num_paths()
+        logging.info('Read source model %d/%d with %d gsim realization(s)',
+                     i + 1, num_source_models, n)
         yield source.SourceModel(
-            sm, weight, smpath, trt_models, gsim_lt, i, num_samples, None)
+            sm, weight, smpath, trt_models, gsim_lt, i, num_samples)
+
+    # log if some source file is being used more than once
+    for fname, hits in parser.fname_hits.items():
+        if hits > 1:
+            logging.info('%s has been considered %d times', fname, hits)
 
 
 def get_composite_source_model(oqparam, in_memory=True):
@@ -1052,14 +1061,14 @@ def get_gmfs_from_txt(oqparam, fname):
 
 
 # used in get_scenario_from_nrml
-def _extract_tags_sites(gmfset):
+def _extract_tags_sitecounts(gmfset):
     tags = set()
-    mesh = set()
+    counter = collections.Counter()
     for gmf in gmfset:
         tags.add(gmf['ruptureId'])
         for node in gmf:
-            mesh.add((node['lon'], node['lat']))
-    return numpy.array(sorted(tags), '|S100'), sorted(mesh)
+            counter[node['lon'], node['lat']] += 1
+    return numpy.array(sorted(tags), '|S100'), counter
 
 
 def get_scenario_from_nrml(oqparam, fname):
@@ -1074,33 +1083,29 @@ def get_scenario_from_nrml(oqparam, fname):
     if not oqparam.imtls:
         oqparam.set_risk_imtls(get_risk_models(oqparam))
     imts = list(oqparam.imtls)
+    num_imts = len(imts)
     imt_dt = numpy.dtype([(imt, float) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet
-    tags, oqparam.sites = _extract_tags_sites(gmfset)
+    tags, sitecounts = _extract_tags_sitecounts(gmfset)
+    oqparam.sites = sorted(sitecounts)
+    site_idx = {lonlat: i for i, lonlat in enumerate(oqparam.sites)}
     oqparam.number_of_ground_motion_fields = num_events = len(tags)
     sitecol = get_site_collection(oqparam)
     num_sites = len(oqparam.sites)
     gmf_by_imt = numpy.zeros((num_events, num_sites), imt_dt)
-    num_imts = len(imts)
     counts = collections.Counter()
     for i, gmf in enumerate(gmfset):
         if len(gmf) != num_sites:  # there must be one node per site
-            raise InvalidFile('Expected %d sites, got %d in %s, line %d' % (
-                num_sites, len(gmf), fname, gmf.lineno))
+            raise InvalidFile('Expected %d sites, got %d nodes in %s, line %d'
+                              % (num_sites, len(gmf), fname, gmf.lineno))
         counts[gmf['ruptureId']] += 1
         imt = gmf['IMT']
         if imt == 'SA':
             imt = 'SA(%s)' % gmf['saPeriod']
-        for site_idx, lon, lat, node in zip(
-                range(num_sites), sitecol.lons, sitecol.lats, gmf):
-            if (node['lon'], node['lat']) != (lon, lat):
-                raise InvalidFile('The site mesh is not ordered in %s, line %d'
-                                  % (fname, node.lineno))
-            try:
-                gmf_by_imt[imt][i % num_events, site_idx] = node['gmv']
-            except IndexError:
-                raise InvalidFile('Something wrong in %s, line %d' %
-                                  (fname, node.lineno))
+        for node in gmf:
+            sid = site_idx[node['lon'], node['lat']]
+            gmf_by_imt[imt][i % num_events, sid] = node['gmv']
+
     for tag, count in counts.items():
         if count < num_imts:
             raise InvalidFile('Found a missing tag %r in %s' %
@@ -1108,6 +1113,12 @@ def get_scenario_from_nrml(oqparam, fname):
         elif count > num_imts:
             raise InvalidFile('Found a duplicated tag %r in %s' %
                               (tag, fname))
+    expected_gmvs_per_site = num_imts * len(tags)
+    for lonlat, counts in sitecounts.items():
+        if counts != expected_gmvs_per_site:
+            raise InvalidFile(
+                '%s: expected %d gmvs at location %s, found %d' %
+                (fname, expected_gmvs_per_site, lonlat, counts))
     return sitecol, tags, gmf_by_imt.T
 
 

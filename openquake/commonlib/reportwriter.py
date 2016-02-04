@@ -102,7 +102,7 @@ def build_report(job_ini, output_dir=None):
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
     calc.SourceManager = source.DummySourceManager
-    calc.is_effective_trt_model = lambda result_dict, trt_model: True
+    calc.count_ruptures = lambda result_dict, trt_model: True
     with mock.patch.object(calc.__class__, 'core_task', source.dummy_task):
         calc.pre_execute()
     with mock.patch.object(logging.root, 'info'):  # reduce logging

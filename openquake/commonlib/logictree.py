@@ -46,12 +46,9 @@ from openquake.commonlib import valid
 from openquake.commonlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 
-from openquake.commonlib.node import (node_from_xml,
-                                      parse,
-                                      iterparse,
-                                      node_from_elem,
-                                      LiteralNode,
-                                      context)
+from openquake.commonlib.node import (
+    node_from_xml, parse, iterparse,
+    node_from_elem, LiteralNode, context)
 from openquake.baselib.python3compat import with_metaclass
 
 #: Minimum value for a seed number
@@ -62,7 +59,9 @@ MAX_SINT_32 = (2 ** 31) - 1
 
 Realization = namedtuple('Realization', 'value weight lt_path ordinal lt_uid')
 Realization.uid = property(lambda self: '_'.join(self.lt_uid))  # unique ID
-Realization.__str__ = lambda self: str(self.value[0])  # the first GSIM
+Realization.__str__ = lambda self: (
+    repr(self) if isinstance(self.value, str)  # source model realization
+    else str(self.value[0]))  # gsim realization
 
 
 class RlzsAssoc(collections.Mapping):

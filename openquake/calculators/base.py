@@ -322,7 +322,8 @@ class HazardCalculator(BaseCalculator):
                         'reading composite source model', autoflush=True):
                     self.csm = readinput.get_composite_source_model(
                         self.oqparam)
-                    self.rlzs_assoc = self.csm.get_rlzs_assoc()
+                    self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
+                    self.datastore['csm_info'] = self.rlzs_assoc.csm_info
 
                     # we could manage limits here
                     self.job_info = readinput.get_job_info(
@@ -536,6 +537,11 @@ class RiskCalculator(HazardCalculator):
         riskinput.build_asset_collection(
             self.assets_by_site, self.oqparam.time_event)
         imtls = self.oqparam.imtls
+        if not set(self.oqparam.risk_imtls) & set(imtls):
+            rsk = ', '.join(self.oqparam.risk_imtls)
+            haz = ', '.join(imtls)
+            raise ValueError('The IMTs in the risk models (%s) are disjoint '
+                             "from the IMTs in the hazard (%s)" % (rsk, haz))
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             idx_weight_pairs = [
@@ -567,6 +573,7 @@ class RiskCalculator(HazardCalculator):
                         imt, hdata[imt], reduced_assets, reduced_eps)
                     if ri.weight > 0:
                         riskinputs.append(ri)
+            assert riskinputs
             logging.info('Built %d risk inputs', len(riskinputs))
             return sorted(riskinputs, key=self.riskinput_key)
 
