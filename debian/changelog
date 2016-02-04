@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Introduced a cutoff for the IML=0 caused by some fragility functions
   * Serialized in HDF5 format the CompositionInfo object
   * Fixed the initial accumulator in the EventBasedRuptureCalculator
 
