@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Made the check on the costs more forgiving for damage calculators
   * Optimized the source model parsing
   * Serialized in HDF5 format the CompositionInfo object
   * Fixed the initial accumulator in the EventBasedRuptureCalculator
