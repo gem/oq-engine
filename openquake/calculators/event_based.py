@@ -388,7 +388,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
     is_stochastic = True
 
     @staticmethod
-    def is_effective_trt_model(ruptures_by_trt_id, trt_model):
+    def count_ruptures(ruptures_by_trt_id, trt_model):
         """
         Returns the number of tectonic region types
         with ID contained in the ruptures_by_trt_id.

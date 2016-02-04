@@ -497,14 +497,16 @@ class RlzsAssoc(collections.Mapping):
 # collection <-> trt model associations
 col_dt = numpy.dtype([('trt_id', numpy.uint32), ('sample', numpy.uint32)])
 
+LENGTH = 256
+
 source_model_dt = numpy.dtype([
-    ('name', (bytes, 255)),
+    ('name', (bytes, LENGTH)),
     ('weight', numpy.float32),
-    ('path', (bytes, 255)),
+    ('path', (bytes, LENGTH)),
     ('num_rlzs', numpy.uint32),
-    ('trts', (bytes, 255)),
-    ('num_ruptures', (bytes, 255)),
-    ('eff_ruptures', numpy.uint32),
+    ('trts', (bytes, LENGTH)),
+    ('num_ruptures', (bytes, LENGTH)),
+    ('eff_ruptures', (bytes, LENGTH)),
     ('samples', numpy.uint32),
 ])
 
@@ -547,7 +549,8 @@ class CompositionInfo(object):
         """Fully initialize the CompositionInfo object"""
         cols = []
         col_id = 0
-        self.eff_ruptures = numpy.zeros(len(self.source_models), numpy.uint32)
+        self.eff_ruptures = numpy.zeros(len(self.source_models),
+                                        (bytes, LENGTH))
         self.col_ids_by_trt_id = collections.defaultdict(list)
         self.tmdict = {}  # trt_id -> trt_model
         self.gsimdict = {}  # (trt_id, gsim_no) -> gsim instance
@@ -648,24 +651,30 @@ class CompositionInfo(object):
         for col_id, col in enumerate(self.cols):
             yield col['trt_id'], col['sample'], col_id
 
-    def get_rlzs_assoc(self, get_weight=lambda tm: tm.num_ruptures):
+    def get_rlzs_assoc(self, count_ruptures=lambda tm: tm.num_ruptures):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
         rlz_idx and trt_gsims.
 
-        :param get_weight: a function trt_model -> positive number
+        :param count_ruptures: a function trt_model -> num_ruptures
         """
         assoc = RlzsAssoc(self)
         random_seed = self.seed
         num_samples = self.num_samples
         idx = 0
         for i, smodel in enumerate(self.source_models):
-            self.eff_ruptures[i] = sum(
-                get_weight(tm) for tm in smodel.trt_models)
-            # collect the effective tectonic region types
-            trts = set(tm.trt for tm in smodel.trt_models if get_weight(tm))
+            # collect the effective tectonic region types and rupture counts
+            trts = []
+            rups = []
+            for tm in smodel.trt_models:
+                nr = count_ruptures(tm)
+                if nr:
+                    trts.append(tm.trt)
+                    rups.append(str(nr))
+            self.eff_ruptures[i] = ','.join(rups)
+
             # recompute the GSIM logic tree if needed
-            if trts != set(smodel.gsim_lt.tectonic_region_types):
+            if set(trts) != set(smodel.gsim_lt.tectonic_region_types):
                 before = smodel.gsim_lt.get_num_paths()
                 smodel.gsim_lt.reduce(trts)
                 after = smodel.gsim_lt.get_num_paths()
