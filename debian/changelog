@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Updated `make_html_report.py` to extract the full report from the
+    datastore
   * If `use_celery` is true, use celery to determine a good default for
     the parameter `concurrent_tasks`
   * Made celery required only in cluster situations
