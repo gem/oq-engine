@@ -13,7 +13,7 @@ $ sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.n
 ```
 
 ```bash
-$ curl -s https://copr.fedoraproject.org/coprs/gem/openquake/repo/epel-7/gem-openquake-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-epel-7.repo
+$ curl -sL https://copr.fedoraproject.org/coprs/gem/openquake/repo/epel-7/gem-openquake-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-epel-7.repo
 
 ```
 This provides some dependencies which are missing in **EPEL**.
@@ -43,12 +43,6 @@ Then restart PostgreSQL
 $ sudo service postgresql restart
 ```
 
-## Start rabbitmq-server
-```bash
-$ sudo service rabbitmq-server start
-```
-
-
 ## Get the OpenQuake Engine code
 ```bash
 $ git clone https://github.com/gem/oq-engine.git
@@ -72,7 +66,3 @@ $ sudo -u postgres oq-engine/bin/oq_create_db
 $ oq-engine/bin/oq-engine --upgrade-db
 ```
 
-## Start celery
-```bash
-$ cd oq-engine/ && celery worker --purge -Ofair
-```
