@@ -109,7 +109,8 @@ def build_report(job_ini, output_dir=None):
     # the goal is to extract information about the source management only
     calc.SourceManager = source.DummySourceManager
     calc.count_eff_ruptures = (
-        lambda result_dict, trt_model: result_dict.eff_ruptures[trt_model.id])
+        lambda result_dict, trt_model:
+        result_dict.eff_ruptures.get(trt_model.id, 0))
     with mock.patch.object(
             calc.__class__, 'core_task', source.count_eff_ruptures):
         calc.pre_execute()
