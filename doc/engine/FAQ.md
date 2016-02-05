@@ -9,6 +9,11 @@ Preliminary support and binary RPMs for unstable (nightly builds) and stable rel
 
 ***
 
+### Using or not Celery
+
+_Stub_
+
+***
 
 ### DatabaseError: invalid byte sequence for encoding "UTF8": 0x00
 

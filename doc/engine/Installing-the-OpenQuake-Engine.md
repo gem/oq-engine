@@ -1,6 +1,6 @@
 ### Installing the OpenQuake Engine
 
-The OpenQuake Engine 1.5 supports **Ubuntu 14.04** LTS (Trusty) and **Red Hat Enterprese Linux 7** and compatible distributions. Support for **Ubuntu 12.04** LTS (Precise) is still available but has been deprecated. For more information see [What's new](What's-new.md).
+The OpenQuake Engine supports **Ubuntu 14.04** LTS (Trusty) and **Red Hat Enterprese Linux 7** and compatible distributions. Support for **Ubuntu 12.04** LTS (Precise) is still available but has been deprecated. For more information see [What's new](What's-new.md).
 
 If you were previously using a nightly release first remove the old packages and the repository:
 <pre>
@@ -43,28 +43,16 @@ sudo diff -urN /etc/openquake/openquake.cfg /etc/openquake/openquake.cfg.new_in_
 ```
 See an [example](openquake.cfg-diff-example.md).
 
-Same must be done with ```/usr/share/openquake/engine/celeryconfig.py``` and ```/usr/share/openquake/engine/celeryconfig.py.new_in_this_release```. Usually you can replace ```celeryconfig.py``` with ```celeryconfig.py.new_in_this_release```.
-
 Finally upgrade your database:
 
 ```bash
 oq-engine --upgrade-db
 ```
 
-**Please note**: PostgreSQL and RabbitMQ must be started, even on a worker node, to successful complete the upgrade. For example, the right upgrade procedure on a worker node is:
-```
-sudo service postgresql start
-sudo service rabbitmq-server start
-sudo apt-get install python-oq-.*
-## Optional, stop the unused services on a worker node
-sudo service postgresql stop
-sudo service rabbitmq-server stop
-```
-
-## Run OQ Engine, without calculation parallelization
+## Run OQ Engine
 You are now ready to run the OQ Engine. First, try running one of the demos included with the package. There are several demo calculations located in `/usr/share/openquake/risklib/demos`. Example:
 ```
-oq-engine --run-hazard=/usr/share/openquake/risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini --no-distribute
+oq-engine --run-hazard=/usr/share/openquake/risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
 ```
 
 The output should look something like this:
@@ -142,23 +130,6 @@ Calculation 114 completed in 44 seconds. Results:
 Some outputs where not shown. You can see the full list with the command
 `oq-engine --list-outputs`
 ```
-
-## Run OQ Engine, with calculation parallelization
-From the directory `/usr/share/openquake/engine`, launch celery worker processes like so:
-##### Ubuntu 12.04 / Celery 2
-<pre>
-cd /usr/share/openquake/engine && celeryd --purge &
-</pre>
-
-##### Ubuntu 14.04 / Celery 3
-<pre>
-cd /usr/share/openquake/engine && celery worker --purge -Ofair &
-</pre>
-
-Then run `oq-engine` without the `--no-distribute` option:
-<pre>
-oq-engine --run-hazard=/usr/share/openquake/risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
-</pre>
 
 ## More commands
 For a list of additional commands, type `oq-engine --help`.
