@@ -172,7 +172,7 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
         source_site_filter=source_site_distance_filter(max_dist),
         maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
     dic.calc_times = monitor.calc_times  # added by hazard_curves_per_trt
-    dic.eff_ruptures = monitor.eff_ruptures  # idem
+    dic.eff_ruptures = {trt_model_id: monitor.eff_ruptures}  # idem
     for gsim, curves in zip(gsims, curves_by_gsim):
         dic[trt_model_id, str(gsim)] = curves
     return dic
@@ -246,7 +246,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         for key in result_dict:
             if trt_model.id == key[0] and nonzero(result_dict[key]):
-                return result_dict.eff_ruptures
+                return result_dict.eff_ruptures[trt_model.id]
         return 0
 
     def zerodict(self):
@@ -256,7 +256,7 @@ class ClassicalCalculator(base.HazardCalculator):
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zd = AccumDict((key, zc) for key in self.rlzs_assoc)
         zd.calc_times = []
-        zd.eff_ruptures = 0
+        zd.eff_ruptures = AccumDict()  # trt_id -> eff_ruptures
         zd.bb_dict = {
             (smodel.ordinal, site.id): BoundingBox(smodel.ordinal, site.id)
             for site in self.sitecol

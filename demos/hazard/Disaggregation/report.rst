@@ -63,15 +63,15 @@ Number of ruptures per tectonic region type
 ================ ====== ======================== =========== ============ ============ ======
 source_model     trt_id trt                      num_sources num_ruptures eff_ruptures weight
 ================ ====== ======================== =========== ============ ============ ======
-source_model.xml 0      Active Shallow Crust     1           1334         5434         1334.0
-source_model.xml 1      Stable Continental Crust 1           4100         5434         102.5 
+source_model.xml 0      Active Shallow Crust     1           1334         1334         1334.0
+source_model.xml 1      Stable Continental Crust 1           4100         4100         102.5 
 ================ ====== ======================== =========== ============ ============ ======
 
 =============== ======
 #TRT models     2     
 #sources        2     
 #tot_ruptures   5434  
-#eff_ruptures   10868 
+#eff_ruptures   5434  
 filtered_weight 1436.5
 =============== ======
 
@@ -87,6 +87,6 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            2         SimpleFaultSource 1334.0 1334      0.00801802  1.18068    0.0      
-1            1         AreaSource        102.5  205       0.00433707  0.252998   0.0      
+0            2         SimpleFaultSource 1334.0 1334      0.00207281  0.325443   0.0      
+1            1         AreaSource        102.5  205       0.00124693  0.063776   0.0      
 ============ ========= ================= ====== ========= =========== ========== =========

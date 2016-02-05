@@ -74,17 +74,17 @@ Number of ruptures per tectonic region type
 ================== ====== ======================== =========== ============ ============ ======
 source_model       trt_id trt                      num_sources num_ruptures eff_ruptures weight
 ================== ====== ======================== =========== ============ ============ ======
-source_model_1.xml 0      Active Shallow Crust     1           1334         12651        1334.0
-source_model_1.xml 1      Stable Continental Crust 1           4100         12651        102.5 
-source_model_2.xml 2      Active Shallow Crust     1           1297         12651        1297.0
-source_model_2.xml 3      Stable Continental Crust 1           5920         12651        148.0 
+source_model_1.xml 0      Active Shallow Crust     1           1334         1334         1334.0
+source_model_1.xml 1      Stable Continental Crust 1           4100         4100         102.5 
+source_model_2.xml 2      Active Shallow Crust     1           1297         1297         1297.0
+source_model_2.xml 3      Stable Continental Crust 1           5920         5920         148.0 
 ================== ====== ======================== =========== ============ ============ ======
 
 =============== ======
 #TRT models     4     
 #sources        4     
 #tot_ruptures   12651 
-#eff_ruptures   50604 
+#eff_ruptures   12651 
 filtered_weight 2881.5
 =============== ======
 
@@ -100,8 +100,8 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            2         SimpleFaultSource 1334.0 1334      0.00516486  0.433879   0.0      
-2            2         SimpleFaultSource 1297.0 1297      0.00203514  0.434893   0.0      
-1            1         AreaSource        102.5  1         0.00127792  0.0        0.0      
-3            1         AreaSource        148.0  1         0.00107193  0.0        0.0      
+0            2         SimpleFaultSource 1334.0 1334      0.003654    0.3275     0.0      
+2            2         SimpleFaultSource 1297.0 1297      0.00199795  0.324473   0.0      
+1            1         AreaSource        102.5  1         0.00121999  0.0        0.0      
+3            1         AreaSource        148.0  1         0.000985146 0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========

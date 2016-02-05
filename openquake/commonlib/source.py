@@ -1049,8 +1049,14 @@ class SourceManager(object):
 
 @parallel.litetask
 def count_eff_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
+    """
+    Count the number of ruptures contained in the given sources and return
+    a dictionary trt_model_id -> num_ruptures. All sources belongs to the
+    same tectonic region type.
+    """
     acc = AccumDict()
-    acc.eff_ruptures = sum(src.num_ruptures for src in sources)
+    acc.eff_ruptures = {sources[0].trt_model_id:
+                        sum(src.num_ruptures for src in sources)}
     return acc
 
 
