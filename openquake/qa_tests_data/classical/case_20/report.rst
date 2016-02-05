@@ -120,7 +120,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 24       
-Sent data                   633.69 KB
+Sent data                   633.77 KB
 =========================== =========
 
 Slowest sources
@@ -128,24 +128,24 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-2            SFLT1     SimpleFaultSource    56.0   1         0.00203586  0.0        0.0      
-5            SFLT1     SimpleFaultSource    56.0   1         0.001827    0.0        0.0      
-0            SFLT1     SimpleFaultSource    56.0   1         0.00182605  0.0        0.0      
-0            CHAR1     CharacteristicFaultS 1.0    1         0.00180006  0.0        0.0      
-1            SFLT1     SimpleFaultSource    56.0   1         0.00178599  0.0        0.0      
-3            SFLT1     SimpleFaultSource    56.0   1         0.00178599  0.0        0.0      
-6            SFLT1     SimpleFaultSource    58.0   1         0.00177813  0.0        0.0      
-4            SFLT1     SimpleFaultSource    56.0   1         0.00177097  0.0        0.0      
-9            SFLT1     SimpleFaultSource    58.0   1         0.00176406  0.0        0.0      
-10           SFLT1     SimpleFaultSource    58.0   1         0.0017581   0.0        0.0      
-7            SFLT1     SimpleFaultSource    58.0   1         0.00175405  0.0        0.0      
-11           SFLT1     SimpleFaultSource    58.0   1         0.00175405  0.0        0.0      
-8            SFLT1     SimpleFaultSource    58.0   1         0.00175095  0.0        0.0      
-4            CHAR1     CharacteristicFaultS 1.0    1         0.00165606  0.0        0.0      
-1            CHAR1     CharacteristicFaultS 1.0    1         0.00164914  0.0        0.0      
-0            COMFLT1   ComplexFaultSource   29.0   1         0.00162101  0.0        0.0      
-10           CHAR1     CharacteristicFaultS 1.0    1         0.00162005  0.0        0.0      
-7            CHAR1     CharacteristicFaultS 1.0    1         0.00161791  0.0        0.0      
-8            CHAR1     CharacteristicFaultS 1.0    1         0.00158787  0.0        0.0      
-2            COMFLT1   ComplexFaultSource   29.0   1         0.00158119  0.0        0.0      
+5            SFLT1     SimpleFaultSource    56.0   1         0.00184512  0.0        0.0      
+10           SFLT1     SimpleFaultSource    58.0   1         0.00184202  0.0        0.0      
+4            SFLT1     SimpleFaultSource    56.0   1         0.00183415  0.0        0.0      
+2            SFLT1     SimpleFaultSource    56.0   1         0.0018301   0.0        0.0      
+0            CHAR1     CharacteristicFaultS 1.0    1         0.001827    0.0        0.0      
+1            SFLT1     SimpleFaultSource    56.0   1         0.00181198  0.0        0.0      
+9            SFLT1     SimpleFaultSource    58.0   1         0.00180793  0.0        0.0      
+0            SFLT1     SimpleFaultSource    56.0   1         0.00180292  0.0        0.0      
+6            SFLT1     SimpleFaultSource    58.0   1         0.00178599  0.0        0.0      
+7            SFLT1     SimpleFaultSource    58.0   1         0.00178504  0.0        0.0      
+3            SFLT1     SimpleFaultSource    56.0   1         0.00178289  0.0        0.0      
+8            SFLT1     SimpleFaultSource    58.0   1         0.00177598  0.0        0.0      
+11           SFLT1     SimpleFaultSource    58.0   1         0.00177407  0.0        0.0      
+1            CHAR1     CharacteristicFaultS 1.0    1         0.00168705  0.0        0.0      
+4            CHAR1     CharacteristicFaultS 1.0    1         0.00165391  0.0        0.0      
+10           CHAR1     CharacteristicFaultS 1.0    1         0.001647    0.0        0.0      
+7            CHAR1     CharacteristicFaultS 1.0    1         0.00164604  0.0        0.0      
+0            COMFLT1   ComplexFaultSource   29.0   1         0.00161409  0.0        0.0      
+8            COMFLT1   ComplexFaultSource   29.0   1         0.0016129   0.0        0.0      
+2            COMFLT1   ComplexFaultSource   29.0   1         0.00160503  0.0        0.0      
 ============ ========= ==================== ====== ========= =========== ========== =========

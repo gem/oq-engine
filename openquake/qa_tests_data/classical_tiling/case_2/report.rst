@@ -99,7 +99,7 @@ Slowest sources
 ============ ============ ============ ====== ========= =========== ========== =========
 trt_model_id source_id    source_class weight split_num filter_time split_time calc_time
 ============ ============ ============ ====== ========= =========== ========== =========
-4            AS_GEAS343   AreaSource   96.9   1         0.0203552   0.0        0.0      
-9            FSBG_TRBG103 AreaSource   43.875 1         0.00637221  0.0        0.0      
-9            FSBG_ARAS462 AreaSource   7.65   1         0.00161386  0.0        0.0      
+4            AS_GEAS343   AreaSource   96.9   1         0.0167069   0.0        0.0      
+9            FSBG_TRBG103 AreaSource   43.875 1         0.00591731  0.0        0.0      
+9            FSBG_ARAS462 AreaSource   7.65   1         0.00216413  0.0        0.0      
 ============ ============ ============ ====== ========= =========== ========== =========
