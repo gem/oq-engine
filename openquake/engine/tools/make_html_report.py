@@ -2,6 +2,8 @@ import cgi
 import datetime
 import decimal
 import itertools
+from docutils.examples import html_parts
+
 from openquake.commonlib.datastore import DataStore
 from openquake.calculators.views import view_fullreport
 
@@ -103,8 +105,8 @@ FROM uiapi.performance_view WHERE oq_job_id=%s
 '''
 
 JOB_STATS = '''
-SELECT oq_job_id, stop_time, status, duration FROM (
-  SELECT oq_job_id, stop_time, status,
+SELECT oq_job_id, user_name, stop_time, status, duration FROM (
+  SELECT oq_job_id, user_name, stop_time, status,
   stop_time - start_time as duration
   FROM uiapi.job_stats AS s
   INNER JOIN uiapi.oq_job AS o
@@ -182,17 +184,18 @@ def make_report(conn, isodate='today'):
     page = '<h2>%d job(s) finished before midnight of %s</h2>' % (
         len(jobs), isodate)
     for job_id, user, status in jobs:
-        page = ''
         tag_ids.append(job_id)
         tag_status.append(status)
         stats = fetcher.query(JOB_STATS, job_id)[1:]
         if not stats:
             continue
-        (job_id, stop_time, status, duration) = stats[0]
+        (job_id, user, stop_time, status, duration) = stats[0]
 
         ds = DataStore(job_id, mode='r')
-        tot_rlzs = len(ds['realizations'])
+        report = html_parts(view_fullreport('fullreport', ds))
+        page = report['html_title']
 
+        tot_rlzs = len(ds['realizations'])
         data = fetcher.query(JOB_INFO, job_id)
         if data[1:]:
             info_rows = (
@@ -202,13 +205,10 @@ def make_report(conn, isodate='today'):
                 )) + html(data)
             page += info_rows
 
-        job_stats = '<h3>Job Stats for job %d [%s]</h3>' % (
-            job_id, user) + html(
-            fetcher.query(JOB_STATS, job_id))
+        job_stats = html(fetcher.query(JOB_STATS, job_id))
         page += job_stats
 
-        report = view_fullreport('fullreport', ds)
-        page += '<pre>%s</pre>' % cgi.escape(report, quote=True)
+        page += report['fragment']
 
         tag_contents.append(page)
 
