@@ -29,7 +29,7 @@ $ curl -sL https://copr.fedoraproject.org/coprs/gem/openquake/repo/epel-7/gem-op
 
 The full list of supported repos (including Fedora) is available on COPR: https://copr.fedoraproject.org/coprs/gem/openquake/
 
-#### Stable releases (starting from OpenQuke Engine 1.5, EPEL only)
+#### Stable releases (starting from OpenQuke Engine 1.5)
 
 
 ```bash
@@ -63,12 +63,6 @@ Then restart PostgreSQL
 $ sudo service postgresql restart
 ```
 
-## Start rabbitmq-server
-```bash
-$ sudo service rabbitmq-server start
-```
-
-
 ## Bootstrap the DB
 ```bash
 $ sudo -u postgres oq_create_db
@@ -77,11 +71,6 @@ $ oq-engine --upgrade-db
 A previously installed database can be removed running the `dropdb` tool
 ```bash
 sudo -u postgres dropdb openquake2
-```
-
-## Start celery
-```bash
-$ cd /usr/share/openquake/engine && celery worker --purge -Ofair
 ```
 
 ## Run a demo

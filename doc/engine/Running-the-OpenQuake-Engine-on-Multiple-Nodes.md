@@ -8,15 +8,6 @@ One common configuration is to install and deploy all three services on a single
 ## Postgres configuration
 The default Postgres configuration does not permit access from other machines: the file /etc/postgresql/9.3/main/pg_hba.conf should be modified to allow access to the "openquake" database from the worker nodes, an example excerpt follows:
 
-### OpenQuake 1.0
-<pre>
-host   openquake   oq_admin        192.168.10.0/8 md5
-host   openquake   oq_job_init     192.168.10.0/8 md5
-host   openquake   oq_job_superv   192.168.10.0/8 md5
-host   openquake   oq_reslt_writer 192.168.10.0/8 md5
-</pre>
-
-### OpenQuake >= 1.2
 <pre>
 host   openquake2   oq_admin        192.168.10.0/8 md5
 host   openquake2   oq_job_init     192.168.10.0/8 md5
@@ -24,7 +15,7 @@ host   openquake2   oq_job_init     192.168.10.0/8 md5
 
 The Postgres manual describes a number of runtime configuration parameters that may need to be adjusted depending on your cluster configuration:
 
-### listen_addresses 
+### listen_addresses
 * See [http://www.postgresql.org/docs/current/static/runtime-config-connection.html#GUC-LISTEN-ADDRESSES](http://www.postgresql.org/docs/current/static/runtime-config-connection.html#GUC-LISTEN-ADDRESSES)
 
 By default Postres, on Ubuntu, allows connections only from localhost. Since celery workers need to push data back to Postgres, it should be exposed to the cluster network:
@@ -50,45 +41,27 @@ max_connections = 100
 
 Note: you have to **restart every celery node** after a PostgreSQL configuration change or a restart.
 
-## Redis configuration (only for OpenQuake <= 1.0)
-By default, Redis does not permit access from other machines. The "bind" parameter in the /etc/redis/redis.conf file should be either:
-  * set to the IP Address of the interface on which to accept incoming connections.  
-  * commented or not preset so that Redis listens for connections on all interfaces
+## OpenQuake Engine 'master' node configuration File
 
-The /etc/redis/redis.conf file should also be edited to set the timeout parameter to 0.  (See [https://bugs.launchpad.net/openquake/+bug/907760](https://bugs.launchpad.net/openquake/+bug/907760) for details).
-<pre>
-timeout=0
-</pre>
+### Enable Celery
 
-See also security considerations below.
+In the master node, the following file should be modified to enable the Celery support
 
-## OpenQuake engine Master node Configuration File
-In the master node, the following file should be modified to refer to the Postres, Redis and Rabbit servers:
-
-/etc/openquake/openquake.cfg:
-
+`/etc/openquake/openquake.cfg:`
 
 ```
-# maximum number of tasks to spawn concurrently
-concurrent_tasks = [number_of_workers * 2]
+[celery]
+# enable celery only if you have a cluster
+use_celery = false
 ```
-
-The ```concurrent_tasks``` value must be set at _[number_of_workers * 2]_ (on a 128 cores cluster it would be 256).
 
 **NOTE** that the /etc/openquake/openquake.cfg file can be overridden by an openquake.cfg file in the current working directory.
 
-## OpenQuake engine Worker node Configuration File
-On all worker nodes, the following file should be modified to refer to the Postres, Redis and Rabbit servers:
+## OpenQuake Engine 'worker' node configuration File
+On all worker nodes, the following file should be modified to refer to the Postres and Rabbit servers:
 
 ```/etc/openquake/openquake.cfg``` (see the ```/etc/openquake/openquake_workers.cfg``` as reference):
 ```
-### Only for OQE <= 1.0.0
-[kvs]
-port = 6379
-## replace localhost with hostname for Redis KVS
-host = localhost
-### End OQE <= 1.0.0 only
-
 [amqp]
 # Replace localhost with hostname for RabbitMQ
 host = localhost
@@ -109,7 +82,21 @@ port = 5432
 
 Jobs can be submitted through the master node using the `oq-engine` command line interface.
 
-`celeryd` must run all of the worker nodes. We strongly suggest to use `supervisord` to manage the celery deamons.
+### Starting Celery
+
+`celeryd` must run all of the worker nodes. It can be started using the following commands
+
+#### Ubuntu 12.04 / Celery 2
+<pre>
+cd /usr/share/openquake/engine && celeryd --purge &
+</pre>
+
+#### Ubuntu 14.04 and RHEL 7 / Celery 3
+<pre>
+cd /usr/share/openquake/engine && celery worker --purge -Ofair &
+</pre>
+
+but we strongly suggest to use `supervisord` to manage the celery deamons.
 
 ```supervisord``` can be installed with
 ```bash
@@ -146,8 +133,6 @@ A custom `PYTHONPATH` can be also set
 environment=PYTHONPATH="/usr/local/openquake/oq-engine:/usr/local/openquake/oq-hazardlib:/usr/local/openquake/oq-nrmllib:/usr/local/openquake/oq-risklib",DJANGO_SETTINGS_MODULE="openquake.engine.settings",OQ_LOCAL_CFG_PATH="openquake_worker.cfg" 
 ```
 
-
-
 ## Network and security considerations
 The worker nodes should be isolated from the external network using either a dedicated internal network or a firewall.
 Additionally, access to the redis, rabbit, and postgres ports should be limited (again by internal LAN or firewall) so that external traffic is excluded.
@@ -160,9 +145,9 @@ If using `supervisord` (or similar) to execute `celeryd` at boot time please ens
 Storage requirements depend a lot on the type of calculations run. On a worker node you will need just the space for the operating system, the logs and the OpenQuake installation: less than 20GB are usually enough. Workers can be also diskless (using iSCSI or NFS for example).
 
 On the master node you will also need space for:
+- the users' **home** directory (usually located under `/home`). The users home folders will contains the calculations exported results and the calculations datastore (`hdf5` files located in the `oqdata` folder)
 - the PostgreSQL DB (on Ubuntu usually located under `/var/lib/postgres`)
 - RabbitMQ mnesia dir (on Ubuntu usually located under `/var/lib/rabbitmq`)
-- the users home directory (usually located under `/home`). The users home folders will contains the calculations exported results and the calculations datastores (`hdf5` files located in the `oqdata` folder)
 
 On large installation we strongly suggest to create separate partition for `/home`, `/var`, PostgreSQL (```/var/lib/postgres```) and RabbitMQ (```/var/lib/rabbitmq```).
 Those partitions should be stored on fast local disks or on a high performance SAN (i.e. using a FC or a 10Gbps link).
