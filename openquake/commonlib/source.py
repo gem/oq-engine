@@ -544,6 +544,7 @@ def cjoin(strings):
     s = ','.join(strings)
     if len(s) > LENGTH:
         raise ValueError('The string %r is over %d characters' % (s, LENGTH))
+    return s
 
 
 def get_trts(smodel):
