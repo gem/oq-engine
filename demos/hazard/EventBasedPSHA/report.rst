@@ -1,7 +1,7 @@
 Event Based PSHA using Area Source
 ==================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
@@ -75,7 +75,15 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 18       
-Sent data                   360.17 KB
+Sent data                   356.6 KB 
 Total received data         185.85 KB
 Maximum received per task   15.5 KB  
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         AreaSource   1230.0 205       0.00236082  0.0929871  33.8232  
+============ ========= ============ ====== ========= =========== ========== =========

@@ -1,7 +1,7 @@
 Classical PSHA with Complex Fault Source
 ========================================
 
-num_sites = 1452, sitecol = 34.45 KB
+num_sites = 1452, sitecol = 65.88 KB
 
 Parameters
 ----------
@@ -19,6 +19,7 @@ area_source_discretization   5.0
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -58,11 +59,11 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources num_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           924          924.0 
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============ ======
+source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight
+================ ====== ==================== =========== ============ ============ ======
+source_model.xml 0      Active Shallow Crust 1           924          924          924.0 
+================ ====== ==================== =========== ============ ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
@@ -70,3 +71,11 @@ Expected data transfer for the sources
 Number of tasks to generate 16     
 Sent data                   1.96 MB
 =========================== =======
+
+Slowest sources
+---------------
+============ ========= ================== ====== ========= =========== ========== =========
+trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
+============ ========= ================== ====== ========= =========== ========== =========
+0            1         ComplexFaultSource 924.0  924       0.00375915  3.66919    0.0      
+============ ========= ================== ====== ========= =========== ========== =========

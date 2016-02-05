@@ -10,7 +10,7 @@ import logging
 
 
 from openquake.baselib.general import humansize
-from openquake.commonlib import readinput, datastore, source
+from openquake.commonlib import readinput, datastore, source, parallel
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.calculators import base, views
 
@@ -43,7 +43,7 @@ class ReportWriter(object):
         self.dstore = dstore
         self.oq = oq = OqParam.from_(dstore.attrs)
         self.text = oq.description + '\n' + '=' * len(oq.description)
-        sitecol_size = humansize(len(dstore.hdf5['sitecol'].value))
+        sitecol_size = humansize(len(parallel.Pickled(dstore['sitecol'])))
         self.text += '\n\nnum_sites = %d, sitecol = %s' % (
             len(dstore['sitemesh']), sitecol_size)
 

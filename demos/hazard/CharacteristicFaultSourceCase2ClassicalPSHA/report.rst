@@ -1,7 +1,7 @@
 Example Classical PSHA using Characteristic Fault Source with Simple Fault Geometry
 ===================================================================================
 
-num_sites = 8836, sitecol = 207.51 KB
+num_sites = 8836, sitecol = 397.58 KB
 
 Parameters
 ----------
@@ -19,6 +19,7 @@ area_source_discretization   5.0
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -58,15 +59,23 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources num_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           1            1.0   
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============ ======
+source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight
+================ ====== ==================== =========== ============ ============ ======
+source_model.xml 0      Active Shallow Crust 1           1            8            1.0   
+================ ====== ==================== =========== ============ ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
-Number of tasks to generate 1        
-Sent data                   226.15 KB
+Number of tasks to generate 8        
+Sent data                   357.48 KB
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ==================== ====== ========= =========== ========== =========
+trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
+============ ========= ==================== ====== ========= =========== ========== =========
+0            6         CharacteristicFaultS 1.0    1         0.0324938   0.0        0.0      
+============ ========= ==================== ====== ========= =========== ========== =========

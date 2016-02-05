@@ -193,6 +193,8 @@ def view_params(token, dstore):
               'random_seed', 'master_seed', 'concurrent_tasks']
     if 'risk' in oq.calculation_mode:
         params.append('avg_losses')
+    if 'classical' in oq.calculation_mode:
+        params.append('sites_per_tile')
     return rst_table([(param, getattr(oq, param, None)) for param in params])
 
 

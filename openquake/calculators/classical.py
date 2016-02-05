@@ -217,6 +217,7 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('aggregate curves', autoflush=True):
             if hasattr(val, 'calc_times'):
                 acc.calc_times.extend(val.calc_times)
+            if hasattr(val, 'eff_ruptures'):
                 acc.eff_ruptures += val.eff_ruptures
             for bb in getattr(val, 'bbs', []):
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
