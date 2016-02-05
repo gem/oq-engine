@@ -139,10 +139,12 @@ def view_rupture_collections(token, dstore):
 @view.add('ruptures_per_trt')
 def view_ruptures_per_trt(token, dstore):
     tbl = []
-    header = 'source_model trt_id trt num_sources num_ruptures weight'.split()
+    header = ('source_model trt_id trt num_sources '
+              'num_ruptures eff_ruptures weight'.split())
     num_trts = 0
     tot_sources = 0
     tot_ruptures = 0
+    eff_ruptures = 0
     tot_weight = 0
     source_info = dstore['source_info'].value
     csm_info = dstore['rlzs_assoc'].csm_info
@@ -150,26 +152,34 @@ def view_ruptures_per_trt(token, dstore):
                 lambda rows: sum(r['weight'] for r in rows))
     n = groupby(source_info, operator.itemgetter('trt_model_id'),
                 lambda rows: sum(1 for r in rows))
-    for sm in csm_info.source_models:
-        for trt_model in sm.trt_models:
+    for i, sm in enumerate(csm_info.source_models):
+        er = map(int, csm_info.eff_ruptures[i].split(','))
+        for trt_model, _eff_ruptures in zip(sm.trt_models, er):
             num_trts += 1
             num_sources = n.get(trt_model.id, 0)
             tot_sources += num_sources
             num_ruptures = trt_model.num_ruptures
             tot_ruptures += num_ruptures
+            eff_ruptures += _eff_ruptures
             weight = w.get(trt_model.id, 0)
             tot_weight += weight
             tbl.append((sm.name, trt_model.id, trt_model.trt,
-                        num_sources, num_ruptures, weight))
+                        num_sources, num_ruptures, _eff_ruptures, weight))
     rows = [('#TRT models', num_trts),
             ('#sources', tot_sources),
-            ('#ruptures', tot_ruptures),
+            ('#tot_ruptures', tot_ruptures),
+            ('#eff_ruptures', eff_ruptures),
             ('filtered_weight', tot_weight)]
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:
         summary = ''
     return rst_table(tbl, header=header) + summary
+
+
+@view.add('short_source_info')
+def view_short_source_info(token, dstore):
+    return rst_table(dstore['source_info'][:20])
 
 
 @view.add('params')
@@ -218,7 +228,9 @@ def source_data_transfer(token, dstore):
     tbl = [
         ('Number of tasks to generate', len(sc)),
         ('Sent data', humansize(sc.attrs['sent']))]
-    if sc.attrs['task_name'] != 'dummy_task':
+    # NB: when called from `oq-lite info --report` the task name is
+    # count_eff_ruptures; then tot_received and max_received are bogus
+    if sc.attrs['task_name'] != 'count_eff_ruptures':
         tbl.extend([
             ('Total received data', humansize(sc.attrs['tot_received'])),
             ('Maximum received per task', humansize(sc.attrs['max_received'])),

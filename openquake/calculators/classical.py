@@ -16,7 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import division
-import math
 import logging
 import operator
 import collections
@@ -173,6 +172,7 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
         source_site_filter=source_site_distance_filter(max_dist),
         maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
     dic.calc_times = monitor.calc_times  # added by hazard_curves_per_trt
+    dic.eff_ruptures = monitor.eff_ruptures  # idem
     for gsim, curves in zip(gsims, curves_by_gsim):
         dic[trt_model_id, str(gsim)] = curves
     return dic
@@ -217,6 +217,7 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('aggregate curves', autoflush=True):
             if hasattr(val, 'calc_times'):
                 acc.calc_times.extend(val.calc_times)
+                acc.eff_ruptures += val.eff_ruptures
             for bb in getattr(val, 'bbs', []):
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
             self.agg_curves(acc, val)
@@ -234,7 +235,7 @@ class ClassicalCalculator(base.HazardCalculator):
                                 if tiling else v)
 
     @staticmethod
-    def count_ruptures(result_dict, trt_model):
+    def count_eff_ruptures(result_dict, trt_model):
         """
         Returns the number of ruptures in the trt_model (after filtering)
         or 0 if the trt_model has been filtered away.
@@ -244,7 +245,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         for key in result_dict:
             if trt_model.id == key[0] and nonzero(result_dict[key]):
-                return trt_model.num_ruptures
+                return result_dict.eff_ruptures
         return 0
 
     def zerodict(self):
@@ -254,6 +255,7 @@ class ClassicalCalculator(base.HazardCalculator):
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zd = AccumDict((key, zc) for key in self.rlzs_assoc)
         zd.calc_times = []
+        zd.eff_ruptures = 0
         zd.bb_dict = {
             (smodel.ordinal, site.id): BoundingBox(smodel.ordinal, site.id)
             for site in self.sitecol
@@ -274,7 +276,7 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(curves_by_trt_gsim)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            partial(self.count_ruptures, curves_by_trt_gsim))
+            partial(self.count_eff_ruptures, curves_by_trt_gsim))
         self.datastore['csm_info'] = self.rlzs_assoc.csm_info
         return curves_by_trt_gsim
 

@@ -35,6 +35,8 @@ class ReportWriter(object):
         source_data_transfer='Expected data transfer for the sources',
         avglosses_data_transfer='Estimated data transfer for the avglosses',
         exposure_info='Exposure model',
+        short_source_info='Slowest sources',
+        performance='Slowest operations',
     )
 
     def __init__(self, dstore):
@@ -78,6 +80,10 @@ class ReportWriter(object):
             self.add('avglosses_data_transfer')
         if 'exposure' in oq.inputs:
             self.add('exposure_info')
+        if 'source_info' in ds:
+            self.add('short_source_info')
+        if 'performance_data' in ds:
+            self.add('performance')
         return self.text
 
     def save(self, fname):
@@ -102,8 +108,10 @@ def build_report(job_ini, output_dir=None):
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
     calc.SourceManager = source.DummySourceManager
-    calc.count_ruptures = lambda result_dict, trt_model: True
-    with mock.patch.object(calc.__class__, 'core_task', source.dummy_task):
+    calc.count_eff_ruptures = (
+        lambda result_dict, trt_model: result_dict.eff_ruptures)
+    with mock.patch.object(
+            calc.__class__, 'core_task', source.count_eff_ruptures):
         calc.pre_execute()
     with mock.patch.object(logging.root, 'info'):  # reduce logging
         calc.execute()

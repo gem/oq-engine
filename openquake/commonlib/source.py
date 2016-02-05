@@ -536,6 +536,16 @@ source_model_dt = numpy.dtype([
 ])
 
 
+def cjoin(strings):
+    """
+    :param strings: an iterable over strings
+    :returns: a comma separated string of lenght <= LENGHT
+    """
+    s = ','.join(strings)
+    if len(s) > LENGTH:
+        raise ValueError('The string %r is over %d characters' % (s, LENGTH))
+
+
 def get_trts(smodel):
     """
     Extract the tectonic region models contained in the source model,
@@ -544,8 +554,7 @@ def get_trts(smodel):
     :param smodel: a :class:`openquake.commonlib.source.SourceModel` tuple
     :returns: a comma separated string of uppercase tectonic region types
     """
-    return ','.join(capitalize(tmodel.trt)
-                    for tmodel in smodel.trt_models)
+    return cjoin(capitalize(tmodel.trt) for tmodel in smodel.trt_models)
 
 
 def get_num_ruptures(smodel):
@@ -553,7 +562,7 @@ def get_num_ruptures(smodel):
     Extract the number of ruptures per each tectonic region model (in order)
     and return a single comma separated string.
     """
-    return ','.join(str(tmodel.num_ruptures) for tmodel in smodel.trt_models)
+    return cjoin(str(tmodel.num_ruptures) for tmodel in smodel.trt_models)
 
 
 class CompositionInfo(object):
@@ -1039,17 +1048,19 @@ class SourceManager(object):
 
 
 @parallel.litetask
-def dummy_task(sources, sitecol, siteidx, rlzs_assoc, monitor):
-    return {}
+def count_eff_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
+    acc = AccumDict()
+    acc.eff_ruptures = sum(src.num_ruptures for src in sources)
+    return acc
 
 
 class DummySourceManager(SourceManager):
     """
-    A SourceManager submitting do-nothing tasks: this is useful to stress
-    the calculation in case of a large data transfer, and to measure it.
+    A SourceManager submitting tasks of kind `count_eff_ruptures`: this is
+    used by the reports produced by `oq-lite info --report`.
     """
     def __init__(self, csm, taskfunc, maximum_distance, dstore, monitor,
                  random_seed=None, filter_sources=True, num_tiles=1):
-        SourceManager.__init__(self, csm, dummy_task, maximum_distance,
+        SourceManager.__init__(self, csm, count_eff_ruptures, maximum_distance,
                                dstore, monitor, random_seed, filter_sources,
                                num_tiles)
