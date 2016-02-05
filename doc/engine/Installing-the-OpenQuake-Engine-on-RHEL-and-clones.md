@@ -24,7 +24,7 @@ $ sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.n
 #### Unstable releases and nightly builds
 
 ```bash
-$ curl -s https://copr.fedoraproject.org/coprs/gem/openquake/repo/epel-7/gem-openquake-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-epel-7.repo
+$ curl -sL https://copr.fedoraproject.org/coprs/gem/openquake/repo/epel-7/gem-openquake-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-epel-7.repo
 ```
 
 The full list of supported repos (including Fedora) is available on COPR: https://copr.fedoraproject.org/coprs/gem/openquake/
@@ -33,7 +33,7 @@ The full list of supported repos (including Fedora) is available on COPR: https:
 
 
 ```bash
-$ curl -s https://copr.fedoraproject.org/coprs/gem/openquake-stable/repo/epel-7/gem-openquake-stable-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-stable-epel-7.repo
+$ curl -sL https://copr.fedoraproject.org/coprs/gem/openquake-stable/repo/epel-7/gem-openquake-stable-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-stable-epel-7.repo
 ```
 
 Now it's possible to install the OpenQuake Engine using YUM:
