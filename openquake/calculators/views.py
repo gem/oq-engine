@@ -140,10 +140,9 @@ def view_rupture_collections(token, dstore):
 def view_ruptures_per_trt(token, dstore):
     tbl = []
     header = ('source_model trt_id trt num_sources '
-              'num_ruptures eff_ruptures weight'.split())
+              'eff_ruptures weight'.split())
     num_trts = 0
     tot_sources = 0
-    tot_ruptures = 0
     eff_ruptures = 0
     tot_weight = 0
     source_info = dstore['source_info'].value
@@ -160,16 +159,13 @@ def view_ruptures_per_trt(token, dstore):
                 num_trts += 1
                 num_sources = n.get(trt_model.id, 0)
                 tot_sources += num_sources
-                num_ruptures = trt_model.num_ruptures
-                tot_ruptures += num_ruptures
                 eff_ruptures += er
                 weight = w.get(trt_model.id, 0)
                 tot_weight += weight
                 tbl.append((sm.name, trt_model.id, trt_model.trt,
-                            num_sources, num_ruptures, er, weight))
+                            num_sources, er, weight))
     rows = [('#TRT models', num_trts),
             ('#sources', tot_sources),
-            ('#tot_ruptures', tot_ruptures),
             ('#eff_ruptures', eff_ruptures),
             ('filtered_weight', tot_weight)]
     if len(tbl) > 1:

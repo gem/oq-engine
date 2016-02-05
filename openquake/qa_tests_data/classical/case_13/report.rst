@@ -66,17 +66,16 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-============================= ====== ==================== =========== ============ ============ ======
-source_model                  trt_id trt                  num_sources num_ruptures eff_ruptures weight
-============================= ====== ==================== =========== ============ ============ ======
-aFault_aPriori_D2.1.xml       0      Active Shallow Crust 168         1980         1848         1848.0
-bFault_stitched_D2.1_Char.xml 1      Active Shallow Crust 186         2706         2046         2046.0
-============================= ====== ==================== =========== ============ ============ ======
+============================= ====== ==================== =========== ============ ======
+source_model                  trt_id trt                  num_sources eff_ruptures weight
+============================= ====== ==================== =========== ============ ======
+aFault_aPriori_D2.1.xml       0      Active Shallow Crust 168         1848         1848.0
+bFault_stitched_D2.1_Char.xml 1      Active Shallow Crust 186         2046         2046.0
+============================= ====== ==================== =========== ============ ======
 
 =============== ======
 #TRT models     2     
 #sources        354   
-#tot_ruptures   4686  
 #eff_ruptures   3894  
 filtered_weight 3894.0
 =============== ======
@@ -93,24 +92,24 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            59_0      CharacteristicFaultS 11.0   1         0.00223613  0.0        0.0      
-0            86_1      CharacteristicFaultS 11.0   1         0.00207615  0.0        0.0      
-0            59_1      CharacteristicFaultS 11.0   1         0.00196505  0.0        0.0      
-0            0_0       CharacteristicFaultS 11.0   1         0.00183201  0.0        0.0      
-0            28_1      CharacteristicFaultS 11.0   1         0.00179195  0.0        0.0      
-0            87_0      CharacteristicFaultS 11.0   1         0.00178885  0.0        0.0      
-1            74_1      CharacteristicFaultS 11.0   1         0.00175095  0.0        0.0      
-0            87_1      CharacteristicFaultS 11.0   1         0.00174618  0.0        0.0      
-0            88_0      CharacteristicFaultS 11.0   1         0.00166297  0.0        0.0      
-0            29_0      CharacteristicFaultS 11.0   1         0.00163698  0.0        0.0      
-1            12_0      CharacteristicFaultS 11.0   1         0.00163507  0.0        0.0      
-1            119_1     CharacteristicFaultS 11.0   1         0.00163102  0.0        0.0      
-0            88_1      CharacteristicFaultS 11.0   1         0.00162983  0.0        0.0      
-0            12_0      CharacteristicFaultS 11.0   1         0.00162888  0.0        0.0      
-1            107_1     CharacteristicFaultS 11.0   1         0.00162697  0.0        0.0      
-0            23_0      CharacteristicFaultS 11.0   1         0.00162196  0.0        0.0      
-0            5_0       CharacteristicFaultS 11.0   1         0.00161886  0.0        0.0      
-0            29_1      CharacteristicFaultS 11.0   1         0.0016129   0.0        0.0      
-0            78_0      CharacteristicFaultS 11.0   1         0.00161195  0.0        0.0      
-1            38_0      CharacteristicFaultS 11.0   1         0.00161195  0.0        0.0      
+0            0_0       CharacteristicFaultS 11.0   1         0.0018599   0.0        0.0      
+0            11_1      CharacteristicFaultS 11.0   1         0.0016911   0.0        0.0      
+0            12_0      CharacteristicFaultS 11.0   1         0.00166011  0.0        0.0      
+0            71_0      CharacteristicFaultS 11.0   1         0.0016551   0.0        0.0      
+1            87_0      CharacteristicFaultS 11.0   1         0.00160003  0.0        0.0      
+1            60_0      CharacteristicFaultS 11.0   1         0.00159907  0.0        0.0      
+1            50_0      CharacteristicFaultS 11.0   1         0.00159907  0.0        0.0      
+1            59_0      CharacteristicFaultS 11.0   1         0.00159311  0.0        0.0      
+1            89_1      CharacteristicFaultS 11.0   1         0.00159097  0.0        0.0      
+1            71_0      CharacteristicFaultS 11.0   1         0.00158501  0.0        0.0      
+1            15_1      CharacteristicFaultS 11.0   1         0.00158501  0.0        0.0      
+1            2_0       CharacteristicFaultS 11.0   1         0.00158     0.0        0.0      
+0            41_0      CharacteristicFaultS 11.0   1         0.00157905  0.0        0.0      
+1            42_1      CharacteristicFaultS 11.0   1         0.00157595  0.0        0.0      
+0            70_0      CharacteristicFaultS 11.0   1         0.00157499  0.0        0.0      
+1            39_1      CharacteristicFaultS 11.0   1         0.00157309  0.0        0.0      
+0            39_0      CharacteristicFaultS 11.0   1         0.00156999  0.0        0.0      
+1            46_0      CharacteristicFaultS 11.0   1         0.00156903  0.0        0.0      
+1            50_1      CharacteristicFaultS 11.0   1         0.00156593  0.0        0.0      
+1            45_0      CharacteristicFaultS 11.0   1         0.00156498  0.0        0.0      
 ============ ========= ==================== ====== ========= =========== ========== =========

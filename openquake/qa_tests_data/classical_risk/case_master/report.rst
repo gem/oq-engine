@@ -76,19 +76,18 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================== ====== ==================== =========== ============ ============ ======
-source_model       trt_id trt                  num_sources num_ruptures eff_ruptures weight
-================== ====== ==================== =========== ============ ============ ======
-source_model_1.xml 0      Active Shallow Crust 1           482          482          482.0 
-source_model_1.xml 1      Stable Shallow Crust 1           4            4            4.0   
-source_model_2.xml 2      Active Shallow Crust 1           482          482          482.0 
-source_model_2.xml 3      Stable Shallow Crust 1           1            1            1.0   
-================== ====== ==================== =========== ============ ============ ======
+================== ====== ==================== =========== ============ ======
+source_model       trt_id trt                  num_sources eff_ruptures weight
+================== ====== ==================== =========== ============ ======
+source_model_1.xml 0      Active Shallow Crust 1           482          482.0 
+source_model_1.xml 1      Stable Shallow Crust 1           4            4.0   
+source_model_2.xml 2      Active Shallow Crust 1           482          482.0 
+source_model_2.xml 3      Stable Shallow Crust 1           1            1.0   
+================== ====== ==================== =========== ============ ======
 
 =============== =====
 #TRT models     4    
 #sources        4    
-#tot_ruptures   969  
 #eff_ruptures   969  
 filtered_weight 969.0
 =============== =====
@@ -122,8 +121,8 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            1         SimpleFaultSource    482.0  15        0.00295997  0.0630829  5.59202  
-2            1         SimpleFaultSource    482.0  15        0.00193906  0.0567579  5.18245  
-3            2         CharacteristicFaultS 1.0    1         0.00159407  0.0        0.0363181
-1            2         SimpleFaultSource    4.0    1         0.00209498  0.0        0.0327339
+0            1         SimpleFaultSource    482.0  15        0.00398493  0.087481   5.66882  
+2            1         SimpleFaultSource    482.0  15        0.00220108  0.0654809  5.28727  
+3            2         CharacteristicFaultS 1.0    1         0.00178599  0.0        0.0398378
+1            2         SimpleFaultSource    4.0    1         0.00236487  0.0        0.0202241
 ============ ========= ==================== ====== ========= =========== ========== =========

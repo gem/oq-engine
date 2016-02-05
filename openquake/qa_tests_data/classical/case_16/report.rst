@@ -86,25 +86,24 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============ ======
-source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight
-================ ====== ==================== =========== ============ ============ ======
-source_model.xml 0      Active Shallow Crust 5           1925         1925         48.125
-source_model.xml 1      Active Shallow Crust 5           2025         2025         50.625
-source_model.xml 2      Active Shallow Crust 5           2135         2135         53.375
-source_model.xml 3      Active Shallow Crust 5           2035         2035         50.875
-source_model.xml 4      Active Shallow Crust 5           1865         1865         46.625
-source_model.xml 5      Active Shallow Crust 5           2085         2085         52.125
-source_model.xml 6      Active Shallow Crust 5           2075         2075         51.875
-source_model.xml 7      Active Shallow Crust 5           2185         2185         54.625
-source_model.xml 8      Active Shallow Crust 5           1905         1905         47.625
-source_model.xml 9      Active Shallow Crust 5           2025         2025         50.625
-================ ====== ==================== =========== ============ ============ ======
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources eff_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust 5           1925         48.125
+source_model.xml 1      Active Shallow Crust 5           2025         50.625
+source_model.xml 2      Active Shallow Crust 5           2135         53.375
+source_model.xml 3      Active Shallow Crust 5           2035         50.875
+source_model.xml 4      Active Shallow Crust 5           1865         46.625
+source_model.xml 5      Active Shallow Crust 5           2085         52.125
+source_model.xml 6      Active Shallow Crust 5           2075         51.875
+source_model.xml 7      Active Shallow Crust 5           2185         54.625
+source_model.xml 8      Active Shallow Crust 5           1905         47.625
+source_model.xml 9      Active Shallow Crust 5           2025         50.625
+================ ====== ==================== =========== ============ ======
 
 =============== =====
 #TRT models     10   
 #sources        50   
-#tot_ruptures   20260
 #eff_ruptures   20260
 filtered_weight 506.5
 =============== =====
@@ -121,24 +120,24 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   8.125  1         0.00113916  0.0        0.0      
-3            5         AreaSource   9.375  1         0.000997066 0.0        0.0      
-2            1         AreaSource   9.375  1         0.000995159 0.0        0.0      
-0            3         AreaSource   11.25  1         0.000975132 0.0        0.0      
-6            2         AreaSource   11.25  1         0.000972986 0.0        0.0      
-5            1         AreaSource   9.375  1         0.000972033 0.0        0.0      
-7            3         AreaSource   12.75  1         0.000969172 0.0        0.0      
-5            3         AreaSource   11.25  1         0.000962019 0.0        0.0      
-4            5         AreaSource   8.125  1         0.000961065 0.0        0.0      
-2            5         AreaSource   10.625 1         0.000960827 0.0        0.0      
-1            5         AreaSource   9.375  1         0.000959158 0.0        0.0      
-1            2         AreaSource   11.25  1         0.00095892  0.0        0.0      
-6            3         AreaSource   11.25  1         0.000957966 0.0        0.0      
-4            1         AreaSource   9.375  1         0.000956059 0.0        0.0      
-3            2         AreaSource   11.25  1         0.000955105 0.0        0.0      
-8            1         AreaSource   9.375  1         0.000954151 0.0        0.0      
-2            3         AreaSource   12.75  1         0.000952005 0.0        0.0      
+0            1         AreaSource   8.125  1         0.00116205  0.0        0.0      
+0            2         AreaSource   11.25  1         0.000995874 0.0        0.0      
+5            1         AreaSource   9.375  1         0.000984907 0.0        0.0      
+5            2         AreaSource   12.75  1         0.00097394  0.0        0.0      
+1            5         AreaSource   9.375  1         0.00095892  0.0        0.0      
+5            4         AreaSource   9.375  1         0.000956059 0.0        0.0      
+7            5         AreaSource   10.625 1         0.00095582  0.0        0.0      
+5            5         AreaSource   9.375  1         0.000948906 0.0        0.0      
 6            5         AreaSource   9.375  1         0.000947952 0.0        0.0      
-0            2         AreaSource   11.25  1         0.000942945 0.0        0.0      
-6            1         AreaSource   10.625 1         0.000942945 0.0        0.0      
+6            1         AreaSource   10.625 1         0.000947952 0.0        0.0      
+1            1         AreaSource   9.375  1         0.000944138 0.0        0.0      
+3            5         AreaSource   9.375  1         0.000942945 0.0        0.0      
+2            2         AreaSource   11.25  1         0.000938892 0.0        0.0      
+2            4         AreaSource   9.375  1         0.000931978 0.0        0.0      
+8            4         AreaSource   10.625 1         0.000931978 0.0        0.0      
+7            1         AreaSource   9.375  1         0.000931025 0.0        0.0      
+0            5         AreaSource   9.375  1         0.000929117 0.0        0.0      
+4            3         AreaSource   11.25  1         0.000929117 0.0        0.0      
+0            3         AreaSource   11.25  1         0.000928879 0.0        0.0      
+9            3         AreaSource   11.25  1         0.000927925 0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========

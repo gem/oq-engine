@@ -65,18 +65,17 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============ ======
-source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight
-================ ====== ==================== =========== ============ ============ ======
-source_model.xml 0      active shallow crust 1           3500         3500         87.5  
-source_model.xml 1      active shallow crust 1           3000         3000         75.0  
-source_model.xml 2      active shallow crust 1           2500         2500         62.5  
-================ ====== ==================== =========== ============ ============ ======
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources eff_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      active shallow crust 1           3500         87.5  
+source_model.xml 1      active shallow crust 1           3000         75.0  
+source_model.xml 2      active shallow crust 1           2500         62.5  
+================ ====== ==================== =========== ============ ======
 
 =============== =====
 #TRT models     3    
 #sources        3    
-#tot_ruptures   9000 
 #eff_ruptures   9000 
 filtered_weight 225.0
 =============== =====
@@ -93,7 +92,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== =========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time  calc_time
 ============ ========= ============ ====== ========= =========== =========== =========
-0            1         PointSource  87.5   1         0.00590706  2.71797e-05 0.0      
-1            1         PointSource  75.0   1         0.00479317  2.40803e-05 0.0      
-2            1         PointSource  62.5   1         0.00402522  2.38419e-05 0.0      
+0            1         PointSource  87.5   1         0.00545621  2.40803e-05 0.0      
+1            1         PointSource  75.0   1         0.00433803  1.69277e-05 0.0      
+2            1         PointSource  62.5   1         0.00368905  1.5974e-05  0.0      
 ============ ========= ============ ====== ========= =========== =========== =========

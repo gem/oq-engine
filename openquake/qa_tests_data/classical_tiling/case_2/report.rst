@@ -73,17 +73,16 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-========================= ====== ==================== =========== ============ ============ =============
-source_model              trt_id trt                  num_sources num_ruptures eff_ruptures weight       
-========================= ====== ==================== =========== ============ ============ =============
-models/src/as_model.xml   4      Active Shallow Crust 1           32481        31008        96.9000015259
-models/src/fsbg_model.xml 9      Active Shallow Crust 2           16635        7326         51.5250000954
-========================= ====== ==================== =========== ============ ============ =============
+========================= ====== ==================== =========== ============ =============
+source_model              trt_id trt                  num_sources eff_ruptures weight       
+========================= ====== ==================== =========== ============ =============
+models/src/as_model.xml   4      Active Shallow Crust 1           31008        96.9000015259
+models/src/fsbg_model.xml 9      Active Shallow Crust 2           7326         51.5250000954
+========================= ====== ==================== =========== ============ =============
 
 =============== =============
 #TRT models     2            
 #sources        3            
-#tot_ruptures   49116        
 #eff_ruptures   38334        
 filtered_weight 148.425001621
 =============== =============
@@ -100,7 +99,7 @@ Slowest sources
 ============ ============ ============ ====== ========= =========== ========== =========
 trt_model_id source_id    source_class weight split_num filter_time split_time calc_time
 ============ ============ ============ ====== ========= =========== ========== =========
-4            AS_GEAS343   AreaSource   96.9   1         0.0160117   0.0        0.0      
-9            FSBG_TRBG103 AreaSource   43.875 1         0.00652194  0.0        0.0      
-9            FSBG_ARAS462 AreaSource   7.65   1         0.00192499  0.0        0.0      
+4            AS_GEAS343   AreaSource   96.9   1         0.0203552   0.0        0.0      
+9            FSBG_TRBG103 AreaSource   43.875 1         0.00637221  0.0        0.0      
+9            FSBG_ARAS462 AreaSource   7.65   1         0.00161386  0.0        0.0      
 ============ ============ ============ ====== ========= =========== ========== =========

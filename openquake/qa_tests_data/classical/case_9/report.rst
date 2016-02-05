@@ -62,17 +62,16 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============ ======
-source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight
-================ ====== ==================== =========== ============ ============ ======
-source_model.xml 0      active shallow crust 1           3000         3000         75.0  
-source_model.xml 1      active shallow crust 1           3500         3500         87.5  
-================ ====== ==================== =========== ============ ============ ======
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources eff_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      active shallow crust 1           3000         75.0  
+source_model.xml 1      active shallow crust 1           3500         87.5  
+================ ====== ==================== =========== ============ ======
 
 =============== =====
 #TRT models     2    
 #sources        2    
-#tot_ruptures   6500 
 #eff_ruptures   6500 
 filtered_weight 162.5
 =============== =====
@@ -89,6 +88,6 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== =========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time  calc_time
 ============ ========= ============ ====== ========= =========== =========== =========
-1            1         PointSource  87.5   1         0.00520897  1.90735e-05 0.0      
-0            1         PointSource  75.0   1         0.0046339   2.21729e-05 0.0      
+1            1         PointSource  87.5   1         0.00510097  1.81198e-05 0.0      
+0            1         PointSource  75.0   1         0.00457311  2.19345e-05 0.0      
 ============ ========= ============ ====== ========= =========== =========== =========
