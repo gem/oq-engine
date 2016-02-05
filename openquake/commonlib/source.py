@@ -554,6 +554,9 @@ source_model_dt = numpy.dtype([
 ])
 
 
+# this is used when populating the array csm_info.eff_ruptures in
+# get_rlzs_assoc, which is then read by view_ruptures_per_trt; an
+# overflow would break the report but not the computation
 def cjoin(strings, maxlength=LENGTH):
     """
     Join strings by checking that the result is below maxlength characters

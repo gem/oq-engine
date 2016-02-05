@@ -43,6 +43,10 @@ class ReportWriter(object):
         self.dstore = dstore
         self.oq = oq = OqParam.from_(dstore.attrs)
         self.text = oq.description + '\n' + '=' * len(oq.description)
+        # NB: in the future, the sitecol could be transferred as
+        # an array by leveraging the HDF5 serialization protocol in
+        # litetask decorator; for the moment however the size of the
+        # data to transfer is given by the usual pickle
         sitecol_size = humansize(len(parallel.Pickled(dstore['sitecol'])))
         self.text += '\n\nnum_sites = %d, sitecol = %s' % (
             len(dstore['sitemesh']), sitecol_size)

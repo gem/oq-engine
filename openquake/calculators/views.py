@@ -152,6 +152,10 @@ def view_ruptures_per_trt(token, dstore):
     n = groupby(source_info, operator.itemgetter('trt_model_id'),
                 lambda rows: sum(1 for r in rows))
     for i, sm in enumerate(csm_info.source_models):
+        # NB: the number of effective ruptures per tectonic region model
+        # is stored in the array eff_ruptures as a literal string describing
+        # an array {trt_model_id: num_ruptures}; see the method
+        # CompositionInfo.get_rlzs_assoc
         erdict = ast.literal_eval(csm_info.eff_ruptures[i])
         for trt_model in sm.trt_models:
             er = erdict.get(trt_model.id, 0)  # effective ruptures
@@ -176,8 +180,8 @@ def view_ruptures_per_trt(token, dstore):
 
 
 @view.add('short_source_info')
-def view_short_source_info(token, dstore):
-    return rst_table(dstore['source_info'][:20])
+def view_short_source_info(token, dstore, maxrows=20):
+    return rst_table(dstore['source_info'][:maxrows])
 
 
 @view.add('params')
