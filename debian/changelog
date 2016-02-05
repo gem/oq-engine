@@ -2,6 +2,8 @@
   * If `use_celery` is true, use celery to determine a good default for
     the parameter `concurrent_tasks`
   * Made celery required only in cluster situations
+  * Fixed the duplication of exported result in the classical_damage
+    calculator when there is more than one realization
   * Replaced all classical calculators with their lite counterparts
   * Fixed the site-ordering in the UHS exporter (by lon-lat)
 
