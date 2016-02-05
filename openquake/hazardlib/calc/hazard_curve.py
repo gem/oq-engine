@@ -191,6 +191,7 @@ def hazard_curves_per_trt(
     ctx_mon = monitor('making contexts', measuremem=False)
     pne_mon = monitor('computing poes', measuremem=False)
     monitor.calc_times = []  # pairs (src_id, delta_t)
+    monitor.eff_ruptures = 0  # effective number of contributing ruptures
     for source, s_sites in source_site_filter(sources_sites):
         t0 = time.time()
         try:
@@ -203,6 +204,8 @@ def hazard_curves_per_trt(
                             r_sites, rupture)
                     except FarAwayRupture:
                         continue
+
+                    monitor.eff_ruptures += 1
 
                     # add optional disaggregation information (bounding boxes)
                     if bbs:
