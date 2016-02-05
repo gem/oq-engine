@@ -17,6 +17,7 @@ import unittest
 
 import numpy
 
+from decimal import Decimal
 from openquake.hazardlib import const
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
@@ -168,20 +169,40 @@ class SeismicSourceGroupTestCase(unittest.TestCase):
                                  rupture_aspect_ratio=1,
                                  temporal_occurrence_model=PoissonTOM(50.))
 
-    def test_init(self):
+    def test_init1(self):
+        # test simple instantiation
         grp = SourceGroup(src_list=[self.source],
                           name='',
                           src_interdep='indep',
                           rup_interdep='indep',
-                          weights=None)
+                          srcs_weights=None)
         assert(len(grp.src_list) == 1)
+
+    def test_init2(self):
+        # test default weighting
+        grp = SourceGroup(src_list=[self.source, self.source, self.source],
+                          name='',
+                          src_interdep='indep',
+                          rup_interdep='indep',
+                          srcs_weights=None)
+        assert(len(grp.srcs_weights) == 3)
+
+    def test_init3(self):
+        # test default weighting
+        grp = SourceGroup(src_list=[self.source, self.source, self.source],
+                          name='',
+                          src_interdep='indep',
+                          rup_interdep='indep',
+                          srcs_weights=[Decimal(0.3333),
+                                        Decimal(0.3334),
+                                        Decimal(0.3333)])
 
     def test_wrong_instance(self):
         self.assertRaises(AssertionError, SourceGroup, [1], 'name', 'indep',
                           'indep', None)
 
     def test_wrong_label(self):
-        self.assertRaises(AssertionError, SourceGroup, [self.source], 'name',
+        self.assertRaises(ValueError, SourceGroup, [self.source], 'name',
                           'aaaa', 'indep', None)
 
 

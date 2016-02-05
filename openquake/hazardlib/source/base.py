@@ -18,6 +18,8 @@ Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
 import abc
+import numpy
+from decimal import Decimal
 from openquake.baselib.slots import with_slots
 from openquake.baselib.python3compat import with_metaclass
 
@@ -43,9 +45,12 @@ class SourceGroupCollection(object):
 
     def _check_init_variables(self, grp_list, name, grp_interdep):
         assert isinstance(grp_list, list)
-        print type(grp_list[0])
         assert issubclass(type(grp_list[0]), SourceGroup)
-        assert set(['indep', 'mutex']) & set([grp_interdep])
+        try:
+            assert set(['indep', 'mutex']) & set([grp_interdep])
+        except:
+            raise ValueError('group interdependence incorrect %s ' %
+                             grp_interdep)
 
     def __iter__(self):
         return iter(self.src_list)
@@ -53,41 +58,54 @@ class SourceGroupCollection(object):
 
 class SourceGroup(object):
     """
-    :parameter str name:
-        The name of the group
     :parameter src_list:
         A list containing seismic sources
-    :parameter weights:
-        A dictionary whose keys are the source IDs of the cluster and the
-        values are the weights associated with each source
-    :parameter src_indep:
+    :parameter str name:
+        The name of the group
+    :parameter src_interdep:
         A string specifying if the sources in this cluster are independent or
         mutually exclusive
     :parameter rup_indep:
         A string specifying if the ruptures within each source of the cluster
         are independent or mutually exclusive
-    :parameter name:
-        A string used to indicate the name of the group of sources
+    :parameter weights:
+        A dictionary whose keys are the source IDs of the cluster and the
+        values are the weights associated with each source
     """
 
     def __init__(self, src_list, name='', src_interdep='indep',
-                 rup_interdep='indep', weights=None):
+                 rup_interdep='indep', srcs_weights=None):
         # checks
         self._check_init_variables(src_list, name, src_interdep, rup_interdep,
-                                   weights)
+                                   srcs_weights)
         # set instance parameters
         self.src_list = src_list
         self.name = name
         self.src_interdep = src_interdep
         self.rup_interdep = rup_interdep
-        self.weights = weights
+        if srcs_weights is None:
+            self.srcs_weights = numpy.ones([len(src_list)])
+            self.srcs_weights[0:-2] = Decimal(1./len(src_list))
+            self.srcs_weights[-1] = 1-numpy.sum(self.srcs_weights[0:-2])
+        else:
+            self.srcs_weights = srcs_weights
 
     def _check_init_variables(self, src_list, name, src_interdep, rup_interdep,
-                              weights):
+                              srcs_weights):
         assert isinstance(src_list, list)
         assert issubclass(type(src_list[0]), BaseSeismicSource)
-        assert set(['indep', 'mutex']) & set([src_interdep])
+        # check source interdependence
+        try:
+            assert set(['indep', 'mutex']) & set([src_interdep])
+        except:
+            raise ValueError('source interdependence incorrect %s ' %
+                             src_interdep)
+        # check rupture interdependence
         assert set(['indep', 'mutex']) & set([rup_interdep])
+        # check srcs weights if defined by the user
+        if srcs_weights is not None:
+            print sum(srcs_weights)
+            assert 1. - float(abs(sum(srcs_weights))) < 1e-6
 
     def __iter__(self):
         return iter(self.src_list)

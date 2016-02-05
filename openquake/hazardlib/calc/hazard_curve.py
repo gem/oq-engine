@@ -30,6 +30,7 @@ from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 from openquake.baselib.general import deprecated
+from openquake.hazardlib.source.base import SourceGroup, SourceGroupCollection
 
 
 def zero_curves(num_sites, imtls):
@@ -242,4 +243,173 @@ def hazard_curves_per_trt(
     for i in range(len(gnames)):
         for imt in imtls:
             curves[i][imt] = 1. - curves[i][imt]
+
+    return curves
+
+
+def hazard_curves_per_group(
+        group, sites, imtls, gsims, truncation_level=None,
+        source_site_filter=filters.source_site_noop_filter,
+        rupture_site_filter=filters.rupture_site_noop_filter,
+        maximum_distance=None, bbs=(), monitor=DummyMonitor()):
+    """
+    Compute the hazard curves for a set of sources belonging to the same
+    source group. We assume that the group contains sources belonging to the
+    same tectonic region.
+    The arguments are the same as in :func:`hazard_curves_per_trt`, except
+    for ``group``, which can be either a :class:`SourceGroup` instance or
+    a list of seismic sources (instances of subclasses of
+    :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
+
+    :returns:
+        A list of G arrays of size N, where N is the number of sites and
+        G the number of gsims. Each array contains records with fields given
+        by the intensity measure types; the size of each field is given by the
+        number of levels in ``imtls``.
+    """
+    # Get source list
+    if not isinstance(group, SourceGroup):
+        sources = group
+        group = SourceGroup(group, '', 'indep', 'indep')
+    else:
+        sources = group.src_list
+    # Check that the all the sources belong to the same tectonic region
+    print len(set([src.tectonic_region_type for src in sources]))
+    assert len(set([src.tectonic_region_type for src in sources])) == 1
+    # Prepare
+    cmaker = ContextMaker(gsims, maximum_distance)
+    gnames = list(map(str, gsims))
+    imt_dt = numpy.dtype([(imt, float, len(imtls[imt]))
+                         for imt in sorted(imtls)])
+    imts = {from_string(imt): imls for imt, imls in imtls.items()}
+    sources_sites = ((source, sites) for source in sources)
+    ctx_mon = monitor('making contexts', measuremem=False)
+    pne_mon = monitor('computing poes', measuremem=False)
+    monitor.calc_times = []  # pairs (src_id, delta_t)
+    # Initialise temporary accumulator for the probability of non-exceedance
+    if group.src_interdep == 'indep':
+        tc_gru = [numpy.ones(len(sites), imt_dt) for gname in gnames]
+    else:
+        tc_gru = [numpy.zeros(len(sites), imt_dt) for gname in gnames]
+    tot_wei = 0.0
+    # Computing contributions by all the sources
+    for source, s_sites in source_site_filter(sources_sites):
+        t0 = time.time()
+        # Initialise temporary accumulator for the probability of
+        # non-exceedance
+        if group.rup_interdep == 'indep':
+            tc_src = [numpy.ones(len(sites), imt_dt) for gname in gnames]
+        else:
+            tc_src = [numpy.zeros(len(sites), imt_dt) for gname in gnames]
+        # Set weights
+        if 'weights' not in source.__dict__:
+            weights = (numpy.ones([source.count_ruptures()]) /
+                       source.count_ruptures())
+        else:
+            weights = source.weights
+        # Processing ruptures
+        try:
+            rupture_sites = rupture_site_filter(
+                (rupture, s_sites) for rupture in source.iter_ruptures())
+            for cnt, (rupture, r_sites) in enumerate(rupture_sites):
+                with ctx_mon:
+                    try:
+                        sctx, rctx, dctx = cmaker.make_contexts(r_sites,
+                                                                rupture)
+                    except FarAwayRupture:
+                        continue
+                    # add optional disaggregation information (bounding boxes)
+                    if bbs:
+                        sids = set(sctx.sites.sids)
+                        jb_dists = dctx.rjb
+                        closest_points = rupture.surface.get_closest_points(
+                            sctx.sites.mesh)
+                        bs = [bb for bb in bbs if bb.site_id in sids]
+                        # NB: the assert below is always true; we are
+                        # protecting against possible refactoring errors
+                        assert len(bs) == len(jb_dists) == len(closest_points)
+                        for bb, dist, p in zip(bs, jb_dists, closest_points):
+                            if dist < maximum_distance:
+                                # ruptures too far away are ignored
+                                bb.update([dist], [p.longitude], [p.latitude])
+                for i, gsim in enumerate(gsims):
+                    with pne_mon:
+                        for imt in imts:
+                            poes = gsim.get_poes(
+                                sctx, rctx, dctx, imt, imts[imt],
+                                truncation_level)
+                            pno = rupture.get_probability_no_exceedance(poes)
+                            # Updating the probability of non-exceedance
+                            expanded_pno = sctx.sites.expand(pno, 1.0)
+                            if group.rup_interdep is 'indep':
+                                tc_src[i][str(imt)] *= expanded_pno
+                            else:
+                                tc_src[i][str(imt)] += (expanded_pno *
+                                                        weights[cnt])
+
+            # Updating the probability of non-exceedance for all the sources
+            # in the group
+            for i, gsim in enumerate(gsims):
+                if group.src_interdep is 'indep':
+                    for imt in imtls:
+                        tc_gru[i][str(imt)] *= tc_src[i][str(imt)]
+                else:
+                    for imt in imtls:
+                        tc_gru[i][str(imt)] += (
+                            tc_src[i][str(imt)] *
+                            group.weights[source.source_id])
+                        tot_wei += group.weights[source.source_id]
+            del tc_src
+
+        except Exception as err:
+            etype, err, tb = sys.exc_info()
+            msg = 'An error occurred with source id=%s. Error: %s'
+            msg %= (source.source_id, str(err))
+            raise_(etype, msg, tb)
+
+        # we are attaching the calculation times to the monitor
+        # so that oq-lite (and the engine) can store them
+        monitor.calc_times.append((source.id, time.time() - t0))
+        # NB: source.id is an integer; it should not be confused
+        # with source.source_id, which is a string
+
+    # Finally we get the probability of exceedance
+    for i in range(len(gnames)):
+        for imt in imtls:
+            tc_gru[i][imt] = 1. - tc_gru[i][imt]
+
+    return tc_gru
+
+
+def calc_hazard_curves_ext(
+        groups, sites, imtls, gsim_by_trt, truncation_level=None,
+        source_site_filter=filters.source_site_noop_filter,
+        rupture_site_filter=filters.rupture_site_noop_filter,
+        maximum_distance=None):
+    """
+    """
+    # This is ensuring backward compatibility i.e. processing a list of
+    # sources.
+    if not isinstance(groups, SourceGroupCollection):
+        group_tmp = SourceGroup(groups, 1, 'indep', 'indep')
+        groups = SourceGroupCollection([group_tmp])
+    # Processing groups
+    for group in groups.grp_list:
+        # Prepare a dictionary
+        sources_by_trt = collections.defaultdict(list)
+        # Fill the dictionary with sources for the different tectonic regions
+        # belonging to this group
+        for src in group.src_list:
+            sources_by_trt[src.tectonic_region_type].append(src)
+        # Initialise the accumulator
+        curves = zero_curves(len(sites), imtls)
+        # Aggregate results. Note that for now we assume that source groups
+        # are independent.
+        for trt in sources_by_trt:
+            # Create a temporary group
+            tmp_group = SourceGroup(sources_by_trt[trt])
+            # Compute curves
+            curves = agg_curves(curves, hazard_curves_per_group(
+                tmp_group, sites, imtls, [gsim_by_trt[trt]],
+                truncation_level, source_site_filter, rupture_site_filter)[0])
     return curves
