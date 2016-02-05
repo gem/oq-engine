@@ -17,7 +17,9 @@
 Module :mod:`openquake.hazardlib.geo.surface.gridded` defines
 :class:`GriddedSurface`.
 """
+import numpy as np
 
+from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
 
@@ -190,7 +192,12 @@ class GriddedSurface(BaseSurface):
             instance of :class:`openquake.hazardlib.geo.point.Point`
             representing surface middle point.
         """
-        raise NotImplementedError
+        lon_bar = np.mean(self.mesh.lons)
+        lat_bar = np.mean(self.mesh.lats)
+        idx = np.argmin((self.mesh.lons - lon_bar)**2 +
+                        (self.mesh.lats - lat_bar)**2)
+        return Point(self.mesh.lons[idx], self.mesh.lats[idx],
+                     self.mesh.depths[idx])
 
     def get_ry0_distance(self, mesh):
         """
