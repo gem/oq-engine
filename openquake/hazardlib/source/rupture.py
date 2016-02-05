@@ -196,7 +196,6 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         prob_no_exceed = numpy.array(
             [v * ((1 - poes) ** i) for i, v in enumerate(p_kT)]
         )
-        print 'par', v, poes, i
         prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
 
         return prob_no_exceed
