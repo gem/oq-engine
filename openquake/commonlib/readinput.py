@@ -793,9 +793,8 @@ def get_exposure(oqparam):
                 asset_id, ', '.join(missing))
             for cost_type in missing:
                 values[cost_type] = None
-        elif missing and oqparam.calculation_mode != 'classical_damage':
-            # TODO: rewrite the classical_damage to work with multiple
-            # loss types, then the special case will disappear
+        elif missing and 'damage' not in oqparam.calculation_mode:
+            # missing the costs is okay for damage calculators
             with context(fname, asset):
                 raise ValueError("Invalid Exposure. "
                                  "Missing cost %s for asset %s" % (
