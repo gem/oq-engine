@@ -554,14 +554,18 @@ source_model_dt = numpy.dtype([
 ])
 
 
-def cjoin(strings):
+def cjoin(strings, maxlength=LENGTH):
     """
+    Join strings by checking that the result is below maxlength characters
+
     :param strings: an iterable over strings
-    :returns: a comma separated string of lenght <= LENGHT
+    :returns: a comma separated string of lenght <= maxlength
     """
     s = ','.join(strings)
     if len(s) > LENGTH:
-        raise ValueError('The string %r is over %d characters' % (s, LENGTH))
+        logging.warn(
+            'The string %r is over %d characters: `csm_info.eff_ruptures` '
+            'will be corrupted' % (s, maxlength))
     return s
 
 
@@ -723,8 +727,8 @@ class CompositionInfo(object):
                 nr = count_ruptures(tm)
                 if nr:
                     trts.append(tm.trt)
-                    rups.append((tm.id, nr))
-            self.eff_ruptures[i] = bytes(rups)
+                    rups.append('%d: %d' % (tm.id, nr))
+            self.eff_ruptures[i] = '{%s}' % cjoin(rups, LENGTH - 2)
 
             # recompute the GSIM logic tree if needed
             if set(trts) != set(smodel.gsim_lt.tectonic_region_types):
@@ -1070,7 +1074,7 @@ class SourceManager(object):
 def count_eff_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     """
     Count the number of ruptures contained in the given sources and return
-    a dictionary trt_model_id -> num_ruptures. All sources belongs to the
+    a dictionary trt_model_id -> num_ruptures. All sources belong to the
     same tectonic region type.
     """
     acc = AccumDict()
