@@ -1,7 +1,7 @@
 Event Based Hazard
 ==================
 
-num_sites = 1, sitecol = 604 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
@@ -78,7 +78,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 14       
-Sent data                   108.23 KB
+Sent data                   105.46 KB
 Total received data         49.47 KB 
 Maximum received per task   12.8 KB  
 =========================== =========
@@ -95,3 +95,12 @@ Taxonomy #Assets
 ======== =======
 Wood     1      
 ======== =======
+
+Slowest sources
+---------------
+============ ========= ==================== ====== ========= =========== ========== =========
+trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
+============ ========= ==================== ====== ========= =========== ========== =========
+0            3         SimpleFaultSource    482.0  15        0.00265884  0.0613799  0.366851 
+0            1         CharacteristicFaultS 1.0    1         0.0017662   0.0        0.014369 
+============ ========= ==================== ====== ========= =========== ========== =========

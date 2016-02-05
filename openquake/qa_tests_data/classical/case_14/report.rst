@@ -1,7 +1,7 @@
 Classical PSHA QA test with sites_csv
 =====================================
 
-num_sites = 10, sitecol = 653 B
+num_sites = 10, sitecol = 1.07 KB
 
 Parameters
 ----------
@@ -19,6 +19,7 @@ area_source_discretization   10.0
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -60,15 +61,23 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources num_ruptures weight
-================ ====== ==================== =========== ============ ======
-simple_fault.xml 0      Active Shallow Crust 1           447          447.0 
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============ ======
+source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight
+================ ====== ==================== =========== ============ ============ ======
+simple_fault.xml 0      Active Shallow Crust 1           447          447          447.0 
+================ ====== ==================== =========== ============ ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 12      
-Sent data                   83.55 KB
+Sent data                   81.53 KB
 =========================== ========
+
+Slowest sources
+---------------
+============ ========= ================= ====== ========= =========== ========== =========
+trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
+============ ========= ================= ====== ========= =========== ========== =========
+0            3         SimpleFaultSource 447.0  15        0.00225997  0.057467   0.0      
+============ ========= ================= ====== ========= =========== ========== =========

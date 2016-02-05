@@ -69,7 +69,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 9        
-Sent data                   294.32 KB
+Sent data                   294.69 KB
 =========================== =========
 
 Slowest sources
@@ -77,5 +77,5 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            1         CharacteristicFaultS 1.0    1         0.0378511   0.0        0.0      
+0            1         CharacteristicFaultS 1.0    1         0.0380805   0.0        0.0      
 ============ ========= ==================== ====== ========= =========== ========== =========

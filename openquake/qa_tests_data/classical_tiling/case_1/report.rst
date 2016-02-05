@@ -1,7 +1,7 @@
 Classical PSHA using Area Source
 ================================
 
-num_sites = 6, sitecol = 557 B
+num_sites = 6, sitecol = 914 B
 
 Parameters
 ----------
@@ -19,6 +19,7 @@ area_source_discretization   5.0
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             4        
+sites_per_tile               1        
 ============================ =========
 
 Input files
@@ -59,15 +60,23 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources num_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           1640         41.0  
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============ ======
+source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight
+================ ====== ==================== =========== ============ ============ ======
+source_model.xml 0      Active Shallow Crust 1           1640         9840         41.0  
+================ ====== ==================== =========== ============ ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 18       
-Sent data                   365.07 KB
+Sent data                   365.03 KB
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         AreaSource   41.0   205       0.0121708   0.0617909  0.0      
+============ ========= ============ ====== ========= =========== ========== =========

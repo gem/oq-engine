@@ -1,7 +1,7 @@
 Scenario Calculation with Simple Fault Rupture
 ==============================================
 
-num_sites = 7, sitecol = 581 B
+num_sites = 7, sitecol = 960 B
 
 Parameters
 ----------

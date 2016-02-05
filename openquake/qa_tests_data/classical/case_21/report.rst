@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 21
 =================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
@@ -19,6 +19,7 @@ area_source_discretization   10.0
 random_seed                  106      
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -136,48 +137,76 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources num_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 2           444          444.0 
-source_model.xml 1      Active Shallow Crust 2           208          208.0 
-source_model.xml 2      Active Shallow Crust 2           149          149.0 
-source_model.xml 3      Active Shallow Crust 2           534          534.0 
-source_model.xml 4      Active Shallow Crust 2           298          298.0 
-source_model.xml 5      Active Shallow Crust 2           239          239.0 
-source_model.xml 6      Active Shallow Crust 2           474          474.0 
-source_model.xml 7      Active Shallow Crust 2           238          238.0 
-source_model.xml 8      Active Shallow Crust 2           179          179.0 
-source_model.xml 9      Active Shallow Crust 2           409          409.0 
-source_model.xml 10     Active Shallow Crust 2           173          173.0 
-source_model.xml 11     Active Shallow Crust 2           114          114.0 
-source_model.xml 12     Active Shallow Crust 2           465          465.0 
-source_model.xml 13     Active Shallow Crust 2           229          229.0 
-source_model.xml 14     Active Shallow Crust 2           170          170.0 
-source_model.xml 15     Active Shallow Crust 2           411          411.0 
-source_model.xml 16     Active Shallow Crust 2           175          175.0 
-source_model.xml 17     Active Shallow Crust 2           116          116.0 
-source_model.xml 18     Active Shallow Crust 2           483          483.0 
-source_model.xml 19     Active Shallow Crust 2           247          247.0 
-source_model.xml 20     Active Shallow Crust 2           188          188.0 
-source_model.xml 21     Active Shallow Crust 2           582          582.0 
-source_model.xml 22     Active Shallow Crust 2           346          346.0 
-source_model.xml 23     Active Shallow Crust 2           287          287.0 
-source_model.xml 24     Active Shallow Crust 2           516          516.0 
-source_model.xml 25     Active Shallow Crust 2           280          280.0 
-source_model.xml 26     Active Shallow Crust 2           221          221.0 
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============ ======
+source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight
+================ ====== ==================== =========== ============ ============ ======
+source_model.xml 0      Active Shallow Crust 2           444          444          444.0 
+source_model.xml 1      Active Shallow Crust 2           208          208          208.0 
+source_model.xml 2      Active Shallow Crust 2           149          149          149.0 
+source_model.xml 3      Active Shallow Crust 2           534          534          534.0 
+source_model.xml 4      Active Shallow Crust 2           298          298          298.0 
+source_model.xml 5      Active Shallow Crust 2           239          239          239.0 
+source_model.xml 6      Active Shallow Crust 2           474          474          474.0 
+source_model.xml 7      Active Shallow Crust 2           238          238          238.0 
+source_model.xml 8      Active Shallow Crust 2           179          179          179.0 
+source_model.xml 9      Active Shallow Crust 2           409          409          409.0 
+source_model.xml 10     Active Shallow Crust 2           173          173          173.0 
+source_model.xml 11     Active Shallow Crust 2           114          114          114.0 
+source_model.xml 12     Active Shallow Crust 2           465          465          465.0 
+source_model.xml 13     Active Shallow Crust 2           229          229          229.0 
+source_model.xml 14     Active Shallow Crust 2           170          170          170.0 
+source_model.xml 15     Active Shallow Crust 2           411          411          411.0 
+source_model.xml 16     Active Shallow Crust 2           175          175          175.0 
+source_model.xml 17     Active Shallow Crust 2           116          116          116.0 
+source_model.xml 18     Active Shallow Crust 2           483          483          483.0 
+source_model.xml 19     Active Shallow Crust 2           247          247          247.0 
+source_model.xml 20     Active Shallow Crust 2           188          188          188.0 
+source_model.xml 21     Active Shallow Crust 2           582          582          582.0 
+source_model.xml 22     Active Shallow Crust 2           346          346          346.0 
+source_model.xml 23     Active Shallow Crust 2           287          287          287.0 
+source_model.xml 24     Active Shallow Crust 2           516          516          516.0 
+source_model.xml 25     Active Shallow Crust 2           280          280          280.0 
+source_model.xml 26     Active Shallow Crust 2           221          221          221.0 
+================ ====== ==================== =========== ============ ============ ======
 
 =============== ======
 #TRT models     27    
 #sources        54    
-#ruptures       8175  
+#tot_ruptures   8175  
+#eff_ruptures   8175  
 filtered_weight 8175.0
 =============== ======
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== =======
-Number of tasks to generate 30     
-Sent data                   1.35 MB
-=========================== =======
+=========================== ======
+Number of tasks to generate 30    
+Sent data                   1.5 MB
+=========================== ======
+
+Slowest sources
+---------------
+============ ========= ================= ====== ========= =========== ========== =========
+trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
+============ ========= ================= ====== ========= =========== ========== =========
+0            SFLT1     SimpleFaultSource 60.0   1         0.001966    0.0        0.0      
+2            SFLT2     SimpleFaultSource 89.0   1         0.0016861   0.0        0.0      
+12           SFLT2     SimpleFaultSource 384.0  1         0.00168586  0.0        0.0      
+16           SFLT1     SimpleFaultSource 27.0   1         0.00167513  0.0        0.0      
+21           SFLT1     SimpleFaultSource 198.0  1         0.00166416  0.0        0.0      
+17           SFLT1     SimpleFaultSource 27.0   1         0.00166202  0.0        0.0      
+17           SFLT2     SimpleFaultSource 89.0   1         0.00166011  0.0        0.0      
+15           SFLT1     SimpleFaultSource 27.0   1         0.00165319  0.0        0.0      
+14           SFLT1     SimpleFaultSource 81.0   1         0.00164509  0.0        0.0      
+18           SFLT1     SimpleFaultSource 99.0   1         0.00163794  0.0        0.0      
+1            SFLT2     SimpleFaultSource 148.0  1         0.00163698  0.0        0.0      
+3            SFLT1     SimpleFaultSource 150.0  1         0.00163293  0.0        0.0      
+7            SFLT2     SimpleFaultSource 148.0  1         0.00163198  0.0        0.0      
+5            SFLT1     SimpleFaultSource 150.0  1         0.00163007  0.0        0.0      
+4            SFLT1     SimpleFaultSource 150.0  1         0.00162983  0.0        0.0      
+14           SFLT2     SimpleFaultSource 89.0   1         0.00162792  0.0        0.0      
+6            SFLT1     SimpleFaultSource 90.0   1         0.00162697  0.0        0.0      
+22           SFLT1     SimpleFaultSource 198.0  1         0.00162506  0.0        0.0      
+20           SFLT2     SimpleFaultSource 89.0   1         0.00162411  0.0        0.0      
+19           SFLT1     SimpleFaultSource 99.0   1         0.00162101  0.0        0.0      
+============ ========= ================= ====== ========= =========== ========== =========

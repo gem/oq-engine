@@ -1,7 +1,7 @@
 Event-based PSHA with logic tree sampling
 =========================================
 
-num_sites = 3, sitecol = 485 B
+num_sites = 3, sitecol = 776 B
 
 Parameters
 ----------
@@ -38,7 +38,7 @@ Composite source model
 ========= ====== ======================================== =============== ================
 smlt_path weight source_model_file                        gsim_logic_tree num_realizations
 ========= ====== ======================================== =============== ================
-b11       0.1    `source_model1.xml <source_model1.xml>`_ simple(3)       7/3             
+b11       0.1    `source_model1.xml <source_model1.xml>`_ simple(3)       7/7             
 b12       0.1    `source_model2.xml <source_model2.xml>`_ simple(3)       3/3             
 ========= ====== ======================================== =============== ================
 
@@ -100,7 +100,16 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 16       
-Sent data                   315.37 KB
+Sent data                   316.85 KB
 Total received data         1.37 MB  
 Maximum received per task   167.85 KB
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         AreaSource   61.4   307       0.0016129   0.0706949  3.01782  
+1            1         AreaSource   61.4   307       0.00163603  0.0692172  1.93798  
+============ ========= ============ ====== ========= =========== ========== =========

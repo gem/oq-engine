@@ -1,7 +1,7 @@
 Demo Classical PSHA for Vancouver Schools
 =========================================
 
-num_sites = 3, sitecol = 485 B
+num_sites = 3, sitecol = 776 B
 
 Parameters
 ----------
@@ -19,6 +19,7 @@ area_source_discretization   50.0
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -59,11 +60,11 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-========================= ====== ==================== =========== ============ ======
-source_model              trt_id trt                  num_sources num_ruptures weight
-========================= ====== ==================== =========== ============ ======
-vancouver_area_source.xml 0      Active Shallow Crust 1           2430         60.75 
-========================= ====== ==================== =========== ============ ======
+========================= ====== ==================== =========== ============ ============ ======
+source_model              trt_id trt                  num_sources num_ruptures eff_ruptures weight
+========================= ====== ==================== =========== ============ ============ ======
+vancouver_area_source.xml 0      Active Shallow Crust 1           2430         2430         60.75 
+========================= ====== ==================== =========== ============ ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
@@ -71,3 +72,11 @@ Expected data transfer for the sources
 Number of tasks to generate 30     
 Sent data                   4.79 MB
 =========================== =======
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            VICM      AreaSource   60.75  30        0.00128603  0.0106101  0.0      
+============ ========= ============ ====== ========= =========== ========== =========

@@ -1,7 +1,7 @@
 Classical PSHA-Based Hazard
 ===========================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
@@ -19,6 +19,7 @@ area_source_discretization   20.0
 random_seed                  42              
 master_seed                  0               
 concurrent_tasks             16              
+sites_per_tile               1000            
 ============================ ================
 
 Input files
@@ -61,18 +62,18 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources num_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           1694         1694.0
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============ ======
+source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight
+================ ====== ==================== =========== ============ ============ ======
+source_model.xml 0      Active Shallow Crust 1           1694         1694         1694.0
+================ ====== ==================== =========== ============ ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== ========
-Number of tasks to generate 13      
-Sent data                   88.47 KB
-=========================== ========
+=========================== =======
+Number of tasks to generate 13     
+Sent data                   86.1 KB
+=========================== =======
 
 Exposure model
 --------------
@@ -86,3 +87,11 @@ Taxonomy #Assets
 ======== =======
 Wood     1      
 ======== =======
+
+Slowest sources
+---------------
+============ ========= ================= ====== ========= =========== ========== =========
+trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
+============ ========= ================= ====== ========= =========== ========== =========
+0            1         SimpleFaultSource 1694.0 15        0.00235295  0.132905   0.0      
+============ ========= ================= ====== ========= =========== ========== =========

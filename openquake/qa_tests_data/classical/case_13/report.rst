@@ -1,7 +1,7 @@
 Classical PSHA QA test
 ======================
 
-num_sites = 21, sitecol = 917 B
+num_sites = 21, sitecol = 1.57 KB
 
 Parameters
 ----------
@@ -19,6 +19,7 @@ area_source_discretization   10.0
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -65,17 +66,18 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-============================= ====== ==================== =========== ============ ======
-source_model                  trt_id trt                  num_sources num_ruptures weight
-============================= ====== ==================== =========== ============ ======
-aFault_aPriori_D2.1.xml       0      Active Shallow Crust 168         1980         1848.0
-bFault_stitched_D2.1_Char.xml 1      Active Shallow Crust 186         2706         2046.0
-============================= ====== ==================== =========== ============ ======
+============================= ====== ==================== =========== ============ ============ ======
+source_model                  trt_id trt                  num_sources num_ruptures eff_ruptures weight
+============================= ====== ==================== =========== ============ ============ ======
+aFault_aPriori_D2.1.xml       0      Active Shallow Crust 168         1980         1848         1848.0
+bFault_stitched_D2.1_Char.xml 1      Active Shallow Crust 186         2706         2046         2046.0
+============================= ====== ==================== =========== ============ ============ ======
 
 =============== ======
 #TRT models     2     
 #sources        354   
-#ruptures       4686  
+#tot_ruptures   4686  
+#eff_ruptures   3894  
 filtered_weight 3894.0
 =============== ======
 
@@ -83,5 +85,32 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =======
 Number of tasks to generate 15     
-Sent data                   1.32 MB
+Sent data                   1.33 MB
 =========================== =======
+
+Slowest sources
+---------------
+============ ========= ==================== ====== ========= =========== ========== =========
+trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
+============ ========= ==================== ====== ========= =========== ========== =========
+0            59_0      CharacteristicFaultS 11.0   1         0.00223613  0.0        0.0      
+0            86_1      CharacteristicFaultS 11.0   1         0.00207615  0.0        0.0      
+0            59_1      CharacteristicFaultS 11.0   1         0.00196505  0.0        0.0      
+0            0_0       CharacteristicFaultS 11.0   1         0.00183201  0.0        0.0      
+0            28_1      CharacteristicFaultS 11.0   1         0.00179195  0.0        0.0      
+0            87_0      CharacteristicFaultS 11.0   1         0.00178885  0.0        0.0      
+1            74_1      CharacteristicFaultS 11.0   1         0.00175095  0.0        0.0      
+0            87_1      CharacteristicFaultS 11.0   1         0.00174618  0.0        0.0      
+0            88_0      CharacteristicFaultS 11.0   1         0.00166297  0.0        0.0      
+0            29_0      CharacteristicFaultS 11.0   1         0.00163698  0.0        0.0      
+1            12_0      CharacteristicFaultS 11.0   1         0.00163507  0.0        0.0      
+1            119_1     CharacteristicFaultS 11.0   1         0.00163102  0.0        0.0      
+0            88_1      CharacteristicFaultS 11.0   1         0.00162983  0.0        0.0      
+0            12_0      CharacteristicFaultS 11.0   1         0.00162888  0.0        0.0      
+1            107_1     CharacteristicFaultS 11.0   1         0.00162697  0.0        0.0      
+0            23_0      CharacteristicFaultS 11.0   1         0.00162196  0.0        0.0      
+0            5_0       CharacteristicFaultS 11.0   1         0.00161886  0.0        0.0      
+0            29_1      CharacteristicFaultS 11.0   1         0.0016129   0.0        0.0      
+0            78_0      CharacteristicFaultS 11.0   1         0.00161195  0.0        0.0      
+1            38_0      CharacteristicFaultS 11.0   1         0.00161195  0.0        0.0      
+============ ========= ==================== ====== ========= =========== ========== =========

@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 3
 ================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
@@ -19,6 +19,7 @@ area_source_discretization   0.05
 random_seed                  1066     
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -58,11 +59,11 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ =============
-source_model     trt_id trt                  num_sources num_ruptures weight       
-================ ====== ==================== =========== ============ =============
-source_model.xml 0      active shallow crust 1           31353        783.825012207
-================ ====== ==================== =========== ============ =============
+================ ====== ==================== =========== ============ ============ =============
+source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight       
+================ ====== ==================== =========== ============ ============ =============
+source_model.xml 0      active shallow crust 1           31353        31353        783.825012207
+================ ====== ==================== =========== ============ ============ =============
 
 Expected data transfer for the sources
 --------------------------------------
@@ -70,3 +71,11 @@ Expected data transfer for the sources
 Number of tasks to generate 16     
 Sent data                   6.34 MB
 =========================== =======
+
+Slowest sources
+---------------
+============ ========= ============ ======= ========= =========== ========== =========
+trt_model_id source_id source_class weight  split_num filter_time split_time calc_time
+============ ========= ============ ======= ========= =========== ========== =========
+0            1         AreaSource   783.825 31353     0.00162315  6.17214    0.0      
+============ ========= ============ ======= ========= =========== ========== =========

@@ -1,7 +1,7 @@
 Classical PSHA-Based Hazard
 ===========================
 
-num_sites = 7, sitecol = 581 B
+num_sites = 7, sitecol = 960 B
 
 Parameters
 ----------
@@ -19,6 +19,7 @@ area_source_discretization   20.0
 random_seed                  42              
 master_seed                  0               
 concurrent_tasks             16              
+sites_per_tile               1000            
 ============================ ================
 
 Input files
@@ -60,17 +61,17 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources num_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           1694         1694.0
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============ ======
+source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight
+================ ====== ==================== =========== ============ ============ ======
+source_model.xml 0      Active Shallow Crust 1           1694         1694         1694.0
+================ ====== ==================== =========== ============ ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 13      
-Sent data                   85.96 KB
+Sent data                   83.38 KB
 =========================== ========
 
 Exposure model
@@ -87,3 +88,11 @@ Concrete 2
 Steel    2      
 Wood     3      
 ======== =======
+
+Slowest sources
+---------------
+============ ========= ================= ====== ========= =========== ========== =========
+trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
+============ ========= ================= ====== ========= =========== ========== =========
+0            1         SimpleFaultSource 1694.0 15        0.0021441   0.116921   0.0      
+============ ========= ================= ====== ========= =========== ========== =========

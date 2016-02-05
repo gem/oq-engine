@@ -1,7 +1,7 @@
 Event Based Hazard QA Test, Case 17
 ===================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
@@ -39,7 +39,7 @@ Composite source model
 smlt_path weight source_model_file                          gsim_logic_tree num_realizations
 ========= ====== ========================================== =============== ================
 b1        0.2    `source_model_1.xml <source_model_1.xml>`_ trivial(1)      1/1             
-b2        0.2    `source_model_2.xml <source_model_2.xml>`_ trivial(1)      4/1             
+b2        0.2    `source_model_2.xml <source_model_2.xml>`_ trivial(1)      4/4             
 ========= ====== ========================================== =============== ================
 
 Required parameters per tectonic region type
@@ -87,7 +87,16 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 2        
-Sent data                   16.41 KB 
+Sent data                   16.42 KB 
 Total received data         894.29 KB
 Maximum received per task   890.23 KB
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+1            2         PointSource  0.175  1         8.08239e-05 0.0        0.110525 
+0            1         PointSource  0.975  1         0.000140905 0.0        0.0298619
+============ ========= ============ ====== ========= =========== ========== =========

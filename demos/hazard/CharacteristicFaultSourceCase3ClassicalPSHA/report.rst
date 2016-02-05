@@ -67,15 +67,15 @@ source_model.xml 0      Active Shallow Crust 1           1            9         
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== =========
-Number of tasks to generate 9        
-Sent data                   570.13 KB
-=========================== =========
+=========================== ========
+Number of tasks to generate 9       
+Sent data                   570.5 KB
+=========================== ========
 
 Slowest sources
 ---------------
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            1         CharacteristicFaultS 1.0    1         0.0389524   0.0        0.0      
+0            1         CharacteristicFaultS 1.0    1         0.0342317   0.0        0.0      
 ============ ========= ==================== ====== ========= =========== ========== =========

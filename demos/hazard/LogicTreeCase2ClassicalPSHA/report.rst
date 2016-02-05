@@ -800,34 +800,34 @@ filtered_weight 117817.875
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== =====
-Number of tasks to generate 162  
-Sent data                   50 MB
-=========================== =====
+=========================== ========
+Number of tasks to generate 162     
+Sent data                   50.08 MB
+=========================== ========
 
 Slowest sources
 ---------------
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-70           2         SimpleFaultSource 1339.0 1         0.00247002  0.0        0.0      
-102          2         SimpleFaultSource 1334.0 1         0.00234795  0.0        0.0      
-68           2         SimpleFaultSource 1337.0 1         0.00231481  0.0        0.0      
-72           2         SimpleFaultSource 1334.0 1         0.00225997  0.0        0.0      
-104          2         SimpleFaultSource 1337.0 1         0.00219798  0.0        0.0      
-0            2         SimpleFaultSource 1334.0 1         0.00206399  0.0        0.0      
-144          2         SimpleFaultSource 1334.0 1         0.00195599  0.0        0.0      
-44           2         SimpleFaultSource 1337.0 1         0.00194597  0.0        0.0      
-62           2         SimpleFaultSource 1337.0 1         0.00193715  0.0        0.0      
-10           2         SimpleFaultSource 1339.0 1         0.00191498  0.0        0.0      
-132          2         SimpleFaultSource 1334.0 1         0.00191307  0.0        0.0      
-98           2         SimpleFaultSource 1337.0 1         0.00188994  0.0        0.0      
-134          2         SimpleFaultSource 1337.0 1         0.00187993  0.0        0.0      
-148          2         SimpleFaultSource 1339.0 1         0.00186491  0.0        0.0      
-18           2         SimpleFaultSource 1334.0 1         0.00185704  0.0        0.0      
-74           2         SimpleFaultSource 1337.0 1         0.00185513  0.0        0.0      
-66           2         SimpleFaultSource 1334.0 1         0.00184512  0.0        0.0      
-28           2         SimpleFaultSource 1339.0 1         0.00183702  0.0        0.0      
-22           2         SimpleFaultSource 1339.0 1         0.00182605  0.0        0.0      
-136          2         SimpleFaultSource 1339.0 1         0.00182009  0.0        0.0      
+154          2         SimpleFaultSource 1339.0 1         0.00363779  0.0        0.0      
+156          2         SimpleFaultSource 1334.0 1         0.00328684  0.0        0.0      
+144          2         SimpleFaultSource 1334.0 1         0.00308299  0.0        0.0      
+140          2         SimpleFaultSource 1337.0 1         0.00286698  0.0        0.0      
+138          2         SimpleFaultSource 1334.0 1         0.002738    0.0        0.0      
+158          2         SimpleFaultSource 1337.0 1         0.00268412  0.0        0.0      
+160          2         SimpleFaultSource 1339.0 1         0.00264883  0.0        0.0      
+112          2         SimpleFaultSource 1339.0 1         0.00251198  0.0        0.0      
+48           2         SimpleFaultSource 1334.0 1         0.0024941   0.0        0.0      
+142          2         SimpleFaultSource 1339.0 1         0.00230193  0.0        0.0      
+58           2         SimpleFaultSource 1339.0 1         0.00227094  0.0        0.0      
+0            2         SimpleFaultSource 1334.0 1         0.00224996  0.0        0.0      
+136          2         SimpleFaultSource 1339.0 1         0.00216699  0.0        0.0      
+40           2         SimpleFaultSource 1339.0 1         0.00208592  0.0        0.0      
+4            2         SimpleFaultSource 1339.0 1         0.00205898  0.0        0.0      
+102          2         SimpleFaultSource 1334.0 1         0.00205302  0.0        0.0      
+6            2         SimpleFaultSource 1334.0 1         0.00203705  0.0        0.0      
+146          2         SimpleFaultSource 1337.0 1         0.0020299   0.0        0.0      
+30           2         SimpleFaultSource 1334.0 1         0.0020299   0.0        0.0      
+10           2         SimpleFaultSource 1339.0 1         0.00202394  0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========

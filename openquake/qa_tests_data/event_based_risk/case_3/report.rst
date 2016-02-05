@@ -1,7 +1,7 @@
 Event Based PSHA for Lisbon
 ===========================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
@@ -89,9 +89,9 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 20       
-Sent data                   4.56 MB  
-Total received data         176.79 KB
-Maximum received per task   18.26 KB 
+Sent data                   4.57 MB  
+Total received data         176.83 KB
+Maximum received per task   18.28 KB 
 =========================== =========
 
 Exposure model
@@ -106,3 +106,30 @@ Taxonomy #Assets
 ======== =======
 M1_2_PC  1      
 ======== =======
+
+Slowest sources
+---------------
+============ ========= ============ ======= ========= =========== ========== =========
+trt_model_id source_id source_class weight  split_num filter_time split_time calc_time
+============ ========= ============ ======= ========= =========== ========== =========
+0            0         AreaSource   2445.75 2174      0.00250602  1.48974    78.8809  
+2            0         AreaSource   2445.75 2174      0.002496    1.81943    77.6729  
+0            2         AreaSource   1992.3  2748      0.00228095  1.76153    26.5966  
+2            2         AreaSource   1992.3  2748      0.00243902  1.44151    23.767   
+3            10        AreaSource   448.2   1         0.000947952 0.0        12.0456  
+1            10        AreaSource   448.2   1         0.000989914 0.0        11.3498  
+3            6         AreaSource   422.375 1         0.000977993 0.0        11.3123  
+1            6         AreaSource   422.375 1         0.000977993 0.0        11.0349  
+2            1         AreaSource   422.05  1         0.000957966 0.0        10.9853  
+0            1         AreaSource   422.05  1         0.00125313  0.0        10.0081  
+1            3         AreaSource   340.025 1         0.00102806  0.0        9.28653  
+3            3         AreaSource   340.025 1         0.00103188  0.0        9.05864  
+3            9         AreaSource   255.6   1         0.000945091 0.0        7.47385  
+1            9         AreaSource   255.6   1         0.000948906 0.0        5.72653  
+1            5         AreaSource   236.35  1         0.000976086 0.0        5.47878  
+3            5         AreaSource   236.35  1         0.00100088  0.0        5.31731  
+1            7         AreaSource   166.725 1         0.000941992 0.0        4.65252  
+1            4         AreaSource   128.25  1         0.00103712  0.0        4.20782  
+3            7         AreaSource   166.725 1         0.000975132 0.0        3.94638  
+1            8         AreaSource   144.45  1         0.000980139 0.0        3.77675  
+============ ========= ============ ======= ========= =========== ========== =========

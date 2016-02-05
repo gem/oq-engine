@@ -1,7 +1,7 @@
 Scenario QA Test with AtkinsonBoore2003SInter
 =============================================
 
-num_sites = 2, sitecol = 461 B
+num_sites = 2, sitecol = 730 B
 
 Parameters
 ----------

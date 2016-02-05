@@ -1,7 +1,7 @@
 QA test for disaggregation case_1, taken from the disagg demo
 =============================================================
 
-num_sites = 2, sitecol = 461 B
+num_sites = 2, sitecol = 730 B
 
 Parameters
 ----------
@@ -58,15 +58,26 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ =======
-source_model     trt_id trt                  num_sources num_ruptures weight 
-================ ====== ==================== =========== ============ =======
-source_model.xml 0      Active Shallow Crust 4           2236         817.375
-================ ====== ==================== =========== ============ =======
+================ ====== ==================== =========== ============ ============ =======
+source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight 
+================ ====== ==================== =========== ============ ============ =======
+source_model.xml 0      Active Shallow Crust 4           2236         2236         817.375
+================ ====== ==================== =========== ============ ============ =======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 14       
-Sent data                   185.21 KB
+Sent data                   182.79 KB
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ================== ====== ========= =========== ========== =========
+trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
+============ ========= ================== ====== ========= =========== ========== =========
+0            4         ComplexFaultSource 164.0  29        0.00206995  0.258712   0.0      
+0            3         SimpleFaultSource  617.0  83        0.00298786  0.084249   0.0      
+0            2         AreaSource         36.0   1         0.00124598  0.0        0.0      
+0            1         PointSource        0.375  1         0.000191927 0.0        0.0      
+============ ========= ================== ====== ========= =========== ========== =========

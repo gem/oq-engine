@@ -1,7 +1,7 @@
 Probabilistic Event-Based QA Test with No Spatial Correlation, case 3
 =====================================================================
 
-num_sites = 2, sitecol = 461 B
+num_sites = 2, sitecol = 730 B
 
 Parameters
 ----------
@@ -75,7 +75,15 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =======
 Number of tasks to generate 1      
-Sent data                   6.45 KB
+Sent data                   6.25 KB
 Total received data         3.07 MB
 Maximum received per task   3.07 MB
 =========================== =======
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         PointSource  0.025  1         0.000161171 0.0        0.369691 
+============ ========= ============ ====== ========= =========== ========== =========

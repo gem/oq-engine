@@ -1,7 +1,7 @@
 Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
-num_sites = 3, sitecol = 485 B
+num_sites = 3, sitecol = 776 B
 
 Parameters
 ----------
@@ -19,6 +19,7 @@ area_source_discretization   10.0
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -71,19 +72,20 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================== ====== ======================== =========== ============ ======
-source_model       trt_id trt                      num_sources num_ruptures weight
-================== ====== ======================== =========== ============ ======
-source_model_1.xml 0      Active Shallow Crust     1           15           0.375 
-source_model_1.xml 1      Stable Continental Crust 1           15           0.375 
-source_model_2.xml 2      Active Shallow Crust     1           240          6.0   
-source_model_2.xml 3      Active Shallow Crust     1           240          6.0   
-================== ====== ======================== =========== ============ ======
+================== ====== ======================== =========== ============ ============ ======
+source_model       trt_id trt                      num_sources num_ruptures eff_ruptures weight
+================== ====== ======================== =========== ============ ============ ======
+source_model_1.xml 0      Active Shallow Crust     1           15           15           0.375 
+source_model_1.xml 1      Stable Continental Crust 1           15           15           0.375 
+source_model_2.xml 2      Active Shallow Crust     1           240          240          6.0   
+source_model_2.xml 3      Active Shallow Crust     1           240          240          6.0   
+================== ====== ======================== =========== ============ ============ ======
 
 =============== =====
 #TRT models     4    
 #sources        4    
-#ruptures       510  
+#tot_ruptures   510  
+#eff_ruptures   510  
 filtered_weight 12.75
 =============== =====
 
@@ -91,5 +93,16 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 18       
-Sent data                   244.23 KB
+Sent data                   246.78 KB
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+2            1         AreaSource   6.0    16        0.00300884  0.00376606 0.0      
+3            1         AreaSource   6.0    16        0.00108814  0.00373316 0.0      
+0            1         PointSource  0.375  1         0.00018692  0.0        0.0      
+1            2         PointSource  0.375  1         0.000122786 0.0        0.0      
+============ ========= ============ ====== ========= =========== ========== =========

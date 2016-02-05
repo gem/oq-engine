@@ -1,7 +1,7 @@
 Event Based QA Test, Case 13
 ============================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
@@ -75,7 +75,15 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 1        
-Sent data                   6.41 KB  
+Sent data                   6.22 KB  
 Total received data         400.74 KB
 Maximum received per task   400.74 KB
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         PointSource  0.025  1         0.000129938 0.0        0.087657 
+============ ========= ============ ====== ========= =========== ========== =========

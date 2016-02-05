@@ -1,7 +1,7 @@
 event based hazard
 ==================
 
-num_sites = 7, sitecol = 581 B
+num_sites = 7, sitecol = 960 B
 
 Parameters
 ----------
@@ -76,7 +76,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 13       
-Sent data                   88 KB    
+Sent data                   85.38 KB 
 Total received data         258.46 KB
 Maximum received per task   30.34 KB 
 =========================== =========
@@ -93,3 +93,11 @@ Taxonomy #Assets
 ======== =======
 tax1     7      
 ======== =======
+
+Slowest sources
+---------------
+============ ========= ================= ====== ========= =========== ========== =========
+trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
+============ ========= ================= ====== ========= =========== ========== =========
+0            1         SimpleFaultSource 482.0  15        0.00239801  0.057344   1.05458  
+============ ========= ================= ====== ========= =========== ========== =========

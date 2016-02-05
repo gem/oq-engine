@@ -1,7 +1,7 @@
 Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per source + 3 Mmax per source
 ==========================================================================================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
@@ -19,6 +19,7 @@ area_source_discretization   10.0
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -85,25 +86,26 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources num_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 5           1925         48.125
-source_model.xml 1      Active Shallow Crust 5           2025         50.625
-source_model.xml 2      Active Shallow Crust 5           2135         53.375
-source_model.xml 3      Active Shallow Crust 5           2035         50.875
-source_model.xml 4      Active Shallow Crust 5           1865         46.625
-source_model.xml 5      Active Shallow Crust 5           2085         52.125
-source_model.xml 6      Active Shallow Crust 5           2075         51.875
-source_model.xml 7      Active Shallow Crust 5           2185         54.625
-source_model.xml 8      Active Shallow Crust 5           1905         47.625
-source_model.xml 9      Active Shallow Crust 5           2025         50.625
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============ ======
+source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight
+================ ====== ==================== =========== ============ ============ ======
+source_model.xml 0      Active Shallow Crust 5           1925         1925         48.125
+source_model.xml 1      Active Shallow Crust 5           2025         2025         50.625
+source_model.xml 2      Active Shallow Crust 5           2135         2135         53.375
+source_model.xml 3      Active Shallow Crust 5           2035         2035         50.875
+source_model.xml 4      Active Shallow Crust 5           1865         1865         46.625
+source_model.xml 5      Active Shallow Crust 5           2085         2085         52.125
+source_model.xml 6      Active Shallow Crust 5           2075         2075         51.875
+source_model.xml 7      Active Shallow Crust 5           2185         2185         54.625
+source_model.xml 8      Active Shallow Crust 5           1905         1905         47.625
+source_model.xml 9      Active Shallow Crust 5           2025         2025         50.625
+================ ====== ==================== =========== ============ ============ ======
 
 =============== =====
 #TRT models     10   
 #sources        50   
-#ruptures       20260
+#tot_ruptures   20260
+#eff_ruptures   20260
 filtered_weight 506.5
 =============== =====
 
@@ -111,5 +113,32 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 22       
-Sent data                   550.04 KB
+Sent data                   492.78 KB
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         AreaSource   8.125  1         0.00113916  0.0        0.0      
+3            5         AreaSource   9.375  1         0.000997066 0.0        0.0      
+2            1         AreaSource   9.375  1         0.000995159 0.0        0.0      
+0            3         AreaSource   11.25  1         0.000975132 0.0        0.0      
+6            2         AreaSource   11.25  1         0.000972986 0.0        0.0      
+5            1         AreaSource   9.375  1         0.000972033 0.0        0.0      
+7            3         AreaSource   12.75  1         0.000969172 0.0        0.0      
+5            3         AreaSource   11.25  1         0.000962019 0.0        0.0      
+4            5         AreaSource   8.125  1         0.000961065 0.0        0.0      
+2            5         AreaSource   10.625 1         0.000960827 0.0        0.0      
+1            5         AreaSource   9.375  1         0.000959158 0.0        0.0      
+1            2         AreaSource   11.25  1         0.00095892  0.0        0.0      
+6            3         AreaSource   11.25  1         0.000957966 0.0        0.0      
+4            1         AreaSource   9.375  1         0.000956059 0.0        0.0      
+3            2         AreaSource   11.25  1         0.000955105 0.0        0.0      
+8            1         AreaSource   9.375  1         0.000954151 0.0        0.0      
+2            3         AreaSource   12.75  1         0.000952005 0.0        0.0      
+6            5         AreaSource   9.375  1         0.000947952 0.0        0.0      
+0            2         AreaSource   11.25  1         0.000942945 0.0        0.0      
+6            1         AreaSource   10.625 1         0.000942945 0.0        0.0      
+============ ========= ============ ====== ========= =========== ========== =========

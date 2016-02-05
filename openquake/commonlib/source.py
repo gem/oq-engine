@@ -69,22 +69,40 @@ class LtRealization(object):
         return hash(repr(self))
 
 
-def get_skeleton(sm):
+class SourceModel(object):
     """
-    Return a copy of the source model `sm` which is empty, i.e. without
-    sources, but with the proper attributes (i.e. num_ruptures) for
-    each TrtModel contained within.
+    A container of TrtModel instances with some additional attributes
+    describing the source model in the logic tree.
     """
-    trt_models = [TrtModel(tm.trt, [], tm.num_ruptures, tm.min_mag,
-                           tm.max_mag, tm.gsims, tm.id)
-                  for tm in sm.trt_models]
-    return SourceModel(sm.name, sm.weight, sm.path, trt_models, sm.gsim_lt,
-                       sm.ordinal, sm.samples)
+    def __init__(self, name, weight, path, trt_models, gsim_lt, ordinal,
+                 samples):
+        self.name = name
+        self.weight = weight
+        self.path = path
+        self.trt_models = trt_models
+        self.gsim_lt = gsim_lt
+        self.ordinal = ordinal
+        self.samples = samples
 
-SourceModel = collections.namedtuple(
-    'SourceModel', 'name weight path trt_models gsim_lt ordinal samples')
-SourceModel.num_sources = property(
-    lambda self: sum(len(tm) for tm in self.trt_models))
+    @property
+    def num_sources(self):
+        return sum(len(tm) for tm in self.trt_models)
+
+    def num_gsim_paths(self, number_of_logic_tree_samples=0):
+        return (self.samples if number_of_logic_tree_samples
+                else self.gsim_lt.get_num_paths())
+
+    def get_skeleton(self):
+        """
+        Return an empty copy of the source model, i.e. without
+        sources, but with the proper attributes (i.e. num_ruptures) for
+        each TrtModel contained within.
+        """
+        trt_models = [TrtModel(tm.trt, [], tm.num_ruptures, tm.min_mag,
+                               tm.max_mag, tm.gsims, tm.id)
+                      for tm in self.trt_models]
+        return self.__class__(self.name, self.weight, self.path, trt_models,
+                              self.gsim_lt, self.ordinal, self.samples)
 
 
 def capitalize(words):
@@ -705,8 +723,8 @@ class CompositionInfo(object):
                 nr = count_ruptures(tm)
                 if nr:
                     trts.append(tm.trt)
-                    rups.append(str(nr))
-            self.eff_ruptures[i] = ','.join(rups)
+                    rups.append((tm.id, nr))
+            self.eff_ruptures[i] = bytes(rups)
 
             # recompute the GSIM logic tree if needed
             if set(trts) != set(smodel.gsim_lt.tectonic_region_types):
@@ -764,7 +782,7 @@ class CompositeSourceModel(collections.Sequence):
         self.info = CompositionInfo(
             self.source_model_lt.seed,
             self.source_model_lt.num_samples,
-            list(map(get_skeleton, self.source_models)))
+            [sm.get_skeleton() for sm in self.source_models])
 
     @property
     def trt_models(self):

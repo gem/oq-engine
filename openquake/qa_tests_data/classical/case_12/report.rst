@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 12
 =================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
@@ -19,6 +19,7 @@ area_source_discretization   10.0
 random_seed                  1066     
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -60,17 +61,18 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ===============
-source_model     trt_id trt                  num_sources num_ruptures weight         
-================ ====== ==================== =========== ============ ===============
-source_model.xml 0      active shallow crust 1           1            0.0250000003725
-source_model.xml 1      stable continental   1           1            0.0250000003725
-================ ====== ==================== =========== ============ ===============
+================ ====== ==================== =========== ============ ============ ===============
+source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight         
+================ ====== ==================== =========== ============ ============ ===============
+source_model.xml 0      active shallow crust 1           1            1            0.0250000003725
+source_model.xml 1      stable continental   1           1            1            0.0250000003725
+================ ====== ==================== =========== ============ ============ ===============
 
 =============== ===============
 #TRT models     2              
 #sources        2              
-#ruptures       2              
+#tot_ruptures   2              
+#eff_ruptures   2              
 filtered_weight 0.0500000007451
 =============== ===============
 
@@ -78,5 +80,14 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 2       
-Sent data                   13.52 KB
+Sent data                   13.14 KB
 =========================== ========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         PointSource  0.025  1         0.000126123 0.0        0.0      
+1            2         PointSource  0.025  1         8.01086e-05 0.0        0.0      
+============ ========= ============ ====== ========= =========== ========== =========

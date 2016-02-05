@@ -1,7 +1,7 @@
 Event Based Hazard for Turkey reduced
 =====================================
 
-num_sites = 14, sitecol = 1.22 KB
+num_sites = 14, sitecol = 1.25 KB
 
 Parameters
 ----------
@@ -18,7 +18,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0       
 random_seed                  323        
 master_seed                  0          
-concurrent_tasks             20         
+concurrent_tasks             64         
 ============================ ===========
 
 Input files
@@ -90,12 +90,12 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== ========
-Number of tasks to generate 4       
-Sent data                   1.17 MB 
-Total received data         47.93 KB
-Maximum received per task   25.35 KB
-=========================== ========
+=========================== =========
+Number of tasks to generate 10       
+Sent data                   18.47 MB 
+Total received data         104.35 KB
+Maximum received per task   25.41 KB 
+=========================== =========
 
 Exposure model
 --------------
@@ -117,3 +117,30 @@ SAM_4S   1
 URM_1S   2      
 URM_2S   2      
 ======== =======
+
+Slowest sources
+---------------
+============ ============ ================= ======= ========= =========== ========== =========
+trt_model_id source_id    source_class      weight  split_num filter_time split_time calc_time
+============ ============ ================= ======= ========= =========== ========== =========
+5            AS_GEAS343   AreaSource        625.575 1         0.00193882  0.0        11.1514  
+9            FSBG_TRBG103 AreaSource        282.15  1         0.00144601  0.0        6.42414  
+5            AS_TRAS334   AreaSource        244.5   1         0.00131607  0.0        5.14249  
+5            AS_AMAS453   AreaSource        175.275 1         0.00141692  0.0        4.15691  
+5            AS_TRAS360   AreaSource        182.4   1         0.000993013 0.0        3.47266  
+5            AS_TRAS346   AreaSource        154.275 1         0.00115919  0.0        2.80778  
+5            AS_TRAS395   AreaSource        122.4   1         0.00106096  0.0        1.69619  
+5            AS_TRAS458   AreaSource        121.125 1         0.000977993 0.0        1.60041  
+5            AS_TRAS410   AreaSource        81.0    1         0.00101519  0.0        1.14785  
+5            AS_GEAS479   AreaSource        72.0    1         0.00160122  0.0        0.962681 
+9            FSBG_TRBG989 AreaSource        33.075  1         0.00103402  0.0        0.791559 
+9            FSBG_TRCS114 SimpleFaultSource 958.0   1         0.003268    0.0        0.367393 
+9            FSBG_TRCS003 SimpleFaultSource 2026.0  1854      0.0105541   2.54928    0.335541 
+9            FSBG_TRCS082 SimpleFaultSource 412.0   1         0.00342107  0.0        0.262334 
+9            FSBG_TRCS439 SimpleFaultSource 392.0   1         0.00285101  0.0        0.251206 
+9            FSBG_TRCS113 SimpleFaultSource 413.0   1         0.00301194  0.0        0.233627 
+9            FSBG_TRCS068 SimpleFaultSource 308.0   1         0.0030539   0.0        0.175981 
+9            FSBG_TRCS141 SimpleFaultSource 248.0   1         0.00297904  0.0        0.121823 
+9            FSBG_TRCS322 SimpleFaultSource 374.0   1         0.00288415  0.0        0.120349 
+9            FSBG_TRCS373 SimpleFaultSource 130.0   1         0.00280094  0.0        0.11506  
+============ ============ ================= ======= ========= =========== ========== =========

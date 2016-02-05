@@ -1,7 +1,7 @@
 PEB QA test 1
 =============
 
-num_sites = 3, sitecol = 485 B
+num_sites = 3, sitecol = 776 B
 
 Parameters
 ----------
@@ -79,7 +79,17 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 1       
-Sent data                   8.75 KB 
-Total received data         11.12 KB
-Maximum received per task   11.12 KB
+Sent data                   8.61 KB 
+Total received data         11.17 KB
+Maximum received per task   11.17 KB
 =========================== ========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== ==========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time 
+============ ========= ============ ====== ========= =========== ========== ==========
+0            2         PointSource  0.15   1         0.000118017 0.0        0.00418711
+0            3         PointSource  0.15   1         0.000113964 0.0        0.00409293
+0            1         PointSource  0.15   1         0.000169992 0.0        0.00392294
+============ ========= ============ ====== ========= =========== ========== ==========

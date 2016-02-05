@@ -75,7 +75,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 18       
-Sent data                   356.6 KB 
+Sent data                   357.34 KB
 Total received data         185.85 KB
 Maximum received per task   15.5 KB  
 =========================== =========
@@ -85,5 +85,5 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   1230.0 205       0.00120282  0.0661559  33.7707  
+0            1         AreaSource   1230.0 205       0.00127792  0.0661871  34.8464  
 ============ ========= ============ ====== ========= =========== ========== =========

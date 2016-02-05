@@ -1,7 +1,7 @@
 Classical PSHA - Loss fractions QA test
 =======================================
 
-num_sites = 13, sitecol = 725 B
+num_sites = 13, sitecol = 1.21 KB
 
 Parameters
 ----------
@@ -20,6 +20,7 @@ random_seed                  23
 master_seed                  0             
 concurrent_tasks             16            
 avg_losses                   False         
+sites_per_tile               1000          
 ============================ ==============
 
 Input files
@@ -61,19 +62,19 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============
-source_model     trt_id trt                  num_sources num_ruptures weight      
-================ ====== ==================== =========== ============ ============
-source_model.xml 0      Active Shallow Crust 24          868805       1660.4750042
-================ ====== ==================== =========== ============ ============
+================ ====== ==================== =========== ============ ============ =============
+source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight       
+================ ====== ==================== =========== ============ ============ =============
+source_model.xml 0      Active Shallow Crust 2           33831        1613         53.2999992371
+================ ====== ==================== =========== ============ ============ =============
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 2       
-Sent data                   35.4 KB 
-Total received data         14.33 KB
-Maximum received per task   7.56 KB 
+Sent data                   16.18 KB
+Total received data         13.04 KB
+Maximum received per task   6.93 KB 
 =========================== ========
 
 Exposure model
@@ -91,3 +92,12 @@ DS       2
 UFB      2      
 W        5      
 ======== =======
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            232       AreaSource   40.3   1         0.00112295  0.0        3.06222  
+0            225       AreaSource   13.0   1         0.00112796  0.0        0.360262 
+============ ========= ============ ====== ========= =========== ========== =========

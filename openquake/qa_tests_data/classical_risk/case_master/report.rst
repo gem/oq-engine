@@ -95,12 +95,12 @@ filtered_weight 969.0
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== ========
-Number of tasks to generate 22      
-Sent data                   285.5 KB
-Total received data         188.9 KB
-Maximum received per task   8.61 KB 
-=========================== ========
+=========================== =========
+Number of tasks to generate 22       
+Sent data                   288.01 KB
+Total received data         188.9 KB 
+Maximum received per task   8.61 KB  
+=========================== =========
 
 Exposure model
 --------------
@@ -122,8 +122,8 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            1         SimpleFaultSource    482.0  15        0.00401902  0.0811269  5.77768  
-2            1         SimpleFaultSource    482.0  15        0.00220609  0.0638721  5.14114  
-1            2         SimpleFaultSource    4.0    1         0.00233507  0.0        0.0328069
-3            2         CharacteristicFaultS 1.0    1         0.00178099  0.0        0.022738 
+0            1         SimpleFaultSource    482.0  15        0.00295997  0.0630829  5.59202  
+2            1         SimpleFaultSource    482.0  15        0.00193906  0.0567579  5.18245  
+3            2         CharacteristicFaultS 1.0    1         0.00159407  0.0        0.0363181
+1            2         SimpleFaultSource    4.0    1         0.00209498  0.0        0.0327339
 ============ ========= ==================== ====== ========= =========== ========== =========

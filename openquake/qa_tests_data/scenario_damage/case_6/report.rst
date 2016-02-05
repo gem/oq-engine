@@ -1,7 +1,7 @@
 oq-test03, depth=15km
 =====================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------

@@ -1,7 +1,7 @@
 Event-Based Hazard QA Test, Case 18
 ===================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
@@ -80,7 +80,15 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 1       
-Sent data                   18.87 KB
+Sent data                   18.71 KB
 Total received data         6.89 KB 
 Maximum received per task   6.89 KB 
 =========================== ========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         PointSource  75.0   1         0.0053091   2.5034e-05 4.03542  
+============ ========= ============ ====== ========= =========== ========== =========

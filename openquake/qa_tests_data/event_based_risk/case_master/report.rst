@@ -1,7 +1,7 @@
 event based risk
 ================
 
-num_sites = 7, sitecol = 581 B
+num_sites = 7, sitecol = 960 B
 
 Parameters
 ----------
@@ -92,7 +92,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 22       
-Sent data                   325.7 KB 
+Sent data                   327.88 KB
 Total received data         129.33 KB
 Maximum received per task   15.2 KB  
 =========================== =========
@@ -115,3 +115,14 @@ tax1     4
 tax2     2      
 tax3     1      
 ======== =======
+
+Slowest sources
+---------------
+============ ========= ==================== ====== ========= =========== ========== ==========
+trt_model_id source_id source_class         weight split_num filter_time split_time calc_time 
+============ ========= ==================== ====== ========= =========== ========== ==========
+0            1         SimpleFaultSource    482.0  15        0.00381994  0.071367   0.348832  
+2            1         SimpleFaultSource    482.0  15        0.00194192  0.0564349  0.289846  
+1            2         SimpleFaultSource    4.0    1         0.00209999  0.0        0.0168738 
+3            2         CharacteristicFaultS 1.0    1         0.00154996  0.0        0.00206089
+============ ========= ==================== ====== ========= =========== ========== ==========

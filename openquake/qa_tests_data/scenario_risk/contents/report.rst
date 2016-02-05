@@ -1,7 +1,7 @@
 QA Scenario Risk for contents
 =============================
 
-num_sites = 3, sitecol = 485 B
+num_sites = 3, sitecol = 776 B
 
 Parameters
 ----------

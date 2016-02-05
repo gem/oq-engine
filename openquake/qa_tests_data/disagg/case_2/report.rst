@@ -1,7 +1,7 @@
 QA test for disaggregation case_2
 =================================
 
-num_sites = 2, sitecol = 461 B
+num_sites = 2, sitecol = 730 B
 
 Parameters
 ----------
@@ -66,24 +66,36 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================== ====== ==================== =========== ============ ======
-source_model       trt_id trt                  num_sources num_ruptures weight
-================== ====== ==================== =========== ============ ======
-source_model_1.xml 0      Subduction IntraSlab 1           1815         45.375
-source_model_1.xml 1      Active Shallow Crust 2           3630         90.75 
-source_model_2.xml 2      Active Shallow Crust 1           1420         1420.0
-================== ====== ==================== =========== ============ ======
+================== ====== ==================== =========== ============ ============ ======
+source_model       trt_id trt                  num_sources num_ruptures eff_ruptures weight
+================== ====== ==================== =========== ============ ============ ======
+source_model_1.xml 0      Subduction IntraSlab 1           1815         1815         45.375
+source_model_1.xml 1      Active Shallow Crust 2           3630         3630         90.75 
+source_model_2.xml 2      Active Shallow Crust 1           1420         1420         1420.0
+================== ====== ==================== =========== ============ ============ ======
 
 =============== ========
 #TRT models     3       
 #sources        4       
-#ruptures       6865    
+#tot_ruptures   6865    
+#eff_ruptures   6865    
 filtered_weight 1556.125
 =============== ========
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== ========
-Number of tasks to generate 14      
-Sent data                   139.7 KB
-=========================== ========
+=========================== =========
+Number of tasks to generate 14       
+Sent data                   139.33 KB
+=========================== =========
+
+Slowest sources
+---------------
+============ ========= ================= ====== ========= =========== ========== =========
+trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
+============ ========= ================= ====== ========= =========== ========== =========
+2            1         SimpleFaultSource 1420.0 15        0.00328588  0.181122   0.0      
+0            2         AreaSource        45.375 1         0.00132418  0.0        0.0      
+1            1         AreaSource        45.375 1         0.00109291  0.0        0.0      
+1            3         AreaSource        45.375 1         0.001086    0.0        0.0      
+============ ========= ================= ====== ========= =========== ========== =========

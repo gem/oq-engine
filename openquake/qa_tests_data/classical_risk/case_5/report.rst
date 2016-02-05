@@ -1,7 +1,7 @@
 Hazard Calculation for end-to-end hazard+risk
 =============================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
@@ -19,6 +19,7 @@ area_source_discretization   10.0
 random_seed                  1024     
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -63,17 +64,18 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ==============
-source_model     trt_id trt                  num_sources num_ruptures weight        
-================ ====== ==================== =========== ============ ==============
-source_model.xml 0      Active Shallow Crust 1           23           0.574999988079
-source_model.xml 1      Subduction Interface 1           23           0.574999988079
-================ ====== ==================== =========== ============ ==============
+================ ====== ==================== =========== ============ ============ ==============
+source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight        
+================ ====== ==================== =========== ============ ============ ==============
+source_model.xml 0      Active Shallow Crust 1           23           23           0.574999988079
+source_model.xml 1      Subduction Interface 1           23           23           0.574999988079
+================ ====== ==================== =========== ============ ============ ==============
 
 =============== =============
 #TRT models     2            
 #sources        2            
-#ruptures       46           
+#tot_ruptures   46           
+#eff_ruptures   46           
 filtered_weight 1.14999997616
 =============== =============
 
@@ -81,5 +83,14 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 2       
-Sent data                   16.66 KB
+Sent data                   16.23 KB
 =========================== ========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            A         PointSource  0.575  1         0.000171185 0.0        0.0      
+1            B         PointSource  0.575  1         0.000117064 0.0        0.0      
+============ ========= ============ ====== ========= =========== ========== =========

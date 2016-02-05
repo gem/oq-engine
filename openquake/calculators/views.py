@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import ast
 import os.path
 import numbers
 import operator
@@ -103,9 +104,8 @@ def view_csm_info(token, dstore):
               'gsim_logic_tree', 'num_realizations']
     rows = []
     for sm in csm_info.source_models:
-        rlzs = rlzs_assoc.rlzs_by_smodel[sm.ordinal]
-        num_rlzs = len(rlzs)
-        num_paths = sm.gsim_lt.get_num_paths()
+        num_rlzs = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
+        num_paths = sm.num_gsim_paths(csm_info.num_samples)
         link = "`%s <%s>`_" % (sm.name, sm.name)
         row = ('_'.join(sm.path), sm.weight, link,
                classify_gsim_lt(sm.gsim_lt), '%d/%d' % (num_rlzs, num_paths))
@@ -153,18 +153,20 @@ def view_ruptures_per_trt(token, dstore):
     n = groupby(source_info, operator.itemgetter('trt_model_id'),
                 lambda rows: sum(1 for r in rows))
     for i, sm in enumerate(csm_info.source_models):
-        er = map(int, csm_info.eff_ruptures[i].split(','))
-        for trt_model, _eff_ruptures in zip(sm.trt_models, er):
-            num_trts += 1
-            num_sources = n.get(trt_model.id, 0)
-            tot_sources += num_sources
-            num_ruptures = trt_model.num_ruptures
-            tot_ruptures += num_ruptures
-            eff_ruptures += _eff_ruptures
-            weight = w.get(trt_model.id, 0)
-            tot_weight += weight
-            tbl.append((sm.name, trt_model.id, trt_model.trt,
-                        num_sources, num_ruptures, _eff_ruptures, weight))
+        erdict = dict(ast.literal_eval(csm_info.eff_ruptures[i]))
+        for trt_model in sm.trt_models:
+            er = erdict.get(trt_model.id, 0)  # effective ruptures
+            if er:
+                num_trts += 1
+                num_sources = n.get(trt_model.id, 0)
+                tot_sources += num_sources
+                num_ruptures = trt_model.num_ruptures
+                tot_ruptures += num_ruptures
+                eff_ruptures += er
+                weight = w.get(trt_model.id, 0)
+                tot_weight += weight
+                tbl.append((sm.name, trt_model.id, trt_model.trt,
+                            num_sources, num_ruptures, er, weight))
     rows = [('#TRT models', num_trts),
             ('#sources', tot_sources),
             ('#tot_ruptures', tot_ruptures),
@@ -249,7 +251,7 @@ def avglosses_data_transfer(token, dstore):
     oq = OqParam.from_(dstore.attrs)
     N = len(dstore['assetcol'])
     R = len(dstore['rlzs_assoc'].realizations)
-    L = len(dstore['riskmodel'].loss_types)
+    L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
     ct = oq.concurrent_tasks
     size_bytes = N * R * L * 2 * 8 * ct  # two 8 byte floats, loss and ins_loss
     return ('%d asset(s) x %d realization(s) x %d loss type(s) x 2 losses x '

@@ -1,7 +1,7 @@
 Scenario QA Test 3
 ==================
 
-num_sites = 4, sitecol = 509 B
+num_sites = 4, sitecol = 822 B
 
 Parameters
 ----------

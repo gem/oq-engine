@@ -1,7 +1,7 @@
 QA test for blocksize independence (hazard)
 ===========================================
 
-num_sites = 2, sitecol = 461 B
+num_sites = 2, sitecol = 730 B
 
 Parameters
 ----------
@@ -75,7 +75,17 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 8        
-Sent data                   533.94 KB
+Sent data                   532.92 KB
 Total received data         43.62 KB 
 Maximum received per task   7.78 KB  
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         AreaSource   175.5  1170      0.00109506  0.407942   5.45753  
+0            2         AreaSource   58.35  389       0.00119805  0.131387   1.39336  
+0            3         AreaSource   44.0   352       0.00114608  0.107548   0.760117 
+============ ========= ============ ====== ========= =========== ========== =========

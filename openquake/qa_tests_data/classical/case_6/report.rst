@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 6
 ================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
@@ -19,6 +19,7 @@ area_source_discretization   10.0
 random_seed                  1066     
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -58,15 +59,24 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources num_ruptures weight
-================ ====== ==================== =========== ============ ======
-source_model.xml 0      active shallow crust 2           1386         1386.0
-================ ====== ==================== =========== ============ ======
+================ ====== ==================== =========== ============ ============ ======
+source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight
+================ ====== ==================== =========== ============ ============ ======
+source_model.xml 0      active shallow crust 2           1386         1386         1386.0
+================ ====== ==================== =========== ============ ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 2       
-Sent data                   12.34 KB
+Sent data                   11.98 KB
 =========================== ========
+
+Slowest sources
+---------------
+============ ========= ================== ====== ========= =========== ========== =========
+trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
+============ ========= ================== ====== ========= =========== ========== =========
+0            2         ComplexFaultSource 485.0  1         0.00194502  12.2035    0.0      
+0            1         SimpleFaultSource  901.0  1         0.00198603  0.719702   0.0      
+============ ========= ================== ====== ========= =========== ========== =========

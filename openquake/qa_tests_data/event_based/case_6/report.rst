@@ -1,7 +1,7 @@
 Event-based PSHA producing hazard curves only
 =============================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
@@ -85,7 +85,16 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 16       
-Sent data                   296.4 KB 
+Sent data                   296.82 KB
 Total received data         3.38 MB  
 Maximum received per task   346.03 KB
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         AreaSource   61.4   307       0.00165009  0.0697339  4.63057  
+1            1         AreaSource   61.4   307       0.00159121  0.0705059  3.45613  
+============ ========= ============ ====== ========= =========== ========== =========
