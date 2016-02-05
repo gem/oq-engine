@@ -99,10 +99,6 @@ class HtmlTable(object):
         yield '</tbody>\n'
         yield '</table>\n'
 
-CALCULATION = '''
-SELECT distinct job_type, calculation_id, description
-FROM uiapi.performance_view WHERE oq_job_id=%s
-'''
 
 JOB_STATS = '''
 SELECT oq_job_id, user_name, stop_time, status, duration FROM (
@@ -202,13 +198,16 @@ def make_report(conn, isodate='today'):
 
         page = report['html_title']
 
-        tot_rlzs = len(ds['realizations'])
+        if 'realizations' in ds:
+            tot_rlzs = len(ds['realizations'])
+        else:
+            tot_rlzs = 1
         data = fetcher.query(JOB_INFO, job_id)
         if data[1:]:
             info_rows = (
                 '<h3>Job Info for calculation=%s, %s</h3>'
                 '<h3>owner: %s, realizations: %d </h3>' % (
-                    job_id, ds.attrs['description'], user, tot_rlzs,
+                    job_id, ds.attrs['description'].decode('utf-8'), user, tot_rlzs,
                 )) + html(data)
             page += info_rows
 
