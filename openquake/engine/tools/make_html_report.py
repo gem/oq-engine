@@ -192,7 +192,14 @@ def make_report(conn, isodate='today'):
         (job_id, user, stop_time, status, duration) = stats[0]
 
         ds = DataStore(job_id, mode='r')
-        report = html_parts(view_fullreport('fullreport', ds))
+        try:
+            report = html_parts(view_fullreport('fullreport', ds))
+        except Exception as exc:
+            report = dict(
+                html_title='Could not generate report: %s' % cgi.escape(
+                    str(exc), quote=True),
+                fragment='')
+
         page = report['html_title']
 
         tot_rlzs = len(ds['realizations'])
