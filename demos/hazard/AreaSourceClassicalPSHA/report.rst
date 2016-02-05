@@ -18,8 +18,8 @@ width_of_mfd_bin             0.2
 area_source_discretization   5.0      
 random_seed                  23       
 master_seed                  0        
-concurrent_tasks             10       
-sites_per_tile               2112     
+concurrent_tasks             4        
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -62,20 +62,20 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ============ ======
 source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight
 ================ ====== ==================== =========== ============ ============ ======
-source_model.xml 0      Active Shallow Crust 1           1640         1640         41.0  
+source_model.xml 0      Active Shallow Crust 1           1640         3280         41.0  
 ================ ====== ==================== =========== ============ ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== =========
-Number of tasks to generate 9        
-Sent data                   550.47 KB
-=========================== =========
+=========================== ========
+Number of tasks to generate 16      
+Sent data                   590.6 KB
+=========================== ========
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   41.0   205       0.00398898  0.0633771  0.0      
+0            1         AreaSource   41.0   205       0.00843811  0.0595751  0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
