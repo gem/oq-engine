@@ -207,8 +207,8 @@ def make_report(conn, isodate='today'):
             info_rows = (
                 '<h3>Job Info for calculation=%s, %s</h3>'
                 '<h3>owner: %s, realizations: %d </h3>' % (
-                    job_id, ds.attrs['description'].decode('utf-8'), user, tot_rlzs,
-                )) + html(data)
+                    job_id, ds.attrs['description'].decode('utf-8'),
+                    user, tot_rlzs)) + html(data)
             page += info_rows
 
         job_stats = html(fetcher.query(JOB_STATS, job_id))
