@@ -15,25 +15,7 @@ def html(header_rows):
     Convert a list of tuples describing a table into a HTML string
     """
     name = 'table%d' % next(tablecounter)
-    return HtmlTable([map(fmt, row) for row in header_rows], name).render()
-
-
-def fmt(number):
-    """
-    Format numbers in a nice way
-    """
-    if isinstance(number, datetime.datetime):
-        return number.isoformat()[:19]
-    elif isinstance(number, datetime.timedelta):
-        return str(number)[:7]
-    elif isinstance(number, (float, decimal.Decimal)):
-        if number > 1000:
-            return '{:,d}'.format(int(round(number)))
-        elif number < 10:
-            return '%6.3f' % number
-        else:
-            return str(int(number))
-    return str(number)
+    return HtmlTable([map(str, row) for row in header_rows], name).render()
 
 
 class Fetcher(object):
