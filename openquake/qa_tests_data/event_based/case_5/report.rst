@@ -8,14 +8,14 @@ Parameters
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 0          
-maximum_distance             80.0       
-investigation_time           30.0       
+maximum_distance             80         
+investigation_time           30         
 ses_per_logic_tree_path      1          
-truncation_level             3.0        
-rupture_mesh_spacing         5.0        
-complex_fault_mesh_spacing   5.0        
-width_of_mfd_bin             0.1        
-area_source_discretization   10.0       
+truncation_level             3.0000     
+rupture_mesh_spacing         5.0000     
+complex_fault_mesh_spacing   5.0000     
+width_of_mfd_bin             0.1000     
+area_source_discretization   10         
 random_seed                  23         
 master_seed                  0          
 concurrent_tasks             16         
@@ -98,24 +98,24 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-4            327       AreaSource   1543.5 5145      0.00759315  4.45256    29.2244  
-4            328       AreaSource   1543.5 5145      0.019104    5.12226    26.1456  
-4            329       AreaSource   1543.5 5145      0.018743    4.86473    21.9602  
-4            316       AreaSource   449.1  1         0.00245404  0.0        12.8654  
-4            317       AreaSource   449.1  1         0.00238895  0.0        12.4022  
-4            318       AreaSource   449.1  1         0.00246215  0.0        11.7328  
-4            323       AreaSource   307.2  1         0.00142717  0.0        8.55296  
-4            322       AreaSource   307.2  1         0.00149488  0.0        7.58535  
-4            264       AreaSource   85.75  1         0.0012722   0.0        2.33543  
-4            263       AreaSource   85.75  1         0.00128102  0.0        2.24531  
-4            265       AreaSource   85.75  1         0.00127101  0.0        1.85175  
-4            332       AreaSource   56.4   1         0.00133395  0.0        1.76335  
-4            330       AreaSource   56.4   1         0.00140405  0.0        1.72514  
-4            267       AreaSource   56.7   1         0.00115895  0.0        1.64182  
-4            331       AreaSource   56.4   1         0.00133801  0.0        1.4666   
-4            266       AreaSource   56.7   1         0.00116515  0.0        1.39166  
-4            333       AreaSource   39.3   1         0.00133896  0.0        1.33543  
-4            334       AreaSource   39.3   1         0.00130486  0.0        1.04191  
-4            248       AreaSource   30.9   1         0.00130391  0.0        0.895476 
-4            250       AreaSource   30.9   1         0.00125504  0.0        0.693734 
+4            327       AreaSource   1,544  5,145     0.0073      4.8013     26       
+4            328       AreaSource   1,544  5,145     0.0172      5.0424     25       
+4            329       AreaSource   1,544  5,145     0.0070      4.5968     23       
+4            317       AreaSource   449    1         0.0024      0.0        12       
+4            316       AreaSource   449    1         0.0025      0.0        12       
+4            318       AreaSource   449    1         0.0024      0.0        12       
+4            322       AreaSource   307    1         0.0014      0.0        10       
+4            323       AreaSource   307    1         0.0014      0.0        8.5806   
+4            264       AreaSource   85     1         0.0013      0.0        2.8195   
+4            265       AreaSource   85     1         0.0013      0.0        2.4887   
+4            263       AreaSource   85     1         0.0013      0.0        2.4473   
+4            331       AreaSource   56     1         0.0014      0.0        2.1667   
+4            332       AreaSource   56     1         0.0013      0.0        1.8074   
+4            267       AreaSource   56     1         0.0011      0.0        1.7691   
+4            330       AreaSource   56     1         0.0014      0.0        1.6993   
+4            333       AreaSource   39     1         0.0014      0.0        1.5886   
+4            334       AreaSource   39     1         0.0013      0.0        1.5318   
+4            266       AreaSource   56     1         0.0012      0.0        1.4917   
+4            249       AreaSource   30     1         0.0013      0.0        0.8507   
+4            248       AreaSource   30     1         0.0013      0.0        0.8333   
 ============ ========= ============ ====== ========= =========== ========== =========

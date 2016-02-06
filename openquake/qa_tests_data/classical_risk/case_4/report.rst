@@ -8,14 +8,14 @@ Parameters
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             200.0    
-investigation_time           50.0     
+maximum_distance             200      
+investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0      
-rupture_mesh_spacing         5.0      
-complex_fault_mesh_spacing   5.0      
-width_of_mfd_bin             0.2      
-area_source_discretization   10.0     
+truncation_level             3.0000   
+rupture_mesh_spacing         5.0000   
+complex_fault_mesh_spacing   5.0000   
+width_of_mfd_bin             0.2000   
+area_source_discretization   10       
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
@@ -62,17 +62,17 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ =======
-source_model     trt_id trt                  num_sources eff_ruptures weight 
-================ ====== ==================== =========== ============ =======
-source_model.xml 0      Active Shallow Crust 2           6405         160.125
-================ ====== ==================== =========== ============ =======
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources eff_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust 2           6,405        160   
+================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 2       
-Sent data                   16.21 KB
+Sent data                   16.17 KB
 =========================== ========
 
 Exposure model
@@ -91,9 +91,9 @@ W        5
 
 Slowest sources
 ---------------
-============ ========= ============ ======= ========= =========== ========== =========
-trt_model_id source_id source_class weight  split_num filter_time split_time calc_time
-============ ========= ============ ======= ========= =========== ========== =========
-0            376       AreaSource   55.5    1         0.000982046 0.0        0.0      
-0            231       AreaSource   104.625 1         0.000972986 0.0        0.0      
-============ ========= ============ ======= ========= =========== ========== =========
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            231       AreaSource   104    1         0.0010      0.0        0.0      
+0            376       AreaSource   55     1         0.0010      0.0        0.0      
+============ ========= ============ ====== ========= =========== ========== =========

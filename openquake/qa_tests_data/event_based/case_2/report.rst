@@ -8,15 +8,15 @@ Parameters
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 0          
-maximum_distance             200.0      
-investigation_time           1.0        
+maximum_distance             200        
+investigation_time           1.0000     
 ses_per_logic_tree_path      600        
 truncation_level             0.0        
-rupture_mesh_spacing         1.0        
-complex_fault_mesh_spacing   1.0        
-width_of_mfd_bin             0.001      
-area_source_discretization   10.0       
-random_seed                  1066       
+rupture_mesh_spacing         1.0000     
+complex_fault_mesh_spacing   1.0000     
+width_of_mfd_bin             0.0010     
+area_source_discretization   10         
+random_seed                  1,066      
 master_seed                  0          
 concurrent_tasks             16         
 ============================ ===========
@@ -73,17 +73,17 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== ========
-Number of tasks to generate 1       
-Sent data                   17.92 KB
-Total received data         4.8 KB  
-Maximum received per task   4.8 KB  
-=========================== ========
+=========================== =======
+Number of tasks to generate 1      
+Sent data                   17.9 KB
+Total received data         4.8 KB 
+Maximum received per task   4.8 KB 
+=========================== =======
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== =========== =========
-trt_model_id source_id source_class weight split_num filter_time split_time  calc_time
-============ ========= ============ ====== ========= =========== =========== =========
-0            1         PointSource  75.0   1         0.00461793  6.69956e-05 2.63593  
-============ ========= ============ ====== ========= =========== =========== =========
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         PointSource  75     1         0.0052      7.4148E-05 3.0424   
+============ ========= ============ ====== ========= =========== ========== =========

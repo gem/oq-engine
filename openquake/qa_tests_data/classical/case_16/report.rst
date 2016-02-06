@@ -8,14 +8,14 @@ Parameters
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 10       
-maximum_distance             200.0    
-investigation_time           50.0     
+maximum_distance             200      
+investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0      
-rupture_mesh_spacing         2.0      
-complex_fault_mesh_spacing   2.0      
-width_of_mfd_bin             0.1      
-area_source_discretization   10.0     
+truncation_level             3.0000   
+rupture_mesh_spacing         2.0000   
+complex_fault_mesh_spacing   2.0000   
+width_of_mfd_bin             0.1000   
+area_source_discretization   10       
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
@@ -38,16 +38,16 @@ Composite source model
 ============================================= ====== ====================================== =============== ================
 smlt_path                                     weight source_model_file                      gsim_logic_tree num_realizations
 ============================================= ====== ====================================== =============== ================
-b11_b20_b31_b43_b52_b62_b72_b82_b91_b103_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b11_b21_b32_b43_b52_b62_b72_b82_b92_b102_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b11_b21_b32_b43_b52_b62_b73_b82_b92_b103_b113 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b11_b22_b31_b43_b52_b64_b73_b84_b92_b104_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b11_b22_b32_b42_b51_b61_b72_b83_b91_b101_b111 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b11_b22_b32_b42_b53_b62_b72_b81_b92_b103_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b11_b22_b33_b42_b52_b62_b72_b82_b92_b100_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b11_b23_b32_b43_b52_b62_b73_b82_b93_b101_b113 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b11_b24_b32_b41_b51_b62_b71_b84_b93_b101_b111 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b11_b24_b33_b40_b52_b62_b72_b81_b91_b102_b112 0.1    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b20_b31_b43_b52_b62_b72_b82_b91_b103_b112 0.1000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b21_b32_b43_b52_b62_b72_b82_b92_b102_b112 0.1000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b21_b32_b43_b52_b62_b73_b82_b92_b103_b113 0.1000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b22_b31_b43_b52_b64_b73_b84_b92_b104_b112 0.1000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b22_b32_b42_b51_b61_b72_b83_b91_b101_b111 0.1000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b22_b32_b42_b53_b62_b72_b81_b92_b103_b112 0.1000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b22_b33_b42_b52_b62_b72_b82_b92_b100_b112 0.1000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b23_b32_b43_b52_b62_b73_b82_b93_b101_b113 0.1000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b24_b32_b41_b51_b62_b71_b84_b93_b101_b111 0.1000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b11_b24_b33_b40_b52_b62_b72_b81_b91_b102_b112 0.1000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
 ============================================= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
@@ -89,30 +89,30 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 5           1925         48.125
-source_model.xml 1      Active Shallow Crust 5           2025         50.625
-source_model.xml 2      Active Shallow Crust 5           2135         53.375
-source_model.xml 3      Active Shallow Crust 5           2035         50.875
-source_model.xml 4      Active Shallow Crust 5           1865         46.625
-source_model.xml 5      Active Shallow Crust 5           2085         52.125
-source_model.xml 6      Active Shallow Crust 5           2075         51.875
-source_model.xml 7      Active Shallow Crust 5           2185         54.625
-source_model.xml 8      Active Shallow Crust 5           1905         47.625
-source_model.xml 9      Active Shallow Crust 5           2025         50.625
+source_model.xml 0      Active Shallow Crust 5           1,925        48    
+source_model.xml 1      Active Shallow Crust 5           2,025        50    
+source_model.xml 2      Active Shallow Crust 5           2,135        53    
+source_model.xml 3      Active Shallow Crust 5           2,035        50    
+source_model.xml 4      Active Shallow Crust 5           1,865        46    
+source_model.xml 5      Active Shallow Crust 5           2,085        52    
+source_model.xml 6      Active Shallow Crust 5           2,075        51    
+source_model.xml 7      Active Shallow Crust 5           2,185        54    
+source_model.xml 8      Active Shallow Crust 5           1,905        47    
+source_model.xml 9      Active Shallow Crust 5           2,025        50    
 ================ ====== ==================== =========== ============ ======
 
-=============== =====
-#TRT models     10   
-#sources        50   
-#eff_ruptures   20260
-filtered_weight 506.5
-=============== =====
+=============== ======
+#TRT models     10    
+#sources        50    
+#eff_ruptures   20,260
+filtered_weight 506   
+=============== ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 22       
-Sent data                   492.78 KB
+Sent data                   490.76 KB
 =========================== =========
 
 Slowest sources
@@ -120,24 +120,24 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   8.125  1         0.00114202  0.0        0.0      
-7            5         AreaSource   10.625 1         0.00101495  0.0        0.0      
-3            5         AreaSource   9.375  1         0.000988007 0.0        0.0      
-0            3         AreaSource   11.25  1         0.000986099 0.0        0.0      
-1            5         AreaSource   9.375  1         0.0009799   0.0        0.0      
-2            2         AreaSource   11.25  1         0.00097394  0.0        0.0      
-7            4         AreaSource   10.625 1         0.000972986 0.0        0.0      
-9            5         AreaSource   9.375  1         0.000972986 0.0        0.0      
-1            3         AreaSource   11.25  1         0.000967979 0.0        0.0      
-3            3         AreaSource   12.75  1         0.000966072 0.0        0.0      
-4            4         AreaSource   8.125  1         0.000966072 0.0        0.0      
-3            1         AreaSource   8.125  1         0.000965834 0.0        0.0      
-2            5         AreaSource   10.625 1         0.00095892  0.0        0.0      
-0            2         AreaSource   11.25  1         0.000956059 0.0        0.0      
-9            3         AreaSource   11.25  1         0.000954866 0.0        0.0      
-1            4         AreaSource   9.375  1         0.000953913 0.0        0.0      
-8            1         AreaSource   9.375  1         0.000952959 0.0        0.0      
-2            4         AreaSource   9.375  1         0.000951052 0.0        0.0      
-9            4         AreaSource   8.125  1         0.000950098 0.0        0.0      
-5            3         AreaSource   11.25  1         0.000947952 0.0        0.0      
+6            1         AreaSource   10     1         0.0018      0.0        0.0      
+4            5         AreaSource   8.1250 1         0.0017      0.0        0.0      
+5            2         AreaSource   12     1         0.0017      0.0        0.0      
+5            5         AreaSource   9.3750 1         0.0017      0.0        0.0      
+5            3         AreaSource   11     1         0.0017      0.0        0.0      
+5            1         AreaSource   9.3750 1         0.0017      0.0        0.0      
+5            4         AreaSource   9.3750 1         0.0017      0.0        0.0      
+4            4         AreaSource   8.1250 1         0.0016      0.0        0.0      
+0            1         AreaSource   8.1250 1         0.0012      0.0        0.0      
+6            2         AreaSource   11     1         0.0010      0.0        0.0      
+8            4         AreaSource   10     1         0.0010      0.0        0.0      
+0            2         AreaSource   11     1         0.0010      0.0        0.0      
+0            5         AreaSource   9.3750 1         0.0010      0.0        0.0      
+1            2         AreaSource   11     1         0.0010      0.0        0.0      
+1            5         AreaSource   9.3750 1         0.0010      0.0        0.0      
+2            4         AreaSource   9.3750 1         0.0010      0.0        0.0      
+2            3         AreaSource   12     1         0.0010      0.0        0.0      
+6            3         AreaSource   11     1         0.0010      0.0        0.0      
+7            5         AreaSource   10     1         0.0010      0.0        0.0      
+7            1         AreaSource   9.3750 1         0.0009      0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========

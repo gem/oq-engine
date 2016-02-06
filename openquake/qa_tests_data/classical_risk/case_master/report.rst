@@ -8,14 +8,14 @@ Parameters
 ============================ ==============
 calculation_mode             classical_risk
 number_of_logic_tree_samples 0             
-maximum_distance             200.0         
-investigation_time           50.0          
+maximum_distance             200           
+investigation_time           50            
 ses_per_logic_tree_path      1             
-truncation_level             3.0           
-rupture_mesh_spacing         2.0           
-complex_fault_mesh_spacing   2.0           
-width_of_mfd_bin             0.1           
-area_source_discretization   10.0          
+truncation_level             3.0000        
+rupture_mesh_spacing         2.0000        
+complex_fault_mesh_spacing   2.0000        
+width_of_mfd_bin             0.1000        
+area_source_discretization   10            
 random_seed                  24            
 master_seed                  0             
 concurrent_tasks             16            
@@ -79,24 +79,24 @@ Number of ruptures per tectonic region type
 ================== ====== ==================== =========== ============ ======
 source_model       trt_id trt                  num_sources eff_ruptures weight
 ================== ====== ==================== =========== ============ ======
-source_model_1.xml 0      Active Shallow Crust 1           482          482.0 
-source_model_1.xml 1      Stable Shallow Crust 1           4            4.0   
-source_model_2.xml 2      Active Shallow Crust 1           482          482.0 
-source_model_2.xml 3      Stable Shallow Crust 1           1            1.0   
+source_model_1.xml 0      Active Shallow Crust 1           482          482   
+source_model_1.xml 1      Stable Shallow Crust 1           4            4.0000
+source_model_2.xml 2      Active Shallow Crust 1           482          482   
+source_model_2.xml 3      Stable Shallow Crust 1           1            1.0000
 ================== ====== ==================== =========== ============ ======
 
-=============== =====
-#TRT models     4    
-#sources        4    
-#eff_ruptures   969  
-filtered_weight 969.0
-=============== =====
+=============== ===
+#TRT models     4  
+#sources        4  
+#eff_ruptures   969
+filtered_weight 969
+=============== ===
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 22       
-Sent data                   288.01 KB
+Sent data                   287.07 KB
 Total received data         188.9 KB 
 Maximum received per task   8.61 KB  
 =========================== =========
@@ -121,8 +121,8 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            1         SimpleFaultSource    482.0  15        0.00254512  0.067971   5.87043  
-2            1         SimpleFaultSource    482.0  15        0.00223899  0.067544   5.33946  
-1            2         SimpleFaultSource    4.0    1         0.00236702  0.0        0.036016 
-3            2         CharacteristicFaultS 1.0    1         0.00181222  0.0        0.0357389
+0            1         SimpleFaultSource    482    15        0.0026      0.0655     5.6430   
+2            1         SimpleFaultSource    482    15        0.0020      0.0599     5.3562   
+3            2         CharacteristicFaultS 1.0000 1         0.0016      0.0        0.0353   
+1            2         SimpleFaultSource    4.0000 1         0.0021      0.0        0.0331   
 ============ ========= ==================== ====== ========= =========== ========== =========

@@ -8,14 +8,14 @@ Parameters
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             200.0    
-investigation_time           50.0     
+maximum_distance             200      
+investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0      
-rupture_mesh_spacing         2.0      
-complex_fault_mesh_spacing   2.0      
-width_of_mfd_bin             0.1      
-area_source_discretization   5.0      
+truncation_level             3.0000   
+rupture_mesh_spacing         2.0000   
+complex_fault_mesh_spacing   2.0000   
+width_of_mfd_bin             0.1000   
+area_source_discretization   5.0000   
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
@@ -119,65 +119,64 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ======================== =========== ============ ============ =======
-source_model     trt_id trt                      num_sources num_ruptures eff_ruptures weight 
-================ ====== ======================== =========== ============ ============ =======
-source_model.xml 0      Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 1      Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 2      Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 3      Stable Continental Crust 1           5125         5125         128.125
-source_model.xml 4      Active Shallow Crust     1           1344         1344         1344.0 
-source_model.xml 5      Stable Continental Crust 1           6150         6150         153.75 
-source_model.xml 6      Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 7      Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 8      Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 9      Stable Continental Crust 1           5125         5125         128.125
-source_model.xml 10     Active Shallow Crust     1           1344         1344         1344.0 
-source_model.xml 11     Stable Continental Crust 1           6150         6150         153.75 
-source_model.xml 12     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 13     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 14     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 15     Stable Continental Crust 1           5125         5125         128.125
-source_model.xml 16     Active Shallow Crust     1           1344         1344         1344.0 
-source_model.xml 17     Stable Continental Crust 1           6150         6150         153.75 
-================ ====== ======================== =========== ============ ============ =======
+================ ====== ======================== =========== ============ ======
+source_model     trt_id trt                      num_sources eff_ruptures weight
+================ ====== ======================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust     1           1,334        1,334 
+source_model.xml 1      Stable Continental Crust 1           4,100        102   
+source_model.xml 2      Active Shallow Crust     1           1,339        1,339 
+source_model.xml 3      Stable Continental Crust 1           5,125        128   
+source_model.xml 4      Active Shallow Crust     1           1,344        1,344 
+source_model.xml 5      Stable Continental Crust 1           6,150        153   
+source_model.xml 6      Active Shallow Crust     1           1,334        1,334 
+source_model.xml 7      Stable Continental Crust 1           4,100        102   
+source_model.xml 8      Active Shallow Crust     1           1,339        1,339 
+source_model.xml 9      Stable Continental Crust 1           5,125        128   
+source_model.xml 10     Active Shallow Crust     1           1,344        1,344 
+source_model.xml 11     Stable Continental Crust 1           6,150        153   
+source_model.xml 12     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 13     Stable Continental Crust 1           4,100        102   
+source_model.xml 14     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 15     Stable Continental Crust 1           5,125        128   
+source_model.xml 16     Active Shallow Crust     1           1,344        1,344 
+source_model.xml 17     Stable Continental Crust 1           6,150        153   
+================ ====== ======================== =========== ============ ======
 
-=============== =========
-#TRT models     18       
-#sources        18       
-#tot_ruptures   58176    
-#eff_ruptures   58176    
-filtered_weight 13204.125
-=============== =========
+=============== ======
+#TRT models     18    
+#sources        18    
+#eff_ruptures   58,176
+filtered_weight 13,204
+=============== ======
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== =======
-Number of tasks to generate 27     
-Sent data                   47.8 MB
-=========================== =======
+=========================== ========
+Number of tasks to generate 27      
+Sent data                   47.79 MB
+=========================== ========
 
 Slowest sources
 ---------------
-============ ========= ================= ======= ========= =========== ========== =========
-trt_model_id source_id source_class      weight  split_num filter_time split_time calc_time
-============ ========= ================= ======= ========= =========== ========== =========
-10           2         SimpleFaultSource 1344.0  1344      0.00204802  0.537999   0.0      
-4            2         SimpleFaultSource 1344.0  1344      0.00208116  0.529397   0.0      
-16           2         SimpleFaultSource 1344.0  1344      0.00203395  0.495312   0.0      
-14           2         SimpleFaultSource 1339.0  1339      0.00205398  0.471118   0.0      
-8            2         SimpleFaultSource 1339.0  1339      0.00203085  0.415793   0.0      
-2            2         SimpleFaultSource 1339.0  1339      0.00202894  0.410952   0.0      
-6            2         SimpleFaultSource 1334.0  1334      0.00203085  0.359584   0.0      
-0            2         SimpleFaultSource 1334.0  1334      0.002671    0.352035   0.0      
-12           2         SimpleFaultSource 1334.0  1334      0.00204301  0.338226   0.0      
-1            1         AreaSource        102.5   1         0.00120997  0.0        0.0      
-9            1         AreaSource        128.125 1         0.00115609  0.0        0.0      
-3            1         AreaSource        128.125 1         0.00103784  0.0        0.0      
-17           1         AreaSource        153.75  1         0.00101209  0.0        0.0      
-11           1         AreaSource        153.75  1         0.0010078   0.0        0.0      
-5            1         AreaSource        153.75  1         0.000983953 0.0        0.0      
-15           1         AreaSource        128.125 1         0.000971079 0.0        0.0      
-7            1         AreaSource        102.5   1         0.000965118 0.0        0.0      
-13           1         AreaSource        102.5   1         0.000959158 0.0        0.0      
-============ ========= ================= ======= ========= =========== ========== =========
+============ ========= ================= ====== ========= =========== ========== =========
+trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
+============ ========= ================= ====== ========= =========== ========== =========
+10           2         SimpleFaultSource 1,344  1,344     0.0021      0.5468     0.0      
+4            2         SimpleFaultSource 1,344  1,344     0.0021      0.5264     0.0      
+16           2         SimpleFaultSource 1,344  1,344     0.0021      0.4952     0.0      
+14           2         SimpleFaultSource 1,339  1,339     0.0022      0.4747     0.0      
+8            2         SimpleFaultSource 1,339  1,339     0.0021      0.4238     0.0      
+2            2         SimpleFaultSource 1,339  1,339     0.0021      0.4094     0.0      
+6            2         SimpleFaultSource 1,334  1,334     0.0021      0.3504     0.0      
+12           2         SimpleFaultSource 1,334  1,334     0.0021      0.3419     0.0      
+0            2         SimpleFaultSource 1,334  1,334     0.0033      0.3365     0.0      
+1            1         AreaSource        102    1         0.0012      0.0        0.0      
+5            1         AreaSource        153    1         0.0011      0.0        0.0      
+13           1         AreaSource        102    1         0.0010      0.0        0.0      
+11           1         AreaSource        153    1         0.0010      0.0        0.0      
+3            1         AreaSource        128    1         0.0010      0.0        0.0      
+15           1         AreaSource        128    1         0.0010      0.0        0.0      
+17           1         AreaSource        153    1         0.0010      0.0        0.0      
+7            1         AreaSource        102    1         0.0010      0.0        0.0      
+9            1         AreaSource        128    1         0.0010      0.0        0.0      
+============ ========= ================= ====== ========= =========== ========== =========

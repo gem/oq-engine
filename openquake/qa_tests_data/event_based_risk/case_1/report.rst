@@ -8,14 +8,14 @@ Parameters
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 0          
-maximum_distance             100.0      
-investigation_time           50.0       
+maximum_distance             100        
+investigation_time           50         
 ses_per_logic_tree_path      20         
-truncation_level             3.0        
-rupture_mesh_spacing         5.0        
-complex_fault_mesh_spacing   5.0        
-width_of_mfd_bin             0.3        
-area_source_discretization   10.0       
+truncation_level             3.0000     
+rupture_mesh_spacing         5.0000     
+complex_fault_mesh_spacing   5.0000     
+width_of_mfd_bin             0.3000     
+area_source_discretization   10         
 random_seed                  23         
 master_seed                  0          
 concurrent_tasks             16         
@@ -79,17 +79,17 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 1       
-Sent data                   8.61 KB 
+Sent data                   8.59 KB 
 Total received data         11.17 KB
 Maximum received per task   11.17 KB
 =========================== ========
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== ========== ==========
-trt_model_id source_id source_class weight split_num filter_time split_time calc_time 
-============ ========= ============ ====== ========= =========== ========== ==========
-0            2         PointSource  0.15   1         0.000119925 0.0        0.00419617
-0            3         PointSource  0.15   1         0.000115871 0.0        0.00414896
-0            1         PointSource  0.15   1         0.000170946 0.0        0.00394106
-============ ========= ============ ====== ========= =========== ========== ==========
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            2         PointSource  0.1500 1         0.0001      0.0        0.0048   
+0            3         PointSource  0.1500 1         0.0001      0.0        0.0047   
+0            1         PointSource  0.1500 1         0.0002      0.0        0.0045   
+============ ========= ============ ====== ========= =========== ========== =========

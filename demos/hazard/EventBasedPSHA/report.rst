@@ -8,14 +8,14 @@ Parameters
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 0          
-maximum_distance             200.0      
-investigation_time           50.0       
+maximum_distance             200        
+investigation_time           50         
 ses_per_logic_tree_path      10         
-truncation_level             3.0        
-rupture_mesh_spacing         2.0        
-complex_fault_mesh_spacing   2.0        
-width_of_mfd_bin             0.1        
-area_source_discretization   5.0        
+truncation_level             3.0000     
+rupture_mesh_spacing         2.0000     
+complex_fault_mesh_spacing   2.0000     
+width_of_mfd_bin             0.1000     
+area_source_discretization   5.0000     
 random_seed                  23         
 master_seed                  0          
 concurrent_tasks             16         
@@ -75,7 +75,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 18       
-Sent data                   357.34 KB
+Sent data                   357 KB   
 Total received data         185.85 KB
 Maximum received per task   15.5 KB  
 =========================== =========
@@ -85,5 +85,5 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   1230.0 205       0.00127792  0.0661871  34.8464  
+0            1         AreaSource   1,230  205       0.0022      0.0957     34       
 ============ ========= ============ ====== ========= =========== ========== =========

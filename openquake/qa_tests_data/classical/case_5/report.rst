@@ -8,15 +8,15 @@ Parameters
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             200.0    
-investigation_time           1.0      
+maximum_distance             200      
+investigation_time           1.0000   
 ses_per_logic_tree_path      1        
 truncation_level             0.0      
-rupture_mesh_spacing         0.01     
-complex_fault_mesh_spacing   0.01     
-width_of_mfd_bin             1.0      
-area_source_discretization   10.0     
-random_seed                  1066     
+rupture_mesh_spacing         0.0100   
+complex_fault_mesh_spacing   0.0100   
+width_of_mfd_bin             1.0000   
+area_source_discretization   10       
+random_seed                  1,066    
 master_seed                  0        
 concurrent_tasks             16       
 sites_per_tile               1000     
@@ -62,14 +62,14 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      active shallow crust 1           485          485.0 
+source_model.xml 0      Active Shallow Crust 1           485          485   
 ================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== =======
 Number of tasks to generate 1      
-Sent data                   6.03 KB
+Sent data                   6.01 KB
 =========================== =======
 
 Slowest sources
@@ -77,5 +77,5 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            1         ComplexFaultSource 485.0  1         0.00177097  12.2902    0.0      
+0            1         ComplexFaultSource 485    1         0.0018      12         0.0      
 ============ ========= ================== ====== ========= =========== ========== =========

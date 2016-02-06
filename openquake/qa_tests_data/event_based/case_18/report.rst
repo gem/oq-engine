@@ -8,15 +8,15 @@ Parameters
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 3          
-maximum_distance             200.0      
-investigation_time           1.0        
+maximum_distance             200        
+investigation_time           1.0000     
 ses_per_logic_tree_path      350        
 truncation_level             0.0        
-rupture_mesh_spacing         1.0        
-complex_fault_mesh_spacing   1.0        
-width_of_mfd_bin             0.001      
-area_source_discretization   10.0       
-random_seed                  1064       
+rupture_mesh_spacing         1.0000     
+complex_fault_mesh_spacing   1.0000     
+width_of_mfd_bin             0.0010     
+area_source_discretization   10         
+random_seed                  1,064      
 master_seed                  0          
 concurrent_tasks             16         
 ============================ ===========
@@ -34,11 +34,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ============== ====================================== =============== ================
-smlt_path weight         source_model_file                      gsim_logic_tree num_realizations
-========= ============== ====================================== =============== ================
-b1        0.333333333333 `source_model.xml <source_model.xml>`_ simple(3)       3/3             
-========= ============== ====================================== =============== ================
+========= ====== ====================================== =============== ================
+smlt_path weight source_model_file                      gsim_logic_tree num_realizations
+========= ====== ====================================== =============== ================
+b1        0.3333 `source_model.xml <source_model.xml>`_ simple(3)       3/3             
+========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -80,15 +80,15 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 1       
-Sent data                   18.71 KB
+Sent data                   18.69 KB
 Total received data         6.89 KB 
 Maximum received per task   6.89 KB 
 =========================== ========
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== =========== =========
-trt_model_id source_id source_class weight split_num filter_time split_time  calc_time
-============ ========= ============ ====== ========= =========== =========== =========
-0            1         PointSource  75.0   1         0.00581288  2.90871e-05 4.09799  
-============ ========= ============ ====== ========= =========== =========== =========
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         PointSource  75     1         0.0056      2.5034E-05 3.9683   
+============ ========= ============ ====== ========= =========== ========== =========

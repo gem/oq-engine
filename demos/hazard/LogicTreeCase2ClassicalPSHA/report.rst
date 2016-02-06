@@ -8,14 +8,14 @@ Parameters
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             200.0    
-investigation_time           50.0     
+maximum_distance             200      
+investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0      
-rupture_mesh_spacing         2.0      
-complex_fault_mesh_spacing   2.0      
-width_of_mfd_bin             0.1      
-area_source_discretization   5.0      
+truncation_level             3.0000   
+rupture_mesh_spacing         2.0000   
+complex_fault_mesh_spacing   2.0000   
+width_of_mfd_bin             0.1000   
+area_source_discretization   5.0000   
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
@@ -623,186 +623,185 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ======================== =========== ============ ============ =======
-source_model     trt_id trt                      num_sources num_ruptures eff_ruptures weight 
-================ ====== ======================== =========== ============ ============ =======
-source_model.xml 0      Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 1      Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 2      Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 3      Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 4      Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 5      Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 6      Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 7      Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 8      Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 9      Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 10     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 11     Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 12     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 13     Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 14     Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 15     Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 16     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 17     Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 18     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 19     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 20     Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 21     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 22     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 23     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 24     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 25     Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 26     Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 27     Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 28     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 29     Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 30     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 31     Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 32     Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 33     Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 34     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 35     Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 36     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 37     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 38     Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 39     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 40     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 41     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 42     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 43     Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 44     Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 45     Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 46     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 47     Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 48     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 49     Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 50     Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 51     Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 52     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 53     Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 54     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 55     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 56     Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 57     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 58     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 59     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 60     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 61     Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 62     Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 63     Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 64     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 65     Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 66     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 67     Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 68     Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 69     Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 70     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 71     Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 72     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 73     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 74     Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 75     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 76     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 77     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 78     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 79     Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 80     Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 81     Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 82     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 83     Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 84     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 85     Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 86     Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 87     Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 88     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 89     Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 90     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 91     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 92     Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 93     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 94     Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 95     Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 96     Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 97     Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 98     Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 99     Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 100    Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 101    Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 102    Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 103    Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 104    Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 105    Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 106    Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 107    Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 108    Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 109    Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 110    Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 111    Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 112    Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 113    Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 114    Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 115    Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 116    Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 117    Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 118    Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 119    Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 120    Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 121    Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 122    Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 123    Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 124    Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 125    Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 126    Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 127    Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 128    Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 129    Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 130    Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 131    Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 132    Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 133    Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 134    Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 135    Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 136    Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 137    Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 138    Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 139    Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 140    Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 141    Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 142    Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 143    Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 144    Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 145    Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 146    Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 147    Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 148    Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 149    Stable Continental Crust 1           4100         4100         102.5  
-source_model.xml 150    Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 151    Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 152    Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 153    Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 154    Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 155    Stable Continental Crust 1           4715         4715         117.875
-source_model.xml 156    Active Shallow Crust     1           1334         1334         1334.0 
-source_model.xml 157    Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 158    Active Shallow Crust     1           1337         1337         1337.0 
-source_model.xml 159    Stable Continental Crust 1           5330         5330         133.25 
-source_model.xml 160    Active Shallow Crust     1           1339         1339         1339.0 
-source_model.xml 161    Stable Continental Crust 1           5330         5330         133.25 
-================ ====== ======================== =========== ============ ============ =======
+================ ====== ======================== =========== ============ ======
+source_model     trt_id trt                      num_sources eff_ruptures weight
+================ ====== ======================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust     1           1,334        1,334 
+source_model.xml 1      Stable Continental Crust 1           4,100        102   
+source_model.xml 2      Active Shallow Crust     1           1,337        1,337 
+source_model.xml 3      Stable Continental Crust 1           4,100        102   
+source_model.xml 4      Active Shallow Crust     1           1,339        1,339 
+source_model.xml 5      Stable Continental Crust 1           4,100        102   
+source_model.xml 6      Active Shallow Crust     1           1,334        1,334 
+source_model.xml 7      Stable Continental Crust 1           4,715        117   
+source_model.xml 8      Active Shallow Crust     1           1,337        1,337 
+source_model.xml 9      Stable Continental Crust 1           4,715        117   
+source_model.xml 10     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 11     Stable Continental Crust 1           4,715        117   
+source_model.xml 12     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 13     Stable Continental Crust 1           5,330        133   
+source_model.xml 14     Active Shallow Crust     1           1,337        1,337 
+source_model.xml 15     Stable Continental Crust 1           5,330        133   
+source_model.xml 16     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 17     Stable Continental Crust 1           5,330        133   
+source_model.xml 18     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 19     Stable Continental Crust 1           4,100        102   
+source_model.xml 20     Active Shallow Crust     1           1,337        1,337 
+source_model.xml 21     Stable Continental Crust 1           4,100        102   
+source_model.xml 22     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 23     Stable Continental Crust 1           4,100        102   
+source_model.xml 24     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 25     Stable Continental Crust 1           4,715        117   
+source_model.xml 26     Active Shallow Crust     1           1,337        1,337 
+source_model.xml 27     Stable Continental Crust 1           4,715        117   
+source_model.xml 28     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 29     Stable Continental Crust 1           4,715        117   
+source_model.xml 30     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 31     Stable Continental Crust 1           5,330        133   
+source_model.xml 32     Active Shallow Crust     1           1,337        1,337 
+source_model.xml 33     Stable Continental Crust 1           5,330        133   
+source_model.xml 34     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 35     Stable Continental Crust 1           5,330        133   
+source_model.xml 36     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 37     Stable Continental Crust 1           4,100        102   
+source_model.xml 38     Active Shallow Crust     1           1,337        1,337 
+source_model.xml 39     Stable Continental Crust 1           4,100        102   
+source_model.xml 40     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 41     Stable Continental Crust 1           4,100        102   
+source_model.xml 42     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 43     Stable Continental Crust 1           4,715        117   
+source_model.xml 44     Active Shallow Crust     1           1,337        1,337 
+source_model.xml 45     Stable Continental Crust 1           4,715        117   
+source_model.xml 46     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 47     Stable Continental Crust 1           4,715        117   
+source_model.xml 48     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 49     Stable Continental Crust 1           5,330        133   
+source_model.xml 50     Active Shallow Crust     1           1,337        1,337 
+source_model.xml 51     Stable Continental Crust 1           5,330        133   
+source_model.xml 52     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 53     Stable Continental Crust 1           5,330        133   
+source_model.xml 54     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 55     Stable Continental Crust 1           4,100        102   
+source_model.xml 56     Active Shallow Crust     1           1,337        1,337 
+source_model.xml 57     Stable Continental Crust 1           4,100        102   
+source_model.xml 58     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 59     Stable Continental Crust 1           4,100        102   
+source_model.xml 60     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 61     Stable Continental Crust 1           4,715        117   
+source_model.xml 62     Active Shallow Crust     1           1,337        1,337 
+source_model.xml 63     Stable Continental Crust 1           4,715        117   
+source_model.xml 64     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 65     Stable Continental Crust 1           4,715        117   
+source_model.xml 66     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 67     Stable Continental Crust 1           5,330        133   
+source_model.xml 68     Active Shallow Crust     1           1,337        1,337 
+source_model.xml 69     Stable Continental Crust 1           5,330        133   
+source_model.xml 70     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 71     Stable Continental Crust 1           5,330        133   
+source_model.xml 72     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 73     Stable Continental Crust 1           4,100        102   
+source_model.xml 74     Active Shallow Crust     1           1,337        1,337 
+source_model.xml 75     Stable Continental Crust 1           4,100        102   
+source_model.xml 76     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 77     Stable Continental Crust 1           4,100        102   
+source_model.xml 78     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 79     Stable Continental Crust 1           4,715        117   
+source_model.xml 80     Active Shallow Crust     1           1,337        1,337 
+source_model.xml 81     Stable Continental Crust 1           4,715        117   
+source_model.xml 82     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 83     Stable Continental Crust 1           4,715        117   
+source_model.xml 84     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 85     Stable Continental Crust 1           5,330        133   
+source_model.xml 86     Active Shallow Crust     1           1,337        1,337 
+source_model.xml 87     Stable Continental Crust 1           5,330        133   
+source_model.xml 88     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 89     Stable Continental Crust 1           5,330        133   
+source_model.xml 90     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 91     Stable Continental Crust 1           4,100        102   
+source_model.xml 92     Active Shallow Crust     1           1,337        1,337 
+source_model.xml 93     Stable Continental Crust 1           4,100        102   
+source_model.xml 94     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 95     Stable Continental Crust 1           4,100        102   
+source_model.xml 96     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 97     Stable Continental Crust 1           4,715        117   
+source_model.xml 98     Active Shallow Crust     1           1,337        1,337 
+source_model.xml 99     Stable Continental Crust 1           4,715        117   
+source_model.xml 100    Active Shallow Crust     1           1,339        1,339 
+source_model.xml 101    Stable Continental Crust 1           4,715        117   
+source_model.xml 102    Active Shallow Crust     1           1,334        1,334 
+source_model.xml 103    Stable Continental Crust 1           5,330        133   
+source_model.xml 104    Active Shallow Crust     1           1,337        1,337 
+source_model.xml 105    Stable Continental Crust 1           5,330        133   
+source_model.xml 106    Active Shallow Crust     1           1,339        1,339 
+source_model.xml 107    Stable Continental Crust 1           5,330        133   
+source_model.xml 108    Active Shallow Crust     1           1,334        1,334 
+source_model.xml 109    Stable Continental Crust 1           4,100        102   
+source_model.xml 110    Active Shallow Crust     1           1,337        1,337 
+source_model.xml 111    Stable Continental Crust 1           4,100        102   
+source_model.xml 112    Active Shallow Crust     1           1,339        1,339 
+source_model.xml 113    Stable Continental Crust 1           4,100        102   
+source_model.xml 114    Active Shallow Crust     1           1,334        1,334 
+source_model.xml 115    Stable Continental Crust 1           4,715        117   
+source_model.xml 116    Active Shallow Crust     1           1,337        1,337 
+source_model.xml 117    Stable Continental Crust 1           4,715        117   
+source_model.xml 118    Active Shallow Crust     1           1,339        1,339 
+source_model.xml 119    Stable Continental Crust 1           4,715        117   
+source_model.xml 120    Active Shallow Crust     1           1,334        1,334 
+source_model.xml 121    Stable Continental Crust 1           5,330        133   
+source_model.xml 122    Active Shallow Crust     1           1,337        1,337 
+source_model.xml 123    Stable Continental Crust 1           5,330        133   
+source_model.xml 124    Active Shallow Crust     1           1,339        1,339 
+source_model.xml 125    Stable Continental Crust 1           5,330        133   
+source_model.xml 126    Active Shallow Crust     1           1,334        1,334 
+source_model.xml 127    Stable Continental Crust 1           4,100        102   
+source_model.xml 128    Active Shallow Crust     1           1,337        1,337 
+source_model.xml 129    Stable Continental Crust 1           4,100        102   
+source_model.xml 130    Active Shallow Crust     1           1,339        1,339 
+source_model.xml 131    Stable Continental Crust 1           4,100        102   
+source_model.xml 132    Active Shallow Crust     1           1,334        1,334 
+source_model.xml 133    Stable Continental Crust 1           4,715        117   
+source_model.xml 134    Active Shallow Crust     1           1,337        1,337 
+source_model.xml 135    Stable Continental Crust 1           4,715        117   
+source_model.xml 136    Active Shallow Crust     1           1,339        1,339 
+source_model.xml 137    Stable Continental Crust 1           4,715        117   
+source_model.xml 138    Active Shallow Crust     1           1,334        1,334 
+source_model.xml 139    Stable Continental Crust 1           5,330        133   
+source_model.xml 140    Active Shallow Crust     1           1,337        1,337 
+source_model.xml 141    Stable Continental Crust 1           5,330        133   
+source_model.xml 142    Active Shallow Crust     1           1,339        1,339 
+source_model.xml 143    Stable Continental Crust 1           5,330        133   
+source_model.xml 144    Active Shallow Crust     1           1,334        1,334 
+source_model.xml 145    Stable Continental Crust 1           4,100        102   
+source_model.xml 146    Active Shallow Crust     1           1,337        1,337 
+source_model.xml 147    Stable Continental Crust 1           4,100        102   
+source_model.xml 148    Active Shallow Crust     1           1,339        1,339 
+source_model.xml 149    Stable Continental Crust 1           4,100        102   
+source_model.xml 150    Active Shallow Crust     1           1,334        1,334 
+source_model.xml 151    Stable Continental Crust 1           4,715        117   
+source_model.xml 152    Active Shallow Crust     1           1,337        1,337 
+source_model.xml 153    Stable Continental Crust 1           4,715        117   
+source_model.xml 154    Active Shallow Crust     1           1,339        1,339 
+source_model.xml 155    Stable Continental Crust 1           4,715        117   
+source_model.xml 156    Active Shallow Crust     1           1,334        1,334 
+source_model.xml 157    Stable Continental Crust 1           5,330        133   
+source_model.xml 158    Active Shallow Crust     1           1,337        1,337 
+source_model.xml 159    Stable Continental Crust 1           5,330        133   
+source_model.xml 160    Active Shallow Crust     1           1,339        1,339 
+source_model.xml 161    Stable Continental Crust 1           5,330        133   
+================ ====== ======================== =========== ============ ======
 
-=============== ==========
-#TRT models     162       
-#sources        162       
-#tot_ruptures   490185    
-#eff_ruptures   490185    
-filtered_weight 117817.875
-=============== ==========
+=============== =======
+#TRT models     162    
+#sources        162    
+#eff_ruptures   490,185
+filtered_weight 117,818
+=============== =======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 162     
-Sent data                   50.08 MB
+Sent data                   49.87 MB
 =========================== ========
 
 Slowest sources
@@ -810,24 +809,24 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-154          2         SimpleFaultSource 1339.0 1         0.00363779  0.0        0.0      
-156          2         SimpleFaultSource 1334.0 1         0.00328684  0.0        0.0      
-144          2         SimpleFaultSource 1334.0 1         0.00308299  0.0        0.0      
-140          2         SimpleFaultSource 1337.0 1         0.00286698  0.0        0.0      
-138          2         SimpleFaultSource 1334.0 1         0.002738    0.0        0.0      
-158          2         SimpleFaultSource 1337.0 1         0.00268412  0.0        0.0      
-160          2         SimpleFaultSource 1339.0 1         0.00264883  0.0        0.0      
-112          2         SimpleFaultSource 1339.0 1         0.00251198  0.0        0.0      
-48           2         SimpleFaultSource 1334.0 1         0.0024941   0.0        0.0      
-142          2         SimpleFaultSource 1339.0 1         0.00230193  0.0        0.0      
-58           2         SimpleFaultSource 1339.0 1         0.00227094  0.0        0.0      
-0            2         SimpleFaultSource 1334.0 1         0.00224996  0.0        0.0      
-136          2         SimpleFaultSource 1339.0 1         0.00216699  0.0        0.0      
-40           2         SimpleFaultSource 1339.0 1         0.00208592  0.0        0.0      
-4            2         SimpleFaultSource 1339.0 1         0.00205898  0.0        0.0      
-102          2         SimpleFaultSource 1334.0 1         0.00205302  0.0        0.0      
-6            2         SimpleFaultSource 1334.0 1         0.00203705  0.0        0.0      
-146          2         SimpleFaultSource 1337.0 1         0.0020299   0.0        0.0      
-30           2         SimpleFaultSource 1334.0 1         0.0020299   0.0        0.0      
-10           2         SimpleFaultSource 1339.0 1         0.00202394  0.0        0.0      
+0            2         SimpleFaultSource 1,334  1         0.0021      0.0        0.0      
+144          2         SimpleFaultSource 1,334  1         0.0021      0.0        0.0      
+108          2         SimpleFaultSource 1,334  1         0.0020      0.0        0.0      
+4            2         SimpleFaultSource 1,339  1         0.0019      0.0        0.0      
+20           2         SimpleFaultSource 1,337  1         0.0019      0.0        0.0      
+16           2         SimpleFaultSource 1,339  1         0.0019      0.0        0.0      
+110          2         SimpleFaultSource 1,337  1         0.0019      0.0        0.0      
+102          2         SimpleFaultSource 1,334  1         0.0019      0.0        0.0      
+112          2         SimpleFaultSource 1,339  1         0.0019      0.0        0.0      
+18           2         SimpleFaultSource 1,334  1         0.0019      0.0        0.0      
+100          2         SimpleFaultSource 1,339  1         0.0019      0.0        0.0      
+114          2         SimpleFaultSource 1,334  1         0.0019      0.0        0.0      
+122          2         SimpleFaultSource 1,337  1         0.0019      0.0        0.0      
+156          2         SimpleFaultSource 1,334  1         0.0019      0.0        0.0      
+116          2         SimpleFaultSource 1,337  1         0.0019      0.0        0.0      
+104          2         SimpleFaultSource 1,337  1         0.0019      0.0        0.0      
+72           2         SimpleFaultSource 1,334  1         0.0019      0.0        0.0      
+128          2         SimpleFaultSource 1,337  1         0.0019      0.0        0.0      
+146          2         SimpleFaultSource 1,337  1         0.0018      0.0        0.0      
+66           2         SimpleFaultSource 1,334  1         0.0018      0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========

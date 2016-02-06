@@ -8,14 +8,14 @@ Parameters
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             100.0    
-investigation_time           10.0     
+maximum_distance             100      
+investigation_time           10       
 ses_per_logic_tree_path      1        
-truncation_level             3.0      
-rupture_mesh_spacing         15.0     
-complex_fault_mesh_spacing   15.0     
-width_of_mfd_bin             0.1      
-area_source_discretization   25.0     
+truncation_level             3.0000   
+rupture_mesh_spacing         15       
+complex_fault_mesh_spacing   15       
+width_of_mfd_bin             0.1000   
+area_source_discretization   25       
 random_seed                  323      
 master_seed                  0        
 concurrent_tasks             4        
@@ -73,19 +73,19 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-========================= ====== ==================== =========== ============ =============
-source_model              trt_id trt                  num_sources eff_ruptures weight       
-========================= ====== ==================== =========== ============ =============
-models/src/as_model.xml   4      Active Shallow Crust 1           31008        96.9000015259
-models/src/fsbg_model.xml 9      Active Shallow Crust 2           7326         51.5250000954
-========================= ====== ==================== =========== ============ =============
+========================= ====== ==================== =========== ============ ======
+source_model              trt_id trt                  num_sources eff_ruptures weight
+========================= ====== ==================== =========== ============ ======
+models/src/as_model.xml   4      Active Shallow Crust 1           31,008       96    
+models/src/fsbg_model.xml 9      Active Shallow Crust 2           7,326        51    
+========================= ====== ==================== =========== ============ ======
 
-=============== =============
-#TRT models     2            
-#sources        3            
-#eff_ruptures   38334        
-filtered_weight 148.425001621
-=============== =============
+=============== ======
+#TRT models     2     
+#sources        3     
+#eff_ruptures   38,334
+filtered_weight 148   
+=============== ======
 
 Expected data transfer for the sources
 --------------------------------------
@@ -99,7 +99,7 @@ Slowest sources
 ============ ============ ============ ====== ========= =========== ========== =========
 trt_model_id source_id    source_class weight split_num filter_time split_time calc_time
 ============ ============ ============ ====== ========= =========== ========== =========
-4            AS_GEAS343   AreaSource   96.9   1         0.0167069   0.0        0.0      
-9            FSBG_TRBG103 AreaSource   43.875 1         0.00591731  0.0        0.0      
-9            FSBG_ARAS462 AreaSource   7.65   1         0.00216413  0.0        0.0      
+4            AS_GEAS343   AreaSource   96     1         0.0151      0.0        0.0      
+9            FSBG_TRBG103 AreaSource   43     1         0.0058      0.0        0.0      
+9            FSBG_ARAS462 AreaSource   7.6500 1         0.0011      0.0        0.0      
 ============ ============ ============ ====== ========= =========== ========== =========

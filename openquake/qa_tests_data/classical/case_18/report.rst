@@ -8,14 +8,14 @@ Parameters
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             400.0    
-investigation_time           1.0      
+maximum_distance             400      
+investigation_time           1.0000   
 ses_per_logic_tree_path      1        
-truncation_level             3.0      
-rupture_mesh_spacing         5.0      
-complex_fault_mesh_spacing   5.0      
-width_of_mfd_bin             0.1      
-area_source_discretization   50.0     
+truncation_level             3.0000   
+rupture_mesh_spacing         5.0000   
+complex_fault_mesh_spacing   5.0000   
+width_of_mfd_bin             0.1000   
+area_source_discretization   50       
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
@@ -63,7 +63,7 @@ Number of ruptures per tectonic region type
 ========================= ====== ==================== =========== ============ ======
 source_model              trt_id trt                  num_sources eff_ruptures weight
 ========================= ====== ==================== =========== ============ ======
-vancouver_area_source.xml 0      Active Shallow Crust 1           2430         60.75 
+vancouver_area_source.xml 0      Active Shallow Crust 1           2,430        60    
 ========================= ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
@@ -78,5 +78,5 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            VICM      AreaSource   60.75  30        0.001302    0.0104561  0.0      
+0            VICM      AreaSource   60     30        0.0013      0.0105     0.0      
 ============ ========= ============ ====== ========= =========== ========== =========

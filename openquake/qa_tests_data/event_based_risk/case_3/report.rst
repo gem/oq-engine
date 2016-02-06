@@ -8,14 +8,14 @@ Parameters
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 0          
-maximum_distance             400.0      
-investigation_time           2.0        
+maximum_distance             400        
+investigation_time           2.0000     
 ses_per_logic_tree_path      1          
-truncation_level             5.0        
-rupture_mesh_spacing         2.0        
-complex_fault_mesh_spacing   2.0        
-width_of_mfd_bin             0.1        
-area_source_discretization   5.0        
+truncation_level             5.0000     
+rupture_mesh_spacing         2.0000     
+complex_fault_mesh_spacing   2.0000     
+width_of_mfd_bin             0.1000     
+area_source_discretization   5.0000     
 random_seed                  23         
 master_seed                  0          
 concurrent_tasks             16         
@@ -89,7 +89,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 20       
-Sent data                   4.57 MB  
+Sent data                   4.56 MB  
 Total received data         176.83 KB
 Maximum received per task   18.28 KB 
 =========================== =========
@@ -109,27 +109,27 @@ M1_2_PC  1
 
 Slowest sources
 ---------------
-============ ========= ============ ======= ========= =========== ========== =========
-trt_model_id source_id source_class weight  split_num filter_time split_time calc_time
-============ ========= ============ ======= ========= =========== ========== =========
-0            0         AreaSource   2445.75 2174      0.00235009  1.64519    85.1432  
-2            0         AreaSource   2445.75 2174      0.002846    1.7013     81.5867  
-0            2         AreaSource   1992.3  2748      0.00228     1.64641    25.9646  
-2            2         AreaSource   1992.3  2748      0.00226688  2.08316    23.2055  
-1            10        AreaSource   448.2   1         0.0010519   0.0        11.3926  
-3            10        AreaSource   448.2   1         0.000950098 0.0        10.1434  
-0            1         AreaSource   422.05  1         0.0013051   0.0        9.72249  
-3            6         AreaSource   422.375 1         0.000985861 0.0        9.39115  
-3            3         AreaSource   340.025 1         0.00100994  0.0        9.2575   
-2            1         AreaSource   422.05  1         0.000972986 0.0        8.8291   
-1            6         AreaSource   422.375 1         0.000993013 0.0        8.53857  
-3            5         AreaSource   236.35  1         0.000981092 0.0        6.94002  
-1            3         AreaSource   340.025 1         0.00104809  0.0        6.92896  
-3            9         AreaSource   255.6   1         0.000957012 0.0        6.07747  
-1            5         AreaSource   236.35  1         0.00104213  0.0        5.91924  
-1            9         AreaSource   255.6   1         0.000962973 0.0        5.46803  
-3            8         AreaSource   144.45  1         0.000952005 0.0        4.87766  
-1            7         AreaSource   166.725 1         0.00137091  0.0        4.62847  
-1            4         AreaSource   128.25  1         0.00102401  0.0        4.13313  
-3            7         AreaSource   166.725 1         0.000970125 0.0        3.71159  
-============ ========= ============ ======= ========= =========== ========== =========
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            0         AreaSource   2,446  2,174     0.0023      1.6586     82       
+2            0         AreaSource   2,446  2,174     0.0024      1.5514     79       
+0            2         AreaSource   1,992  2,748     0.0023      1.4809     27       
+2            2         AreaSource   1,992  2,748     0.0023      1.7045     23       
+3            10        AreaSource   448    1         0.0010      0.0        12       
+3            6         AreaSource   422    1         0.0010      0.0        11       
+1            10        AreaSource   448    1         0.0010      0.0        11       
+2            1         AreaSource   422    1         0.0010      0.0        11       
+0            1         AreaSource   422    1         0.0012      0.0        10       
+1            6         AreaSource   422    1         0.0010      0.0        9.7055   
+3            3         AreaSource   340    1         0.0011      0.0        8.1706   
+1            3         AreaSource   340    1         0.0010      0.0        7.9161   
+1            5         AreaSource   236    1         0.0010      0.0        5.9454   
+1            9         AreaSource   255    1         0.0009      0.0        5.8614   
+3            9         AreaSource   255    1         0.0009      0.0        5.8395   
+3            5         AreaSource   236    1         0.0010      0.0        5.4875   
+3            7         AreaSource   166    1         0.0010      0.0        4.7749   
+1            7         AreaSource   166    1         0.0009      0.0        4.4676   
+3            4         AreaSource   128    1         0.0010      0.0        4.1406   
+1            8         AreaSource   144    1         0.0010      0.0        3.9303   
+============ ========= ============ ====== ========= =========== ========== =========

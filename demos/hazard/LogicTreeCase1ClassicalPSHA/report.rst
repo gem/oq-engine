@@ -8,14 +8,14 @@ Parameters
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             200.0    
-investigation_time           50.0     
+maximum_distance             200      
+investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0      
-rupture_mesh_spacing         2.0      
-complex_fault_mesh_spacing   2.0      
-width_of_mfd_bin             0.1      
-area_source_discretization   5.0      
+truncation_level             3.0000   
+rupture_mesh_spacing         2.0000   
+complex_fault_mesh_spacing   2.0000   
+width_of_mfd_bin             0.1000   
+area_source_discretization   5.0000   
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
@@ -71,21 +71,20 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================== ====== ======================== =========== ============ ============ ======
-source_model       trt_id trt                      num_sources num_ruptures eff_ruptures weight
-================== ====== ======================== =========== ============ ============ ======
-source_model_1.xml 0      Active Shallow Crust     1           1334         1334         1334.0
-source_model_1.xml 1      Stable Continental Crust 1           4100         4100         102.5 
-source_model_2.xml 2      Active Shallow Crust     1           1297         1297         1297.0
-source_model_2.xml 3      Stable Continental Crust 1           5920         5920         148.0 
-================== ====== ======================== =========== ============ ============ ======
+================== ====== ======================== =========== ============ ======
+source_model       trt_id trt                      num_sources eff_ruptures weight
+================== ====== ======================== =========== ============ ======
+source_model_1.xml 0      Active Shallow Crust     1           1,334        1,334 
+source_model_1.xml 1      Stable Continental Crust 1           4,100        102   
+source_model_2.xml 2      Active Shallow Crust     1           1,297        1,297 
+source_model_2.xml 3      Stable Continental Crust 1           5,920        148   
+================== ====== ======================== =========== ============ ======
 
 =============== ======
 #TRT models     4     
 #sources        4     
-#tot_ruptures   12651 
-#eff_ruptures   12651 
-filtered_weight 2881.5
+#eff_ruptures   12,651
+filtered_weight 2,882 
 =============== ======
 
 Expected data transfer for the sources
@@ -100,8 +99,8 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            2         SimpleFaultSource 1334.0 1334      0.003613    0.336183   0.0      
-2            2         SimpleFaultSource 1297.0 1297      0.00203204  0.327362   0.0      
-3            1         AreaSource        148.0  1         0.00138497  0.0        0.0      
-1            1         AreaSource        102.5  1         0.00115299  0.0        0.0      
+0            2         SimpleFaultSource 1,334  1,334     0.0037      0.3550     0.0      
+2            2         SimpleFaultSource 1,297  1,297     0.0021      0.3258     0.0      
+3            1         AreaSource        148    1         0.0021      0.0        0.0      
+1            1         AreaSource        102    1         0.0013      0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========

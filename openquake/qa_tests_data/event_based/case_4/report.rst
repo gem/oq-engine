@@ -8,15 +8,15 @@ Parameters
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 0          
-maximum_distance             200.0      
-investigation_time           1.0        
+maximum_distance             200        
+investigation_time           1.0000     
 ses_per_logic_tree_path      50         
 truncation_level             0.0        
-rupture_mesh_spacing         1.0        
-complex_fault_mesh_spacing   1.0        
-width_of_mfd_bin             1.0        
-area_source_discretization   10.0       
-random_seed                  1066       
+rupture_mesh_spacing         1.0000     
+complex_fault_mesh_spacing   1.0000     
+width_of_mfd_bin             1.0000     
+area_source_discretization   10         
+random_seed                  1,066      
 master_seed                  0          
 concurrent_tasks             16         
 ============================ ===========
@@ -75,7 +75,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 1       
-Sent data                   6.17 KB 
+Sent data                   6.15 KB 
 Total received data         10.01 KB
 Maximum received per task   10.01 KB
 =========================== ========
@@ -85,5 +85,5 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 10.0   1         0.00238705  0.00491619 0.02233  
+0            1         SimpleFaultSource 10     1         0.0023      0.0034     0.0205   
 ============ ========= ================= ====== ========= =========== ========== =========

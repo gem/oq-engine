@@ -8,14 +8,14 @@ Parameters
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             200.0    
-investigation_time           50.0     
+maximum_distance             200      
+investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0      
-rupture_mesh_spacing         2.0      
-complex_fault_mesh_spacing   2.0      
-width_of_mfd_bin             0.1      
-area_source_discretization   5.0      
+truncation_level             3.0000   
+rupture_mesh_spacing         2.0000   
+complex_fault_mesh_spacing   2.0000   
+width_of_mfd_bin             0.1000   
+area_source_discretization   5.0000   
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
@@ -59,23 +59,23 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ============ ======
-source_model     trt_id trt                  num_sources num_ruptures eff_ruptures weight
-================ ====== ==================== =========== ============ ============ ======
-source_model.xml 0      Active Shallow Crust 1           80           80           2.0   
-================ ====== ==================== =========== ============ ============ ======
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources eff_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust 1           80           2.0000
+================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 1       
-Sent data                   53.04 KB
+Sent data                   53.03 KB
 =========================== ========
 
 Slowest sources
 ---------------
-============ ========= ============ ====== ========= =========== =========== =========
-trt_model_id source_id source_class weight split_num filter_time split_time  calc_time
-============ ========= ============ ====== ========= =========== =========== =========
-0            2         PointSource  2.0    1         0.00032711  4.79221e-05 0.0      
-============ ========= ============ ====== ========= =========== =========== =========
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            2         PointSource  2.0000 1         0.0003      0.0000     0.0      
+============ ========= ============ ====== ========= =========== ========== =========

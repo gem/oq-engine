@@ -8,14 +8,14 @@ Parameters
 ============================ ==============
 calculation_mode             disaggregation
 number_of_logic_tree_samples 0             
-maximum_distance             200.0         
-investigation_time           50.0          
+maximum_distance             200           
+investigation_time           50            
 ses_per_logic_tree_path      1             
-truncation_level             3.0           
-rupture_mesh_spacing         2.0           
-complex_fault_mesh_spacing   2.0           
-width_of_mfd_bin             0.1           
-area_source_discretization   5.0           
+truncation_level             3.0000        
+rupture_mesh_spacing         2.0000        
+complex_fault_mesh_spacing   2.0000        
+width_of_mfd_bin             0.1000        
+area_source_discretization   5.0000        
 random_seed                  23            
 master_seed                  0             
 concurrent_tasks             16            
@@ -60,20 +60,19 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ======================== =========== ============ ============ ======
-source_model     trt_id trt                      num_sources num_ruptures eff_ruptures weight
-================ ====== ======================== =========== ============ ============ ======
-source_model.xml 0      Active Shallow Crust     1           1334         1334         1334.0
-source_model.xml 1      Stable Continental Crust 1           4100         4100         102.5 
-================ ====== ======================== =========== ============ ============ ======
+================ ====== ======================== =========== ============ ======
+source_model     trt_id trt                      num_sources eff_ruptures weight
+================ ====== ======================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust     1           1,334        1,334 
+source_model.xml 1      Stable Continental Crust 1           4,100        102   
+================ ====== ======================== =========== ============ ======
 
-=============== ======
-#TRT models     2     
-#sources        2     
-#tot_ruptures   5434  
-#eff_ruptures   5434  
-filtered_weight 1436.5
-=============== ======
+=============== =====
+#TRT models     2    
+#sources        2    
+#eff_ruptures   5,434
+filtered_weight 1,437
+=============== =====
 
 Expected data transfer for the sources
 --------------------------------------
@@ -87,6 +86,6 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            2         SimpleFaultSource 1334.0 1334      0.0020299   0.334677   0.0      
-1            1         AreaSource        102.5  205       0.00117803  0.0649002  0.0      
+0            2         SimpleFaultSource 1,334  1,334     0.0020      0.3321     0.0      
+1            1         AreaSource        102    205       0.0012      0.0647     0.0      
 ============ ========= ================= ====== ========= =========== ========== =========

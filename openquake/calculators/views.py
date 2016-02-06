@@ -21,6 +21,8 @@ import ast
 import os.path
 import numbers
 import operator
+import decimal
+import functools
 import itertools
 import numpy
 
@@ -35,8 +37,44 @@ from openquake.commonlib.writers import (
 
 # ########################## utility functions ############################## #
 
+FLOAT = (float, numpy.float32, numpy.float64)
+INT = (int, numpy.uint32, numpy.int64)
 
-def rst_table(data, header=None, fmt='%9.7E'):
+
+def form(value):
+    """
+    Format numbers in a nice way.
+
+    >>> form(0)
+    '0'
+    >>> form(0.0)
+    '0.0'
+    >>> form(1003.4)
+    '1,003'
+    >>> form(103.4)
+    '103'
+    >>> form(9.3)
+    '9.3000'
+    >>> form(-1.2)
+    '-1.2'
+    """
+    if isinstance(value, FLOAT + INT):
+        if value <= 0:
+            return str(value)
+        elif value < .0001:
+            return '%.4E' % value
+        elif value < 10 and isinstance(value, FLOAT):
+            return '%.4f' % value
+        elif value > 1000:
+            return '{:,d}'.format(int(round(value)))
+        else:  # in the range 10-1000
+            return str(int(value))
+    elif hasattr(value, '__iter__'):
+        return ' '.join(map(form, value))
+    return str(value)
+
+
+def rst_table(data, header=None, fmt=None):
     """
     Build a .rst table from a matrix.
     
@@ -63,11 +101,12 @@ def rst_table(data, header=None, fmt='%9.7E'):
     else:
         col_sizes = [len(str(col)) for col in data[0]]
     body = []
+    fmt = functools.partial(scientificformat, fmt=fmt) if fmt else form
     for row in data:
-        row = tuple(scientificformat(col, fmt) for col in row)
-        for (i, col) in enumerate(row):
+        tup = tuple(fmt(c) for c in row)
+        for (i, col) in enumerate(tup):
             col_sizes[i] = max(col_sizes[i], len(col))
-        body.append(row)
+        body.append(tup)
 
     sepline = ' '.join(('=' * size for size in col_sizes))
     templ = ' '.join(('%-{}s'.format(size) for size in col_sizes))
@@ -111,12 +150,6 @@ def view_csm_info(token, dstore):
                classify_gsim_lt(sm.gsim_lt), '%d/%d' % (num_rlzs, num_paths))
         rows.append(row)
     return rst_table(rows, header)
-
-
-@view.add('slow_sources')
-def view_slow_sources(token, dstore):
-    info = dstore['source_info'][:10]
-    return rst_table(info, fmt='%g')
 
 
 @view.add('rupture_collections')
@@ -371,7 +404,7 @@ def view_assetcol(token, dstore):
             columns[i] = sitemesh[assetcol[field]]
         else:
             columns[i] = assetcol[field]
-    return write_csv(io.StringIO(), [header] + list(zip(*columns)), fmt='%s')
+    return write_csv(io.StringIO(), [header] + list(zip(*columns)))
 
 
 @view.add('fullreport')
@@ -401,7 +434,7 @@ def view_performance(token, dstore):
             mem = max(mem, memory_mb)
         out.append((operation, time, mem, counts))
     out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
-    return rst_table(numpy.array(out, perf_dt), fmt='%s')
+    return rst_table(numpy.array(out, perf_dt))
 
 
 @view.add('required_params_per_trt')

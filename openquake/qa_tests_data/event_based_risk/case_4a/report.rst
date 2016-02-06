@@ -8,14 +8,14 @@ Parameters
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 0          
-maximum_distance             200.0      
-investigation_time           1.0        
+maximum_distance             200        
+investigation_time           1.0000     
 ses_per_logic_tree_path      100        
-truncation_level             3.0        
-rupture_mesh_spacing         2.0        
-complex_fault_mesh_spacing   2.0        
-width_of_mfd_bin             0.1        
-area_source_discretization   10.0       
+truncation_level             3.0000     
+rupture_mesh_spacing         2.0000     
+complex_fault_mesh_spacing   2.0000     
+width_of_mfd_bin             0.1000     
+area_source_discretization   10         
 random_seed                  24         
 master_seed                  0          
 concurrent_tasks             16         
@@ -76,12 +76,12 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== =========
-Number of tasks to generate 14       
-Sent data                   105.46 KB
-Total received data         49.47 KB 
-Maximum received per task   12.8 KB  
-=========================== =========
+=========================== ========
+Number of tasks to generate 14      
+Sent data                   105.2 KB
+Total received data         49.47 KB
+Maximum received per task   12.8 KB 
+=========================== ========
 
 Exposure model
 --------------
@@ -101,6 +101,6 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            3         SimpleFaultSource    482.0  15        0.0039289   0.077177   0.389491 
-0            1         CharacteristicFaultS 1.0    1         0.00217199  0.0        0.0216889
+0            3         SimpleFaultSource    482    15        0.0028      0.0663     0.3988   
+0            1         CharacteristicFaultS 1.0000 1         0.0020      0.0        0.0128   
 ============ ========= ==================== ====== ========= =========== ========== =========

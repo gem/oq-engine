@@ -8,14 +8,14 @@ Parameters
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 0          
-maximum_distance             200.0      
-investigation_time           50.0       
+maximum_distance             200        
+investigation_time           50         
 ses_per_logic_tree_path      300        
-truncation_level             3.0        
-rupture_mesh_spacing         2.0        
-complex_fault_mesh_spacing   2.0        
-width_of_mfd_bin             0.2        
-area_source_discretization   20.0       
+truncation_level             3.0000     
+rupture_mesh_spacing         2.0000     
+complex_fault_mesh_spacing   2.0000     
+width_of_mfd_bin             0.2000     
+area_source_discretization   20         
 random_seed                  23         
 master_seed                  0          
 concurrent_tasks             16         
@@ -69,8 +69,8 @@ Non-empty rupture collections
 === ========= ==================== ============
 col smlt_path TRT                  num_ruptures
 === ========= ==================== ============
-0   b11       Active Shallow Crust 14732       
-1   b12       Active Shallow Crust 1454        
+0   b11       Active Shallow Crust 14,732      
+1   b12       Active Shallow Crust 1,454       
 === ========= ==================== ============
 
 Collections <-> realizations
@@ -85,7 +85,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 16       
-Sent data                   296.82 KB
+Sent data                   296.4 KB 
 Total received data         3.38 MB  
 Maximum received per task   346.03 KB
 =========================== =========
@@ -95,6 +95,6 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   61.4   307       0.00166011  0.071074   4.68962  
-1            1         AreaSource   61.4   307       0.00169301  0.072408   3.62728  
+0            1         AreaSource   61     307       0.0016      0.0722     5.0158   
+1            1         AreaSource   61     307       0.0018      0.0710     3.7104   
 ============ ========= ============ ====== ========= =========== ========== =========

@@ -8,14 +8,14 @@ Parameters
 ============================ ==============
 calculation_mode             classical_risk
 number_of_logic_tree_samples 1             
-maximum_distance             200.0         
-investigation_time           50.0          
+maximum_distance             200           
+investigation_time           50            
 ses_per_logic_tree_path      1             
-truncation_level             3.0           
-rupture_mesh_spacing         5.0           
-complex_fault_mesh_spacing   5.0           
-width_of_mfd_bin             0.2           
-area_source_discretization   10.0          
+truncation_level             3.0000        
+rupture_mesh_spacing         5.0000        
+complex_fault_mesh_spacing   5.0000        
+width_of_mfd_bin             0.2000        
+area_source_discretization   10            
 random_seed                  23            
 master_seed                  0             
 concurrent_tasks             16            
@@ -41,7 +41,7 @@ Composite source model
 ========= ====== ====================================== =============== ================
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations
 ========= ====== ====================================== =============== ================
-b1        1.0    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1        1.0000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
 ========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
@@ -62,17 +62,17 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ =============
-source_model     trt_id trt                  num_sources eff_ruptures weight       
-================ ====== ==================== =========== ============ =============
-source_model.xml 0      Active Shallow Crust 2           1613         53.2999992371
-================ ====== ==================== =========== ============ =============
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources eff_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust 2           1,613        53    
+================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 2       
-Sent data                   16.22 KB
+Sent data                   16.18 KB
 Total received data         13.04 KB
 Maximum received per task   6.93 KB 
 =========================== ========
@@ -98,6 +98,6 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            232       AreaSource   40.3   1         0.000982046 0.0        3.08021  
-0            225       AreaSource   13.0   1         0.00100398  0.0        0.53501  
+0            232       AreaSource   40     1         0.0011      0.0        3.0785   
+0            225       AreaSource   13     1         0.0010      0.0        0.5460   
 ============ ========= ============ ====== ========= =========== ========== =========

@@ -8,18 +8,18 @@ Parameters
 ============================ ================
 calculation_mode             event_based_risk
 number_of_logic_tree_samples 0               
-maximum_distance             200.0           
-investigation_time           50.0            
+maximum_distance             200             
+investigation_time           50              
 ses_per_logic_tree_path      2               
-truncation_level             3.0             
-rupture_mesh_spacing         2.0             
-complex_fault_mesh_spacing   2.0             
-width_of_mfd_bin             0.1             
-area_source_discretization   10.0            
+truncation_level             3.0000          
+rupture_mesh_spacing         2.0000          
+complex_fault_mesh_spacing   2.0000          
+width_of_mfd_bin             0.1000          
+area_source_discretization   10              
 random_seed                  24              
 master_seed                  0               
 concurrent_tasks             16              
-avg_losses                   True            
+avg_losses                   1               
 ============================ ================
 
 Input files
@@ -92,7 +92,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 22       
-Sent data                   327.84 KB
+Sent data                   326.51 KB
 Total received data         129.33 KB
 Maximum received per task   15.2 KB  
 =========================== =========
@@ -118,11 +118,11 @@ tax3     1
 
 Slowest sources
 ---------------
-============ ========= ==================== ====== ========= =========== ========== ==========
-trt_model_id source_id source_class         weight split_num filter_time split_time calc_time 
-============ ========= ==================== ====== ========= =========== ========== ==========
-0            1         SimpleFaultSource    482.0  15        0.00276613  0.0653689  0.351308  
-2            1         SimpleFaultSource    482.0  15        0.00196815  0.0564461  0.292487  
-1            2         SimpleFaultSource    4.0    1         0.00221014  0.0        0.0119152 
-3            2         CharacteristicFaultS 1.0    1         0.00169802  0.0        0.00347781
-============ ========= ==================== ====== ========= =========== ========== ==========
+============ ========= ==================== ====== ========= =========== ========== =========
+trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
+============ ========= ==================== ====== ========= =========== ========== =========
+0            1         SimpleFaultSource    482    15        0.0031      0.0610     0.3432   
+2            1         SimpleFaultSource    482    15        0.0020      0.0562     0.2902   
+1            2         SimpleFaultSource    4.0000 1         0.0021      0.0        0.0111   
+3            2         CharacteristicFaultS 1.0000 1         0.0015      0.0        0.0035   
+============ ========= ==================== ====== ========= =========== ========== =========

@@ -58,10 +58,7 @@ class ReportWriter(object):
         if obj:
             text = '\n::\n\n' + indent(str(obj))
         else:
-            orig = views.rst_table.__defaults__
-            views.rst_table.__defaults__ = (None, '%s')  # disable formatting
             text = datastore.view(name, self.dstore)
-            views.rst_table.__defaults__ = orig
         self.text += '\n'.join(['\n\n' + title, line, text])
 
     def make_report(self):

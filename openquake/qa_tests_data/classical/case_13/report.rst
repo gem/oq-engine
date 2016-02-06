@@ -8,14 +8,14 @@ Parameters
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             200.0    
-investigation_time           50.0     
+maximum_distance             200      
+investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0      
-rupture_mesh_spacing         4.0      
-complex_fault_mesh_spacing   4.0      
-width_of_mfd_bin             0.1      
-area_source_discretization   10.0     
+truncation_level             3.0000   
+rupture_mesh_spacing         4.0000   
+complex_fault_mesh_spacing   4.0000   
+width_of_mfd_bin             0.1000   
+area_source_discretization   10       
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
@@ -69,16 +69,16 @@ Number of ruptures per tectonic region type
 ============================= ====== ==================== =========== ============ ======
 source_model                  trt_id trt                  num_sources eff_ruptures weight
 ============================= ====== ==================== =========== ============ ======
-aFault_aPriori_D2.1.xml       0      Active Shallow Crust 168         1848         1848.0
-bFault_stitched_D2.1_Char.xml 1      Active Shallow Crust 186         2046         2046.0
+aFault_aPriori_D2.1.xml       0      Active Shallow Crust 168         1,848        1,848 
+bFault_stitched_D2.1_Char.xml 1      Active Shallow Crust 186         2,046        2,046 
 ============================= ====== ==================== =========== ============ ======
 
-=============== ======
-#TRT models     2     
-#sources        354   
-#eff_ruptures   3894  
-filtered_weight 3894.0
-=============== ======
+=============== =====
+#TRT models     2    
+#sources        354  
+#eff_ruptures   3,894
+filtered_weight 3,894
+=============== =====
 
 Expected data transfer for the sources
 --------------------------------------
@@ -92,24 +92,24 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            22_0      CharacteristicFaultS 11.0   1         0.003057    0.0        0.0      
-0            22_1      CharacteristicFaultS 11.0   1         0.00281     0.0        0.0      
-0            23_0      CharacteristicFaultS 11.0   1         0.00272584  0.0        0.0      
-0            23_1      CharacteristicFaultS 11.0   1         0.002707    0.0        0.0      
-0            52_1      CharacteristicFaultS 11.0   1         0.00218701  0.0        0.0      
-0            0_0       CharacteristicFaultS 11.0   1         0.00186086  0.0        0.0      
-0            53_0      CharacteristicFaultS 11.0   1         0.00168204  0.0        0.0      
-0            54_1      CharacteristicFaultS 11.0   1         0.00165987  0.0        0.0      
-0            55_0      CharacteristicFaultS 11.0   1         0.00165009  0.0        0.0      
-0            45_0      CharacteristicFaultS 11.0   1         0.0016439   0.0        0.0      
-0            87_1      CharacteristicFaultS 11.0   1         0.00164318  0.0        0.0      
-0            56_0      CharacteristicFaultS 11.0   1         0.00163794  0.0        0.0      
-0            55_1      CharacteristicFaultS 11.0   1         0.00163794  0.0        0.0      
-1            108_0     CharacteristicFaultS 11.0   1         0.00163579  0.0        0.0      
-1            46_1      CharacteristicFaultS 11.0   1         0.00162411  0.0        0.0      
-0            57_1      CharacteristicFaultS 11.0   1         0.00162101  0.0        0.0      
-0            89_0      CharacteristicFaultS 11.0   1         0.00161505  0.0        0.0      
-0            88_1      CharacteristicFaultS 11.0   1         0.00161386  0.0        0.0      
-1            59_1      CharacteristicFaultS 11.0   1         0.00161314  0.0        0.0      
-1            14_1      CharacteristicFaultS 11.0   1         0.0016129   0.0        0.0      
+1            118_1     CharacteristicFaultS 11     1         0.0024      0.0        0.0      
+0            14_1      CharacteristicFaultS 11     1         0.0021      0.0        0.0      
+0            0_0       CharacteristicFaultS 11     1         0.0019      0.0        0.0      
+0            15_0      CharacteristicFaultS 11     1         0.0018      0.0        0.0      
+1            60_0      CharacteristicFaultS 11     1         0.0018      0.0        0.0      
+0            14_0      CharacteristicFaultS 11     1         0.0018      0.0        0.0      
+1            60_1      CharacteristicFaultS 11     1         0.0018      0.0        0.0      
+1            81_1      CharacteristicFaultS 11     1         0.0017      0.0        0.0      
+0            13_1      CharacteristicFaultS 11     1         0.0017      0.0        0.0      
+1            83_1      CharacteristicFaultS 11     1         0.0017      0.0        0.0      
+1            83_0      CharacteristicFaultS 11     1         0.0017      0.0        0.0      
+1            71_1      CharacteristicFaultS 11     1         0.0017      0.0        0.0      
+0            44_0      CharacteristicFaultS 11     1         0.0017      0.0        0.0      
+1            108_1     CharacteristicFaultS 11     1         0.0017      0.0        0.0      
+0            25_0      CharacteristicFaultS 11     1         0.0016      0.0        0.0      
+1            84_0      CharacteristicFaultS 11     1         0.0016      0.0        0.0      
+1            118_0     CharacteristicFaultS 11     1         0.0016      0.0        0.0      
+1            119_0     CharacteristicFaultS 11     1         0.0016      0.0        0.0      
+0            23_0      CharacteristicFaultS 11     1         0.0016      0.0        0.0      
+0            76_0      CharacteristicFaultS 11     1         0.0016      0.0        0.0      
 ============ ========= ==================== ====== ========= =========== ========== =========

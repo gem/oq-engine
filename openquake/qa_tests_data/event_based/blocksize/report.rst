@@ -8,15 +8,15 @@ Parameters
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 1          
-maximum_distance             400.0      
-investigation_time           5.0        
+maximum_distance             400        
+investigation_time           5.0000     
 ses_per_logic_tree_path      1          
-truncation_level             3.0        
-rupture_mesh_spacing         10.0       
-complex_fault_mesh_spacing   10.0       
-width_of_mfd_bin             0.5        
-area_source_discretization   10.0       
-random_seed                  1024       
+truncation_level             3.0000     
+rupture_mesh_spacing         10         
+complex_fault_mesh_spacing   10         
+width_of_mfd_bin             0.5000     
+area_source_discretization   10         
+random_seed                  1,024      
 master_seed                  0          
 concurrent_tasks             16         
 ============================ ===========
@@ -37,7 +37,7 @@ Composite source model
 ========= ====== ====================================== =============== ================
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations
 ========= ====== ====================================== =============== ================
-b1        1.0    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1        1.0000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
 ========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
@@ -75,7 +75,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 8        
-Sent data                   532.92 KB
+Sent data                   532.77 KB
 Total received data         43.62 KB 
 Maximum received per task   7.78 KB  
 =========================== =========
@@ -85,7 +85,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   175.5  1170      0.00118303  0.466713   4.93561  
-0            2         AreaSource   58.35  389       0.00135303  0.1329     1.55978  
-0            3         AreaSource   44.0   352       0.00116181  0.107819   0.693992 
+0            1         AreaSource   175    1,170     0.0010      0.4123     5.0057   
+0            2         AreaSource   58     389       0.0012      0.1325     1.4567   
+0            3         AreaSource   44     352       0.0011      0.1091     0.7610   
 ============ ========= ============ ====== ========= =========== ========== =========
