@@ -11,10 +11,10 @@ number_of_logic_tree_samples 1
 maximum_distance             200           
 investigation_time           50            
 ses_per_logic_tree_path      1             
-truncation_level             3.0000        
-rupture_mesh_spacing         5.0000        
-complex_fault_mesh_spacing   5.0000        
-width_of_mfd_bin             0.2000        
+truncation_level             3.000         
+rupture_mesh_spacing         5.000         
+complex_fault_mesh_spacing   5.000         
+width_of_mfd_bin             0.200         
 area_source_discretization   10            
 random_seed                  23            
 master_seed                  0             
@@ -41,7 +41,7 @@ Composite source model
 ========= ====== ====================================== =============== ================
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations
 ========= ====== ====================================== =============== ================
-b1        1.0000 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
 ========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
@@ -57,7 +57,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
+  <RlzsAssoc(size=1, rlzs=1)
   0,ChiouYoungs2008: ['<0,b1,b1,w=1.0>']>
 
 Number of ruptures per tectonic region type
@@ -72,7 +72,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 2       
-Sent data                   16.18 KB
+Sent data                   16.14 KB
 Total received data         13.04 KB
 Maximum received per task   6.93 KB 
 =========================== ========
@@ -98,6 +98,6 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            232       AreaSource   40     1         0.0011      0.0        3.0785   
-0            225       AreaSource   13     1         0.0010      0.0        0.5460   
+0            232       AreaSource   40     1         0.001       0.0        3.108    
+0            225       AreaSource   13     1         0.001       0.0        0.530    
 ============ ========= ============ ====== ========= =========== ========== =========

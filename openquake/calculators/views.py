@@ -61,10 +61,10 @@ def form(value):
     if isinstance(value, FLOAT + INT):
         if value <= 0:
             return str(value)
-        elif value < .0001:
-            return '%.4E' % value
+        elif value < .001:
+            return '%.3E' % value
         elif value < 10 and isinstance(value, FLOAT):
-            return '%.4f' % value
+            return '%.3f' % value
         elif value > 1000:
             return '{:,d}'.format(int(round(value)))
         else:  # in the range 10-1000

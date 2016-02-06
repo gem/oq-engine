@@ -11,10 +11,10 @@ number_of_logic_tree_samples 0
 maximum_distance             200      
 investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0000   
-rupture_mesh_spacing         4.0000   
-complex_fault_mesh_spacing   4.0000   
-width_of_mfd_bin             0.1000   
+truncation_level             3.000    
+rupture_mesh_spacing         4.000    
+complex_fault_mesh_spacing   4.000    
+width_of_mfd_bin             0.100    
 area_source_discretization   10       
 random_seed                  23       
 master_seed                  0        
@@ -58,7 +58,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(4)
+  <RlzsAssoc(size=4, rlzs=4)
   0,BooreAtkinson2008: ['<0,aFault_aPriori_D2.1,BooreAtkinson2008,w=0.25>']
   0,ChiouYoungs2008: ['<1,aFault_aPriori_D2.1,ChiouYoungs2008,w=0.25>']
   1,BooreAtkinson2008: ['<2,bFault_stitched_D2.1_Char,BooreAtkinson2008,w=0.25>']
@@ -92,24 +92,24 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-1            118_1     CharacteristicFaultS 11     1         0.0024      0.0        0.0      
-0            14_1      CharacteristicFaultS 11     1         0.0021      0.0        0.0      
-0            0_0       CharacteristicFaultS 11     1         0.0019      0.0        0.0      
-0            15_0      CharacteristicFaultS 11     1         0.0018      0.0        0.0      
-1            60_0      CharacteristicFaultS 11     1         0.0018      0.0        0.0      
-0            14_0      CharacteristicFaultS 11     1         0.0018      0.0        0.0      
-1            60_1      CharacteristicFaultS 11     1         0.0018      0.0        0.0      
-1            81_1      CharacteristicFaultS 11     1         0.0017      0.0        0.0      
-0            13_1      CharacteristicFaultS 11     1         0.0017      0.0        0.0      
-1            83_1      CharacteristicFaultS 11     1         0.0017      0.0        0.0      
-1            83_0      CharacteristicFaultS 11     1         0.0017      0.0        0.0      
-1            71_1      CharacteristicFaultS 11     1         0.0017      0.0        0.0      
-0            44_0      CharacteristicFaultS 11     1         0.0017      0.0        0.0      
-1            108_1     CharacteristicFaultS 11     1         0.0017      0.0        0.0      
-0            25_0      CharacteristicFaultS 11     1         0.0016      0.0        0.0      
-1            84_0      CharacteristicFaultS 11     1         0.0016      0.0        0.0      
-1            118_0     CharacteristicFaultS 11     1         0.0016      0.0        0.0      
-1            119_0     CharacteristicFaultS 11     1         0.0016      0.0        0.0      
-0            23_0      CharacteristicFaultS 11     1         0.0016      0.0        0.0      
-0            76_0      CharacteristicFaultS 11     1         0.0016      0.0        0.0      
+0            55_0      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+0            0_0       CharacteristicFaultS 11     1         0.002       0.0        0.0      
+0            59_0      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+0            64_1      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+0            65_1      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+0            36_1      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+0            67_0      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+0            36_0      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+0            66_1      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+1            34_1      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+0            65_0      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+0            66_0      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+0            54_0      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+0            35_1      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+1            68_0      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+0            53_0      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+0            64_0      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+1            34_0      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+1            92_1      CharacteristicFaultS 11     1         0.002       0.0        0.0      
+0            30_1      CharacteristicFaultS 11     1         0.002       0.0        0.0      
 ============ ========= ==================== ====== ========= =========== ========== =========

@@ -11,10 +11,10 @@ number_of_logic_tree_samples 0
 maximum_distance             200      
 investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0000   
-rupture_mesh_spacing         5.0000   
-complex_fault_mesh_spacing   5.0000   
-width_of_mfd_bin             0.2000   
+truncation_level             3.000    
+rupture_mesh_spacing         5.000    
+complex_fault_mesh_spacing   5.000    
+width_of_mfd_bin             0.200    
 area_source_discretization   10       
 random_seed                  23       
 master_seed                  0        
@@ -56,7 +56,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(2)
+  <RlzsAssoc(size=2, rlzs=2)
   0,AkkarBommer2010: ['<0,b1,b1,w=0.4>']
   0,ChiouYoungs2008: ['<1,b1,b2,w=0.6>']>
 
@@ -70,10 +70,10 @@ source_model.xml 0      Active Shallow Crust 2           6,405        160
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== ========
-Number of tasks to generate 2       
-Sent data                   16.17 KB
-=========================== ========
+=========================== =======
+Number of tasks to generate 2      
+Sent data                   16.2 KB
+=========================== =======
 
 Exposure model
 --------------
@@ -94,6 +94,6 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            231       AreaSource   104    1         0.0010      0.0        0.0      
-0            376       AreaSource   55     1         0.0010      0.0        0.0      
+0            376       AreaSource   55     1         0.001       0.0        0.0      
+0            231       AreaSource   104    1         9.670E-04   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========

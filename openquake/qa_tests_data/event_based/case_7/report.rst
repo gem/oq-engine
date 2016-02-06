@@ -11,10 +11,10 @@ number_of_logic_tree_samples 10
 maximum_distance             200        
 investigation_time           50         
 ses_per_logic_tree_path      10         
-truncation_level             3.0000     
-rupture_mesh_spacing         2.0000     
-complex_fault_mesh_spacing   2.0000     
-width_of_mfd_bin             0.2000     
+truncation_level             3.000      
+rupture_mesh_spacing         2.000      
+complex_fault_mesh_spacing   2.000      
+width_of_mfd_bin             0.200      
 area_source_discretization   20         
 random_seed                  23         
 master_seed                  0          
@@ -38,8 +38,8 @@ Composite source model
 ========= ====== ======================================== =============== ================
 smlt_path weight source_model_file                        gsim_logic_tree num_realizations
 ========= ====== ======================================== =============== ================
-b11       0.1000 `source_model1.xml <source_model1.xml>`_ simple(3)       7/7             
-b12       0.1000 `source_model2.xml <source_model2.xml>`_ simple(3)       3/3             
+b11       0.100  `source_model1.xml <source_model1.xml>`_ simple(3)       7/7             
+b12       0.100  `source_model2.xml <source_model2.xml>`_ simple(3)       3/3             
 ========= ====== ======================================== =============== ================
 
 Required parameters per tectonic region type
@@ -56,7 +56,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(5)
+  <RlzsAssoc(size=5, rlzs=10)
   0,BooreAtkinson2008: ['<3,b11,BA,w=0.1>', '<5,b11,BA,w=0.1>']
   0,CampbellBozorgnia2008: ['<4,b11,CB,w=0.1>', '<6,b11,CB,w=0.1>']
   0,ChiouYoungs2008: ['<0,b11,CY,w=0.1>', '<1,b11,CY,w=0.1>', '<2,b11,CY,w=0.1>']
@@ -110,6 +110,6 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   61     307       0.0016      0.0713     3.0274   
-1            1         AreaSource   61     307       0.0016      0.0698     2.0038   
+0            1         AreaSource   61     307       0.002       0.072      3.059    
+1            1         AreaSource   61     307       0.002       0.073      2.074    
 ============ ========= ============ ====== ========= =========== ========== =========

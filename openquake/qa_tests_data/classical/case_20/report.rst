@@ -9,12 +9,12 @@ Parameters
 calculation_mode             classical
 number_of_logic_tree_samples 0        
 maximum_distance             200      
-investigation_time           1.0000   
+investigation_time           1.000    
 ses_per_logic_tree_path      1        
-truncation_level             3.0000   
-rupture_mesh_spacing         2.0000   
-complex_fault_mesh_spacing   2.0000   
-width_of_mfd_bin             1.0000   
+truncation_level             3.000    
+rupture_mesh_spacing         2.000    
+complex_fault_mesh_spacing   2.000    
+width_of_mfd_bin             1.000    
 area_source_discretization   10       
 random_seed                  106      
 master_seed                  0        
@@ -76,7 +76,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(12)
+  <RlzsAssoc(size=12, rlzs=12)
   0,SadighEtAl1997: ['<0,sm1_sg1_cog1_char_complex,Sad1997,w=0.07>']
   1,SadighEtAl1997: ['<1,sm1_sg1_cog1_char_plane,Sad1997,w=0.105>']
   2,SadighEtAl1997: ['<2,sm1_sg1_cog1_char_simple,Sad1997,w=0.175>']
@@ -120,7 +120,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 24       
-Sent data                   631.29 KB
+Sent data                   631.44 KB
 =========================== =========
 
 Slowest sources
@@ -128,24 +128,24 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-11           COMFLT1   ComplexFaultSource   62     1         0.0022      0.0        0.0      
-11           SFLT1     SimpleFaultSource    58     1         0.0019      0.0        0.0      
-9            SFLT1     SimpleFaultSource    58     1         0.0019      0.0        0.0      
-2            SFLT1     SimpleFaultSource    56     1         0.0018      0.0        0.0      
-7            SFLT1     SimpleFaultSource    58     1         0.0018      0.0        0.0      
-0            SFLT1     SimpleFaultSource    56     1         0.0018      0.0        0.0      
-1            SFLT1     SimpleFaultSource    56     1         0.0018      0.0        0.0      
-6            SFLT1     SimpleFaultSource    58     1         0.0018      0.0        0.0      
-5            SFLT1     SimpleFaultSource    56     1         0.0018      0.0        0.0      
-10           SFLT1     SimpleFaultSource    58     1         0.0018      0.0        0.0      
-1            CHAR1     CharacteristicFaultS 1.0000 1         0.0018      0.0        0.0      
-0            CHAR1     CharacteristicFaultS 1.0000 1         0.0018      0.0        0.0      
-4            SFLT1     SimpleFaultSource    56     1         0.0017      0.0        0.0      
-3            SFLT1     SimpleFaultSource    56     1         0.0017      0.0        0.0      
-8            SFLT1     SimpleFaultSource    58     1         0.0017      0.0        0.0      
-7            CHAR1     CharacteristicFaultS 1.0000 1         0.0017      0.0        0.0      
-0            COMFLT1   ComplexFaultSource   29     1         0.0017      0.0        0.0      
-10           CHAR1     CharacteristicFaultS 1.0000 1         0.0017      0.0        0.0      
-11           CHAR1     CharacteristicFaultS 1.0000 1         0.0016      0.0        0.0      
-4            CHAR1     CharacteristicFaultS 1.0000 1         0.0016      0.0        0.0      
+7            SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+0            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+3            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+4            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+0            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+11           SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+1            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+10           SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+5            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+2            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+8            SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+9            SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+6            SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+3            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+10           CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+1            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+4            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+7            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+8            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+3            COMFLT1   ComplexFaultSource   62     1         0.002       0.0        0.0      
 ============ ========= ==================== ====== ========= =========== ========== =========

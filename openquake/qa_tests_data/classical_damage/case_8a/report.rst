@@ -9,12 +9,12 @@ Parameters
 calculation_mode             classical_damage
 number_of_logic_tree_samples 0               
 maximum_distance             200             
-investigation_time           1.0000          
+investigation_time           1.000           
 ses_per_logic_tree_path      1               
-truncation_level             3.0000          
-rupture_mesh_spacing         1.0000          
-complex_fault_mesh_spacing   1.0000          
-width_of_mfd_bin             0.1000          
+truncation_level             3.000           
+rupture_mesh_spacing         1.000           
+complex_fault_mesh_spacing   1.000           
+width_of_mfd_bin             0.100           
 area_source_discretization   20              
 random_seed                  42              
 master_seed                  0               
@@ -56,7 +56,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(2)
+  <RlzsAssoc(size=2, rlzs=2)
   0,AkkarBommer2010: ['<1,b1,b2,w=0.5>']
   0,SadighEtAl1997: ['<0,b1,b1,w=0.5>']>
 
@@ -93,5 +93,5 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 1,694  15        0.0027      0.1477     0.0      
+0            1         SimpleFaultSource 1,694  15        0.002       0.116      0.0      
 ============ ========= ================= ====== ========= =========== ========== =========

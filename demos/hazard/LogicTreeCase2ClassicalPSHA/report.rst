@@ -11,11 +11,11 @@ number_of_logic_tree_samples 0
 maximum_distance             200      
 investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0000   
-rupture_mesh_spacing         2.0000   
-complex_fault_mesh_spacing   2.0000   
-width_of_mfd_bin             0.1000   
-area_source_discretization   5.0000   
+truncation_level             3.000    
+rupture_mesh_spacing         2.000    
+complex_fault_mesh_spacing   2.000    
+width_of_mfd_bin             0.100    
+area_source_discretization   5.000    
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
@@ -295,7 +295,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(324)
+  <RlzsAssoc(size=324, rlzs=324)
   0,BooreAtkinson2008: ['<0,b11_b21_b31_b41_b51,b11_b21,w=0.00307409258025>', '<1,b11_b21_b31_b41_b51,b11_b22,w=0.00307409258025>']
   0,ChiouYoungs2008: ['<2,b11_b21_b31_b41_b51,b12_b21,w=0.00307409258025>', '<3,b11_b21_b31_b41_b51,b12_b22,w=0.00307409258025>']
   1,Campbell2003: ['<1,b11_b21_b31_b41_b51,b11_b22,w=0.00307409258025>', '<3,b11_b21_b31_b41_b51,b12_b22,w=0.00307409258025>']
@@ -809,24 +809,24 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            2         SimpleFaultSource 1,334  1         0.0021      0.0        0.0      
-144          2         SimpleFaultSource 1,334  1         0.0021      0.0        0.0      
-108          2         SimpleFaultSource 1,334  1         0.0020      0.0        0.0      
-4            2         SimpleFaultSource 1,339  1         0.0019      0.0        0.0      
-20           2         SimpleFaultSource 1,337  1         0.0019      0.0        0.0      
-16           2         SimpleFaultSource 1,339  1         0.0019      0.0        0.0      
-110          2         SimpleFaultSource 1,337  1         0.0019      0.0        0.0      
-102          2         SimpleFaultSource 1,334  1         0.0019      0.0        0.0      
-112          2         SimpleFaultSource 1,339  1         0.0019      0.0        0.0      
-18           2         SimpleFaultSource 1,334  1         0.0019      0.0        0.0      
-100          2         SimpleFaultSource 1,339  1         0.0019      0.0        0.0      
-114          2         SimpleFaultSource 1,334  1         0.0019      0.0        0.0      
-122          2         SimpleFaultSource 1,337  1         0.0019      0.0        0.0      
-156          2         SimpleFaultSource 1,334  1         0.0019      0.0        0.0      
-116          2         SimpleFaultSource 1,337  1         0.0019      0.0        0.0      
-104          2         SimpleFaultSource 1,337  1         0.0019      0.0        0.0      
-72           2         SimpleFaultSource 1,334  1         0.0019      0.0        0.0      
-128          2         SimpleFaultSource 1,337  1         0.0019      0.0        0.0      
-146          2         SimpleFaultSource 1,337  1         0.0018      0.0        0.0      
-66           2         SimpleFaultSource 1,334  1         0.0018      0.0        0.0      
+33           1         AreaSource        133    1         0.015       0.0        0.0      
+29           1         AreaSource        117    1         0.009       0.0        0.0      
+25           1         AreaSource        117    1         0.006       0.0        0.0      
+28           2         SimpleFaultSource 1,339  1         0.004       0.0        0.0      
+142          2         SimpleFaultSource 1,339  1         0.004       0.0        0.0      
+0            2         SimpleFaultSource 1,334  1         0.004       0.0        0.0      
+102          2         SimpleFaultSource 1,334  1         0.004       0.0        0.0      
+50           2         SimpleFaultSource 1,337  1         0.004       0.0        0.0      
+6            2         SimpleFaultSource 1,334  1         0.004       0.0        0.0      
+144          2         SimpleFaultSource 1,334  1         0.004       0.0        0.0      
+20           2         SimpleFaultSource 1,337  1         0.004       0.0        0.0      
+140          2         SimpleFaultSource 1,337  1         0.004       0.0        0.0      
+114          2         SimpleFaultSource 1,334  1         0.004       0.0        0.0      
+30           2         SimpleFaultSource 1,334  1         0.004       0.0        0.0      
+48           2         SimpleFaultSource 1,334  1         0.004       0.0        0.0      
+38           2         SimpleFaultSource 1,337  1         0.004       0.0        0.0      
+68           2         SimpleFaultSource 1,337  1         0.004       0.0        0.0      
+34           2         SimpleFaultSource 1,339  1         0.004       0.0        0.0      
+150          2         SimpleFaultSource 1,334  1         0.004       0.0        0.0      
+120          2         SimpleFaultSource 1,334  1         0.004       0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========

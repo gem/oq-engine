@@ -11,10 +11,10 @@ number_of_logic_tree_samples 0
 maximum_distance             100      
 investigation_time           10       
 ses_per_logic_tree_path      1        
-truncation_level             3.0000   
+truncation_level             3.000    
 rupture_mesh_spacing         15       
 complex_fault_mesh_spacing   15       
-width_of_mfd_bin             0.1000   
+width_of_mfd_bin             0.100    
 area_source_discretization   25       
 random_seed                  323      
 master_seed                  0        
@@ -61,7 +61,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(8)
+  <RlzsAssoc(size=8, rlzs=8)
   4,AkkarBommer2010: ['<0,AreaSource,AkkarBommer2010asc_@_@_@_@_@_@,w=0.25>']
   4,CauzziFaccioli2008: ['<1,AreaSource,CauzziFaccioli2008asc_@_@_@_@_@_@,w=0.25>']
   4,ChiouYoungs2008: ['<2,AreaSource,ChiouYoungs2008asc_@_@_@_@_@_@,w=0.142857142857>']
@@ -99,7 +99,7 @@ Slowest sources
 ============ ============ ============ ====== ========= =========== ========== =========
 trt_model_id source_id    source_class weight split_num filter_time split_time calc_time
 ============ ============ ============ ====== ========= =========== ========== =========
-4            AS_GEAS343   AreaSource   96     1         0.0151      0.0        0.0      
-9            FSBG_TRBG103 AreaSource   43     1         0.0058      0.0        0.0      
-9            FSBG_ARAS462 AreaSource   7.6500 1         0.0011      0.0        0.0      
+4            AS_GEAS343   AreaSource   96     1         0.019       0.0        0.0      
+9            FSBG_TRBG103 AreaSource   43     1         0.006       0.0        0.0      
+9            FSBG_ARAS462 AreaSource   7.650  1         0.002       0.0        0.0      
 ============ ============ ============ ====== ========= =========== ========== =========

@@ -11,11 +11,11 @@ number_of_logic_tree_samples 0
 maximum_distance             200      
 investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0000   
-rupture_mesh_spacing         2.0000   
-complex_fault_mesh_spacing   2.0000   
-width_of_mfd_bin             0.1000   
-area_source_discretization   5.0000   
+truncation_level             3.000    
+rupture_mesh_spacing         2.000    
+complex_fault_mesh_spacing   2.000    
+width_of_mfd_bin             0.100    
+area_source_discretization   5.000    
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
@@ -79,7 +79,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(36)
+  <RlzsAssoc(size=36, rlzs=36)
   0,BooreAtkinson2008: ['<0,b11_b21_b31,b11_b21,w=0.02772225>', '<1,b11_b21_b31,b11_b22,w=0.02772225>']
   0,ChiouYoungs2008: ['<2,b11_b21_b31,b12_b21,w=0.02772225>', '<3,b11_b21_b31,b12_b22,w=0.02772225>']
   1,Campbell2003: ['<1,b11_b21_b31,b11_b22,w=0.02772225>', '<3,b11_b21_b31,b12_b22,w=0.02772225>']
@@ -161,22 +161,22 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-10           2         SimpleFaultSource 1,344  1,344     0.0021      0.5468     0.0      
-4            2         SimpleFaultSource 1,344  1,344     0.0021      0.5264     0.0      
-16           2         SimpleFaultSource 1,344  1,344     0.0021      0.4952     0.0      
-14           2         SimpleFaultSource 1,339  1,339     0.0022      0.4747     0.0      
-8            2         SimpleFaultSource 1,339  1,339     0.0021      0.4238     0.0      
-2            2         SimpleFaultSource 1,339  1,339     0.0021      0.4094     0.0      
-6            2         SimpleFaultSource 1,334  1,334     0.0021      0.3504     0.0      
-12           2         SimpleFaultSource 1,334  1,334     0.0021      0.3419     0.0      
-0            2         SimpleFaultSource 1,334  1,334     0.0033      0.3365     0.0      
-1            1         AreaSource        102    1         0.0012      0.0        0.0      
-5            1         AreaSource        153    1         0.0011      0.0        0.0      
-13           1         AreaSource        102    1         0.0010      0.0        0.0      
-11           1         AreaSource        153    1         0.0010      0.0        0.0      
-3            1         AreaSource        128    1         0.0010      0.0        0.0      
-15           1         AreaSource        128    1         0.0010      0.0        0.0      
-17           1         AreaSource        153    1         0.0010      0.0        0.0      
-7            1         AreaSource        102    1         0.0010      0.0        0.0      
-9            1         AreaSource        128    1         0.0010      0.0        0.0      
+4            2         SimpleFaultSource 1,344  1,344     0.015       2.262      0.0      
+10           2         SimpleFaultSource 1,344  1,344     0.005       1.563      0.0      
+8            2         SimpleFaultSource 1,339  1,339     0.007       1.521      0.0      
+14           2         SimpleFaultSource 1,339  1,339     0.004       1.503      0.0      
+16           2         SimpleFaultSource 1,344  1,344     0.004       1.468      0.0      
+6            2         SimpleFaultSource 1,334  1,334     0.007       1.367      0.0      
+12           2         SimpleFaultSource 1,334  1,334     0.013       1.254      0.0      
+2            2         SimpleFaultSource 1,339  1,339     0.004       1.146      0.0      
+0            2         SimpleFaultSource 1,334  1,334     0.004       1.095      0.0      
+1            1         AreaSource        102    1         0.002       0.0        0.0      
+5            1         AreaSource        153    1         0.002       0.0        0.0      
+15           1         AreaSource        128    1         0.002       0.0        0.0      
+11           1         AreaSource        153    1         0.002       0.0        0.0      
+3            1         AreaSource        128    1         0.002       0.0        0.0      
+9            1         AreaSource        128    1         0.002       0.0        0.0      
+17           1         AreaSource        153    1         0.002       0.0        0.0      
+13           1         AreaSource        102    1         0.002       0.0        0.0      
+7            1         AreaSource        102    1         0.002       0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========

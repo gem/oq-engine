@@ -11,10 +11,10 @@ number_of_logic_tree_samples 0
 maximum_distance             200        
 investigation_time           10,000     
 ses_per_logic_tree_path      1          
-truncation_level             3.0000     
-rupture_mesh_spacing         2.0000     
-complex_fault_mesh_spacing   2.0000     
-width_of_mfd_bin             0.1000     
+truncation_level             3.000      
+rupture_mesh_spacing         2.000      
+complex_fault_mesh_spacing   2.000      
+width_of_mfd_bin             0.100      
 area_source_discretization   None       
 random_seed                  24         
 master_seed                  0          
@@ -54,7 +54,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
+  <RlzsAssoc(size=1, rlzs=1)
   0,BooreAtkinson2008: ['<0,b1,b1,w=1.0>']>
 
 Non-empty rupture collections
@@ -99,5 +99,5 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 482    15        0.0024      0.0648     1.1370   
+0            1         SimpleFaultSource 482    15        0.002       0.057      1.017    
 ============ ========= ================= ====== ========= =========== ========== =========

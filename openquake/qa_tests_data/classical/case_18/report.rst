@@ -9,12 +9,12 @@ Parameters
 calculation_mode             classical
 number_of_logic_tree_samples 0        
 maximum_distance             400      
-investigation_time           1.0000   
+investigation_time           1.000    
 ses_per_logic_tree_path      1        
-truncation_level             3.0000   
-rupture_mesh_spacing         5.0000   
-complex_fault_mesh_spacing   5.0000   
-width_of_mfd_bin             0.1000   
+truncation_level             3.000    
+rupture_mesh_spacing         5.000    
+complex_fault_mesh_spacing   5.000    
+width_of_mfd_bin             0.100    
 area_source_discretization   50       
 random_seed                  23       
 master_seed                  0        
@@ -55,7 +55,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
+  <RlzsAssoc(size=1, rlzs=3)
   0,GMPETable: ['<0,b1,b11,w=0.16>', '<1,b1,b12,w=0.68>', '<2,b1,b13,w=0.16>']>
 
 Number of ruptures per tectonic region type
@@ -78,5 +78,5 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            VICM      AreaSource   60     30        0.0013      0.0105     0.0      
+0            VICM      AreaSource   60     30        0.001       0.011      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========

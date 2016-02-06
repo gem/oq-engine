@@ -11,10 +11,10 @@ number_of_logic_tree_samples 0
 maximum_distance             200           
 investigation_time           50            
 ses_per_logic_tree_path      1             
-truncation_level             3.0000        
-rupture_mesh_spacing         2.0000        
-complex_fault_mesh_spacing   2.0000        
-width_of_mfd_bin             0.1000        
+truncation_level             3.000         
+rupture_mesh_spacing         2.000         
+complex_fault_mesh_spacing   2.000         
+width_of_mfd_bin             0.100         
 area_source_discretization   10            
 random_seed                  24            
 master_seed                  0             
@@ -64,7 +64,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(8)
+  <RlzsAssoc(size=8, rlzs=8)
   0,BooreAtkinson2008: ['<0,b1,b11_b21,w=0.1125>', '<1,b1,b11_b22,w=0.075>']
   0,ChiouYoungs2008: ['<2,b1,b12_b21,w=0.0375>', '<3,b1,b12_b22,w=0.025>']
   1,AkkarBommer2010: ['<0,b1,b11_b21,w=0.1125>', '<2,b1,b12_b21,w=0.0375>']
@@ -80,9 +80,9 @@ Number of ruptures per tectonic region type
 source_model       trt_id trt                  num_sources eff_ruptures weight
 ================== ====== ==================== =========== ============ ======
 source_model_1.xml 0      Active Shallow Crust 1           482          482   
-source_model_1.xml 1      Stable Shallow Crust 1           4            4.0000
+source_model_1.xml 1      Stable Shallow Crust 1           4            4.000 
 source_model_2.xml 2      Active Shallow Crust 1           482          482   
-source_model_2.xml 3      Stable Shallow Crust 1           1            1.0000
+source_model_2.xml 3      Stable Shallow Crust 1           1            1.000 
 ================== ====== ==================== =========== ============ ======
 
 =============== ===
@@ -121,8 +121,8 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            1         SimpleFaultSource    482    15        0.0026      0.0655     5.6430   
-2            1         SimpleFaultSource    482    15        0.0020      0.0599     5.3562   
-3            2         CharacteristicFaultS 1.0000 1         0.0016      0.0        0.0353   
-1            2         SimpleFaultSource    4.0000 1         0.0021      0.0        0.0331   
+2            1         SimpleFaultSource    482    15        0.002       0.058      6.148    
+0            1         SimpleFaultSource    482    15        0.004       0.070      5.743    
+1            2         SimpleFaultSource    4.000  1         0.002       0.0        0.029    
+3            2         CharacteristicFaultS 1.000  1         0.002       0.0        0.026    
 ============ ========= ==================== ====== ========= =========== ========== =========

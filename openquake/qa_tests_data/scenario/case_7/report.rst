@@ -12,8 +12,8 @@ maximum_distance             200
 investigation_time           None    
 ses_per_logic_tree_path      1       
 truncation_level             None    
-rupture_mesh_spacing         1.0000  
-complex_fault_mesh_spacing   1.0000  
+rupture_mesh_spacing         1.000   
+complex_fault_mesh_spacing   1.000   
 width_of_mfd_bin             None    
 area_source_discretization   None    
 random_seed                  3       

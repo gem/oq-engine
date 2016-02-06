@@ -11,10 +11,10 @@ number_of_logic_tree_samples 0
 maximum_distance             200        
 investigation_time           10         
 ses_per_logic_tree_path      1          
-truncation_level             3.0000     
-rupture_mesh_spacing         2.0000     
-complex_fault_mesh_spacing   2.0000     
-width_of_mfd_bin             0.1000     
+truncation_level             3.000      
+rupture_mesh_spacing         2.000      
+complex_fault_mesh_spacing   2.000      
+width_of_mfd_bin             0.100      
 area_source_discretization   10         
 random_seed                  323        
 master_seed                  0          
@@ -61,7 +61,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(8)
+  <RlzsAssoc(size=8, rlzs=8)
   5,AkkarBommer2010: ['<0,AreaSource,AkkarBommer2010asc_@_@_@_@_@_@,w=0.25>']
   5,CauzziFaccioli2008: ['<1,AreaSource,CauzziFaccioli2008asc_@_@_@_@_@_@,w=0.25>']
   5,ChiouYoungs2008: ['<2,AreaSource,ChiouYoungs2008asc_@_@_@_@_@_@,w=0.142857142857>']
@@ -123,24 +123,24 @@ Slowest sources
 ============ ============ ================= ====== ========= =========== ========== =========
 trt_model_id source_id    source_class      weight split_num filter_time split_time calc_time
 ============ ============ ================= ====== ========= =========== ========== =========
-5            AS_GEAS343   AreaSource        625    1         0.0019      0.0        7.7860   
-9            FSBG_TRBG103 AreaSource        282    1         0.0016      0.0        6.7380   
-5            AS_TRAS334   AreaSource        244    1         0.0013      0.0        5.9031   
-5            AS_AMAS453   AreaSource        175    1         0.0015      0.0        4.4374   
-5            AS_TRAS458   AreaSource        121    1         0.0010      0.0        2.6101   
-5            AS_TRAS346   AreaSource        154    1         0.0011      0.0        2.6020   
-5            AS_TRAS360   AreaSource        182    1         0.0011      0.0        2.2755   
-5            AS_TRAS395   AreaSource        122    1         0.0010      0.0        1.5593   
-5            AS_TRAS410   AreaSource        81     1         0.0010      0.0        1.5448   
-5            AS_GEAS479   AreaSource        72     1         0.0016      0.0        1.2964   
-9            FSBG_TRBG989 AreaSource        33     1         0.0011      0.0        0.7013   
-9            FSBG_TRCS114 SimpleFaultSource 958    1         0.0035      0.0        0.4655   
-9            FSBG_TRCS439 SimpleFaultSource 392    1         0.0030      0.0        0.3907   
-9            FSBG_TRCS113 SimpleFaultSource 413    1         0.0033      0.0        0.2669   
-9            FSBG_TRCS003 SimpleFaultSource 2,026  1,854     0.0108      2.6844     0.2474   
-9            FSBG_TRCS437 SimpleFaultSource 390    1         0.0031      0.0        0.2148   
-9            FSBG_TRCS322 SimpleFaultSource 374    1         0.0031      0.0        0.2053   
-9            FSBG_TRCS082 SimpleFaultSource 412    1         0.0045      0.0        0.1526   
-9            FSBG_TRCS141 SimpleFaultSource 248    1         0.0032      0.0        0.1487   
-9            FSBG_BGCS044 SimpleFaultSource 79     1         0.0028      0.0        0.1020   
+5            AS_GEAS343   AreaSource        625    1         0.002       0.0        9.174    
+9            FSBG_TRBG103 AreaSource        282    1         0.001       0.0        6.228    
+5            AS_TRAS334   AreaSource        244    1         0.001       0.0        5.222    
+5            AS_AMAS453   AreaSource        175    1         0.001       0.0        4.086    
+5            AS_TRAS346   AreaSource        154    1         0.001       0.0        2.694    
+5            AS_TRAS360   AreaSource        182    1         0.001       0.0        2.414    
+5            AS_TRAS458   AreaSource        121    1         0.001       0.0        1.574    
+5            AS_TRAS395   AreaSource        122    1         0.001       0.0        1.445    
+5            AS_TRAS410   AreaSource        81     1         0.001       0.0        1.034    
+5            AS_GEAS479   AreaSource        72     1         0.002       0.0        0.960    
+9            FSBG_TRBG989 AreaSource        33     1         0.001       0.0        0.574    
+9            FSBG_TRCS439 SimpleFaultSource 392    1         0.003       0.0        0.427    
+9            FSBG_TRCS114 SimpleFaultSource 958    1         0.003       0.0        0.349    
+9            FSBG_TRCS082 SimpleFaultSource 412    1         0.003       0.0        0.259    
+9            FSBG_TRCS322 SimpleFaultSource 374    1         0.003       0.0        0.190    
+9            FSBG_TRCS113 SimpleFaultSource 413    1         0.003       0.0        0.188    
+9            FSBG_TRCS003 SimpleFaultSource 2,026  1,854     0.010       2.417      0.180    
+9            FSBG_TRCS141 SimpleFaultSource 248    1         0.003       0.0        0.148    
+9            FSBG_TRCS373 SimpleFaultSource 130    1         0.003       0.0        0.146    
+9            FSBG_TRCS239 SimpleFaultSource 222    1         0.004       0.0        0.129    
 ============ ============ ================= ====== ========= =========== ========== =========

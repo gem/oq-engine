@@ -11,10 +11,10 @@ number_of_logic_tree_samples 0
 maximum_distance             200             
 investigation_time           50              
 ses_per_logic_tree_path      2               
-truncation_level             3.0000          
-rupture_mesh_spacing         2.0000          
-complex_fault_mesh_spacing   2.0000          
-width_of_mfd_bin             0.1000          
+truncation_level             3.000           
+rupture_mesh_spacing         2.000           
+complex_fault_mesh_spacing   2.000           
+width_of_mfd_bin             0.100           
 area_source_discretization   10              
 random_seed                  24              
 master_seed                  0               
@@ -62,7 +62,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(6)
+  <RlzsAssoc(size=6, rlzs=6)
   0,BooreAtkinson2008: ['<0,b1,b11_b21,w=0.1125>', '<1,b1,b11_b22,w=0.075>']
   0,ChiouYoungs2008: ['<2,b1,b12_b21,w=0.0375>', '<3,b1,b12_b22,w=0.025>']
   1,AkkarBommer2010: ['<0,b1,b11_b21,w=0.1125>', '<2,b1,b12_b21,w=0.0375>']
@@ -92,7 +92,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 22       
-Sent data                   326.51 KB
+Sent data                   326.91 KB
 Total received data         129.33 KB
 Maximum received per task   15.2 KB  
 =========================== =========
@@ -121,8 +121,8 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            1         SimpleFaultSource    482    15        0.0031      0.0610     0.3432   
-2            1         SimpleFaultSource    482    15        0.0020      0.0562     0.2902   
-1            2         SimpleFaultSource    4.0000 1         0.0021      0.0        0.0111   
-3            2         CharacteristicFaultS 1.0000 1         0.0015      0.0        0.0035   
+0            1         SimpleFaultSource    482    15        0.003       0.064      0.336    
+2            1         SimpleFaultSource    482    15        0.002       0.056      0.273    
+1            2         SimpleFaultSource    4.000  1         0.002       0.0        0.013    
+3            2         CharacteristicFaultS 1.000  1         0.002       0.0        0.003    
 ============ ========= ==================== ====== ========= =========== ========== =========

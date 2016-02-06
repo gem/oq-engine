@@ -530,8 +530,9 @@ class RlzsAssoc(collections.Mapping):
             if len(rlzs) > 10:  # short representation
                 rlzs = ['%d realizations' % len(rlzs)]
             pairs.append(('%s,%s' % key, rlzs))
-        return '<%s(%d)\n%s>' % (self.__class__.__name__, len(self),
-                                 '\n'.join('%s: %s' % pair for pair in pairs))
+        return '<%s(size=%d, rlzs=%d)\n%s>' % (
+            self.__class__.__name__, len(self), len(self.realizations),
+            '\n'.join('%s: %s' % pair for pair in pairs))
 
 # collection <-> trt model associations
 col_dt = numpy.dtype([('trt_id', numpy.uint32), ('sample', numpy.uint32)])

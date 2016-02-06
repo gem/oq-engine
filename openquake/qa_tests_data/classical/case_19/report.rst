@@ -11,10 +11,10 @@ number_of_logic_tree_samples 0
 maximum_distance             200      
 investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0000   
-rupture_mesh_spacing         5.0000   
-complex_fault_mesh_spacing   5.0000   
-width_of_mfd_bin             0.2000   
+truncation_level             3.000    
+rupture_mesh_spacing         5.000    
+complex_fault_mesh_spacing   5.000    
+width_of_mfd_bin             0.200    
 area_source_discretization   10       
 random_seed                  23       
 master_seed                  0        
@@ -54,7 +54,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(4)
+  <RlzsAssoc(size=4, rlzs=4)
   4,AtkinsonBoore2003SSlab: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>']
   4,LinLee2008SSlab: ['<1,b1,@_@_@_@_b52_@_@,w=0.2>']
   4,YoungsEtAl1997SSlab: ['<2,b1,@_@_@_@_b53_@_@,w=0.2>']
@@ -80,5 +80,5 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-4            s46       AreaSource   194    1         0.0013      0.0        0.0      
+4            s46       AreaSource   194    1         0.001       0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========

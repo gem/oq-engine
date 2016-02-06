@@ -781,7 +781,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         self.assertEqual(rlz.weight, 1.)
         self.assertEqual(
             str(assoc),
-            "<RlzsAssoc(2)\n0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=1.0>']\n"
+            "<RlzsAssoc(size=2, rlzs=1)\n0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=1.0>']\n"
             "1,ChiouYoungs2008: ['<0,b1_b5_b8,b2_b3,w=1.0>']>")
 
     def test_many_rlzs(self):
@@ -810,7 +810,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         # test the method extract
         assoc = rlzs_assoc.extract([1, 5])
         self.assertEqual(str(assoc), """\
-<RlzsAssoc(4)
+<RlzsAssoc(size=4, rlzs=2)
 0,SadighEtAl1997: ['<1,b1_b3_b6,b2_b3,w=0.5>']
 1,ChiouYoungs2008: ['<1,b1_b3_b6,b2_b3,w=0.5>']
 4,SadighEtAl1997: ['<5,b1_b3_b8,b2_b3,w=0.5>']
@@ -824,7 +824,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
                 return 1
         assoc = csm.info.get_rlzs_assoc(count_ruptures)
         expected_assoc = """\
-<RlzsAssoc(9)
+<RlzsAssoc(size=9, rlzs=9)
 0,SadighEtAl1997: ['<0,b1_b3_b6,@_b3,w=0.04>']
 2,SadighEtAl1997: ['<1,b1_b3_b7,@_b3,w=0.12>']
 4,SadighEtAl1997: ['<2,b1_b3_b8,@_b3,w=0.04>']
@@ -853,7 +853,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         assoc = csm.info.get_rlzs_assoc()
         self.assertEqual(
             str(assoc),
-            "<RlzsAssoc(2)\n"
+            "<RlzsAssoc(size=2, rlzs=5)\n"
             "0,SadighEtAl1997: ['<0,b1,b1,w=0.2>']\n"
             "1,SadighEtAl1997: ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']>")
 

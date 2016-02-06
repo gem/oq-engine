@@ -11,11 +11,11 @@ number_of_logic_tree_samples 0
 maximum_distance             200      
 investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0000   
-rupture_mesh_spacing         2.0000   
-complex_fault_mesh_spacing   2.0000   
-width_of_mfd_bin             0.1000   
-area_source_discretization   5.0000   
+truncation_level             3.000    
+rupture_mesh_spacing         2.000    
+complex_fault_mesh_spacing   2.000    
+width_of_mfd_bin             0.100    
+area_source_discretization   5.000    
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
@@ -59,7 +59,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(8)
+  <RlzsAssoc(size=8, rlzs=8)
   0,BooreAtkinson2008: ['<0,b1,b11_b21,w=0.125>', '<1,b1,b11_b22,w=0.125>']
   0,ChiouYoungs2008: ['<2,b1,b12_b21,w=0.125>', '<3,b1,b12_b22,w=0.125>']
   1,Campbell2003: ['<1,b1,b11_b22,w=0.125>', '<3,b1,b12_b22,w=0.125>']
@@ -99,8 +99,8 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            2         SimpleFaultSource 1,334  1,334     0.0037      0.3550     0.0      
-2            2         SimpleFaultSource 1,297  1,297     0.0021      0.3258     0.0      
-3            1         AreaSource        148    1         0.0021      0.0        0.0      
-1            1         AreaSource        102    1         0.0013      0.0        0.0      
+0            2         SimpleFaultSource 1,334  1,334     0.006       0.788      0.0      
+2            2         SimpleFaultSource 1,297  1,297     0.004       0.730      0.0      
+3            1         AreaSource        148    1         0.003       0.0        0.0      
+1            1         AreaSource        102    1         0.002       0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========

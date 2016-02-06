@@ -9,12 +9,12 @@ Parameters
 calculation_mode             classical
 number_of_logic_tree_samples 0        
 maximum_distance             200      
-investigation_time           1.0000   
+investigation_time           1.000    
 ses_per_logic_tree_path      1        
-truncation_level             3.0000   
-rupture_mesh_spacing         2.0000   
-complex_fault_mesh_spacing   2.0000   
-width_of_mfd_bin             1.0000   
+truncation_level             3.000    
+rupture_mesh_spacing         2.000    
+complex_fault_mesh_spacing   2.000    
+width_of_mfd_bin             1.000    
 area_source_discretization   10       
 random_seed                  106      
 master_seed                  0        
@@ -106,7 +106,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(27)
+  <RlzsAssoc(size=27, rlzs=27)
   0,SadighEtAl1997: ['<0,b1_mfd1_high_dip_dip30,Sad1997,w=0.0132>']
   1,SadighEtAl1997: ['<1,b1_mfd1_high_dip_dip45,Sad1997,w=0.0396>']
   2,SadighEtAl1997: ['<2,b1_mfd1_high_dip_dip60,Sad1997,w=0.0132>']
@@ -188,24 +188,24 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            SFLT1     SimpleFaultSource 60     1         0.0020      0.0        0.0      
-1            SFLT1     SimpleFaultSource 60     1         0.0018      0.0        0.0      
-13           SFLT1     SimpleFaultSource 81     1         0.0017      0.0        0.0      
-14           SFLT1     SimpleFaultSource 81     1         0.0017      0.0        0.0      
-12           SFLT2     SimpleFaultSource 384    1         0.0017      0.0        0.0      
-2            SFLT1     SimpleFaultSource 60     1         0.0016      0.0        0.0      
-26           SFLT2     SimpleFaultSource 89     1         0.0016      0.0        0.0      
-0            SFLT2     SimpleFaultSource 384    1         0.0016      0.0        0.0      
-25           SFLT2     SimpleFaultSource 148    1         0.0016      0.0        0.0      
-16           SFLT2     SimpleFaultSource 148    1         0.0016      0.0        0.0      
-15           SFLT2     SimpleFaultSource 384    1         0.0016      0.0        0.0      
-1            SFLT2     SimpleFaultSource 148    1         0.0016      0.0        0.0      
-5            SFLT2     SimpleFaultSource 89     1         0.0016      0.0        0.0      
-23           SFLT1     SimpleFaultSource 198    1         0.0016      0.0        0.0      
-3            SFLT2     SimpleFaultSource 384    1         0.0016      0.0        0.0      
-23           SFLT2     SimpleFaultSource 89     1         0.0016      0.0        0.0      
-6            SFLT2     SimpleFaultSource 384    1         0.0016      0.0        0.0      
-11           SFLT1     SimpleFaultSource 25     1         0.0016      0.0        0.0      
-3            SFLT1     SimpleFaultSource 150    1         0.0016      0.0        0.0      
-21           SFLT2     SimpleFaultSource 384    1         0.0016      0.0        0.0      
+0            SFLT1     SimpleFaultSource 60     1         0.002       0.0        0.0      
+1            SFLT1     SimpleFaultSource 60     1         0.002       0.0        0.0      
+13           SFLT2     SimpleFaultSource 148    1         0.002       0.0        0.0      
+12           SFLT1     SimpleFaultSource 81     1         0.002       0.0        0.0      
+3            SFLT2     SimpleFaultSource 384    1         0.002       0.0        0.0      
+2            SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
+24           SFLT2     SimpleFaultSource 384    1         0.002       0.0        0.0      
+17           SFLT1     SimpleFaultSource 27     1         0.002       0.0        0.0      
+16           SFLT1     SimpleFaultSource 27     1         0.002       0.0        0.0      
+20           SFLT1     SimpleFaultSource 99     1         0.002       0.0        0.0      
+15           SFLT1     SimpleFaultSource 27     1         0.002       0.0        0.0      
+24           SFLT1     SimpleFaultSource 132    1         0.002       0.0        0.0      
+11           SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
+0            SFLT2     SimpleFaultSource 384    1         0.002       0.0        0.0      
+8            SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
+14           SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
+20           SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
+19           SFLT2     SimpleFaultSource 148    1         0.002       0.0        0.0      
+6            SFLT1     SimpleFaultSource 90     1         0.002       0.0        0.0      
+5            SFLT1     SimpleFaultSource 150    1         0.002       0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========

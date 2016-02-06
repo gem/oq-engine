@@ -9,12 +9,12 @@ Parameters
 calculation_mode             disaggregation
 number_of_logic_tree_samples 0             
 maximum_distance             200           
-investigation_time           1.0000        
+investigation_time           1.000         
 ses_per_logic_tree_path      1             
-truncation_level             3.0000        
-rupture_mesh_spacing         4.0000        
-complex_fault_mesh_spacing   4.0000        
-width_of_mfd_bin             0.1000        
+truncation_level             3.000         
+rupture_mesh_spacing         4.000         
+complex_fault_mesh_spacing   4.000         
+width_of_mfd_bin             0.100         
 area_source_discretization   10            
 random_seed                  23            
 master_seed                  0             
@@ -57,7 +57,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(5)
+  <RlzsAssoc(size=5, rlzs=4)
   0,YoungsEtAl1997SSlab: ['<0,source_model_1,BooreAtkinson2008_YoungsEtAl1997SSlab,w=0.25>', '<1,source_model_1,ChiouYoungs2008_YoungsEtAl1997SSlab,w=0.25>']
   1,BooreAtkinson2008: ['<0,source_model_1,BooreAtkinson2008_YoungsEtAl1997SSlab,w=0.25>']
   1,ChiouYoungs2008: ['<1,source_model_1,ChiouYoungs2008_YoungsEtAl1997SSlab,w=0.25>']
@@ -93,8 +93,8 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-2            1         SimpleFaultSource 1,420  15        0.0040      0.1998     0.0      
-0            2         AreaSource        45     1         0.0015      0.0        0.0      
-1            1         AreaSource        45     1         0.0012      0.0        0.0      
-1            3         AreaSource        45     1         0.0012      0.0        0.0      
+2            1         SimpleFaultSource 1,420  15        0.003       0.159      0.0      
+0            2         AreaSource        45     1         0.001       0.0        0.0      
+1            1         AreaSource        45     1         0.001       0.0        0.0      
+1            3         AreaSource        45     1         0.001       0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========

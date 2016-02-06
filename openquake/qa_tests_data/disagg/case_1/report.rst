@@ -11,10 +11,10 @@ number_of_logic_tree_samples 0
 maximum_distance             200           
 investigation_time           50            
 ses_per_logic_tree_path      1             
-truncation_level             3.0000        
-rupture_mesh_spacing         5.0000        
-complex_fault_mesh_spacing   5.0000        
-width_of_mfd_bin             0.2000        
+truncation_level             3.000         
+rupture_mesh_spacing         5.000         
+complex_fault_mesh_spacing   5.000         
+width_of_mfd_bin             0.200         
 area_source_discretization   10            
 random_seed                  9,000         
 master_seed                  0             
@@ -53,7 +53,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
+  <RlzsAssoc(size=1, rlzs=1)
   0,ChiouYoungs2008: ['<0,b1,b1,w=1.0>']>
 
 Number of ruptures per tectonic region type
@@ -76,8 +76,8 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            4         ComplexFaultSource 164    29        0.0023      0.2890     0.0      
-0            3         SimpleFaultSource  617    83        0.0032      0.0981     0.0      
-0            2         AreaSource         36     1         0.0014      0.0        0.0      
-0            1         PointSource        0.3750 1         0.0002      0.0        0.0      
+0            4         ComplexFaultSource 164    29        0.002       0.224      0.0      
+0            3         SimpleFaultSource  617    83        0.003       0.075      0.0      
+0            2         AreaSource         36     1         0.001       0.0        0.0      
+0            1         PointSource        0.375  1         1.740E-04   0.0        0.0      
 ============ ========= ================== ====== ========= =========== ========== =========

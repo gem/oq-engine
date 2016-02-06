@@ -9,12 +9,12 @@ Parameters
 calculation_mode             classical
 number_of_logic_tree_samples 0        
 maximum_distance             200      
-investigation_time           1.0000   
+investigation_time           1.000    
 ses_per_logic_tree_path      1        
 truncation_level             0.0      
-rupture_mesh_spacing         0.0100   
-complex_fault_mesh_spacing   0.0100   
-width_of_mfd_bin             0.0010   
+rupture_mesh_spacing         0.010    
+complex_fault_mesh_spacing   0.010    
+width_of_mfd_bin             0.001    
 area_source_discretization   10       
 random_seed                  1,066    
 master_seed                  0        
@@ -58,7 +58,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(3)
+  <RlzsAssoc(size=3, rlzs=3)
   0,SadighEtAl1997: ['<0,b1_b2,b1,w=0.3>']
   1,SadighEtAl1997: ['<1,b1_b3,b1,w=0.3>']
   2,SadighEtAl1997: ['<2,b1_b4,b1,w=0.4>']>
@@ -92,7 +92,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  75     1         0.0047      2.1935E-05 0.0      
-1            1         PointSource  75     1         0.0043      1.5020E-05 0.0      
-2            1         PointSource  75     1         0.0043      1.5020E-05 0.0      
+0            1         PointSource  75     1         0.005       2.193E-05  0.0      
+2            1         PointSource  75     1         0.004       2.217E-05  0.0      
+1            1         PointSource  75     1         0.004       1.502E-05  0.0      
 ============ ========= ============ ====== ========= =========== ========== =========

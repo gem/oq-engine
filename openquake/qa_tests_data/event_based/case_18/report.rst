@@ -9,12 +9,12 @@ Parameters
 calculation_mode             event_based
 number_of_logic_tree_samples 3          
 maximum_distance             200        
-investigation_time           1.0000     
+investigation_time           1.000      
 ses_per_logic_tree_path      350        
 truncation_level             0.0        
-rupture_mesh_spacing         1.0000     
-complex_fault_mesh_spacing   1.0000     
-width_of_mfd_bin             0.0010     
+rupture_mesh_spacing         1.000      
+complex_fault_mesh_spacing   1.000      
+width_of_mfd_bin             0.001      
 area_source_discretization   10         
 random_seed                  1,064      
 master_seed                  0          
@@ -37,7 +37,7 @@ Composite source model
 ========= ====== ====================================== =============== ================
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations
 ========= ====== ====================================== =============== ================
-b1        0.3333 `source_model.xml <source_model.xml>`_ simple(3)       3/3             
+b1        0.333  `source_model.xml <source_model.xml>`_ simple(3)       3/3             
 ========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
@@ -53,7 +53,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(2)
+  <RlzsAssoc(size=2, rlzs=3)
   0,AkkarBommer2010: ['<0,b1,AB,w=0.333333333333>', '<1,b1,AB,w=0.333333333333>']
   0,CauzziFaccioli2008: ['<2,b1,CF,w=0.333333333333>']>
 
@@ -90,5 +90,5 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  75     1         0.0056      2.5034E-05 3.9683   
+0            1         PointSource  75     1         0.005       2.718E-05  3.745    
 ============ ========= ============ ====== ========= =========== ========== =========

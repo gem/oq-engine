@@ -11,10 +11,10 @@ number_of_logic_tree_samples 0
 maximum_distance             200      
 investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0000   
-rupture_mesh_spacing         1.0000   
-complex_fault_mesh_spacing   1.0000   
-width_of_mfd_bin             0.1000   
+truncation_level             3.000    
+rupture_mesh_spacing         1.000    
+complex_fault_mesh_spacing   1.000    
+width_of_mfd_bin             0.100    
 area_source_discretization   10       
 random_seed                  23       
 master_seed                  0        
@@ -60,7 +60,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(8)
+  <RlzsAssoc(size=8, rlzs=8)
   0,BooreAtkinson2008: ['<0,SM1,BA2008_C2003,w=0.125>', '<1,SM1,BA2008_T2002,w=0.125>']
   0,CampbellBozorgnia2008: ['<2,SM1,CB2008_C2003,w=0.125>', '<3,SM1,CB2008_T2002,w=0.125>']
   1,Campbell2003: ['<0,SM1,BA2008_C2003,w=0.125>', '<2,SM1,CB2008_C2003,w=0.125>']
@@ -75,10 +75,10 @@ Number of ruptures per tectonic region type
 ================== ====== ======================== =========== ============ ======
 source_model       trt_id trt                      num_sources eff_ruptures weight
 ================== ====== ======================== =========== ============ ======
-source_model_1.xml 0      Active Shallow Crust     1           15           0.3750
-source_model_1.xml 1      Stable Continental Crust 1           15           0.3750
-source_model_2.xml 2      Active Shallow Crust     1           240          6.0000
-source_model_2.xml 3      Active Shallow Crust     1           240          6.0000
+source_model_1.xml 0      Active Shallow Crust     1           15           0.375 
+source_model_1.xml 1      Stable Continental Crust 1           15           0.375 
+source_model_2.xml 2      Active Shallow Crust     1           240          6.000 
+source_model_2.xml 3      Active Shallow Crust     1           240          6.000 
 ================== ====== ======================== =========== ============ ======
 
 =============== ===
@@ -100,8 +100,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-2            1         AreaSource   6.0000 16        0.0021      0.0039     0.0      
-3            1         AreaSource   6.0000 16        0.0011      0.0038     0.0      
-0            1         PointSource  0.3750 1         0.0002      0.0        0.0      
-1            2         PointSource  0.3750 1         0.0001      0.0        0.0      
+2            1         AreaSource   6.000  16        0.003       0.004      0.0      
+3            1         AreaSource   6.000  16        0.001       0.004      0.0      
+0            1         PointSource  0.375  1         1.719E-04   0.0        0.0      
+1            2         PointSource  0.375  1         1.478E-04   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
