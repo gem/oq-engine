@@ -27,7 +27,7 @@ import numpy
 from openquake.baselib.general import humansize, groupby
 from openquake.baselib.performance import perf_dt
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import util
+from openquake.commonlib import util, source
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import (
@@ -158,7 +158,8 @@ def view_ruptures_per_trt(token, dstore):
         # CompositionInfo.get_rlzs_assoc
         erdict = ast.literal_eval(csm_info.eff_ruptures[i])
         for trt_model in sm.trt_models:
-            er = erdict.get(trt_model.id, 0)  # effective ruptures
+            trt = source.capitalize(trt_model.trt)
+            er = erdict.get(trt, 0)  # effective ruptures
             if er:
                 num_trts += 1
                 num_sources = n.get(trt_model.id, 0)
@@ -166,7 +167,7 @@ def view_ruptures_per_trt(token, dstore):
                 eff_ruptures += er
                 weight = w.get(trt_model.id, 0)
                 tot_weight += weight
-                tbl.append((sm.name, trt_model.id, trt_model.trt,
+                tbl.append((sm.name, trt_model.id, trt,
                             num_sources, er, weight))
     rows = [('#TRT models', num_trts),
             ('#sources', tot_sources),
