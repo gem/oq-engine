@@ -30,7 +30,7 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, datastore, sourceconverter
+from openquake.commonlib import parallel, datastore, source, sourceconverter
 from openquake.baselib.general import AccumDict
 
 from openquake.calculators import base, calc
@@ -301,7 +301,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 info['calc_time'] += dt
             self.source_info = numpy.array(
                 sorted(info_dict.values(), key=operator.itemgetter(7),
-                       reverse=True))
+                       reverse=True), source.source_info_dt)
         self.datastore.hdf5.flush()
 
     def post_execute(self, curves_by_trt_gsim):
