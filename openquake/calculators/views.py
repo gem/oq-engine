@@ -312,7 +312,7 @@ def view_totlosses(token, dstore):
         for stat in ('mean', 'mean_ins'):
             for rec in avglosses:
                 zero['%s-%s' % (name, stat)] += rec[name][stat]
-    return rst_table(zero)
+    return rst_table(zero, fmt='%.7E')
 
 
 def sum_table(records):
