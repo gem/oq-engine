@@ -4,6 +4,7 @@
   * Made celery required only in cluster situations
   * Fixed the duplication of exported result in the classical_damage
     calculator when there is more than one realization
+  * Removed several obsolete or deprecated switches from the `oq-engine` command
   * Replaced all classical calculators with their lite counterparts
   * Fixed the site-ordering in the UHS exporter (by lon-lat)
 
