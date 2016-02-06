@@ -43,7 +43,7 @@ class InfoTestCase(unittest.TestCase):
     EXPECTED = '''<CompositionInfo
 b1, x15.xml, trt=[0], weight=1.00: 1 realization(s)>
 See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst for an explanation
-<RlzsAssoc(1)
+<RlzsAssoc(size=1, rlzs=1)
 0,AkkarBommer2010: ['<0,b1,@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>'''
 
     def test_zip(self):
