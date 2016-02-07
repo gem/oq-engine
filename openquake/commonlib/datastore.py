@@ -173,7 +173,9 @@ class DataStore(collections.MutableMapping):
         if not parent and 'hazard_calculation_id' in self.attrs:
             parent_id = ast.literal_eval(self.attrs['hazard_calculation_id'])
             if parent_id:
-                self.parent = self.__class__(parent_id)
+                # NB: I am assuming that the parent is in the same datadir
+                # as the child
+                self.parent = read(parent_id, datadir=self.datadir)
 
     def set_parent(self, parent):
         """
@@ -244,12 +246,6 @@ class DataStore(collections.MutableMapping):
         Generic csv exporter
         """
         return write_csv(self.export_path(key, 'csv'), self[key])
-
-    def reopen(self):
-        """Reopen a closed datastore"""
-        parent = () if self.parent is () else self.parent.reopen()
-        return self.__class__(self.calc_id, self.datadir, parent,
-                              self.export_dir)
 
     def close(self):
         """Close the underlying hdf5 file"""
