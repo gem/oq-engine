@@ -501,7 +501,7 @@ _pkgtest_innervm_run () {
 
         echo 'running EventBasedRisk...'
         oq-lite run EventBasedRisk/job.ini
-        oq-lite export loss_maps -1-rlzs xml /tmp
+        oq-lite export loss_maps-rlzs -1 xml /tmp
         oq-lite show performance
 
         echo 'running ClassicalRisk...'
