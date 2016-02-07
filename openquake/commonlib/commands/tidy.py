@@ -19,7 +19,7 @@ from __future__ import print_function
 from openquake.commonlib import sap, nrml
 
 
-def tidy(fname):
+def tidy(fnames):
     """
     Reformat a NRML file in a canonical form. That also means reducing the
     precision of the floats to a standard value. If the file is invalid,

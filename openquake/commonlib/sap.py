@@ -132,6 +132,7 @@ class Parser(object):
         kw = dict(help=help, type=type, choices=choices, metavar=metavar)
         default = self.argdict[name]
         if default is not NODEFAULT:
+            kw['nargs'] = '*'
             kw['default'] = default
             kw['metavar'] = metavar or str(default)
         abbrev = abbrev or '-' + name[0]
