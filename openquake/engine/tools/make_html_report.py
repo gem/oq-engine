@@ -1,10 +1,10 @@
+import os
 import cgi
 import datetime
-import decimal
 import itertools
 from docutils.examples import html_parts
 
-from openquake.commonlib.datastore import DataStore
+from openquake.commonlib.datastore import read
 from openquake.calculators.views import view_fullreport
 
 tablecounter = itertools.count(0)
@@ -92,12 +92,8 @@ SELECT oq_job_id, user_name, stop_time, status, duration FROM (
 WHERE oq_job_id=%s;
 '''
 
-JOB_INFO = '''
-SELECT * FROM uiapi.job_info WHERE oq_job_id=%s;
-'''
-
 ALL_JOBS = '''
-SELECT s.oq_job_id, o.user_name, status FROM uiapi.job_stats AS s
+SELECT s.oq_job_id, o.user_name, status, ds_calc_dir FROM uiapi.job_stats AS s
 INNER JOIN uiapi.oq_job AS o
 ON o.id=s.oq_job_id
 WHERE stop_time::date = %s OR stop_time IS NULL AND start_time >= %s
@@ -161,7 +157,7 @@ def make_report(conn, isodate='today'):
     jobs = fetcher.query(ALL_JOBS, isodate, isodate)[1:]
     page = '<h2>%d job(s) finished before midnight of %s</h2>' % (
         len(jobs), isodate)
-    for job_id, user, status in jobs:
+    for job_id, user, status, ds_calc in jobs:
         tag_ids.append(job_id)
         tag_status.append(status)
         stats = fetcher.query(JOB_STATS, job_id)[1:]
@@ -169,7 +165,7 @@ def make_report(conn, isodate='today'):
             continue
         (job_id, user, stop_time, status, duration) = stats[0]
 
-        ds = DataStore(job_id, mode='r')
+        ds = read(job_id, datadir=os.path.dirname(ds_calc))
         try:
             report = html_parts(view_fullreport('fullreport', ds))
         except Exception as exc:
@@ -179,19 +175,6 @@ def make_report(conn, isodate='today'):
                 fragment='')
 
         page = report['html_title']
-
-        if 'realizations' in ds:
-            tot_rlzs = len(ds['realizations'])
-        else:
-            tot_rlzs = 1
-        data = fetcher.query(JOB_INFO, job_id)
-        if data[1:]:
-            info_rows = (
-                '<h3>Job Info for calculation=%s, %s</h3>'
-                '<h3>owner: %s, realizations: %d </h3>' % (
-                    job_id, ds.attrs['description'].decode('utf-8'),
-                    user, tot_rlzs)) + html(data)
-            page += info_rows
 
         job_stats = html(fetcher.query(JOB_STATS, job_id))
         page += job_stats
