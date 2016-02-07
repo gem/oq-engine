@@ -387,8 +387,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
     counts_per_rlz = datastore.persistent_attribute('counts_per_rlz')
     is_stochastic = True
 
-    @staticmethod
-    def count_eff_ruptures(ruptures_by_trt_id, trt_model):
+    def count_eff_ruptures(self, ruptures_by_trt_id, trt_model):
         """
         Returns the number of ruptures sampled in the given trt_model.
 

@@ -235,8 +235,7 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[k] = agg_curves(acc[k], expand(v, n, val.siteslice)
                                 if tiling else v)
 
-    @staticmethod
-    def count_eff_ruptures(result_dict, trt_model):
+    def count_eff_ruptures(self, result_dict, trt_model):
         """
         Returns the number of ruptures in the trt_model (after filtering)
         or 0 if the trt_model has been filtered away.
