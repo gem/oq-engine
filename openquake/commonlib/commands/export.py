@@ -25,12 +25,12 @@ from openquake.commonlib.export import export as export_
 
 
 # the export is tested in the demos
-def export(calc_id, datastore_key, format='csv', export_dir='.'):
+def export(datastore_key, calc_id=-1, format='csv', export_dir='.'):
     """
     Export an output from the datastore.
     """
     logging.basicConfig(level=logging.INFO)
-    dstore = datastore.DataStore(calc_id)
+    dstore = datastore.read(calc_id)
     dstore.export_dir = export_dir
     with performance.PerformanceMonitor('export', measuremem=True) as mon:
         for fmt in format.split(','):
@@ -42,7 +42,7 @@ def export(calc_id, datastore_key, format='csv', export_dir='.'):
 
 
 parser = sap.Parser(export)
-parser.arg('calc_id', 'number of the calculation', type=int)
 parser.arg('datastore_key', 'datastore key')
+parser.arg('calc_id', 'number of the calculation', type=int)
 parser.arg('format', 'export formats (comma separated)')
 parser.arg('export_dir', 'export directory')

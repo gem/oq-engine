@@ -38,7 +38,7 @@ from openquake.commonlib.writers import (
 # ########################## utility functions ############################## #
 
 FLOAT = (float, numpy.float32, numpy.float64)
-INT = (int, numpy.uint32, numpy.int64)
+INT = (int, decimal.Decimal, numpy.uint32, numpy.int64)
 
 
 def form(value):
@@ -135,6 +135,18 @@ def classify_gsim_lt(gsim_lt):
         return "simple" + num_gsims
     else:
         return "complex" + num_gsims
+
+
+@view.add('contents')
+def view_contents(token, dstore):
+    """
+    Returns the size of the contents of the datastore and its total size
+    """
+    oq = OqParam.from_(dstore.attrs)
+    rows = [(key, humansize(dstore.getsize(key))) for key in dstore]
+    total = '\n\n%s: %s' % (
+        dstore.hdf5path, humansize(os.path.getsize(dstore.hdf5path)))
+    return rst_table(rows, header=(oq.description, '')) + total
 
 
 @view.add('csm_info')

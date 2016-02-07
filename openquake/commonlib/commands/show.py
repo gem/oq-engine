@@ -51,21 +51,21 @@ def get_hcurves_and_means(dstore):
     return curves_by_rlz, mean_curves
 
 
-def show(calc_id, key=None, rlzs=None):
+def show(what, calc_id=-1, rlzs=None):
     """
     Show the content of a datastore.
 
-    :param calc_id: numeric calculation ID; if 0, show all calculations
-    :param key: key of the datastore
+    :param what: key or view of the datastore
+    :param calc_id: numeric calculation ID; if -1, show the last calculation
     :param rlzs: flag; if given, print out the realizations in order
     """
-    if calc_id == 0:  # show all
+    if what == 'all':  # show all
         if not os.path.exists(datastore.DATADIR):
             return
         rows = []
         for calc_id in datastore.get_calc_ids(datastore.DATADIR):
             try:
-                ds = datastore.DataStore(calc_id, mode='r')
+                ds = datastore.read(calc_id)
                 oq = OqParam.from_(ds.attrs)
                 cmode, descr = oq.calculation_mode, oq.description
             except:
@@ -81,17 +81,16 @@ def show(calc_id, key=None, rlzs=None):
         for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
             print('#%d %s: %s' % row)
         return
-    ds = datastore.DataStore(calc_id, mode='r')
-    if key:
-        if key in datastore.view:
-            print(datastore.view(key, ds))
-            return
-        obj = ds[key]
-        if hasattr(obj, 'value'):  # an array
-            print(write_csv(io.StringIO(), obj.value))
-        else:
-            print(obj)
+    ds = datastore.read(calc_id)
+
+    if what in datastore.view:
+        print(datastore.view(what, ds))
         return
+    obj = ds[what]
+    if hasattr(obj, 'value'):  # an array
+        print(write_csv(io.StringIO(), obj.value))
+    else:
+        print(obj)
 
     oq = OqParam.from_(ds.attrs)
 
@@ -107,15 +106,9 @@ def show(calc_id, key=None, rlzs=None):
         print('Realizations in order of distance from the mean curves')
         for dist, rlz in sorted(dists):
             print('%s: rmsep=%s' % (rlz, dist))
-    else:
-        # print all keys
-        print(oq.calculation_mode, 'calculation (%r) saved in %s contains:' %
-              (oq.description, ds.hdf5path))
-        for key in ds:
-            print(key, humansize(ds.getsize(key)))
 
 
 parser = sap.Parser(show)
+parser.arg('what', 'key or view of the datastore')
 parser.arg('calc_id', 'calculation ID', type=int)
-parser.arg('key', 'key of the datastore')
 parser.flg('rlzs', 'print out the realizations')

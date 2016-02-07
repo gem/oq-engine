@@ -106,6 +106,19 @@ def get_last_calc_id(datadir):
     return calcs[-1]
 
 
+def read(calc_id, mode='r'):
+    """
+    Read the datastore identified by the calculation ID, if it exists
+    and it is accessible.
+    """
+    if calc_id < 0:  # use an old datastore
+        calc_id = get_calc_ids(DATADIR)[calc_id]
+    fname = os.path.join(DATADIR, 'calc_%s.hdf5' % calc_id)
+    assert os.path.exists(fname), fname
+    assert os.access(fname, os.R_OK if mode == 'r' else os.W_OK), fname
+    return DataStore(calc_id, mode=mode)
+
+
 class DataStore(collections.MutableMapping):
     """
     DataStore class to store the inputs/outputs of a calculation on the
