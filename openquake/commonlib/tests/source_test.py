@@ -853,11 +853,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         oq = readinput.get_oqparam(
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         sitecol = readinput.get_site_collection(oq)
-        with mock.patch('logging.warn') as warn:
-            csm = readinput.get_composite_source_model(oq, sitecol)
-        messages = [args[0][0] % args[0][1:] for args in warn.call_args_list]
-        self.assertEqual(
-            messages, ["The source path ('b2',) was sampled 4 times"])
+        csm = readinput.get_composite_source_model(oq, sitecol)
         assoc = csm.info.get_rlzs_assoc()
         self.assertEqual(
             str(assoc),
