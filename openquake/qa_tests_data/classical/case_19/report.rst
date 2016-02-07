@@ -72,7 +72,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 1       
-Sent data                   55.76 KB
+Sent data                   55.64 KB
 =========================== ========
 
 Slowest sources

@@ -69,10 +69,10 @@ simple_fault.xml 0      Active Shallow Crust 1           447          447
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== =======
-Number of tasks to generate 12     
-Sent data                   81.3 KB
-=========================== =======
+=========================== ========
+Number of tasks to generate 12      
+Sent data                   79.79 KB
+=========================== ========
 
 Slowest sources
 ---------------

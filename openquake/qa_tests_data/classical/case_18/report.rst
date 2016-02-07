@@ -70,7 +70,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =======
 Number of tasks to generate 30     
-Sent data                   4.79 MB
+Sent data                   4.78 MB
 =========================== =======
 
 Slowest sources
@@ -78,5 +78,5 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            VICM      AreaSource   60     30        0.001       0.011      0.0      
+0            VICM      AreaSource   60     30        0.002       0.010      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========

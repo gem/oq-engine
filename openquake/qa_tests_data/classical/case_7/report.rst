@@ -79,17 +79,17 @@ filtered_weight 2,287
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== =======
-Number of tasks to generate 3      
-Sent data                   22.2 KB
-=========================== =======
+=========================== ========
+Number of tasks to generate 3       
+Sent data                   21.82 KB
+=========================== ========
 
 Slowest sources
 ---------------
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            2         ComplexFaultSource 485    1         0.002       12         0.0      
-1            1         SimpleFaultSource  901    1         0.002       0.747      0.0      
-0            1         SimpleFaultSource  901    1         0.002       0.721      0.0      
+0            2         ComplexFaultSource 485    1         0.005       20         0.0      
+0            1         SimpleFaultSource  901    1         0.007       1.718      0.0      
+1            1         SimpleFaultSource  901    1         0.002       0.735      0.0      
 ============ ========= ================== ====== ========= =========== ========== =========
