@@ -431,9 +431,6 @@ def get_source_models(oqparam, source_model_lt, in_memory=True):
         sm = rlz.value  # name of the source model
         smpath = rlz.lt_path
         num_samples = samples_by_lt_path[smpath]
-        if num_samples > 1:
-            logging.warn('The source path %s was sampled %d times',
-                         smpath, num_samples)
         fname = possibly_gunzip(os.path.join(oqparam.base_path, sm))
         if in_memory:
             apply_unc = source_model_lt.make_apply_uncertainties(smpath)
