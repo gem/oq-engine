@@ -106,17 +106,21 @@ def get_last_calc_id(datadir):
     return calcs[-1]
 
 
-def read(calc_id, mode='r'):
+def read(calc_id, mode='r', datadir=DATADIR):
     """
-    Read the datastore identified by the calculation ID, if it exists
-    and it is accessible.
+    :param calc_id: calculation ID
+    :param mode: 'r' or 'w'
+    :param datadir: the directory where to look
+    :returns: the corresponding DataStore instance
+
+    Read the datastore, if it exists and it is accessible.
     """
-    if calc_id < 0:  # use an old datastore
-        calc_id = get_calc_ids(DATADIR)[calc_id]
-    fname = os.path.join(DATADIR, 'calc_%s.hdf5' % calc_id)
+    if calc_id < 0:  # retrieve an old datastore
+        calc_id = get_calc_ids(datadir)[calc_id]
+    fname = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
     assert os.path.exists(fname), fname
     assert os.access(fname, os.R_OK if mode == 'r' else os.W_OK), fname
-    return DataStore(calc_id, mode=mode)
+    return DataStore(calc_id, datadir, mode=mode)
 
 
 class DataStore(collections.MutableMapping):
