@@ -243,10 +243,7 @@ class ClassicalCalculator(base.HazardCalculator):
         :param result_dict: a dictionary with keys (trt_id, gsim)
         :param trt_model: a TrtModel instance
         """
-        for key in result_dict:
-            if trt_model.id == key[0] and nonzero(result_dict[key]):
-                return result_dict.eff_ruptures[trt_model.id]
-        return 0
+        return result_dict.eff_ruptures.get(trt_model.id, 0)
 
     def zerodict(self):
         """
