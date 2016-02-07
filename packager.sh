@@ -519,7 +519,7 @@ _pkgtest_innervm_run () {
 
         echo 'running LogicTreeCase3ClassicalPSHA'
         oq-lite run LogicTreeCase3ClassicalPSHA/job.ini --exports xml
-        oq-lite show --rlzs
+        oq-lite show rlzs
 
         echo 'Show all the oq-lite calculations'
         oq-lite show all

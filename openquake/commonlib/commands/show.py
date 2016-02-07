@@ -21,7 +21,6 @@ import io
 import os
 import logging
 
-from openquake.baselib.general import humansize
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.commonlib import sap, datastore
 from openquake.commonlib.oqvalidation import OqParam
@@ -51,13 +50,12 @@ def get_hcurves_and_means(dstore):
     return curves_by_rlz, mean_curves
 
 
-def show(what, calc_id=-1, rlzs=None):
+def show(what, calc_id=-1):
     """
     Show the content of a datastore.
 
     :param what: key or view of the datastore
     :param calc_id: numeric calculation ID; if -1, show the last calculation
-    :param rlzs: flag; if given, print out the realizations in order
     """
     if what == 'all':  # show all
         if not os.path.exists(datastore.DATADIR):
@@ -83,19 +81,8 @@ def show(what, calc_id=-1, rlzs=None):
         return
     ds = datastore.read(calc_id)
 
-    if what in datastore.view:
-        print(datastore.view(what, ds))
-        return
-    obj = ds[what]
-    if hasattr(obj, 'value'):  # an array
-        print(write_csv(io.StringIO(), obj.value))
-    else:
-        print(obj)
-
-    oq = OqParam.from_(ds.attrs)
-
     # this part is experimental
-    if rlzs and 'hcurves' in ds:
+    if what == 'rlzs' and 'hcurves' in ds:
         min_value = 0.01  # used in rmsep
         curves_by_rlz, mean_curves = get_hcurves_and_means(ds)
         dists = []
@@ -106,9 +93,16 @@ def show(what, calc_id=-1, rlzs=None):
         print('Realizations in order of distance from the mean curves')
         for dist, rlz in sorted(dists):
             print('%s: rmsep=%s' % (rlz, dist))
+    elif what in datastore.view:
+        print(datastore.view(what, ds))
+    else:
+        obj = ds[what]
+        if hasattr(obj, 'value'):  # an array
+            print(write_csv(io.StringIO(), obj.value))
+        else:
+            print(obj)
 
 
 parser = sap.Parser(show)
 parser.arg('what', 'key or view of the datastore')
 parser.arg('calc_id', 'calculation ID', type=int)
-parser.flg('rlzs', 'print out the realizations')
