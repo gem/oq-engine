@@ -38,4 +38,4 @@ def tidy(fnames):
         print('Reformatted %s, original left in %s.bak' % (fname, fname))
 
 parser = sap.Parser(tidy)
-parser.arg('fnames', 'NRML file name', nargs='*')
+parser.arg('fnames', 'NRML file name', nargs='+')
