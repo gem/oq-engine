@@ -67,9 +67,9 @@ class TidyTestCase(unittest.TestCase):
     </gmf>
   </gmfSet>
 </gmfCollection>
-</nrml>''')
+</nrml>''', suffix='.xml')
         with Print.patch() as p:
-            tidy(fname)
+            tidy([fname])
         self.assertIn('Reformatted', str(p))
         self.assertEqual(open(fname).read(), '''\
 <?xml version="1.0" encoding="utf-8"?>
@@ -109,9 +109,9 @@ xmlns:gml="http://www.opengis.net/gml"
     </gmf>
   </gmfSet>
 </gmfCollection>
-</nrml>''')
+        </nrml>''', suffix='.xml')
         with Print.patch() as p:
-            tidy(fname)
+            tidy([fname])
         self.assertIn('Could not convert gmv->positivefloat: '
                       'float -0.012492 < 0, line 8 of', str(p))
 
