@@ -1,10 +1,42 @@
-<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
-    <hazardMap investigationTime="50.0" IMT="PGA" statistics="quantile" quantileValue="0.15" poE="0.15">
-        <node lon="-1.0" lat="1.0" iml="0.01" />
-        <node lon="1.0" lat="1.0" iml="0.02" />
-        <node lon="1.0" lat="-1.0" iml="0.03" />
-        <node lon="-1.0" lat="-1.0" iml="0.04" />
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <hazardMap
+    IMT="PGA"
+    investigationTime="5.0000000E+01"
+    poE="1.5000000E-01"
+    quantileValue="1.5000000E-01"
+    statistics="quantile"
+    >
+        <node
+        iml="0.01"
+        lat="1.0"
+        lon="-1.0"
+        >
+            -1.0000000E+00 1.0000000E+00 1.0000000E-02
+        </node>
+        <node
+        iml="0.02"
+        lat="1.0"
+        lon="1.0"
+        >
+            1.0000000E+00 1.0000000E+00 2.0000000E-02
+        </node>
+        <node
+        iml="0.03"
+        lat="-1.0"
+        lon="1.0"
+        >
+            1.0000000E+00 -1.0000000E+00 3.0000000E-02
+        </node>
+        <node
+        iml="0.04"
+        lat="-1.0"
+        lon="-1.0"
+        >
+            -1.0000000E+00 -1.0000000E+00 4.0000000E-02
+        </node>
     </hazardMap>
 </nrml>

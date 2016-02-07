@@ -174,4 +174,4 @@ parser.opt('exports', 'export formats as a comma-separated string',
 parser.opt('loglevel', 'logging level',
            choices='debug info warn error critical'.split())
 parser.flg('pdb', 'enable post mortem debugging', '-d')
-parser.opt('param', 'override parameter')
+parser.opt('param', 'override parameter', nargs='*')

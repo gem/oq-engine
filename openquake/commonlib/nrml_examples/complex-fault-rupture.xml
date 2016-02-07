@@ -1,51 +1,45 @@
-<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
-
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
     <complexFaultRupture>
-        <magnitude>9.0</magnitude>
-        <rake>0.0</rake>
-        <hypocenter lon="-124.977" lat="41.214" depth="0.5088560E+01"/>
+        <magnitude>
+            9.0000000E+00
+        </magnitude>
+        <rake>
+            0.0000000E+00
+        </rake>
+        <hypocenter depth="5.0885600E+00" lat="4.1214000E+01" lon="-1.2497700E+02"/>
         <complexFaultGeometry>
-                <faultTopEdge>
-                    <gml:LineString>
-                        <gml:posList>
-                            -124.704 40.363 0.5493260E+01
-                            -124.977 41.214 0.4988560E+01
-                            -125.140 42.096 0.4897340E+01
-                         </gml:posList>
-                    </gml:LineString>
-                </faultTopEdge>
-
-                <intermediateEdge>
-                  <gml:LineString>
+            <faultTopEdge>
+                <gml:LineString>
                     <gml:posList>
-                      -124.704  40.363  0.5593260E+01
-                      -124.977  41.214  0.5088560E+01
-                      -125.140  42.096  0.4997340E+01
+                        -1.2470400E+02 4.0363000E+01 5.4932600E+00 -1.2497700E+02 4.1214000E+01 4.9885600E+00 -1.2514000E+02 4.2096000E+01 4.8973400E+00
                     </gml:posList>
-                  </gml:LineString>
-                </intermediateEdge>
-
-                <intermediateEdge>
-                  <gml:LineString>
+                </gml:LineString>
+            </faultTopEdge>
+            <intermediateEdge>
+                <gml:LineString>
                     <gml:posList>
-                      -124.704  40.363  0.5693260E+01
-                      -124.977  41.214  0.5188560E+01
-                      -125.140  42.096  0.5097340E+01
+                        -1.2470400E+02 4.0363000E+01 5.5932600E+00 -1.2497700E+02 4.1214000E+01 5.0885600E+00 -1.2514000E+02 4.2096000E+01 4.9973400E+00
                     </gml:posList>
-                  </gml:LineString>
-                  </intermediateEdge>
-
-                  <faultBottomEdge>
-                    <gml:LineString>
-                      <gml:posList>
-                            -123.829 40.347 0.2038490E+02
-                            -124.137 41.218 0.1741390E+02
-                            -124.252 42.115 0.1752740E+02
-                      </gml:posList>
-                    </gml:LineString>
-                  </faultBottomEdge>
+                </gml:LineString>
+            </intermediateEdge>
+            <intermediateEdge>
+                <gml:LineString>
+                    <gml:posList>
+                        -1.2470400E+02 4.0363000E+01 5.6932600E+00 -1.2497700E+02 4.1214000E+01 5.1885600E+00 -1.2514000E+02 4.2096000E+01 5.0973400E+00
+                    </gml:posList>
+                </gml:LineString>
+            </intermediateEdge>
+            <faultBottomEdge>
+                <gml:LineString>
+                    <gml:posList>
+                        -1.2382900E+02 4.0347000E+01 2.0384900E+01 -1.2413700E+02 4.1218000E+01 1.7413900E+01 -1.2425200E+02 4.2115000E+01 1.7527400E+01
+                    </gml:posList>
+                </gml:LineString>
+            </faultBottomEdge>
         </complexFaultGeometry>
     </complexFaultRupture>
 </nrml>

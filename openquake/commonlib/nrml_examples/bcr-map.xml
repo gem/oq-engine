@@ -1,26 +1,33 @@
-<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
-
-    <bcrMap sourceModelTreePath="b1|b2" gsimTreePath="b1|b2"
-            lossCategory="economic_loss" unit="EUR" interestRate="1.0"
-            assetLifeExpectancy="20" lossType="structural">
-
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <bcrMap
+    assetLifeExpectancy="2.0000000E+01"
+    gsimTreePath="b1|b2"
+    interestRate="1.0000000E+00"
+    lossCategory="economic_loss"
+    lossType="structural"
+    sourceModelTreePath="b1|b2"
+    unit="EUR"
+    >
         <node>
             <gml:Point>
-                <gml:pos>-116.0 41.0</gml:pos>
+                <gml:pos>
+                    -1.1600000E+02 4.1000000E+01
+                </gml:pos>
             </gml:Point>
-
-            <bcr assetRef="asset_1" ratio="15.23" aalOrig="1.1" aalRetr="1.0" />
-            <bcr assetRef="asset_2" ratio="25.23" aalOrig="2.1" aalRetr="2.0" />
+            <bcr aalOrig="1.1000000E+00" aalRetr="1.0000000E+00" assetRef="asset_1" ratio="1.5230000E+01"/>
+            <bcr aalOrig="2.1000000E+00" aalRetr="2.0000000E+00" assetRef="asset_2" ratio="2.5230000E+01"/>
         </node>
-
         <node>
             <gml:Point>
-                <gml:pos>-116.0 42.0</gml:pos>
+                <gml:pos>
+                    -1.1600000E+02 4.2000000E+01
+                </gml:pos>
             </gml:Point>
-
-            <bcr assetRef="asset_3" ratio="64.23" aalOrig="2.1" aalRetr="2.0" />
+            <bcr aalOrig="2.1000000E+00" aalRetr="2.0000000E+00" assetRef="asset_3" ratio="6.4230000E+01"/>
         </node>
     </bcrMap>
 </nrml>

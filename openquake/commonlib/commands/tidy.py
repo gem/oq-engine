@@ -25,16 +25,17 @@ def tidy(fnames):
     precision of the floats to a standard value. If the file is invalid,
     a clear error message is shown.
     """
-    try:
-        nodes = nrml.read(fname).nodes
-    except ValueError as err:
-        print(err)
-        return
-    with open(fname + '.bak', 'w') as f:
-        f.write(open(fname).read())
-    with open(fname, 'w') as f:
-        nrml.write(nodes, f)
-    print('Reformatted %s, original left in %s.bak' % (fname, fname))
+    for fname in fnames:
+        try:
+            nodes = nrml.read(fname).nodes
+        except ValueError as err:
+            print(err)
+            return
+        with open(fname + '.bak', 'w') as f:
+            f.write(open(fname).read())
+        with open(fname, 'w') as f:
+            nrml.write(nodes, f)
+        print('Reformatted %s, original left in %s.bak' % (fname, fname))
 
 parser = sap.Parser(tidy)
-parser.arg('fname', 'NRML file name')
+parser.arg('fnames', 'NRML file name', nargs='*')
