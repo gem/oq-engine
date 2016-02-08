@@ -81,7 +81,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     sitecol = datastore.persistent_attribute('sitecol')
     rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
     realizations = datastore.persistent_attribute('realizations')
-    # assets_by_site = datastore.persistent_attribute('assets_by_site')
     assetcol = datastore.persistent_attribute('assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('taxonomies')
@@ -436,7 +435,8 @@ class HazardCalculator(BaseCalculator):
 
         if oq_hazard:
             # TODO: move check_time_event outside the if
-            check_time_event(self.datastore)
+            if 'time_events' in self.datastore:
+                check_time_event(self.datastore)
             if oq_hazard.time_event != oq.time_event:
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
