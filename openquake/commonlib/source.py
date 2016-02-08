@@ -560,7 +560,7 @@ def cjoin(strings, maxlength=LENGTH):
     :returns: a comma separated string of lenght <= maxlength
     """
     s = ','.join(strings)
-    if len(s) > LENGTH:
+    if len(s) > maxlength:
         logging.warn(
             'The string %r is over %d characters: `csm_info.eff_ruptures` '
             'will be corrupted' % (s, maxlength))
