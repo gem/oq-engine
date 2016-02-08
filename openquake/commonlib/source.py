@@ -560,7 +560,7 @@ def cjoin(strings, maxlength=LENGTH):
     :returns: a comma separated string of lenght <= maxlength
     """
     s = ','.join(strings)
-    if len(s) > LENGTH:
+    if len(s) > maxlength:
         logging.warn(
             'The string %r is over %d characters: `csm_info.eff_ruptures` '
             'will be corrupted' % (s, maxlength))
@@ -706,7 +706,7 @@ class CompositionInfo(object):
                 if nr:
                     rups.append('%r: %d' % (capitalize(tm.trt), nr))
                     trts.add(tm.trt)
-            self.eff_ruptures[i] = '{%s}' % cjoin(rups, LENGTH - 2)
+            self.eff_ruptures[i] = '{%s}' % cjoin(rups, LENGTH - len('{}'))
 
             # recompute the GSIM logic tree if needed
             if trts != set(smodel.gsim_lt.tectonic_region_types):

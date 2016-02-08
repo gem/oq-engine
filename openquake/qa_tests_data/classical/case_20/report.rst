@@ -120,7 +120,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 24       
-Sent data                   631.44 KB
+Sent data                   627.71 KB
 =========================== =========
 
 Slowest sources
@@ -128,24 +128,24 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-7            SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
 0            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
-3            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
-4            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
 0            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
-11           SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
-1            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
-10           SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
-5            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
-2            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
 8            SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
-9            SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+4            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
 6            SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
-3            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
-10           CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+5            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+1            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+9            SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+2            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+3            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+10           SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+7            SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+11           SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
 1            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
 4            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
 7            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
-8            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
-3            COMFLT1   ComplexFaultSource   62     1         0.002       0.0        0.0      
+10           CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+0            COMFLT1   ComplexFaultSource   29     1         0.002       0.0        0.0      
+11           CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+1            COMFLT1   ComplexFaultSource   29     1         0.002       0.0        0.0      
 ============ ========= ==================== ====== ========= =========== ========== =========

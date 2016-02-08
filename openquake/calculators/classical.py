@@ -235,8 +235,7 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[k] = agg_curves(acc[k], expand(v, n, val.siteslice)
                                 if tiling else v)
 
-    @staticmethod
-    def count_eff_ruptures(result_dict, trt_model):
+    def count_eff_ruptures(self, result_dict, trt_model):
         """
         Returns the number of ruptures in the trt_model (after filtering)
         or 0 if the trt_model has been filtered away.
@@ -244,10 +243,8 @@ class ClassicalCalculator(base.HazardCalculator):
         :param result_dict: a dictionary with keys (trt_id, gsim)
         :param trt_model: a TrtModel instance
         """
-        for key in result_dict:
-            if trt_model.id == key[0] and nonzero(result_dict[key]):
-                return result_dict.eff_ruptures[trt_model.id]
-        return 0
+        return (result_dict.eff_ruptures.get(trt_model.id, 0) /
+                self.manager.num_tiles)
 
     def zerodict(self):
         """

@@ -112,7 +112,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 22       
-Sent data                   490.76 KB
+Sent data                   486.92 KB
 =========================== =========
 
 Slowest sources
@@ -121,23 +121,23 @@ Slowest sources
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
 0            1         AreaSource   8.125  1         0.001       0.0        0.0      
-0            3         AreaSource   11     1         0.001       0.0        0.0      
-5            1         AreaSource   9.375  1         0.001       0.0        0.0      
-1            3         AreaSource   11     1         0.001       0.0        0.0      
-0            2         AreaSource   11     1         0.001       0.0        0.0      
-9            4         AreaSource   8.125  1         0.001       0.0        0.0      
-8            5         AreaSource   8.125  1         9.971E-04   0.0        0.0      
-2            1         AreaSource   9.375  1         9.909E-04   0.0        0.0      
-9            1         AreaSource   10     1         9.902E-04   0.0        0.0      
-0            5         AreaSource   9.375  1         9.892E-04   0.0        0.0      
-4            5         AreaSource   8.125  1         9.880E-04   0.0        0.0      
-3            3         AreaSource   12     1         9.840E-04   0.0        0.0      
-4            2         AreaSource   9.750  1         9.811E-04   0.0        0.0      
-2            4         AreaSource   9.375  1         9.780E-04   0.0        0.0      
-0            4         AreaSource   8.125  1         9.770E-04   0.0        0.0      
-1            4         AreaSource   9.375  1         9.742E-04   0.0        0.0      
-1            5         AreaSource   9.375  1         9.689E-04   0.0        0.0      
-5            5         AreaSource   9.375  1         9.651E-04   0.0        0.0      
-7            3         AreaSource   12     1         9.649E-04   0.0        0.0      
-6            2         AreaSource   11     1         9.642E-04   0.0        0.0      
+8            5         AreaSource   8.125  1         0.001       0.0        0.0      
+2            5         AreaSource   10     1         0.001       0.0        0.0      
+7            1         AreaSource   9.375  1         0.001       0.0        0.0      
+1            2         AreaSource   11     1         0.001       0.0        0.0      
+4            2         AreaSource   9.750  1         0.001       0.0        0.0      
+9            3         AreaSource   11     1         0.001       0.0        0.0      
+1            4         AreaSource   9.375  1         9.999E-04   0.0        0.0      
+7            4         AreaSource   10     1         9.990E-04   0.0        0.0      
+3            5         AreaSource   9.375  1         9.940E-04   0.0        0.0      
+1            3         AreaSource   11     1         9.899E-04   0.0        0.0      
+0            4         AreaSource   8.125  1         9.861E-04   0.0        0.0      
+2            2         AreaSource   11     1         9.851E-04   0.0        0.0      
+4            3         AreaSource   11     1         9.840E-04   0.0        0.0      
+3            1         AreaSource   8.125  1         9.789E-04   0.0        0.0      
+3            2         AreaSource   11     1         9.770E-04   0.0        0.0      
+5            1         AreaSource   9.375  1         9.730E-04   0.0        0.0      
+2            1         AreaSource   9.375  1         9.720E-04   0.0        0.0      
+2            4         AreaSource   9.375  1         9.720E-04   0.0        0.0      
+6            4         AreaSource   9.375  1         9.711E-04   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========

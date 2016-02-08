@@ -80,7 +80,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 2       
-Sent data                   14.69 KB
+Sent data                   14.44 KB
 =========================== ========
 
 Slowest sources
@@ -88,6 +88,6 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-1            1         PointSource  87     1         0.005       1.621E-05  0.0      
-0            1         PointSource  75     1         0.005       2.503E-05  0.0      
+1            1         PointSource  87     1         0.005       1.502E-05  0.0      
+0            1         PointSource  75     1         0.004       2.098E-05  0.0      
 ============ ========= ============ ====== ========= =========== ========== =========

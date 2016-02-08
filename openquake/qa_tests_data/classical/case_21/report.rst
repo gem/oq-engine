@@ -178,10 +178,10 @@ filtered_weight 8,175
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== ======
-Number of tasks to generate 30    
-Sent data                   1.5 MB
-=========================== ======
+=========================== =======
+Number of tasks to generate 30     
+Sent data                   1.49 MB
+=========================== =======
 
 Slowest sources
 ---------------
@@ -189,23 +189,23 @@ Slowest sources
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
 0            SFLT1     SimpleFaultSource 60     1         0.002       0.0        0.0      
-1            SFLT1     SimpleFaultSource 60     1         0.002       0.0        0.0      
-13           SFLT2     SimpleFaultSource 148    1         0.002       0.0        0.0      
-12           SFLT1     SimpleFaultSource 81     1         0.002       0.0        0.0      
+8            SFLT1     SimpleFaultSource 90     1         0.002       0.0        0.0      
+17           SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
 3            SFLT2     SimpleFaultSource 384    1         0.002       0.0        0.0      
-2            SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
-24           SFLT2     SimpleFaultSource 384    1         0.002       0.0        0.0      
-17           SFLT1     SimpleFaultSource 27     1         0.002       0.0        0.0      
-16           SFLT1     SimpleFaultSource 27     1         0.002       0.0        0.0      
-20           SFLT1     SimpleFaultSource 99     1         0.002       0.0        0.0      
-15           SFLT1     SimpleFaultSource 27     1         0.002       0.0        0.0      
-24           SFLT1     SimpleFaultSource 132    1         0.002       0.0        0.0      
-11           SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
-0            SFLT2     SimpleFaultSource 384    1         0.002       0.0        0.0      
-8            SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
-14           SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
-20           SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
-19           SFLT2     SimpleFaultSource 148    1         0.002       0.0        0.0      
+1            SFLT2     SimpleFaultSource 148    1         0.002       0.0        0.0      
+18           SFLT1     SimpleFaultSource 99     1         0.002       0.0        0.0      
+1            SFLT1     SimpleFaultSource 60     1         0.002       0.0        0.0      
 6            SFLT1     SimpleFaultSource 90     1         0.002       0.0        0.0      
-5            SFLT1     SimpleFaultSource 150    1         0.002       0.0        0.0      
+12           SFLT2     SimpleFaultSource 384    1         0.002       0.0        0.0      
+13           SFLT1     SimpleFaultSource 81     1         0.002       0.0        0.0      
+18           SFLT2     SimpleFaultSource 384    1         0.002       0.0        0.0      
+23           SFLT1     SimpleFaultSource 198    1         0.002       0.0        0.0      
+19           SFLT2     SimpleFaultSource 148    1         0.002       0.0        0.0      
+21           SFLT2     SimpleFaultSource 384    1         0.002       0.0        0.0      
+25           SFLT1     SimpleFaultSource 132    1         0.002       0.0        0.0      
+4            SFLT1     SimpleFaultSource 150    1         0.002       0.0        0.0      
+5            SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
+23           SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
+25           SFLT2     SimpleFaultSource 148    1         0.002       0.0        0.0      
+26           SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
