@@ -1,22 +1,22 @@
 Probabilistic Event-Based QA Test with Spatial Correlation, case 2
 ==================================================================
 
-num_sites = 2, sitecol = 461 B
+num_sites = 2, sitecol = 730 B
 
 Parameters
 ----------
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 0          
-maximum_distance             200.0      
-investigation_time           50.0       
+maximum_distance             200        
+investigation_time           50         
 ses_per_logic_tree_path      150        
 truncation_level             None       
-rupture_mesh_spacing         2.0        
-complex_fault_mesh_spacing   2.0        
-width_of_mfd_bin             0.1        
-area_source_discretization   10.0       
-random_seed                  123456789  
+rupture_mesh_spacing         2.000      
+complex_fault_mesh_spacing   2.000      
+width_of_mfd_bin             0.100      
+area_source_discretization   10         
+random_seed                  123,456,789
 master_seed                  0          
 concurrent_tasks             16         
 ============================ ===========
@@ -53,7 +53,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
+  <RlzsAssoc(size=1, rlzs=1)
   0,BooreAtkinson2008: ['<0,b1,b1,w=1.0>']>
 
 Non-empty rupture collections
@@ -61,7 +61,7 @@ Non-empty rupture collections
 === ========= ==================== ============
 col smlt_path TRT                  num_ruptures
 === ========= ==================== ============
-0   b1        Active Shallow Crust 22566       
+0   b1        Active Shallow Crust 22,566      
 === ========= ==================== ============
 
 Collections <-> realizations
@@ -75,7 +75,15 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =======
 Number of tasks to generate 1      
-Sent data                   6.57 KB
+Sent data                   6.32 KB
 Total received data         1.84 MB
 Maximum received per task   1.84 MB
 =========================== =======
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         PointSource  0.025  1         1.330E-04   0.0        0.410    
+============ ========= ============ ====== ========= =========== ========== =========

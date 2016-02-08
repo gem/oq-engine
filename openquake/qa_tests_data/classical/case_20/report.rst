@@ -1,24 +1,25 @@
 Classical Hazard QA Test, Case 20
 =================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             200.0    
-investigation_time           1.0      
+maximum_distance             200      
+investigation_time           1.000    
 ses_per_logic_tree_path      1        
-truncation_level             3.0      
-rupture_mesh_spacing         2.0      
-complex_fault_mesh_spacing   2.0      
-width_of_mfd_bin             1.0      
-area_source_discretization   10.0     
+truncation_level             3.000    
+rupture_mesh_spacing         2.000    
+complex_fault_mesh_spacing   2.000    
+width_of_mfd_bin             1.000    
+area_source_discretization   10       
 random_seed                  106      
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -75,7 +76,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(12)
+  <RlzsAssoc(size=12, rlzs=12)
   0,SadighEtAl1997: ['<0,sm1_sg1_cog1_char_complex,Sad1997,w=0.07>']
   1,SadighEtAl1997: ['<1,sm1_sg1_cog1_char_plane,Sad1997,w=0.105>']
   2,SadighEtAl1997: ['<2,sm1_sg1_cog1_char_simple,Sad1997,w=0.175>']
@@ -92,32 +93,59 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources num_ruptures weight
+source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 3           86           86.0  
-source_model.xml 1      Active Shallow Crust 3           86           86.0  
-source_model.xml 2      Active Shallow Crust 3           86           86.0  
-source_model.xml 3      Active Shallow Crust 3           119          119.0 
-source_model.xml 4      Active Shallow Crust 3           119          119.0 
-source_model.xml 5      Active Shallow Crust 3           119          119.0 
-source_model.xml 6      Active Shallow Crust 3           88           88.0  
-source_model.xml 7      Active Shallow Crust 3           88           88.0  
-source_model.xml 8      Active Shallow Crust 3           88           88.0  
-source_model.xml 9      Active Shallow Crust 3           121          121.0 
-source_model.xml 10     Active Shallow Crust 3           121          121.0 
-source_model.xml 11     Active Shallow Crust 3           121          121.0 
+source_model.xml 0      Active Shallow Crust 3           86           86    
+source_model.xml 1      Active Shallow Crust 3           86           86    
+source_model.xml 2      Active Shallow Crust 3           86           86    
+source_model.xml 3      Active Shallow Crust 3           119          119   
+source_model.xml 4      Active Shallow Crust 3           119          119   
+source_model.xml 5      Active Shallow Crust 3           119          119   
+source_model.xml 6      Active Shallow Crust 3           88           88    
+source_model.xml 7      Active Shallow Crust 3           88           88    
+source_model.xml 8      Active Shallow Crust 3           88           88    
+source_model.xml 9      Active Shallow Crust 3           121          121   
+source_model.xml 10     Active Shallow Crust 3           121          121   
+source_model.xml 11     Active Shallow Crust 3           121          121   
 ================ ====== ==================== =========== ============ ======
 
-=============== ======
-#TRT models     12    
-#sources        36    
-#ruptures       1242  
-filtered_weight 1242.0
-=============== ======
+=============== =====
+#TRT models     12   
+#sources        36   
+#eff_ruptures   1,242
+filtered_weight 1,242
+=============== =====
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== =======
-Number of tasks to generate 24     
-Sent data                   1.04 MB
-=========================== =======
+=========================== =========
+Number of tasks to generate 24       
+Sent data                   627.71 KB
+=========================== =========
+
+Slowest sources
+---------------
+============ ========= ==================== ====== ========= =========== ========== =========
+trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
+============ ========= ==================== ====== ========= =========== ========== =========
+0            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+0            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+8            SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+4            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+6            SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+5            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+1            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+9            SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+2            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+3            SFLT1     SimpleFaultSource    56     1         0.002       0.0        0.0      
+10           SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+7            SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+11           SFLT1     SimpleFaultSource    58     1         0.002       0.0        0.0      
+1            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+4            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+7            CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+10           CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+0            COMFLT1   ComplexFaultSource   29     1         0.002       0.0        0.0      
+11           CHAR1     CharacteristicFaultS 1.000  1         0.002       0.0        0.0      
+1            COMFLT1   ComplexFaultSource   29     1         0.002       0.0        0.0      
+============ ========= ==================== ====== ========= =========== ========== =========

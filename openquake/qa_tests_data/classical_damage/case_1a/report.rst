@@ -1,24 +1,25 @@
 Classical PSHA-Based Hazard
 ===========================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
 ============================ ================
 calculation_mode             classical_damage
 number_of_logic_tree_samples 0               
-maximum_distance             200.0           
-investigation_time           1.0             
+maximum_distance             200             
+investigation_time           1.000           
 ses_per_logic_tree_path      1               
-truncation_level             3.0             
-rupture_mesh_spacing         1.0             
-complex_fault_mesh_spacing   1.0             
-width_of_mfd_bin             0.1             
-area_source_discretization   20.0            
+truncation_level             3.000           
+rupture_mesh_spacing         1.000           
+complex_fault_mesh_spacing   1.000           
+width_of_mfd_bin             0.100           
+area_source_discretization   20              
 random_seed                  42              
 master_seed                  0               
 concurrent_tasks             16              
+sites_per_tile               1000            
 ============================ ================
 
 Input files
@@ -55,22 +56,22 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
+  <RlzsAssoc(size=1, rlzs=1)
   0,SadighEtAl1997: ['<0,b1,b1,w=1.0>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources num_ruptures weight
+source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           1694         1694.0
+source_model.xml 0      Active Shallow Crust 1           1,694        1,694 
 ================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 13      
-Sent data                   84.13 KB
+Sent data                   81.31 KB
 =========================== ========
 
 Exposure model
@@ -85,3 +86,11 @@ Taxonomy #Assets
 ======== =======
 Wood     1      
 ======== =======
+
+Slowest sources
+---------------
+============ ========= ================= ====== ========= =========== ========== =========
+trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
+============ ========= ================= ====== ========= =========== ========== =========
+0            1         SimpleFaultSource 1,694  15        0.002       0.116      0.0      
+============ ========= ================= ====== ========= =========== ========== =========
