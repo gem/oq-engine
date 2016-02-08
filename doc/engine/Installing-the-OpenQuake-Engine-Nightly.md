@@ -1,4 +1,4 @@
-### Installing the OpenQuake Engine
+# Installing the OpenQuake Engine nightly builds on Ubuntu Linux
 
 Here's how to install the latest nightly engine package on **Ubuntu 12.04** and **Ubuntu 14.04**:
 
