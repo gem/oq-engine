@@ -1,24 +1,25 @@
 Classical Hazard QA Test, Case 3
 ================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             200.0    
-investigation_time           1.0      
+maximum_distance             200      
+investigation_time           1.000    
 ses_per_logic_tree_path      1        
 truncation_level             0.0      
-rupture_mesh_spacing         1.0      
-complex_fault_mesh_spacing   1.0      
-width_of_mfd_bin             1.0      
-area_source_discretization   0.05     
-random_seed                  1066     
+rupture_mesh_spacing         1.000    
+complex_fault_mesh_spacing   1.000    
+width_of_mfd_bin             1.000    
+area_source_discretization   0.050    
+random_seed                  1,066    
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -53,16 +54,16 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
+  <RlzsAssoc(size=1, rlzs=1)
   0,SadighEtAl1997: ['<0,b1,b1,w=1.0>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ =============
-source_model     trt_id trt                  num_sources num_ruptures weight       
-================ ====== ==================== =========== ============ =============
-source_model.xml 0      active shallow crust 1           31353        783.825012207
-================ ====== ==================== =========== ============ =============
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources eff_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust 1           31,353       783   
+================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
@@ -70,3 +71,11 @@ Expected data transfer for the sources
 Number of tasks to generate 16     
 Sent data                   6.34 MB
 =========================== =======
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         AreaSource   783    31,353    0.002       6.579      0.0      
+============ ========= ============ ====== ========= =========== ========== =========

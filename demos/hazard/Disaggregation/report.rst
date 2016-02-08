@@ -1,21 +1,21 @@
 Disaggregation calculation with Source Model containing an Area Source and a Simple Fault Source belonging to different tectonic region types
 =============================================================================================================================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
 ============================ ==============
 calculation_mode             disaggregation
 number_of_logic_tree_samples 0             
-maximum_distance             200.0         
-investigation_time           50.0          
+maximum_distance             200           
+investigation_time           50            
 ses_per_logic_tree_path      1             
-truncation_level             3.0           
-rupture_mesh_spacing         2.0           
-complex_fault_mesh_spacing   2.0           
-width_of_mfd_bin             0.1           
-area_source_discretization   5.0           
+truncation_level             3.000         
+rupture_mesh_spacing         2.000         
+complex_fault_mesh_spacing   2.000         
+width_of_mfd_bin             0.100         
+area_source_discretization   5.000         
 random_seed                  23            
 master_seed                  0             
 concurrent_tasks             16            
@@ -54,25 +54,25 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(2)
+  <RlzsAssoc(size=2, rlzs=1)
   0,ChiouYoungs2008: ['<0,b11,b11_b21,w=1.0>']
   1,ToroEtAl2002: ['<0,b11,b11_b21,w=1.0>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================ ====== ======================== =========== ============ ======
-source_model     trt_id trt                      num_sources num_ruptures weight
+source_model     trt_id trt                      num_sources eff_ruptures weight
 ================ ====== ======================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust     1           1334         1334.0
-source_model.xml 1      Stable Continental Crust 1           4100         102.5 
+source_model.xml 0      Active Shallow Crust     1           1,334        1,334 
+source_model.xml 1      Stable Continental Crust 1           4,100        102   
 ================ ====== ======================== =========== ============ ======
 
-=============== ======
-#TRT models     2     
-#sources        2     
-#ruptures       5434  
-filtered_weight 1436.5
-=============== ======
+=============== =====
+#TRT models     2    
+#sources        2    
+#eff_ruptures   5,434
+filtered_weight 1,437
+=============== =====
 
 Expected data transfer for the sources
 --------------------------------------
@@ -80,3 +80,12 @@ Expected data transfer for the sources
 Number of tasks to generate 17     
 Sent data                   5.26 MB
 =========================== =======
+
+Slowest sources
+---------------
+============ ========= ================= ====== ========= =========== ========== =========
+trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
+============ ========= ================= ====== ========= =========== ========== =========
+0            2         SimpleFaultSource 1,334  1,334     0.002       0.331      0.0      
+1            1         AreaSource        102    205       0.001       0.066      0.0      
+============ ========= ================= ====== ========= =========== ========== =========

@@ -1,24 +1,25 @@
 Hazard Calculation for end-to-end hazard+risk
 =============================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             300.0    
-investigation_time           15.0     
+maximum_distance             300      
+investigation_time           15       
 ses_per_logic_tree_path      1        
-truncation_level             4.0      
-rupture_mesh_spacing         20.0     
-complex_fault_mesh_spacing   20.0     
-width_of_mfd_bin             0.2      
-area_source_discretization   10.0     
-random_seed                  1024     
+truncation_level             4.000    
+rupture_mesh_spacing         20       
+complex_fault_mesh_spacing   20       
+width_of_mfd_bin             0.200    
+area_source_discretization   10       
+random_seed                  1,024    
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -54,7 +55,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(5)
+  <RlzsAssoc(size=5, rlzs=4)
   0,AkkarBommer2010: ['<0,b1,b1_b5,w=0.25>', '<1,b1,b1_b6,w=0.25>', '<2,b1,b1_b7,w=0.25>', '<3,b1,b1_b8,w=0.25>']
   1,AtkinsonBoore2003SInter: ['<1,b1,b1_b6,w=0.25>']
   1,LinLee2008SInter: ['<3,b1,b1_b8,w=0.25>']
@@ -63,23 +64,32 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ==================== =========== ============ ==============
-source_model     trt_id trt                  num_sources num_ruptures weight        
-================ ====== ==================== =========== ============ ==============
-source_model.xml 0      Active Shallow Crust 1           23           0.574999988079
-source_model.xml 1      Subduction Interface 1           23           0.574999988079
-================ ====== ==================== =========== ============ ==============
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources eff_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust 1           23           0.575 
+source_model.xml 1      Subduction Interface 1           23           0.575 
+================ ====== ==================== =========== ============ ======
 
-=============== =============
-#TRT models     2            
-#sources        2            
-#ruptures       46           
-filtered_weight 1.14999997616
-=============== =============
+=============== =====
+#TRT models     2    
+#sources        2    
+#eff_ruptures   46   
+filtered_weight 1.150
+=============== =====
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 2       
-Sent data                   16.66 KB
+Sent data                   16.18 KB
 =========================== ========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            A         PointSource  0.575  1         1.850E-04   0.0        0.0      
+1            B         PointSource  0.575  1         1.190E-04   0.0        0.0      
+============ ========= ============ ====== ========= =========== ========== =========

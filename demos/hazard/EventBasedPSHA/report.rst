@@ -1,21 +1,21 @@
 Event Based PSHA using Area Source
 ==================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 0          
-maximum_distance             200.0      
-investigation_time           50.0       
+maximum_distance             200        
+investigation_time           50         
 ses_per_logic_tree_path      10         
-truncation_level             3.0        
-rupture_mesh_spacing         2.0        
-complex_fault_mesh_spacing   2.0        
-width_of_mfd_bin             0.1        
-area_source_discretization   5.0        
+truncation_level             3.000      
+rupture_mesh_spacing         2.000      
+complex_fault_mesh_spacing   2.000      
+width_of_mfd_bin             0.100      
+area_source_discretization   5.000      
 random_seed                  23         
 master_seed                  0          
 concurrent_tasks             16         
@@ -53,7 +53,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
+  <RlzsAssoc(size=1, rlzs=1)
   0,BooreAtkinson2008: ['<0,b1,b1,w=1.0>']>
 
 Non-empty rupture collections
@@ -75,7 +75,15 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 18       
-Sent data                   360.17 KB
+Sent data                   357 KB   
 Total received data         185.85 KB
 Maximum received per task   15.5 KB  
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         AreaSource   1,230  205       0.001       0.066      33       
+============ ========= ============ ====== ========= =========== ========== =========

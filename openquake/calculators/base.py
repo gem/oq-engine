@@ -316,7 +316,6 @@ class HazardCalculator(BaseCalculator):
         else:  # we are in a basic calculator
             self.read_risk_data()
             if 'source' in self.oqparam.inputs:
-                logging.info('Reading the composite source model')
                 with self.monitor(
                         'reading composite source model', autoflush=True):
                     self.csm = readinput.get_composite_source_model(

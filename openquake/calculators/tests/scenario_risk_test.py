@@ -70,8 +70,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 =============== ===================
 structural-mean structural-mean_ins
 =============== ===================
-2.6872496E+03         NAN          
-3.2341374E+03         NAN          
+2.6872496E+03   NAN                
+3.2341374E+03   NAN                
 =============== ===================''')
 
     @attr('qa', 'risk', 'scenario_risk')

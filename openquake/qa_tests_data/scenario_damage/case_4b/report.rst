@@ -1,19 +1,19 @@
 scenario hazard
 ===============
 
-num_sites = 7, sitecol = 581 B
+num_sites = 7, sitecol = 960 B
 
 Parameters
 ----------
 ============================ ========
 calculation_mode             scenario
 number_of_logic_tree_samples 0       
-maximum_distance             200.0   
+maximum_distance             200     
 investigation_time           None    
 ses_per_logic_tree_path      1       
-truncation_level             3.0     
-rupture_mesh_spacing         2.0     
-complex_fault_mesh_spacing   2.0     
+truncation_level             3.000   
+rupture_mesh_spacing         2.000   
+complex_fault_mesh_spacing   2.000   
 width_of_mfd_bin             None    
 area_source_discretization   None    
 random_seed                  42      

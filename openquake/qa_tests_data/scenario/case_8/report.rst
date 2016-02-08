@@ -1,19 +1,19 @@
 Scenario QA Test with AtkinsonBoore2003SInter
 =============================================
 
-num_sites = 2, sitecol = 461 B
+num_sites = 2, sitecol = 730 B
 
 Parameters
 ----------
 ============================ ========
 calculation_mode             scenario
 number_of_logic_tree_samples 0       
-maximum_distance             200.0   
+maximum_distance             200     
 investigation_time           None    
 ses_per_logic_tree_path      1       
 truncation_level             None    
-rupture_mesh_spacing         1.0     
-complex_fault_mesh_spacing   1.0     
+rupture_mesh_spacing         1.000   
+complex_fault_mesh_spacing   1.000   
 width_of_mfd_bin             None    
 area_source_discretization   None    
 random_seed                  3       

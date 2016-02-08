@@ -10,7 +10,7 @@ import logging
 
 
 from openquake.baselib.general import humansize
-from openquake.commonlib import readinput, datastore, source
+from openquake.commonlib import readinput, datastore, source, parallel
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.calculators import base, views
 
@@ -35,13 +35,19 @@ class ReportWriter(object):
         source_data_transfer='Expected data transfer for the sources',
         avglosses_data_transfer='Estimated data transfer for the avglosses',
         exposure_info='Exposure model',
+        short_source_info='Slowest sources',
+        performance='Slowest operations',
     )
 
     def __init__(self, dstore):
         self.dstore = dstore
         self.oq = oq = OqParam.from_(dstore.attrs)
         self.text = oq.description + '\n' + '=' * len(oq.description)
-        sitecol_size = humansize(len(dstore.hdf5['sitecol'].value))
+        # NB: in the future, the sitecol could be transferred as
+        # an array by leveraging the HDF5 serialization protocol in
+        # litetask decorator; for the moment however the size of the
+        # data to transfer is given by the usual pickle
+        sitecol_size = humansize(len(parallel.Pickled(dstore['sitecol'])))
         self.text += '\n\nnum_sites = %d, sitecol = %s' % (
             len(dstore['sitemesh']), sitecol_size)
 
@@ -52,10 +58,7 @@ class ReportWriter(object):
         if obj:
             text = '\n::\n\n' + indent(str(obj))
         else:
-            orig = views.rst_table.__defaults__
-            views.rst_table.__defaults__ = (None, '%s')  # disable formatting
             text = datastore.view(name, self.dstore)
-            views.rst_table.__defaults__ = orig
         self.text += '\n'.join(['\n\n' + title, line, text])
 
     def make_report(self):
@@ -78,6 +81,10 @@ class ReportWriter(object):
             self.add('avglosses_data_transfer')
         if 'exposure' in oq.inputs:
             self.add('exposure_info')
+        if 'source_info' in ds:
+            self.add('short_source_info')
+        if 'performance_data' in ds:
+            self.add('performance')
         return self.text
 
     def save(self, fname):
@@ -102,8 +109,8 @@ def build_report(job_ini, output_dir=None):
     # some taken is care so that the real calculation is not run:
     # the goal is to extract information about the source management only
     calc.SourceManager = source.DummySourceManager
-    calc.count_ruptures = lambda result_dict, trt_model: True
-    with mock.patch.object(calc.__class__, 'core_task', source.dummy_task):
+    with mock.patch.object(
+            calc.__class__, 'core_task', source.count_eff_ruptures):
         calc.pre_execute()
     with mock.patch.object(logging.root, 'info'):  # reduce logging
         calc.execute()
