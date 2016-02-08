@@ -1,24 +1,25 @@
 Classical PSHA with non-trivial logic tree (1 source model + relative uncertainties on G-R b value and maximum magnitude and 2 GMPEs per tectonic region type)
 ==============================================================================================================================================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             200.0    
-investigation_time           50.0     
+maximum_distance             200      
+investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0      
-rupture_mesh_spacing         2.0      
-complex_fault_mesh_spacing   2.0      
-width_of_mfd_bin             0.1      
-area_source_discretization   5.0      
+truncation_level             3.000    
+rupture_mesh_spacing         2.000    
+complex_fault_mesh_spacing   2.000    
+width_of_mfd_bin             0.100    
+area_source_discretization   5.000    
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -78,7 +79,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(36)
+  <RlzsAssoc(size=36, rlzs=36)
   0,BooreAtkinson2008: ['<0,b11_b21_b31,b11_b21,w=0.02772225>', '<1,b11_b21_b31,b11_b22,w=0.02772225>']
   0,ChiouYoungs2008: ['<2,b11_b21_b31,b12_b21,w=0.02772225>', '<3,b11_b21_b31,b12_b22,w=0.02772225>']
   1,Campbell2003: ['<1,b11_b21_b31,b11_b22,w=0.02772225>', '<3,b11_b21_b31,b12_b22,w=0.02772225>']
@@ -118,39 +119,64 @@ Realizations per (TRT, GSIM)
 
 Number of ruptures per tectonic region type
 -------------------------------------------
-================ ====== ======================== =========== ============ =======
-source_model     trt_id trt                      num_sources num_ruptures weight 
-================ ====== ======================== =========== ============ =======
-source_model.xml 0      Active Shallow Crust     1           1334         1334.0 
-source_model.xml 1      Stable Continental Crust 1           4100         102.5  
-source_model.xml 2      Active Shallow Crust     1           1339         1339.0 
-source_model.xml 3      Stable Continental Crust 1           5125         128.125
-source_model.xml 4      Active Shallow Crust     1           1344         1344.0 
-source_model.xml 5      Stable Continental Crust 1           6150         153.75 
-source_model.xml 6      Active Shallow Crust     1           1334         1334.0 
-source_model.xml 7      Stable Continental Crust 1           4100         102.5  
-source_model.xml 8      Active Shallow Crust     1           1339         1339.0 
-source_model.xml 9      Stable Continental Crust 1           5125         128.125
-source_model.xml 10     Active Shallow Crust     1           1344         1344.0 
-source_model.xml 11     Stable Continental Crust 1           6150         153.75 
-source_model.xml 12     Active Shallow Crust     1           1334         1334.0 
-source_model.xml 13     Stable Continental Crust 1           4100         102.5  
-source_model.xml 14     Active Shallow Crust     1           1339         1339.0 
-source_model.xml 15     Stable Continental Crust 1           5125         128.125
-source_model.xml 16     Active Shallow Crust     1           1344         1344.0 
-source_model.xml 17     Stable Continental Crust 1           6150         153.75 
-================ ====== ======================== =========== ============ =======
+================ ====== ======================== =========== ============ ======
+source_model     trt_id trt                      num_sources eff_ruptures weight
+================ ====== ======================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust     1           1,334        1,334 
+source_model.xml 1      Stable Continental Crust 1           4,100        102   
+source_model.xml 2      Active Shallow Crust     1           1,339        1,339 
+source_model.xml 3      Stable Continental Crust 1           5,125        128   
+source_model.xml 4      Active Shallow Crust     1           1,344        1,344 
+source_model.xml 5      Stable Continental Crust 1           6,150        153   
+source_model.xml 6      Active Shallow Crust     1           1,334        1,334 
+source_model.xml 7      Stable Continental Crust 1           4,100        102   
+source_model.xml 8      Active Shallow Crust     1           1,339        1,339 
+source_model.xml 9      Stable Continental Crust 1           5,125        128   
+source_model.xml 10     Active Shallow Crust     1           1,344        1,344 
+source_model.xml 11     Stable Continental Crust 1           6,150        153   
+source_model.xml 12     Active Shallow Crust     1           1,334        1,334 
+source_model.xml 13     Stable Continental Crust 1           4,100        102   
+source_model.xml 14     Active Shallow Crust     1           1,339        1,339 
+source_model.xml 15     Stable Continental Crust 1           5,125        128   
+source_model.xml 16     Active Shallow Crust     1           1,344        1,344 
+source_model.xml 17     Stable Continental Crust 1           6,150        153   
+================ ====== ======================== =========== ============ ======
 
-=============== =========
-#TRT models     18       
-#sources        18       
-#ruptures       58176    
-filtered_weight 13204.125
-=============== =========
+=============== ======
+#TRT models     18    
+#sources        18    
+#eff_ruptures   58,176
+filtered_weight 13,204
+=============== ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 27      
-Sent data                   47.76 MB
+Sent data                   47.79 MB
 =========================== ========
+
+Slowest sources
+---------------
+============ ========= ================= ====== ========= =========== ========== =========
+trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
+============ ========= ================= ====== ========= =========== ========== =========
+10           2         SimpleFaultSource 1,344  1,344     0.002       0.533      0.0      
+4            2         SimpleFaultSource 1,344  1,344     0.002       0.523      0.0      
+16           2         SimpleFaultSource 1,344  1,344     0.002       0.487      0.0      
+14           2         SimpleFaultSource 1,339  1,339     0.002       0.468      0.0      
+8            2         SimpleFaultSource 1,339  1,339     0.002       0.409      0.0      
+2            2         SimpleFaultSource 1,339  1,339     0.002       0.409      0.0      
+0            2         SimpleFaultSource 1,334  1,334     0.005       0.336      0.0      
+12           2         SimpleFaultSource 1,334  1,334     0.002       0.333      0.0      
+6            2         SimpleFaultSource 1,334  1,334     0.002       0.332      0.0      
+1            1         AreaSource        102    1         0.001       0.0        0.0      
+17           1         AreaSource        153    1         0.001       0.0        0.0      
+11           1         AreaSource        153    1         9.940E-04   0.0        0.0      
+9            1         AreaSource        128    1         9.918E-04   0.0        0.0      
+3            1         AreaSource        128    1         9.811E-04   0.0        0.0      
+5            1         AreaSource        153    1         9.730E-04   0.0        0.0      
+13           1         AreaSource        102    1         9.592E-04   0.0        0.0      
+15           1         AreaSource        128    1         9.570E-04   0.0        0.0      
+7            1         AreaSource        102    1         9.530E-04   0.0        0.0      
+============ ========= ================= ====== ========= =========== ========== =========

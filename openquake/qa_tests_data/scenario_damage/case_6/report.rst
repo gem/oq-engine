@@ -1,19 +1,19 @@
 oq-test03, depth=15km
 =====================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
 ============================ ===============
 calculation_mode             scenario_damage
 number_of_logic_tree_samples 0              
-maximum_distance             300.0          
+maximum_distance             300            
 investigation_time           None           
 ses_per_logic_tree_path      1              
-truncation_level             3.0            
-rupture_mesh_spacing         0.1            
-complex_fault_mesh_spacing   0.1            
+truncation_level             3.000          
+rupture_mesh_spacing         0.100          
+complex_fault_mesh_spacing   0.100          
 width_of_mfd_bin             None           
 area_source_discretization   None           
 random_seed                  3              

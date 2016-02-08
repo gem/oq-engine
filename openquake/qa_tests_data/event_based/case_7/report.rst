@@ -1,21 +1,21 @@
 Event-based PSHA with logic tree sampling
 =========================================
 
-num_sites = 3, sitecol = 485 B
+num_sites = 3, sitecol = 776 B
 
 Parameters
 ----------
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 10         
-maximum_distance             200.0      
-investigation_time           50.0       
+maximum_distance             200        
+investigation_time           50         
 ses_per_logic_tree_path      10         
-truncation_level             3.0        
-rupture_mesh_spacing         2.0        
-complex_fault_mesh_spacing   2.0        
-width_of_mfd_bin             0.2        
-area_source_discretization   20.0       
+truncation_level             3.000      
+rupture_mesh_spacing         2.000      
+complex_fault_mesh_spacing   2.000      
+width_of_mfd_bin             0.200      
+area_source_discretization   20         
 random_seed                  23         
 master_seed                  0          
 concurrent_tasks             16         
@@ -38,8 +38,8 @@ Composite source model
 ========= ====== ======================================== =============== ================
 smlt_path weight source_model_file                        gsim_logic_tree num_realizations
 ========= ====== ======================================== =============== ================
-b11       0.1    `source_model1.xml <source_model1.xml>`_ simple(3)       7/3             
-b12       0.1    `source_model2.xml <source_model2.xml>`_ simple(3)       3/3             
+b11       0.100  `source_model1.xml <source_model1.xml>`_ simple(3)       7/7             
+b12       0.100  `source_model2.xml <source_model2.xml>`_ simple(3)       3/3             
 ========= ====== ======================================== =============== ================
 
 Required parameters per tectonic region type
@@ -56,7 +56,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(5)
+  <RlzsAssoc(size=5, rlzs=10)
   0,BooreAtkinson2008: ['<3,b11,BA,w=0.1>', '<5,b11,BA,w=0.1>']
   0,CampbellBozorgnia2008: ['<4,b11,CB,w=0.1>', '<6,b11,CB,w=0.1>']
   0,ChiouYoungs2008: ['<0,b11,CY,w=0.1>', '<1,b11,CY,w=0.1>', '<2,b11,CY,w=0.1>']
@@ -100,7 +100,16 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 16       
-Sent data                   315.37 KB
+Sent data                   316.43 KB
 Total received data         1.37 MB  
 Maximum received per task   167.85 KB
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         AreaSource   61     307       0.002       0.072      3.059    
+1            1         AreaSource   61     307       0.002       0.073      2.074    
+============ ========= ============ ====== ========= =========== ========== =========

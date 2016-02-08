@@ -701,11 +701,6 @@ class TrtModelTestCase(unittest.TestCase):
         self.check('Stable Continental Crust', 'min_mag', 5.5)
         self.check('Active Shallow Crust', 'min_mag', 5.0)
 
-        self.check('Volcanic', 'num_ruptures', 0)
-        self.check('Subduction Interface', 'num_ruptures', 0)
-        self.check('Stable Continental Crust', 'num_ruptures', 0)
-        self.check('Active Shallow Crust', 'num_ruptures', 0)
-
     def test_repr(self):
         self.assertEqual(
             repr(self.source_collector['Volcanic']),
@@ -786,7 +781,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         self.assertEqual(rlz.weight, 1.)
         self.assertEqual(
             str(assoc),
-            "<RlzsAssoc(2)\n0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=1.0>']\n"
+            "<RlzsAssoc(size=2, rlzs=1)\n0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=1.0>']\n"
             "1,ChiouYoungs2008: ['<0,b1_b5_b8,b2_b3,w=1.0>']>")
 
     def test_many_rlzs(self):
@@ -815,20 +810,21 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         # test the method extract
         assoc = rlzs_assoc.extract([1, 5])
         self.assertEqual(str(assoc), """\
-<RlzsAssoc(4)
+<RlzsAssoc(size=4, rlzs=2)
 0,SadighEtAl1997: ['<1,b1_b3_b6,b2_b3,w=0.5>']
 1,ChiouYoungs2008: ['<1,b1_b3_b6,b2_b3,w=0.5>']
 4,SadighEtAl1997: ['<5,b1_b3_b8,b2_b3,w=0.5>']
 5,ChiouYoungs2008: ['<5,b1_b3_b8,b2_b3,w=0.5>']>""")
 
         # removing 9 trt_models out of 18
-        for smodel in csm.info.source_models:
-            for trt_model in smodel.trt_models:
-                if trt_model.trt == 'Active Shallow Crust':  # no ruptures
-                    trt_model.num_ruptures = 0
-        assoc = csm.info.get_rlzs_assoc()
+        def count_ruptures(trt_model):
+            if trt_model.trt == 'Active Shallow Crust':  # no ruptures
+                return 0
+            else:
+                return 1
+        assoc = csm.info.get_rlzs_assoc(count_ruptures)
         expected_assoc = """\
-<RlzsAssoc(9)
+<RlzsAssoc(size=9, rlzs=9)
 0,SadighEtAl1997: ['<0,b1_b3_b6,@_b3,w=0.04>']
 2,SadighEtAl1997: ['<1,b1_b3_b7,@_b3,w=0.12>']
 4,SadighEtAl1997: ['<2,b1_b3_b8,@_b3,w=0.04>']
@@ -842,11 +838,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         self.assertEqual(len(assoc.realizations), 9)
 
         # removing all trt_models
-        for smodel in csm.info.source_models:
-            for trt_model in smodel.trt_models:
-                if trt_model.trt == 'Subduction Interface':  # no ruptures
-                    trt_model.num_ruptures = 0
-        self.assertEqual(csm.info.get_rlzs_assoc().realizations, [])
+        self.assertEqual(csm.info.get_rlzs_assoc(lambda t: 0).realizations, [])
 
     def test_oversampling(self):
         from openquake.qa_tests_data.classical import case_17
@@ -861,7 +853,7 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         assoc = csm.info.get_rlzs_assoc()
         self.assertEqual(
             str(assoc),
-            "<RlzsAssoc(2)\n"
+            "<RlzsAssoc(size=2, rlzs=5)\n"
             "0,SadighEtAl1997: ['<0,b1,b1,w=0.2>']\n"
             "1,SadighEtAl1997: ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']>")
 

@@ -1,21 +1,21 @@
 QA test for disaggregation case_2
 =================================
 
-num_sites = 2, sitecol = 461 B
+num_sites = 2, sitecol = 730 B
 
 Parameters
 ----------
 ============================ ==============
 calculation_mode             disaggregation
 number_of_logic_tree_samples 0             
-maximum_distance             200.0         
-investigation_time           1.0           
+maximum_distance             200           
+investigation_time           1.000         
 ses_per_logic_tree_path      1             
-truncation_level             3.0           
-rupture_mesh_spacing         4.0           
-complex_fault_mesh_spacing   4.0           
-width_of_mfd_bin             0.1           
-area_source_discretization   10.0          
+truncation_level             3.000         
+rupture_mesh_spacing         4.000         
+complex_fault_mesh_spacing   4.000         
+width_of_mfd_bin             0.100         
+area_source_discretization   10            
 random_seed                  23            
 master_seed                  0             
 concurrent_tasks             10            
@@ -57,7 +57,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(5)
+  <RlzsAssoc(size=5, rlzs=4)
   0,YoungsEtAl1997SSlab: ['<0,source_model_1,BooreAtkinson2008_YoungsEtAl1997SSlab,w=0.25>', '<1,source_model_1,ChiouYoungs2008_YoungsEtAl1997SSlab,w=0.25>']
   1,BooreAtkinson2008: ['<0,source_model_1,BooreAtkinson2008_YoungsEtAl1997SSlab,w=0.25>']
   1,ChiouYoungs2008: ['<1,source_model_1,ChiouYoungs2008_YoungsEtAl1997SSlab,w=0.25>']
@@ -67,23 +67,34 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================== ====== ==================== =========== ============ ======
-source_model       trt_id trt                  num_sources num_ruptures weight
+source_model       trt_id trt                  num_sources eff_ruptures weight
 ================== ====== ==================== =========== ============ ======
-source_model_1.xml 0      Subduction IntraSlab 1           1815         45.375
-source_model_1.xml 1      Active Shallow Crust 2           3630         90.75 
-source_model_2.xml 2      Active Shallow Crust 1           1420         1420.0
+source_model_1.xml 0      Subduction Intraslab 1           1,815        45    
+source_model_1.xml 1      Active Shallow Crust 2           3,630        90    
+source_model_2.xml 2      Active Shallow Crust 1           1,420        1,420 
 ================== ====== ==================== =========== ============ ======
 
-=============== ========
-#TRT models     3       
-#sources        4       
-#ruptures       6865    
-filtered_weight 1556.125
-=============== ========
+=============== =====
+#TRT models     3    
+#sources        4    
+#eff_ruptures   6,865
+filtered_weight 1,556
+=============== =====
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== ========
-Number of tasks to generate 14      
-Sent data                   139.7 KB
-=========================== ========
+=========================== =========
+Number of tasks to generate 14       
+Sent data                   138.89 KB
+=========================== =========
+
+Slowest sources
+---------------
+============ ========= ================= ====== ========= =========== ========== =========
+trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
+============ ========= ================= ====== ========= =========== ========== =========
+2            1         SimpleFaultSource 1,420  15        0.003       0.159      0.0      
+0            2         AreaSource        45     1         0.001       0.0        0.0      
+1            1         AreaSource        45     1         0.001       0.0        0.0      
+1            3         AreaSource        45     1         0.001       0.0        0.0      
+============ ========= ================= ====== ========= =========== ========== =========
