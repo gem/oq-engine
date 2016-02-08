@@ -1,21 +1,21 @@
 PEB QA test 2
 =============
 
-num_sites = 3, sitecol = 485 B
+num_sites = 3, sitecol = 776 B
 
 Parameters
 ----------
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 0          
-maximum_distance             100.0      
-investigation_time           50.0       
+maximum_distance             100        
+investigation_time           50         
 ses_per_logic_tree_path      20         
-truncation_level             3.0        
-rupture_mesh_spacing         5.0        
-complex_fault_mesh_spacing   5.0        
-width_of_mfd_bin             0.3        
-area_source_discretization   10.0       
+truncation_level             3.000      
+rupture_mesh_spacing         5.000      
+complex_fault_mesh_spacing   5.000      
+width_of_mfd_bin             0.300      
+area_source_discretization   10         
 random_seed                  23         
 master_seed                  0          
 concurrent_tasks             16         
@@ -54,7 +54,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
+  <RlzsAssoc(size=1, rlzs=1)
   0,ChiouYoungs2008: ['<0,b1,b1,w=1.0>']>
 
 Non-empty rupture collections
@@ -76,7 +76,17 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 1       
-Sent data                   7.81 KB 
-Total received data         10.46 KB
-Maximum received per task   10.46 KB
+Sent data                   7.63 KB 
+Total received data         10.51 KB
+Maximum received per task   10.51 KB
 =========================== ========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            3         PointSource  0.150  1         1.121E-04   0.0        0.005    
+0            2         PointSource  0.150  1         1.171E-04   0.0        0.004    
+0            1         PointSource  0.150  1         1.678E-04   0.0        0.004    
+============ ========= ============ ====== ========= =========== ========== =========

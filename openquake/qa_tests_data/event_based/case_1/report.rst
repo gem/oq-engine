@@ -1,22 +1,22 @@
 Event Based QA Test, Case 1
 ===========================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 0          
-maximum_distance             200.0      
-investigation_time           1.0        
-ses_per_logic_tree_path      2000       
-truncation_level             2.0        
-rupture_mesh_spacing         1.0        
-complex_fault_mesh_spacing   1.0        
-width_of_mfd_bin             1.0        
-area_source_discretization   10.0       
-random_seed                  1066       
+maximum_distance             200        
+investigation_time           1.000      
+ses_per_logic_tree_path      2,000      
+truncation_level             2.000      
+rupture_mesh_spacing         1.000      
+complex_fault_mesh_spacing   1.000      
+width_of_mfd_bin             1.000      
+area_source_discretization   10         
+random_seed                  1,066      
 master_seed                  0          
 concurrent_tasks             16         
 ============================ ===========
@@ -53,7 +53,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
+  <RlzsAssoc(size=1, rlzs=1)
   0,SadighEtAl1997: ['<0,b1,b1,w=1.0>']>
 
 Non-empty rupture collections
@@ -61,7 +61,7 @@ Non-empty rupture collections
 === ========= ==================== ============
 col smlt_path TRT                  num_ruptures
 === ========= ==================== ============
-0   b1        active shallow crust 2037        
+0   b1        active shallow crust 2,037       
 === ========= ==================== ============
 
 Collections <-> realizations
@@ -75,7 +75,15 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 1       
-Sent data                   6.38 KB 
+Sent data                   6.18 KB 
 Total received data         163.9 KB
 Maximum received per task   163.9 KB
 =========================== ========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         PointSource  0.025  1         1.290E-04   0.0        0.029    
+============ ========= ============ ====== ========= =========== ========== =========

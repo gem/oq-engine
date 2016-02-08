@@ -106,6 +106,23 @@ def get_last_calc_id(datadir):
     return calcs[-1]
 
 
+def read(calc_id, mode='r', datadir=DATADIR):
+    """
+    :param calc_id: calculation ID
+    :param mode: 'r' or 'w'
+    :param datadir: the directory where to look
+    :returns: the corresponding DataStore instance
+
+    Read the datastore, if it exists and it is accessible.
+    """
+    if calc_id < 0:  # retrieve an old datastore
+        calc_id = get_calc_ids(datadir)[calc_id]
+    fname = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
+    assert os.path.exists(fname), fname
+    assert os.access(fname, os.R_OK if mode == 'r' else os.W_OK), fname
+    return DataStore(calc_id, datadir, mode=mode)
+
+
 class DataStore(collections.MutableMapping):
     """
     DataStore class to store the inputs/outputs of a calculation on the
@@ -156,7 +173,9 @@ class DataStore(collections.MutableMapping):
         if not parent and 'hazard_calculation_id' in self.attrs:
             parent_id = ast.literal_eval(self.attrs['hazard_calculation_id'])
             if parent_id:
-                self.parent = self.__class__(parent_id)
+                # NB: I am assuming that the parent is in the same datadir
+                # as the child
+                self.parent = read(parent_id, datadir=self.datadir)
 
     def set_parent(self, parent):
         """
@@ -227,12 +246,6 @@ class DataStore(collections.MutableMapping):
         Generic csv exporter
         """
         return write_csv(self.export_path(key, 'csv'), self[key])
-
-    def reopen(self):
-        """Reopen a closed datastore"""
-        parent = () if self.parent is () else self.parent.reopen()
-        return self.__class__(self.calc_id, self.datadir, parent,
-                              self.export_dir)
 
     def close(self):
         """Close the underlying hdf5 file"""

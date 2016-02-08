@@ -17,16 +17,19 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import ast
 import os.path
 import numbers
 import operator
+import decimal
+import functools
 import itertools
 import numpy
 
 from openquake.baselib.general import humansize, groupby
 from openquake.baselib.performance import perf_dt
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import util
+from openquake.commonlib import util, source
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import (
@@ -34,8 +37,46 @@ from openquake.commonlib.writers import (
 
 # ########################## utility functions ############################## #
 
+FLOAT = (float, numpy.float32, numpy.float64)
+INT = (int, numpy.uint32, numpy.int64)
 
-def rst_table(data, header=None, fmt='%9.7E'):
+
+def form(value):
+    """
+    Format numbers in a nice way.
+
+    >>> form(0)
+    '0'
+    >>> form(0.0)
+    '0.0'
+    >>> form(0.0001)
+    '1.000E-04'
+    >>> form(1003.4)
+    '1,003'
+    >>> form(103.4)
+    '103'
+    >>> form(9.3)
+    '9.300'
+    >>> form(-1.2)
+    '-1.2'
+    """
+    if isinstance(value, FLOAT + INT):
+        if value <= 0:
+            return str(value)
+        elif value < .001:
+            return '%.3E' % value
+        elif value < 10 and isinstance(value, FLOAT):
+            return '%.3f' % value
+        elif value > 1000:
+            return '{:,d}'.format(int(round(value)))
+        else:  # in the range 10-1000
+            return str(int(value))
+    elif hasattr(value, '__iter__'):
+        return ' '.join(map(form, value))
+    return str(value)
+
+
+def rst_table(data, header=None, fmt=None):
     """
     Build a .rst table from a matrix.
     
@@ -62,11 +103,12 @@ def rst_table(data, header=None, fmt='%9.7E'):
     else:
         col_sizes = [len(str(col)) for col in data[0]]
     body = []
+    fmt = functools.partial(scientificformat, fmt=fmt) if fmt else form
     for row in data:
-        row = tuple(scientificformat(col, fmt) for col in row)
-        for (i, col) in enumerate(row):
+        tup = tuple(fmt(c) for c in row)
+        for (i, col) in enumerate(tup):
             col_sizes[i] = max(col_sizes[i], len(col))
-        body.append(row)
+        body.append(tup)
 
     sepline = ' '.join(('=' * size for size in col_sizes))
     templ = ' '.join(('%-{}s'.format(size) for size in col_sizes))
@@ -103,20 +145,13 @@ def view_csm_info(token, dstore):
               'gsim_logic_tree', 'num_realizations']
     rows = []
     for sm in csm_info.source_models:
-        rlzs = rlzs_assoc.rlzs_by_smodel[sm.ordinal]
-        num_rlzs = len(rlzs)
-        num_paths = sm.gsim_lt.get_num_paths()
+        num_rlzs = len(rlzs_assoc.rlzs_by_smodel[sm.ordinal])
+        num_paths = sm.num_gsim_paths(csm_info.num_samples)
         link = "`%s <%s>`_" % (sm.name, sm.name)
         row = ('_'.join(sm.path), sm.weight, link,
                classify_gsim_lt(sm.gsim_lt), '%d/%d' % (num_rlzs, num_paths))
         rows.append(row)
     return rst_table(rows, header)
-
-
-@view.add('slow_sources')
-def view_slow_sources(token, dstore):
-    info = dstore['source_info'][:10]
-    return rst_table(info, fmt='%g')
 
 
 @view.add('rupture_collections')
@@ -139,10 +174,11 @@ def view_rupture_collections(token, dstore):
 @view.add('ruptures_per_trt')
 def view_ruptures_per_trt(token, dstore):
     tbl = []
-    header = 'source_model trt_id trt num_sources num_ruptures weight'.split()
+    header = ('source_model trt_id trt num_sources '
+              'eff_ruptures weight'.split())
     num_trts = 0
     tot_sources = 0
-    tot_ruptures = 0
+    eff_ruptures = 0
     tot_weight = 0
     source_info = dstore['source_info'].value
     csm_info = dstore['rlzs_assoc'].csm_info
@@ -150,26 +186,38 @@ def view_ruptures_per_trt(token, dstore):
                 lambda rows: sum(r['weight'] for r in rows))
     n = groupby(source_info, operator.itemgetter('trt_model_id'),
                 lambda rows: sum(1 for r in rows))
-    for sm in csm_info.source_models:
+    for i, sm in enumerate(csm_info.source_models):
+        # NB: the number of effective ruptures per tectonic region model
+        # is stored in the array eff_ruptures as a literal string describing
+        # an array {trt_model_id: num_ruptures}; see the method
+        # CompositionInfo.get_rlzs_assoc
+        erdict = ast.literal_eval(csm_info.eff_ruptures[i])
         for trt_model in sm.trt_models:
-            num_trts += 1
-            num_sources = n.get(trt_model.id, 0)
-            tot_sources += num_sources
-            num_ruptures = trt_model.num_ruptures
-            tot_ruptures += num_ruptures
-            weight = w.get(trt_model.id, 0)
-            tot_weight += weight
-            tbl.append((sm.name, trt_model.id, trt_model.trt,
-                        num_sources, num_ruptures, weight))
+            trt = source.capitalize(trt_model.trt)
+            er = erdict.get(trt, 0)  # effective ruptures
+            if er:
+                num_trts += 1
+                num_sources = n.get(trt_model.id, 0)
+                tot_sources += num_sources
+                eff_ruptures += er
+                weight = w.get(trt_model.id, 0)
+                tot_weight += weight
+                tbl.append((sm.name, trt_model.id, trt,
+                            num_sources, er, weight))
     rows = [('#TRT models', num_trts),
             ('#sources', tot_sources),
-            ('#ruptures', tot_ruptures),
+            ('#eff_ruptures', eff_ruptures),
             ('filtered_weight', tot_weight)]
     if len(tbl) > 1:
         summary = '\n\n' + rst_table(rows)
     else:
         summary = ''
     return rst_table(tbl, header=header) + summary
+
+
+@view.add('short_source_info')
+def view_short_source_info(token, dstore, maxrows=20):
+    return rst_table(dstore['source_info'][:maxrows])
 
 
 @view.add('params')
@@ -183,6 +231,8 @@ def view_params(token, dstore):
               'random_seed', 'master_seed', 'concurrent_tasks']
     if 'risk' in oq.calculation_mode:
         params.append('avg_losses')
+    if 'classical' in oq.calculation_mode:
+        params.append('sites_per_tile')
     return rst_table([(param, getattr(oq, param, None)) for param in params])
 
 
@@ -218,7 +268,9 @@ def source_data_transfer(token, dstore):
     tbl = [
         ('Number of tasks to generate', len(sc)),
         ('Sent data', humansize(sc.attrs['sent']))]
-    if sc.attrs['task_name'] != 'dummy_task':
+    # NB: when called from `oq-lite info --report` the task name is
+    # count_eff_ruptures; then tot_received and max_received are bogus
+    if sc.attrs['task_name'] != 'count_eff_ruptures':
         tbl.extend([
             ('Total received data', humansize(sc.attrs['tot_received'])),
             ('Maximum received per task', humansize(sc.attrs['max_received'])),
@@ -235,7 +287,7 @@ def avglosses_data_transfer(token, dstore):
     oq = OqParam.from_(dstore.attrs)
     N = len(dstore['assetcol'])
     R = len(dstore['rlzs_assoc'].realizations)
-    L = len(dstore['riskmodel'].loss_types)
+    L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
     ct = oq.concurrent_tasks
     size_bytes = N * R * L * 2 * 8 * ct  # two 8 byte floats, loss and ins_loss
     return ('%d asset(s) x %d realization(s) x %d loss type(s) x 2 losses x '
@@ -260,7 +312,7 @@ def view_totlosses(token, dstore):
         for stat in ('mean', 'mean_ins'):
             for rec in avglosses:
                 zero['%s-%s' % (name, stat)] += rec[name][stat]
-    return rst_table(zero)
+    return rst_table(zero, fmt='%.7E')
 
 
 def sum_table(records):
@@ -354,7 +406,7 @@ def view_assetcol(token, dstore):
             columns[i] = sitemesh[assetcol[field]]
         else:
             columns[i] = assetcol[field]
-    return write_csv(io.StringIO(), [header] + list(zip(*columns)), fmt='%s')
+    return write_csv(io.StringIO(), [header] + list(zip(*columns)))
 
 
 @view.add('fullreport')
@@ -384,7 +436,7 @@ def view_performance(token, dstore):
             mem = max(mem, memory_mb)
         out.append((operation, time, mem, counts))
     out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
-    return rst_table(numpy.array(out, perf_dt), fmt='%s')
+    return rst_table(numpy.array(out, perf_dt))
 
 
 @view.add('required_params_per_trt')
