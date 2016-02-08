@@ -1,4 +1,5 @@
-This documentation explains how to install the OpenQuake Engine on RHEL 7 and its clones (CentOS, Scientific Linux) via EPEL. GEM provides preliminary support and binary RPMs for unstable (nightly builds) and stable releases. An experimental support for unstable releases is available also for Fedora 21/22/23.
+# Installing the OpenQuake Engine on RedHat Linux and clones
+This documentation explains how to install the OpenQuake Engine on RHEL 7 and its clones (CentOS, Scientific Linux) via EPEL. GEM provides preliminary support and binary RPMs for unstable (nightly builds) and stable releases.
 
 ## Dependencies
 
@@ -27,7 +28,7 @@ $ sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.n
 $ curl -sL https://copr.fedoraproject.org/coprs/gem/openquake/repo/epel-7/gem-openquake-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-epel-7.repo
 ```
 
-The full list of supported repos (including Fedora) is available on COPR: https://copr.fedoraproject.org/coprs/gem/openquake/
+The full list of supported repos is available on COPR: https://copr.fedoraproject.org/coprs/gem/openquake/
 
 #### Stable releases (starting from OpenQuake Engine 1.5)
 

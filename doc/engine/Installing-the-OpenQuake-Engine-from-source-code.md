@@ -1,4 +1,4 @@
-# Running OpenQuake Engine from git repository
+# Running OpenQuake Engine from git repository on RedHat Linux and clones
 This page describes the additional steps necessary to run the current development version of the OpenQuake engine rather than the latest public package using Ubuntu Linux 14.04 LTS or 12.04 LTS.
 
 ## Install primary dependencies

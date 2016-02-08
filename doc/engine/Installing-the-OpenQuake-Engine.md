@@ -1,6 +1,7 @@
-### Installing the OpenQuake Engine
+# Installing the OpenQuake Engine on Ubuntu Linux
 
-The OpenQuake Engine supports **Ubuntu 14.04** LTS (Trusty) and **Red Hat Enterprese Linux 7** and compatible distributions. Support for **Ubuntu 12.04** LTS (Precise) is still available but has been deprecated. For more information see [What's new](What's-new.md).
+The OpenQuake Engine supports **Ubuntu 14.04** LTS (Trusty). Support for **Ubuntu 12.04** LTS (Precise) is still available but has been deprecated. For more information see [What's new](What's-new.md).
+For RHEL and clones support see [Installing the OpenQuake Engine on RHEL and clones](Installing-the-OpenQuake-Engine-on-RHEL-and-clones.md).
 
 If you were previously using a nightly release first remove the old packages and the repository:
 <pre>

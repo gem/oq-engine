@@ -1,9 +1,11 @@
+# Running the OpenQuake Engine on multiple RHEL nodes (cluster configuration)
+
 ## Overall architecture
 The nodes must all be able to communicate with a single PostresSQL database and a single RabbitMQ server.
 One common configuration is to install and deploy the two services on a single "master" node, but other configurations are possible. It is not necessary and not normally recommended to install PostgreSQL or RabbitMQ on a worker node.
 
 ## Initial install
-On all nodes,install the python-oq-engine package as described in [OpenQuake Engine installation](Installing-the-OpenQuake-Engine.md) or [OpenQuake Engine Master installation](Installing-the-OpenQuake-Engine-Nightly.md).
+On all nodes,install the python-oq-engine package as described in [OpenQuake Engine installation](Installing-the-OpenQuake-Engine-on-RHEL-and-clones.md).
 
 ## Postgres configuration
 The default Postgres configuration does not permit access from other machines: the file `/etc/postgresql/9.3/main/pg_hba.conf` should be modified to allow access to the "openquake2" database from the worker nodes, an example excerpt follows:
@@ -26,7 +28,7 @@ By default Postres, on Ubuntu, allows connections only from localhost. Since cel
 listen_addresses = '*'
 </pre>
 
-### max_connections 
+### max_connections
 * See [http://www.postgresql.org/docs/current/static/runtime-config-connection.html#GUC-MAX-CONNECTIONS](http://www.postgresql.org/docs/current/static/runtime-config-connection.html#GUC-MAX-CONNECTIONS)
 
 By default Postres allows a maximum of 100 simultaneous connections. By default celery will create a worker process for each available core and the OpenQuake Engine uses two connection per worker, so max_connections should be at least twice number of available worker cores (2 * CPU in the cluster).
@@ -103,34 +105,7 @@ but we strongly suggest to use `supervisord` to manage the celery deamons.
 sudo apt-get install supervisor
 ```
 
-An example of configuration for the OpenQuake Engine is
-```
-openquake@node01:~$ sudo cat /etc/supervisor/conf.d/celeryd.conf 
-[program:celery]
-command=celeryd --purge
-directory=/usr/local/openquake/oq-engine
-user=celery
-group=celery
-stdout_logfile=/var/log/celery/openquake.log
-stderr_logfile=/var/log/celery/openquake.log
-autostart=false
-autorestart=true
-startsecs=10
-
-; Need to wait for currently executing tasks to finish at shutdown.
-; Increase this if you have very long running tasks.
-stopwaitsecs = 600
-
-; When resorting to send SIGKILL to the program to terminate it
-; send SIGKILL to its whole process group instead,
-; taking care of its children as well.
-killasgroup=true
-```
-
-A custom `PYTHONPATH`, if using the OpenQuake source instead of packages can be also set in `supervisord`:
-```
-environment=PYTHONPATH="/usr/local/openquake/oq-engine:/usr/local/openquake/oq-hazardlib:/usr/local/openquake/oq-nrmllib:/usr/local/openquake/oq-risklib",DJANGO_SETTINGS_MODULE="openquake.engine.settings",OQ_LOCAL_CFG_PATH="openquake_worker.cfg" 
-```
+An example of configuration for the OpenQuake Engine is available in [supervisor.md](supervisord.md).
 
 ## Network and security considerations
 The worker nodes should be isolated from the external network using either a dedicated internal network or a firewall.
