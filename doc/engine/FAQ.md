@@ -3,9 +3,9 @@
 #### Ubuntu 
 [Ubuntu 12.04 LTS](Installing-the-OpenQuake-Engine.md) and [Ubuntu 14.04 LTS](Installing-the-OpenQuake-Engine.md), both 32 and 64 bit, are supported.
 
-#### RHEL/Fedora
+#### RHEL / CentOS / SL
 
-Preliminary support and binary RPMs for unstable (nightly builds) and stable releases on [RHEL7 and its clones](Installing-the-OpenQuake-Engine-on-RHEL-and-clones.md) are provided. An experimental support for unstable releases is available also for [Fedora 21/22](Installing-the-OpenQuake-Engine-from-source-code-on-Fedora-and-RHEL.md).
+Preliminary support and binary RPMs for unstable (nightly builds) and stable releases on [RHEL7 and its clones](Installing-the-OpenQuake-Engine-on-RHEL-and-clones.md) are provided.
 
 ***
 
@@ -15,7 +15,7 @@ _Stub_
 
 ***
 
-### DatabaseError: invalid byte sequence for encoding "UTF8": 0x00
+### DatabaseError: invalid byte sequence for encoding "UTF8": 0x00 (Ubuntu 12.04 only)
 
 A more detailed stack trace:
 
