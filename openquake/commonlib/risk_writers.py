@@ -103,7 +103,7 @@ class LossCurveXMLWriter(object):
     def __init__(self, dest, investigation_time, loss_type,
                  source_model_tree_path=None, gsim_tree_path=None,
                  statistics=None, quantile_value=None, unit=None,
-                 insured=False):
+                 insured=False, poe=None):
 
         validate_hazard_metadata(gsim_tree_path, source_model_tree_path,
                                  statistics, quantile_value)
@@ -257,7 +257,7 @@ class AggregateLossCurveXMLWriter(object):
 
     def __init__(self, dest, investigation_time, loss_type,
                  source_model_tree_path=None, gsim_tree_path=None,
-                 statistics=None, quantile_value=None, unit=None):
+                 statistics=None, quantile_value=None, unit=None, poe=None):
 
         validate_hazard_metadata(gsim_tree_path, source_model_tree_path,
                                  statistics, quantile_value)
@@ -721,7 +721,7 @@ class BCRMapXMLWriter(object):
     def __init__(self, path, interest_rate, asset_life_expectancy, loss_type,
                  source_model_tree_path=None, gsim_tree_path=None,
                  statistics=None, quantile_value=None, unit=None,
-                 loss_category=None):
+                 loss_category=None, poe=None):
 
         validate_hazard_metadata(gsim_tree_path, source_model_tree_path,
                                  statistics, quantile_value)

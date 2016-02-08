@@ -161,15 +161,15 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         # loss curves stats
         if self.R > 1:
-            stat_curves = numpy.zeros((self.Q1, self.N), self.loss_curve_dt)
+            stat_curves = numpy.zeros((self.N, self.Q1), self.loss_curve_dt)
             for l, aid, statcurve in result['stat_curves']:
                 stat_curves_lt = stat_curves[ltypes[l]]
                 for name in stat_curves_lt.dtype.names:
                     for s in range(self.Q1):
                         if name.startswith('avg'):
-                            stat_curves_lt[name][s, aid] = statcurve[name][s]
+                            stat_curves_lt[name][aid, s] = statcurve[name][s]
                         else:
-                            base.set_array(stat_curves_lt[name][s, aid],
+                            base.set_array(stat_curves_lt[name][aid, s],
                                            statcurve[name][s])
             self.datastore['loss_curves-stats'] = stat_curves
 
@@ -189,10 +189,10 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         # loss maps stats
         if self.R > 1:
-            stat_maps = numpy.zeros((self.Q1, self.N), self.loss_maps_dt)
+            stat_maps = numpy.zeros((self.N, self.Q1), self.loss_maps_dt)
             for l, aid, statmaps in result['stat_maps']:
                 statmaps_lt = stat_maps[ltypes[l]]
                 for name in statmaps_lt.dtype.names:
                     for s in range(self.Q1):
-                        statmaps_lt[name][s, aid] = statmaps[name][s]
+                        statmaps_lt[name][aid, s] = statmaps[name][s]
             self.datastore['loss_maps-stats'] = stat_maps

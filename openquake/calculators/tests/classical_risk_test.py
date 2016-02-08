@@ -50,7 +50,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'classical_risk')
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job_haz.ini,job_risk.ini',
-                            exports='csv')
+                            exports='csv,xml')
         fnames = out['loss_maps-rlzs', 'csv']
         self.assertEqualFiles('expected/loss_maps-b1,b1.csv', fnames[0])
         self.assertEqualFiles('expected/loss_maps-b1,b2.csv', fnames[1])
@@ -58,6 +58,13 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         fnames = out['loss_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/loss_curves-000.csv', fnames[0])
         self.assertEqualFiles('expected/loss_curves-001.csv', fnames[1])
+
+        [fname] = out['loss_maps-stats', 'xml']
+        self.assertEqualFiles('expected/loss_maps-mean-structural.xml', fname)
+
+        [fname] = out['loss_curves-stats', 'xml']
+        self.assertEqualFiles('expected/loss_curves-mean-structural.xml',
+                              fname)
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_5(self):
