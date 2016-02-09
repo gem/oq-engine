@@ -149,7 +149,8 @@ def run(job_ini, slowest, hc, param, concurrent_tasks=CT, exports='',
         flag to enable pdb debugging on failing calculations
     """
     concurrent_futures_process_monkeypatch()
-    params = oqvalidation.OqParam.check(dict(p.split('=', 1) for p in param))
+    params = oqvalidation.OqParam.check(
+        dict(p.split('=', 1) for p in param or ()))
     if slowest:
         prof = cProfile.Profile()
         stmt = ('_run(job_ini, concurrent_tasks, pdb, loglevel, hc, '
