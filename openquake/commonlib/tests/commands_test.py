@@ -109,7 +109,7 @@ xmlns:gml="http://www.opengis.net/gml"
     </gmf>
   </gmfSet>
 </gmfCollection>
-        </nrml>''', suffix='.xml')
+</nrml>''', suffix='.xml')
         with Print.patch() as p:
             tidy([fname])
         self.assertIn('Could not convert gmv->positivefloat: '
