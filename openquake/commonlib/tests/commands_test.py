@@ -161,7 +161,7 @@ lon,lat
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            export('hcurves', self.datastore.calc_id, export_dir=tempdir)
+            export('hcurves', tempdir, self.datastore.calc_id)
         [fname] = os.listdir(tempdir)
         self.assertIn(str(fname), str(p))
         shutil.rmtree(tempdir)
