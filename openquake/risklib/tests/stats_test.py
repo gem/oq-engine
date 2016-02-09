@@ -176,10 +176,10 @@ class NormalizeTestCase(unittest.TestCase):
 
 def asset(ref, value, deductibles=None,
           insurance_limits=None,
-          retrofitting_values=None):
+          retrofitteds=None):
     return riskmodels.Asset(ref, 'taxonomy', 1, (0, 0), dict(structural=value),
                            1, deductibles, insurance_limits,
-                           retrofitting_values)
+                           retrofitteds)
 
 
 # return a matrix N x 2 x R with n=2, R=5

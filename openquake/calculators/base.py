@@ -18,6 +18,7 @@
 
 import sys
 import abc
+import ast
 import pdb
 import math
 import logging
@@ -80,7 +81,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     sitecol = datastore.persistent_attribute('sitecol')
     rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
     realizations = datastore.persistent_attribute('realizations')
-    assets_by_site = datastore.persistent_attribute('assets_by_site')
     assetcol = datastore.persistent_attribute('assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('taxonomies')
@@ -229,6 +229,20 @@ def _set_nbytes(dkey, dstore):
     group.attrs['nbytes'] = group[key].attrs['nbytes'] * len(group)
 
 
+def check_time_event(dstore):
+    """
+    Check the `time_event` parameter in the datastore, by comparing
+    with the periods found in the exposure.
+    """
+    time_event = dstore.attrs.get('time_event')
+    time_events = dstore['time_events']
+    if time_event and ast.literal_eval(time_event) not in time_events:
+        inputs = ast.literal_eval(dstore.attrs['inputs'])
+        raise ValueError(
+            'time_event is %s in %s, but the exposure contains %s' %
+            (time_event, inputs['job_ini'], ', '.join(time_events)))
+
+
 class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
@@ -287,8 +301,11 @@ class HazardCalculator(BaseCalculator):
                 precalc.run()
                 if 'scenario' not in self.oqparam.calculation_mode:
                     self.csm = precalc.csm
-                if 'riskmodel' in vars(precalc):
-                    self.riskmodel = precalc.riskmodel
+                pre_attrs = vars(precalc)
+                for name in ('riskmodel', 'assets_by_site'):
+                    if name in pre_attrs:
+                        setattr(self, name, getattr(precalc, name))
+
             else:  # read previously computed data
                 parent = datastore.DataStore(precalc_id)
                 self.datastore.set_parent(parent)
@@ -331,6 +348,10 @@ class HazardCalculator(BaseCalculator):
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
             self.exposure = readinput.get_exposure(self.oqparam)
+            all_cost_types = set(self.oqparam.all_cost_types)
+            fname = self.oqparam.inputs['exposure']
+            cc = readinput.get_exposure_lazy(fname, all_cost_types)[-1]
+            self.datastore['cost_calculator'] = cc
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
             if len(self.exposure.cost_types):
@@ -383,13 +404,14 @@ class HazardCalculator(BaseCalculator):
         Read the exposure (if any), the risk model (if any) and then the
         site collection, possibly extracted from the exposure.
         """
+        oq = self.oqparam
         logging.info('Reading the site collection')
         with self.monitor('reading site collection', autoflush=True):
-            haz_sitecol = readinput.get_site_collection(self.oqparam)
+            haz_sitecol = readinput.get_site_collection(oq)
 
         oq_hazard = (OqParam.from_(self.datastore.parent.attrs)
                      if self.datastore.parent else None)
-        if 'exposure' in self.oqparam.inputs:
+        if 'exposure' in oq.inputs:
             self.read_exposure()
             self.load_riskmodel()  # must be called *after* read_exposure
             num_assets = self.count_assets()
@@ -410,16 +432,29 @@ class HazardCalculator(BaseCalculator):
             self.load_riskmodel()
             self.sitecol = haz_sitecol
 
+        if oq_hazard:
+            if 'time_events' in self.datastore.parent:
+                check_time_event(self.datastore)
+            if oq_hazard.time_event != oq.time_event:
+                raise ValueError(
+                    'The risk configuration file has time_event=%s but the '
+                    'hazard was computed with time_event=%s' % (
+                        oq.time_event, oq_hazard.time_event))
+
         # save mesh and asset collection
         self.save_mesh()
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.build_asset_collection(
-                self.assets_by_site, self.oqparam.time_event)
-            spec = set(self.oqparam.specific_assets)
+                self.assets_by_site, oq.time_event)
+            spec = set(oq.specific_assets)
             unknown = spec - set(self.assetcol['asset_ref'])
             if unknown:
                 raise ValueError('The specific asset(s) %s are not in the '
                                  'exposure' % ', '.join(unknown))
+        elif hasattr(self, 'assetcol'):
+            cc = self.datastore['cost_calculator']
+            self.assets_by_site = riskinput.build_assets_by_site(
+                self.assetcol, self.taxonomies, oq.time_event, cc)
 
     def save_mesh(self):
         """
