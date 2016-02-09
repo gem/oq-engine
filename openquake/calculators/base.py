@@ -433,8 +433,7 @@ class HazardCalculator(BaseCalculator):
             self.sitecol = haz_sitecol
 
         if oq_hazard:
-            # TODO: move check_time_event outside the if
-            if 'time_events' in self.datastore:
+            if 'time_events' in self.datastore.parent:
                 check_time_event(self.datastore)
             if oq_hazard.time_event != oq.time_event:
                 raise ValueError(
