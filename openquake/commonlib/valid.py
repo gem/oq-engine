@@ -925,7 +925,7 @@ class ParamSet(with_metaclass(MetaParamSet)):
             try:
                 p = getattr(cls, name)
             except AttributeError:
-                pass
+                logging.warn('Ignored unknown parameter %s', name)
             else:
                 res[name] = p.validator(text)
         return res

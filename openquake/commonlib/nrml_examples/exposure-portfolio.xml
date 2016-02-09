@@ -1,90 +1,76 @@
-<?xml version="1.0" encoding="utf-8"?>
-<nrml
-xmlns="http://openquake.org/xmlns/nrml/0.5"
-xmlns:gml="http://www.opengis.net/gml"
->
-    <exposureModel
-    category="buildings"
-    id="my_exposure_model"
-    taxonomySource="PAGER"
-    >
-        <description>
-            Sample buildings
-        </description>
-        <conversions>
-            <area type="per_asset" unit="square meters"/>
-            <costTypes>
-                <costType name="business_interruption" type="per_area" unit="EUR"/>
-                <costType name="contents" type="per_area" unit="USD"/>
-                <costType name="nonstructural" type="aggregated" unit="YEN"/>
-                <costType name="structural" retrofittedType="aggregated" retrofittedUnit="EUR" type="aggregated" unit="YEN"/>
-            </costTypes>
-            <deductible
-            isAbsolute="false"
-            >
-                False
-            </deductible>
-            <insuranceLimit
-            isAbsolute="false"
-            >
-                False
-            </insuranceLimit>
-        </conversions>
-        <assets>
-            <asset
-            area="120"
-            id="asset_01"
-            number="7.0000000E+00"
-            taxonomy="RC/DMRF-D/LR"
-            >
-                <location lat="4.5166670E+01" lon="9.1500000E+00"/>
-                <costs>
-                    <cost deductible="1.0000000E-01" insuranceLimit="8.0000000E-01" retrofitted="1.0987600E+05" type="structural" value="1.5000000E+05"/>
-                    <cost deductible="9.0000000E-02" insuranceLimit="8.2000000E-01" type="nonstructural" value="2.5000000E+04"/>
-                    <cost deductible="5.0000000E-01" insuranceLimit="7.0000000E-01" type="contents" value="1.2950000E+01"/>
-                    <cost deductible="5.0000000E-01" insuranceLimit="8.0000000E-01" type="business_interruption" value="4.0000000E+01"/>
-                </costs>
-                <occupancies>
-                    <occupancy occupants="1.0000000E+02" period="day"/>
-                    <occupancy occupants="5.0000000E+01" period="night"/>
-                    <occupancy occupants="2.0000000E+01" period="transit"/>
-                </occupancies>
-            </asset>
-            <asset
-            area="119"
-            id="asset_02"
-            number="7.0000000E+00"
-            taxonomy="RC/DMRF-D/HR"
-            >
-                <location lat="4.5122000E+01" lon="9.1533300E+00"/>
-                <costs>
-                    <cost type="structural" value="2.5000000E+05"/>
-                    <cost type="nonstructural" value="2.1000000E+04"/>
-                    <cost type="contents" value="2.1950000E+01"/>
-                    <cost type="business_interruption" value="4.0000000E+01"/>
-                </costs>
-                <occupancies>
-                    <occupancy occupants="1.2000000E+01" period="day"/>
-                    <occupancy occupants="5.0000000E+01" period="night"/>
-                    <occupancy occupants="2.0000000E+01" period="transit"/>
-                </occupancies>
-            </asset>
-            <asset
-            area="118"
-            id="asset_03"
-            number="5.0000000E+00"
-            taxonomy="RC/DMRF-D/LR"
-            >
-                <location lat="4.5179990E+01" lon="9.1477700E+00"/>
-                <costs>
-                    <cost type="structural" value="5.0000000E+05"/>
-                    <cost type="contents" value="3.0950000E+01"/>
-                </costs>
-                <occupancies>
-                    <occupancy occupants="3.6000000E+01" period="early morning"/>
-                    <occupancy occupants="5.0000000E+00" period="late afternoon"/>
-                </occupancies>
-            </asset>
-        </assets>
-    </exposureModel>
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel
+      id="my_exposure_model"
+      category="buildings"
+      taxonomySource="PAGER">
+
+    <description>
+      Sample buildings 
+    </description>
+
+    <conversions>
+      <area type="per_asset" unit="square meters"/>
+      
+      <costTypes>
+          <costType name="business_interruption" type="per_area" unit="EUR"/>
+          <costType name="contents" type="per_area" unit="USD"/>
+          <costType name="non_structural" type="aggregated" unit="YEN" />
+          <costType name="structural" type="aggregated" unit="YEN"
+                    retrofittedType="aggregated" retrofittedUnit="EUR"/>
+      </costTypes>
+      <deductible isAbsolute="false"/>
+      <insuranceLimit isAbsolute="false"/>
+    </conversions>
+
+    <assets>
+      <asset id="asset_01" area="120" number="7" taxonomy="RC/DMRF-D/LR">
+          <location lon="9.15000" lat="45.16667" />
+
+          <costs>
+            <cost type="structural" value="150000" deductible=".1" insuranceLimit="0.8" retrofitted="109876"/>
+            <cost type="non_structural" value="25000" deductible=".09" insuranceLimit="0.82"/>
+            <cost type="contents" value="12.95" deductible=".5" insuranceLimit=".7"/>
+            <cost type="business_interruption" value="40" deductible=".5" insuranceLimit="0.8"/>
+          </costs>
+
+          <occupancies>
+            <occupancy occupants="100" period="day"/>
+            <occupancy occupants="50" period="night"/>
+            <occupancy occupants="20" period="transit"/>
+          </occupancies>
+        </asset>
+
+        <asset id="asset_02" area="119" number="7" taxonomy="RC/DMRF-D/HR">
+          <location lon="9.15333" lat="45.12200" />
+
+          <costs>
+            <cost type="structural" value="250000"/>
+            <cost type="non_structural" value="21000"/>
+            <cost type="contents" value="21.95"/>
+            <cost type="business_interruption" value="40"/>
+          </costs>
+  
+          <occupancies>
+            <occupancy occupants="12" period="day"/>
+            <occupancy occupants="50" period="night"/>
+            <occupancy occupants="20" period="transit"/>
+          </occupancies>
+        </asset>
+
+        <asset id="asset_03" area="118" number="5" taxonomy="RC/DMRF-D/LR">
+          <location lon="9.14777" lat="45.17999" />
+
+          <costs>
+            <cost type="structural" value="500000"/>
+            <cost type="contents" value="30.95"/>
+          </costs>
+
+          <occupancies>
+            <occupancy occupants="36" period="early morning"/>
+            <occupancy occupants="5" period="late afternoon"/>
+          </occupancies>
+        </asset>
+      </assets>
+  </exposureModel>
 </nrml>

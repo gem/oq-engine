@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <nrml
 xmlns="http://openquake.org/xmlns/nrml/0.5"
-xmlns:gml="http://www.opengis.net/gml"
 >
     <fragilityModel
     assetCategory="building"
@@ -28,22 +27,22 @@ xmlns:gml="http://www.opengis.net/gml"
             <poes
             ls="minor"
             >
-                0.0000000E+00 9.0000000E-02 5.6000000E-01 9.1000000E-01 9.8000000E-01
+                0.0 0.09 0.56 0.91 0.98
             </poes>
             <poes
             ls="moderate"
             >
-                0.0000000E+00 0.0000000E+00 4.0000000E-02 7.8000000E-01 9.6000000E-01
+                0.0 0.0 0.04 0.78 0.96
             </poes>
             <poes
             ls="severe"
             >
-                0.0000000E+00 0.0000000E+00 0.0000000E+00 2.9000000E-01 8.8000000E-01
+                0.0 0.0 0.0 0.29 0.88
             </poes>
             <poes
             ls="collapse"
             >
-                0.0000000E+00 0.0000000E+00 0.0000000E+00 3.0000000E-02 6.3000000E-01
+                0.0 0.0 0.0 0.03 0.63
             </poes>
         </fragilityFunction>
         <fragilityFunction
@@ -53,29 +52,29 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <imls
             imt="MMI"
-            noDamageLimit="0.0000000E+00"
+            noDamageLimit="0"
             >
                 7.0 8.0 9.0 10.0 11.0
             </imls>
             <poes
             ls="minor"
             >
-                0.0000000E+00 9.0000000E-02 5.6000000E-01 9.2000000E-01 9.9000000E-01
+                0.0 0.09 0.56 0.92 0.99
             </poes>
             <poes
             ls="moderate"
             >
-                0.0000000E+00 0.0000000E+00 4.0000000E-02 7.9000000E-01 9.7000000E-01
+                0.0 0.0 0.04 0.79 0.97
             </poes>
             <poes
             ls="severe"
             >
-                0.0000000E+00 0.0000000E+00 0.0000000E+00 3.0000000E-01 8.9000000E-01
+                0.0 0.0 0.0 0.3 0.89
             </poes>
             <poes
             ls="collapse"
             >
-                0.0000000E+00 0.0000000E+00 0.0000000E+00 4.0000000E-02 6.4000000E-01
+                0.0 0.0 0.0 0.04 0.64
             </poes>
         </fragilityFunction>
     </fragilityModel>

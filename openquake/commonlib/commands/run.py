@@ -126,8 +126,8 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
     return calc
 
 
-def run(job_ini, slowest, hc, concurrent_tasks=CT, exports='',
-        loglevel='info', pdb=None, param=('NAME=VALUE',)):
+def run(job_ini, slowest, hc, param, concurrent_tasks=CT, exports='',
+        loglevel='info', pdb=None):
     """
     Run a calculation.
 
@@ -137,6 +137,8 @@ def run(job_ini, slowest, hc, concurrent_tasks=CT, exports='',
         enable Python cProfile functionality
     :param hc:
         ID of the previous calculation (or None)
+    :param param:
+        override a configuration parameter
     :param concurrent_tasks:
         the number of concurrent tasks (0 to disable the parallelization)
     :param loglevel:
@@ -145,8 +147,6 @@ def run(job_ini, slowest, hc, concurrent_tasks=CT, exports='',
         export type, can be '', 'csv', 'xml', 'geojson' or combinations
     :param pdb:
         flag to enable pdb debugging on failing calculations
-    :param param:
-        override a configuration parameter
     """
     concurrent_futures_process_monkeypatch()
     params = oqvalidation.OqParam.check(dict([p.split('=', 1) for p in param]))
@@ -167,6 +167,8 @@ parser.arg('job_ini', 'calculation configuration file '
            '(or files, comma-separated)')
 parser.opt('slowest', 'profile and show the slowest operations', type=int)
 parser.opt('hc', 'previous calculation ID', type=valid.hazard_id)
+parser.opt('param', 'override parameter with the syntax NAME=VALUE ...',
+           nargs='+')
 parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
            type=int)
 parser.opt('exports', 'export formats as a comma-separated string',
@@ -174,4 +176,3 @@ parser.opt('exports', 'export formats as a comma-separated string',
 parser.opt('loglevel', 'logging level',
            choices='debug info warn error critical'.split())
 parser.flg('pdb', 'enable post mortem debugging', '-d')
-parser.opt('param', 'override parameter', nargs='*')
