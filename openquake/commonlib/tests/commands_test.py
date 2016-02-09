@@ -67,9 +67,9 @@ class TidyTestCase(unittest.TestCase):
     </gmf>
   </gmfSet>
 </gmfCollection>
-</nrml>''')
+</nrml>''', suffix='.xml')
         with Print.patch() as p:
-            tidy(fname)
+            tidy([fname])
         self.assertIn('Reformatted', str(p))
         self.assertEqual(open(fname).read(), '''\
 <?xml version="1.0" encoding="utf-8"?>
@@ -109,9 +109,9 @@ xmlns:gml="http://www.opengis.net/gml"
     </gmf>
   </gmfSet>
 </gmfCollection>
-</nrml>''')
+</nrml>''', suffix='.xml')
         with Print.patch() as p:
-            tidy(fname)
+            tidy([fname])
         self.assertIn('Could not convert gmv->positivefloat: '
                       'float -0.012492 < 0, line 8 of', str(p))
 
@@ -124,7 +124,8 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
-            cls.datastore = _run(job_ini, 0, False, 'info', None, '').datastore
+            cls.datastore = _run(
+                job_ini, 0, False, 'info', None, '', {}).datastore
 
     def test_run_calc(self):
         self.assertIn('See the output with hdfview', str(self.p))
