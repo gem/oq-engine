@@ -490,19 +490,19 @@ _pkgtest_innervm_run () {
 
         echo 'running ScenarioDamage...'
         oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini
-        oq-lite export -1 dmg_by_asset xml /tmp
+        oq-lite export -e xml dmg_by_asset /tmp
 
         echo 'running ScenarioRisk...'
         oq-lite run ScenarioRisk/job.ini
-        oq-lite show -1 agglosses-rlzs > /tmp/agglosses.csv
-        oq-lite show -1 totlosses > /tmp/totlosses.txt
+        oq-lite show agglosses-rlzs > /tmp/agglosses.csv
+        oq-lite show totlosses > /tmp/totlosses.txt
         cmp /tmp/agglosses.csv ScenarioRisk/expected_agglosses.csv
         cmp /tmp/totlosses.txt ScenarioRisk/expected_totlosses.txt
 
         echo 'running EventBasedRisk...'
         oq-lite run EventBasedRisk/job.ini
-        oq-lite export -1 loss_maps-rlzs xml /tmp
-        oq-lite show -1 performance
+        oq-lite export -e xml loss_maps-rlzs /tmp
+        oq-lite show performance
 
         echo 'running ClassicalRisk...'
         oq-lite run ClassicalRisk/job_hazard.ini,ClassicalRisk/job_risk.ini
@@ -519,10 +519,10 @@ _pkgtest_innervm_run () {
 
         echo 'running LogicTreeCase3ClassicalPSHA'
         oq-lite run LogicTreeCase3ClassicalPSHA/job.ini --exports xml
-        oq-lite show -1 --rlzs
+        oq-lite show rlzs
 
         echo 'Show all the oq-lite calculations'
-        oq-lite show 0
+        oq-lite show all
         "
     fi
 

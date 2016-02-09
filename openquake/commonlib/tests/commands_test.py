@@ -133,36 +133,36 @@ class RunShowExportTestCase(unittest.TestCase):
     def test_show_calc(self):
         # test show all
         with Print.patch() as p:
-            show(0)
+            show('all')
         with Print.patch() as p:
-            show(self.datastore.calc_id)
+            show('contents', self.datastore.calc_id)
         self.assertIn('sitemesh', str(p))
 
         with Print.patch() as p:
-            show(self.datastore.calc_id, 'sitemesh')
+            show('sitemesh', self.datastore.calc_id)
         self.assertEqual(str(p), '''\
 lon,lat
 0.00000000E+00,0.00000000E+00''')
 
     def test_show_attrs(self):
         with Print.patch() as p:
-            show_attrs(self.datastore.calc_id, 'hcurve')
+            show_attrs('hcurve', self.datastore.calc_id)
         self.assertEqual("'hcurve' is not in %s" % self.datastore, str(p))
 
         with Print.patch() as p:
             self.datastore['one'] = numpy.array([1])
-            show_attrs(self.datastore.calc_id, 'one')
+            show_attrs('one', self.datastore.calc_id)
         self.assertEqual('one has no attributes', str(p))
 
         with Print.patch() as p:
-            show_attrs(self.datastore.calc_id, 'hcurves')
+            show_attrs('hcurves', self.datastore.calc_id)
         self.assertEqual("imtls [['PGA' '3']\n ['SA(0.1)' '3']]\nnbytes 48",
                          str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            export(self.datastore.calc_id, 'hcurves', export_dir=tempdir)
+            export('hcurves', tempdir, self.datastore.calc_id)
         [fname] = os.listdir(tempdir)
         self.assertIn(str(fname), str(p))
         shutil.rmtree(tempdir)

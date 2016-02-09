@@ -20,14 +20,14 @@ from __future__ import print_function
 from openquake.commonlib import sap, datastore
 
 
-def show_attrs(calc_id, key):
+def show_attrs(key, calc_id=-1):
     """
     Show the attributes of a HDF5 dataset in the datastore
 
-    :param calc_id: numeric calculation ID
     :param key: key of the datastore
+    :param calc_id: numeric calculation ID (default last calculation)
     """
-    ds = datastore.DataStore(calc_id)
+    ds = datastore.read(calc_id)
     try:
         attrs = ds.hdf5[key].attrs
     except KeyError:
@@ -39,5 +39,5 @@ def show_attrs(calc_id, key):
         print(name, value)
 
 parser = sap.Parser(show_attrs)
-parser.arg('calc_id', 'calculation ID', type=int)
 parser.arg('key', 'key of the datastore')
+parser.arg('calc_id', 'calculation ID', type=int)
