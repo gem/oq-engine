@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2014, GEM Foundation
+#  Copyright (c) 2014-2016, GEM Foundation
 
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
@@ -116,20 +116,22 @@ class Parser(object):
         self.names.add(name)
         self._argno += 1
 
-    def arg(self, name, help, type=None, choices=None, metavar=None):
+    def arg(self, name, help, type=None, choices=None, metavar=None,
+            nargs='?'):
         """Describe a positional argument"""
         kw = dict(help=help, type=type, choices=choices, metavar=metavar)
         default = self.argdict[name]
         if default is not NODEFAULT:
-            kw['nargs'] = '?'
+            kw['nargs'] = nargs
             kw['default'] = default
             kw['help'] = kw['help'] + ' [default: %s]' % str(default)
         self._add(name, name, **kw)
 
     def opt(self, name, help, abbrev=None,
-            type=None, choices=None, metavar=None):
+            type=None, choices=None, metavar=None, nargs=None):
         """Describe an option"""
-        kw = dict(help=help, type=type, choices=choices, metavar=metavar)
+        kw = dict(help=help, type=type, choices=choices, metavar=metavar,
+                  nargs=nargs)
         default = self.argdict[name]
         if default is not NODEFAULT:
             kw['default'] = default
