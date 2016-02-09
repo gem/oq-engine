@@ -117,12 +117,13 @@ class Parser(object):
         self._argno += 1
 
     def arg(self, name, help, type=None, choices=None, metavar=None,
-            nargs='?'):
+            nargs=None):
         """Describe a positional argument"""
-        kw = dict(help=help, type=type, choices=choices, metavar=metavar)
+        kw = dict(help=help, type=type, choices=choices, metavar=metavar,
+                  nargs=nargs)
         default = self.argdict[name]
         if default is not NODEFAULT:
-            kw['nargs'] = nargs
+            kw['nargs'] = nargs or '?'
             kw['default'] = default
             kw['help'] = kw['help'] + ' [default: %s]' % str(default)
         self._add(name, name, **kw)
