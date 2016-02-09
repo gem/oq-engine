@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed two `oq-engine` switches (`--export-stats` and `--list-inputs`)
+    and fixed `--show-view`
   * Updated `make_html_report.py` to extract the full report from the
     datastore
   * If `use_celery` is true, use celery to determine a good default for
