@@ -680,7 +680,8 @@ def _gen_writers(dstore, writercls, root):
                         suffix = ('' if L == 1 and R == 1
                                   else '-gsimltp_%s_%s' % (rlz.uid, loss_type))
                         dest = dstore.export_path('%s%s%s%s.xml' % (
-                            root[:-5], suffix, poe_str, '_ins' if ins else ''))
+                            root[:-5],  # strip -rlzs
+                            suffix, poe_str, '_ins' if ins else ''))
                         yield writercls(
                             dest, oq.investigation_time, poe=poe,
                             loss_type=loss_type, unit=ct['unit'],
@@ -692,7 +693,8 @@ def _gen_writers(dstore, writercls, root):
                         for q in oq.quantile_loss_curves]
                     for ordinal, (statname, statvalue) in enumerate(pairs):
                         dest = dstore.export_path('%s-%s-%s%s%s.xml' % (
-                            root[:-6], statname, loss_type, poe_str,
+                            root[:-6],  # strip -stats
+                            statname, loss_type, poe_str,
                             '_ins' if ins else ''))
                         yield writercls(
                             dest, oq.investigation_time,
