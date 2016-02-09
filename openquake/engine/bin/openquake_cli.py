@@ -125,10 +125,10 @@ def set_up_arg_parser():
         help='List hazard calculation information',
         action='store_true')
     hazard_grp.add_argument(
-        '--delete-hazard-calculation',
-        '--dhc',
-        help='Delete a hazard calculation and all associated outputs',
-        metavar='HAZARD_CALCULATION_ID')
+        '--delete-calculation',
+        '--dc',
+        help='Delete a calculation and all associated outputs',
+        metavar='CALCULATION_ID')
 
     hazard_grp.add_argument(
         '--delete-uncompleted-calculations',
@@ -157,11 +157,6 @@ def set_up_arg_parser():
         '--lrc',
         help='List risk calculation information',
         action='store_true')
-    risk_grp.add_argument(
-        '--delete-risk-calculation',
-        '--drc',
-        help='Delete a risk calculation and all associated outputs',
-        metavar='RISK_CALCULATION_ID')
 
     export_grp = parser.add_argument_group('Export')
     export_grp.add_argument(
@@ -417,8 +412,8 @@ def main():
             if args.log_file is not None else None
         run_job(expanduser(args.run_hazard), args.log_level,
                 log_file, args.exports)
-    elif args.delete_hazard_calculation is not None:
-        del_calc(args.delete_hazard_calculation, args.yes)
+    elif args.delete_calculation is not None:
+        del_calc(args.delete_calculation, args.yes)
     # risk
     elif args.list_risk_calculations:
         list_calculations('risk')
@@ -433,8 +428,6 @@ def main():
             args.log_level, log_file, args.exports,
             hazard_output_id=args.hazard_output_id,
             hazard_calculation_id=hc_id)
-    elif args.delete_risk_calculation is not None:
-        del_calc(args.delete_risk_calculation, args.yes)
 
     # export
     elif args.list_outputs is not None:
