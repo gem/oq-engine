@@ -915,6 +915,23 @@ class ParamSet(with_metaclass(MetaParamSet)):
     params = {}
 
     @classmethod
+    def check(cls, dic):
+        """
+        Convert a dictionary name->string into a dictionary name->value
+        by converting the string. If the name does not correspond to a
+        known parameter, just ignore it and print a warning.
+        """
+        res = {}
+        for name, text in dic.items():
+            try:
+                p = getattr(cls, name)
+            except AttributeError:
+                logging.warn('Ignored unknown parameter %s', name)
+            else:
+                res[name] = p.validator(text)
+        return res
+
+    @classmethod
     def from_(cls, dic):
         """
         Build a new ParamSet from a dictionary of string-valued parameters

@@ -69,22 +69,23 @@ def get_pstats(pstatfile, n):
     return views.rst_table(rows, header='ncalls cumtime path'.split())
 
 
-def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, monitor):
+def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params, monitor):
     """
     Run both hazard and risk, one after the other
     """
     hcalc = base.calculators(readinput.get_oqparam(job_haz), monitor)
     with monitor:
-        hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports)
+        hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
+                  exports=exports, **params)
         hc_id = hcalc.datastore.calc_id
         oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
         rcalc = base.calculators(oq, monitor)
         rcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports,
-                  hazard_calculation_id=hc_id)
+                  hazard_calculation_id=hc_id, **params)
     return rcalc
 
 
-def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports):
+def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
     global calc_path
     logging.basicConfig(level=getattr(logging, loglevel.upper()))
     job_inis = job_ini.split(',')
@@ -111,10 +112,11 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports):
         with monitor:
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports, hazard_calculation_id=hc_id,
-                     rlz_ids=rlz_ids)
+                     rlz_ids=rlz_ids, **params)
     else:  # run hazard + risk
         calc = run2(
-            job_inis[0], job_inis[1], concurrent_tasks, pdb, exports, monitor)
+            job_inis[0], job_inis[1], concurrent_tasks, pdb,
+            exports, params, monitor)
 
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
@@ -124,7 +126,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports):
     return calc
 
 
-def run(job_ini, slowest, hc, concurrent_tasks=CT, exports='',
+def run(job_ini, slowest, hc, param, concurrent_tasks=CT, exports='',
         loglevel='info', pdb=None):
     """
     Run a calculation.
@@ -135,6 +137,8 @@ def run(job_ini, slowest, hc, concurrent_tasks=CT, exports='',
         enable Python cProfile functionality
     :param hc:
         ID of the previous calculation (or None)
+    :param param:
+        override a configuration parameter
     :param concurrent_tasks:
         the number of concurrent tasks (0 to disable the parallelization)
     :param loglevel:
@@ -145,22 +149,27 @@ def run(job_ini, slowest, hc, concurrent_tasks=CT, exports='',
         flag to enable pdb debugging on failing calculations
     """
     concurrent_futures_process_monkeypatch()
+    params = oqvalidation.OqParam.check(
+        dict(p.split('=', 1) for p in param or ()))
     if slowest:
         prof = cProfile.Profile()
-        stmt = '_run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports)'
+        stmt = ('_run(job_ini, concurrent_tasks, pdb, loglevel, hc, '
+                'exports, params)')
         prof.runctx(stmt, globals(), locals())
         pstat = calc_path + '.pstat'
         prof.dump_stats(pstat)
         print('Saved profiling info in %s' % pstat)
         print(get_pstats(pstat, slowest))
     else:
-        _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports)
+        _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params)
 
 parser = sap.Parser(run)
 parser.arg('job_ini', 'calculation configuration file '
            '(or files, comma-separated)')
 parser.opt('slowest', 'profile and show the slowest operations', type=int)
 parser.opt('hc', 'previous calculation ID', type=valid.hazard_id)
+parser.opt('param', 'override parameter with the syntax NAME=VALUE ...',
+           nargs='+')
 parser.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
            type=int)
 parser.opt('exports', 'export formats as a comma-separated string',
