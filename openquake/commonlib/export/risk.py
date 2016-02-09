@@ -25,7 +25,7 @@ import numpy
 from openquake.baselib.general import AccumDict
 from openquake.risklib import scientific
 from openquake.commonlib.export import export
-from openquake.commonlib import writers, risk_writers, riskmodels
+from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.export import export_csv
 from openquake.commonlib.util import (
@@ -479,9 +479,8 @@ class Location(object):
 
 
 # used by event_based_risk and classical_risk
-@export.add(('loss_maps-rlzs', 'xml'), ('loss_maps-rlzs', 'geojson'),
-            ('loss_maps-stats', 'xml'), ('loss_maps-stats', 'geojson'))
-def export_loss_maps_xml_geojson(ekey, dstore):
+@export.add(('loss_maps-rlzs', 'xml'), ('loss_maps-rlzs', 'geojson'))
+def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
     unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
     unit_by_lt['occupants'] = 'people'
@@ -501,7 +500,7 @@ def export_loss_maps_xml_geojson(ekey, dstore):
         loss_maps_lt = loss_maps[lt]
         for r in range(R):
             lmaps = loss_maps_lt[:, r]
-            for p, poe in enumerate(oq.conditional_loss_poes):
+            for poe in oq.conditional_loss_poes:
                 for insflag in range(oq.insured_losses + 1):
                     ins = '_ins' if insflag else ''
                     rlz = rlzs[r]
@@ -523,6 +522,35 @@ def export_loss_maps_xml_geojson(ekey, dstore):
                         unit=unit, **get_paths(rlz))
                     writer.serialize(data)
                     fnames.append(fname)
+    return sorted(fnames)
+
+
+# used by event_based_risk and classical_risk
+@export.add(('loss_maps-stats', 'xml'), ('loss_maps-stats', 'geojson'))
+def export_loss_maps_stats_xml_geojson(ekey, dstore):
+    loss_maps = dstore[ekey[0]]
+    N, S = loss_maps.shape
+    assetcol = dstore['assetcol']
+    sitemesh = dstore['sitemesh']
+    fnames = []
+    export_type = ekey[1]
+    writercls = (risk_writers.LossMapGeoJSONWriter
+                 if export_type == 'geojson' else
+                 risk_writers.LossMapXMLWriter)
+    for writer, (ltype, poe, s, insflag) in _gen_writers(
+            dstore, writercls, ekey[0]):
+        ins = '_ins' if insflag else ''
+        if ltype not in loss_maps.dtype.names:
+            continue
+        array = loss_maps[ltype][:, s]
+        curves = []
+        poe_str = 'poe~%s' % poe + ins
+        for ass, val in zip(assetcol, array[poe_str]):
+            loc = Location(sitemesh[ass['site_id']])
+            curve = LossMap(loc, ass['asset_ref'], val, None)
+            curves.append(curve)
+        writer.serialize(curves)
+        fnames.append(writer._dest)
     return sorted(fnames)
 
 
@@ -641,30 +669,39 @@ def _gen_writers(dstore, writercls, root):
     rlzs = dstore['rlzs_assoc'].realizations
     cost_types = dstore['cost_types']
     L, R = len(cost_types), len(rlzs)
-    for l, ct in enumerate(cost_types):
-        loss_type = ct['name']
-        for ins in range(oq.insured_losses + 1):
-            if root.endswith('-rlzs'):
-                for rlz in rlzs:
-                    suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
-                        rlz.uid, loss_type)
-                    dest = dstore.export_path('%s%s%s.xml' % (
-                        root[:-5], suffix, '_ins' if ins else ''))
-                    yield writercls(
-                        dest, oq.investigation_time, loss_type,
-                        unit=ct['unit'], **get_paths(rlz)), (
-                            loss_type, rlz.ordinal, ins)
-            elif root.endswith('-stats'):
-                pairs = [('mean', None)] + [
-                    ('quantile-%s' % q, q) for q in oq.quantile_loss_curves]
-                for ordinal, (statname, statvalue) in enumerate(pairs):
-                    dest = dstore.export_path('%s-%s-%s%s.xml' % (
-                        root[:-6], statname, loss_type, '_ins' if ins else ''))
-                    yield writercls(
-                        dest, oq.investigation_time, loss_type,
-                        statistics='mean' if ordinal == 0 else 'quantile',
-                        quantile_value=statvalue, unit=ct['unit']
-                    ), (loss_type, ordinal, ins)
+    poes = oq.conditional_loss_poes if 'maps' in root else [None]
+    for poe in poes:
+        poe_str = '-%s' % poe if poe is not None else ''
+        for l, ct in enumerate(cost_types):
+            loss_type = ct['name']
+            for ins in range(oq.insured_losses + 1):
+                if root.endswith('-rlzs'):
+                    for rlz in rlzs:
+                        suffix = ('' if L == 1 and R == 1
+                                  else '-gsimltp_%s_%s' % (rlz.uid, loss_type))
+                        dest = dstore.export_path('%s%s%s%s.xml' % (
+                            root[:-5],  # strip -rlzs
+                            suffix, poe_str, '_ins' if ins else ''))
+                        yield writercls(
+                            dest, oq.investigation_time, poe=poe,
+                            loss_type=loss_type, unit=ct['unit'],
+                            **get_paths(rlz)), (
+                                loss_type, poe, rlz.ordinal, ins)
+                elif root.endswith('-stats'):
+                    pairs = [('mean', None)] + [
+                        ('quantile-%s' % q, q)
+                        for q in oq.quantile_loss_curves]
+                    for ordinal, (statname, statvalue) in enumerate(pairs):
+                        dest = dstore.export_path('%s-%s-%s%s%s.xml' % (
+                            root[:-6],  # strip -stats
+                            statname, loss_type, poe_str,
+                            '_ins' if ins else ''))
+                        yield writercls(
+                            dest, oq.investigation_time,
+                            poe=poe, loss_type=loss_type,
+                            statistics='mean' if ordinal == 0 else 'quantile',
+                            quantile_value=statvalue, unit=ct['unit']
+                        ), (loss_type, poe, ordinal, ins)
 
 
 # this is used by event_based_risk
@@ -672,7 +709,7 @@ def _gen_writers(dstore, writercls, root):
 def export_agg_curve(ekey, dstore):
     agg_curve = dstore[ekey[0]]
     fnames = []
-    for writer, (loss_type, r, insflag) in _gen_writers(
+    for writer, (loss_type, poe, r, insflag) in _gen_writers(
             dstore, risk_writers.AggregateLossCurveXMLWriter, ekey[0]):
         ins = '_ins' if insflag else ''
         rec = agg_curve[loss_type][r]
@@ -683,7 +720,7 @@ def export_agg_curve(ekey, dstore):
     return sorted(fnames)
 
 
-# this is used by event_based_risk
+# this is used by classical risk and event_based_risk
 @export.add(('loss_curves-stats', 'xml'),
             ('loss_curves-stats', 'geojson'))
 def export_loss_curves_stats(ekey, dstore):
@@ -696,12 +733,12 @@ def export_loss_curves_stats(ekey, dstore):
     writercls = (risk_writers.LossCurveGeoJSONWriter
                  if ekey[0] == 'geojson' else
                  risk_writers.LossCurveXMLWriter)
-    for writer, (ltype, s, insflag) in _gen_writers(
+    for writer, (ltype, poe, s, insflag) in _gen_writers(
             dstore, writercls, ekey[0]):
         if ltype not in ok_loss_types:
             continue  # ignore loss type
         ins = '_ins' if insflag else ''
-        array = loss_curves[ltype][s]
+        array = loss_curves[ltype][:, s]
         curves = []
         for ass, rec in zip(assetcol, array):
             loc = Location(sitemesh[ass['site_id']])
@@ -726,7 +763,8 @@ def export_rcurves_rlzs(ekey, dstore):
     writercls = (risk_writers.LossCurveGeoJSONWriter
                  if ekey[0] == 'geojson' else
                  risk_writers.LossCurveXMLWriter)
-    for writer, (ltype, r, ins) in _gen_writers(dstore, writercls, ekey[0]):
+    for writer, (ltype, poe, r, ins) in _gen_writers(
+            dstore, writercls, ekey[0]):
         if ltype not in loss_ratios.dtype.names:
             continue  # ignore loss type
         array = rcurves[ltype][:, r, ins]
@@ -754,7 +792,8 @@ def export_loss_curves_rlzs(ekey, dstore):
     writercls = (risk_writers.LossCurveGeoJSONWriter
                  if ekey[0] == 'geojson' else
                  risk_writers.LossCurveXMLWriter)
-    for writer, (lt, r, insflag) in _gen_writers(dstore, writercls, ekey[0]):
+    for writer, (lt, poe, r, insflag) in _gen_writers(
+            dstore, writercls, ekey[0]):
         ins = '_ins' if insflag else ''
         array = loss_curves[lt][:, r]
         curves = []
