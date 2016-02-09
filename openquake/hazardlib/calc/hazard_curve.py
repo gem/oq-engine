@@ -311,7 +311,6 @@ def hazard_curves_per_group(
     tot_wei = 0.0
     # Computing contributions by all the sources
     for source, s_sites in source_site_filter(sources_sites):
-        print '         source:', source.source_id
         t0 = time.time()
         # Initialise temporary accumulator for the probability of
         # non-exceedance
@@ -330,7 +329,6 @@ def hazard_curves_per_group(
             rupture_sites = rupture_site_filter(
                 (rupture, s_sites) for rupture in source.iter_ruptures())
             for cnt, (rupture, r_sites) in enumerate(rupture_sites):
-                print '            rupture ----'
                 with ctx_mon:
                     try:
                         sctx, rctx, dctx = cmaker.make_contexts(r_sites,
@@ -358,12 +356,10 @@ def hazard_curves_per_group(
                                 sctx, rctx, dctx, imt, imts[imt],
                                 truncation_level)
                             pno = rupture.get_probability_no_exceedance(poes)
-                            print 'pnp:', pno
                             # Updating the probability of non-exceedance
                             expanded_pno = sctx.sites.expand(pno, 1.0)
                             if group.rup_interdep is 'indep':
                                 tc_src[i][str(imt)] *= expanded_pno
-                                print tc_src
                             else:
                                 tc_src[i][str(imt)] += (expanded_pno *
                                                         weights[cnt])

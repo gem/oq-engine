@@ -78,10 +78,10 @@ class GriddedSurface(BaseSurface):
         :returns:
             A numpy array of distances in km.
         """
-        # return (self.mesh.get_min_distance(mesh))
-        dists = min_geodetic_distance(mesh.lons, mesh.lats, self.mesh.lons,
-                                      self.mesh.lats)
-        return min(dists)
+        return (self.mesh.get_min_distance(mesh))
+        # dists = min_geodetic_distance(mesh.lons, mesh.lats, self.mesh.lons,
+        #                              self.mesh.lats)
+        # return min(dists)
 
     def get_closest_points(self, mesh):
         """
