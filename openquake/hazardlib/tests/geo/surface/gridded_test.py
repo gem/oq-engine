@@ -29,10 +29,12 @@ class GriddedSurfaceTestCase(unittest.TestCase):
     def setUp(self):
         self.surf = GriddedSurface.from_points_list(POINTS)
         self.mesh = Mesh(np.array([1.]), np.array([2.]), np.array([3.]))
+        self.meshA = Mesh(np.array([1., 2.]), np.array([2., 2.]), 
+                          np.array([3., 2.]))
 
     def test_get_min_distance(self):
         dists = self.surf.get_min_distance(self.mesh)
-        expected = np.array([111.23538876])
+        expected = np.array([111.19493])
         np.testing.assert_allclose(dists, expected, rtol=1e-5, atol=0)
 
     def test_get_closest_points(self):
@@ -40,8 +42,10 @@ class GriddedSurfaceTestCase(unittest.TestCase):
                           self.mesh)
 
     def test_get_joyner_boore_distance(self):
-        self.assertRaises(NotImplementedError,
-                          self.surf.get_joyner_boore_distance, self.mesh)
+        dists = self.surf.get_joyner_boore_distance(self.mesh)
+        print dists
+        expected = np.array([111.19493])
+        np.testing.assert_allclose(dists, expected, rtol=1e-5, atol=0)
 
     def test_get_rx_distance(self):
         self.assertRaises(NotImplementedError, self.surf.get_rx_distance,
@@ -67,7 +71,7 @@ class GriddedSurfaceTestCase(unittest.TestCase):
         self.assertRaises(NotImplementedError, self.surf.get_area)
 
     def test_get_bounding_box(self):
-        self.assertRaises(NotImplementedError, self.surf.get_bounding_box)
+        pass
 
     def test_get_middle_point(self):
-        self.assertRaises(NotImplementedError, self.surf.get_middle_point)
+        pass

@@ -71,13 +71,16 @@ class SourceGroup(object):
     :parameter weights:
         A dictionary whose keys are the source IDs of the cluster and the
         values are the weights associated with each source
+    :parameter checkw:
+        Flag controlling the verification of weights assigned to the sources
+        in the group
     """
 
     def __init__(self, src_list, name='', src_interdep='indep',
-                 rup_interdep='indep', srcs_weights=None):
+                 rup_interdep='indep', srcs_weights=None, checkw=True):
         # checks
         self._check_init_variables(src_list, name, src_interdep, rup_interdep,
-                                   srcs_weights)
+                                   srcs_weights, checkw)
         # set instance parameters
         self.src_list = src_list
         self.name = name
@@ -91,7 +94,7 @@ class SourceGroup(object):
             self.srcs_weights = srcs_weights
 
     def _check_init_variables(self, src_list, name, src_interdep, rup_interdep,
-                              srcs_weights):
+                              srcs_weights, checkw):
         assert isinstance(src_list, list)
         assert issubclass(type(src_list[0]), BaseSeismicSource)
         # check source interdependence
@@ -100,11 +103,17 @@ class SourceGroup(object):
         except:
             raise ValueError('source interdependence incorrect %s ' %
                              src_interdep)
-        # check rupture interdependence
+        # check rupture interdependence definition
         assert set(['indep', 'mutex']) & set([rup_interdep])
-        # check srcs weights if defined by the user
+        # check srcs weights defined by the user
         if srcs_weights is not None:
-            assert 1. - float(abs(sum(srcs_weights))) < 1e-6
+            assert isinstance(srcs_weights, dict)
+            # Check weights
+            if checkw:
+                smm = 0.0
+                for key in srcs_weights:
+                    smm += float(srcs_weights[key])
+                assert abs(1. - smm) < 1e-6
 
     def __iter__(self):
         return iter(self.src_list)

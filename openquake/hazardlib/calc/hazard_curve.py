@@ -33,7 +33,7 @@ from openquake.baselib.general import deprecated
 from openquake.hazardlib.source.base import SourceGroup, SourceGroupCollection
 
 
-def zero_curves(num_sites, imtls):
+def init_curves(num_sites, imtls, interdep='indep'):
     """
     :param num_sites: the number of sites
     :param imtls: the intensity measure levels dictionary
@@ -42,7 +42,10 @@ def zero_curves(num_sites, imtls):
     # numpy dtype for the hazard curves
     imt_dt = numpy.dtype([(imt, float, 1 if imls is None else len(imls))
                           for imt, imls in imtls.items()])
-    zero = numpy.zeros(num_sites, imt_dt)
+    if interdep == 'indep':
+        zero = numpy.zeros(num_sites, imt_dt)
+    else:
+        zero = numpy.ones(num_sites, imt_dt)
     return zero
 
 
@@ -59,6 +62,21 @@ def zero_maps(num_sites, imts, poes=()):
     else:
         imt_dt = numpy.dtype([(imt, numpy.float32) for imt in imts])
     return numpy.zeros(num_sites, imt_dt)
+
+
+def agg_curves_mutex(acc, curves, weight):
+    """
+    Aggregate hazard curves by composing the probabilities. Probabilities
+    here are mutually exclusive.
+
+    :param acc: an accumulator array
+    :param curves: an array of hazard curves
+    :returns: a new accumulator
+    """
+    new = numpy.array(acc)  # copy of the accumulator
+    for imt in curves.dtype.fields:
+        new[imt] = 1. - (1. - curves[imt]) * weight + (1. - acc[imt])
+    return new
 
 
 def agg_curves(acc, curves):
@@ -155,7 +173,7 @@ def calc_hazard_curves(
     sources_by_trt = collections.defaultdict(list)
     for src in sources:
         sources_by_trt[src.tectonic_region_type].append(src)
-    curves = zero_curves(len(sites), imtls)
+    curves = init_curves(len(sites), imtls)
     for trt in sources_by_trt:
         curves = agg_curves(curves, hazard_curves_per_trt(
             sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
@@ -274,7 +292,6 @@ def hazard_curves_per_group(
     else:
         sources = group.src_list
     # Check that the all the sources belong to the same tectonic region
-    print len(set([src.tectonic_region_type for src in sources]))
     assert len(set([src.tectonic_region_type for src in sources])) == 1
     # Prepare
     cmaker = ContextMaker(gsims, maximum_distance)
@@ -294,6 +311,7 @@ def hazard_curves_per_group(
     tot_wei = 0.0
     # Computing contributions by all the sources
     for source, s_sites in source_site_filter(sources_sites):
+        print '         source:', source.source_id
         t0 = time.time()
         # Initialise temporary accumulator for the probability of
         # non-exceedance
@@ -312,6 +330,7 @@ def hazard_curves_per_group(
             rupture_sites = rupture_site_filter(
                 (rupture, s_sites) for rupture in source.iter_ruptures())
             for cnt, (rupture, r_sites) in enumerate(rupture_sites):
+                print '            rupture ----'
                 with ctx_mon:
                     try:
                         sctx, rctx, dctx = cmaker.make_contexts(r_sites,
@@ -339,10 +358,12 @@ def hazard_curves_per_group(
                                 sctx, rctx, dctx, imt, imts[imt],
                                 truncation_level)
                             pno = rupture.get_probability_no_exceedance(poes)
+                            print 'pnp:', pno
                             # Updating the probability of non-exceedance
                             expanded_pno = sctx.sites.expand(pno, 1.0)
                             if group.rup_interdep is 'indep':
                                 tc_src[i][str(imt)] *= expanded_pno
+                                print tc_src
                             else:
                                 tc_src[i][str(imt)] += (expanded_pno *
                                                         weights[cnt])
@@ -357,8 +378,8 @@ def hazard_curves_per_group(
                     for imt in imtls:
                         tc_gru[i][str(imt)] += (
                             tc_src[i][str(imt)] *
-                            group.weights[source.source_id])
-                        tot_wei += group.weights[source.source_id]
+                            float(group.srcs_weights[source.source_id]))
+                        tot_wei += float(group.srcs_weights[source.source_id])
             del tc_src
 
         except Exception as err:
@@ -393,23 +414,54 @@ def calc_hazard_curves_ext(
     if not isinstance(groups, SourceGroupCollection):
         group_tmp = SourceGroup(groups, 1, 'indep', 'indep')
         groups = SourceGroupCollection([group_tmp])
+    # Initialise the curves accumulator
+    curves_fin = init_curves(len(sites), imtls)
     # Processing groups
     for group in groups.grp_list:
+        print 'Group:', group.name
         # Prepare a dictionary
         sources_by_trt = collections.defaultdict(list)
+        weights_by_trt = collections.defaultdict(dict)
         # Fill the dictionary with sources for the different tectonic regions
         # belonging to this group
-        for src in group.src_list:
-            sources_by_trt[src.tectonic_region_type].append(src)
-        # Initialise the accumulator
-        curves = zero_curves(len(sites), imtls)
+        if group.src_interdep is 'indep':
+            for src in group.src_list:
+                sources_by_trt[src.tectonic_region_type].append(src)
+                # in this case this is a dummy variable
+                weights_by_trt[src.tectonic_region_type][src.source_id] = 1.0
+        else:
+            for src in group.src_list:
+                sources_by_trt[src.tectonic_region_type].append(src)
+                wei = group.srcs_weights[src.source_id]
+                weights_by_trt[src.tectonic_region_type][src.source_id] = wei
+        # Initialise the curves accumulator
+        curves = init_curves(len(sites), imtls, group.src_interdep)
         # Aggregate results. Note that for now we assume that source groups
         # are independent.
         for trt in sources_by_trt:
+            print '    TRT:', trt
             # Create a temporary group
-            tmp_group = SourceGroup(sources_by_trt[trt])
+            tmp_group = SourceGroup(sources_by_trt[trt],
+                                    'temp',
+                                    group.src_interdep,
+                                    group.rup_interdep,
+                                    weights_by_trt[trt],
+                                    False)
             # Compute curves
-            curves = agg_curves(curves, hazard_curves_per_group(
-                tmp_group, sites, imtls, [gsim_by_trt[trt]],
-                truncation_level, source_site_filter, rupture_site_filter)[0])
-    return curves
+            if group.src_interdep is 'indep':
+                print '      src indep'
+                curves = agg_curves(curves, hazard_curves_per_group(
+                    tmp_group, sites, imtls, [gsim_by_trt[trt]],
+                    truncation_level, source_site_filter,
+                    rupture_site_filter)[0])
+            else:
+                # Since in this case the probability for each source have
+                # been already accounted we use a weight equal to unity
+                print '      src mutex'
+                curves = agg_curves_mutex(curves, hazard_curves_per_group(
+                    tmp_group, sites, imtls, [gsim_by_trt[trt]],
+                    truncation_level, source_site_filter,
+                    rupture_site_filter)[0], 1.0)
+        # Final aggregation
+        curves_fin = agg_curves(curves_fin, curves)
+    return curves_fin
