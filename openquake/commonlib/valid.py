@@ -918,7 +918,8 @@ class ParamSet(with_metaclass(MetaParamSet)):
     def check(cls, dic):
         """
         Convert a dictionary name->string into a dictionary name->value
-        by checking the validity of the value.
+        by converting the string. If the name does not correspond to a
+        known parameter, just ignore it and print a warning.
         """
         res = {}
         for name, text in dic.items():
