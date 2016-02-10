@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Raised an error early if there is a PoE=1 for classical damage
+    calculations
   * Introduced a cutoff for minIML=0 in continuous fragility functions
   * Fixed the `ses_ratio` when the number of samples is greater than 1
   * Changed the order of the arguments in the commands `oq-lite show` and
