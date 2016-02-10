@@ -8,7 +8,7 @@ One common configuration is to install and deploy the two services on a single "
 On all nodes,install the python-oq-engine package as described in [OpenQuake Engine installation](Installing-the-OpenQuake-Engine-on-RHEL-and-clones.md).
 
 ## Postgres configuration
-The default Postgres configuration does not permit access from other machines: the file `/etc/postgresql/9.3/main/pg_hba.conf` should be modified to allow access to the "openquake2" database from the worker nodes, an example excerpt follows:
+The default Postgres configuration does not permit access from other machines: the file `/var/lib/pgsql/data/pg_hba.conf` should be modified to allow access to the "openquake2" database from the worker nodes, an example excerpt follows:
 
 <pre>
 host   openquake2   oq_admin        192.168.10.0/8 md5
@@ -20,9 +20,9 @@ The Postgres manual describes a number of runtime configuration parameters that 
 ### listen_addresses
 * See [http://www.postgresql.org/docs/current/static/runtime-config-connection.html#GUC-LISTEN-ADDRESSES](http://www.postgresql.org/docs/current/static/runtime-config-connection.html#GUC-LISTEN-ADDRESSES)
 
-By default Postres, on Ubuntu, allows connections only from localhost. Since celery workers need to push data back to Postgres, it should be exposed to the cluster network:
+By default Postres allows connections only from localhost. Since celery workers need to push data back to Postgres, it should be exposed to the cluster network:
 
-`/etc/postgresql/9.3/main/postgresql.conf`
+`/var/lib/pgsql/data/postgresql.conf`
 <pre>
 # This value should be at least the number of worker cores
 listen_addresses = '*'
@@ -35,7 +35,7 @@ By default Postres allows a maximum of 100 simultaneous connections. By default 
 
 Note that changing max_connections may also imply operating-system level changes, please see [http://www.postgresql.org/docs/current/static/kernel-resources.html](http://www.postgresql.org/docs/current/static/kernel-resources.html) for details.
 
-`/etc/postgresql/9.3/main/postgresql.conf`
+`/var/lib/pgsql/data/postgresql.conf`
 <pre>
 # This value should be at least the number of worker cores
 max_connections = 100
@@ -88,12 +88,6 @@ Jobs can be submitted through the master node using the `oq-engine` command line
 
 `celeryd` must run all of the worker nodes. It can be started using the following commands
 
-#### Ubuntu 12.04 / Celery 2
-<pre>
-cd /usr/share/openquake/engine && celeryd --purge &
-</pre>
-
-#### Ubuntu 14.04 and RHEL 7 / Celery 3
 <pre>
 cd /usr/share/openquake/engine && celery worker --purge -Ofair &
 </pre>
@@ -102,7 +96,7 @@ but we strongly suggest to use `supervisord` to manage the celery deamons.
 
 ```supervisord``` can be installed with
 ```bash
-sudo apt-get install supervisor
+sudo yum install supervisor
 ```
 
 An example of configuration for the OpenQuake Engine is available in [supervisor.md](supervisord.md).
@@ -120,9 +114,9 @@ Storage requirements depend a lot on the type of calculations run. On a worker n
 
 On the master node you will also need space for:
 - the users' **home** directory (usually located under `/home`): it contains the calculations datastore (`hdf5` files located in the `oqdata` folder)
-- the PostgreSQL `openquake2` database (on Ubuntu is usually located under `/var/lib/postgres`)
-- RabbitMQ mnesia dir (on Ubuntu usually located under `/var/lib/rabbitmq`)
+- the PostgreSQL `openquake2` database (on RHEL is usually located under `/var/lib/pgsql`)
+- RabbitMQ mnesia dir (on RHEL usually located under `/var/lib/rabbitmq`)
 
-On large installation we strongly suggest to create separate partition for `/home`, `/var`, PostgreSQL (`/var/lib/postgres`) and RabbitMQ (`/var/lib/rabbitmq`).
+On large installation we strongly suggest to create separate partition for `/home`, `/var`, PostgreSQL (`/var/lib/pgsql`) and RabbitMQ (`/var/lib/rabbitmq`).
 Those partitions should be stored on fast local disks or on a high performance SAN (i.e. using a FC or a 10Gbps link).
 
