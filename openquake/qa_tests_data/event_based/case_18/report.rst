@@ -1,22 +1,22 @@
 Event-Based Hazard QA Test, Case 18
 ===================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 3          
-maximum_distance             200.0      
-investigation_time           1.0        
+maximum_distance             200        
+investigation_time           1.000      
 ses_per_logic_tree_path      350        
 truncation_level             0.0        
-rupture_mesh_spacing         1.0        
-complex_fault_mesh_spacing   1.0        
+rupture_mesh_spacing         1.000      
+complex_fault_mesh_spacing   1.000      
 width_of_mfd_bin             0.001      
-area_source_discretization   10.0       
-random_seed                  1064       
+area_source_discretization   10         
+random_seed                  1,064      
 master_seed                  0          
 concurrent_tasks             16         
 ============================ ===========
@@ -34,11 +34,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ============== ====================================== =============== ================
-smlt_path weight         source_model_file                      gsim_logic_tree num_realizations
-========= ============== ====================================== =============== ================
-b1        0.333333333333 `source_model.xml <source_model.xml>`_ simple(3)       3/3             
-========= ============== ====================================== =============== ================
+========= ====== ====================================== =============== ================
+smlt_path weight source_model_file                      gsim_logic_tree num_realizations
+========= ====== ====================================== =============== ================
+b1        0.333  `source_model.xml <source_model.xml>`_ simple(3)       3/3             
+========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -53,7 +53,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(2)
+  <RlzsAssoc(size=2, rlzs=3)
   0,AkkarBommer2010: ['<0,b1,AB,w=0.333333333333>', '<1,b1,AB,w=0.333333333333>']
   0,CauzziFaccioli2008: ['<2,b1,CF,w=0.333333333333>']>
 
@@ -80,7 +80,15 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 1       
-Sent data                   18.87 KB
+Sent data                   18.69 KB
 Total received data         6.89 KB 
 Maximum received per task   6.89 KB 
 =========================== ========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         PointSource  75     1         0.005       2.718E-05  3.745    
+============ ========= ============ ====== ========= =========== ========== =========

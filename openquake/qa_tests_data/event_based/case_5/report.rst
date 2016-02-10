@@ -1,21 +1,21 @@
 Germany_SHARE Combined Model event_based
 ========================================
 
-num_sites = 100, sitecol = 2.76 KB
+num_sites = 100, sitecol = 5.13 KB
 
 Parameters
 ----------
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 0          
-maximum_distance             80.0       
-investigation_time           30.0       
+maximum_distance             80         
+investigation_time           30         
 ses_per_logic_tree_path      1          
-truncation_level             3.0        
-rupture_mesh_spacing         5.0        
-complex_fault_mesh_spacing   5.0        
-width_of_mfd_bin             0.1        
-area_source_discretization   10.0       
+truncation_level             3.000      
+rupture_mesh_spacing         5.000      
+complex_fault_mesh_spacing   5.000      
+width_of_mfd_bin             0.100      
+area_source_discretization   10         
 random_seed                  23         
 master_seed                  0          
 concurrent_tasks             16         
@@ -59,7 +59,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(6)
+  <RlzsAssoc(size=6, rlzs=6)
   1,FaccioliEtAl2010: ['<0,b1,@_@_@_b4_1,w=0.714285714286>']
   4,AkkarBommer2010: ['<1,b2,@_b2_1_@_@,w=0.0571428571429>']
   4,Campbell2003SHARE: ['<5,b2,@_b2_5_@_@,w=0.0571428571429>']
@@ -88,7 +88,34 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 12       
-Sent data                   5.1 MB   
-Total received data         167.19 KB
+Sent data                   5.12 MB  
+Total received data         167.23 KB
 Maximum received per task   34.6 KB  
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+4            327       AreaSource   1,544  5,145     0.007       4.593      32       
+4            328       AreaSource   1,544  5,145     0.019       4.866      29       
+4            329       AreaSource   1,544  5,145     0.019       4.965      21       
+4            317       AreaSource   449    1         0.002       0.0        13       
+4            318       AreaSource   449    1         0.002       0.0        11       
+4            316       AreaSource   449    1         0.002       0.0        11       
+4            322       AreaSource   307    1         0.001       0.0        9.401    
+4            323       AreaSource   307    1         0.001       0.0        8.333    
+4            265       AreaSource   85     1         0.001       0.0        2.498    
+4            264       AreaSource   85     1         0.001       0.0        2.277    
+4            263       AreaSource   85     1         0.001       0.0        2.261    
+4            267       AreaSource   56     1         0.001       0.0        1.861    
+4            332       AreaSource   56     1         0.001       0.0        1.835    
+4            331       AreaSource   56     1         0.001       0.0        1.721    
+4            330       AreaSource   56     1         0.001       0.0        1.589    
+4            266       AreaSource   56     1         0.001       0.0        1.577    
+4            333       AreaSource   39     1         0.001       0.0        1.290    
+4            249       AreaSource   30     1         0.001       0.0        1.056    
+4            334       AreaSource   39     1         0.001       0.0        1.011    
+4            250       AreaSource   30     1         0.001       0.0        0.949    
+============ ========= ============ ====== ========= =========== ========== =========

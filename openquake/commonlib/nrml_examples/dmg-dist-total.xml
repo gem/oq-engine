@@ -1,46 +1,19 @@
-<?xml version="1.0" encoding="utf-8"?>
-<nrml
-xmlns="http://openquake.org/xmlns/nrml/0.5"
-xmlns:gml="http://www.opengis.net/gml"
->
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
     <totalDmgDist>
         <damageStates>
-            no_damage slight moderate extensive complete
+            no_damage
+            slight
+            moderate
+            extensive
+            complete
         </damageStates>
-        <damage
-        ds="no_damage"
-        mean="1.0"
-        stddev="1.6"
-        >
-            no_damage 1.0000000E+00 1.6000000E+00
-        </damage>
-        <damage
-        ds="slight"
-        mean="34.8"
-        stddev="18.3"
-        >
-            slight 3.4800000E+01 1.8300000E+01
-        </damage>
-        <damage
-        ds="moderate"
-        mean="64.2"
-        stddev="19.8"
-        >
-            moderate 6.4200000E+01 1.9800000E+01
-        </damage>
-        <damage
-        ds="extensive"
-        mean="64.3"
-        stddev="19.7"
-        >
-            extensive 6.4300000E+01 1.9700000E+01
-        </damage>
-        <damage
-        ds="complete"
-        mean="64.3"
-        stddev="19.7"
-        >
-            complete 6.4300000E+01 1.9700000E+01
-        </damage>
+
+        <damage ds="no_damage" mean="1.0" stddev="1.6" />
+        <damage ds="slight" mean="34.8" stddev="18.3" />
+        <damage ds="moderate" mean="64.2"  stddev="19.8" />
+        <damage ds="extensive" mean="64.3"  stddev="19.7" />
+        <damage ds="complete" mean="64.3"  stddev="19.7" />
     </totalDmgDist>
 </nrml>

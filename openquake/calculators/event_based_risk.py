@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib.general import AccumDict, humansize
 from openquake.calculators import base
 from openquake.commonlib import readinput, parallel
-from openquake.risklib import riskinput, scientific
+from openquake.risklib import riskinput, scientific, riskmodels
 from openquake.commonlib.parallel import apply_reduce
 
 U32 = numpy.uint32
@@ -245,10 +245,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         correl_model = readinput.get_correl_model(oq)
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
-        assets_by_site = self.assets_by_site
-        # the following is needed to set the asset idx attribute
-        self.assetcol = riskinput.build_asset_collection(
-            assets_by_site, oq.time_event)
 
         logging.info('Populating the risk inputs')
         rup_by_tag = AccumDict()
@@ -264,7 +260,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             eps = FakeMatrix(self.N, self.E)
         else:
             eps = riskinput.make_eps(
-                assets_by_site, self.E, oq.master_seed,
+                self.assets_by_site, self.E, oq.master_seed,
                 oq.asset_correlation)
             logging.info('Generated %s epsilons', eps.shape)
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
@@ -366,6 +362,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.riskmodel.build_loss_dtypes(
                 self.oqparam.conditional_loss_poes, self.I))
 
+        self.vals = {}  # asset values by loss_type
+        for ltype in ltypes:
+            asset_values = []
+            for assets in self.assets_by_site:
+                for asset in assets:
+                    asset_values.append(asset.value(
+                        ltype, self.oqparam.time_event))
+            self.vals[ltype] = numpy.array(asset_values)
+
         # loss curves
         multi_lr_dt = numpy.dtype(
             [(ltype, (F32, cbuilder.curve_resolution))
@@ -380,8 +385,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         result['AVGLOSS']):
                     lt = self.riskmodel.loss_types[l]
                     avg_losses_lt = self.avg_losses[lt]
-                    asset_values = self.assetcol[lt]
-                    for i, avalue in enumerate(asset_values):
+                    for i, avalue in enumerate(self.vals[lt]):
                         avg_losses_lt[i, r] = avgloss[i, 0] * avalue
                         if self.oqparam.insured_losses:
                             self.avg_losses[lt + '_ins'][i, r] = (
@@ -495,7 +499,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         for loss_type, cbuilder in zip(
                 self.riskmodel.loss_types, self.riskmodel.curve_builders):
             rcurves = r_curves[loss_type]
-            asset_values = self.assetcol[loss_type]
+            asset_values = self.vals[loss_type]
             data = []
             for rlz in rlzs:
                 average_losses = avg_losses[loss_type][:, rlz.ordinal]
@@ -532,8 +536,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         all_stats = map(builder.build, self._collect_all_data())
         if not all_stats:
             return
-        loss_curves = numpy.zeros((self.Q1, self.N), self.loss_curve_dt)
-        loss_maps = numpy.zeros((self.Q1, self.N), self.loss_maps_dt)
+        loss_curves = numpy.zeros((self.N, self.Q1), self.loss_curve_dt)
+        loss_maps = numpy.zeros((self.N, self.Q1), self.loss_maps_dt)
         for stats in all_stats:
             # there is one stat for each loss_type
             cb = self.riskmodel.curve_builders[ltypes.index(stats.loss_type)]
@@ -544,13 +548,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 len(cb.ratios), scientific.normalize_curves_eb,
                 oq.insured_losses)
             curves, maps = sb.get_curves_maps(stats)  # matrices (Q1, N)
-            lc = loss_curves[cb.loss_type]
-            lm = loss_maps[cb.loss_type]
-            for i, statname in enumerate(sb.mean_quantiles):
-                for name in curves.dtype.names:
-                    lc[name][i] = curves[name][i]
-                for name in maps.dtype.names:
-                    lm[name][i] = maps[name][i]
+            loss_curves[cb.loss_type] = curves.T
+            loss_maps[cb.loss_type] = maps.T
+
         self.datastore['loss_curves-stats'] = loss_curves
         if oq.conditional_loss_poes:
             self.datastore['loss_maps-stats'] = loss_maps

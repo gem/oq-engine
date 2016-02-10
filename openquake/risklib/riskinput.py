@@ -26,9 +26,49 @@ import numpy
 from openquake.baselib.general import groupby, split_in_blocks
 from openquake.baselib.performance import DummyMonitor
 from openquake.hazardlib.gsim.base import gsim_imt_dt
-from openquake.risklib import scientific
+from openquake.risklib import scientific, riskmodels
 
 F32 = numpy.float32
+
+FIELDS = ('site_id', 'lon', 'lat', 'asset_ref', 'taxonomy', 'area', 'number',
+          'occupants', 'deductible~', 'insurance_limit~', 'retrofitted~')
+
+
+def build_assets_by_site(assetcol, taxonomies, time_event, cc):
+    """
+    :param assetcol: the asset collection as a composite array
+    :param taxomies: an array of taxonomy strings
+    :param time_event: time event string (or None)
+    :param cc: :class:`openquake.risklib.riskmodels.CostCalculator` instance
+    :returns: an array of lists with the assets by each site
+    """
+    fields = assetcol.dtype.names
+    site_ids = sorted(set(assetcol['site_id']))
+    loss_types = sorted(f for f in fields if not f.startswith(FIELDS))
+    deduc = [n for n in fields if n.startswith('deductible~')]
+    i_lim = [n for n in fields if n.startswith('insurance_limit~')]
+    retro = [n for n in fields if n.startswith('retrofitted~')]
+    assets_by_site = [[] for sid in site_ids]
+    index = dict(zip(site_ids, range(len(site_ids))))
+    for idx, a in enumerate(assetcol):
+        sid = a['site_id']
+        values = {lt: a[lt] for lt in loss_types}
+        if 'occupants' in fields:
+            values['occupants_' + str(time_event)] = a['occupants']
+        asset = riskmodels.Asset(
+            a['asset_ref'],
+            taxonomies[a['taxonomy']],
+            number=a['number'],
+            location=(a['lon'], a['lat']),
+            values=values,
+            area=a['area'],
+            deductibles={lt: a[lt] for lt in deduc},
+            insurance_limits={lt: a[lt] for lt in i_lim},
+            retrofitteds={lt: a[lt] for lt in retro},
+            calc=cc,
+            idx=idx)
+        assets_by_site[index[sid]].append(asset)
+    return numpy.array(assets_by_site)
 
 
 def build_asset_collection(assets_by_site, time_event=None):
@@ -55,7 +95,7 @@ def build_asset_collection(assets_by_site, time_event=None):
             loss_types.append(candidate)
     deductible_d = first_asset.deductibles or {}
     limit_d = first_asset.insurance_limits or {}
-    retrofitting_d = first_asset.retrofitting_values or {}
+    retrofitting_d = first_asset.retrofitteds or {}
     deductibles = ['deductible~%s' % name for name in deductible_d]
     limits = ['insurance_limit~%s' % name for name in limit_d]
     retrofittings = ['retrofitted~%s' % n for n in retrofitting_d]
@@ -66,13 +106,14 @@ def build_asset_collection(assets_by_site, time_event=None):
             taxonomies.add(asset.taxonomy)
     sorted_taxonomies = sorted(taxonomies)
     asset_dt = numpy.dtype(
-        [('asset_ref', '|S100'), ('site_id', numpy.uint32),
-         ('taxonomy', numpy.uint32)] +
+        [('asset_ref', '|S100'),
+         ('lon', F32), ('lat', F32), ('site_id', numpy.uint32),
+         ('taxonomy', numpy.uint32), ('number', F32), ('area', F32)] +
         [(name, float) for name in float_fields])
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
     asset_ordinal = 0
-    fields = ['taxonomy', 'asset_ref', 'site_id'] + float_fields
+    fields = set(asset_dt.fields)
     for sid, assets_ in enumerate(assets_by_site):
         for asset in sorted(assets_, key=operator.attrgetter('id')):
             asset.idx = asset_ordinal
@@ -81,10 +122,18 @@ def build_asset_collection(assets_by_site, time_event=None):
             for field in fields:
                 if field == 'taxonomy':
                     value = sorted_taxonomies.index(asset.taxonomy)
+                elif field == 'number':
+                    value = asset.number
+                elif field == 'area':
+                    value = asset.area
                 elif field == 'asset_ref':
                     value = asset.id
                 elif field == 'site_id':
                     value = sid
+                elif field == 'lon':
+                    value = asset.location[0]
+                elif field == 'lat':
+                    value = asset.location[1]
                 elif field == 'occupants':
                     value = asset.values[the_occupants]
                 else:
@@ -92,7 +141,9 @@ def build_asset_collection(assets_by_site, time_event=None):
                         name, lt = field.split('~')
                     except ValueError:  # no ~ in field
                         name, lt = 'value', field
-                    value = getattr(asset, name)(lt)
+                    # the line below retrieve one of `deductibles`,
+                    # `insured_limits` or `retrofitteds` ("s" suffix)
+                    value = getattr(asset, name + 's')[lt]
                 record[field] = value
     return assetcol
 

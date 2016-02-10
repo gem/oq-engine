@@ -1,21 +1,21 @@
 Event Based Hazard
 ==================
 
-num_sites = 1, sitecol = 604 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 0          
-maximum_distance             200.0      
-investigation_time           1.0        
+maximum_distance             200        
+investigation_time           1.000      
 ses_per_logic_tree_path      100        
-truncation_level             3.0        
-rupture_mesh_spacing         2.0        
-complex_fault_mesh_spacing   2.0        
-width_of_mfd_bin             0.1        
-area_source_discretization   10.0       
+truncation_level             3.000      
+rupture_mesh_spacing         2.000      
+complex_fault_mesh_spacing   2.000      
+width_of_mfd_bin             0.100      
+area_source_discretization   10         
 random_seed                  24         
 master_seed                  0          
 concurrent_tasks             16         
@@ -56,7 +56,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
+  <RlzsAssoc(size=1, rlzs=1)
   0,SadighEtAl1997: ['<0,b1,b1,w=1.0>']>
 
 Non-empty rupture collections
@@ -76,12 +76,12 @@ Collections Realizations
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== =========
-Number of tasks to generate 14       
-Sent data                   108.23 KB
-Total received data         49.47 KB 
-Maximum received per task   12.8 KB  
-=========================== =========
+=========================== ========
+Number of tasks to generate 14      
+Sent data                   105.2 KB
+Total received data         49.47 KB
+Maximum received per task   12.8 KB 
+=========================== ========
 
 Exposure model
 --------------
@@ -95,3 +95,12 @@ Taxonomy #Assets
 ======== =======
 Wood     1      
 ======== =======
+
+Slowest sources
+---------------
+============ ========= ==================== ====== ========= =========== ========== =========
+trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
+============ ========= ==================== ====== ========= =========== ========== =========
+0            3         SimpleFaultSource    482    15        0.003       0.066      0.394    
+0            1         CharacteristicFaultS 1.000  1         0.002       0.0        0.013    
+============ ========= ==================== ====== ========= =========== ========== =========

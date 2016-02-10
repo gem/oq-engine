@@ -1,24 +1,25 @@
 Classical Hazard QA Test, Case 11
 =================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             200.0    
-investigation_time           1.0      
+maximum_distance             200      
+investigation_time           1.000    
 ses_per_logic_tree_path      1        
 truncation_level             0.0      
-rupture_mesh_spacing         0.01     
-complex_fault_mesh_spacing   0.01     
+rupture_mesh_spacing         0.010    
+complex_fault_mesh_spacing   0.010    
 width_of_mfd_bin             0.001    
-area_source_discretization   10.0     
-random_seed                  1066     
+area_source_discretization   10       
+random_seed                  1,066    
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -57,7 +58,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(3)
+  <RlzsAssoc(size=3, rlzs=3)
   0,SadighEtAl1997: ['<0,b1_b2,b1,w=0.2>']
   1,SadighEtAl1997: ['<1,b1_b3,b1,w=0.6>']
   2,SadighEtAl1997: ['<2,b1_b4,b1,w=0.2>']>
@@ -65,23 +66,33 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources num_ruptures weight
+source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      active shallow crust 1           3500         87.5  
-source_model.xml 1      active shallow crust 1           3000         75.0  
-source_model.xml 2      active shallow crust 1           2500         62.5  
+source_model.xml 0      Active Shallow Crust 1           3,500        87    
+source_model.xml 1      Active Shallow Crust 1           3,000        75    
+source_model.xml 2      Active Shallow Crust 1           2,500        62    
 ================ ====== ==================== =========== ============ ======
 
 =============== =====
 #TRT models     3    
 #sources        3    
-#ruptures       9000 
-filtered_weight 225.0
+#eff_ruptures   9,000
+filtered_weight 225  
 =============== =====
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 3       
-Sent data                   26.54 KB
+Sent data                   26.03 KB
 =========================== ========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         PointSource  87     1         0.005       2.503E-05  0.0      
+1            1         PointSource  75     1         0.004       1.693E-05  0.0      
+2            1         PointSource  62     1         0.004       2.503E-05  0.0      
+============ ========= ============ ====== ========= =========== ========== =========

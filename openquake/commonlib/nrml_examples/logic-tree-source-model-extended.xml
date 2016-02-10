@@ -1,194 +1,115 @@
-<?xml version="1.0" encoding="utf-8"?>
-<nrml
-xmlns="http://openquake.org/xmlns/nrml/0.5"
-xmlns:gml="http://www.opengis.net/gml"
->
-    <logicTree
-    logicTreeID="lt1"
-    >
-        <logicTreeBranchingLevel
-        branchingLevelID="bl1"
-        >
-            <logicTreeBranchSet
-            branchSetID="bs1"
-            uncertaintyType="sourceModel"
-            >
-                <logicTreeBranch
-                branchID="b1"
-                >
-                    <uncertaintyModel>
-                        source_model_1.xml
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.5
-                    </uncertaintyWeight>
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>source_model_1.xml</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch
-                branchID="b2"
-                >
-                    <uncertaintyModel>
-                        source_model_2.xml
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.5
-                    </uncertaintyWeight>
+
+                <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>source_model_2.xml</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
-        <logicTreeBranchingLevel
-        branchingLevelID="bl2"
-        >
-            <logicTreeBranchSet
-            branchSetID="bs2"
-            uncertaintyType="maxMagGRRelative"
-            >
-                <logicTreeBranch
-                branchID="b3"
-                >
-                    <uncertaintyModel>
-                        0.2
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.2
-                    </uncertaintyWeight>
+
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="maxMagGRRelative" branchSetID="bs2">
+                <logicTreeBranch branchID="b3">
+                    <uncertaintyModel>0.2</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch
-                branchID="b4"
-                >
-                    <uncertaintyModel>
-                        0.0
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.6
-                    </uncertaintyWeight>
+
+                <logicTreeBranch branchID="b4">
+                    <uncertaintyModel>0.0</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch
-                branchID="b5"
-                >
-                    <uncertaintyModel>
-                        -0.2
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.2
-                    </uncertaintyWeight>
+
+                <logicTreeBranch branchID="b5">
+                    <uncertaintyModel>-0.2</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="bl3">
+            <logicTreeBranchSet uncertaintyType="bGRRelative" branchSetID="bs3">
+                <logicTreeBranch branchID="b6">
+                    <uncertaintyModel>0.1</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b7">
+                    <uncertaintyModel>0.0</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b8">
+                    <uncertaintyModel>-0.1</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
-        <logicTreeBranchingLevel
-        branchingLevelID="bl3"
-        >
-            <logicTreeBranchSet
-            branchSetID="bs3"
-            uncertaintyType="bGRRelative"
-            >
-                <logicTreeBranch
-                branchID="b6"
-                >
-                    <uncertaintyModel>
-                        0.1
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.2
-                    </uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch
-                branchID="b7"
-                >
-                    <uncertaintyModel>
-                        0.0
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.6
-                    </uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch
-                branchID="b8"
-                >
-                    <uncertaintyModel>
-                        -0.1
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.2
-                    </uncertaintyWeight>
-                </logicTreeBranch>
-            </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
-        <logicTreeBranchingLevel
-        branchingLevelID="bl4"
-        >
-            <logicTreeBranchSet
-            applyToSources="1"
-            branchSetID="bs4"
-            uncertaintyType="incrementalMFDAbsolute"
-            >
-                <logicTreeBranch
-                branchID="b9"
-                >
+        
+        <logicTreeBranchingLevel branchingLevelID="bl4">
+            <logicTreeBranchSet uncertaintyType="incrementalMFDAbsolute"
+                                branchSetID="bs4"
+                                applyToSources="1">
+                <logicTreeBranch branchID="b9">
                     <uncertaintyModel>
                         <incrementalMFD
-                        binWidth="0.1"
-                        minMag="8.0"
+                            binWidth="0.1"
+                            minMag="8.0"
                         >
                             <occurRates>
                                 0.005 0.0025
                             </occurRates>
                         </incrementalMFD>
                     </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.33
-                    </uncertaintyWeight>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch
-                branchID="b10"
-                >
+
+                <logicTreeBranch branchID="b10">
                     <uncertaintyModel>
                         <incrementalMFD
-                        binWidth="0.1"
-                        minMag="8.2"
+                            binWidth="0.1"
+                            minMag="8.2"
                         >
                             <occurRates>
                                 0.01 0.005
                             </occurRates>
                         </incrementalMFD>
                     </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.34
-                    </uncertaintyWeight>
+                    <uncertaintyWeight>0.34</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch
-                branchID="b11"
-                >
+
+                <logicTreeBranch branchID="b11">
                     <uncertaintyModel>
                         <incrementalMFD
-                        binWidth="0.1"
-                        minMag="7.8"
+                            binWidth="0.1"
+                            minMag="7.8"
                         >
                             <occurRates>
                                 0.05 0.025
                             </occurRates>
                         </incrementalMFD>
                     </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.33
-                    </uncertaintyWeight>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
-        <logicTreeBranchingLevel
-        branchingLevelID="bl5"
-        >
-            <logicTreeBranchSet
-            applyToSources="1"
-            branchSetID="bs5"
-            uncertaintyType="simpleFaultGeometryAbsolute"
-            >
-                <logicTreeBranch
-                branchID="b12"
-                >
+        <logicTreeBranchingLevel branchingLevelID="bl5">
+            <logicTreeBranchSet uncertaintyType="simpleFaultGeometryAbsolute"
+                                branchSetID="bs5"
+                                applyToSources="1">
+                <logicTreeBranch branchID="b12">
                     <uncertaintyModel>
-                        <simpleFaultGeometry
-                        spacing="1.0"
-                        >
+                        <simpleFaultGeometry spacing="1.0">
                             <gml:LineString>
                                 <gml:posList>
                                     -121.80 37.70 -122.05 37.88
@@ -205,17 +126,11 @@ xmlns:gml="http://www.opengis.net/gml"
                             </lowerSeismoDepth>
                         </simpleFaultGeometry>
                     </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.5
-                    </uncertaintyWeight>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch
-                branchID="b13"
-                >
+                <logicTreeBranch branchID="b13">
                     <uncertaintyModel>
-                        <simpleFaultGeometry
-                        spacing="1.0"
-                        >
+                        <simpleFaultGeometry spacing="1.0">
                             <gml:LineString>
                                 <gml:posList>
                                     -121.81 37.70 -122.10 37.90
@@ -232,105 +147,53 @@ xmlns:gml="http://www.opengis.net/gml"
                             </lowerSeismoDepth>
                         </simpleFaultGeometry>
                     </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.5
-                    </uncertaintyWeight>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
-        <logicTreeBranchingLevel
-        branchingLevelID="bl7"
-        >
-            <logicTreeBranchSet
-            branchSetID="bs7"
-            uncertaintyType="simpleFaultDipRelative"
-            >
-                <logicTreeBranch
-                branchID="b14"
-                >
-                    <uncertaintyModel>
-                        -15.0
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.2
-                    </uncertaintyWeight>
+        <logicTreeBranchingLevel branchingLevelID="bl7">
+            <logicTreeBranchSet uncertaintyType="simpleFaultDipRelative" branchSetID="bs7">
+                <logicTreeBranch branchID="b14">
+                    <uncertaintyModel>-15.0</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch
-                branchID="b15"
-                >
-                    <uncertaintyModel>
-                        0.0
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.6
-                    </uncertaintyWeight>
+
+                <logicTreeBranch branchID="b15">
+                    <uncertaintyModel>0.0</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch
-                branchID="b16"
-                >
-                    <uncertaintyModel>
-                        15.0
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.2
-                    </uncertaintyWeight>
+
+                <logicTreeBranch branchID="b16">
+                    <uncertaintyModel>15.0</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
-        <logicTreeBranchingLevel
-        branchingLevelID="bl8"
-        >
-            <logicTreeBranchSet
-            branchSetID="bs8"
-            uncertaintyType="simpleFaultDipAbsolute"
-            >
-                <logicTreeBranch
-                branchID="b17"
-                >
-                    <uncertaintyModel>
-                        30.0
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.2
-                    </uncertaintyWeight>
+        <logicTreeBranchingLevel branchingLevelID="bl8">
+            <logicTreeBranchSet uncertaintyType="simpleFaultDipAbsolute" branchSetID="bs8">
+                <logicTreeBranch branchID="b17">
+                    <uncertaintyModel>30.0</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch
-                branchID="b18"
-                >
-                    <uncertaintyModel>
-                        45.0
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.6
-                    </uncertaintyWeight>
+
+                <logicTreeBranch branchID="b18">
+                    <uncertaintyModel>45.0</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch
-                branchID="b19"
-                >
-                    <uncertaintyModel>
-                        60.0
-                    </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.2
-                    </uncertaintyWeight>
+
+                <logicTreeBranch branchID="b19">
+                    <uncertaintyModel>60.0</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
-        <logicTreeBranchingLevel
-        branchingLevelID="bl6"
-        >
-            <logicTreeBranchSet
-            applyToSources="1"
-            branchSetID="bs6"
-            uncertaintyType="complexFaultGeometryAbsolute"
-            >
-                <logicTreeBranch
-                branchID="CASCBOT"
-                >
+        <logicTreeBranchingLevel branchingLevelID="bl6">
+            <logicTreeBranchSet uncertaintyType="complexFaultGeometryAbsolute"
+                                branchSetID="bs6"
+                                applyToSources="1">
+                <logicTreeBranch branchID="CASCBOT">
                     <uncertaintyModel>
-                        <complexFaultGeometry
-                        spacing="5.0"
-                        >
+                        <complexFaultGeometry spacing="5.0">
                             <faultTopEdge>
                                 <gml:LineString>
                                     <gml:posList>
@@ -381,19 +244,13 @@ xmlns:gml="http://www.opengis.net/gml"
                                     </gml:posList>
                                 </gml:LineString>
                             </faultBottomEdge>
-                        </complexFaultGeometry>
+                        </complexFaultGeometry> 
                     </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.333
-                    </uncertaintyWeight>
+                    <uncertaintyWeight>0.333</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch
-                branchID="CASCMID"
-                >
+                <logicTreeBranch branchID="CASCMID">
                     <uncertaintyModel>
-                        <complexFaultGeometry
-                        spacing="5.0"
-                        >
+                        <complexFaultGeometry spacing="5.0">
                             <faultTopEdge>
                                 <gml:LineString>
                                     <gml:posList>
@@ -415,7 +272,7 @@ xmlns:gml="http://www.opengis.net/gml"
                                         42.95745 -125.28921 5
                                         42.09936 -125.04685 5
                                         41.21360 -125.08518 5
-                                        40.35467 -125.09899 6.74507
+                                        40.35467 -125.09899 6.74507 
                                     </gml:posList>
                                 </gml:LineString>
                             </faultTopEdge>
@@ -440,23 +297,17 @@ xmlns:gml="http://www.opengis.net/gml"
                                         42.97969 -124.51445 13.66332
                                         42.11170 -124.38969 12.12714
                                         41.21782 -124.17259 14.83582
-                                        40.34700 -123.82900 24.01755
+                                        40.34700 -123.82900 24.01755 
                                     </gml:posList>
                                 </gml:LineString>
                             </faultBottomEdge>
-                        </complexFaultGeometry>
+                        </complexFaultGeometry> 
                     </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.334
-                    </uncertaintyWeight>
+                    <uncertaintyWeight>0.334</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch
-                branchID="CASCTOP"
-                >
+                <logicTreeBranch branchID="CASCTOP">
                     <uncertaintyModel>
-                        <complexFaultGeometry
-                        spacing="5.0"
-                        >
+                        <complexFaultGeometry spacing="5.0">
                             <faultTopEdge>
                                 <gml:LineString>
                                     <gml:posList>
@@ -507,30 +358,20 @@ xmlns:gml="http://www.opengis.net/gml"
                                     </gml:posList>
                                 </gml:LineString>
                             </faultBottomEdge>
-                        </complexFaultGeometry>
+                        </complexFaultGeometry> 
                     </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.333
-                    </uncertaintyWeight>
+                    <uncertaintyWeight>0.333</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
-        <logicTreeBranchingLevel
-        branchingLevelID="bl9"
-        >
-            <logicTreeBranchSet
-            applyToSources="1"
-            branchSetID="bs9"
-            uncertaintyType="characteristicFaultGeometryAbsolute"
-            >
-                <logicTreeBranch
-                branchID="CHAR_SIMPLE"
-                >
+        <logicTreeBranchingLevel branchingLevelID="bl9">
+            <logicTreeBranchSet uncertaintyType="characteristicFaultGeometryAbsolute"
+                                branchSetID="bs9"
+                                applyToSources="1">
+                <logicTreeBranch branchID="CHAR_SIMPLE">
                     <uncertaintyModel>
                         <surface>
-                            <simpleFaultGeometry
-                            spacing="1.0"
-                            >
+                            <simpleFaultGeometry spacing="1.0">
                                 <gml:LineString>
                                     <gml:posList>
                                         30.0 30.0 31.0 30.0 31.5 30.2
@@ -548,18 +389,12 @@ xmlns:gml="http://www.opengis.net/gml"
                             </simpleFaultGeometry>
                         </surface>
                     </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.5
-                    </uncertaintyWeight>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch
-                branchID="CHAR_COMPLEX"
-                >
+                <logicTreeBranch branchID="CHAR_COMPLEX">
                     <uncertaintyModel>
                         <surface>
-                            <complexFaultGeometry
-                            spacing="2.0"
-                            >
+                            <complexFaultGeometry spacing="2.0">
                                 <faultTopEdge>
                                     <gml:LineString>
                                         <gml:posList>
@@ -577,19 +412,15 @@ xmlns:gml="http://www.opengis.net/gml"
                             </complexFaultGeometry>
                         </surface>
                     </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.2
-                    </uncertaintyWeight>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
                 </logicTreeBranch>
-                <logicTreeBranch
-                branchID="CHAR_MULTI_PLANE"
-                >
+                <logicTreeBranch branchID="CHAR_MULTI_PLANE">
                     <uncertaintyModel>
                         <surface>
                             <planarSurface
                             dip="90.0"
-                            spacing="1.0"
                             strike="89.75"
+                            spacing="1.0"
                             >
                                 <topLeft depth="0.5" lat="30.0" lon="30.0"/>
                                 <topRight depth="0.5" lat="30.0" lon="31.0"/>
@@ -598,8 +429,8 @@ xmlns:gml="http://www.opengis.net/gml"
                             </planarSurface>
                             <planarSurface
                             dip="90.0"
-                            spacing="1.0"
                             strike="65.06146"
+                            spacing="1.0"
                             >
                                 <topLeft depth="0.6" lat="30.0" lon="31.0"/>
                                 <topRight depth="0.6" lat="30.2" lon="31.5"/>
@@ -608,9 +439,7 @@ xmlns:gml="http://www.opengis.net/gml"
                             </planarSurface>
                         </surface>
                     </uncertaintyModel>
-                    <uncertaintyWeight>
-                        0.3
-                    </uncertaintyWeight>
+                    <uncertaintyWeight>0.3</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>

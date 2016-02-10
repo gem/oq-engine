@@ -466,9 +466,10 @@ def get_source_models(oqparam, source_model_lt, in_memory=True):
         else:
             gsim_lt = logictree.DummyGsimLogicTree()
         weight = rlz.weight / num_samples
-        n = num_samples if num_samples else gsim_lt.get_num_paths()
+        num_gsim_paths = (num_samples if oqparam.number_of_logic_tree_samples
+                          else gsim_lt.get_num_paths())
         logging.info('Read source model %d/%d with %d gsim realization(s)',
-                     i + 1, num_source_models, n)
+                     i + 1, num_source_models, num_gsim_paths)
         yield source.SourceModel(
             sm, weight, smpath, trt_models, gsim_lt, i, num_samples)
 
@@ -691,10 +692,17 @@ def get_exposure_lazy(fname, ok_cost_types):
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
     time_events = set()
-    return Exposure(
+    exp = Exposure(
         exposure['id'], exposure['category'],
         ~description, numpy.array(cost_types, cost_type_dt), time_events,
-        ~inslimit, ~deductible, area.attrib, [], set()), exposure.assets
+        ~inslimit, ~deductible, area.attrib, [], set())
+    cc = riskmodels.CostCalculator(
+        {}, {}, exp.deductible_is_absolute, exp.insurance_limit_is_absolute)
+    for ct in exp.cost_types:
+        name = ct['name']  # structural, nonstructural, ...
+        cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
+        cc.area_types[name] = exp.area['type']
+    return exp, exposure.assets, cc
 
 
 valid_cost_type = valid.Choice('aggregated', 'per_area', 'per_asset')
@@ -719,15 +727,7 @@ def get_exposure(oqparam):
         region = None
     all_cost_types = set(oqparam.all_cost_types)
     fname = oqparam.inputs['exposure']
-    exposure, assets_node = get_exposure_lazy(fname, all_cost_types)
-    cc = riskmodels.CostCalculator(
-        {}, {}, exposure.deductible_is_absolute,
-        exposure.insurance_limit_is_absolute)
-    for ct in exposure.cost_types:
-        name = ct['name']  # structural, nonstructural, ...
-        cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
-        cc.area_types[name] = exposure.area['type']
-
+    exposure, assets_node, cc = get_exposure_lazy(fname, all_cost_types)
     relevant_cost_types = all_cost_types - set(['occupants'])
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
@@ -736,7 +736,7 @@ def get_exposure(oqparam):
         values = {}
         deductibles = {}
         insurance_limits = {}
-        retrofitting_values = {}
+        retrofitteds = {}
         with context(fname, asset):
             asset_id = asset['id'].encode('utf8')
             if asset_id in asset_refs:
@@ -777,7 +777,7 @@ def get_exposure(oqparam):
                     values[cost_type] = cost['value']
                     retrovalue = cost.attrib.get('retrofitted')
                     if retrovalue is not None:
-                        retrofitting_values[cost_type] = retrovalue
+                        retrofitteds[cost_type] = retrovalue
                     if oqparam.insured_losses:
                         deductibles[cost_type] = cost['deductible']
                         insurance_limits[cost_type] = cost['insuranceLimit']
@@ -808,7 +808,7 @@ def get_exposure(oqparam):
         area = float(asset.attrib.get('area', 1))
         ass = riskmodels.Asset(
             asset_id, taxonomy, number, location, values, area,
-            deductibles, insurance_limits, retrofitting_values, cc)
+            deductibles, insurance_limits, retrofitteds, cc)
         exposure.assets.append(ass)
         exposure.taxonomies.add(taxonomy)
     if region:

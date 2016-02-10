@@ -1,24 +1,25 @@
 Classical PSHA with Characteristic Fault Source defined by Complex Fault Geometry.
 ==================================================================================
 
-num_sites = 9213, sitecol = 216.35 KB
+num_sites = 9213, sitecol = 414.52 KB
 
 Parameters
 ----------
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             200.0    
-investigation_time           50.0     
+maximum_distance             200      
+investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0      
-rupture_mesh_spacing         2.0      
-complex_fault_mesh_spacing   2.0      
-width_of_mfd_bin             0.1      
-area_source_discretization   5.0      
+truncation_level             3.000    
+rupture_mesh_spacing         2.000    
+complex_fault_mesh_spacing   2.000    
+width_of_mfd_bin             0.100    
+area_source_discretization   5.000    
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -53,20 +54,28 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
+  <RlzsAssoc(size=1, rlzs=1)
   0,BooreAtkinson2008: ['<0,b1,b1,w=1.0>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================ ====== ==================== =========== ============ ======
-source_model     trt_id trt                  num_sources num_ruptures weight
+source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           1            1.0   
+source_model.xml 0      Active Shallow Crust 1           1            1.000 
 ================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
-Number of tasks to generate 1        
-Sent data                   255.54 KB
+Number of tasks to generate 9        
+Sent data                   570.34 KB
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ==================== ====== ========= =========== ========== =========
+trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
+============ ========= ==================== ====== ========= =========== ========== =========
+0            1         CharacteristicFaultS 1.000  1         0.063       0.0        0.0      
+============ ========= ==================== ====== ========= =========== ========== =========

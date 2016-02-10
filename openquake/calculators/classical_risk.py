@@ -106,12 +106,14 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             haz_sitecol, haz_curves = readinput.get_hcurves(self.oqparam)
             self.read_exposure()  # define .assets_by_site
             self.load_riskmodel()
+            self.assetcol = riskinput.build_asset_collection(
+                self.assets_by_site, self.oqparam.time_event)
             self.sitecol, self.assets_by_site = self.assoc_assets_sites(
                 haz_sitecol)
             curves_by_trt_gsim = {(0, 'FromFile'): haz_curves}
             self.rlzs_assoc = logictree.trivial_rlzs_assoc()
             self.save_mesh()
-        else:  # compute hazard
+        else:  # compute hazard or read it from the datastore
             super(ClassicalRiskCalculator, self).pre_execute()
             logging.info('Preparing the risk input')
             curves_by_trt_gsim = {}
@@ -119,8 +121,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 for key, curves in dset.items():
                     trt_id, gsim = key.split('-')
                     curves_by_trt_gsim[int(trt_id), gsim] = curves.value
-        self.assetcol = riskinput.build_asset_collection(
-            self.assets_by_site, self.oqparam.time_event)
         self.riskinputs = self.build_riskinputs(curves_by_trt_gsim)
         self.monitor.oqparam = self.oqparam
 
@@ -161,15 +161,15 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         # loss curves stats
         if self.R > 1:
-            stat_curves = numpy.zeros((self.Q1, self.N), self.loss_curve_dt)
+            stat_curves = numpy.zeros((self.N, self.Q1), self.loss_curve_dt)
             for l, aid, statcurve in result['stat_curves']:
                 stat_curves_lt = stat_curves[ltypes[l]]
                 for name in stat_curves_lt.dtype.names:
                     for s in range(self.Q1):
                         if name.startswith('avg'):
-                            stat_curves_lt[name][s, aid] = statcurve[name][s]
+                            stat_curves_lt[name][aid, s] = statcurve[name][s]
                         else:
-                            base.set_array(stat_curves_lt[name][s, aid],
+                            base.set_array(stat_curves_lt[name][aid, s],
                                            statcurve[name][s])
             self.datastore['loss_curves-stats'] = stat_curves
 
@@ -189,10 +189,10 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
         # loss maps stats
         if self.R > 1:
-            stat_maps = numpy.zeros((self.Q1, self.N), self.loss_maps_dt)
+            stat_maps = numpy.zeros((self.N, self.Q1), self.loss_maps_dt)
             for l, aid, statmaps in result['stat_maps']:
                 statmaps_lt = stat_maps[ltypes[l]]
                 for name in statmaps_lt.dtype.names:
                     for s in range(self.Q1):
-                        statmaps_lt[name][s, aid] = statmaps[name][s]
+                        statmaps_lt[name][aid, s] = statmaps[name][s]
             self.datastore['loss_maps-stats'] = stat_maps

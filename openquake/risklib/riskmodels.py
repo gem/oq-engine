@@ -100,7 +100,7 @@ class Asset(object):
                  area=1,
                  deductibles=None,
                  insurance_limits=None,
-                 retrofitting_values=None,
+                 retrofitteds=None,
                  calc=costcalculator,
                  idx=None):
         """
@@ -120,7 +120,7 @@ class Asset(object):
         :param dict insurance_limits:
             insured limits values (expressed as a percentage relative to
             the value of the asset) keyed by loss types
-        :param dict retrofitting_values:
+        :param dict retrofitteds:
             asset retrofitting values keyed by loss types
         :param calc:
             cost calculator instance
@@ -133,7 +133,7 @@ class Asset(object):
         self.location = location
         self.values = values
         self.area = area
-        self.retrofitting_values = retrofitting_values
+        self.retrofitteds = retrofitteds
         self.deductibles = deductibles
         self.insurance_limits = insurance_limits
         self.calc = calc
@@ -182,7 +182,7 @@ class Asset(object):
         """
         if loss_type == 'occupants':
             return self.values['occupants_' + str(time_event)]
-        return self.calc(loss_type, self.retrofitting_values,
+        return self.calc(loss_type, self.retrofitteds,
                          self.area, self.number)
 
     def __repr__(self):

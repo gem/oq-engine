@@ -1,24 +1,25 @@
 Classical PSHA with non-trivial logic tree (2 source models and 2 GMPEs per tectonic region type)
 =================================================================================================
 
-num_sites = 1, sitecol = 437 B
+num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
 ============================ =========
 calculation_mode             classical
 number_of_logic_tree_samples 0        
-maximum_distance             200.0    
-investigation_time           50.0     
+maximum_distance             200      
+investigation_time           50       
 ses_per_logic_tree_path      1        
-truncation_level             3.0      
-rupture_mesh_spacing         2.0      
-complex_fault_mesh_spacing   2.0      
-width_of_mfd_bin             0.1      
-area_source_discretization   5.0      
+truncation_level             3.000    
+rupture_mesh_spacing         2.000    
+complex_fault_mesh_spacing   2.000    
+width_of_mfd_bin             0.100    
+area_source_discretization   5.000    
 random_seed                  23       
 master_seed                  0        
 concurrent_tasks             16       
+sites_per_tile               1000     
 ============================ =========
 
 Input files
@@ -58,7 +59,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(8)
+  <RlzsAssoc(size=8, rlzs=8)
   0,BooreAtkinson2008: ['<0,b1,b11_b21,w=0.125>', '<1,b1,b11_b22,w=0.125>']
   0,ChiouYoungs2008: ['<2,b1,b12_b21,w=0.125>', '<3,b1,b12_b22,w=0.125>']
   1,Campbell2003: ['<1,b1,b11_b22,w=0.125>', '<3,b1,b12_b22,w=0.125>']
@@ -71,19 +72,19 @@ Realizations per (TRT, GSIM)
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================== ====== ======================== =========== ============ ======
-source_model       trt_id trt                      num_sources num_ruptures weight
+source_model       trt_id trt                      num_sources eff_ruptures weight
 ================== ====== ======================== =========== ============ ======
-source_model_1.xml 0      Active Shallow Crust     1           1334         1334.0
-source_model_1.xml 1      Stable Continental Crust 1           4100         102.5 
-source_model_2.xml 2      Active Shallow Crust     1           1297         1297.0
-source_model_2.xml 3      Stable Continental Crust 1           5920         148.0 
+source_model_1.xml 0      Active Shallow Crust     1           1,334        1,334 
+source_model_1.xml 1      Stable Continental Crust 1           4,100        102   
+source_model_2.xml 2      Active Shallow Crust     1           1,297        1,297 
+source_model_2.xml 3      Stable Continental Crust 1           5,920        148   
 ================== ====== ======================== =========== ============ ======
 
 =============== ======
 #TRT models     4     
 #sources        4     
-#ruptures       12651 
-filtered_weight 2881.5
+#eff_ruptures   12,651
+filtered_weight 2,882 
 =============== ======
 
 Expected data transfer for the sources
@@ -92,3 +93,14 @@ Expected data transfer for the sources
 Number of tasks to generate 18      
 Sent data                   10.27 MB
 =========================== ========
+
+Slowest sources
+---------------
+============ ========= ================= ====== ========= =========== ========== =========
+trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
+============ ========= ================= ====== ========= =========== ========== =========
+2            2         SimpleFaultSource 1,297  1,297     0.002       0.334      0.0      
+0            2         SimpleFaultSource 1,334  1,334     0.004       0.331      0.0      
+1            1         AreaSource        102    1         0.001       0.0        0.0      
+3            1         AreaSource        148    1         0.001       0.0        0.0      
+============ ========= ================= ====== ========= =========== ========== =========

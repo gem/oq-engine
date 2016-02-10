@@ -1,22 +1,22 @@
 QA test for blocksize independence (hazard)
 ===========================================
 
-num_sites = 2, sitecol = 461 B
+num_sites = 2, sitecol = 730 B
 
 Parameters
 ----------
 ============================ ===========
 calculation_mode             event_based
 number_of_logic_tree_samples 1          
-maximum_distance             400.0      
-investigation_time           5.0        
+maximum_distance             400        
+investigation_time           5.000      
 ses_per_logic_tree_path      1          
-truncation_level             3.0        
-rupture_mesh_spacing         10.0       
-complex_fault_mesh_spacing   10.0       
-width_of_mfd_bin             0.5        
-area_source_discretization   10.0       
-random_seed                  1024       
+truncation_level             3.000      
+rupture_mesh_spacing         10         
+complex_fault_mesh_spacing   10         
+width_of_mfd_bin             0.500      
+area_source_discretization   10         
+random_seed                  1,024      
 master_seed                  0          
 concurrent_tasks             16         
 ============================ ===========
@@ -37,7 +37,7 @@ Composite source model
 ========= ====== ====================================== =============== ================
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations
 ========= ====== ====================================== =============== ================
-b1        1.0    `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
 ========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
@@ -53,7 +53,7 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
+  <RlzsAssoc(size=1, rlzs=1)
   0,ChiouYoungs2008: ['<0,b1,b1,w=1.0>']>
 
 Non-empty rupture collections
@@ -75,7 +75,17 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 8        
-Sent data                   533.94 KB
+Sent data                   532.77 KB
 Total received data         43.62 KB 
 Maximum received per task   7.78 KB  
 =========================== =========
+
+Slowest sources
+---------------
+============ ========= ============ ====== ========= =========== ========== =========
+trt_model_id source_id source_class weight split_num filter_time split_time calc_time
+============ ========= ============ ====== ========= =========== ========== =========
+0            1         AreaSource   175    1,170     0.001       0.479      5.308    
+0            2         AreaSource   58     389       0.001       0.154      1.599    
+0            3         AreaSource   44     352       0.001       0.126      0.823    
+============ ========= ============ ====== ========= =========== ========== =========

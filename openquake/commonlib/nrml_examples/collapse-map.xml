@@ -1,54 +1,18 @@
-<?xml version="1.0" encoding="utf-8"?>
-<nrml
-xmlns="http://openquake.org/xmlns/nrml/0.5"
-xmlns:gml="http://www.opengis.net/gml"
->
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
     <collapseMap>
         <CMNode>
-            <gml:Point
-            srsName="epsg:4326"
-            >
-                <gml:pos>
-                    -7.2200000E+01 1.8000000E+01
-                </gml:pos>
-            </gml:Point>
-            <cf
-            assetRef="a1"
-            mean="1.6"
-            stdDev="1.7"
-            >
-                a1 1.6000000E+00 1.7000000E+00
-            </cf>
-            <cf
-            assetRef="a2"
-            mean="2.9"
-            stdDev="3.1"
-            >
-                a2 2.9000000E+00 3.1000000E+00
-            </cf>
-            <cf
-            assetRef="a3"
-            mean="4.9"
-            stdDev="5.1"
-            >
-                a3 4.9000000E+00 5.1000000E+00
-            </cf>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-72.20 18.00</gml:pos>
+          </gml:Point>
+          <cf assetRef="a1" mean="1.6" stdDev="1.7"/>
+          <cf assetRef="a2" mean="2.9" stdDev="3.1"/>
+          <cf assetRef="a3" mean="4.9" stdDev="5.1"/>
         </CMNode>
         <CMNode>
-            <gml:Point
-            srsName="epsg:4326"
-            >
-                <gml:pos>
-                    -7.2250000E+01 1.8000000E+01
-                </gml:pos>
-            </gml:Point>
-            <cf
-            assetRef="a4"
-            mean="10.6"
-            stdDev="11.7"
-            >
-                a4 1.0600000E+01 1.1700000E+01
-            </cf>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-72.25 18.00</gml:pos>
+          </gml:Point>
+          <cf assetRef="a4" mean="10.6" stdDev="11.7"/>
         </CMNode>
     </collapseMap>
 </nrml>

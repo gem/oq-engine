@@ -17,6 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+from openquake.baselib.general import groupby2
 import operator
 import numpy
 
@@ -117,13 +118,9 @@ def compose_arrays(a1, a2, firstfield='tag'):
 
 def get_assets(dstore):
     """
-    :param dstore: a datastore with a key `specific_assets`
+    :param dstore: a datastore with keys 'assetcol'
     :returns: an ordered array of records (asset_ref, lon, lat)
     """
-    assets = []
-    for assets_by_site in dstore['assets_by_site']:
-        assets.extend(sorted(assets_by_site, key=operator.attrgetter('id')))
-    asset_data = numpy.array(
-        [(asset.id, asset.location[0], asset.location[1])
-         for asset in assets], asset_dt)
-    return asset_data
+    assetcol = dstore['assetcol']
+    asset_data = [(a['asset_ref'], a['lon'], a['lat']) for a in assetcol]
+    return numpy.array(asset_data, asset_dt)

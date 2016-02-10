@@ -1,27 +1,18 @@
-<?xml version="1.0" encoding="utf-8"?>
-<nrml
-xmlns="http://openquake.org/xmlns/nrml/0.5"
-xmlns:gml="http://www.opengis.net/gml"
->
-    <consequenceModel
-    assetCategory="buildings"
-    id="example"
-    lossCategory="structural"
-    >
-        <description>
-            ln cf | tax1 | zcov
-        </description>
-        <limitStates>
-            ds1 ds2 ds3 ds4
-        </limitStates>
-        <consequenceFunction
-        dist="LN"
-        id="tax1"
-        >
-            <params ls="ds1" mean="4.0000000E-02" stddev="0.0000000E+00"/>
-            <params ls="ds2" mean="1.6000000E-01" stddev="0.0000000E+00"/>
-            <params ls="ds3" mean="3.2000000E-01" stddev="0.0000000E+00"/>
-            <params ls="ds4" mean="6.4000000E-01" stddev="0.0000000E+00"/>
-        </consequenceFunction>
-    </consequenceModel>
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+<consequenceModel id="example" assetCategory="buildings" lossCategory="structural">
+
+  <description>ln cf | tax1 | zcov</description>
+  <limitStates>ds1 ds2 ds3 ds4</limitStates>
+
+  <consequenceFunction id="tax1" dist="LN">
+    <params ls="ds1" mean="0.04" stddev="0.00"/>
+    <params ls="ds2" mean="0.16" stddev="0.00"/>
+    <params ls="ds3" mean="0.32" stddev="0.00"/>
+    <params ls="ds4" mean="0.64" stddev="0.00"/>
+  </consequenceFunction>
+
+</consequenceModel>
+
 </nrml>

@@ -37,12 +37,12 @@ class RiskInputTestCase(unittest.TestCase):
 
     def test_assetcol(self):
         expected = writetmp('''\
-asset_ref:|S100:,site_id:uint32:,taxonomy:uint32:,occupants:float64:,structural:float64:,deductible~structural:float64:,insurance_limit~structural:float64:
-a0,0,1,10,3000,.25,1.0
-a1,1,0,20,2000,0.25,0.5
-a2,2,2,30,1000,0.2,0.8
-a3,2,1,0,5000,2.0,6.0
-a4,3,1,50,500000,2.0,6.0
+asset_ref:|S100,lon,lat,site_id:uint32,taxonomy:uint32:,number,area,occupants:float64:,structural:float64:,deductible~structural:float64:,insurance_limit~structural:float64:
+a0,8.12985001E+01,2.91098003E+01,0,1,3.00000000E+00,1.00000000E+01,1.00000000E+01,1.00000000E+02,2.50000000E+01,1.00000000E+02
+a1,8.30822983E+01,2.79006004E+01,1,0,5.00000000E+02,1.00000000E+01,2.00000000E+01,4.00000000E-01,1.00000000E-01,2.00000000E-01
+a2,8.57477036E+01,2.79015007E+01,2,2,1.00000000E+03,1.00000000E+01,3.00000000E+01,1.00000000E-01,2.00000000E-02,8.00000000E-02
+a3,8.57477036E+01,2.79015007E+01,2,1,1.00000000E+01,1.00000000E+00,0.00000000E+00,5.00000000E+02,1.00000000E+03,3.00000000E+03
+a4,8.77477036E+01,2.79015007E+01,3,1,1.00000000E+01,1.00000000E+02,5.00000000E+01,5.00000000E+02,1.00000000E+03,3.00000000E+03
 ''')
         assetcol = riskinput.build_asset_collection(self.assets_by_site)
         numpy.testing.assert_equal(
