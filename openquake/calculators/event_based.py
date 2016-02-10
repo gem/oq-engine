@@ -449,11 +449,12 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                         'The tag %s is long %d characters, it will be '
                         'truncated to 100 characters in the /tags array',
                         sr.tag, len(sr.tag))
-        logging.info('Saving the SES collection')
         with self.monitor('saving ruptures', autoflush=True):
             self.tags = numpy.array(tags, (bytes, 100))
-            for sescol, col in zip(sescollection, cols):
+            for i, (sescol, col) in enumerate(zip(sescollection, cols)):
                 nr = len(sescol)
+                logging.info('Saving the SES collection #%d with %d ruptures',
+                             i, nr)
                 key = 'sescollection/trtmod=%s-%s' % tuple(col)
                 self.datastore[key] = sescol
                 self.datastore.set_attrs(key, num_ruptures=nr)
