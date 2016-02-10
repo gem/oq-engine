@@ -1,4 +1,5 @@
-This documentation explains how to install the OpenQuake Engine on RHEL 7 and its clones (CentOS, Scientific Linux) via EPEL. GEM provides preliminary support and binary RPMs for unstable (nightly builds) and stable releases. An experimental support for unstable releases is available also for Fedora 21/22/23.
+# Installing the OpenQuake Engine on RedHat Linux and clones
+This documentation explains how to install the OpenQuake Engine on RHEL 7 and its clones (CentOS, Scientific Linux) via EPEL. GEM provides preliminary support and binary RPMs for unstable (nightly builds) and stable releases.
 
 ## Dependencies
 
@@ -24,16 +25,16 @@ $ sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.n
 #### Unstable releases and nightly builds
 
 ```bash
-$ curl -s https://copr.fedoraproject.org/coprs/gem/openquake/repo/epel-7/gem-openquake-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-epel-7.repo
+$ curl -sL https://copr.fedoraproject.org/coprs/gem/openquake/repo/epel-7/gem-openquake-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-epel-7.repo
 ```
 
-The full list of supported repos (including Fedora) is available on COPR: https://copr.fedoraproject.org/coprs/gem/openquake/
+The full list of supported repos is available on COPR: https://copr.fedoraproject.org/coprs/gem/openquake/
 
-#### Stable releases (starting from OpenQuke Engine 1.5, EPEL only)
+#### Stable releases (starting from OpenQuake Engine 1.5)
 
 
 ```bash
-$ curl -s https://copr.fedoraproject.org/coprs/gem/openquake-stable/repo/epel-7/gem-openquake-stable-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-stable-epel-7.repo
+$ curl -sL https://copr.fedoraproject.org/coprs/gem/openquake-stable/repo/epel-7/gem-openquake-stable-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-stable-epel-7.repo
 ```
 
 Now it's possible to install the OpenQuake Engine using YUM:
@@ -63,12 +64,6 @@ Then restart PostgreSQL
 $ sudo service postgresql restart
 ```
 
-## Start rabbitmq-server
-```bash
-$ sudo service rabbitmq-server start
-```
-
-
 ## Bootstrap the DB
 ```bash
 $ sudo -u postgres oq_create_db
@@ -77,11 +72,6 @@ $ oq-engine --upgrade-db
 A previously installed database can be removed running the `dropdb` tool
 ```bash
 sudo -u postgres dropdb openquake2
-```
-
-## Start celery
-```bash
-$ cd /usr/share/openquake/engine && celery worker --purge -Ofair
 ```
 
 ## Run a demo
