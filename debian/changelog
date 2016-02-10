@@ -1,6 +1,8 @@
   [Michele Simionato]
   * Changed the order of the arguments in the commands `oq-lite show` and
     `oq-lite export`
+  * Fixed a subtle bug: now the epsilons are correctly associated to the
+    assets because `asset.idx` is correctly set
   * Removed the `assets_by_site` pickled array from the datastore
   * Fixed the XML exporters for loss maps/curves mean and quantiles
   * Now it is possible to override (most) configuration parameters with the
