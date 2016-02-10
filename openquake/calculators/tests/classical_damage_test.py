@@ -1,3 +1,4 @@
+import mock
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.classical_damage import (
@@ -5,6 +6,7 @@ from openquake.qa_tests_data.classical_damage import (
     case_4a, case_4b, case_4c, case_5a, case_6a, case_6b, case_7a, case_7b,
     case_7c, case_8a)
 from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.classical_damage import ClassicalDamageCalculator
 
 import numpy
 
@@ -156,3 +158,12 @@ class ClassicalDamageTestCase(CalculatorTestCase):
         f1, f2 = out['damages-rlzs', 'csv']
         self.assertEqualFiles('expected/damages-000.csv', f1)
         self.assertEqualFiles('expected/damages-001.csv', f2)
+
+    @attr('qa', 'risk', 'classical_damage')
+    def test_poe_1(self):
+        oq = mock.Mock()
+        oq.imtls = {'PGA': [0.00001, 0.0001, 0.001, 0.002, 0.01, 0.05]}
+        curves_by_trt_gsim = {
+            (0, 0): {'PGA': numpy.array([1, 0.99, 0.95, 0.9, 0.6, 0.1])}}
+        with self.assertRaises(ValueError):
+            ClassicalDamageCalculator(oq).check_poes(curves_by_trt_gsim)

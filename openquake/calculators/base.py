@@ -512,6 +512,9 @@ class RiskCalculator(HazardCalculator):
     specific_assets = datastore.persistent_attribute('specific_assets')
     extra_args = ()  # to be overridden in subclasses
 
+    def check_poes(self, curves_by_trt_gsim):
+        """Overridden in ClassicalDamage"""
+
     def make_eps(self, num_ruptures):
         """
         :param num_ruptures: the size of the epsilon array for each asset
@@ -531,6 +534,8 @@ class RiskCalculator(HazardCalculator):
         :returns:
             a list of RiskInputs objects, sorted by IMT.
         """
+        self.check_poes(hazards_by_key)
+
         # add asset.idx as side effect
         riskinput.build_asset_collection(
             self.assets_by_site, self.oqparam.time_event)
