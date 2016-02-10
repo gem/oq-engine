@@ -1,4 +1,5 @@
-Supported releases: **Fedora 21**/**Fedora 22**/**Fedora 23** and **RHEL/CentOS/SL 7** via EPEL.
+### Installing the OpenQuake Engine on RedHat Linux and clones
+Supported releases: **RHEL / CentOS / SL 7** via EPEL.
 
 ## Dependencies
 
@@ -13,7 +14,7 @@ $ sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.n
 ```
 
 ```bash
-$ curl -s https://copr.fedoraproject.org/coprs/gem/openquake/repo/epel-7/gem-openquake-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-epel-7.repo
+$ curl -sL https://copr.fedoraproject.org/coprs/gem/openquake/repo/epel-7/gem-openquake-epel-7.repo | sudo tee /etc/yum.repos.d/gem-openquake-epel-7.repo
 
 ```
 This provides some dependencies which are missing in **EPEL**.
@@ -21,7 +22,7 @@ This provides some dependencies which are missing in **EPEL**.
 ### Install the OpenQuake Engine dependencies
 
 ```bash
-$ sudo yum install sudo git gcc python-amqp python-celery numpy python-paramiko scipy python-shapely python-psycopg2 python-django python-setuptools python-psutil python-mock python-futures rabbitmq-server postgresql-server postgis h5py
+$ sudo yum install sudo git gcc python-amqp python-celery numpy python-paramiko scipy python-shapely python-psycopg2 python-django python-setuptools python-psutil python-mock python-futures python-docutils rabbitmq-server postgresql-server postgis h5py
 ```
 
 ## PostgreSQL initialization
@@ -42,12 +43,6 @@ Then restart PostgreSQL
 ```bash
 $ sudo service postgresql restart
 ```
-
-## Start rabbitmq-server
-```bash
-$ sudo service rabbitmq-server start
-```
-
 
 ## Get the OpenQuake Engine code
 ```bash
@@ -72,7 +67,3 @@ $ sudo -u postgres oq-engine/bin/oq_create_db
 $ oq-engine/bin/oq-engine --upgrade-db
 ```
 
-## Start celery
-```bash
-$ cd oq-engine/ && celery worker --purge -Ofair
-```
