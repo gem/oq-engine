@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the `ses_ratio` when the number of samples is greater than 1
   * Changed the order of the arguments in the commands `oq-lite show` and
     `oq-lite export`
   * Removed the `assets_by_site` pickled array from the datastore

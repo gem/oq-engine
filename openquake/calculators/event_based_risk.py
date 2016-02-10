@@ -296,9 +296,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.elt_dt = numpy.dtype([('rup_id', U32), ('loss', (F32, (L, 2)))])
         for rlz in self.rlzs_assoc.realizations:
             self.asset_loss_table[rlz.ordinal] = self.datastore.create_dset(
-                'asset_loss_table/rlz-%04d' % rlz.ordinal, ela_dt)
+                'asset_loss_table/rlz-%03d' % rlz.ordinal, ela_dt)
             self.agg_loss_table[rlz.ordinal] = self.datastore.create_dset(
-                'agg_loss_table/rlz-%04d' % rlz.ordinal, self.elt_dt)
+                'agg_loss_table/rlz-%03d' % rlz.ordinal, self.elt_dt)
 
     def execute(self):
         """
@@ -346,8 +346,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.datastore['asset_loss_table'].attrs['nbytes'] = self.ass_bytes
         self.datastore['agg_loss_table'].attrs['nbytes'] = self.agg_bytes
         for i, rlz in enumerate(self.realizations):
-            elt = self.datastore['asset_loss_table/rlz-%04d' % i]
-            alt = self.datastore['agg_loss_table/rlz-%04d' % i]
+            elt = self.datastore['asset_loss_table/rlz-%03d' % i]
+            alt = self.datastore['agg_loss_table/rlz-%03d' % i]
             elt.attrs['nonzero_fraction'] = len(elt) / (self.N * self.E)
             alt.attrs['nonzero_fraction'] = len(alt) / self.N
 

@@ -190,7 +190,7 @@ def export_agg_losses_ebr(ekey, dstore):
         [(elt, numpy.float32) for elt in ext_loss_types])
     writer = writers.CsvWriter(fmt='%10.6E')
     for rlz in rlzs:
-        rows = agg_losses['rlz-%04d' % rlz.ordinal]
+        rows = agg_losses['rlz-%03d' % rlz.ordinal]
         data = []
         for row in rows:
             loss = row['loss']  # matrix L x 2
