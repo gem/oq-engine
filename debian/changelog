@@ -7,7 +7,6 @@
     weighted mean of the epistemic uncertainty adjustment factor
 
   [Nick Ackerley]
-  * Added Japan regionalization to GMPE of Atkinson & Boore (2003).
   * Implemented GMPE of Kanno et al. (2006) for shallow and deep earthquakes.
   * Implemented GMPE of Raghukanth & Iyengar (2007) for stable continental
     regions of peninsular India.
