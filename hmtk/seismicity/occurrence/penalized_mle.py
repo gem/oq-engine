@@ -54,7 +54,8 @@ from hmtk.seismicity.occurrence.utils import input_checks
     completeness=True,
     reference_magnitude=0.0,
     mmax=None,
-    b_prior=1.0)
+    b_prior=1.0,
+    b_prior_weight=1.0)
 
 class PenalizedMLE(SeismicityOccurrence):
     """
@@ -75,9 +76,9 @@ class PenalizedMLE(SeismicityOccurrence):
         a_4 = 0.05 * config["area"]
         return config["b_prior"], 0.0,\
             10.0 ** (np.log10(a_4) +
-            (4. - config["mmin"]) * config["b_prior"]), 0.0
+            (4. - config["reference_magnitude"]) * config["b_prior"]), 0.0
 
-    def calculate(self, config, catalogue, completeness):
+    def calculate(self, catalogue, config, completeness):
         """
         Calculates the b-value and rates (and their corresponding standard
         deviations) using the Penalized MLE approach
@@ -93,8 +94,7 @@ class PenalizedMLE(SeismicityOccurrence):
             deviation on a
         """
         # Setup
-        if config["b_prior"]:
-             
+        if config["b_prior"]: 
             betap = config["b_prior"] * np.log(10.)
             beta = np.copy(betap)
             has_prior = True
@@ -112,7 +112,6 @@ class PenalizedMLE(SeismicityOccurrence):
             wau = 0.0
             apu = 1.0
             has_prior = False
-        print betap, beta, wbu, wau
         # Get the counts of earthquakes in their completeness windows
         delta, kval, tval, lamda, cum_rate, cum_count, nmx, nmt =\
             self._get_rate_counts(catalogue, config, completeness)
@@ -127,7 +126,7 @@ class PenalizedMLE(SeismicityOccurrence):
         aval = np.log10(rate) + bval * completeness[0, 1]
         if "reference_magnitude" in config.keys() and\
                 config["reference_magnitude"]:
-            dm = config["mmin"] - completeness[0, 1]
+            dm = config["reference_magnitude"] - completeness[0, 1]
             rate = 10.0 ** (np.log10(rate) - bval * dm)
             sigma_rate = 10.0 ** (np.log10(rate + sigma_rate) -bval * dm) -\
                 rate
@@ -136,7 +135,7 @@ class PenalizedMLE(SeismicityOccurrence):
             rate = np.log10(rate) - bval * dm
             sigma_rate = np.log10(rate + sigma_rate) - np.log10(rate)
             rate = np.log10(rate)
-        return bval, sigmav, rate, sigma_rate
+        return bval, sigmab, rate, sigma_rate
 
     def _run_penalized_mle(self, config, delta, kval, tval, cum_count,
             betap, beta, wbu, wau):
@@ -228,7 +227,7 @@ class PenalizedMLE(SeismicityOccurrence):
             time_idx = np.logical_and(catalogue.data["dtime"] < cyear[i],
                                       catalogue.data["dtime"] >= cyear[i + 1])
             nyrs = cyear[i] - cyear[i + 1]
-            sel_mags = cat1.data["magnitude"][time_idx]
+            sel_mags = catalogue.data["magnitude"][time_idx]
             for j in range(i, len(cmag) - 1):
                 mag_idx = np.logical_and(sel_mags >= cmag[j],
                                          sel_mags < cmag[j + 1])

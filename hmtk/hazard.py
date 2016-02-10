@@ -58,6 +58,7 @@ from collections import OrderedDict
 from openquake.hazardlib.calc import hazard_curve
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim import get_available_gsims
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib import imt
 from openquake.hazardlib.geo.point import Point
@@ -237,9 +238,12 @@ def get_hazard_curve_source(input_set):
     From a dictionary input set returns hazard curves
     """
     try:
+        cmaker = ContextMaker(
+            [input_set["gsims"][key] for key in input_set["gsims"]],
+            None)
         for rupture, r_sites in input_set["ruptures_sites"]:
             gsim = input_set["gsims"][rupture.tectonic_region_type]
-            sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
+            sctx, rctx, dctx = cmaker.make_contexts(r_sites, rupture)
             for iimt in input_set["imts"]:
                 poes = gsim.get_poes(sctx, rctx, dctx, imt.from_string(iimt),
                                      input_set["imts"][iimt],

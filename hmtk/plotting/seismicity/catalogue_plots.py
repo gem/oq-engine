@@ -196,7 +196,7 @@ def plot_magnitude_time_scatter(catalogue, plot_error=False, filename=None,
 
 def plot_magnitude_time_density(catalogue, mag_int, time_int,
         normalisation=False, logscale=True, bootstrap=None, filename=None,
-        filetype='png', dpi=300):
+        filetype='png', dpi=300, completeness=None):
     """
     Creates a plot of magnitude-time density
     :param catalogue:
@@ -240,7 +240,10 @@ def plot_magnitude_time_density(catalogue, mag_int, time_int,
     if logscale:
         norm_data = LogNorm(vmin=vmin_val, vmax=np.max(mag_time_dist))
     else:
-        norm_data = Normalize(vmin=vmin_val, vmax=np.max(mag_time_dist))
+        if normalisation:
+            norm_data = Normalize(vmin=vmin_val, vmax=np.max(mag_time_dist))
+        else:
+            norm_data = Normalize(vmin=1.0, vmax=np.max(mag_time_dist))
 
     plt.pcolor(time_bins[:-1],
                mag_bins[:-1],
@@ -250,7 +253,11 @@ def plot_magnitude_time_density(catalogue, mag_int, time_int,
     plt.ylabel('Magnitude', fontsize='large')
     plt.xlim(time_bins[0], time_bins[-1])
     plt.colorbar()
-    if normalisation:
+    # Plot completeness
+    if completeness is not None:
+        _plot_completeness(completeness, time_bins[0], time_bins[-1])
+    # Fix the title
+    if normalisation is True:
         plt.title('Magnitude-Time Density', fontsize='large')
     else:
         plt.title('Magnitude-Time Count', fontsize='large')
@@ -258,6 +265,30 @@ def plot_magnitude_time_density(catalogue, mag_int, time_int,
     _save_image(filename, filetype, dpi)
     plt.show()
     return
+
+def _plot_completeness(comw, start_time, end_time):
+    x = []
+    y = []
+    comp = np.column_stack([np.hstack([end_time, comw[:, 0], start_time]),
+                            np.hstack([comw[0, 1], comw[:, 1], comw[-1, 1]])])
+    for row in comp:
+        print row[0], row[1]
+    plt.step(comp[:-1, 0], comp[1:, 1], ls='--',
+             where="post", linewidth=3, color='brown')
+    
+    #for idx in range(len(comp) - 1):
+    #    x.append(comp[idx, 0])
+    #    y.append(comp[idx, 1])
+    #    x.append(comp[idx + 1, 0])
+    #    y.append(comp[idx, 1])
+
+    #    x.append(comw[idx,0])
+    #    y.append(comw[idx,1])
+    #    x.append(comw[idx+1,0])
+    #    y.append(comw[idx,1])
+    #print x
+    #print y
+    #plt.step(x, y, '--', where="pre", linewidth=3, color='brown')
 
 def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
     """
