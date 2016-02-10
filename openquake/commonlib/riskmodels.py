@@ -258,7 +258,8 @@ def get_vulnerability_functions_05(node, fname):
 
 # ########################### fragility ############################### #
 
-def ffconvert(fname, limit_states, ff):
+
+def ffconvert(fname, limit_states, ff, min_iml=1E-10):
     """
     Convert a fragility function into a numpy array plus a bunch
     of attributes.
@@ -271,10 +272,16 @@ def ffconvert(fname, limit_states, ff):
     with context(fname, ff):
         ffs = ff[1:]
         imls = ff.imls
+    nodamage = imls.attrib.get('noDamageLimit')
+    if nodamage == 0:
+        # use a cutoff to avoid log(0) in GMPE.to_distribution_values
+        logging.warn('Found a noDamageLimit=0 in %s, line %s, '
+                     'using %g instead', fname, ff.lineno, min_iml)
+        nodamage = min_iml
     with context(fname, imls):
         attrs = dict(format=ff['format'],
                      imt=imls['imt'],
-                     nodamage=imls.attrib.get('noDamageLimit'))
+                     nodamage=nodamage)
 
     LS = len(limit_states)
     if LS != len(ffs):
@@ -282,7 +289,13 @@ def ffconvert(fname, limit_states, ff):
             raise InvalidFile('expected %d limit states, found %d' %
                               (LS, len(ffs)))
     if ff['format'] == 'continuous':
-        attrs['minIML'] = float(imls['minIML'])
+        minIML = float(imls['minIML'])
+        if minIML == 0:
+            # use a cutoff to avoid log(0) in GMPE.to_distribution_values
+            logging.warn('Found minIML=0 in %s, line %s, using %g instead',
+                         fname, imls.lineno, min_iml)
+            minIML = min_iml
+        attrs['minIML'] = minIML
         attrs['maxIML'] = float(imls['maxIML'])
         array = numpy.zeros(LS, [('mean', F64), ('stddev', F64)])
         for i, ls, node in zip(range(LS), limit_states, ff[1:]):
