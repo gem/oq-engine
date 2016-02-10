@@ -2,7 +2,7 @@
 
 ## Overall architecture
 The nodes must all be able to communicate with a single PostresSQL database and a single RabbitMQ server.
-One common configuration is to install and deploy the two services on a single "master" node, but other configurations are possible. It is not necessary and not normally recommended to install PostgreSQL or RabbitMQ on a worker node.
+One common configuration is to install and deploy the two services on a single "master" node, but other configurations are possible. It is not necessary and not normally recommended to configure PostgreSQL or RabbitMQ on a worker node.
 
 ## Initial install
 On all nodes,install the python-oq-engine package as described in [OpenQuake Engine installation](Installing-the-OpenQuake-Engine.md) or [OpenQuake Engine Master installation](Installing-the-OpenQuake-Engine-Nightly.md).
