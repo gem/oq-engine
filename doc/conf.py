@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # openquake documentation build configuration file, created by
 # sphinx-quickstart on Tue Oct 28 16:06:40 2014.

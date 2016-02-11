@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 import unittest
 from openquake.hazardlib import imt
 from openquake.commonlib import valid

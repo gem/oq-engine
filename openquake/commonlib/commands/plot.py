@@ -1,4 +1,3 @@
-from __future__ import print_function
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -17,6 +16,7 @@ from __future__ import print_function
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 from openquake.commonlib import sap, datastore, oqvalidation
 from openquake.commonlib.commands.show import get_hcurves_and_means
 
