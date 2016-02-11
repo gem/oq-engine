@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
 # Copyright (C) 2014-2016 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -11,7 +14,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import pickle
