@@ -1,5 +1,5 @@
 # The OpenQuake Engine
-# Copyright (C) 2010-2015, GEM Foundation
+# Copyright (c) 2010-2016, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -46,7 +46,7 @@ the PYTHONPATH; when using binary packages, if a celeryconfig.py is not
 available the OpenQuake Engine default celeryconfig.py, located in
 /usr/share/openquake/engine, is used.
 
-Copyright (C) 2010-2015, GEM Foundation.
+Copyright (c) 2010-2016, GEM Foundation.
 """
 
 PY_MODULES = ['openquake.engine.bin.openquake_cli']

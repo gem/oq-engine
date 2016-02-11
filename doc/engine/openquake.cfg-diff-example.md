@@ -8,7 +8,7 @@ $ diff -urN /etc/openquake/openquake.cfg /etc/openquake/openquake.cfg.new_in_thi
 +++ /etc/openquake/openquake.cfg.new_in_this_release	2014-06-03 07:06:44.995410536 +0000
 @@ -1,4 +1,4 @@
 -# Copyright (c) 2010-2012, GEM Foundation.
-+# Copyright (c) 2010-2014, GEM Foundation.
++# Copyright (c) 2010-2016, GEM Foundation.
  #
  # OpenQuake is free software: you can redistribute it and/or modify it
  # under the terms of the GNU Affero General Public License as published
