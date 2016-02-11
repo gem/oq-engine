@@ -1,5 +1,5 @@
 from __future__ import division
-# Copyright (c) 2015, GEM Foundation.
+# Copyright (C) 2015-2016, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
