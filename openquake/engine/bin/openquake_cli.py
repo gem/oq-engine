@@ -41,6 +41,7 @@ import openquake.engine
 
 from openquake.engine import __version__
 from openquake.engine import engine, logs
+from openquake.commonlib import datastore
 from openquake.calculators import views
 from openquake.server.db import models, upgrade_manager
 from openquake.engine.export import core
@@ -83,10 +84,6 @@ def set_up_arg_parser():
         help='Run a job with the specified configuration file; you can also '
         'pass a comma-separated pair of files for hazard and risk',
         metavar='CONFIG_FILE')
-    general_grp.add_argument(
-        '--list-inputs', '--li',
-        help='List inputs of a specific input type',
-        metavar="INPUT_TYPE")
 
     general_grp.add_argument(
         '--yes', '-y', action='store_true',
@@ -128,10 +125,10 @@ def set_up_arg_parser():
         help='List hazard calculation information',
         action='store_true')
     hazard_grp.add_argument(
-        '--delete-hazard-calculation',
-        '--dhc',
-        help='Delete a hazard calculation and all associated outputs',
-        metavar='HAZARD_CALCULATION_ID')
+        '--delete-calculation',
+        '--dc',
+        help='Delete a calculation and all associated outputs',
+        metavar='CALCULATION_ID')
 
     hazard_grp.add_argument(
         '--delete-uncompleted-calculations',
@@ -149,7 +146,7 @@ def set_up_arg_parser():
         HAZARD_OUTPUT_ARG,
         '--ho',
         help='Use the desired hazard output as input for the risk job',
-        metavar='HAZARD_OUTPUT')
+        metavar='HAZARD_OUTPUT_ID')
     risk_grp.add_argument(
         HAZARD_CALCULATION_ARG,
         '--hc',
@@ -160,11 +157,6 @@ def set_up_arg_parser():
         '--lrc',
         help='List risk calculation information',
         action='store_true')
-    risk_grp.add_argument(
-        '--delete-risk-calculation',
-        '--drc',
-        help='Delete a risk calculation and all associated outputs',
-        metavar='RISK_CALCULATION_ID')
 
     export_grp = parser.add_argument_group('Export')
     export_grp.add_argument(
@@ -195,12 +187,6 @@ def set_up_arg_parser():
         '--eos',
         help='Export all the calculation outputs to the specified directory',
         nargs=2, metavar=('CALCULATION_ID', 'TARGET_DIR'))
-    export_grp.add_argument(
-        '--export-stats',
-        '--es',
-        help='Export the statistical outputs to the specified directory',
-        nargs=3,
-        metavar=('CALCULATION_ID', 'TARGET_DIR', 'OUTPUT_TYPE'))
 
     return parser
 
@@ -263,25 +249,6 @@ def export_outputs(hc_id, target_dir, export_type):
             export(output.id, target_dir, export_type)
         except Exception as exc:
             print exc
-
-
-def export_stats(job_id, target_dir, output_type, export_type):
-    supported = {'hazard_curve': models.HazardCurve,
-                 'hazard_map': models.HazardMap,
-                 # 'uh_spectra': models.UHS  # not supported yet
-                 }
-    if output_type not in supported:
-        sys.exit('The output type %s is not supported. Choose one of %s' % (
-            output_type, ', '.join(supported)))
-    kw = {'%s__statistics__isnull' % output_type: False}
-    queryset = models.Output.objects.filter(
-        oq_job=job_id, output_type=output_type, **kw
-    ).order_by('display_name')
-    if queryset.count() == 0:
-        print 'There are no outputs of kind %s' % output_type
-        return
-    for output in queryset:
-        export(output.id, target_dir, 'csv')
 
 
 def export(output_id, target_dir, export_type):
@@ -445,8 +412,8 @@ def main():
             if args.log_file is not None else None
         run_job(expanduser(args.run_hazard), args.log_level,
                 log_file, args.exports)
-    elif args.delete_hazard_calculation is not None:
-        del_calc(args.delete_hazard_calculation, args.yes)
+    elif args.delete_calculation is not None:
+        del_calc(args.delete_calculation, args.yes)
     # risk
     elif args.list_risk_calculations:
         list_calculations('risk')
@@ -461,15 +428,13 @@ def main():
             args.log_level, log_file, args.exports,
             hazard_output_id=args.hazard_output_id,
             hazard_calculation_id=hc_id)
-    elif args.delete_risk_calculation is not None:
-        del_calc(args.delete_risk_calculation, args.yes)
 
     # export
     elif args.list_outputs is not None:
         engine.list_outputs(get_hc_id(args.list_outputs))
     elif args.show_view is not None:
         job_id, view_name = args.show_view
-        print views.view(view_name, get_hc_id(job_id))
+        print views.view(view_name, datastore.read(int(job_id)))
 
     elif args.export_output is not None:
         output_id, target_dir = args.export_output
@@ -478,11 +443,6 @@ def main():
     elif args.export_outputs is not None:
         job_id, target_dir = args.export_outputs
         export_outputs(get_hc_id(job_id), expanduser(target_dir), exports)
-
-    elif args.export_stats is not None:
-        job_id, target_dir, output_type = args.export_stats
-        export_stats(get_hc_id(job_id), expanduser(target_dir),
-                     output_type, exports)
 
     elif args.delete_uncompleted_calculations:
         delete_uncompleted_calculations()
