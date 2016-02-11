@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2014, GEM Foundation.
+# Copyright (c) 2010-2016, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,6 +32,11 @@ class FakeJob(object):
     def __init__(self, job_type, calculation_mode):
         self.job_type = job_type
         self.calculation_mode = calculation_mode
+
+    def get_oqparam(self):
+        m = mock.Mock()
+        m.calculation_mode = self.calculation_mode
+        return m
 
 
 class CheckHazardRiskConsistencyTestCase(unittest.TestCase):
@@ -135,12 +140,10 @@ class DeleteHazCalcTestCase(unittest.TestCase):
             self.hazard_cfg, username=getpass.getuser())
 
         models.Output.objects.create_output(
-            hazard_job, 'test_curves_1', output_type='hazard_curve',
-            ds_key='hcurve'
+            hazard_job, 'test_curves_1', ds_key='hcurve'
         )
         models.Output.objects.create_output(
-            hazard_job, 'test_curves_2', output_type='hazard_curve',
-            ds_key='hcurve'
+            hazard_job, 'test_curves_2', ds_key='hcurve'
         )
 
         # Sanity check: make sure the hazard calculation and outputs exist in
@@ -179,7 +182,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         # In this case, deletion is not allowed and should raise an exception.
         risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
-            output_type='curve', username=getpass.getuser()
+            username=getpass.getuser()
         )
         hc = risk_job.hazard_calculation
         self.assertRaises(RuntimeError, engine.del_calc, hc.id)
@@ -191,7 +194,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         # In this case, deletion is not allowed and should raise an exception.
         risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
-            output_type='curve', username=getpass.getuser()
+            username=getpass.getuser()
         )
         hc = risk_job.hazard_calculation
         self.assertRaises(RuntimeError, engine.del_calc, hc.id)
@@ -210,15 +213,13 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         raise unittest.SkipTest
         risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
-            output_type='curve', username=getpass.getuser()
+            username=getpass.getuser()
         )
         models.Output.objects.create_output(
-            risk_job, 'test_curves_1', output_type='loss_curve',
-            ds_key='rcurves-rlzs'
+            risk_job, 'test_curves_1', ds_key='rcurves-rlzs'
         )
         models.Output.objects.create_output(
-            risk_job, 'test_curves_2', output_type='loss_curve',
-            ds_key='rcurves-rlzs'
+            risk_job, 'test_curves_2', ds_key='rcurves-rlzs'
         )
 
         # Sanity check: make sure the risk calculation and outputs exist in
@@ -249,15 +250,14 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         # In this case, deletion is now allowed and should raise an exception.
         risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
-            output_type='curve', username=helpers.random_string()
+            username=helpers.random_string()
         )
         self.assertRaises(RuntimeError, engine.del_calc, risk_job.id)
 
 
 class FakeOutput(object):
-    def __init__(self, id, output_type, display_name):
+    def __init__(self, id, display_name):
         self.id = id
-        self.output_type = output_type
         self.display_name = display_name
 
     def get_output_type_display(self):
@@ -265,7 +265,7 @@ class FakeOutput(object):
 
 
 class PrintSummaryTestCase(unittest.TestCase):
-    outputs = [FakeOutput(i, 'gmf', 'gmf') for i in range(1, 12)]
+    outputs = [FakeOutput(i, 'gmf') for i in range(1, 12)]
 
     def print_outputs_summary(self, full):
         orig_stdout = sys.stdout
@@ -279,35 +279,35 @@ class PrintSummaryTestCase(unittest.TestCase):
 
     def test_print_outputs_summary_full(self):
         self.assertEqual(self.print_outputs_summary(full=True), '''\
-  id | output_type | name
-   1 | gmf1 | gmf
-   2 | gmf2 | gmf
-   3 | gmf3 | gmf
-   4 | gmf4 | gmf
-   5 | gmf5 | gmf
-   6 | gmf6 | gmf
-   7 | gmf7 | gmf
-   8 | gmf8 | gmf
-   9 | gmf9 | gmf
-  10 | gmf10 | gmf
-  11 | gmf11 | gmf
+  id | name
+   1 | gmf
+   2 | gmf
+   3 | gmf
+   4 | gmf
+   5 | gmf
+   6 | gmf
+   7 | gmf
+   8 | gmf
+   9 | gmf
+  10 | gmf
+  11 | gmf
 ''')
 
     def test_print_outputs_summary_short(self):
         self.assertEqual(
             self.print_outputs_summary(full=False), '''\
-  id | output_type | name
-   1 | gmf1 | gmf
-   2 | gmf2 | gmf
-   3 | gmf3 | gmf
-   4 | gmf4 | gmf
-   5 | gmf5 | gmf
-   6 | gmf6 | gmf
-   7 | gmf7 | gmf
-   8 | gmf8 | gmf
-   9 | gmf9 | gmf
-  10 | gmf10 | gmf
- ... | gmf11 | 1 additional output(s)
+  id | name
+   1 | gmf
+   2 | gmf
+   3 | gmf
+   4 | gmf
+   5 | gmf
+   6 | gmf
+   7 | gmf
+   8 | gmf
+   9 | gmf
+  10 | gmf
+ ... | 1 additional output(s)
 Some outputs where not shown. You can see the full list with the command
 `oq-engine --list-outputs`
 ''')
