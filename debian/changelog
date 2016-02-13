@@ -1,3 +1,6 @@
+  [Daniele Viganò, Matteo Nastasi
+  * Updates Copyrights to 2016 and uniformized headers
+
   [Michele Simionato]
   * Raised an error early if there is a PoE=1 for classical damage
     calculations
