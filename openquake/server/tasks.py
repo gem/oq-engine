@@ -56,7 +56,7 @@ class ProgressHandler(logging.Handler):
         logging.Handler.__init__(self)
         self.callback_url = callback_url
         self.calc = calc
-        self.description = calc.get_param('description')
+        self.description = calc.get_oqparam().description
 
     def emit(self, record):
         """
@@ -79,7 +79,7 @@ def safely_call(func, *args):
         logger.error(str(e), exc_info=True)
 
 
-def run_calc(job_id, calc_dir,
+def run_calc(job, calc_dir,
              callback_url=None, foreign_calc_id=None,
              dbname="platform", log_file=None):
     """
@@ -88,8 +88,8 @@ def run_calc(job_id, calc_dir,
     and is ready to execute. This function never fails; errors are trapped
     but not logged since the engine already logs them.
 
-    :param job_id:
-        the ID of the job on the engine
+    :param job:
+        the job object
     :param calc_dir:
         the directory with the input files
     :param callback_url:
@@ -99,8 +99,7 @@ def run_calc(job_id, calc_dir,
     :param dbname:
         the platform database name
     """
-    job = oqe_models.OqJob.objects.get(pk=job_id)
-    update_calculation(callback_url, status="started", engine_id=job_id)
+    update_calculation(callback_url, status="started", engine_id=job.id)
 
     progress_handler = ProgressHandler(callback_url, job)
     logging.root.addHandler(progress_handler)
