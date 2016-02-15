@@ -1,4 +1,4 @@
-# Running OpenQuake Engine from git repository
+# Running OpenQuake Engine from git repository on RedHat Linux and clones
 This page describes the additional steps necessary to run the current development version of the OpenQuake engine rather than the latest public package using Ubuntu Linux 14.04 LTS or 12.04 LTS.
 
 ## Install primary dependencies
@@ -6,7 +6,7 @@ The easiest way to install the primary dependencies for OQ Engine is to install 
 
 Here's how:
 ```bash
-sudo apt-get install python-software-properties
+sudo apt-get install software-properties-common
 sudo add-apt-repository ppa:openquake-automatic-team/latest-master
 sudo apt-get update
 sudo apt-get install python-oq-engine
@@ -16,7 +16,7 @@ sudo apt-get remove --purge python-oq.*
 ## Install additional dependencies
 A few additional packages are necessary if using GIT:
 ```bash
-sudo apt-get install python-mock python-psutil
+sudo apt-get install python-mock
 ```
 
 ## Get the source code from git
@@ -67,10 +67,10 @@ Finally upgrade the DB.
 
 To build the Hazardlib speedups see: https://github.com/gem/oq-hazardlib/wiki/Installing-C-extensions-from-git-repository
 
-## Run OQ Engine, without calculation parallelization
+## Run OQ Engine
 You are now ready to run the OQ Engine. First, try running one of the demos included with the source code:
 ```bash
-./bin/oq-engine --run-hazard=../oq-risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini  --no-distribute
+./bin/oq-engine --run-hazard=../oq-risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
 ```
 
 The output should look something like this:
@@ -147,25 +147,6 @@ Calculation 114 completed in 44 seconds. Results:
 1366 | Uniform Hazard Spectra | UHS (0.1) rlz-102
 Some outputs where not shown. You can see the full list with the command
 `oq-engine --list-outputs`
-```
-
-## Run OQ Engine, with calculation parallelization
-
-### Ubuntu 12.04 / Celery 2
-From the root of the `oq-engine` directory, launch celery worker processes like so:
-```bash
-celeryd --purge & #Run it in background
-```
-
-### Ubuntu 14.04 / Celery 3
-From the root of the `oq-engine` directory, launch celery worker processes like so:
-```bash
-celery worker --purge -Ofair & #Run it in background
-```
-
-Then run `bin/oq-engine` without the `--no-distribute` option:
-```bash
-./bin/oq-engine --run-hazard=../oq-risklib/demos/hazard/SimpleFaultSourceClassicalPSHA/job.ini
 ```
 
 ## More commands

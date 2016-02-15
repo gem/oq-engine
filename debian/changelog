@@ -1,7 +1,17 @@
+python-oq-engine (1.8.0-0~precise01) precise; urgency=low
+
   [Michele Simionato]
+  * Removed two `oq-engine` switches (`--export-stats` and `--list-inputs`)
+    and fixed `--show-view`; unified `--delete-hazard-calculation` and
+    `--delete-risk-calculation` into a single `--delete-calculation`
+  * Updated `make_html_report.py` to extract the full report from the
+    datastore
   * If `use_celery` is true, use celery to determine a good default for
     the parameter `concurrent_tasks`
   * Made celery required only in cluster situations
+  * Fixed the duplication of exported result in the classical_damage
+    calculator when there is more than one realization
+  * Removed several obsolete or deprecated switches from the `oq-engine` command
   * Replaced all classical calculators with their lite counterparts
   * Fixed the site-ordering in the UHS exporter (by lon-lat)
 
@@ -13,6 +23,8 @@
   * Now the loss maps and curves are exported with a fixed ordering: first
     by lon-lat, then by asset ID
   * Replaced the old disaggregation calculator with the oq-lite one
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 15 Feb 2016 12:06:54 +0100
 
 python-oq-engine (1.7.0-0~precise01) precise; urgency=low
 
