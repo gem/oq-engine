@@ -5,8 +5,15 @@ by following the [usual procedure](Installing-the-OpenQuake-Engine.md).
 New features of the OpenQuake Engine, version 1.8
 ---------------------------------------------------
 
-1. The most important new feature of the engine is that the
-celery/rabbitmq combo is now optional. That means that the engine
+1. The most important change is that all the calculators based on
+PostgreSQL are gone. There is now no distinction between the oq-lite
+calculators and the engine calculators: they are all the same.
+All the calculators use an HDF5 file (the datastore) as data
+storage. This has a large performance impact on calculations heavy
+on data storage.
+
+2. Thanks the refactoring in point 1, now
+celery/rabbitmq combo is optional. That means that the engine
 works even without celery/rabbitmq; actually, this is the recommended way to run
 the engine on a single machine.  If you are using a cluster, you must
 still use celery/rabbitmq. But the big majority of the users, including
@@ -16,35 +23,18 @@ celery or running it from the wrong directory. Now this barrier is
 gone. Also, the engine is more efficient without celery/rabbitmq,
 especially for calculations with a large data transfer.
 
-2. The other big change is that now all the old calculators based on
-PostgreSQL are gone. There is no distinction between the oq-lite
-calculators and the engine calculators: they are all the same.
-All the calculators use an HDF5 file (the datastore) as data
-storage. This has a large performance impact on calculations heavy
-on data storage.
+3. In a cluster situation, you should edit the file `openquake.cfg` and
+set the parameter `use_celery` to `True`. The, a dynamic default for the
+parameter `concurrent_tasks` will be inferred by asking celery how many
+cores are available and by multiplying that number by 2. This is done
+at each new calculation.
 
-3. The classical hazard calculator has been completely rewritten. Now
+4. The classical hazard calculator has been completely rewritten. Now
 it automatically splits the site collection in tiles of size
 `sites_per_tiles` (the default is 1,000 sites per tile). This has an
 huge performance benefit, especially for continental scale calculation
 with tens or hundreds of thousand of sites.
 
-4. The logic for splitting the sources has changed: now only the so-called
-*heavy* sources are split, thus reducing a lot the split time and the
-data transfer.
-
-5. The algorithm to read the source model has been changed and it is now
-faster, since it does not require anymore to parse the same file more
-than once, which was the case for nontrivial logic trees.
-
-6. The algorithm to generate seeds for the event based calculator has
-changed to ensure that the results are not affected by the splitting
-procedure. Because of the change in the algorithm, the ruptures
-produced by the event based calculator are slightly different than
-before, and all the dependent quantites are different as well.
-The difference however is stochastically insignificant, akin to
-a change of seeds and in the limit of a large number of Stochastic
-Event Sets the results are equivalent.
 
 7. The storage of the results in the datastore has been significantly
 improved. In particular a lots of outputs that previosly were stored
@@ -63,9 +53,16 @@ or the loss curves from the datastore, you can, but you should be
 aware that you will have to change your code with the next release
 of the engine.
 
-8. 
+8. There is now an HTTP API to validate NRML files, implemented on top
+of the engine server. This API is used by the new Risk Input
+Preparation Toolkit in the platform.
 
-7. 
+7. There is now a serialization protocol to and from HDF5: thanks to that
+several pickled objects have been removed from the datastore and replace
+with proper arrays. Among them:
+
+8. We enabled Zip64 extensions and now we can export zip files
+larger than 4 GB on 64 bit machines.
 
 4. The validation of the risk models in the engine has been
 improved.
@@ -74,18 +71,31 @@ improved.
 look at the [changelog]
 (https://github.com/gem/oq-hazardlib/blob/engine-1.8/debian/changelog).
 
-7. The following new GMPEs have been added:
-
-
-10.
 
 13. The .rst report of a calculation has been improved and more information is
-  displayed. Moreover, you can also run
-  ```bash
-  $ oq-lite show fullreport <calc-id>
-  ```
-  to get information about a calculation which has already run.
+displayed. The command `oq-lite info --report job.ini` allows to generate
+a partial report without running the full computation, whereas the command
+`oq-lite show fullreport <calc_id>`` displays the full report after the
+computation has been executed.
 
+14. `hazardlib` now contains an arbitrary MFD, in which the magnitudes
+and rates are input as a pair of lists.
+
+15 Several new GMPEs have been added:
+
+   + GMPE of Gupta (2010) for intraslab earthquakes in the Indo-Burmese subduction zone
+   + GMPE of Nath et al. (2012) for interface subduction in in the Shillong plateau of India
+   + GMPE of Kanno et al. (2006) for shallow and deep earthquakes in Japan
+   + Two GMPEs for weighted mean epistemic uncertainty NSHMP NGA
+   + Fixed the GMPETable class: this was needed for the Canada model
+   + GMPE of Raghukanth & Iyengar (2007) for stable continental regions of peninsular India
+   + GMPE of Sharma et al. (2009) for active shallow crust in Himalayas
+   + GMPE of Drout (2015) for Brazil
+   + GMPE of Moltalva et al (2015)
+
+16 Other improvements, such as making clearer the error message
+in several validity checks for the GMPEs, or adding a method `split_in_tiles`
+to the SiteCollection class.
 
 19. Countless small improvements and additional validations have been
 added. This release has seen more than 200 pull
@@ -98,6 +108,45 @@ Bug fixes and changes with respect to OpenQuake 1.7
 all the commands that have been deprecated for over two years, all
 the commands that have become obsolete (i.e. the one specific
 to PostgreSQL), and all the commands that never worked properly.
+The following have been removed:
+
+  + --list_inputs
+  + --lite
+  + --list-hazard-outputs/--lho
+  + --list-risk-outputs/--lro
+  + --export-hazard-output/--eh
+  + --export-risk-output/--er
+  + --export-hazard-outputs/--eho
+  + --export-risk-outputs/--ero
+  + --export-stats/--es
+  + --save-hazard-calculation/--shc
+  + --load-hazard-calculation
+  + --load-curve
+  + --list-imported-outputs
+
+Also `--delete-hazard-calculation` and `--delete-risk-calculation` have
+been unified into a single `--delete-calculation`.
+
+3. A lot of obsolete code (over 12,000 lines) have been removed from the engine
+and the code base is now smaller and manageable: more will be removed in the
+next release.
+
+5. The logic for splitting the sources has changed: now only the so-called
+*heavy* sources are split, thus reducing a lot the split time and the
+data transfer.
+
+6. The algorithm to read the source model has been changed and it is now
+faster, since it does not require anymore to parse the same file more
+than once, which was the case for nontrivial logic trees.
+
+6. The algorithm to generate seeds for the event based calculator has
+changed to ensure that the results are not affected by the splitting
+procedure. Because of the change in the algorithm, the ruptures
+produced by the event based calculator are slightly different than
+before, and all the dependent quantites are different as well.
+The difference however is stochastically insignificant, akin to
+a change of seeds and in the limit of a large number of Stochastic
+Event Sets the results are equivalent.
 
 2. We temporarily removed the ability to compute insured loss curves from
 the classical risk calculator. The reason is that doubts were
@@ -108,8 +157,10 @@ in the next version of the engine with a better and more tested algorithm.
 calculators `classical_risk` and `classical_bcr`: this has been
 fixed now.
 
-18. We fixed a few export bugs. Now the XML exporter for mean and
-quantile loss curves and maps work properly in all situations/
+18. We fixed a few export bugs. Now the XML exporters for mean and
+quantile loss curves and maps work properly in all situations. Also,
+the XML exporters for the Uniform Hazard Spectra have been rewritten
+to export from the datastore, not from the database.
 
 6. We are not storing anymore the epsilon matrix in event based and
 scenario risk calculations. There was no strong reason to persist it,
@@ -128,6 +179,14 @@ of source objects.
 export has changed slightly with respect to the past. Everything
 is now more consistent.
 
+13. We added a check on classical damage calculation: now if there is
+a PoE = 1, the error is raised early in the pre_execute phase and not
+during the parallel calculation.
+
+14. The `oq-lite` command-line tool has been enhanced and the order of
+arguments for the commands `oq-lite show` and `oq-lite export` have changed.
+The tool is still experimental and could disappear in the next release,
+being merged with the `oq-engine` command-line tool.
 
 Support for different platforms
 ----------------------------------------------------
