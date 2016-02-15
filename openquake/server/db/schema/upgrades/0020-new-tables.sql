@@ -2,6 +2,7 @@ CREATE TABLE job(
      id SERIAL PRIMARY KEY,
      description TEXT NOT NULL,
      user_name TEXT NOT NULL,
+     calculation_mode TEXT NOT NULL,
      hazard_calculation_id INTEGER REFERENCES job (id) ON DELETE CASCADE,
      status TEXT NOT NULL DEFAULT 'created',
      is_running BOOL NOT NULL DEFAULT false,
