@@ -337,6 +337,8 @@ def expose_outputs(dstore, job):
         if key in exportable:
             if key == 'realizations' and len(dstore['realizations']) == 1:
                 continue  # there is no point in exporting a single realization
+            models.Output.objects.create_output(
+                job, DISPLAY_NAME.get(key, key), output_type='datastore',
                 ds_key=key)
 
 
