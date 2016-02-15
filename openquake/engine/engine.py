@@ -1,4 +1,7 @@
-# Copyright (c) 2010-2016, GEM Foundation.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2010-2016 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -8,10 +11,10 @@
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
@@ -100,10 +103,12 @@ def cleanup_after_job(job, terminate, task_ids=()):
         logs.LOG.debug('Revoked task %s', tid)
 
 
-def create_job(user_name="openquake", hc_id=None):
+def create_job(calc_mode, user_name="openquake", hc_id=None):
     """
     Create job for the given user, return it.
 
+    :param str calc_mode:
+        Calculation mode, such as classical, event_based, etc
     :param str username:
         Username of the user who owns/started this job. If the username doesn't
         exist, a user record for this name will be created.
@@ -115,6 +120,7 @@ def create_job(user_name="openquake", hc_id=None):
     calc_id = get_calc_id() + 1
     job = models.OqJob.objects.create(
         id=calc_id,
+        calculation_mode=calc_mode,
         description='A job',
         user_name=user_name,
         ds_calc_dir=os.path.join(datastore.DATADIR, 'calc_%s' % calc_id))
@@ -348,7 +354,7 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
                          'in the .ini file' % (risk_mode, risk_mode))
 
     # check calculation_mode consistency
-    prev_mode = haz_job.get_oqparam().calculation_mode
+    prev_mode = haz_job.calculation_mode
     ok_mode = RISK_HAZARD_MAP[risk_mode]
     if prev_mode not in ok_mode:
         raise InvalidCalculationID(
@@ -384,18 +390,17 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
     :raises:
         `RuntimeError` if the input job configuration is not valid
     """
+    # read calculation params and create the calculation profile
+    params = readinput.get_params([cfg_file])
+    params.update(extras)
+    # build and validate an OqParam object
+    oq = readinput.get_oqparam(params)
     # create the current job
-    job = create_job(username, hazard_calculation_id)
-    with logs.handle(job, log_level):
-        # read calculation params and create the calculation profile
-        params = readinput.get_params([cfg_file])
-        params.update(extras)
-        # build and validate an OqParam object
-        oq = readinput.get_oqparam(params)
-        calc = base.calculators(oq, calc_id=job.id)
-        calc.save_params()
-        job.description = oq.description
-        job.calc = calc
+    job = create_job(oq.calculation_mode, username, hazard_calculation_id)
+    calc = base.calculators(oq, calc_id=job.id)
+    calc.save_params()
+    job.description = oq.description
+    job.calc = calc
     return job
 
 
