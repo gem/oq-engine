@@ -144,12 +144,6 @@ class OqJob(djm.Model):
         # have not been written on the database yet
         return 'risk' if self.calculation_mode in RISK_CALCULATORS else 'hazard'
 
-    def has_hdf5(self):
-        """
-        Check if the associated .hdf5 file exists
-        """
-        return os.path.exists(self.ds_calc_dir + '.hdf5')
-
     def get_or_create_output(self, display_name, output_type, ds_key):
         """
         :param disp_name: display name of the output
