@@ -107,6 +107,8 @@ def create_job(calc_mode, user_name="openquake", hc_id=None):
     """
     Create job for the given user, return it.
 
+    :param str calc_mode:
+        Calculation mode, such as classical, event_based, etc
     :param str username:
         Username of the user who owns/started this job. If the username doesn't
         exist, a user record for this name will be created.
