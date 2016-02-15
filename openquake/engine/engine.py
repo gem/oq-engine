@@ -26,7 +26,6 @@ import getpass
 import itertools
 import operator
 import traceback
-from contextlib import contextmanager
 from datetime import datetime
 
 import celery.task.control
@@ -36,8 +35,6 @@ import openquake.engine
 from django.core import exceptions
 from django import db as django_db
 
-from openquake.baselib.performance import (
-    PerformanceMonitor as EnginePerformanceMonitor)
 from openquake.engine import logs
 from openquake.server.db import models
 from openquake.engine.utils import config, tasks
@@ -106,46 +103,6 @@ def cleanup_after_job(job, terminate, task_ids=()):
         logs.LOG.debug('Revoked task %s', tid)
 
 
-@contextmanager
-def job_stats(job):
-    """
-    A context manager saving information such as the number of sites
-    in the job_stats table. The information is saved at the end of the
-    job, even if the job fails.
-    """
-    try:
-        yield
-    finally:
-        tb = traceback.format_exc()  # get the traceback of the error, if any
-        job.is_running = False
-        if tb != 'None\n':
-            # rollback the transactions; unfortunately, for mysterious reasons,
-            # this is not enough and an OperationalError may still show up in
-            # the finalization phase when forks are involved
-            for conn in django_db.connections.all():
-                conn.rollback()
-        # try to save the job stats on the database and then clean up;
-        # if there was an error in the calculation, this part may fail;
-        # in such a situation, we simply log the cleanup error without
-        # taking further action, so that the real error can propagate
-        try:
-            job.stop_time = datetime.utcnow()
-            job.save()
-            if USE_CELERY:
-                cleanup_after_job(job, TERMINATE, tasks.OqTaskManager.task_ids)
-        except:
-            # log the finalization error only if there is not real error
-            if tb == 'None\n':
-                logs.LOG.error('finalizing', exc_info=True)
-
-        # log the real error, if any
-        if tb != 'None\n':
-            try:
-                logs.LOG.critical(tb)
-            except:  # an OperationalError may always happen
-                sys.stderr.write(tb)
-
-
 def create_job(user_name="openquake", hc_id=None):
     """
     Create job for the given user, return it.
@@ -159,12 +116,11 @@ def create_job(user_name="openquake", hc_id=None):
         :class:`openquake.server.db.models.OqJob` instance.
     """
     calc_id = get_calc_id() + 1
-    dstore = datastore.DataStore(calc_id, mode='w')
     job = models.OqJob.objects.create(
         id=calc_id,
         description='A job',
         user_name=user_name,
-        ds_calc_dir=dstore.calc_dir)
+        ds_calc_dir=os.path.join(datastore.DATADIR, 'calc_%s' % calc_id))
     if hc_id:
         job.hazard_calculation = models.OqJob.objects.get(pk=hc_id)
     job.save()
@@ -187,36 +143,44 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
     :param exports:
         A comma-separated string of export types.
     """
-    # let's import the calculator classes here, when they are needed;
-    # the reason is that the command `$ oq-engine --upgrade-db`
-    # does not need them and would raise strange errors during installation
-    # time if the PYTHONPATH is not set and commonlib is not visible
-    calculator = base.calculators(job.get_oqparam(), calc_id=job.id)
-    calculator.job = job
-    calculator.monitor = EnginePerformanceMonitor(
-        '', calculator.datastore.hdf5path)
-    calculator.monitor.job_id = job.id
-
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
-    with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
-        _do_run_calc(calculator, exports, hazard_calculation_id)
-        expose_outputs(calculator.datastore, job)
-    return calculator
+    with logs.handle(job, log_level, log_file):  # run the job
+        tb = 'None\n'
+        try:
+            _do_run_calc(job, exports, hazard_calculation_id)
+            job.status = 'complete'
+        except:
+            tb = traceback.format_exc()
+            try:
+                logs.LOG.critical(tb)
+                job.status = 'failed'
+            except:  # an OperationalError may always happen
+                sys.stderr.write(tb)
+            raise
+        finally:
+            # try to save the job stats on the database and then clean up;
+            # if there was an error in the calculation, this part may fail;
+            # in such a situation, we simply log the cleanup error without
+            # taking further action, so that the real error can propagate
+            try:
+                job.is_running = False
+                job.stop_time = datetime.utcnow()
+                job.save()
+                if USE_CELERY:
+                    cleanup_after_job(
+                        job, TERMINATE, tasks.OqTaskManager.task_ids)
+            except:
+                # log the finalization error only if there is no real error
+                if tb == 'None\n':
+                    logs.LOG.error('finalizing', exc_info=True)
+        expose_outputs(job.calc.datastore, job)
+    return job.calc
 
 
-def _do_run_calc(calc, exports, hazard_calculation_id):
-    """
-    Step through all of the phases of a calculation, updating the job
-    status at each phase.
-
-    :param calc:
-        An :class:`~openquake.engine.calculators.base.Calculator` instance.
-    :param exports:
-        a (potentially empty) comma-separated string of export targets
-    """
-    calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id)
-    calc.job.status = 'complete'
+# keep this as a private function, since it is mocked by engine_test.py
+def _do_run_calc(job, exports, hazard_calculation_id):
+    job.calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id)
 
 
 def del_calc(job_id):
@@ -392,7 +356,7 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
                          'in the .ini file' % (risk_mode, risk_mode))
 
     # check calculation_mode consistency
-    prev_mode = haz_job.get_param('calculation_mode')
+    prev_mode = haz_job.get_oqparam().calculation_mode
     ok_mode = RISK_HAZARD_MAP[risk_mode]
     if prev_mode not in ok_mode:
         raise InvalidCalculationID(
@@ -438,6 +402,8 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
         oq = readinput.get_oqparam(params)
         calc = base.calculators(oq, calc_id=job.id)
         calc.save_params()
+        job.description = oq.description
+        job.calc = calc
     return job
 
 
