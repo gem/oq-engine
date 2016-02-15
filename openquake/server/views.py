@@ -402,6 +402,8 @@ def submit_job(job_file, temp_dir, dbname, user_name,
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=job)
         raise exctype(job)
+    else:
+        assert job.has_hdf5(), job
 
     future = executor.submit(
         tasks.safely_call, tasks.run_calc, job, temp_dir,
@@ -410,12 +412,8 @@ def submit_job(job_file, temp_dir, dbname, user_name,
 
 
 def _get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
-
-    # TODO if superuser with should show all the calculations i.e.
-
     # helper to get job+calculation data from the oq-engine database
     jobs = oqe_models.OqJob.objects.filter()
-
     if not user_is_super:
         jobs = jobs.filter(user_name=user_name)
 
