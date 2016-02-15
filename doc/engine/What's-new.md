@@ -1,4 +1,5 @@
-OpenQuake 1.8 is a major release and a big improvement with respect
+We are pleased to announce the release of OpenQuake 1.8.
+This is a major release and contains numerous improvements with respect
 to OpenQuake 1.7. Everybody is invited to upgrade,
 by following the [usual procedure](Installing-the-OpenQuake-Engine.md).
 
@@ -43,8 +44,10 @@ datastore and replace with proper arrays. Among them:
 
    *sitecol*:
      contains the hazard sites and their parameters
+     
    *assetcol*:
      contains the exposure
+     
    *riskmodel*:
      contains the vulnerability/fragility functions
 
@@ -115,7 +118,7 @@ to PostgreSQL), and all the commands that never worked properly:
 2. `--delete-hazard-calculation` and `--delete-risk-calculation` have
 been unified into a single `--delete-calculation`.
 
-3. A lot of obsolete code (over 12,000 lines) have been removed from the engine
+3. A lot of obsolete code (over 12,000 lines) has been removed from the engine
 and the code base is now smaller and manageable: more will be removed in the
 next release.
 
