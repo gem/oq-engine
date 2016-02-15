@@ -1,18 +1,21 @@
-# The OpenQuake Engine
-# Copyright (C) 2010-2015, GEM Foundation
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# Copyright (C) 2010-2016 GEM Foundation
 #
-# This program is distributed in the hope that it will be useful,
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 import re
 import sys
 from setuptools import setup, find_packages
@@ -46,7 +49,7 @@ the PYTHONPATH; when using binary packages, if a celeryconfig.py is not
 available the OpenQuake Engine default celeryconfig.py, located in
 /usr/share/openquake/engine, is used.
 
-Copyright (C) 2010-2015, GEM Foundation.
+Copyright (C) 2010-2016, GEM Foundation.
 """
 
 PY_MODULES = ['openquake.engine.bin.openquake_cli']
