@@ -1,16 +1,23 @@
 ### Supported operating systems
 
 #### Ubuntu 
-[Ubuntu 12.04 LTS](Installing-the-OpenQuake-Engine.md) and [Ubuntu 14.04 LTS](Installing-the-OpenQuake-Engine.md), both 32 and 64 bit, are supported.
+[Ubuntu 12.04 LTS](Installing-the-OpenQuake-Engine.md) and [Ubuntu 14.04 LTS](Installing-the-OpenQuake-Engine.md), both 32 and 64 bit, are supported and deb packages provided.
 
-#### RHEL/Fedora
+#### RHEL / CentOS / SL
 
-Preliminary support and binary RPMs for unstable (nightly builds) and stable releases on [RHEL7 and its clones](Installing-the-OpenQuake-Engine-on-RHEL-and-clones.md) are provided. An experimental support for unstable releases is available also for [Fedora 21/22](Installing-the-OpenQuake-Engine-from-source-code-on-Fedora-and-RHEL.md).
+[RHEL7 and its clones](Installing-the-OpenQuake-Engine-on-RHEL-and-clones.md) are supported and RPM packages provided.
 
 ***
 
+### Celery support
 
-### DatabaseError: invalid byte sequence for encoding "UTF8": 0x00
+Starting from release 1.8 Celery isn't needed (and not recommended) on a single machine setup anymore; the OpenQuake Engine is able to use all the available CPU cores even without Celery.
+Celery can still be enabled on a cluster / multi node setup. To enable it please refer to the multiple nodes installation guidelines for [Ubuntu](Running-the-OpenQuake-Engine-on-multiple-RHEL-nodes.md)
+or [RHEL](Running-the-OpenQuake-Engine-on-multiple-RHEL-nodes.md).
+
+***
+
+### DatabaseError: invalid byte sequence for encoding "UTF8": 0x00 (Ubuntu 12.04 only)
 
 A more detailed stack trace:
 
