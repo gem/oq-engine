@@ -1,3 +1,6 @@
+  [Daniele Viganò, Matteo Nastasi]
+  * Updates Copyrights to 2016 and uniformize them
+
   [Michele Simionato]
   * SiteCollection instances are now serializable in HDF5 format
 
