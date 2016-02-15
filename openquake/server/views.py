@@ -402,8 +402,6 @@ def submit_job(job_file, temp_dir, dbname, user_name,
     if exctype:
         tasks.update_calculation(callback_url, status="failed", einfo=job)
         raise exctype(job)
-    else:
-        assert job.has_hdf5(), job
 
     future = executor.submit(
         tasks.safely_call, tasks.run_calc, job, temp_dir,
