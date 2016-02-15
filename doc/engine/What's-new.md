@@ -80,9 +80,9 @@ and rates are input as a pair of lists.
    + GMPE of Drout (2015) for Brazil
    + GMPE of Moltalva et al (2015)
 
-16. Other improvements, such as making clearer the error message
-in several validity checks for the GMPEs, or adding a method `split_in_tiles`
-to the SiteCollection class.
+16. Other improvements entered in hazardlib, such as making clearer
+the error message in several validity checks for the GMPEs, or adding
+a method `split_in_tiles` to the SiteCollection class.
 
 17. The .rst report of a calculation has been improved and more information is
 displayed. The command `oq-lite info --report job.ini` allows to generate
