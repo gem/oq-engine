@@ -1,6 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2014-2016 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
 OpenQuake: software for seismic hazard and risk assessment
@@ -41,6 +56,7 @@ import openquake.engine
 
 from openquake.engine import __version__
 from openquake.engine import engine, logs
+from openquake.commonlib import datastore
 from openquake.calculators import views
 from openquake.server.db import models, upgrade_manager
 from openquake.engine.export import core
@@ -51,14 +67,6 @@ HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = ("Please specify the ID of the hazard output (or "
                       "job) to be used by using '%s (or %s) <id>'" %
                       (HAZARD_OUTPUT_ARG, HAZARD_CALCULATION_ARG))
-
-
-def deprecate(option, newoption):
-    """
-    Print a deprecation warning for obsolete options.
-    """
-    print('The option %s is deprecated and will be removed in the next '
-          'version of the engine.\nUse %s instead.' % (option, newoption))
 
 
 def set_up_arg_parser():
@@ -91,10 +99,6 @@ def set_up_arg_parser():
         help='Run a job with the specified configuration file; you can also '
         'pass a comma-separated pair of files for hazard and risk',
         metavar='CONFIG_FILE')
-    general_grp.add_argument(
-        '--list-inputs', '--li',
-        help='List inputs of a specific input type',
-        metavar="INPUT_TYPE")
 
     general_grp.add_argument(
         '--yes', '-y', action='store_true',
@@ -136,10 +140,10 @@ def set_up_arg_parser():
         help='List hazard calculation information',
         action='store_true')
     hazard_grp.add_argument(
-        '--delete-hazard-calculation',
-        '--dhc',
-        help='Delete a hazard calculation and all associated outputs',
-        metavar='HAZARD_CALCULATION_ID')
+        '--delete-calculation',
+        '--dc',
+        help='Delete a calculation and all associated outputs',
+        metavar='CALCULATION_ID')
 
     hazard_grp.add_argument(
         '--delete-uncompleted-calculations',
@@ -157,7 +161,7 @@ def set_up_arg_parser():
         HAZARD_OUTPUT_ARG,
         '--ho',
         help='Use the desired hazard output as input for the risk job',
-        metavar='HAZARD_OUTPUT')
+        metavar='HAZARD_OUTPUT_ID')
     risk_grp.add_argument(
         HAZARD_CALCULATION_ARG,
         '--hc',
@@ -168,11 +172,6 @@ def set_up_arg_parser():
         '--lrc',
         help='List risk calculation information',
         action='store_true')
-    risk_grp.add_argument(
-        '--delete-risk-calculation',
-        '--drc',
-        help='Delete a risk calculation and all associated outputs',
-        metavar='RISK_CALCULATION_ID')
 
     export_grp = parser.add_argument_group('Export')
     export_grp.add_argument(
@@ -187,19 +186,6 @@ def set_up_arg_parser():
         help='Show a view of the specified calculation',
         nargs=2, metavar=('CALCULATION_ID', 'VIEW_NAME'))
 
-    # deprecated options
-    export_grp.add_argument(
-        '--list-hazard-outputs',
-        '--lho',
-        help='List outputs for the specified calculation [deprecated]',
-        metavar='CALCULATION_ID')
-
-    export_grp.add_argument(
-        '--list-risk-outputs',
-        '--lro',
-        help='List outputs for the specified calculation [deprecated]',
-        metavar='CALCULATION_ID')
-
     export_grp.add_argument(
         '--exports', action="store",
         default='',
@@ -212,70 +198,12 @@ def set_up_arg_parser():
         help='Export the desired output to the specified directory',
         nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
     export_grp.add_argument(
-        '--export-hazard-output',
-        '--eh',
-        help='Export the output to the specified directory [deprecated]',
-        nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
-    export_grp.add_argument(
-        '--export-risk-output',
-        '--er',
-        help='Export the output to the specified directory [deprecated]',
-        nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
-    export_grp.add_argument(
         '--export-outputs',
         '--eos',
         help='Export all the calculation outputs to the specified directory',
         nargs=2, metavar=('CALCULATION_ID', 'TARGET_DIR'))
-    export_grp.add_argument(
-        '--export-stats',
-        '--es',
-        help='Export the statistical outputs to the specified directory',
-        nargs=3,
-        metavar=('CALCULATION_ID', 'TARGET_DIR', 'OUTPUT_TYPE'))
-    export_grp.add_argument(
-        '--export-hazard-outputs',
-        '--eho',
-        help='Export all the outputs to the specified directory [deprecated]',
-        nargs=2, metavar=('HAZARD_CALCULATION_ID', 'TARGET_DIR'))
-    export_grp.add_argument(
-        '--export-risk-outputs',
-        '--ero',
-        help='Export all the outputs to the specified directory [deprecated]',
-        nargs=2, metavar=('RISK_CALCULATION_ID', 'TARGET_DIR'))
-
-    import_grp = parser.add_argument_group('Import')
-    import_grp.add_argument(
-        '--load-curve',
-        help=('Load hazard curves from an XML file.'),
-        metavar='CURVE_FILE',
-    )
-    import_grp.add_argument(
-        '--list-imported-outputs', action='store_true',
-        help=('List outputs which were imported from a file, not calculated '
-              'from a job'))
 
     return parser
-
-
-def list_inputs(input_type):
-    """
-    Print a list of available input models
-    """
-
-    if input_type == "exposure":
-        model = models.ExposureModel
-    else:
-        sys.exit("Wrong input type. Available input types: exposure")
-
-    inputs = model.objects.all()
-
-    if not inputs.count():
-        print "No inputs found of type %s" % input_type
-        return
-    print ('model id | name')
-
-    for inp in inputs:
-        print "%9d|%s" % (inp.id, inp.name)
 
 
 def list_calculations(job_type):
@@ -314,18 +242,6 @@ def list_calculations(job_type):
                 job.id, status, last_update, descr)).encode('utf-8')
 
 
-# TODO: the command-line switches are not tested, included this one
-def list_imported_outputs():
-    """
-    List outputs which were imported from a file, not calculated from a job
-    """
-    jobs = [jp.job.id for jp in models.JobParam.objects.filter(
-            value__contains=' importer, file ', name='description',
-            job__user_name=getpass.getuser())]
-    outputs = models.Output.objects.filter(oq_job__in=jobs)
-    engine.print_outputs_summary(outputs)
-
-
 def get_hc_id(hc_id):
     """
     If hc_id is negative, return the last calculation of the current user
@@ -348,25 +264,6 @@ def export_outputs(hc_id, target_dir, export_type):
             export(output.id, target_dir, export_type)
         except Exception as exc:
             print exc
-
-
-def export_stats(job_id, target_dir, output_type, export_type):
-    supported = {'hazard_curve': models.HazardCurve,
-                 'hazard_map': models.HazardMap,
-                 # 'uh_spectra': models.UHS  # not supported yet
-                 }
-    if output_type not in supported:
-        sys.exit('The output type %s is not supported. Choose one of %s' % (
-            output_type, ', '.join(supported)))
-    kw = {'%s__statistics__isnull' % output_type: False}
-    queryset = models.Output.objects.filter(
-        oq_job=job_id, output_type=output_type, **kw
-    ).order_by('display_name')
-    if queryset.count() == 0:
-        print 'There are no outputs of kind %s' % output_type
-        return
-    for output in queryset:
-        export(output.id, target_dir, 'csv')
 
 
 def export(output_id, target_dir, export_type):
@@ -495,9 +392,6 @@ def main():
     if args.hazard_output_id:
         sys.exit('The --hazard-output-id option is not supported anymore')
 
-    if args.list_inputs:
-        list_inputs(args.list_inputs)
-
     # hazard or hazard+risk
     hc_id = args.hazard_calculation_id
     if hc_id and int(hc_id) < 0:
@@ -533,8 +427,8 @@ def main():
             if args.log_file is not None else None
         run_job(expanduser(args.run_hazard), args.log_level,
                 log_file, args.exports)
-    elif args.delete_hazard_calculation is not None:
-        del_calc(args.delete_hazard_calculation, args.yes)
+    elif args.delete_calculation is not None:
+        del_calc(args.delete_calculation, args.yes)
     # risk
     elif args.list_risk_calculations:
         list_calculations('risk')
@@ -549,56 +443,22 @@ def main():
             args.log_level, log_file, args.exports,
             hazard_output_id=args.hazard_output_id,
             hazard_calculation_id=hc_id)
-    elif args.delete_risk_calculation is not None:
-        del_calc(args.delete_risk_calculation, args.yes)
 
     # export
     elif args.list_outputs is not None:
         engine.list_outputs(get_hc_id(args.list_outputs))
     elif args.show_view is not None:
         job_id, view_name = args.show_view
-        print views.view(view_name, get_hc_id(job_id))
-    elif args.list_hazard_outputs is not None:
-        deprecate('--list-hazard-outputs', '--list-outputs')
-        engine.list_outputs(args.list_hazard_outputs)
-    elif args.list_risk_outputs is not None:
-        deprecate('--list-risk-outputs', '--list-outputs')
-        engine.list_outputs(args.list_risk_outputs)
+        print views.view(view_name, datastore.read(int(job_id)))
 
     elif args.export_output is not None:
         output_id, target_dir = args.export_output
-        export(int(output_id), expanduser(target_dir), exports)
-
-    elif args.export_hazard_output is not None:
-        deprecate('--export-hazard-output', '--export-output')
-        output_id, target_dir = args.export_hazard_output
-        export(int(output_id), expanduser(target_dir), exports)
-
-    elif args.export_risk_output is not None:
-        deprecate('--export-risk-output', '--export-output')
-        output_id, target_dir = args.export_risk_output
         export(int(output_id), expanduser(target_dir), exports)
 
     elif args.export_outputs is not None:
         job_id, target_dir = args.export_outputs
         export_outputs(get_hc_id(job_id), expanduser(target_dir), exports)
 
-    elif args.export_stats is not None:
-        job_id, target_dir, output_type = args.export_stats
-        export_stats(get_hc_id(job_id), expanduser(target_dir),
-                     output_type, exports)
-
-    # deprecated
-    elif args.export_hazard_outputs is not None:
-        deprecate('--export-hazard-outputs', '--export-outputs')
-        job_id, target_dir = args.export_hazard_outputs
-        export_outputs(get_hc_id(job_id), expanduser(target_dir), exports)
-    elif args.export_risk_outputs is not None:
-        deprecate('--export-risk-outputs', '--export-outputs')
-        job_id, target_dir = args.export_risk_outputs
-        export_outputs(get_hc_id(job_id), expanduser(target_dir), exports)
-    elif args.list_imported_outputs:
-        list_imported_outputs()
     elif args.delete_uncompleted_calculations:
         delete_uncompleted_calculations()
     else:

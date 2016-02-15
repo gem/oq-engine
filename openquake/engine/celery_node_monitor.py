@@ -1,20 +1,20 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-#  Copyright (c) 2014, GEM Foundation
-
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2014-2016 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import sys
@@ -98,6 +98,8 @@ class CeleryNodeMonitor(object):
         Returns the number of live celery nodes (i.e. the number of machines).
         """
         stats = celery.task.control.inspect(timeout=1).stats()
+        if not stats:
+            sys.exit("No live compute nodes, aborting calculation")
         num_workers = sum(stats[k]['pool']['max-concurrency'] for k in stats)
         OqParam.concurrent_tasks.default = 2 * num_workers
         return set(stats)
@@ -107,8 +109,6 @@ class CeleryNodeMonitor(object):
             return self  # do nothing
         elif self.use_celery:
             self.live_nodes = self.set_concurrent_tasks_default()
-            if not self.live_nodes:
-                sys.exit("No live compute nodes, aborting calculation")
             self.th = threading.Thread(None, self.check_nodes)
             self.th.start()
         return self
