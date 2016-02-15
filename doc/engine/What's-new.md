@@ -5,29 +5,30 @@ by following the [usual procedure](Installing-the-OpenQuake-Engine.md).
 New features of the OpenQuake Engine, version 1.8
 ---------------------------------------------------
 
-1. The most important change is that all the calculators based on
-PostgreSQL are gone. There is now no distinction between the oq-lite
+1. The most important feature is that the calculators based on
+PostgreSQL are all gone. There is now no distinction between the oq-lite
 calculators and the engine calculators: they are all the same.
 All the calculators use an HDF5 file (the datastore) as data
 storage. This has a large performance impact on calculations heavy
 on data storage.
 
-2. Thanks the refactoring in point 1, now
-celery/rabbitmq combo is optional. That means that the engine
-works even without celery/rabbitmq; actually, this is the recommended way to run
-the engine on a single machine.  If you are using a cluster, you must
-still use celery/rabbitmq. But the big majority of the users, including
-everybody using the official virtual machines will have a much simpler
-experience. The most common error for newbies was to forget starting
-celery or running it from the wrong directory. Now this barrier is
-gone. Also, the engine is more efficient without celery/rabbitmq,
-especially for calculations with a large data transfer.
+2. Thanks the refactoring in point 1, the celery/rabbitmq combo is now
+optional. Actually, the recommended way to run the engine on a single
+machine is *without* celery/rabbitmq. If you are using a cluster, you
+must still use celery/rabbitmq. But the big majority of the users,
+including everybody using the official virtual machines will have a
+simpler experience. The most common error for newbies was to
+forget starting celery or running it from the wrong directory. Now
+this barrier is gone. Also, the engine is more efficient without
+celery/rabbitmq, especially for calculations with a large data
+transfer.
 
 3. In a cluster situation, you should edit the file `openquake.cfg` and
-set the parameter `use_celery` to `True`. The, a dynamic default for the
+set the parameter `use_celery` to `True`. Then, a dynamic default for the
 parameter `concurrent_tasks` will be inferred by asking celery how many
 cores are available and by multiplying that number by 2. This is done
-at each new calculation.
+at each new calculation. This solves another common error for users
+setting a bad `concurrent_tasks`.
 
 4. The classical hazard calculator has been completely rewritten. Now
 it automatically splits the site collection in tiles of size
@@ -35,18 +36,16 @@ it automatically splits the site collection in tiles of size
 huge performance benefit, especially for continental scale calculation
 with tens or hundreds of thousand of sites.
 
+5. The storage of the results in the datastore has been significantly
+improved. There is now a serialization protocol to and from HDF5: thanks to that
+several pickled objects have been removed from the datastore and replace
+with proper arrays. Among them:
 
-7. The storage of the results in the datastore has been significantly
-improved. In particular a lots of outputs that previosly were stored
-as pickled Python objects are now being stored as proper HDF5 arrays.
-Specifically, the datastore contains the following new arrays,
-previously only pickled:
+   -*sitecol*: contains the hazard sites and their parameters
+   -*assetcol*: contains the exposure
+   -*riskmodel*: contains the vulnerability/fragility functions
 
-   sitecol: contains the hazard sites and their parameters
-   assetcol: contains the exposure
-   riskmodel: contains the vulnerability/fragility functions
-
-However the HDF5 format is still NOT stable and actually is guaranteed
+6. The HDF5 format is still *not* stable and actually is guaranteed
 to change in the next version. For instance, if you want to write
 your our routines your our routines to extract/plot the hazard curves
 or the loss curves from the datastore, you can, but you should be
@@ -57,26 +56,11 @@ of the engine.
 of the engine server. This API is used by the new Risk Input
 Preparation Toolkit in the platform.
 
-7. There is now a serialization protocol to and from HDF5: thanks to that
-several pickled objects have been removed from the datastore and replace
-with proper arrays. Among them:
-
 8. We enabled Zip64 extensions and now we can export zip files
 larger than 4 GB on 64 bit machines.
 
 4. The validation of the risk models in the engine has been
 improved.
-
-6. Some work has been going on hazardlib, as usual, and you can have a
-look at the [changelog]
-(https://github.com/gem/oq-hazardlib/blob/engine-1.8/debian/changelog).
-
-
-13. The .rst report of a calculation has been improved and more information is
-displayed. The command `oq-lite info --report job.ini` allows to generate
-a partial report without running the full computation, whereas the command
-`oq-lite show fullreport <calc_id>`` displays the full report after the
-computation has been executed.
 
 14. `hazardlib` now contains an arbitrary MFD, in which the magnitudes
 and rates are input as a pair of lists.
@@ -96,6 +80,12 @@ and rates are input as a pair of lists.
 16 Other improvements, such as making clearer the error message
 in several validity checks for the GMPEs, or adding a method `split_in_tiles`
 to the SiteCollection class.
+
+13. The .rst report of a calculation has been improved and more information is
+displayed. The command `oq-lite info --report job.ini` allows to generate
+a partial report without running the full computation, whereas the command
+`oq-lite show fullreport <calc_id>`` displays the full report after the
+computation has been executed.
 
 19. Countless small improvements and additional validations have been
 added. This release has seen more than 200 pull
