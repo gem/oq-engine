@@ -68,7 +68,7 @@ class CheckHazardRiskConsistencyTestCase(unittest.TestCase):
 class JobFromFileTestCase(unittest.TestCase):
 
     def test_create_job_default_user(self):
-        job = engine.create_job()
+        job = engine.create_job('classical')
 
         self.assertEqual('openquake', job.user_name)
         self.assertEqual('pre_executing', job.status)
@@ -81,7 +81,7 @@ class JobFromFileTestCase(unittest.TestCase):
 
     def test_create_job_specified_user(self):
         user_name = helpers.random_string()
-        job = engine.create_job(user_name=user_name)
+        job = engine.create_job('classical', user_name=user_name)
 
         self.assertEqual(user_name, job.user_name)
         self.assertEqual('pre_executing', job.status)
