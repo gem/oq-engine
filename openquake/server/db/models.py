@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright (c) 2010-2014, GEM Foundation.
+#
+# Copyright (C) 2010-2016 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -11,10 +11,10 @@
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 # Disable:
 # - 'Maximum number of public methods for a class'
@@ -25,11 +25,10 @@
 Model representations of the OpenQuake DB tables.
 '''
 import os
-import ast
 import collections
 from datetime import datetime
 
-from openquake.commonlib.datastore import DataStore
+from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import OqParam, RISK_CALCULATORS
 import django
 if hasattr(django, 'setup'):
@@ -114,6 +113,7 @@ class OqJob(djm.Model):
     '''
     description = djm.TextField()
     user_name = djm.TextField()
+    calculation_mode = djm.TextField()
     hazard_calculation = djm.ForeignKey('OqJob', null=True)
     STATUS_CHOICES = (
         (u'created', u'Created'),
@@ -140,10 +140,9 @@ class OqJob(djm.Model):
         """
         'hazard' or 'risk'
         """
-        calcmode = self.get_oqparam().calculation_mode
         # the calculation mode can be unknown if the job parameters
         # have not been written on the database yet
-        return 'risk' if calcmode in RISK_CALCULATORS else 'hazard'
+        return 'risk' if self.calculation_mode in RISK_CALCULATORS else 'hazard'
 
     def get_or_create_output(self, display_name, output_type, ds_key):
         """
@@ -165,7 +164,7 @@ class OqJob(djm.Model):
         Return an OqParam object as read from the database
         """
         datadir = os.path.dirname(self.ds_calc_dir)
-        dstore = DataStore(self.id, datadir, mode='r')
+        dstore = datastore.read(self.id, datadir=datadir)
         oqparam = OqParam.from_(dstore.attrs)
         return oqparam
 
