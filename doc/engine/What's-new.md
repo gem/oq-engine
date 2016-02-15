@@ -12,22 +12,22 @@ All the calculators use an HDF5 file (the datastore) as data
 storage. This has a large performance impact on calculations heavy
 on data storage.
 
-2. Thanks the refactoring in point 1, the celery/rabbitmq combo is now
+2. Thanks to the new calculators, the celery/rabbitmq combo is now
 optional. Actually, the recommended way to run the engine on a single
-machine is *without* celery/rabbitmq. If you are using a cluster, you
-must still use celery/rabbitmq. But the big majority of the users,
-including everybody using the official virtual machines will have a
-simpler experience. The most common error for newbies was to
-forget starting celery or running it from the wrong directory. Now
+machine is *without* celery/rabbitmq. This means that the majority
+of the users, including everybody using the official virtual machines
+will have a simpler experience. The most common error for newbies was
+to forget starting celery or running it from the wrong directory. Now
 this barrier is gone. Also, the engine is more efficient without
 celery/rabbitmq, especially for calculations with a large data
 transfer.
 
-3. In a cluster situation, you should edit the file `openquake.cfg` and
+3. In a cluster situation, the combo celery/rabbitmq is still needed. In this
+case you should edit the file `openquake.cfg` and
 set the parameter `use_celery` to `True`. Then, a dynamic default for the
-parameter `concurrent_tasks` will be inferred by asking celery how many
+parameter `concurrent_tasks` will be determined by asking celery how many
 cores are available and by multiplying that number by 2. This is done
-at each new calculation. This solves another common error for users
+at each new calculation. This mechanism solves another common error for users
 setting a bad `concurrent_tasks`.
 
 4. The classical hazard calculator has been completely rewritten. Now
@@ -37,16 +37,19 @@ huge performance benefit, especially for continental scale calculation
 with tens or hundreds of thousand of sites.
 
 5. The storage of the results in the datastore has been significantly
-improved. There is now a serialization protocol to and from HDF5: thanks to that
-several pickled objects have been removed from the datastore and replace
-with proper arrays. Among them:
+improved. There is now a serialization protocol *to* and *from* HDF5:
+thanks to that several pickled objects have been removed from the
+datastore and replace with proper arrays. Among them:
 
-   -*sitecol*: contains the hazard sites and their parameters
-   -*assetcol*: contains the exposure
-   -*riskmodel*: contains the vulnerability/fragility functions
+   *sitecol*:
+     contains the hazard sites and their parameters
+   *assetcol*:
+     contains the exposure
+   *riskmodel*:
+     contains the vulnerability/fragility functions
 
-6. The HDF5 format is still *not* stable and actually is guaranteed
-to change in the next version. For instance, if you want to write
+6. The HDF5 format is still *not* stable and is guaranteed
+to change in the next version. If you want to write
 your our routines your our routines to extract/plot the hazard curves
 or the loss curves from the datastore, you can, but you should be
 aware that you will have to change your code with the next release
@@ -65,7 +68,7 @@ improved.
 14. `hazardlib` now contains an arbitrary MFD, in which the magnitudes
 and rates are input as a pair of lists.
 
-15 Several new GMPEs have been added:
+15. Several new GMPEs have been added:
 
    + GMPE of Gupta (2010) for intraslab earthquakes in the Indo-Burmese subduction zone
    + GMPE of Nath et al. (2012) for interface subduction in in the Shillong plateau of India
@@ -77,19 +80,15 @@ and rates are input as a pair of lists.
    + GMPE of Drout (2015) for Brazil
    + GMPE of Moltalva et al (2015)
 
-16 Other improvements, such as making clearer the error message
+16. Other improvements, such as making clearer the error message
 in several validity checks for the GMPEs, or adding a method `split_in_tiles`
 to the SiteCollection class.
 
-13. The .rst report of a calculation has been improved and more information is
+17. The .rst report of a calculation has been improved and more information is
 displayed. The command `oq-lite info --report job.ini` allows to generate
 a partial report without running the full computation, whereas the command
 `oq-lite show fullreport <calc_id>`` displays the full report after the
 computation has been executed.
-
-19. Countless small improvements and additional validations have been
-added. This release has seen more than 200 pull
-requests reviewed and merged.
 
 Bug fixes and changes with respect to OpenQuake 1.7
 ----------------------------------------------------
@@ -97,8 +96,7 @@ Bug fixes and changes with respect to OpenQuake 1.7
 1. We removed several switches from the `oq-engine` command:
 all the commands that have been deprecated for over two years, all
 the commands that have become obsolete (i.e. the one specific
-to PostgreSQL), and all the commands that never worked properly.
-The following have been removed:
+to PostgreSQL), and all the commands that never worked properly:
 
   + --list_inputs
   + --lite
@@ -114,7 +112,7 @@ The following have been removed:
   + --load-curve
   + --list-imported-outputs
 
-Also `--delete-hazard-calculation` and `--delete-risk-calculation` have
+2. `--delete-hazard-calculation` and `--delete-risk-calculation` have
 been unified into a single `--delete-calculation`.
 
 3. A lot of obsolete code (over 12,000 lines) have been removed from the engine
@@ -125,17 +123,17 @@ next release.
 *heavy* sources are split, thus reducing a lot the split time and the
 data transfer.
 
-6. The algorithm to read the source model has been changed and it is now
-faster, since it does not require anymore to parse the same file more
-than once, which was the case for nontrivial logic trees.
+6. The algorithm to read the source model has been changed and it is
+faster, since it does not require to parse the same file more
+than once anymore. This was the case for nontrivial logic trees.
 
 6. The algorithm to generate seeds for the event based calculator has
-changed to ensure that the results are not affected by the splitting
-procedure. Because of the change in the algorithm, the ruptures
-produced by the event based calculator are slightly different than
-before, and all the dependent quantites are different as well.
-The difference however is stochastically insignificant, akin to
-a change of seeds and in the limit of a large number of Stochastic
+changed. The new algorithm ensures that the results are not affected
+by the splitting procedure. Because of the change in the algorithm,
+the ruptures produced by the event based calculator are slightly
+different than before, and all the dependent quantites are different
+as well. The difference however is stochastically insignificant, akin
+to a change of seeds and in the limit of a large number of Stochastic
 Event Sets the results are equivalent.
 
 2. We temporarily removed the ability to compute insured loss curves from
@@ -175,8 +173,11 @@ during the parallel calculation.
 
 14. The `oq-lite` command-line tool has been enhanced and the order of
 arguments for the commands `oq-lite show` and `oq-lite export` have changed.
-The tool is still experimental and could disappear in the next release,
-being merged with the `oq-engine` command-line tool.
+The tool is still experimental and could disappear in the next release;
+it could be merged with the `oq-engine` command-line tool.
+
+19. Countless small improvements and additional validations have been
+added. This release has seen 159 pull requests reviewed and merged.
 
 Support for different platforms
 ----------------------------------------------------
