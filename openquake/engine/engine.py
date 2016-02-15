@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2015, GEM Foundation.
+# Copyright (c) 2010-2016, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -396,6 +396,8 @@ def expose_outputs(dstore, job):
 
     for key in dstore:
         if key in exportable:
+            if key == 'realizations' and len(dstore['realizations']) == 1:
+                continue  # there is no point in exporting a single realization
             out = models.Output.objects.create_output(
                 job, DISPLAY_NAME.get(key, key), output_type='datastore')
             out.ds_key = key
