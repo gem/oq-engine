@@ -218,12 +218,12 @@ def list_calculations(job_type):
         jobs = jobs.filter(hazard_calculation__isnull=True)
     else:  # risk
         jobs = jobs.filter(hazard_calculation__isnull=False)
-    jobs = jobs.order_by('last_update')
+    jobs = jobs.order_by('start_time')
 
     if len(jobs) == 0:
         print 'None'
     else:
-        print ('job_id |     status |         last_update | '
+        print ('job_id |     status |         start_time | '
                '        description')
         for job in jobs:
             descr = job.description
@@ -235,11 +235,11 @@ def list_calculations(job_type):
                     status = 'successful'
                 else:
                     status = 'failed'
-            last_update = latest_job.last_update.strftime(
+            start_time = latest_job.start_time.strftime(
                 '%Y-%m-%d %H:%M:%S %Z'
             )
             print ('%6d | %10s | %s| %s' % (
-                job.id, status, last_update, descr)).encode('utf-8')
+                job.id, status, start_time, descr)).encode('utf-8')
 
 
 def get_hc_id(hc_id):
