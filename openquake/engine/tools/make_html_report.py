@@ -101,19 +101,12 @@ class HtmlTable(object):
 
 
 JOB_STATS = '''
-SELECT oq_job_id, user_name, stop_time, status, duration FROM (
-  SELECT oq_job_id, user_name, stop_time, status,
-  stop_time - start_time as duration
-  FROM uiapi.job_stats AS s
-  INNER JOIN uiapi.oq_job AS o
-  ON s.oq_job_id=o.id) AS x
-WHERE oq_job_id=%s;
+SELECT id, user_name, stop_time, status, stop_time - start_time AS duration
+FROM job WHERE id=%s;
 '''
 
 ALL_JOBS = '''
-SELECT s.oq_job_id, o.user_name, status, ds_calc_dir FROM uiapi.job_stats AS s
-INNER JOIN uiapi.oq_job AS o
-ON o.id=s.oq_job_id
+SELECT id, user_name, status, ds_calc_dir FROM job
 WHERE stop_time::date = %s OR stop_time IS NULL AND start_time >= %s
 ORDER BY stop_time
 '''
@@ -182,9 +175,8 @@ def make_report(conn, isodate='today'):
         if not stats:
             continue
         (job_id, user, stop_time, status, duration) = stats[0]
-
-        ds = read(job_id, datadir=os.path.dirname(ds_calc))
         try:
+            ds = read(job_id, datadir=os.path.dirname(ds_calc))
             report = html_parts(view_fullreport('fullreport', ds))
         except Exception as exc:
             report = dict(
