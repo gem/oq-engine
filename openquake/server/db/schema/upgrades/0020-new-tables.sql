@@ -42,6 +42,5 @@ CREATE TABLE performance(
      time_sec FLOAT NOT NULL,
      memory_mb FLOAT NOT NULL,
      counts INTEGER NOT NULL);
-
 GRANT ALL ON performance TO oq_job_init;
 GRANT USAGE ON performance_id_seq TO oq_job_init;
