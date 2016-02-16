@@ -220,7 +220,7 @@ def del_calc(job_id):
         # all the records to delete before deleting them: thus, it runs out
         # of memory for large calculations
         curs = models.getcursor('admin')
-        curs.execute('DELETE FROM uiapi.oq_job WHERE id=%s', (job_id,))
+        curs.execute('DELETE FROM job WHERE id=%s', (job_id,))
     else:
         # this doesn't belong to the current user
         raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
@@ -261,19 +261,14 @@ def print_outputs_summary(outputs, full=True):
     """
     if len(outputs) > 0:
         truncated = False
-        print '  id | output_type | name'
-        for output_type, group in itertools.groupby(
-                sorted(outputs, key=operator.attrgetter('output_type')),
-                key=operator.attrgetter('output_type')):
-            outs = sorted(group, key=operator.attrgetter('display_name'))
-            for i, o in enumerate(outs):
-                if not full and i >= 10:
-                    print ' ... | %s | %d additional output(s)' % (
-                        o.get_output_type_display(), len(outs) - 10)
-                    truncated = True
-                    break
-                print '%4d | %s | %s' % (
-                    o.id, o.get_output_type_display(), o.display_name)
+        print '  id | name'
+        outs = sorted(outputs, key=operator.attrgetter('display_name'))
+        for i, o in enumerate(outs):
+            if not full and i >= 10:
+                print ' ... | %d additional output(s)' % (len(outs) - 10)
+                truncated = True
+                break
+            print '%4d | %s' % (o.id, o.display_name)
         if truncated:
             print ('Some outputs where not shown. You can see the full list '
                    'with the command\n`oq-engine --list-outputs`')
@@ -333,16 +328,14 @@ def expose_outputs(dstore, job):
         exportable.remove('sescollection')
     uhs = oq.uniform_hazard_spectra
     if uhs and 'hmaps' in dstore:
-        models.Output.objects.create_output(
-            job, 'uhs', output_type='datastore', ds_key='uhs')
+        models.Output.objects.create_output(job, 'uhs', ds_key='uhs')
 
     for key in dstore:
         if key in exportable:
             if key == 'realizations' and len(dstore['realizations']) == 1:
                 continue  # there is no point in exporting a single realization
             models.Output.objects.create_output(
-                job, DISPLAY_NAME.get(key, key), output_type='datastore',
-                ds_key=key)
+                job, DISPLAY_NAME.get(key, key), ds_key=key)
 
 
 def check_hazard_risk_consistency(haz_job, risk_mode):
