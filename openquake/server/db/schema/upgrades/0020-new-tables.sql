@@ -29,7 +29,6 @@ CREATE TABLE output(
      id SERIAL PRIMARY KEY,     
      oq_job_id INTEGER NOT NULL REFERENCES job (id) ON DELETE CASCADE,
      display_name TEXT NOT NULL,
-     output_type TEXT NOT NULL,
      last_update TIMESTAMP NOT NULL DEFAULT timezone('UTC', now()),
      ds_key TEXT NOT NULL);
 GRANT ALL ON output TO oq_job_init;

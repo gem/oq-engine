@@ -142,21 +142,20 @@ class OqJob(djm.Model):
         """
         # the calculation mode can be unknown if the job parameters
         # have not been written on the database yet
-        return 'risk' if self.calculation_mode in RISK_CALCULATORS else 'hazard'
+        return ('risk' if self.calculation_mode in RISK_CALCULATORS
+                else 'hazard')
 
-    def get_or_create_output(self, display_name, output_type, ds_key):
+    def get_or_create_output(self, display_name, ds_key):
         """
         :param disp_name: display name of the output
-        :param output_type: the output type
         :returns: an Output instance
         """
         try:
             output = Output.objects.get(
-                oq_job=self, display_name=display_name,
-                output_type=output_type)
+                oq_job=self, display_name=display_name)
         except ObjectDoesNotExist:
             output = Output.objects.create_output(
-                self, display_name, output_type, ds_key)
+                self, display_name, ds_key)
         return output
 
     def get_oqparam(self):
@@ -239,14 +238,13 @@ class OutputManager(djm.Manager):
     """
     Manager class to filter and create Output objects
     """
-    def create_output(self, job, display_name, output_type, ds_key):
+    def create_output(self, job, display_name, ds_key):
         """
         Create an output for the given `job`, `display_name` and
-        `output_type` (default to hazard_curve)
+        `ds_key`
         """
         return self.create(oq_job=job,
                            display_name=display_name,
-                           output_type=output_type,
                            ds_key=ds_key)
 
 
@@ -255,155 +253,16 @@ class Output(djm.Model):
     A single artifact which is a result of an OpenQuake job.
     The data may reside in a file or in the database.
     '''
-
-    #: Metadata of hazard outputs used by risk calculation. See
-    #: `hazard_metadata` property for more details
-    HazardMetadata = collections.namedtuple(
-        'hazard_metadata',
-        'investigation_time statistics quantile sm_path gsim_path')
-
-    #: Hold the full paths in the model trees of ground shaking
-    #: intensity models and of source models, respectively.
-    LogicTreePath = collections.namedtuple(
-        'logic_tree_path',
-        'gsim_path sm_path')
-
-    #: Hold the statistical params (statistics, quantile).
-    StatisticalParams = collections.namedtuple(
-        'statistical_params',
-        'statistics quantile')
-
     oq_job = djm.ForeignKey('OqJob', null=False)
-
     display_name = djm.TextField()
-
-    HAZARD_OUTPUT_TYPE_CHOICES = (
-        (u'disagg_matrix', u'Disaggregation Matrix'),
-        (u'gmf', u'Ground Motion Field'),
-        (u'gmf_scenario', u'Ground Motion Field'),
-        (u'hazard_curve', u'Hazard Curve'),
-        (u'hazard_curve_multi', u'Hazard Curve (multiple imts)'),
-        (u'hazard_map', u'Hazard Map'),
-        (u'ses', u'Stochastic Event Set'),
-        (u'uh_spectra', u'Uniform Hazard Spectra'),
-    )
-
-    RISK_OUTPUT_TYPE_CHOICES = (
-        (u'agg_loss_curve', u'Aggregate Loss Curve'),
-        (u'aggregate_loss', u'Aggregate Losses'),
-        (u'bcr_distribution', u'Benefit-cost ratio distribution'),
-        (u'collapse_map', u'Collapse Map Distribution'),
-        (u'dmg_dist_per_asset', u'Damage Distribution Per Asset'),
-        (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
-        (u'dmg_dist_total', u'Total Damage Distribution'),
-        (u'event_loss', u'Event Loss Table'),
-        (u'event_loss_asset', u'Event Loss Asset'),
-        (u'loss_curve', u'Loss Curve'),
-        (u'event_loss_curve', u'Loss Curve'),
-        (u'loss_fraction', u'Loss fractions'),
-        (u'loss_map', u'Loss Map'),
-        (u'dmg_per_asset', 'Damage Per Asset'),
-    )
-
-    output_type = djm.TextField(
-        choices=HAZARD_OUTPUT_TYPE_CHOICES + RISK_OUTPUT_TYPE_CHOICES)
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
     ds_key = djm.TextField(null=False, blank=True)  # datastore key
 
     objects = OutputManager()
 
     def __str__(self):
-        return "%d||%s||%s" % (self.id, self.output_type, self.display_name)
+        return "%d||%s" % (self.id, self.display_name)
 
     class Meta:
         db_table = 'output'
         ordering = ['id']
-
-    def is_hazard_curve(self):
-        return self.output_type in ['hazard_curve', 'hazard_curve_multi']
-
-    @property
-    def output_container(self):
-        """
-        :returns: the output container associated with this output
-        """
-
-        # FIXME(lp). Remove the following outstanding exceptions
-        if self.output_type in ['agg_loss_curve', 'event_loss_curve']:
-            return self.loss_curve
-        elif self.output_type == 'hazard_curve_multi':
-            return self.hazard_curve
-        elif self.output_type == 'gmf_scenario':
-            return self.gmf
-        elif self.output_type == 'event_loss_asset':
-            return self.event_loss
-        return getattr(self, self.output_type)
-
-    @property
-    def lt_realization_paths(self):
-        """
-        :returns: an instance of `LogicTreePath` the output is
-        associated with. When the output is not associated with any
-        logic tree branch then it returns a LogicTreePath namedtuple
-        with a couple of None.
-        """
-        hazard_output_types = [el[0] for el in self.HAZARD_OUTPUT_TYPE_CHOICES]
-        risk_output_types = [el[0] for el in self.RISK_OUTPUT_TYPE_CHOICES]
-        container = self.output_container
-
-        if self.output_type in hazard_output_types:
-            rlz = getattr(container, 'lt_realization_id', None)
-            if rlz is not None:
-                return self.LogicTreePath(
-                    tuple(container.lt_realization.gsim_lt_path),
-                    tuple(container.lt_realization.sm_lt_path))
-            else:
-                return self.LogicTreePath(None, None)
-        elif self.output_type in risk_output_types:
-            if getattr(container, 'hazard_output_id', None):
-                return container.hazard_output.lt_realization_paths
-            else:
-                return self.LogicTreePath(None, None)
-
-        raise RuntimeError("unexpected output type %s" % self.output_type)
-
-    @property
-    def statistical_params(self):
-        """
-        :returns: an instance of `StatisticalParams` the output is
-        associated with
-        """
-        if getattr(self.output_container, 'statistics', None) is not None:
-            return self.StatisticalParams(self.output_container.statistics,
-                                          self.output_container.quantile)
-        elif getattr(
-                self.output_container, 'hazard_output_id', None) is not None:
-            return self.output_container.hazard_output.statistical_params
-        else:
-            return self.StatisticalParams(None, None)
-
-    @property
-    def hazard_metadata(self):
-        """
-        Given an Output produced by a risk calculation it returns the
-        corresponding hazard metadata.
-
-        :returns:
-            A `namedtuple` with the following attributes::
-
-                * investigation_time: the hazard investigation time (float)
-                * statistics: the kind of hazard statistics (None, "mean" or
-                  "quantile")
-                * quantile: quantile value (when `statistics` is "quantile")
-                * sm_path: a list representing the source model path
-                * gsim_path: a list representing the gsim logic tree path
-
-        """
-        oq = self.oq_job.get_oqparam()
-
-        statistics, quantile = self.statistical_params
-        gsim_lt_path, sm_lt_path = self.lt_realization_paths
-
-        return self.HazardMetadata(oq.investigation_time,
-                                   statistics, quantile,
-                                   sm_lt_path, gsim_lt_path)
