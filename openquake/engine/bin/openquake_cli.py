@@ -212,18 +212,14 @@ def list_calculations(job_type):
 
     :param job_type: 'hazard' or 'risk'
     """
-    jobs = models.OqJob.objects.filter(
-        user_name=getpass.getuser())
-    if job_type == 'hazard':
-        jobs = jobs.filter(hazard_calculation__isnull=True)
-    else:  # risk
-        jobs = jobs.filter(hazard_calculation__isnull=False)
-    jobs = jobs.order_by('start_time')
+    jobs = [job for job in models.OqJob.objects.filter(
+        user_name=getpass.getuser()).order_by('start_time')
+            if job.job_type == job_type]
 
     if len(jobs) == 0:
         print 'None'
     else:
-        print ('job_id |     status |         start_time | '
+        print ('job_id |     status |          start_time | '
                '        description')
         for job in jobs:
             descr = job.description
