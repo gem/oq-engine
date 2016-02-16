@@ -357,13 +357,13 @@ def main():
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
 
     if args.make_html_report:
-        conn = models.getcursor('admin').connection
+        conn = models.getcursor('job_init').connection
         print 'Written', make_report(conn, args.make_html_report)
         sys.exit(0)
 
     if args.upgrade_db:
         logs.set_level('info')
-        conn = models.getcursor('admin').connection
+        conn = models.getcursor('job_init').connection
         msg = upgrade_manager.what_if_I_upgrade(
             conn, extract_scripts='read_scripts')
         print msg
@@ -374,12 +374,12 @@ def main():
         sys.exit(0)
 
     if args.version_db:
-        conn = models.getcursor('admin').connection
+        conn = models.getcursor('job_init').connection
         print upgrade_manager.version_db(conn)
         sys.exit(0)
 
     if args.what_if_I_upgrade:
-        conn = models.getcursor('admin').connection
+        conn = models.getcursor('job_init').connection
         print upgrade_manager.what_if_I_upgrade(conn)
         sys.exit(0)
 

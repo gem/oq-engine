@@ -1,1 +1,0 @@
-ALTER TABLE hzrdr.lt_source_model ADD COLUMN samples INTEGER NOT NULL DEFAULT 1;
