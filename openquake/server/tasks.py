@@ -52,11 +52,10 @@ class ProgressHandler(logging.Handler):
     A logging handler to update the status of the job as seen
     from the platform.
     """
-    def __init__(self, callback_url, calc):
+    def __init__(self, callback_url, job):
         logging.Handler.__init__(self)
         self.callback_url = callback_url
-        self.calc = calc
-        self.description = calc.get_oqparam().description
+        self.job = job
 
     def emit(self, record):
         """
@@ -65,7 +64,7 @@ class ProgressHandler(logging.Handler):
         update_calculation(
             self.callback_url,
             status=record.getMessage(),
-            description=self.description)
+            description=self.job.description)
 
 
 def safely_call(func, *args):
