@@ -142,21 +142,20 @@ class OqJob(djm.Model):
         """
         # the calculation mode can be unknown if the job parameters
         # have not been written on the database yet
-        return 'risk' if self.calculation_mode in RISK_CALCULATORS else 'hazard'
+        return ('risk' if self.calculation_mode in RISK_CALCULATORS
+                else 'hazard')
 
-    def get_or_create_output(self, display_name, output_type, ds_key):
+    def get_or_create_output(self, display_name, ds_key):
         """
         :param disp_name: display name of the output
-        :param output_type: the output type
         :returns: an Output instance
         """
         try:
             output = Output.objects.get(
-                oq_job=self, display_name=display_name,
-                output_type=output_type)
+                oq_job=self, display_name=display_name)
         except ObjectDoesNotExist:
             output = Output.objects.create_output(
-                self, display_name, output_type, ds_key)
+                self, display_name, ds_key)
         return output
 
     def get_oqparam(self):
