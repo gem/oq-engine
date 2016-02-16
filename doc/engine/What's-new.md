@@ -1,4 +1,5 @@
-OpenQuake 1.8 is a major release and a big improvement with respect
+We are pleased to announce the release of OpenQuake 1.8.
+This is a major release and contains numerous improvements with respect
 to OpenQuake 1.7. Everybody is invited to upgrade,
 by following the [usual procedure](Installing-the-OpenQuake-Engine.md).
 
@@ -40,10 +41,14 @@ with tens or hundreds of thousand of sites.
 improved. There is now a serialization protocol *to* and *from* HDF5:
 thanks to that several pickled objects have been removed from the
 datastore and replace with proper arrays. Among them:
-
    *sitecol*:
      contains the hazard sites and their parameters
+     
    *assetcol*:
+     contains the exposure
+     
+   *riskmodel*:
+     contains the vulnerability/fragility functions
      contains the exposure
    *riskmodel*:
      contains the vulnerability/fragility functions
@@ -80,9 +85,9 @@ and rates are input as a pair of lists.
    + GMPE of Drout (2015) for Brazil
    + GMPE of Moltalva et al (2015)
 
-16. Other improvements, such as making clearer the error message
-in several validity checks for the GMPEs, or adding a method `split_in_tiles`
-to the SiteCollection class.
+16. Other improvements entered in hazardlib, such as making clearer
+the error message in several validity checks for the GMPEs, or adding
+a method `split_in_tiles` to the SiteCollection class.
 
 17. The .rst report of a calculation has been improved and more information is
 displayed. The command `oq-lite info --report job.ini` allows to generate
@@ -115,7 +120,7 @@ to PostgreSQL), and all the commands that never worked properly:
 2. `--delete-hazard-calculation` and `--delete-risk-calculation` have
 been unified into a single `--delete-calculation`.
 
-3. A lot of obsolete code (over 12,000 lines) have been removed from the engine
+3. A lot of obsolete code (over 12,000 lines) has been removed from the engine
 and the code base is now smaller and manageable: more will be removed in the
 next release.
 
