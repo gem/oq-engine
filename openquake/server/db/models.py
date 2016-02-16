@@ -145,19 +145,6 @@ class OqJob(djm.Model):
         return ('risk' if self.calculation_mode in RISK_CALCULATORS
                 else 'hazard')
 
-    def get_or_create_output(self, display_name, ds_key):
-        """
-        :param disp_name: display name of the output
-        :returns: an Output instance
-        """
-        try:
-            output = Output.objects.get(
-                oq_job=self, display_name=display_name)
-        except ObjectDoesNotExist:
-            output = Output.objects.create_output(
-                self, display_name, ds_key)
-        return output
-
     def get_oqparam(self):
         """
         Return an OqParam object as read from the database

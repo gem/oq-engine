@@ -24,7 +24,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "openquake.server.settings")
 from openquake.server.db import models
 models.getcursor('job_init').execute(
     # cleanup of the flag oq_job.is_running
-    'UPDATE job SET is_running=false WHERE is_running')
+    'UPDATE job SET is_running=0 WHERE is_running=1')
 
 # This application object is used by the development server
 # as well as any WSGI server configured to use this file.

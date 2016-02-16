@@ -26,7 +26,7 @@ APPS = (
     'contenttypes',
     'sessions',
     'sites',
-    'admin',
+    'job_init',
 )
 
 
