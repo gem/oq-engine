@@ -220,7 +220,7 @@ def del_calc(job_id):
         # all the records to delete before deleting them: thus, it runs out
         # of memory for large calculations
         curs = models.getcursor('admin')
-        curs.execute('DELETE FROM uiapi.oq_job WHERE id=%s', (job_id,))
+        curs.execute('DELETE FROM job WHERE id=%s', (job_id,))
     else:
         # this doesn't belong to the current user
         raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
