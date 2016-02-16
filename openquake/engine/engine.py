@@ -226,7 +226,7 @@ def del_calc(job_id):
         raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
     try:
         os.remove(job.ds_calc_dir + '.hdf5')
-    except:
+    except:  # already removed or missing permission
         pass
     else:
         print('Removed %s' % job.ds_calc_dir + '.hdf5')
@@ -243,9 +243,6 @@ def list_outputs(job_id, full=True):
         If True produce a full listing, otherwise a short version
     """
     outputs = get_outputs(job_id)
-    if models.oqparam(job_id).calculation_mode == 'scenario':
-        # ignore SES output
-        outputs = [o for o in outputs if o.output_type != 'ses']
     print_outputs_summary(outputs, full)
 
 
