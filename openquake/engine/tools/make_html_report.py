@@ -101,8 +101,8 @@ class HtmlTable(object):
 
 
 JOB_STATS = '''
-SELECT id, user_name, stop_time, status, stop_time - start_time AS duration
-FROM job WHERE id=%s;
+SELECT id, user_name, start_time, stop_time, status,
+stop_time - start_time AS duration FROM job WHERE id=%s;
 '''
 
 ALL_JOBS = '''
@@ -174,7 +174,7 @@ def make_report(conn, isodate='today'):
         stats = fetcher.query(JOB_STATS, job_id)[1:]
         if not stats:
             continue
-        (job_id, user, stop_time, status, duration) = stats[0]
+        (job_id, user, start_time, stop_time, status, duration) = stats[0]
         try:
             ds = read(job_id, datadir=os.path.dirname(ds_calc))
             report = html_parts(view_fullreport('fullreport', ds))
