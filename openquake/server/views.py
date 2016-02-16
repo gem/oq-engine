@@ -1,17 +1,20 @@
-# Copyright (c) 2015, GEM Foundation.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# This program is free software: you can redistribute it and/or modify
+# Copyright (C) 2015-2016 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
+# OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import shutil
 import json
@@ -407,12 +410,8 @@ def submit_job(job_file, temp_dir, dbname, user_name,
 
 
 def _get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
-
-    # TODO if superuser with should show all the calculations i.e.
-
     # helper to get job+calculation data from the oq-engine database
     jobs = oqe_models.OqJob.objects.filter()
-
     if not user_is_super:
         jobs = jobs.filter(user_name=user_name)
 
