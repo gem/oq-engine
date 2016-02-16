@@ -41,14 +41,10 @@ with tens or hundreds of thousand of sites.
 improved. There is now a serialization protocol *to* and *from* HDF5:
 thanks to that several pickled objects have been removed from the
 datastore and replace with proper arrays. Among them:
+
    *sitecol*:
      contains the hazard sites and their parameters
-     
    *assetcol*:
-     contains the exposure
-     
-   *riskmodel*:
-     contains the vulnerability/fragility functions
      contains the exposure
    *riskmodel*:
      contains the vulnerability/fragility functions
@@ -124,11 +120,11 @@ been unified into a single `--delete-calculation`.
 and the code base is now smaller and manageable: more will be removed in the
 next release.
 
-5. The logic for splitting the sources has changed: now only the so-called
+4. The logic for splitting the sources has changed: now only the so-called
 *heavy* sources are split, thus reducing a lot the split time and the
 data transfer.
 
-6. The algorithm to read the source model has been changed and it is
+5. The algorithm to read the source model has been changed and it is
 faster, since it does not require to parse the same file more
 than once anymore. This was the case for nontrivial logic trees.
 
@@ -141,7 +137,13 @@ as well. The difference however is stochastically insignificant, akin
 to a change of seeds and in the limit of a large number of Stochastic
 Event Sets the results are equivalent.
 
-2. We temporarily removed the ability to compute insured loss curves from
+7. A subtle bug in the scenario risk calculator, affecting calculations
+with nonzero coefficients of variations, was discovered. The epsilons
+were associated to the assets in a random order. The issue has been
+fixed and this is the reason why the numbers are (slightly) different
+from before in the ScenarioRisk demo.
+
+8. We temporarily removed the ability to compute insured loss curves from
 the classical risk calculator. The reason is that doubts were
 raised about the algorithm used. The plan is to restore such functionality
 in the next version of the engine with a better and more tested algorithm.
