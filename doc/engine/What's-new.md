@@ -39,22 +39,20 @@ with tens or hundreds of thousand of sites.
 
 5. The storage of the results in the datastore has been significantly
 improved. There is now a serialization protocol *to* and *from* HDF5:
-thanks to that several pickled objects have been removed from the
-datastore and replace with proper arrays. Among them:
+thanks to that several pickled Python objects have been removed from the
+datastore and replaced with proper arrays. Among them:
 
    *sitecol*:
      contains the hazard sites and their parameters
+   
    *assetcol*:
      contains the exposure
+   
    *riskmodel*:
      contains the vulnerability/fragility functions
 
-6. The HDF5 format is still *not* stable and is guaranteed
-to change in the next version. If you want to write
-your our routines your our routines to extract/plot the hazard curves
-or the loss curves from the datastore, you can, but you should be
-aware that you will have to change your code with the next release
-of the engine.
+   *csm_info*:
+      contains information about the composition of the source model
 
 8. There is now an HTTP API to validate NRML files, implemented on top
 of the engine server. This API is used by the new Risk Input
@@ -63,8 +61,22 @@ Preparation Toolkit in the platform.
 8. We enabled Zip64 extensions and now we can export zip files
 larger than 4 GB on 64 bit machines.
 
-4. The validation of the risk models in the engine has been
-improved.
+9. The validation of the risk models in the engine has been
+improved. In particular if the user writes "SA" instead of "SA(...)" the
+error is flagged early. If the risk wants some Intensity Measure Type
+which is not available, a clear error is displayed early.
+
+10. A few CSV exporter were improved. In particular we added a
+taxonomy column to the CSV output of the scenario damage calculator
+in presence of a consequence model. Moreover, now the hazard map
+CSV exporter also exports the PoEs as column headers. Finally,
+we changed the column names in the header to be `lon` and `lat`
+for longitude and latitude fields: this makes it easier to import
+the data in QGIS.
+
+11. We improved the algorithm to determine the required data transfer
+for the source model. Moreover, now we also report the figures for
+the task with the highest data transfer back.
 
 14. `hazardlib` now contains an arbitrary MFD, in which the magnitudes
 and rates are input as a pair of lists.
@@ -143,47 +155,70 @@ were associated to the assets in a random order. The issue has been
 fixed and this is the reason why the numbers are (slightly) different
 from before in the ScenarioRisk demo.
 
+7. There was a possible bug when reading GMFs from a NRML file,
+if longitude and latitude has more than 5 digits. This has been fixed
+now. The coordinates are still rounded to 5 digits, but we removed
+the need for the ordering check, so any file can be imported, even
+if the coordinates are not ordered after rounding.
+
 8. We temporarily removed the ability to compute insured loss curves from
 the classical risk calculator. The reason is that doubts were
 raised about the algorithm used. The plan is to restore such functionality
 in the next version of the engine with a better and more tested algorithm.
 
-3. The parameter `asset_hazard_distance` was not honored for the
+9. The parameter `asset_hazard_distance` was not honored for the
 calculators `classical_risk` and `classical_bcr`: this has been
 fixed now.
 
-18. We fixed a few export bugs. Now the XML exporters for mean and
+10. Several structures in the HDF5 datastore have changed.
+The HDF5 format continues to be *not* stable and it will keep
+changing in the next version of the engine. If you want to write
+your our routines your our routines to extract/plot the hazard curves
+or the loss curves from the datastore, you can, but you should be
+aware that you will have to change your code with future releases
+of the engine.
+
+11. We fixed a bug in the exporter for the average losses in the event based
+risk calculator: in presence of multiple loss types, the numbers were
+mixed up.
+
+12. We fixed a few XML export bugs. Now the XML exporters for mean and
 quantile loss curves and maps work properly in all situations. Also,
 the XML exporters for the Uniform Hazard Spectra have been rewritten
 to export from the datastore, not from the database.
 
-6. We are not storing anymore the epsilon matrix in event based and
+13. We are not storing anymore the epsilon matrix in event based and
 scenario risk calculations. There was no strong reason to persist it,
 and since it can be rather large, it was artificially making the
 datastore larger than needed.
 
-8. Some unused and undocumented configuration parameters like `statistics`
+13. We removed a check that was too strict: now the exposure does not
+need to provide costs if you are doing damage calculations, since the
+classical damage and scenario damage calculators depends on the
+numbers and the occupancies, not on the costs.
+
+14. Some unused and undocumented configuration parameters like `statistics`
 have been removed.
 
-9. The demos have been revisited and updated.
+15. The demos have been revisited and updated.
 
-11. We fixed a subtle bug that made it impossible to make a deepcopy
+16. We fixed a subtle bug that made it impossible to make a deepcopy
 of source objects.
 
-12. Since all the classical calculators use the datastore, the
+17. Since all the classical calculators use the datastore, the
 export has changed slightly with respect to the past. Everything
 is now more consistent.
 
-13. We added a check on classical damage calculation: now if there is
+18. We added a check on classical damage calculation: now if there is
 a PoE = 1, the error is raised early in the pre_execute phase and not
 during the parallel calculation.
 
-14. The `oq-lite` command-line tool has been enhanced and the order of
+19. The `oq-lite` command-line tool has been enhanced and the order of
 arguments for the commands `oq-lite show` and `oq-lite export` have changed.
 The tool is still experimental and could disappear in the next release;
 it could be merged with the `oq-engine` command-line tool.
 
-19. Countless small improvements and additional validations have been
+20. Countless small improvements and additional validations have been
 added. This release has seen 159 pull requests reviewed and merged.
 
 Support for different platforms
