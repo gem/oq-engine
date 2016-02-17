@@ -25,7 +25,6 @@ import logging
 import mock as mock_module
 import numpy
 import os
-import csv
 import random
 import shutil
 import string
@@ -36,10 +35,6 @@ import time
 
 from django.core import exceptions
 
-from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.geo import Point
-from openquake.hazardlib.geo.surface.planar import PlanarSurface
-from openquake.hazardlib.tom import PoissonTOM
 from openquake.baselib.general import writetmp as touch
 
 from openquake.server.db import models
