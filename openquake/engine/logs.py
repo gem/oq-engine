@@ -149,8 +149,7 @@ class LogDatabaseHandler(logging.Handler):
     def emit(self, record):  # pylint: disable=E0202
         if record.levelno >= logging.INFO:
             self.getcursor('job_init').execute(
-                """INSERT INTO uiapi.log
-                (job_id, timestamp, level, process, message)
+                """INSERT INTO log (job_id, timestamp, level, process, message)
                 VALUES (%s, %s, %s, %s, %s)""",
                 (self.job.id, datetime.utcnow(), record.levelname,
                  '%s/%s' % (record.processName, record.process),
@@ -169,11 +168,12 @@ def handle(job, log_level='info', log_file=None):
     :param log_file:
          log file path (if None, logs on stdout only)
     """
+    oq = job.get_oqparam()
     handlers = [LogDatabaseHandler(job)]  # log on db always
     if log_file is None:
         handlers.append(LogStreamHandler(job))
     elif log_file == 'stderr':
-        edir = job.get_param('export_dir')
+        edir = oq.export_dir
         log_file = os.path.join(edir, 'calc_%d.log' % job.id)
         touch_log_file(log_file)  # check if writeable
         handlers.append(LogStreamHandler(job))

@@ -44,7 +44,7 @@ if __name__ == "__main__":
     from openquake.server.db import models
     models.getcursor('job_init').execute(
         # cleanup of the flag oq_job.is_running
-        'UPDATE uiapi.oq_job SET is_running=false WHERE is_running')
+        'UPDATE job SET is_running=false WHERE is_running')
 
     # the django autoreloader sets the variable RUN_MAIN; at the beginning
     # it is None, and only at that moment celery must be run
