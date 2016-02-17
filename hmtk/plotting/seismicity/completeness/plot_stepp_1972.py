@@ -105,7 +105,7 @@ def create_stepp_plot(model, filename, filetype='png', filedpi=300):
                    marker=marker_vals[iloc],
                    color=rgb_list[iloc])
 
-    plt.legend(legend_list, bbox_to_anchor=DEFAULT_OFFSET)
+    lgd = plt.legend(legend_list, bbox_to_anchor=DEFAULT_OFFSET)
     plt.grid(True)
     # Plot expected Poisson rate
     for iloc in range(0, len(model.magnitude_bin) - 1):
@@ -125,4 +125,6 @@ def create_stepp_plot(model, filename, filetype='png', filedpi=300):
     plt.ylabel("$\\sigma_{\\lambda} = \\sqrt{\\lambda} / \\sqrt{T}$",
                fontsize=15)
     # Save figure to file
-    plt.savefig(filename, dpi=filedpi, format=filetype)
+    plt.tight_layout()
+    plt.savefig(filename, dpi=filedpi, format=filetype,
+                bbox_extra_artists=(lgd,), bbox_inches="tight")

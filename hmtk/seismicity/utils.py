@@ -51,6 +51,7 @@
 import numpy as np
 from math import fabs
 from scipy.stats import truncnorm
+from shapely import geometry
 
 MARKER_NORMAL = np.array([0, 31, 59, 90, 120, 151, 181,
                           212, 243, 273, 304, 334])
@@ -421,3 +422,75 @@ def bootstrap_histogram_2D(
         else:
             output = np.sum(temp_hist, axis=2) / float(number_bootstraps)
         return output
+
+# Parameters of WGS84 projection (in km)
+WGS84 = {"a": 6378.137, "e": 0.081819191, "1/f": 298.257223563}
+WGS84["e2"] = WGS84["e"] ** 2.
+# Parameters of WGS84 projection (in m)
+WGS84m = {"a": 6378137., "e": 0.081819191, "1/f": 298.2572221}
+WGS84m["e2"] = WGS84m["e"] ** 2.
+TO_Q = lambda lat: (
+    (1.0 - WGS84["e2"]) * (
+    (np.sin(lat) / (1.0 -  (WGS84["e2"] * (np.sin(lat) ** 2.))) -
+    ((1. / (2.0 * WGS84["e"])) * np.log((1.0 - WGS84["e"] * np.sin(lat)) /
+    (1.0 + WGS84["e"] * np.sin(lat))))))
+    )
+TO_Qm = lambda lat: (
+    (1.0 - WGS84m["e2"]) * (
+    (np.sin(lat) / (1.0 -  (WGS84m["e2"] * (np.sin(lat) ** 2.))) -
+    ((1. / (2.0 * WGS84m["e"])) * np.log((1.0 - WGS84m["e"] * np.sin(lat)) /
+    (1.0 + WGS84m["e"] * np.sin(lat))))))
+    )
+
+def lonlat_to_laea(lon, lat, lon0, lat0, f_e=0.0, f_n=0.0):
+    """
+    Converts vectors of longitude and latitude into Lambert Azimuthal
+    Equal Area projection (km), with respect to an origin point
+    :param numpy.ndarray lon:
+        Longitudes
+    :param numpy.ndarray lat:
+        Latitude
+    :param float lon0:
+        Central longitude
+    :param float lat0:
+        Central latitude
+    :param float f_e:
+        False easting (km)
+    :param float f_e:
+        False northing (km)
+    :returns:
+        * easting (km)
+        * northing (km)
+    """
+    lon = np.radians(lon)
+    lat = np.radians(lat)
+    lon0 = np.radians(lon0)
+    lat0 = np.radians(lat0)
+    q_0 = TO_Q(lat0)
+    q_p = TO_Q(np.pi / 2.)
+    q_val = TO_Q(lat)
+    beta = np.arcsin(q_val / q_p)
+    beta0 = np.arcsin(q_0 / q_p)
+    r_q = WGS84["a"] * np.sqrt(q_p / 2.)
+    dval = WGS84["a"] * (
+        np.cos(lat0) / np.sqrt(1.0 - (WGS84["e2"] * (np.sin(lat0) ** 2.))) /
+        (r_q * np.cos(beta0)))
+    bval = r_q * np.sqrt(
+        2. / (1.0 + (np.sin(beta0) * np.sin(beta)) + (np.cos(beta) *
+        np.cos(beta0) * np.cos(lon - lon0))))
+    easting = f_e + ((bval * dval) * (np.cos(beta) * np.sin(lon - lon0))) 
+    northing = f_n + (bval / dval) * ((np.cos(beta0) * np.sin(beta)) -
+        (np.sin(beta0) * np.cos(beta) * np.cos(lon - lon0)))
+    return easting, northing
+
+def area_of_polygon(polygon):
+    """
+    Returns the area of an OpenQuake polygon in square kilometres
+    """
+    lon0 = np.mean(polygon.lons)
+    lat0 = np.mean(polygon.lats)
+    # Transform to lamber equal area projection
+    x, y = lonlat_to_laea(polygon.lons, polygon.lats, lon0, lat0)
+    # Build shapely polygons
+    poly = geometry.Polygon(zip(x, y))
+    return poly.area

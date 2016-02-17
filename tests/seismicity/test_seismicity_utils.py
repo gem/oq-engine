@@ -351,3 +351,19 @@ class TestBootstrapHistograms(unittest.TestCase):
             number_bootstraps=1000)
         array_diff = expected_array - hist_values
         self.assertTrue(np.all(np.fabs(array_diff) < 0.02))
+
+class Testlonlat2laea(unittest.TestCase):
+    """
+    Tests the converter from longitude and latitude to lambert azimuthal
+    equal area coordinates
+    """
+    def test_conversion(self):
+        """
+        Tests lonlat to lambert equal area
+        Data from pyproj conversion taken from reference test case
+        """
+        expected_x, expected_y = (-286700.13595616777, -325847.4698447622)
+        calc_x, calc_y = utils.lonlat_to_laea(5.0, 50.0, 9.0, 53.0)
+        self.assertAlmostEqual(calc_x, expected_x / 1000.0)
+        self.assertAlmostEqual(calc_y, expected_y / 1000.0)
+

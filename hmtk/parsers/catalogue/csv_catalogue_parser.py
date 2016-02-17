@@ -75,16 +75,15 @@ class CsvCatalogueParser(BaseCatalogueParser):
                 valid_key_list = self._header_check(
                     row.keys(),
                     catalogue.TOTAL_ATTRIBUTE_LIST)
-            else:
-                for key in valid_key_list:
-                    if key in catalogue.FLOAT_ATTRIBUTE_LIST:
-                        catalogue.data[key] = self._float_check(
-                            catalogue.data[key], row[key], irow, key)
-                    elif key in catalogue.INT_ATTRIBUTE_LIST:
-                        catalogue.data[key] = self._int_check(
-                            catalogue.data[key], row[key], irow, key)
-                    else:
-                        catalogue.data[key].append(row[key])
+            for key in valid_key_list:
+                if key in catalogue.FLOAT_ATTRIBUTE_LIST:
+                    catalogue.data[key] = self._float_check(
+                        catalogue.data[key], row[key], irow, key)
+                elif key in catalogue.INT_ATTRIBUTE_LIST:
+                    catalogue.data[key] = self._int_check(
+                        catalogue.data[key], row[key], irow, key)
+                else:
+                    catalogue.data[key].append(row[key])
         if start_year:
             catalogue.start_year = start_year
         else:
