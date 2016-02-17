@@ -1,3 +1,9 @@
+  [Michele Simionato]
+  * Printed the names of the files exported by the engine, even when there
+    are multiple files for a single output
+  * Introduced four new tables job, output, log, performance: all the other
+    60+ database tables are not used anymore
+
 python-oq-engine (1.8.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
