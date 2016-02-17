@@ -248,7 +248,7 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         # not belong to current user.
         # In this case, deletion is now allowed and should raise an exception.
         risk_job = helpers.get_job(
-            self.hazard_cfg, username=helpers.random_string(),
+            self.risk_cfg, username=helpers.random_string(),
             hazard_calculation_id=self.job.id)
         self.assertRaises(RuntimeError, engine.del_calc, risk_job.id)
 
