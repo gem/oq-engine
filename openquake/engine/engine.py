@@ -23,7 +23,6 @@ import os
 import sys
 import time
 import getpass
-import itertools
 import operator
 import traceback
 from datetime import datetime
@@ -316,7 +315,7 @@ def expose_outputs(dstore, job):
     :param job: an OqJob instance
     """
     exportable = set(ekey[0] for ekey in export.export)
-    oq = job.get_oqparam()
+    oq = job.calc.oqparam
 
     # small hack: remove the sescollection outputs from scenario
     # calculators, as requested by Vitor
