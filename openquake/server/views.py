@@ -404,41 +404,34 @@ def submit_job(job_file, temp_dir, dbname, user_name,
         raise exctype(job)
 
     future = executor.submit(
-        tasks.safely_call, tasks.run_calc, job.id, temp_dir,
+        tasks.safely_call, tasks.run_calc, job, temp_dir,
         callback_url, foreign_calc_id, dbname, logfile)
     return job, future
 
 
 def _get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
-
-    # TODO if superuser with should show all the calculations i.e.
-
     # helper to get job+calculation data from the oq-engine database
-    job_params = oqe_models.JobParam.objects.filter(
-        name='description').order_by('-id')
-
+    jobs = oqe_models.OqJob.objects.filter()
     if not user_is_super:
-        job_params = job_params.filter(job__user_name=user_name)
+        jobs = jobs.filter(user_name=user_name)
 
     if id is not None:
-        job_params = job_params.filter(job_id=id)
+        jobs = jobs.filter(id=id)
 
     if 'job_type' in request_get_dict:
         job_type = request_get_dict.get('job_type')
-        job_params = job_params.filter(
-            job__hazard_calculation__isnull=job_type == 'hazard')
+        jobs = jobs.filter(hazard_calculation__isnull=job_type == 'hazard')
 
     if 'is_running' in request_get_dict:
         is_running = request_get_dict.get('is_running')
-        job_params = job_params.filter(
-            job__is_running=valid.boolean(is_running))
+        jobs = jobs.filter(is_running=valid.boolean(is_running))
 
     if 'relevant' in request_get_dict:
         relevant = request_get_dict.get('relevant')
-        job_params = job_params.filter(job__relevant=valid.boolean(relevant))
+        jobs = jobs.filter(relevant=valid.boolean(relevant))
 
-    return [(jp.job.id, jp.job.user_name, jp.job.status, jp.job.job_type,
-             jp.job.is_running, jp.value) for jp in job_params]
+    return [(job.id, job.user_name, job.status, job.job_type,
+             job.is_running, job.description) for job in jobs.order_by('-id')]
 
 
 @require_http_methods(['GET'])

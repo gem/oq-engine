@@ -212,21 +212,17 @@ def list_calculations(job_type):
 
     :param job_type: 'hazard' or 'risk'
     """
-    jobs = models.OqJob.objects.filter(
-        user_name=getpass.getuser())
-    if job_type == 'hazard':
-        jobs = jobs.filter(hazard_calculation__isnull=True)
-    else:  # risk
-        jobs = jobs.filter(hazard_calculation__isnull=False)
-    jobs = jobs.order_by('last_update')
+    jobs = [job for job in models.OqJob.objects.filter(
+        user_name=getpass.getuser()).order_by('start_time')
+            if job.job_type == job_type]
 
     if len(jobs) == 0:
         print 'None'
     else:
-        print ('job_id |     status |         last_update | '
+        print ('job_id |     status |          start_time | '
                '        description')
         for job in jobs:
-            descr = job.get_param('description', None)
+            descr = job.description
             latest_job = job
             if latest_job.is_running:
                 status = 'pending'
@@ -235,11 +231,11 @@ def list_calculations(job_type):
                     status = 'successful'
                 else:
                     status = 'failed'
-            last_update = latest_job.last_update.strftime(
+            start_time = latest_job.start_time.strftime(
                 '%Y-%m-%d %H:%M:%S %Z'
             )
             print ('%6d | %10s | %s| %s' % (
-                job.id, status, last_update, descr)).encode('utf-8')
+                job.id, status, start_time, descr)).encode('utf-8')
 
 
 def get_hc_id(hc_id):

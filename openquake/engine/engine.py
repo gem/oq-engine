@@ -26,7 +26,6 @@ import getpass
 import itertools
 import operator
 import traceback
-from contextlib import contextmanager
 from datetime import datetime
 
 import celery.task.control
@@ -36,16 +35,14 @@ import openquake.engine
 from django.core import exceptions
 from django import db as django_db
 
-from openquake.baselib.performance import PerformanceMonitor
 from openquake.engine import logs
 from openquake.server.db import models
 from openquake.engine.utils import config, tasks
 from openquake.engine.celery_node_monitor import CeleryNodeMonitor
 from openquake.server.db.schema.upgrades import upgrader
 
-from openquake import hazardlib, risklib, commonlib
-
 from openquake.commonlib import readinput, valid, datastore, export
+from openquake.calculators import base
 
 
 def get_calc_id(job_id=None):
@@ -54,12 +51,12 @@ def get_calc_id(job_id=None):
     and the database.
     """
     calcs = datastore.get_calc_ids(datastore.DATADIR)
-    calc_id = 1 if not calcs else calcs[-1]
+    calc_id = 0 if not calcs else calcs[-1]
     if job_id is None:
         try:
             job_id = models.OqJob.objects.latest('id').id
         except exceptions.ObjectDoesNotExist:
-            job_id = 1
+            job_id = 0
     return max(calc_id, job_id)
 
 INPUT_TYPES = set(dict(models.INPUT_TYPE_CHOICES))
@@ -106,90 +103,31 @@ def cleanup_after_job(job, terminate, task_ids=()):
         logs.LOG.debug('Revoked task %s', tid)
 
 
-@contextmanager
-def job_stats(job):
-    """
-    A context manager saving information such as the number of sites
-    in the job_stats table. The information is saved at the end of the
-    job, even if the job fails.
-    """
-    js = job.jobstats
-    try:
-        yield
-    finally:
-        tb = traceback.format_exc()  # get the traceback of the error, if any
-        job.is_running = False
-        if tb != 'None\n':
-            # rollback the transactions; unfortunately, for mysterious reasons,
-            # this is not enough and an OperationalError may still show up in
-            # the finalization phase when forks are involved
-            for conn in django_db.connections.all():
-                conn.rollback()
-        # try to save the job stats on the database and then clean up;
-        # if there was an error in the calculation, this part may fail;
-        # in such a situation, we simply log the cleanup error without
-        # taking further action, so that the real error can propagate
-        try:
-            job.save()
-            js.stop_time = datetime.utcnow()
-            js.save()
-            if USE_CELERY:
-                cleanup_after_job(job, TERMINATE, tasks.OqTaskManager.task_ids)
-        except:
-            # log the finalization error only if there is not real error
-            if tb == 'None\n':
-                logs.LOG.error('finalizing', exc_info=True)
-
-        # log the real error, if any
-        if tb != 'None\n':
-            try:
-                logs.LOG.critical(tb)
-            except:  # an OperationalError may always happen
-                sys.stderr.write(tb)
-
-
-def create_job(user_name="openquake", log_level='progress', hc_id=None):
+def create_job(calc_mode, user_name="openquake", hc_id=None):
     """
     Create job for the given user, return it.
 
+    :param str calc_mode:
+        Calculation mode, such as classical, event_based, etc
     :param str username:
         Username of the user who owns/started this job. If the username doesn't
         exist, a user record for this name will be created.
-    :param str log_level:
-        Defaults to 'progress'. Specify a logging level for this job. This
-        level can be passed, for example, from the command line interface using
-        the `--log-level` directive.
     :param hc_id:
         If not None, then the created job is a risk job
     :returns:
         :class:`openquake.server.db.models.OqJob` instance.
     """
+    calc_id = get_calc_id() + 1
     job = models.OqJob.objects.create(
-        id=get_calc_id() + 1,
+        id=calc_id,
+        calculation_mode=calc_mode,
+        description='A job',
         user_name=user_name,
-        log_level=log_level,
-        oq_version=openquake.engine.__version__,
-        hazardlib_version=hazardlib.__version__,
-        risklib_version=risklib.__version__,
-        commonlib_version=commonlib.__version__)
+        ds_calc_dir=os.path.join(datastore.DATADIR, 'calc_%s' % calc_id))
     if hc_id:
         job.hazard_calculation = models.OqJob.objects.get(pk=hc_id)
+    job.save()
     return job
-
-
-class EnginePerformanceMonitor(PerformanceMonitor):
-    """
-    PerformanceMonitor that writes both in the datastore and in the database
-    """
-    def flush(self):
-        curs = models.getcursor('job_init')
-        data = PerformanceMonitor.flush(self)
-        for rec in data:
-            curs.execute("""INSERT INTO uiapi.performance
-            (oq_job_id, operation, start_time, duration, pymemory)
-            VALUES (%s, %s, %s, %s, %s)""", (
-                self.job_id, rec['operation'], self.start_time,
-                rec['time_sec'], rec['memory_mb']))
 
 
 # used by bin/openquake and openquake.server.views
@@ -208,40 +146,44 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
     :param exports:
         A comma-separated string of export types.
     """
-    # let's import the calculator classes here, when they are needed;
-    # the reason is that the command `$ oq-engine --upgrade-db`
-    # does not need them and would raise strange errors during installation
-    # time if the PYTHONPATH is not set and commonlib is not visible
-    from openquake.calculators import base
-    calculator = base.calculators(job.get_oqparam(), calc_id=job.id)
-    calculator.job = job
-    calculator.monitor = EnginePerformanceMonitor(
-        '', calculator.datastore.hdf5path)
-    calculator.monitor.job_id = job.id
-
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connections['admin'])
-    with logs.handle(job, log_level, log_file), job_stats(job):  # run the job
-        _do_run_calc(calculator, exports, hazard_calculation_id)
-        job.ds_calc_dir = calculator.datastore.calc_dir
-        job.save()
-        expose_outputs(calculator.datastore, job)
-    return calculator
+    with logs.handle(job, log_level, log_file):  # run the job
+        tb = 'None\n'
+        try:
+            _do_run_calc(job, exports, hazard_calculation_id)
+            job.status = 'complete'
+        except:
+            tb = traceback.format_exc()
+            try:
+                logs.LOG.critical(tb)
+                job.status = 'failed'
+            except:  # an OperationalError may always happen
+                sys.stderr.write(tb)
+            raise
+        finally:
+            # try to save the job stats on the database and then clean up;
+            # if there was an error in the calculation, this part may fail;
+            # in such a situation, we simply log the cleanup error without
+            # taking further action, so that the real error can propagate
+            try:
+                job.is_running = False
+                job.stop_time = datetime.utcnow()
+                job.save()
+                if USE_CELERY:
+                    cleanup_after_job(
+                        job, TERMINATE, tasks.OqTaskManager.task_ids)
+            except:
+                # log the finalization error only if there is no real error
+                if tb == 'None\n':
+                    logs.LOG.error('finalizing', exc_info=True)
+        expose_outputs(job.calc.datastore, job)
+    return job.calc
 
 
-def _do_run_calc(calc, exports, hazard_calculation_id):
-    """
-    Step through all of the phases of a calculation, updating the job
-    status at each phase.
-
-    :param calc:
-        An :class:`~openquake.engine.calculators.base.Calculator` instance.
-    :param exports:
-        a (potentially empty) comma-separated string of export targets
-    """
-    calc.save_params()
-    calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id)
-    calc.job.status = 'complete'
+# keep this as a private function, since it is mocked by engine_test.py
+def _do_run_calc(job, exports, hazard_calculation_id):
+    job.calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id)
 
 
 def del_calc(job_id):
@@ -278,13 +220,13 @@ def del_calc(job_id):
         # all the records to delete before deleting them: thus, it runs out
         # of memory for large calculations
         curs = models.getcursor('admin')
-        curs.execute('DELETE FROM uiapi.oq_job WHERE id=%s', (job_id,))
+        curs.execute('DELETE FROM job WHERE id=%s', (job_id,))
     else:
         # this doesn't belong to the current user
         raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
     try:
         os.remove(job.ds_calc_dir + '.hdf5')
-    except:
+    except:  # already removed or missing permission
         pass
     else:
         print('Removed %s' % job.ds_calc_dir + '.hdf5')
@@ -301,9 +243,6 @@ def list_outputs(job_id, full=True):
         If True produce a full listing, otherwise a short version
     """
     outputs = get_outputs(job_id)
-    if models.oqparam(job_id).calculation_mode == 'scenario':
-        # ignore SES output
-        outputs = [o for o in outputs if o.output_type != 'ses']
     print_outputs_summary(outputs, full)
 
 
@@ -319,19 +258,14 @@ def print_outputs_summary(outputs, full=True):
     """
     if len(outputs) > 0:
         truncated = False
-        print '  id | output_type | name'
-        for output_type, group in itertools.groupby(
-                sorted(outputs, key=operator.attrgetter('output_type')),
-                key=operator.attrgetter('output_type')):
-            outs = sorted(group, key=operator.attrgetter('display_name'))
-            for i, o in enumerate(outs):
-                if not full and i >= 10:
-                    print ' ... | %s | %d additional output(s)' % (
-                        o.get_output_type_display(), len(outs) - 10)
-                    truncated = True
-                    break
-                print '%4d | %s | %s' % (
-                    o.id, o.get_output_type_display(), o.display_name)
+        print '  id | name'
+        outs = sorted(outputs, key=operator.attrgetter('display_name'))
+        for i, o in enumerate(outs):
+            if not full and i >= 10:
+                print ' ... | %d additional output(s)' % (len(outs) - 10)
+                truncated = True
+                break
+            print '%4d | %s' % (o.id, o.display_name)
         if truncated:
             print ('Some outputs where not shown. You can see the full list '
                    'with the command\n`oq-engine --list-outputs`')
@@ -360,8 +294,6 @@ def run_job(cfg_file, log_level, log_file, exports='',
             cfg_file, getpass.getuser(), log_level, exports,
             hazard_output_id=hazard_output_id,
             hazard_calculation_id=hazard_calculation_id)
-        job.ds_calc_dir = datastore.DataStore(job.id).calc_dir
-        job.save()
         t0 = time.time()
         run_calc(job, log_level, log_file, exports,
                  hazard_calculation_id=hazard_calculation_id)
@@ -384,27 +316,23 @@ def expose_outputs(dstore, job):
     :param job: an OqJob instance
     """
     exportable = set(ekey[0] for ekey in export.export)
+    oq = job.get_oqparam()
 
     # small hack: remove the sescollection outputs from scenario
     # calculators, as requested by Vitor
-    calcmode = job.get_param('calculation_mode')
+    calcmode = oq.calculation_mode
     if 'scenario' in calcmode and 'sescollection' in exportable:
         exportable.remove('sescollection')
-    uhs = job.get_param('uniform_hazard_spectra', False)
+    uhs = oq.uniform_hazard_spectra
     if uhs and 'hmaps' in dstore:
-        out = models.Output.objects.create_output(
-            job, 'uhs', output_type='datastore')
-        out.ds_key = 'uhs'
-        out.save()
+        models.Output.objects.create_output(job, 'uhs', ds_key='uhs')
 
     for key in dstore:
         if key in exportable:
             if key == 'realizations' and len(dstore['realizations']) == 1:
                 continue  # there is no point in exporting a single realization
-            out = models.Output.objects.create_output(
-                job, DISPLAY_NAME.get(key, key), output_type='datastore')
-            out.ds_key = key
-            out.save()
+            models.Output.objects.create_output(
+                job, DISPLAY_NAME.get(key, key), ds_key=key)
 
 
 def check_hazard_risk_consistency(haz_job, risk_mode):
@@ -423,7 +351,7 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
                          'in the .ini file' % (risk_mode, risk_mode))
 
     # check calculation_mode consistency
-    prev_mode = haz_job.get_param('calculation_mode')
+    prev_mode = haz_job.calculation_mode
     ok_mode = RISK_HAZARD_MAP[risk_mode]
     if prev_mode not in ok_mode:
         raise InvalidCalculationID(
@@ -459,18 +387,17 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
     :raises:
         `RuntimeError` if the input job configuration is not valid
     """
-    from openquake.calculators import base
+    # read calculation params and create the calculation profile
+    params = readinput.get_params([cfg_file])
+    params.update(extras)
+    # build and validate an OqParam object
+    oq = readinput.get_oqparam(params)
     # create the current job
-    job = create_job(username, log_level, hazard_calculation_id)
-    models.JobStats.objects.create(oq_job=job)
-    with logs.handle(job, log_level):
-        # read calculation params and create the calculation profile
-        params = readinput.get_params([cfg_file])
-        params.update(extras)
-        # build and validate an OqParam object
-        oqparam = readinput.get_oqparam(params, calculators=base.calculators)
-        job.save_params(vars(oqparam))
-        job.save()
+    job = create_job(oq.calculation_mode, username, hazard_calculation_id)
+    calc = base.calculators(oq, calc_id=job.id)
+    calc.save_params()
+    job.description = oq.description
+    job.calc = calc
     return job
 
 
