@@ -65,9 +65,7 @@ from openquake.engine.tools.make_html_report import make_report
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
-MISSING_HAZARD_MSG = ("Please specify the ID of the hazard output (or "
-                      "job) to be used by using '%s (or %s) <id>'" %
-                      (HAZARD_OUTPUT_ARG, HAZARD_CALCULATION_ARG))
+MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 
 
 def set_up_arg_parser():
