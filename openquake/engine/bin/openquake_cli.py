@@ -23,6 +23,7 @@ OpenQuake: software for seismic hazard and risk assessment
 import logging
 import argparse
 import getpass
+import zipfile
 import os
 import sys
 
@@ -279,9 +280,13 @@ def export(output_id, target_dir, export_type):
 
     the_file = core.export(output_id, target_dir, export_type)
     if the_file.endswith('.zip'):
-        print 'Files Exported in', os.path.dirname(the_file)
+        dname = os.path.dirname(the_file)
+        fnames = zipfile.ZipFile(the_file).namelist()
+        print('Files exported:')
+        for fname in fnames:
+            print(os.path.join(dname, fname))
     else:
-        print 'File exported:', the_file
+        print('File exported: %s' % the_file)
 
 
 def _touch_log_file(log_file):
