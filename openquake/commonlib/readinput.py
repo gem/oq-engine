@@ -33,7 +33,7 @@ from openquake.hazardlib import geo, site, correlation, imt
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import riskmodels, riskinput
 
-from openquake.commonlib.datastore import DataStore
+from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.node import read_nodes, LiteralNode, context
 from openquake.commonlib import nrml, valid, logictree, InvalidFile
@@ -211,7 +211,7 @@ def get_mesh(oqparam):
     elif 'gmfs' in oqparam.inputs:
         return get_gmfs(oqparam)[0].mesh
     elif oqparam.hazard_calculation_id:
-        sitemesh = DataStore(oqparam.hazard_calculation_id)['sitemesh']
+        sitemesh = datastore.read(oqparam.hazard_calculation_id)['sitemesh']
         return geo.Mesh(sitemesh['lon'], sitemesh['lat'])
     elif 'exposure' in oqparam.inputs:
         # the mesh is extracted from get_sitecol_assets
