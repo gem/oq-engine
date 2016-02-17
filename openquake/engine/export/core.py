@@ -121,19 +121,15 @@ def makedirs(path):
         os.makedirs(path)
 
 
-def get_outputs(job_id, output_type=None):
+def get_outputs(job_id):
     """Get all :class:`openquake.server.db.models.Output` objects associated
     with the specified job and output_type.
 
     :param int job_id:
         ID of a :class:`openquake.server.db.models.OqJob`.
-    :param str output_type:
-        the output type; if None, return all outputs
     :returns:
         :class:`django.db.models.query.QuerySet` of
         :class:`openquake.server.db.models.Output` objects.
     """
     queryset = models.Output.objects.filter(oq_job=job_id)
-    if output_type:
-        return queryset.filter(output_type=output_type)
     return queryset
