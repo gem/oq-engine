@@ -34,6 +34,12 @@ sudo diff -urN /etc/openquake/openquake.cfg /etc/openquake/openquake.cfg.new_in_
 ```
 See an [example](openquake.cfg-diff-example.md).
 
+The same procedure must be repeated also for the files located in `/usr/share/openquake/engine`. In most cases the only step needed is to replace the `celeryconfig.py` file with the new version:
+
+```bash
+sudo mv /usr/share/openquake/engine/celeryconfig.py.new_in_this_release /usr/share/openquake/engine/celeryconfig.py
+```
+
 Finally upgrade your database:
 
 ```bash

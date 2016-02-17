@@ -32,8 +32,7 @@ sudo apt-get update
 sudo apt-get install python-oq-.*
 ```
 
-You have then to check if a ```/etc/openquake/openquake.cfg.new_in_this_release``` file has been created. It contains the new configuration settings that needs to be merged with your 
-```/etc/openquake/openquake.cfg```. If you did not change the original ```openquake.cfg``` you can replace it with the new version
+You have then to check if a ```/etc/openquake/openquake.cfg.new_in_this_release``` file has been created. It contains the new configuration settings that needs to be merged with your ```/etc/openquake/openquake.cfg```. If you did not change the original ```openquake.cfg``` you can replace it with the new version
 ```bash
 sudo mv /etc/openquake/openquake.cfg.new_in_this_release /etc/openquake/openquake.cfg
 ```
@@ -43,6 +42,12 @@ To compare cfg versions the ```diff``` utility is your friend:
 sudo diff -urN /etc/openquake/openquake.cfg /etc/openquake/openquake.cfg.new_in_this_release
 ```
 See an [example](openquake.cfg-diff-example.md).
+
+The same procedure must be repeated also for the files located in `/usr/share/openquake/engine`. In most cases the only step needed is to replace the `celeryconfig.py` file with the new version:
+
+```bash
+sudo mv /usr/share/openquake/engine/celeryconfig.py.new_in_this_release /usr/share/openquake/engine/celeryconfig.py
+```
 
 Finally upgrade your database:
 
