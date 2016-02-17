@@ -307,7 +307,7 @@ class HazardCalculator(BaseCalculator):
                         setattr(self, name, getattr(precalc, name))
 
             else:  # read previously computed data
-                parent = datastore.DataStore(precalc_id)
+                parent = datastore.read(precalc_id)
                 self.datastore.set_parent(parent)
                 # update oqparam with the attributes saved in the datastore
                 self.oqparam = OqParam.from_(self.datastore.attrs)
