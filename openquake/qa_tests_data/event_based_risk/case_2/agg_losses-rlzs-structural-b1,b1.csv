@@ -1,4 +1,4 @@
-rupture_tag,aggregate_loss,insured_loss
+ruptureId,aggregate_loss,insured_loss
 col=00~ses=0003~src=1~rup=001-01,3.4616440E+02,      NAN
 col=00~ses=0003~src=1~rup=001-02,1.0186693E+03,      NAN
 col=00~ses=0003~src=2~rup=001-01,9.6345268E+01,      NAN

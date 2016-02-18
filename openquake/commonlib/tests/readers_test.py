@@ -21,8 +21,7 @@ import tempfile
 import numpy
 from openquake.baselib.general import writetmp
 from openquake.commonlib import InvalidFile
-from openquake.commonlib.writers import write_csv
-from openquake.commonlib.readers import read_composite_array
+from openquake.commonlib.writers import write_csv, read_composite_array
 
 fname = writetmp('''\
 asset_ref:|S20:,lon:float64:,poe~0.9:float64:,lat:float64:,poe~0.5:float64:,poe~0.1:float64:
