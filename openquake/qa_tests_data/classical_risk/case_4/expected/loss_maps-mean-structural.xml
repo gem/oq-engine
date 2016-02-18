@@ -7,6 +7,7 @@ xmlns:gml="http://www.opengis.net/gml"
     investigationTime="50.0"
     lossType="structural"
     poE="0.1"
+    riskInvestigationTime="50.0"
     statistics="mean"
     unit="USD"
     >

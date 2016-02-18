@@ -105,7 +105,7 @@ class LossCurveXMLWriter(object):
     def __init__(self, dest, investigation_time, loss_type,
                  source_model_tree_path=None, gsim_tree_path=None,
                  statistics=None, quantile_value=None, unit=None,
-                 insured=False, poe=None):
+                 insured=False, poe=None, risk_investigation_time=None):
 
         validate_hazard_metadata(gsim_tree_path, source_model_tree_path,
                                  statistics, quantile_value)
@@ -116,6 +116,8 @@ class LossCurveXMLWriter(object):
         self._quantile_value = quantile_value
         self._gsim_tree_path = gsim_tree_path
         self._investigation_time = investigation_time
+        self._risk_investigation_time = (
+            risk_investigation_time or investigation_time)
         self._loss_type = loss_type
         self._source_model_tree_path = source_model_tree_path
         self._insured = insured
@@ -205,6 +207,9 @@ class LossCurveXMLWriter(object):
         self._loss_curves.set("investigationTime",
                               str(self._investigation_time))
 
+        self._loss_curves.set("riskInvestigationTime",
+                              str(self._risk_investigation_time))
+
         if self._source_model_tree_path is not None:
             self._loss_curves.set("sourceModelTreePath",
                                   str(self._source_model_tree_path))
@@ -259,7 +264,8 @@ class AggregateLossCurveXMLWriter(object):
 
     def __init__(self, dest, investigation_time, loss_type,
                  source_model_tree_path=None, gsim_tree_path=None,
-                 statistics=None, quantile_value=None, unit=None, poe=None):
+                 statistics=None, quantile_value=None, unit=None, poe=None,
+                 risk_investigation_time=None):
 
         validate_hazard_metadata(gsim_tree_path, source_model_tree_path,
                                  statistics, quantile_value)
@@ -270,6 +276,8 @@ class AggregateLossCurveXMLWriter(object):
         self._quantile_value = quantile_value
         self._gsim_tree_path = gsim_tree_path
         self._investigation_time = investigation_time
+        self._risk_investigation_time = (
+            risk_investigation_time or investigation_time)
         self._loss_type = loss_type
         self._source_model_tree_path = source_model_tree_path
 
@@ -306,6 +314,9 @@ class AggregateLossCurveXMLWriter(object):
 
             aggregate_loss_curve.set("investigationTime",
                                      str(self._investigation_time))
+
+            aggregate_loss_curve.set("riskInvestigationTime",
+                                     str(self._risk_investigation_time))
 
             if self._source_model_tree_path is not None:
                 aggregate_loss_curve.set("sourceModelTreePath",
@@ -388,7 +399,7 @@ class LossMapWriter(object):
     def __init__(self, dest, investigation_time, poe, loss_type,
                  source_model_tree_path=None, gsim_tree_path=None,
                  statistics=None, quantile_value=None, unit=None,
-                 loss_category=None):
+                 loss_category=None, risk_investigation_time=None):
 
         # Relaxed constraint for scenario risk calculator
         # which doesn't have hazard metadata.
@@ -405,6 +416,8 @@ class LossMapWriter(object):
         self._quantile_value = quantile_value
         self._gsim_tree_path = gsim_tree_path
         self._investigation_time = investigation_time
+        self._risk_investigation_time = (
+            risk_investigation_time or investigation_time)
         self._source_model_tree_path = source_model_tree_path
 
     def serialize(self, data):
@@ -474,6 +487,8 @@ class LossMapXMLWriter(LossMapWriter):
 
         loss_map = et.SubElement(root, "lossMap")
         loss_map.set("investigationTime", str(self._investigation_time))
+        loss_map.set("riskInvestigationTime",
+                     str(self._risk_investigation_time))
         loss_map.set("poE", str(self._poe))
 
         if self._source_model_tree_path is not None:

@@ -8,6 +8,7 @@ xmlns:gml="http://www.opengis.net/gml"
     investigationTime="None"
     lossType="structural"
     poE="0.05"
+    riskInvestigationTime="None"
     sourceModelTreePath=""
     unit="USD"
     >

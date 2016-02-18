@@ -8,6 +8,7 @@ xmlns:gml="http://www.opengis.net/gml"
     investigationTime="None"
     lossType="occupants"
     poE="None"
+    riskInvestigationTime="None"
     unit="people"
     >
         <node>

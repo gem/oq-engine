@@ -519,7 +519,9 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
                         data.append(lm)
                     writer = writercls(
                         fname, oq.investigation_time, poe=poe, loss_type=lt,
-                        unit=unit, **get_paths(rlz))
+                        unit=unit,
+                        risk_investigation_time=oq.risk_investigation_time,
+                        **get_paths(rlz))
                     writer.serialize(data)
                     fnames.append(fname)
     return sorted(fnames)
@@ -594,7 +596,8 @@ def export_loss_map_xml_geojson(ekey, dstore):
                     data.append(lm)
                 writer = writercls(
                     fname, oq.investigation_time, poe=None, loss_type=lt,
-                    gsim_tree_path=rlz.uid, unit=unit)
+                    gsim_tree_path=rlz.uid, unit=unit,
+                    risk_investigation_time=oq.risk_investigation_time)
                 writer.serialize(data)
                 fnames.append(fname)
     return sorted(fnames)
@@ -685,6 +688,7 @@ def _gen_writers(dstore, writercls, root):
                         yield writercls(
                             dest, oq.investigation_time, poe=poe,
                             loss_type=loss_type, unit=ct['unit'],
+                            risk_investigation_time=oq.risk_investigation_time,
                             **get_paths(rlz)), (
                                 loss_type, poe, rlz.ordinal, ins)
                 elif root.endswith('-stats'):
@@ -699,6 +703,7 @@ def _gen_writers(dstore, writercls, root):
                         yield writercls(
                             dest, oq.investigation_time,
                             poe=poe, loss_type=loss_type,
+                            risk_investigation_time=oq.risk_investigation_time,
                             statistics='mean' if ordinal == 0 else 'quantile',
                             quantile_value=statvalue, unit=ct['unit']
                         ), (loss_type, poe, ordinal, ins)

@@ -6,6 +6,7 @@ xmlns:gml="http://www.opengis.net/gml"
     <lossCurves
     investigationTime="50.0"
     lossType="structural"
+    riskInvestigationTime="50.0"
     statistics="mean"
     unit="USD"
     >

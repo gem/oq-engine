@@ -7,6 +7,7 @@ xmlns:gml="http://www.opengis.net/gml"
     gsimTreePath=""
     investigationTime="None"
     lossType="structural"
+    riskInvestigationTime="None"
     sourceModelTreePath=""
     unit="USD"
     >
