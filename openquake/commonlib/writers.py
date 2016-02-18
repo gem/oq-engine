@@ -202,22 +202,26 @@ class HeaderTranslator(object):
     """
     An utility to convert the headers in CSV files. When reading,
     the column names are converted into column descriptions with the
-    method .get_descr, when writing column descriptions are converted
-    into column names with the method .get_names. The usage is
+    method .read, when writing column descriptions are converted
+    into column names with the method .write. The usage is
 
     >>> htranslator = HeaderTranslator(
     ...     asset_ref='asset_ref:|S20',
     ...     ruptureId='tag:|S100',
     ...     taxonomy='taxonomy:|S100')
+    >>> htranslator.read('asset_ref value:5'.split())
+    ['asset_ref:|S20', 'value:5']
+    >>> htranslator.write('asset_ref:|S20 value:5'.split())
+    ['asset_ref', 'value:5']
     """
     def __init__(self, **descr):
         self.descr = descr
         self.name = {d: n for n, d in descr.items()}
 
-    def get_descr(self, names):
+    def read(self, names):
         return [self.descr.get(n, n) for n in names]
 
-    def get_names(self, descr):
+    def write(self, descr):
         return [self.name.get(d, d) for d in descr]
 
 htranslator = HeaderTranslator(
@@ -321,7 +325,7 @@ def write_csv(dest, data, sep=',', fmt='%12.8E', header=None):
 
     someheader = header or autoheader
     if someheader:
-        dest.write(sep.join(htranslator.get_names(someheader)) + u'\n')
+        dest.write(sep.join(htranslator.write(someheader)) + u'\n')
 
     if autoheader:
         all_fields = [col.split(':', 1)[0].split('-')
@@ -438,7 +442,7 @@ def read_composite_array(fname, sep=','):
     """
     with open(fname) as f:
         header = next(f)
-        fields, dtype = parse_header(htranslator.get_descr(header.split(sep)))
+        fields, dtype = parse_header(htranslator.read(header.split(sep)))
         ts_pairs = []  # [(type, shape), ...]
         for name in fields:
             dt = dtype.fields[name][0]
