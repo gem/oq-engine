@@ -1,4 +1,4 @@
-rupture_tag,structural,structural_ins
+ruptureId,structural,structural_ins
 col=00~ses=0001~src=1~rup=24-01,1.891084E+02,0.000000E+00
 col=00~ses=0001~src=2~rup=29-01,2.024427E+02,0.000000E+00
 col=00~ses=0002~src=1~rup=23-01,3.866232E+02,0.000000E+00

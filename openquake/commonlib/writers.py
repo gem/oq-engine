@@ -207,7 +207,7 @@ class HeaderTranslator(object):
 
     >>> htranslator = HeaderTranslator(
     ...     asset_ref='asset_ref:|S20',
-    ...     rupture_tag='tag:|S100',
+    ...     ruptureId='tag:|S100',
     ...     taxonomy='taxonomy:|S100')
     """
     def __init__(self, **descr):
@@ -222,7 +222,7 @@ class HeaderTranslator(object):
 
 htranslator = HeaderTranslator(
     asset_ref='asset_ref:|S20',
-    rupture_tag='tag:|S100',
+    ruptureId='tag:|S100',
     taxonomy='taxonomy:|S100',
 )
 
