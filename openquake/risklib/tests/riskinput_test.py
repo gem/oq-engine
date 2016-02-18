@@ -20,7 +20,7 @@ import mock
 import unittest
 import numpy
 from openquake.baselib.general import writetmp
-from openquake.commonlib import readinput, readers, riskmodels
+from openquake.commonlib import readinput, writers, riskmodels
 from openquake.risklib import riskinput
 from openquake.calculators import event_based
 from openquake.calculators.tests import get_datastore
@@ -64,7 +64,7 @@ a4,8.77477036E+01,2.79015007E+01,3,1,1.00000000E+01,1.00000000E+02,5.00000000E+0
 ''')
         assetcol = riskinput.build_asset_collection(self.assets_by_site)
         numpy.testing.assert_equal(
-            assetcol, readers.read_composite_array(expected))
+            assetcol, writers.read_composite_array(expected))
 
     def test_get_all(self):
         self.assertEqual(
