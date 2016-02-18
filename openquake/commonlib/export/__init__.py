@@ -39,6 +39,13 @@ def export_csv(ekey, dstore):
     return [write_csv(dstore.export_path(name), array)]
 
 
-export = CallableDict()
+def interpret_colon(ekey, dstore):
+    if ':' not in ekey[0]:
+        raise KeyError('Not found in datastore: %s' % ekey[0])
+    key = ekey[0].split(':')
+    return export(key, dstore)
+
+
+export = CallableDict(keymissing=interpret_colon)
 
 import_all('openquake.commonlib.export')
