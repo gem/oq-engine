@@ -65,9 +65,7 @@ from openquake.engine.tools.make_html_report import make_report
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
-MISSING_HAZARD_MSG = ("Please specify the ID of the hazard output (or "
-                      "job) to be used by using '%s (or %s) <id>'" %
-                      (HAZARD_OUTPUT_ARG, HAZARD_CALCULATION_ARG))
+MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 
 
 def set_up_arg_parser():
@@ -158,11 +156,6 @@ def set_up_arg_parser():
         '--rr',
         help='Run a risk job with the specified config file',
         metavar='CONFIG_FILE')
-    risk_grp.add_argument(
-        HAZARD_OUTPUT_ARG,
-        '--ho',
-        help='Use the desired hazard output as input for the risk job',
-        metavar='HAZARD_OUTPUT_ID')
     risk_grp.add_argument(
         HAZARD_CALCULATION_ARG,
         '--hc',
@@ -390,9 +383,6 @@ def main():
 
     run_job = engine.run_job
 
-    if args.hazard_output_id:
-        sys.exit('The --hazard-output-id option is not supported anymore')
-
     # hazard or hazard+risk
     hc_id = args.hazard_calculation_id
     if hc_id and int(hc_id) < 0:
@@ -418,8 +408,7 @@ def main():
         else:
             run_job(
                 expanduser(args.run), args.log_level, log_file,
-                args.exports, hazard_output_id=args.hazard_output_id,
-                hazard_calculation_id=hc_id)
+                args.exports, hazard_calculation_id=hc_id)
     # hazard
     elif args.list_hazard_calculations:
         list_calculations('hazard')
@@ -434,15 +423,13 @@ def main():
     elif args.list_risk_calculations:
         list_calculations('risk')
     elif args.run_risk is not None:
-        if (args.hazard_output_id is None and
-                args.hazard_calculation_id is None):
+        if args.hazard_calculation_id is None:
             sys.exit(MISSING_HAZARD_MSG)
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         run_job(
             expanduser(args.run_risk),
             args.log_level, log_file, args.exports,
-            hazard_output_id=args.hazard_output_id,
             hazard_calculation_id=hc_id)
 
     # export
