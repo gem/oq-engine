@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the obsolete option `--hazard-output-id`
   * Printed the names of the files exported by the engine, even when there
     are multiple files for a single output
   * Introduced four new tables job, output, log, performance: all the other
