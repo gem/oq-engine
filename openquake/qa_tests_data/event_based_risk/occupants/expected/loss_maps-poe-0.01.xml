@@ -8,6 +8,7 @@ xmlns:gml="http://www.opengis.net/gml"
     investigationTime="10000.0"
     lossType="occupants"
     poE="0.01"
+    riskInvestigationTime="1.0"
     sourceModelTreePath="b1"
     unit="people"
     >

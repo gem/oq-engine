@@ -95,6 +95,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
   <lossCurves investigationTime="10.0"
+              riskInvestigationTime="10.0"
               sourceModelTreePath="b1_b2_b3"
               gsimTreePath="b1_b2" unit="USD" lossType="structural">
     <lossCurve assetRef="asset_1">
@@ -144,6 +145,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
   <lossCurves  insured="True" investigationTime="10.0"
+    riskInvestigationTime="10.0"
     sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b2" unit="USD" lossType="structural">
     <lossCurve assetRef="asset_1">
       <gml:Point>
@@ -194,7 +196,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossCurves investigationTime="10.0"
+  <lossCurves investigationTime="10.0" riskInvestigationTime="10.0"
               statistics="quantile" quantileValue="0.5" lossType="structural">
     <lossCurve assetRef="asset_1">
       <gml:Point>
@@ -240,21 +242,32 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
 
     def test_serialize_a_model(self):
         expected = io.BytesIO(b"""\
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <nrml
-  xmlns:gml="http://www.opengis.net/gml"
-  xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <aggregateLossCurve
-    investigationTime="10.0"
-    sourceModelTreePath="b1_b2_b3"
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <aggregateLossCurve
     gsimTreePath="b1_b2"
+    investigationTime="10.0"
+    lossType="structural"
+    riskInvestigationTime="10.0"
+    sourceModelTreePath="b1_b2_b3"
     unit="USD"
-    lossType="structural">
-    <poEs>1.0 0.5 0.1</poEs>
-    <losses>10.0000 20.0000 30.0000</losses>
-    <averageLoss>3.0000e+00</averageLoss>
-    <stdDevLoss>5.0000e-01</stdDevLoss>
-  </aggregateLossCurve>
+    >
+        <poEs>
+            1.0 0.5 0.1
+        </poEs>
+        <losses>
+            10.0000 20.0000 30.0000
+        </losses>
+        <averageLoss>
+            3.0000e+00
+        </averageLoss>
+        <stdDevLoss>
+            5.0000e-01
+        </stdDevLoss>
+    </aggregateLossCurve>
 </nrml>
 """)
 
@@ -268,7 +281,6 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
             average_loss=3., stddev_loss=0.5)
 
         writer.serialize(data)
-
         _utils.assert_xml_equal(expected, self.filename)
 
     def test_serialize_statistics_metadata(self):
@@ -279,6 +291,7 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
   xmlns="http://openquake.org/xmlns/nrml/0.4">
   <aggregateLossCurve
     investigationTime="10.0"
+	riskInvestigationTime="10.0"
     statistics="quantile"
     quantileValue="0.5"
     lossType="structural">
@@ -346,7 +359,8 @@ class LossMapWriterTestCase(unittest.TestCase):
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossMap investigationTime="10.0" poE="0.8" statistics="mean" lossType="structural">
+  <lossMap investigationTime="10.0" riskInvestigationTime="10.0"
+    poE="0.8" statistics="mean" lossType="structural">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -409,8 +423,10 @@ class LossMapWriterTestCase(unittest.TestCase):
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossMap investigationTime="10.0" poE="0.8" statistics="quantile"
-        quantileValue="0.5" lossCategory="economic" unit="USD" lossType="structural">
+  <lossMap investigationTime="10.0" riskInvestigationTime="10.0"
+    poE="0.8" statistics="quantile"
+    quantileValue="0.5" lossCategory="economic" unit="USD"
+    lossType="structural">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -475,8 +491,8 @@ class LossMapWriterTestCase(unittest.TestCase):
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossMap investigationTime="10.0" poE="0.8"
-           sourceModelTreePath="b1|b2" gsimTreePath="b3|b4"
+  <lossMap investigationTime="10.0" riskInvestigationTime="10.0"
+           poE="0.8" sourceModelTreePath="b1|b2" gsimTreePath="b3|b4"
            lossCategory="economic" unit="USD" lossType="structural">
     <node>
       <gml:Point>

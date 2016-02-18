@@ -198,7 +198,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 ekey = (key, fmt)
                 if ekey not in exp:  # non-exportable output
                     continue
-                exported[ekey] = exp(ekey, self.datastore)
+                with self.monitor('export'):
+                    exported[ekey] = exp(ekey, self.datastore)
                 logging.info('exported %s: %s', key, exported[ekey])
         return exported
 

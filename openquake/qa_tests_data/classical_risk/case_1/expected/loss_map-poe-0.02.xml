@@ -5,9 +5,10 @@ xmlns:gml="http://www.opengis.net/gml"
 >
     <lossMap
     gsimTreePath=""
-    investigationTime="None"
+    investigationTime="50.0"
     lossType="structural"
     poE="0.02"
+    riskInvestigationTime="50.0"
     sourceModelTreePath=""
     unit="USD"
     >

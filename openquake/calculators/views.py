@@ -144,7 +144,7 @@ def view_contents(token, dstore):
     """
     oq = OqParam.from_(dstore.attrs)
     rows = [(key, humansize(dstore.getsize(key))) for key in dstore]
-    total = '\n\n%s: %s' % (
+    total = '\n%s : %s' % (
         dstore.hdf5path, humansize(os.path.getsize(dstore.hdf5path)))
     return rst_table(rows, header=(oq.description, '')) + total
 

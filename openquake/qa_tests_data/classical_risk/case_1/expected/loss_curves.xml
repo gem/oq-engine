@@ -5,8 +5,9 @@ xmlns:gml="http://www.opengis.net/gml"
 >
     <lossCurves
     gsimTreePath=""
-    investigationTime="None"
+    investigationTime="50.0"
     lossType="structural"
+    riskInvestigationTime="50.0"
     sourceModelTreePath=""
     unit="USD"
     >

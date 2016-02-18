@@ -938,7 +938,7 @@ def get_hcurves(oqparam):
     if fname.endswith('.csv'):
         return get_hcurves_from_csv(oqparam, fname)
     elif fname.endswith('.xml'):
-        return get_hcurves_from_xml(oqparam, fname)
+        return get_hcurves_from_nrml(oqparam, fname)
     else:
         raise NotImplemented('Reading from %s' % fname)
 
@@ -966,7 +966,7 @@ def get_hcurves_from_csv(oqparam, fname):
     return sitecol, hcurves_by_imt
 
 
-def get_hcurves_from_xml(oqparam, fname):
+def get_hcurves_from_nrml(oqparam, fname):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -979,6 +979,7 @@ def get_hcurves_from_xml(oqparam, fname):
     oqparam.hazard_imtls = imtls = {}
     for hcurves in nrml.read(fname):
         imt = hcurves['IMT']
+        oqparam.investigation_time = hcurves['investigationTime']
         if imt == 'SA':
             imt += '(%s)' % hcurves['saPeriod']
         imtls[imt] = ~hcurves.IMLs
