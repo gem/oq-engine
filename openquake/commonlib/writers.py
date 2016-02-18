@@ -198,6 +198,35 @@ def tostring(node, indent=4, nsmap=None):
     return out.getvalue()
 
 
+class HeaderTranslator(object):
+    """
+    An utility to convert the headers in CSV files. When reading,
+    the column names are converted into column descriptions with the
+    method .get_descr, when writing column descriptions are converted
+    into column names with the method .get_names. The usage is
+
+    >>> htranslator = HeaderTranslator(
+    ...     asset_ref='asset_ref:|S20',
+    ...     rupture_tag='tag:|S100',
+    ...     taxonomy='taxonomy:|S100')
+    """
+    def __init__(self, **descr):
+        self.descr = descr
+        self.name = {d: n for n, d in descr.items()}
+
+    def get_descr(self, names):
+        return [self.descr.get(n, n) for n in names]
+
+    def get_names(self, descr):
+        return [self.name.get(d, d) for d in descr]
+
+htranslator = HeaderTranslator(
+    asset_ref='asset_ref:|S20',
+    rupture_tag='tag:|S100',
+    taxonomy='taxonomy:|S100',
+)
+
+
 # recursive function used internally by build_header
 def _build_header(dtype, root):
     header = []
@@ -292,7 +321,7 @@ def write_csv(dest, data, sep=',', fmt='%12.8E', header=None):
 
     someheader = header or autoheader
     if someheader:
-        dest.write(sep.join(someheader) + u'\n')
+        dest.write(sep.join(htranslator.get_names(someheader)) + u'\n')
 
     if autoheader:
         all_fields = [col.split(':', 1)[0].split('-')
@@ -409,7 +438,7 @@ def read_composite_array(fname, sep=','):
     """
     with open(fname) as f:
         header = next(f)
-        fields, dtype = parse_header(header.split(sep))
+        fields, dtype = parse_header(htranslator.get_descr(header.split(sep)))
         ts_pairs = []  # [(type, shape), ...]
         for name in fields:
             dt = dtype.fields[name][0]

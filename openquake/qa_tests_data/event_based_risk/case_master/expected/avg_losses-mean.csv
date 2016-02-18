@@ -1,4 +1,4 @@
-asset_ref:|S20,lon,lat,business_interruption,contents,nonstructural,occupants,structural,business_interruption_ins,contents_ins,nonstructural_ins,occupants_ins,structural_ins
+asset_ref,lon,lat,business_interruption,contents,nonstructural,occupants,structural,business_interruption_ins,contents_ins,nonstructural_ins,occupants_ins,structural_ins
 a3,-1.225700E+02,3.811300E+01,8.106530E+01,4.292015E+02,6.438023E+02,1.621306E-03,0.000000E+00,2.345000E+00,2.345000E+00,2.345000E+00,       NAN,0.000000E+00
 a2,-1.221140E+02,3.811300E+01,5.983760E+02,5.831741E+03,7.955139E+03,1.196752E-02,8.020405E+02,9.817500E+00,9.975000E+00,9.975000E+00,       NAN,3.657500E+00
 a5,-1.220000E+02,3.791000E+01,2.890215E+02,1.577770E+03,2.366656E+03,5.780431E-03,2.606101E+02,7.367500E+00,7.367500E+00,7.367500E+00,       NAN,1.102500E+00

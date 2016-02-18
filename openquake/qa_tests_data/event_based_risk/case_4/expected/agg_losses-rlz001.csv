@@ -1,4 +1,4 @@
-tag:|S100,structural,structural_ins
+rupture_tag,structural,structural_ins
 col=05~ses=0001~src=AS_TRAS334~rup=619366-01,8.385502E+04,       NAN
 col=05~ses=0001~src=AS_TRAS334~rup=621103-01,1.455121E+05,       NAN
 col=05~ses=0001~src=AS_TRAS360~rup=629301-01,1.546157E+06,       NAN

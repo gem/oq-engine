@@ -1,4 +1,4 @@
-asset_ref:|S20,lon,lat,contents-mean,contents-stddev,nonstructural-mean,nonstructural-stddev,structural-mean,structural-stddev
+asset_ref,lon,lat,contents-mean,contents-stddev,nonstructural-mean,nonstructural-stddev,structural-mean,structural-stddev
 a3,-1.225700E+02,3.811300E+01,3.122914E+02,2.101129E+02,2.789062E+02,1.795827E+02,4.362107E+00,1.004325E+01
 a2,-1.221140E+02,3.811300E+01,4.827527E+02,4.884961E+02,1.551888E+03,1.267454E+03,1.254224E+02,1.881906E+02
 a5,-1.220000E+02,3.791000E+01,1.501644E+03,6.200311E+02,1.637054E+03,9.430231E+02,3.896253E+02,5.149171E+02
