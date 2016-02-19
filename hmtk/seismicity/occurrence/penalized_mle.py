@@ -55,7 +55,9 @@ from hmtk.seismicity.occurrence.utils import input_checks
     reference_magnitude=0.0,
     mmax=None,
     b_prior=1.0,
-    b_prior_weight=1.0)
+    b_prior_weight=1.0,
+    area=0.0,
+    a_prior_weight=1.0)
 
 class PenalizedMLE(SeismicityOccurrence):
     """

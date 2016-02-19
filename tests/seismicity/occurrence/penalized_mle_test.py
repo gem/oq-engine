@@ -63,7 +63,7 @@ BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
 def build_catalogue_from_file(filename):
     """
-
+    Creates a "minimal" catalogue from a raw csv file
     """
     raw_data = np.genfromtxt(filename, delimiter=",")
     neq = raw_data.shape[0]
@@ -82,9 +82,6 @@ class PenalizedMLETestCase(unittest.TestCase):
     likelihood estimation algorithm
     """
     def setUp(self):
-        """
-
-        """
         cat_file = os.path.join(BASE_DATA_PATH, "synthetic_test_cat1.csv")
         self.catalogue = build_catalogue_from_file(cat_file)
         self.config = {"reference_magnitude": 3.0}
@@ -96,7 +93,8 @@ class PenalizedMLETestCase(unittest.TestCase):
 
     def test_rate_counting(self):
         """
-
+        Tests the algorithm to determine the observed rates of events in
+        the different completeness bins
         """
         pen_mle = PenalizedMLE()
         self.config["mmax"] = 8.0
