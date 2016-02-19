@@ -11,25 +11,25 @@ xmlns:gml="http://www.opengis.net/gml"
             <taxonomy>
                 RC
             </taxonomy>
-            <damage ds="no_damage" mean="1.0368332E-06" stddev="1.5488489E-06"/>
-            <damage ds="LS1" mean="7.0533931E-02" stddev="7.5338028E-02"/>
-            <damage ds="LS2" mean="9.9992944E+02" stddev="7.5339578E-02"/>
+            <damage ds="no_damage" mean="2.0826854E+02" stddev="3.0739569E+02"/>
+            <damage ds="LS1" mean="5.3367383E+02" stddev="1.7719035E+02"/>
+            <damage ds="LS2" mean="2.5805765E+02" stddev="2.5157742E+02"/>
         </DDNode>
         <DDNode>
             <taxonomy>
                 RM
             </taxonomy>
-            <damage ds="no_damage" mean="3.0000000E+03" stddev="0.0000000E+00"/>
-            <damage ds="LS1" mean="0.0000000E+00" stddev="0.0000000E+00"/>
-            <damage ds="LS2" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+            <damage ds="no_damage" mean="2.6659250E+03" stddev="3.8540884E+02"/>
+            <damage ds="LS1" mean="3.2092496E+02" stddev="3.6327496E+02"/>
+            <damage ds="LS2" mean="1.3149886E+01" stddev="2.3862001E+01"/>
         </DDNode>
         <DDNode>
             <taxonomy>
                 W
             </taxonomy>
-            <damage ds="no_damage" mean="2.0000000E+03" stddev="0.0000000E+00"/>
-            <damage ds="LS1" mean="0.0000000E+00" stddev="0.0000000E+00"/>
-            <damage ds="LS2" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+            <damage ds="no_damage" mean="6.3869843E+02" stddev="7.5799176E+02"/>
+            <damage ds="LS1" mean="6.7041724E+02" stddev="5.3936487E+02"/>
+            <damage ds="LS2" mean="6.9088440E+02" stddev="8.8318506E+02"/>
         </DDNode>
     </dmgDistPerTaxonomy>
 </nrml>

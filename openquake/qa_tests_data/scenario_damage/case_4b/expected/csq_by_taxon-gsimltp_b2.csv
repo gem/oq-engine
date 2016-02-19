@@ -1,4 +1,4 @@
 taxonomy,contents-mean,contents-stddev,nonstructural-mean,nonstructural-stddev,structural-mean,structural-stddev
-tax1,      NAN,      NAN,      NAN,      NAN,      NAN,      NAN
-tax2,      NAN,      NAN,      NAN,      NAN,      NAN,      NAN
-tax3,      NAN,      NAN,      NAN,      NAN,      NAN,      NAN
+tax1,5.853390E+03,1.683397E+03,7.151245E+03,3.148477E+03,2.390923E+03,1.937312E+03
+tax2,1.953228E+03,1.282481E+03,5.475295E+03,3.009279E+03,8.035997E+02,8.776774E+02
+tax3,1.230309E+03,7.945099E+02,3.545542E+03,1.773412E+03,4.816003E+02,4.896966E+02
