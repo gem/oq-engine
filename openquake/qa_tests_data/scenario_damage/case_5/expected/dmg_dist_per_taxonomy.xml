@@ -11,41 +11,41 @@ xmlns:gml="http://www.opengis.net/gml"
             <taxonomy>
                 A
             </taxonomy>
-            <damage ds="no_damage" mean="5.5360552E+03" stddev="3.5137967E+02"/>
-            <damage ds="slight" mean="1.5158894E+02" stddev="7.0275932E+01"/>
-            <damage ds="moderate" mean="2.6174359E+02" stddev="1.2134311E+02"/>
-            <damage ds="extreme" mean="1.7483258E+02" stddev="8.1051575E+01"/>
-            <damage ds="complete" mean="1.6977962E+02" stddev="7.8709045E+01"/>
+            <damage ds="no_damage" mean="5.6903877E+03" stddev="7.2687195E+02"/>
+            <damage ds="slight" mean="9.9482578E-01" stddev="3.1057451E+00"/>
+            <damage ds="moderate" mean="4.1487818E+00" stddev="6.0657539E+00"/>
+            <damage ds="extreme" mean="1.0238451E+01" stddev="1.1380184E+01"/>
+            <damage ds="complete" mean="5.8823029E+02" stddev="7.1306848E+02"/>
         </DDNode>
         <DDNode>
             <taxonomy>
                 DS
             </taxonomy>
-            <damage ds="no_damage" mean="4.4731220E+01" stddev="1.6997048E-01"/>
-            <damage ds="slight" mean="5.6311879E-02" stddev="3.5610456E-02"/>
-            <damage ds="moderate" mean="9.2655003E-02" stddev="5.8593091E-02"/>
-            <damage ds="extreme" mean="6.0705006E-02" stddev="3.8388576E-02"/>
-            <damage ds="complete" mean="5.9107505E-02" stddev="3.7378352E-02"/>
+            <damage ds="no_damage" mean="        NAN" stddev="        NAN"/>
+            <damage ds="slight" mean="        NAN" stddev="        NAN"/>
+            <damage ds="moderate" mean="        NAN" stddev="        NAN"/>
+            <damage ds="extreme" mean="        NAN" stddev="        NAN"/>
+            <damage ds="complete" mean="        NAN" stddev="        NAN"/>
         </DDNode>
         <DDNode>
             <taxonomy>
                 UFB
             </taxonomy>
-            <damage ds="no_damage" mean="2.6636438E+02" stddev="1.7636768E+02"/>
-            <damage ds="slight" mean="1.0561499E+02" stddev="4.1678337E+01"/>
-            <damage ds="moderate" mean="1.3808267E+02" stddev="3.1893229E+01"/>
-            <damage ds="extreme" mean="9.7307808E+01" stddev="4.5450676E+01"/>
-            <damage ds="complete" mean="1.4663014E+02" stddev="1.3273035E+02"/>
+            <damage ds="no_damage" mean="5.3950000E+02" stddev="3.4537781E+02"/>
+            <damage ds="slight" mean="2.1450000E-01" stddev="3.4537780E-01"/>
+            <damage ds="moderate" mean="2.1450000E+00" stddev="3.4537780E+00"/>
+            <damage ds="extreme" mean="6.4349999E+00" stddev="1.0361335E+01"/>
+            <damage ds="complete" mean="2.0570551E+02" stddev="3.3121732E+02"/>
         </DDNode>
         <DDNode>
             <taxonomy>
                 W
             </taxonomy>
-            <damage ds="no_damage" mean="2.0898056E+01" stddev="6.9184691E-01"/>
-            <damage ds="slight" mean="6.1573702E-01" stddev="3.3932137E-01"/>
-            <damage ds="moderate" mean="3.6870122E-01" stddev="2.4564192E-01"/>
-            <damage ds="extreme" mean="9.0897523E-02" stddev="8.4381416E-02"/>
-            <damage ds="complete" mean="2.6607333E-02" stddev="3.7733149E-02"/>
+            <damage ds="no_damage" mean="2.1600401E+01" stddev="1.2636461E+00"/>
+            <damage ds="slight" mean="5.2000000E-03" stddev="1.6443843E-02"/>
+            <damage ds="moderate" mean="3.3199999E-02" stddev="1.0498762E-01"/>
+            <damage ds="extreme" mean="7.0000000E-02" stddev="2.2135943E-01"/>
+            <damage ds="complete" mean="2.9120001E-01" stddev="9.2085528E-01"/>
         </DDNode>
     </dmgDistPerTaxonomy>
 </nrml>

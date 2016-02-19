@@ -16,47 +16,47 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="ant_13_S1"
             >
-                <damage ds="no_damage" mean="2.1290000E+03" stddev="1.5158245E-13"/>
-                <damage ds="Slight" mean="-2.9562902E-10" stddev="6.9194950E-10"/>
-                <damage ds="Moderate" mean="4.9217113E-11" stddev="1.2386775E-10"/>
-                <damage ds="Extensive" mean="-3.6820406E-08" stddev="7.5608931E-08"/>
-                <damage ds="Collapse" mean="3.7066869E-08" stddev="7.6173158E-08"/>
+                <damage ds="no_damage" mean="1.2774000E+03" stddev="1.0994109E+03"/>
+                <damage ds="Slight" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="Moderate" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="Extensive" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="Collapse" mean="8.5159998E+02" stddev="1.0994109E+03"/>
             </asset>
             <asset
             assetRef="ant_13_S2"
             >
-                <damage ds="no_damage" mean="4.6000000E+02" stddev="0.0000000E+00"/>
-                <damage ds="Slight" mean="-4.9091201E-17" stddev="1.4393451E-16"/>
-                <damage ds="Moderate" mean="4.8431352E-17" stddev="1.4199449E-16"/>
-                <damage ds="Extensive" mean="-1.5163102E-17" stddev="4.2942731E-17"/>
-                <damage ds="Collapse" mean="1.5823358E-17" stddev="4.4883048E-17"/>
+                <damage ds="no_damage" mean="2.7600000E+02" stddev="2.3754298E+02"/>
+                <damage ds="Slight" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="Moderate" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="Extensive" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="Collapse" mean="1.8400000E+02" stddev="2.3754298E+02"/>
             </asset>
             <asset
             assetRef="ant_13_S3"
             >
-                <damage ds="no_damage" mean="7.7000000E+01" stddev="0.0000000E+00"/>
-                <damage ds="Slight" mean="-2.6091601E-18" stddev="7.6881309E-18"/>
-                <damage ds="Moderate" mean="-3.6441204E-17" stddev="1.0689909E-16"/>
-                <damage ds="Extensive" mean="4.2687208E-17" stddev="1.2574654E-16"/>
-                <damage ds="Collapse" mean="2.0426875E-28" stddev="6.3611973E-28"/>
+                <damage ds="no_damage" mean="4.6200001E+01" stddev="3.9762630E+01"/>
+                <damage ds="Slight" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="Moderate" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="Extensive" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="Collapse" mean="3.0799999E+01" stddev="3.9762630E+01"/>
             </asset>
             <asset
             assetRef="ant_13_S4"
             >
-                <damage ds="no_damage" mean="1.5000000E+01" stddev="2.4278116E-12"/>
-                <damage ds="Slight" mean="7.6778205E-13" stddev="2.4276644E-12"/>
-                <damage ds="Moderate" mean="-6.0214937E-15" stddev="1.9038915E-14"/>
-                <damage ds="Extensive" mean="6.0214937E-15" stddev="1.9038915E-14"/>
-                <damage ds="Collapse" mean="6.2691247E-29" stddev="1.9824712E-28"/>
+                <damage ds="no_damage" mean="2.9354340E-05" stddev="3.7129816E-05"/>
+                <damage ds="Slight" mean="-2.9045676E-05" stddev="3.6610876E-05"/>
+                <damage ds="Moderate" mean="2.1407854E-02" stddev="1.9123198E-02"/>
+                <damage ds="Extensive" mean="7.4394658E-02" stddev="7.2204761E-02"/>
+                <damage ds="Collapse" mean="1.4904197E+01" stddev="9.1324374E-02"/>
             </asset>
             <asset
             assetRef="ant_13_S5"
             >
-                <damage ds="no_damage" mean="1.0000000E+00" stddev="0.0000000E+00"/>
-                <damage ds="Slight" mean="-7.8042350E-14" stddev="2.4675414E-13"/>
-                <damage ds="Moderate" mean="7.5161645E-14" stddev="2.3764562E-13"/>
-                <damage ds="Extensive" mean="2.8807042E-15" stddev="9.1085053E-15"/>
-                <damage ds="Collapse" mean="6.5448794E-26" stddev="2.0696720E-25"/>
+                <damage ds="no_damage" mean="0.0000000E+00" stddev="0.0000000E+00"/>
+                <damage ds="Slight" mean="4.5175107E-06" stddev="5.5012501E-06"/>
+                <damage ds="Moderate" mean="9.8534627E-05" stddev="1.0445908E-04"/>
+                <damage ds="Extensive" mean="3.0991051E-04" stddev="3.6181207E-04"/>
+                <damage ds="Collapse" mean="9.9958706E-01" stddev="4.7167644E-04"/>
             </asset>
         </DDNode>
     </dmgDistPerAsset>

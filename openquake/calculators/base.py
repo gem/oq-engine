@@ -649,7 +649,7 @@ def get_gmfs(calc):
         haz_sitecol = calc.sitecol
     risk_indices = set(calc.sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
-    imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])
+    imt_dt = numpy.dtype([(imt, F32) for imt in calc.oqparam.imtls])
     gmf_by_idx = general.groupby(gmf, lambda row: row['idx'])
     R = len(gmf_by_idx)
     # build a matrix N x R for each GSIM realization
