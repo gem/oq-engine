@@ -609,7 +609,7 @@ def export_gmf_spec(ekey, dstore, spec):
     rupids = map(int, spec.split(','))
     for rupid in rupids:
         assert 0 <= rupid < num_ruptures, (rupid, num_ruptures)
-    sitecol, tags, gmfs_by_trt_gsim = base.get_gmfs(dstore)
+    tags, gmfs_by_trt_gsim = base.get_gmfs(dstore)
     num_gsims = len(gmfs_by_trt_gsim)
     ruptags = tags[rupids]
     sitemesh = dstore['sitemesh']

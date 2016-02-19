@@ -631,7 +631,7 @@ def get_gmfs(dstore):
             gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
 
         logging.info('Preparing the risk input')
-        return sitecol, tags, {(0, 'FromFile'): gmfs_by_imt}
+        return tags, {(0, 'FromFile'): gmfs_by_imt}
 
     # else from rupture
     sitecol = dstore['sitecol']
@@ -659,4 +659,4 @@ def get_gmfs(dstore):
             if sid in risk_indices:
                 for trt_id, gsim in gmfs:
                     gmfs[trt_id, gsim][sid, rupid] = gmv[gsim]
-    return haz_sitecol, dstore['tags'].value, gmfs
+    return dstore['tags'].value, gmfs
