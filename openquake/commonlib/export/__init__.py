@@ -54,8 +54,6 @@ def dispatch_on_colon(ekey, dstore):
     if ':' not in ekey[0]:
         raise KeyError('Not found in datastore: %s' % ekey[0])
     dkey, spec = ekey[0].split(':', 1)
-    if dkey not in dstore:
-        raise KeyError('Not found in datastore: %s' % dkey)
     return export((dkey + ':', ekey[1]), dstore, spec)
 
 

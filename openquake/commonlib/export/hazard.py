@@ -18,7 +18,6 @@
 
 import os
 import re
-import mock
 import pickle
 import logging
 import operator
@@ -35,7 +34,7 @@ from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.writers import (
     scientificformat, floatformat, write_csv)
 from openquake.commonlib import writers, hazard_writers, util
-from openquake.calculators import calc
+from openquake.calculators import calc, base
 
 
 GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -557,16 +556,17 @@ def export_gmf(ekey, dstore):
     samples = oq.number_of_logic_tree_samples
     fmt = ekey[-1]
     if 'sescollection' not in dstore:  # scenario from file calculation
+        sitecol, tags, gmfs = base.get_gmfs(dstore)
+
         class Rupture:
             pass
         ruptures = []
-        for tag in dstore['tags']:
+        for tag in tags:
             rup = Rupture()
             rup.tag = tag
             ruptures.append(rup)
         [rlz] = rlzs_assoc.realizations
         fname = build_name(dstore, rlz, 'gmf', fmt, samples)
-        gmfs = dstore['gmfs/col00']
         globals()['export_gmf_%s' % fmt](
             ('gmf', fmt), fname, sitecol,
             ruptures, gmfs, rlz, investigation_time)
@@ -608,12 +608,13 @@ def export_gmf_spec(ekey, dstore, spec):
     rupids = map(int, spec.split(','))
     for rupid in rupids:
         assert 0 <= rupid < num_ruptures, (rupid, num_ruptures)
-    ruptags = dstore['tags'][rupids]
+    sitecol, tags, gmfs_by_trt_gsim = base.get_gmfs(dstore)
+    ruptags = tags[rupids]
     sitemesh = dstore['sitemesh']
     writer = writers.CsvWriter(fmt='%.5f')
     for rupid, ruptag in zip(rupids, ruptags):
         dest = dstore.export_path('gmf-%s.csv' % ruptag)
-        gmf = dstore['gmfs/col00'][:, rupid]
+        gmf = gmfs_by_trt_gsim[0, 'FromFile'][:, rupid]
         data = util.compose_arrays(sitemesh, gmf)
         writer.save(data, dest)
     return writer.getsaved()
