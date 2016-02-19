@@ -97,6 +97,11 @@ structural-mean structural-mean_ins
 2.3084982E+03   NAN                
 =============== ===================''')
 
+        # testing the specific GMF exporter
+        [gmf1, gmf2] = export(('gmfs:0', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf-BooreAtkinson2008.csv', gmf1)
+        self.assertEqualFiles('expected/gmf-ChiouYoungs2008.csv', gmf2)
+
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_1g(self):
         out = self.run_calc(case_1g.__file__, 'job_haz.ini,job_risk.ini',

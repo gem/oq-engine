@@ -565,7 +565,7 @@ def export_gmf(ekey, dstore):
             rup = Rupture()
             rup.tag = tag
             ruptures.append(rup)
-        [rlz] = rlzs_assoc.realizations
+        [rlz] = rlzs_assoc.realizations  # there is a single realization
         fname = build_name(dstore, rlz, 'gmf', fmt, samples)
         globals()['export_gmf_%s' % fmt](
             ('gmf', fmt), fname, sitecol,
@@ -604,19 +604,25 @@ def export_gmf_spec(ekey, dstore, spec):
     :param dstore: datastore object
     :param spec: a string specifying what to export exactly
     """
+    assert 'scenario' in dstore.attrs['calculation_mode']
     num_ruptures = len(dstore['tags'])
     rupids = map(int, spec.split(','))
     for rupid in rupids:
         assert 0 <= rupid < num_ruptures, (rupid, num_ruptures)
     sitecol, tags, gmfs_by_trt_gsim = base.get_gmfs(dstore)
+    num_gsims = len(gmfs_by_trt_gsim)
     ruptags = tags[rupids]
     sitemesh = dstore['sitemesh']
     writer = writers.CsvWriter(fmt='%.5f')
     for rupid, ruptag in zip(rupids, ruptags):
-        dest = dstore.export_path('gmf-%s.csv' % ruptag)
-        gmf = gmfs_by_trt_gsim[0, 'FromFile'][:, rupid]
-        data = util.compose_arrays(sitemesh, gmf)
-        writer.save(data, dest)
+        for trt_gsim, gmfs in gmfs_by_trt_gsim.items():
+            if num_gsims > 1:
+                gsim = trt_gsim[1]
+                dest = dstore.export_path('gmf-%s-%s.csv' % (gsim, ruptag))
+            else:
+                dest = dstore.export_path('gmf-%s.csv' % ruptag)
+            data = util.compose_arrays(sitemesh, gmfs[:, rupid])
+            writer.save(data, dest)
     return writer.getsaved()
 
 
