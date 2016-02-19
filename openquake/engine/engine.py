@@ -34,6 +34,7 @@ import openquake.engine
 from django.core import exceptions
 from django import db as django_db
 
+from openquake.baselib.performance import PerformanceMonitor
 from openquake.engine import logs
 from openquake.server.db import models
 from openquake.engine.utils import config, tasks
@@ -393,7 +394,7 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
     oq = readinput.get_oqparam(params)
     # create the current job
     job = create_job(oq.calculation_mode, username, hazard_calculation_id)
-    calc = base.calculators(oq, calc_id=job.id)
+    calc = base.calculators(oq, PerformanceMonitor(''), calc_id=job.id)
     calc.save_params()
     job.description = oq.description
     job.calc = calc
