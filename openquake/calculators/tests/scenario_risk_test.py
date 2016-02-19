@@ -23,6 +23,7 @@ from openquake.qa_tests_data.scenario_risk import (
 
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.datastore import view
+from openquake.commonlib.export import export
 
 
 class ScenarioRiskTestCase(CalculatorTestCase):
@@ -32,6 +33,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
         [fname] = out['agglosses-rlzs', 'csv']
         self.assertEqualFiles('expected/agg.csv', fname)
+
+        # check the exported GMFs
+        [gmf1, gmf2] = export(('gmfs:0,1', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf1.csv', gmf1)
+        self.assertEqualFiles('expected/gmf2.csv', gmf2)
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_2(self):

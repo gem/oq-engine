@@ -629,6 +629,10 @@ def get_gmfs(calc):
         for imt in calc.oqparam.imtls:
             gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
 
+        # save the gmfs in the datastore
+        calc.datastore['tags'] = calc.tags
+        calc.datastore['gmfs/col00'] = gmfs_by_imt
+
         logging.info('Preparing the risk input')
         calc.rlzs_assoc = logictree.trivial_rlzs_assoc()
         return sitecol, {(0, 'FromFile'): gmfs_by_imt}
