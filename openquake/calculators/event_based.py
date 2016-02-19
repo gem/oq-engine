@@ -454,7 +454,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
             self.tags = numpy.array(tags, (bytes, 100))
             for i, (sescol, col) in enumerate(zip(sescollection, cols)):
                 nr = len(sescol)
-                logging.info('Saving the SES collection #%d with %d ruptures',
+                logging.info('Saving SES collection #%d with %d ruptures',
                              i, nr)
                 key = 'sescollection/trtmod=%s-%s' % tuple(col)
                 self.datastore[key] = sescol
