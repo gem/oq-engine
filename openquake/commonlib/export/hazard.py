@@ -610,17 +610,12 @@ def export_gmf_spec(ekey, dstore, spec):
     for rupid in rupids:
         assert 0 <= rupid < num_ruptures, (rupid, num_ruptures)
     tags, gmfs_by_trt_gsim = base.get_gmfs(dstore)
-    num_gsims = len(gmfs_by_trt_gsim)
     ruptags = tags[rupids]
     sitemesh = dstore['sitemesh']
     writer = writers.CsvWriter(fmt='%.5f')
     for rupid, ruptag in zip(rupids, ruptags):
-        for trt_gsim, gmfs in gmfs_by_trt_gsim.items():
-            if num_gsims > 1:
-                gsim = trt_gsim[1]
-                dest = dstore.export_path('gmf-%s-%s.csv' % (gsim, ruptag))
-            else:
-                dest = dstore.export_path('gmf-%s.csv' % ruptag)
+        for (trt, gsim), gmfs in gmfs_by_trt_gsim.items():
+            dest = dstore.export_path('gmf-%s-%s.csv' % (gsim, ruptag))
             data = util.compose_arrays(sitemesh, gmfs[:, rupid])
             writer.save(data, dest)
     return writer.getsaved()
