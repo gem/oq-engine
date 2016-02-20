@@ -4,7 +4,7 @@
 * Celery - Distributed task queue library, usisng the `iterator_native()`
 * Django - Used mostly just for its ORM
 * RabbitMQ - Message broker for Celery tasks, logging channels, and other signalling
-* PostgreSQL/PostGIS - Persistent storage of calculation inputs/outputs
+* PostgreSQL - Persistent storage of calculation inputs/outputs
 
 ### Binary dependencies
 
@@ -13,7 +13,6 @@ Software  | Version(s)
 Python | 2.7
 RabbitMQ | 2.6 to 3.2
 PostgreSQL | 9.1 to 9.4
-PostGIS | 1.5, 2.1
 libgeos | >= 3.2.2
 
 
