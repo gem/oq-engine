@@ -150,7 +150,7 @@ a3        8.574770E+01 2.790150E+01 1.441384E+02 0.000000E+00
     def test_case_4a(self):
         # the case of a site_model.xml with 7 sites but only 1 asset
         out = self.run_calc(case_4a.__file__, 'job_hazard.ini',
-                            exports='csv')
-        [fname] = out['gmfs', 'csv']
+                            exports='txt')
+        [fname] = out['gmfs', 'txt']
         self.assertEqualFiles(
-            'expected/gmf-smltp_b1-gsimltp_b1.csv', fname)
+            'expected/gmf-smltp_b1-gsimltp_b1.txt', fname)

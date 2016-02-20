@@ -270,7 +270,7 @@ def export_gmf_xml(key, dest, sitecol, ruptures, gmfs, rlz,
     return {key: [dest]}
 
 
-def export_gmf_csv(key, dest, sitecol, ruptures, gmfs, rlz,
+def export_gmf_txt(key, dest, sitecol, ruptures, gmfs, rlz,
                    investigation_time):
     """
     :param key: output_type and export_type
@@ -542,7 +542,7 @@ def export_hmaps_xml_json(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('gmfs', 'xml'), ('gmfs', 'csv'))
+@export.add(('gmfs', 'xml'), ('gmfs', 'txt'))
 def export_gmf(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
