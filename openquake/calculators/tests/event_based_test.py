@@ -146,7 +146,8 @@ class EventBasedTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_2bis(self):  # oversampling
-        out = self.run_calc(case_2.__file__, 'job_2.ini', exports='txt,xml')
+        out = self.run_calc(case_2.__file__, 'job_2.ini',
+                            exports='txt,csv,xml')
         ltr = out['gmfs', 'txt']  # 2 realizations, 1 TRT
         self.assertEqualFiles(
             'expected/gmf-smltp_b1-gsimltp_b1-ltr_0.txt', ltr[0])
@@ -157,13 +158,13 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/gmf-smltp_b1-gsimltp_b1-ltr_0.xml',
                               ltr0)
 
-        ltr = out['hcurves', 'txt']
+        ltr = out['hcurves', 'csv']
         self.assertEqualFiles(
-            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.txt', ltr[0])
+            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[0])
         # NB: we are testing that the file ltr_1.csv is equal to
         # ltr_0.csv, as it should be for the hazard curves
         self.assertEqualFiles(
-            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.txt', ltr[1])
+            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[1])
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4(self):
