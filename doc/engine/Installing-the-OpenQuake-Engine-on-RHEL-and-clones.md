@@ -8,7 +8,7 @@ This documentation explains how to install the OpenQuake Engine on RHEL 7 and it
 The following dependencies are required. They will be installed automatically by the `oq-engine` package:
 
 ```
-sudo python-amqp python-celery numpy scipy python-shapely python-psycopg2 python-django python-setuptools python-psutil python-mock python-futures rabbitmq-server postgresql-server postgis
+sudo python-amqp python-celery numpy scipy python-shapely python-psycopg2 python-django python-setuptools python-psutil python-mock python-futures rabbitmq-server postgresql-server
 ```
 
 
