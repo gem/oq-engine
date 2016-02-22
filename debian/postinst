@@ -88,6 +88,7 @@ if [ -f /usr/lib/postgresql/$PG_VERSION/bin/postgres ]; then
     # Restart postgres in order to get rid of idle/open connections
     # held by celeryd processes.
 
+    echo $(ps ax | grep celery | grep -v grep)
     for pid in `ps ax | grep celery | grep -v grep | awk '{print $1}'`; do
         echo $pid
         kill -15 $pid
@@ -95,6 +96,7 @@ if [ -f /usr/lib/postgresql/$PG_VERSION/bin/postgres ]; then
 
     # Make sure the celeryd  processes are gone.
     sleep 3
+    echo $(ps ax | grep celery | grep -v grep)
     for pid in `ps ax | grep celery | grep -v grep | awk '{print $1}'`; do
         echo $pid
         kill -9 $pid
