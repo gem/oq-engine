@@ -1,2 +1,2 @@
-nonstructural-mean:float64,nonstructural-stddev:float64,nonstructural-mean_ins:float64,nonstructural-stddev_ins:float64,occupants-mean:float64,occupants-stddev:float64,occupants-mean_ins:float64,occupants-stddev_ins:float64,structural-mean:float64,structural-stddev:float64,structural-mean_ins:float64,structural-stddev_ins:float64
-7.77737540E+09,2.80243940E+09,         NAN,         NAN,4.84526388E+05,1.54450409E+05,         NAN,         NAN,1.02601438E+10,2.70521704E+09,         NAN,         NAN
+nonstructural-mean,nonstructural-stddev,nonstructural-mean_ins,nonstructural-stddev_ins,occupants-mean,occupants-stddev,occupants-mean_ins,occupants-stddev_ins,structural-mean,structural-stddev,structural-mean_ins,structural-stddev_ins
+7.77737523E+09,2.80243942E+09,         NAN,         NAN,4.84526406E+05,1.54450406E+05,         NAN,         NAN,1.02601431E+10,2.70521702E+09,         NAN,         NAN
