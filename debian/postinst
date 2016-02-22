@@ -88,17 +88,15 @@ if [ -f /usr/lib/postgresql/$PG_VERSION/bin/postgres ]; then
     # Restart postgres in order to get rid of idle/open connections
     # held by celeryd processes.
 
-    # stop celeryd.
-    if [ -x /etc/init.d/celeryd ]; then
-        /etc/init.d/celeryd stop
-    else
-        for pid in `ps ax | grep celeryd | grep -v grep | awk '{print $1}'`; do
-            kill -15 $pid
-        done
-    fi
+    for pid in `ps ax | grep '/usr/bin/celery' | grep -v grep | awk '{print $1}'`; do
+        echo $pid
+        kill -15 $pid
+    done
+
     # Make sure the celeryd  processes are gone.
     sleep 3
-    for pid in `ps ax | grep celeryd | grep -v grep | awk '{print $1}'`; do
+    for pid in `ps ax | grep '/usr/bin/celery' | grep -v grep | awk '{print $1}'`; do
+        echo $pid
         kill -9 $pid
     done
 
@@ -140,7 +138,7 @@ if [ -f /usr/lib/postgresql/$PG_VERSION/bin/postgres ]; then
             echo "local   openquake2   $dbu                   md5" >> $PG_ROOT/pg_hba.conf
         done
         cat $PG_ROOT/pg_hba.conf.orig | grep -v 'local..*oq_' >> $PG_ROOT/pg_hba.conf
-        /etc/init.d/postgresql reload 9.1
+        /etc/init.d/postgresql reload $PG_VERSION
     else
         echo ""
         echo "============================================================"
@@ -158,15 +156,6 @@ if [ -f /usr/lib/postgresql/$PG_VERSION/bin/postgres ]; then
     # Restart the remaining services just to be on the safe side.
     if [ -f /usr/sbin/rabbitmqctl ]; then
         /etc/init.d/rabbitmq-server restart
-    fi
-
-    # Restart celeryd
-    if [ -x /etc/init.d/celeryd ]; then
-        /etc/init.d/celeryd start
-    else
-        # NOTE: when started without an init.d script celeryd must be run as normal user, not root.
-        rm -f /tmp/celeryd.log
-        echo "celeryd has been stopped, remember to start it before running new calculations"
     fi
 fi
 
