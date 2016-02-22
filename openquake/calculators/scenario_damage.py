@@ -149,7 +149,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.rlzs_assoc = logictree.trivial_rlzs_assoc()
         self.tags, gmfs = base.get_gmfs(self.datastore)
-        # self.save_params()  # save number_of_ground_motion_fields and sites
         self.riskinputs = self.build_riskinputs(gmfs)
         self.monitor.taxonomies = sorted(self.taxonomies)
 
