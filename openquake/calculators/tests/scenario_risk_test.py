@@ -23,6 +23,7 @@ from openquake.qa_tests_data.scenario_risk import (
 
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.datastore import view
+from openquake.commonlib.export import export
 
 
 class ScenarioRiskTestCase(CalculatorTestCase):
@@ -32,6 +33,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
         [fname] = out['agglosses-rlzs', 'csv']
         self.assertEqualFiles('expected/agg.csv', fname)
+
+        # check the exported GMFs
+        [gmf1, gmf2] = export(('gmfs:0,1', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf1.csv', gmf1)
+        self.assertEqualFiles('expected/gmf2.csv', gmf2)
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_2(self):
@@ -90,6 +96,11 @@ structural-mean structural-mean_ins
 2.6872496E+03   NAN                
 3.2341374E+03   NAN                
 =============== ===================''')
+
+        # testing the specific GMF exporter
+        [gmf1, gmf2] = export(('gmfs:0', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf-BooreAtkinson2008.csv', gmf1)
+        self.assertEqualFiles('expected/gmf-ChiouYoungs2008.csv', gmf2)
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_1g(self):

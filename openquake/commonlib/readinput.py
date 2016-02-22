@@ -47,6 +47,8 @@ from openquake.commonlib import source, sourceconverter
 NORMALIZATION_FACTOR = 1E-2
 MAX_SITE_MODEL_DISTANCE = 5  # km, given by Graeme Weatherill
 
+F32 = numpy.float32
+
 info_dt = numpy.dtype([('input_weight', float),
                        ('output_weight', float),
                        ('n_imts', numpy.uint32),
@@ -1025,7 +1027,7 @@ def get_gmfs_from_txt(oqparam, fname):
         if not oqparam.imtls:
             oqparam.set_risk_imtls(get_risk_models(oqparam))
         imts = list(oqparam.imtls)
-        imt_dt = numpy.dtype([(imt, float) for imt in imts])
+        imt_dt = numpy.dtype([(imt, F32) for imt in imts])
         num_gmfs = oqparam.number_of_ground_motion_fields
         gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
         tags = []
@@ -1083,7 +1085,7 @@ def get_scenario_from_nrml(oqparam, fname):
         oqparam.set_risk_imtls(get_risk_models(oqparam))
     imts = list(oqparam.imtls)
     num_imts = len(imts)
-    imt_dt = numpy.dtype([(imt, float) for imt in imts])
+    imt_dt = numpy.dtype([(imt, F32) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet
     tags, sitecounts = _extract_tags_sitecounts(gmfset)
     oqparam.sites = sorted(sitecounts)

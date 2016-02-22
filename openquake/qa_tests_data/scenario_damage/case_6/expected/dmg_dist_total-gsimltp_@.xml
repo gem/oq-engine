@@ -8,9 +8,9 @@ xmlns:gml="http://www.opengis.net/gml"
             no_damage Slight Moderate Extensive Collapse
         </damageStates>
         <damage ds="no_damage" mean="2.6820000E+03" stddev="2.4347746E-12"/>
-        <damage ds="Slight" mean="-2.9493935E-10" stddev="6.9228040E-10"/>
-        <damage ds="Moderate" mean="4.9286263E-11" stddev="1.2383745E-10"/>
-        <damage ds="Extensive" mean="-3.6820399E-08" stddev="7.5608938E-08"/>
-        <damage ds="Collapse" mean="3.7066869E-08" stddev="7.6173158E-08"/>
+        <damage ds="Slight" mean="-2.9493930E-10" stddev="6.9228029E-10"/>
+        <damage ds="Moderate" mean="4.9286256E-11" stddev="1.2383743E-10"/>
+        <damage ds="Extensive" mean="-3.6820396E-08" stddev="7.5608931E-08"/>
+        <damage ds="Collapse" mean="3.7066865E-08" stddev="7.6173151E-08"/>
     </totalDmgDist>
 </nrml>

@@ -16,7 +16,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <asset
             assetRef="a1"
             >
-                <damage ds="no_damage" mean="3.6785829E-01" stddev="2.4107251E-01"/>
+                <damage ds="no_damage" mean="3.6785829E-01" stddev="2.4107249E-01"/>
                 <damage ds="slight" mean="2.9563794E-01" stddev="7.5016990E-02"/>
                 <damage ds="moderate" mean="1.4259686E-01" stddev="6.6649072E-02"/>
                 <damage ds="extreme" mean="7.4934140E-02" stddev="5.4291055E-02"/>

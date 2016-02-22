@@ -33,8 +33,8 @@ from openquake.commonlib.export import export
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.writers import (
     scientificformat, floatformat, write_csv)
-from openquake.commonlib import hazard_writers, util
-from openquake.calculators import calc
+from openquake.commonlib import writers, hazard_writers, util
+from openquake.calculators import calc, base
 
 
 GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -91,7 +91,8 @@ def export_ses_xml(ekey, dstore):
     fnames = []
     for sm in csm_info.source_models:
         for trt_model in sm.trt_models:
-            colkey = 'sescollection/trtmod=%s-%s' % tuple(csm_info.cols[col_id])
+            colkey = 'sescollection/trtmod=%s-%s' % tuple(
+                csm_info.cols[col_id])
             sesruptures = dstore[colkey].values()
             col_id += 1
             ses_coll = SESCollection(
@@ -236,8 +237,8 @@ class GmfCollection(object):
                 else:  # scenario
                     sites = self.sitecol
                     ses_idx = 1
-                nodes = (GroundMotionFieldNode(gmv, site.location)
-                         for site, gmv in zip(sites, gmf))
+                nodes = (GroundMotionFieldNode(gmv, loc)
+                         for loc, gmv in zip(sites.mesh, gmf))
                 gmfset[ses_idx].append(
                     GroundMotionField(
                         imt, sa_period, sa_damping, rupture.tag, nodes))
@@ -269,7 +270,7 @@ def export_gmf_xml(key, dest, sitecol, ruptures, gmfs, rlz,
     return {key: [dest]}
 
 
-def export_gmf_csv(key, dest, sitecol, ruptures, gmfs, rlz,
+def export_gmf_txt(key, dest, sitecol, ruptures, gmfs, rlz,
                    investigation_time):
     """
     :param key: output_type and export_type
@@ -541,7 +542,7 @@ def export_hmaps_xml_json(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('gmfs', 'xml'), ('gmfs', 'csv'))
+@export.add(('gmfs', 'xml'), ('gmfs', 'txt'))
 def export_gmf(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -549,15 +550,32 @@ def export_gmf(ekey, dstore):
     """
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['rlzs_assoc']
-    rupture_by_tag = AccumDict()
-    for colkey in dstore['sescollection']:
-        rupture_by_tag += dstore['sescollection/' + colkey]
-    all_tags = dstore['tags'].value
     oq = OqParam.from_(dstore.attrs)
     investigation_time = (None if oq.calculation_mode == 'scenario'
                           else oq.investigation_time)
     samples = oq.number_of_logic_tree_samples
     fmt = ekey[-1]
+    if 'sescollection' not in dstore:  # scenario from file calculation
+        sitecol, tags, gmfs = base.get_gmfs(dstore)
+
+        class Rupture:
+            pass
+        ruptures = []
+        for tag in tags:
+            rup = Rupture()
+            rup.tag = tag
+            ruptures.append(rup)
+        [rlz] = rlzs_assoc.realizations  # there is a single realization
+        fname = build_name(dstore, rlz, 'gmf', fmt, samples)
+        globals()['export_gmf_%s' % fmt](
+            ('gmf', fmt), fname, sitecol,
+            ruptures, gmfs, rlz, investigation_time)
+        return [fname]
+
+    rupture_by_tag = AccumDict()
+    for colkey in dstore['sescollection']:
+        rupture_by_tag += dstore['sescollection/' + colkey]
+    all_tags = dstore['tags'].value
     gmfs = dstore[ekey[0]]
     nbytes = gmfs.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
@@ -577,6 +595,30 @@ def export_gmf(ekey, dstore):
             ('gmf', fmt), fname, sitecol,
             ruptures, gmfs, rlz, investigation_time)
     return fnames
+
+
+@export.add(('gmfs:', 'csv'))
+def export_gmf_spec(ekey, dstore, spec):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    :param spec: a string specifying what to export exactly
+    """
+    assert 'scenario' in dstore.attrs['calculation_mode']
+    num_ruptures = len(dstore['tags'])
+    rupids = map(int, spec.split(','))
+    for rupid in rupids:
+        assert 0 <= rupid < num_ruptures, (rupid, num_ruptures)
+    tags, gmfs_by_trt_gsim = base.get_gmfs(dstore)
+    ruptags = tags[rupids]
+    sitemesh = dstore['sitemesh']
+    writer = writers.CsvWriter(fmt='%.5f')
+    for rupid, ruptag in zip(rupids, ruptags):
+        for (trt, gsim), gmfs in gmfs_by_trt_gsim.items():
+            dest = dstore.export_path('gmf-%s-%s.csv' % (gsim, ruptag))
+            data = util.compose_arrays(sitemesh, gmfs[:, rupid])
+            writer.save(data, dest)
+    return writer.getsaved()
 
 
 # not used right now

@@ -84,8 +84,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 ========= ============ ============ ============ ==============
 asset_ref lon          lat          structural   structural_ins
 ========= ============ ============ ============ ==============
-a0        8.129850E+01 2.910980E+01 1.700938E+02 1.292496E+00  
-a1        8.308230E+01 2.790060E+01 1.219089E+02 1.382176E+00  
+a0        8.129850E+01 2.910980E+01 1.700938E+02 1.292497E+00  
+a1        8.308230E+01 2.790060E+01 1.219089E+02 1.382179E+00  
 a2        8.574770E+01 2.790150E+01 1.549711E+02 9.837796E+01  
 a3        8.574770E+01 2.790150E+01 1.441384E+02 0.000000E+00  
 ========= ============ ============ ============ ==============''')
@@ -150,7 +150,7 @@ a3        8.574770E+01 2.790150E+01 1.441384E+02 0.000000E+00
     def test_case_4a(self):
         # the case of a site_model.xml with 7 sites but only 1 asset
         out = self.run_calc(case_4a.__file__, 'job_hazard.ini',
-                            exports='csv')
-        [fname] = out['gmfs', 'csv']
+                            exports='txt')
+        [fname] = out['gmfs', 'txt']
         self.assertEqualFiles(
-            'expected/gmf-smltp_b1-gsimltp_b1.csv', fname)
+            'expected/gmf-smltp_b1-gsimltp_b1.txt', fname)

@@ -21,10 +21,10 @@ xmlns:gml="http://www.opengis.net/gml"
             <taxonomy>
                 DS
             </taxonomy>
-            <damage ds="no_damage" mean="4.4731220E+01" stddev="1.6997048E-01"/>
+            <damage ds="no_damage" mean="4.4731220E+01" stddev="1.6997047E-01"/>
             <damage ds="slight" mean="5.6311879E-02" stddev="3.5610456E-02"/>
             <damage ds="moderate" mean="9.2655003E-02" stddev="5.8593091E-02"/>
-            <damage ds="extreme" mean="6.0705006E-02" stddev="3.8388576E-02"/>
+            <damage ds="extreme" mean="6.0705002E-02" stddev="3.8388576E-02"/>
             <damage ds="complete" mean="5.9107505E-02" stddev="3.7378352E-02"/>
         </DDNode>
         <DDNode>
@@ -44,8 +44,8 @@ xmlns:gml="http://www.opengis.net/gml"
             <damage ds="no_damage" mean="2.0898056E+01" stddev="6.9184691E-01"/>
             <damage ds="slight" mean="6.1573702E-01" stddev="3.3932137E-01"/>
             <damage ds="moderate" mean="3.6870122E-01" stddev="2.4564192E-01"/>
-            <damage ds="extreme" mean="9.0897523E-02" stddev="8.4381416E-02"/>
-            <damage ds="complete" mean="2.6607333E-02" stddev="3.7733149E-02"/>
+            <damage ds="extreme" mean="9.0897523E-02" stddev="8.4381424E-02"/>
+            <damage ds="complete" mean="2.6607335E-02" stddev="3.7733153E-02"/>
         </DDNode>
     </dmgDistPerTaxonomy>
 </nrml>
