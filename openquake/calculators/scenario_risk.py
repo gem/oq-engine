@@ -20,7 +20,7 @@ import logging
 
 import numpy
 
-from openquake.commonlib import parallel
+from openquake.commonlib import parallel, logictree
 from openquake.risklib import scientific
 from openquake.calculators import base
 
@@ -100,7 +100,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         logging.info('Building the epsilons')
         epsilon_matrix = self.make_eps(
             self.oqparam.number_of_ground_motion_fields)
-        sitecol, gmfs = base.get_gmfs(self)
+        if 'gmfs' in self.oqparam.inputs:
+            self.rlzs_assoc = logictree.trivial_rlzs_assoc()
+        self.tags, gmfs = base.get_gmfs(self.datastore)
         self.riskinputs = self.build_riskinputs(gmfs, epsilon_matrix)
 
     def post_execute(self, result):

@@ -32,7 +32,7 @@ from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general
 from openquake.baselib.performance import DummyMonitor
 from openquake.commonlib import (
-    readinput, riskmodels, datastore, logictree, source, __version__)
+    readinput, riskmodels, datastore, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import apply_reduce, executor
 from openquake.risklib import riskinput
@@ -79,6 +79,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     """
     sitemesh = datastore.persistent_attribute('sitemesh')
     sitecol = datastore.persistent_attribute('sitecol')
+    tags = datastore.persistent_attribute('tags')
     rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
     realizations = datastore.persistent_attribute('realizations')
     assetcol = datastore.persistent_attribute('assetcol')
@@ -615,42 +616,42 @@ class RiskCalculator(HazardCalculator):
 
 # functions useful for the calculators ScenarioDamage and ScenarioRisk
 
-def get_gmfs(calc):
+def get_gmfs(dstore):
     """
-    :param calc: a ScenarioDamage or ScenarioRisk calculator
+    :param dstore: a datastore
     :returns: a dictionary of gmfs
     """
-    if 'gmfs' in calc.oqparam.inputs:  # from file
+    oq = OqParam.from_(dstore.attrs)
+    if 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
-        sitecol, calc.tags, gmfs_by_imt = readinput.get_gmfs(calc.oqparam)
-        calc.save_params()  # save number_of_ground_motion_fields and sites
+        sitecol, tags, gmfs_by_imt = readinput.get_gmfs(oq)
 
         # reduce the gmfs matrices to the filtered sites
-        for imt in calc.oqparam.imtls:
+        for imt in oq.imtls:
             gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
 
         logging.info('Preparing the risk input')
-        calc.rlzs_assoc = logictree.trivial_rlzs_assoc()
-        return sitecol, {(0, 'FromFile'): gmfs_by_imt}
+        return tags, {(0, 'FromFile'): gmfs_by_imt}
 
     # else from rupture
-    gmf = calc.datastore['gmfs/col00'].value
+    sitecol = dstore['sitecol']
+    gmf = dstore['gmfs/col00'].value
     # NB: if the hazard site collection has N sites, the hazard
     # filtered site collection for the nonzero GMFs has N' <= N sites
     # whereas the risk site collection associated to the assets
     # has N'' <= N' sites
-    if calc.datastore.parent:
-        haz_sitecol = calc.datastore.parent['sitecol']  # N' values
+    if dstore.parent:
+        haz_sitecol = dstore.parent['sitecol']  # N' values
     else:
-        haz_sitecol = calc.sitecol
-    risk_indices = set(calc.sitecol.indices)  # N'' values
+        haz_sitecol = sitecol
+    risk_indices = set(sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
-    imt_dt = numpy.dtype([(imt, float) for imt in calc.oqparam.imtls])
+    imt_dt = numpy.dtype([(imt, F32) for imt in oq.imtls])
     gmf_by_idx = general.groupby(gmf, lambda row: row['idx'])
     R = len(gmf_by_idx)
     # build a matrix N x R for each GSIM realization
     gmfs = {(trt_id, gsim): numpy.zeros((N, R), imt_dt)
-            for trt_id, gsim in calc.rlzs_assoc}
+            for trt_id, gsim in dstore['rlzs_assoc']}
     for rupid, rows in sorted(gmf_by_idx.items()):
         assert len(haz_sitecol.indices) == len(rows), (
             len(haz_sitecol.indices), len(rows))
@@ -658,4 +659,4 @@ def get_gmfs(calc):
             if sid in risk_indices:
                 for trt_id, gsim in gmfs:
                     gmfs[trt_id, gsim][sid, rupid] = gmv[gsim]
-    return haz_sitecol, gmfs
+    return dstore['tags'].value, gmfs

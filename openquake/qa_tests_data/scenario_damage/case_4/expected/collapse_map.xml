@@ -10,7 +10,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     81.29850 29.10980
                 </gml:pos>
             </gml:Point>
-            <cf assetRef="a1" mean="1.3149887E+01" stdDev="2.3862005E+01"/>
+            <cf assetRef="a1" mean="1.3149886E+01" stdDev="2.3862001E+01"/>
         </CMNode>
         <CMNode>
             <gml:Point>
@@ -26,7 +26,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     85.74770 27.90150
                 </gml:pos>
             </gml:Point>
-            <cf assetRef="a3" mean="6.9088440E+02" stdDev="8.8318512E+02"/>
+            <cf assetRef="a3" mean="6.9088440E+02" stdDev="8.8318506E+02"/>
         </CMNode>
     </collapseMap>
 </nrml>

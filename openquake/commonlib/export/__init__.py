@@ -20,6 +20,11 @@ from openquake.baselib.general import import_all, CallableDict
 from openquake.commonlib.writers import write_csv
 
 
+class MissingExporter(Exception):
+    """
+    Raised when there is not exporter for the given pair (dskey, fmt)
+    """
+
 def export_csv(ekey, dstore):
     """
     Default csv exporter for arrays stored in the output.hdf5 file
@@ -39,6 +44,24 @@ def export_csv(ekey, dstore):
     return [write_csv(dstore.export_path(name), array)]
 
 
-export = CallableDict()
+def dispatch_on_colon(ekey, dstore):
+    """
+    If the datastore key contains a colon, i.e. it is of the form
+    dskey:spec, then call `export(('<dskey>:', fmt), dstore, spec)`.
+
+    :param ekey:
+        export key of the form (k0, ext) with k0 of the form <dskey>:<spec>
+    :param dstore:
+        datastore instance
+
+    This function is called only for ekey not present in the datastore.
+    """
+    if ':' not in ekey[0]:
+        raise MissingExporter(ekey)
+    dkey, spec = ekey[0].split(':', 1)
+    return export((dkey + ':', ekey[1]), dstore, spec)
+
+
+export = CallableDict(keymissing=dispatch_on_colon)
 
 import_all('openquake.commonlib.export')
