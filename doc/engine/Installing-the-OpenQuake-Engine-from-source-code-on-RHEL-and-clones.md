@@ -22,7 +22,7 @@ This provides some dependencies which are missing in **EPEL**.
 ### Install the OpenQuake Engine dependencies
 
 ```bash
-$ sudo yum install sudo git gcc python-amqp python-celery numpy python-paramiko scipy python-shapely python-psycopg2 python-django python-setuptools python-psutil python-mock python-futures python-docutils rabbitmq-server postgresql-server postgis h5py
+$ sudo yum install sudo git gcc python-amqp python-celery numpy python-paramiko scipy python-shapely python-psycopg2 python-django python-setuptools python-psutil python-mock python-futures python-docutils rabbitmq-server postgresql-server h5py
 ```
 
 ## PostgreSQL initialization
