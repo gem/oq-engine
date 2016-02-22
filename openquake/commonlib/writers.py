@@ -390,7 +390,7 @@ def parse_header(header):
     """
     Convert a list of the form `['fieldname:fieldtype:fieldsize',...]`
     into a numpy composite dtype. The parser understands headers generated
-    by :function:`openquake.commonlib.writers.build_header`.
+    by :func:`openquake.commonlib.writers.build_header`.
     Here is an example:
 
     >>> parse_header(['PGA', 'PGV:float64', 'avg:2'])
