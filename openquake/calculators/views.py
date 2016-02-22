@@ -315,16 +315,19 @@ def view_totlosses(token, dstore):
     all assets are indeed equal to the aggregate losses. This is a
     sanity check for the correctness of the implementation.
     """
+    if dstore.attrs['insured_losses'] == 'True':
+        stats = ('mean', 'mean_ins')
+    else:
+        stats = ('mean',)
     avglosses = dstore['loss_map-rlzs'].value
-    dtlist = [('%s-%s' % (name, stat), float)
-              for name in avglosses.dtype.names
-              for stat in ('mean', 'mean_ins')]
+    dtlist = [('%s-%s' % (name, stat), numpy.float32)
+              for name in avglosses.dtype.names for stat in stats]
     zero = numpy.zeros(avglosses.shape[1:], numpy.dtype(dtlist))
     for name in avglosses.dtype.names:
-        for stat in ('mean', 'mean_ins'):
+        for stat in stats:
             for rec in avglosses:
                 zero['%s-%s' % (name, stat)] += rec[name][stat]
-    return rst_table(zero, fmt='%.7E')
+    return rst_table(zero, fmt='%.6E')
 
 
 def sum_table(records):

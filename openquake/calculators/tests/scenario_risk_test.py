@@ -90,12 +90,12 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         dstore = self.calc.datastore
         text = view('totlosses', dstore)
         self.assertEqual(text, '''\
-=============== ===================
-structural-mean structural-mean_ins
-=============== ===================
-2.6872496E+03   NAN                
-3.2341374E+03   NAN                
-=============== ===================''')
+===============
+structural-mean
+===============
+2.687250E+03   
+3.234137E+03   
+===============''')
 
         # testing the specific GMF exporter
         [gmf1, gmf2] = export(('gmfs:0', 'csv'), self.calc.datastore)

@@ -25,10 +25,8 @@ from openquake.risklib import scientific
 from openquake.calculators import base
 
 
-F64 = numpy.float64
-
-stat_dt = numpy.dtype([('mean', F64), ('stddev', F64),
-                       ('mean_ins', F64), ('stddev_ins', F64)])
+F32 = numpy.float32
+F64 = numpy.float64  # higher precision to avoid task order dependency
 
 
 @parallel.litetask
@@ -63,7 +61,7 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
         for out in out_by_rlz:
             l = lt2idx[out.loss_type]
             r = out.hid  # realization index
-            stats = numpy.zeros((len(out.assets), 4), F64)
+            stats = numpy.zeros((len(out.assets), 4), F32)
             # this is ugly but using a composite array (i.e.
             # stats['mean'], stats['stddev'], ...) may return
             # bogus numbers! even with the SAME version of numpy,
@@ -113,6 +111,10 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         the results on the datastore.
         """
         ltypes = self.riskmodel.loss_types
+        dt_list = [('mean', F32), ('stddev', F32)]
+        if self.oqparam.insured_losses:
+            dt_list.extend([('mean_ins', F32), ('stddev_ins', F32)])
+        stat_dt = numpy.dtype(dt_list)
         multi_stat_dt = numpy.dtype([(lt, stat_dt) for lt in ltypes])
         with self.monitor('saving outputs', autoflush=True):
             R = len(self.rlzs_assoc.realizations)
@@ -123,10 +125,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             mean, std = scientific.mean_std(result['agg'])
             for l, lt in enumerate(ltypes):
                 agg = agglosses[lt]
-                agg['mean'] = mean[l, :, 0]
-                agg['stddev'] = std[l, :, 0]
-                agg['mean_ins'] = mean[l, :, 1]
-                agg['stddev_ins'] = std[l, :, 1]
+                agg['mean'] = numpy.float32(mean[l, :, 0])
+                agg['stddev'] = numpy.float32(std[l, :, 0])
+                if self.oqparam.insured_losses:
+                    agg['mean_ins'] = numpy.float32(mean[l, :, 1])
+                    agg['stddev_ins'] = numpy.float32(std[l, :, 1])
 
             # average losses
             avglosses = numpy.zeros((N, R), multi_stat_dt)
