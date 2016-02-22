@@ -300,7 +300,7 @@ def extract_from(data, fields):
     return data
 
 
-def write_csv(dest, data, sep=',', fmt='%12.8E', header=None):
+def write_csv(dest, data, sep=',', fmt='%.6E', header=None):
     """
     :param dest: destination filename or io.StringIO instance
     :param data: array to save
