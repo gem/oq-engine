@@ -26,6 +26,7 @@ from openquake.calculators import base
 
 
 F32 = numpy.float32
+F64 = numpy.float64  # higher precision to avoid task order dependency
 
 
 @parallel.litetask
@@ -53,7 +54,7 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     E = monitor.oqparam.number_of_ground_motion_fields
     L = len(riskmodel.loss_types)
     R = len(rlzs_assoc.realizations)
-    result = dict(agg=numpy.zeros((E, L, R, 2), F32), avg=[])
+    result = dict(agg=numpy.zeros((E, L, R, 2), F64), avg=[])
     lt2idx = {lt: i for i, lt in enumerate(riskmodel.loss_types)}
     for out_by_rlz in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor):
@@ -122,11 +123,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             mean, std = scientific.mean_std(result['agg'])
             for l, lt in enumerate(ltypes):
                 agg = agglosses[lt]
-                agg['mean'] = mean[l, :, 0]
-                agg['stddev'] = std[l, :, 0]
+                agg['mean'] = numpy.float32(mean[l, :, 0])
+                agg['stddev'] = numpy.float32(std[l, :, 0])
                 if self.oqparam.insured_losses:
-                    agg['mean_ins'] = mean[l, :, 1]
-                    agg['stddev_ins'] = std[l, :, 1]
+                    agg['mean_ins'] = numpy.float32(mean[l, :, 1])
+                    agg['stddev_ins'] = numpy.float32(std[l, :, 1])
 
             # average losses
             avglosses = numpy.zeros((N, R), multi_stat_dt)
