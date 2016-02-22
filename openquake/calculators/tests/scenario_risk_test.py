@@ -84,12 +84,12 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         dstore = self.calc.datastore
         text = view('totlosses', dstore)
         self.assertEqual(text, '''\
-=============== ===================
-structural-mean structural-mean_ins
-=============== ===================
-2.6872495E+03   NAN                
-3.2341375E+03   NAN                
-=============== ===================''')
+===============
+structural-mean
+===============
+2.687250E+03   
+3.234137E+03   
+===============''')
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_1g(self):

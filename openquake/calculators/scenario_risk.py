@@ -27,9 +27,6 @@ from openquake.calculators import base
 
 F32 = numpy.float32
 
-stat_dt = numpy.dtype([('mean', F32), ('stddev', F32),
-                       ('mean_ins', F32), ('stddev_ins', F32)])
-
 
 @parallel.litetask
 def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
@@ -111,6 +108,10 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         the results on the datastore.
         """
         ltypes = self.riskmodel.loss_types
+        dt_list = [('mean', F32), ('stddev', F32)]
+        if self.oqparam.insured_losses:
+            dt_list.extend([('mean_ins', F32), ('stddev_ins', F32)])
+        stat_dt = numpy.dtype(dt_list)
         multi_stat_dt = numpy.dtype([(lt, stat_dt) for lt in ltypes])
         with self.monitor('saving outputs', autoflush=True):
             R = len(self.rlzs_assoc.realizations)
@@ -123,8 +124,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 agg = agglosses[lt]
                 agg['mean'] = mean[l, :, 0]
                 agg['stddev'] = std[l, :, 0]
-                agg['mean_ins'] = mean[l, :, 1]
-                agg['stddev_ins'] = std[l, :, 1]
+                if self.oqparam.insured_losses:
+                    agg['mean_ins'] = mean[l, :, 1]
+                    agg['stddev_ins'] = std[l, :, 1]
 
             # average losses
             avglosses = numpy.zeros((N, R), multi_stat_dt)
