@@ -36,6 +36,7 @@ from openquake.commonlib.writers import (
 from openquake.commonlib import writers, hazard_writers, util
 from openquake.calculators import calc, base
 
+F32 = numpy.float32
 
 GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 GMF_WARNING = '''\
@@ -617,6 +618,25 @@ def export_gmf_spec(ekey, dstore, spec):
         for (trt, gsim), gmfs in gmfs_by_trt_gsim.items():
             dest = dstore.export_path('gmf-%s-%s.csv' % (gsim, ruptag))
             data = util.compose_arrays(sitemesh, gmfs[:, rupid])
+            writer.save(data, dest)
+    return writer.getsaved()
+
+
+@export.add(('gmfs', 'csv'))
+def export_gmf_scenario(ekey, dstore):
+    assert 'scenario' in dstore.attrs['calculation_mode']
+    fields = ['%03d' % i for i in range(len(dstore['tags']))]
+    dt = numpy.dtype([(f, F32) for f in fields])
+    tags, gmfs_by_trt_gsim = base.get_gmfs(dstore)
+    sitemesh = dstore['sitemesh']
+    writer = writers.CsvWriter(fmt='%.5f')
+    for (trt, gsim), gmfs_ in gmfs_by_trt_gsim.items():
+        for imt in gmfs_.dtype.names:
+            gmfs = numpy.zeros(len(gmfs_), dt)
+            for i, gmf in enumerate(gmfs_):
+                gmfs[i] = tuple(gmfs_[imt][i])
+            dest = dstore.export_path('gmf-%s-%s.csv' % (gsim, imt))
+            data = util.compose_arrays(sitemesh, gmfs)
             writer.save(data, dest)
     return writer.getsaved()
 

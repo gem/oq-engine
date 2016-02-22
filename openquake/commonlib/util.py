@@ -17,8 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-from openquake.baselib.general import groupby2
-import operator
 import numpy
 
 F32 = numpy.float32
