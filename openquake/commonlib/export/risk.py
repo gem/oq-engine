@@ -116,8 +116,8 @@ def compactify(array):
     return zeros
 
 
-# this is used by classical_risk and event_based_risk
-@export.add(('avg_losses-rlzs', 'csv'))
+# this is used by classical_risk, event_based_risk and scenario_risk
+@export.add(('avg_losses-rlzs', 'csv'), ('loss_map-rlzs', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -126,7 +126,7 @@ def export_avg_losses(ekey, dstore):
     avg_losses = dstore[ekey[0]].value
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets(dstore)
-    writer = writers.CsvWriter(fmt='%10.6E')
+    writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
         losses = avg_losses[:, rlz.ordinal]
         dest = dstore.export_path('avg_losses-rlz%03d.csv' % rlz.ordinal)
@@ -435,35 +435,6 @@ def export_dmg_xml(key, dstore, damage_states, dmg_data, suffix):
 
 AggLoss = collections.namedtuple(
     'AggLoss', 'loss_type unit mean stddev')
-
-PerAssetLoss = collections.namedtuple(
-    'PerAssetLoss', 'loss_type unit asset_ref mean stddev')
-
-
-@export.add(('loss_map-rlzs', 'csv'))
-def export_loss_map(ekey, dstore):
-    unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
-    unit_by_lt['occupants'] = 'people'
-    rlzs = dstore['rlzs_assoc'].realizations
-    avglosses = dstore[ekey[0]]
-    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    assets = dstore['assetcol']['asset_ref']
-    N, R = avglosses.shape
-    L = len(loss_types)
-    fnames = []
-    for l, lt in enumerate(loss_types):
-        alosses = avglosses[lt]
-        for r in range(R):
-            rlz = rlzs[r]
-            lt = loss_types[l]
-            unit = unit_by_lt[lt]
-            suffix = '' if L == 1 and R == 1 else '-gsimltp_%s_%s' % (
-                rlz.uid, lt)
-            losses = [PerAssetLoss(lt, unit, ass, stat['mean'], stat['stddev'])
-                      for ass, stat in zip(assets, alosses[:, r])]
-            out = export_loss_csv(('avg', 'csv'), dstore, losses, suffix)
-            fnames.append(out)
-    return sorted(fnames)
 
 LossMap = collections.namedtuple('LossMap', 'location asset_ref value std_dev')
 LossCurve = collections.namedtuple(

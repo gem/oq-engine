@@ -25,10 +25,10 @@ from openquake.risklib import scientific
 from openquake.calculators import base
 
 
-F64 = numpy.float64
+F32 = numpy.float32
 
-stat_dt = numpy.dtype([('mean', F64), ('stddev', F64),
-                       ('mean_ins', F64), ('stddev_ins', F64)])
+stat_dt = numpy.dtype([('mean', F32), ('stddev', F32),
+                       ('mean_ins', F32), ('stddev_ins', F32)])
 
 
 @parallel.litetask
@@ -56,14 +56,14 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     E = monitor.oqparam.number_of_ground_motion_fields
     L = len(riskmodel.loss_types)
     R = len(rlzs_assoc.realizations)
-    result = dict(agg=numpy.zeros((E, L, R, 2), F64), avg=[])
+    result = dict(agg=numpy.zeros((E, L, R, 2), F32), avg=[])
     lt2idx = {lt: i for i, lt in enumerate(riskmodel.loss_types)}
     for out_by_rlz in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor):
         for out in out_by_rlz:
             l = lt2idx[out.loss_type]
             r = out.hid  # realization index
-            stats = numpy.zeros((len(out.assets), 4), F64)
+            stats = numpy.zeros((len(out.assets), 4), F32)
             # this is ugly but using a composite array (i.e.
             # stats['mean'], stats['stddev'], ...) may return
             # bogus numbers! even with the SAME version of numpy,
