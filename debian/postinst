@@ -89,12 +89,14 @@ if [ -f /usr/lib/postgresql/$PG_VERSION/bin/postgres ]; then
     # held by celeryd processes.
 
     for pid in `ps ax | grep celery | grep -v grep | awk '{print $1}'`; do
+        echo $pid
         kill -15 $pid
     done
 
     # Make sure the celeryd  processes are gone.
     sleep 3
     for pid in `ps ax | grep celery | grep -v grep | awk '{print $1}'`; do
+        echo $pid
         kill -9 $pid
     done
 
