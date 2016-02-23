@@ -628,8 +628,8 @@ def export_gmf_spec(ekey, dstore, spec):
             data = util.compose_arrays(sitemesh, gmfa)
             writer.save(data, dest)
     else:  # event based
-        for gmfa, ruptag in _get_gmfs(dstore, ruptags):
-            dest = dstore.export_path('gmf-%s.csv' % ruptag)
+        for gmfa, imt, ruptag in _get_gmfs(dstore, ruptags):
+            dest = dstore.export_path('gmf-%s-%s.csv' % (ruptag, imt))
             data = util.compose_arrays(sitemesh, gmfa)
             writer.save(data, dest)
     return writer.getsaved()
@@ -657,18 +657,15 @@ def _get_gmfs(dstore, ruptags):
         gsims = gsims_by_col[rup.col_id]
         rlzs = [rlz for gsim in map(str, gsims)
                 for rlz in rlzs_assoc[trt_id, gsim]]
-        gmf_dt = numpy.dtype([('%s~%03d' % (imt, rlz.ordinal), F32)
-                              for imt in oq.imtls for rlz in rlzs])
+        gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
         [gmf] = event_based.make_gmfs(
             [rup], sitecol, oq.imtls, gsims, oq.truncation_level, correl_model)
-        gmfa = numpy.zeros(N, gmf_dt)
-        gmfa[rup.indices] = gmf
-        for gsim in map(str, gsims):
-            for rlz in rlzs_assoc[trt_id, gsim]:
-                for imt in oq.imtls:
-                    gmfa['%s~%03d' % (imt, rlz.ordinal)][rup.indices] = (
-                        gmf[gsim][imt])
-        yield gmfa, ruptag
+        for imt in oq.imtls:
+            gmfa = numpy.zeros(N, gmf_dt)
+            for gsim in map(str, gsims):
+                for rlz in rlzs_assoc[trt_id, gsim]:
+                    gmfa['%03d' % rlz.ordinal][rup.indices] = gmf[gsim][imt]
+            yield gmfa, imt, ruptag
 
 
 @export.add(('gmfs', 'csv'))
