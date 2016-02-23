@@ -112,8 +112,10 @@ ORDER BY stop_time
 '''
 
 PAGE_TEMPLATE = '''\
+<!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css" />
 <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js"></script>
