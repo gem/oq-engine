@@ -435,9 +435,9 @@ class HazardCalculator(BaseCalculator):
             self.sitecol = haz_sitecol
 
         if oq_hazard:
-            par = self.datastore.parent
-            if 'assetcol' in par and any(
-                    par.get_attr('assetcol', 'time_events', ())):
+            parent = self.datastore.parent
+            if 'assetcol' in parent and any(
+                    parent.get_attr('assetcol', 'time_events', ())):
                 check_time_event(self.datastore)
             if oq_hazard.time_event != oq.time_event:
                 raise ValueError(
@@ -462,6 +462,11 @@ class HazardCalculator(BaseCalculator):
             try:
                 cc = self.datastore['cost_calculator']
             except KeyError:
+                # the cost calculator can be missing: this happens when
+                # there are no cost types in damage calculations. Not saving
+                # the cost calculator is needed to work around yet another
+                # bug of HDF5 in Ubuntu 12.04 that makes it impossible to
+                # store numpy arrays of zero length
                 cc = rm.CostCalculator({}, {}, True, True)  # dummy
             self.assets_by_site = riskinput.build_assets_by_site(
                 self.assetcol, self.taxonomies, oq.time_event, cc)
