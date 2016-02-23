@@ -30,7 +30,7 @@ import logging
 from openquake.baselib.general import humansize
 from openquake.commonlib import readinput, datastore, source, parallel
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.calculators import base, views
+from openquake.calculators import base
 
 
 def indent(text):
@@ -60,7 +60,8 @@ class ReportWriter(object):
     def __init__(self, dstore):
         self.dstore = dstore
         self.oq = oq = OqParam.from_(dstore.attrs)
-        self.text = oq.description + '\n' + '=' * len(oq.description)
+        self.text = (oq.description.encode('utf8') + '\n' +
+                     '=' * len(oq.description))
         # NB: in the future, the sitecol could be transferred as
         # an array by leveraging the HDF5 serialization protocol in
         # litetask decorator; for the moment however the size of the

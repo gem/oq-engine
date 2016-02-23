@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Made possible to generate the report even for descriptions with
+    non-ASCII characters
   * Added a tag `riskInvestigationTime` to the exported loss maps and curves
   * Made customizable the header of CSV files
 
