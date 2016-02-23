@@ -17,12 +17,12 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-from openquake.baselib.general import groupby2
-import operator
 import numpy
 
 F32 = numpy.float32
-asset_dt = numpy.dtype([('asset_ref', bytes, 20), ('lon', F32), ('lat', F32)])
+asset_dt = numpy.dtype([('asset_ref', bytes, 20),
+                        ('taxonomy', bytes, 100),
+                        ('lon', F32), ('lat', F32)])
 
 
 def max_rel_diff(curve_ref, curve, min_value=0.01):
@@ -119,8 +119,10 @@ def compose_arrays(a1, a2, firstfield='tag'):
 def get_assets(dstore):
     """
     :param dstore: a datastore with keys 'assetcol'
-    :returns: an ordered array of records (asset_ref, lon, lat)
+    :returns: an ordered array of records (asset_ref, taxonomy, lon, lat)
     """
     assetcol = dstore['assetcol']
-    asset_data = [(a['asset_ref'], a['lon'], a['lat']) for a in assetcol]
+    taxo = dstore['taxonomies'].value
+    asset_data = [(a['asset_ref'], taxo[a['taxonomy']], a['lon'], a['lat'])
+                  for a in assetcol]
     return numpy.array(asset_data, asset_dt)

@@ -38,20 +38,6 @@ from openquake.commonlib.risk_writers import (
 Output = collections.namedtuple('Output', 'ltype path array')
 
 
-def get_assets_sites(dstore):
-    """
-    :param dstore: a datastore with a key `specific_assets`
-    :returns: an ordered array of records (asset_ref, lon, lat)
-    """
-    assetcol = dstore['assetcol']
-    sitemesh = dstore['sitemesh']
-    rows = []
-    for asset in assetcol:
-        loc = sitemesh[asset['site_id']]
-        rows.append((asset['asset_ref'], loc[0], loc[1]))
-    return numpy.array(rows, asset_dt)
-
-
 def extract_outputs(dkey, dstore, loss_type=None, ext=''):
     """
     An utility to extract outputs ordered by loss types from a datastore
@@ -228,7 +214,7 @@ def export_avglosses_csv(ekey, dstore):
 @export.add(('rcurves-rlzs', 'csv'))
 def export_rcurves(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
-    assets = get_assets_sites(dstore)
+    assets = get_assets(dstore)
     curves = compactify(dstore[ekey[0]].value)
     name = ekey[0].split('-')[0]
     writer = writers.CsvWriter(fmt='%9.7E')
@@ -244,7 +230,7 @@ def export_rcurves(ekey, dstore):
 def export_loss_curves(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    assets = get_assets_sites(dstore)
+    assets = get_assets(dstore)
     curves = dstore[ekey[0]]
     name = ekey[0].split('-')[0]
     writer = writers.CsvWriter(fmt='%9.6E')
