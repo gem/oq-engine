@@ -190,3 +190,74 @@ def generate_synthetic_magnitudes(aval, bval, mmin, mmax, nyears):
     # Get magnitudes
     mags = generate_trunc_gr_magnitudes(bval, mmin, mmax, nsamples)
     return {'magnitude': mags, 'year': np.sort(year)}
+
+def downsample_completeness_table(comp_table, sample_width=0.1, mmax=None):
+    """
+    Re-sample the completeness table to a specified sample_width
+    """
+    new_comp_table = []
+    for i in range(comp_table.shape[0] - 1):
+        mvals = np.arange(comp_table[i, 1],
+        comp_table[i + 1, 1], d_m)
+        new_comp_table.extend([[comp_table[i, 0], mval] for mval in mvals])
+    # If mmax > last magnitude in completeness table
+    if mmax and (mmax > comp_table[-1, 1]):
+        new_comp_table.extend(
+            [[comp_table[-1, 0], mval]
+             for mval in np.arange(comp_table[-1, 1], mmax + d_m, d_m)])
+    return np.array(new_comp_table)
+
+
+def get_completeness_counts(catalogue, completeness, d_m):
+    """
+    Returns the number of earthquakes in a set of magnitude bins of specified
+    with, along with the corresponding completeness duration (in years) of the
+    bin
+    :param catalogue:
+        Earthquake catalogue as instance of
+        :class: hmtk.seisimicity.catalogue.Catalogue
+    :param numpy.ndarray completeness:
+        Completeness table [year, magnitude]
+    :param float d_m:
+        Bin size
+    :returns:
+        * cent_mag - array indicating center of magnitude bins
+        * t_per - array indicating total duration (in years) of completeness
+        * n_obs - number of events in completeness period
+    """
+    mmax_obs = np.max(catalogue.data["magnitude"])
+    if mmax_obs > np.max(completeness[:, 1]):
+        cmag = np.hstack([completeness[:, 1], mmax_obs])
+    else:
+        cmag = completeness[:, 1]
+    cyear = np.hstack([catalogue.end_year + 1, completeness[:, 0]])
+
+    # When the magnitude value is on the bin edge numpy's histogram function
+    # may assign randomly to one side or the other based on the floating
+    # point value. As catalogues are rounded to the nearest 0.1 this occurs
+    # frequently! So we offset the bin edge by a very tiny amount to ensure
+    # that, for example, M = 4.099999999 is assigned to the bin M = 4.1 and
+    # not 4.0
+    master_bins = np.arange(np.min(cmag) - 1.0E-7,
+                            np.max(cmag) + d_m,
+                            d_m)
+    count_rates = np.zeros(len(master_bins) - 1)
+    count_years = np.zeros_like(count_rates)
+    for i in range(len(cyear) - 1):
+        time_idx = np.logical_and(catalogue.data["dtime"] < cyear[i],
+                                  catalogue.data["dtime"] >= cyear[i + 1])
+        nyrs = cyear[i] - cyear[i + 1]
+        sel_mags = catalogue.data["magnitude"][time_idx]
+        m_idx = np.where(master_bins >= (cmag[i] - (d_m / 2.)))[0]
+        m_bins = master_bins[m_idx]
+        count_rates[m_idx[:-1]] += np.histogram(
+            sel_mags,
+            bins=m_bins)[0].astype(float)
+        count_years[m_idx[:-1]] += float(nyrs)
+    # Removes any zero rates greater than 
+    last_loc = np.where(count_rates > 0)[0][-1]
+    n_obs = count_rates[:(last_loc + 1)]
+    t_per = count_years[:(last_loc + 1)]
+    cent_mag = (master_bins[:-1] + master_bins[1:]) / 2.
+    cent_mag = np.around(cent_mag[:(last_loc + 1)], 3)
+    return cent_mag, t_per, n_obs

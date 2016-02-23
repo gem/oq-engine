@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm, Normalize
 from math import log10
+from hmtk.seismicity.occurrence.utils import get_completeness_counts
 
 # Default the figure size
 DEFAULT_SIZE = (8., 6.)
@@ -343,7 +344,7 @@ def get_completeness_adjusted_table(catalogue, completeness, dmag, end_year):
                             np.log10(cum_rates[out_idx])])
 
 def plot_observed_recurrence(catalogue, completeness, dmag, end_year=None,
-        filename=None, filetype='png', dpi=300):
+        figure_size=DEFAULT_SIZE, filename=None, filetype='png', dpi=300):
     """
     Plots the observed recurrence taking into account the completeness
     """
@@ -353,18 +354,22 @@ def plot_observed_recurrence(catalogue, completeness, dmag, end_year=None,
         completeness = np.array([[np.min(catalogue.data['year']),
                                   completeness]])
     if not end_year:
-        end_year = np.max(catalogue.data['year'])
-    recurrence = get_completeness_adjusted_table(catalogue,
-                                                 completeness,
-                                                 dmag,
-                                                 end_year)
-    plt.figure(figsize=DEFAULT_SIZE)
-    plt.semilogy(recurrence[:, 0], recurrence[:, 1], 'bo')
-    plt.semilogy(recurrence[:, 0], recurrence[:, 2], 'rs')
-    plt.xlim([recurrence[0, 0] - 0.1, recurrence[-1, 0] + 0.1])
-    plt.xlabel('Magnitude', fontsize='large')
-    plt.ylabel('Annual Rate', fontsize='large')
-    plt.legend(['Incremental', 'Cumulative'])
-
+        end_year = catalogue.update_end_year()
+    catalogue.data["dtime"] = catalogue.get_decimal_time() 
+    cent_mag, t_per, n_obs = get_completeness_counts(catalogue,
+                                                     completeness,
+                                                     dmag)
+    obs_rates = n_obs / t_per
+    cum_obs_rates = np.array([np.sum(obs_rates[i:])
+                              for i in range(len(obs_rates))])
+ 
+    plt.figure(figsize=figure_size)
+    plt.semilogy(cent_mag, obs_rates, 'bo', label="Incremental")
+    plt.semilogy(cent_mag, cum_obs_rates, 'rs', label="Cumulative")
+    plt.xlim([cent_mag[0] - 0.1, cent_mag[-1] + 0.1])
+    plt.xlabel('Magnitude', fontsize=16)
+    plt.ylabel('Annual Rate', fontsize=16)
+    plt.legend(fontsize=14)
+    plt.tick_params(labelsize=12)
     _save_image(filename, filetype, dpi)
     plt.show()

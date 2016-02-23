@@ -187,3 +187,51 @@ class TestSyntheticCatalogues(unittest.TestCase):
                 Catalogue.make_from_dict(cat1))[0])
         bvals = np.array(bvals)
         self.assertAlmostEqual(np.mean(bvals), 1.0, 1)
+
+
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
+
+
+class TestCompletenessCounts(unittest.TestCase):
+    """
+    Tests the counting of the number of events by completeness period
+    """
+    def setUp(self):
+        cat_file = os.path.join(BASE_DATA_PATH, "synthetic_test_cat1.csv")
+        raw_data = np.genfromtxt(cat_file, delimiter=",")
+        neq = raw_data.shape[0]
+        self.catalogue = Catalogue.make_from_dict({
+            "eventID": raw_data[:, 0].astype(int),
+            "year": raw_data[:, 1].astype(int),
+            "dtime": raw_data[:, 2],
+            "longitude": raw_data[:, 3],
+            "latitude": raw_data[:, 4],
+            "magnitude": raw_data[:, 5],
+            "depth": raw_data[:, 6]})
+        self.config = {"reference_magnitude": 3.0}
+        self.completeness = np.array([[1990., 3.0],
+                                      [1975., 4.0],
+                                      [1960., 5.0],
+                                      [1930., 6.0],
+                                      [1910., 7.0]])
+
+    def test_completeness_counts(self):
+        """
+        Assert that the correct counts are returned
+        """
+        expected_data = np.array([[3.25, 20.0, 1281.0],
+                                  [3.75, 20.0,  468.0],
+                                  [4.25, 35.0,  275.0],
+                                  [4.75, 35.0,  116.0],
+                                  [5.25, 50.0,   55.0],
+                                  [5.75, 50.0,   17.0],
+                                  [6.25, 80.0,   11.0],
+                                  [6.75, 80.0,    2.0],
+                                  [7.25,100.0,    1.0]])
+        cent_mag, t_per, n_obs = rec_utils.get_completeness_counts(
+            self.catalogue, self.completeness, 0.5)
+        np.testing.assert_array_almost_equal(cent_mag, expected_data[:, 0])
+        np.testing.assert_array_almost_equal(t_per, expected_data[:, 1])
+        np.testing.assert_array_almost_equal(n_obs, expected_data[:, 2])
+        self.assertEqual(self.catalogue.get_number_events(),
+                         int(np.sum(n_obs)))

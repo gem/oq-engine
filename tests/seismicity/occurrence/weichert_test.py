@@ -148,20 +148,6 @@ class WeichertTestCase(unittest.TestCase):
                                       [1930., 6.0],
                                       [1910., 7.0]])
 
-    def test_weichert_prep(self):
-        """
-        Tests the Weichert preparation function to ensure the correct counts
-        """
-        wchrt = Weichert()
-        expected_mags = np.array([3.5, 4.5, 5.5, 6.5, 7.06])
-        expected_count = np.array([1749., 391., 72., 13., 1.])
-        expected_tper = np.array([20., 35., 50., 80.,100.])
-        cent_mag, t_per, n_obs = wchrt._weichert_prep(self.catalogue,
-                                                      self.completeness)
-        np.testing.assert_array_almost_equal(cent_mag, expected_mags)
-        np.testing.assert_array_almost_equal(t_per, expected_tper)
-        np.testing.assert_array_almost_equal(n_obs, expected_count)
-
     def test_weichert_full(self):
         """
         Tests the Weichert function for the synthetic catalogue
@@ -170,7 +156,7 @@ class WeichertTestCase(unittest.TestCase):
         bval, sigmab, rate, sigma_rate = wchrt.calculate(self.catalogue,
                                                          self.config,
                                                          self.completeness)
-        self.assertAlmostEqual(bval, 0.905, 3)
-        self.assertAlmostEqual(sigmab, 0.0165, 4)
-        self.assertAlmostEqual(rate, 100.350, 3)
-        self.assertAlmostEqual(sigma_rate, 2.1269, 3) 
+        self.assertAlmostEqual(bval, 0.890, 3)
+        self.assertAlmostEqual(sigmab, 0.015, 3)
+        self.assertAlmostEqual(rate, 100.1078, 4)
+        self.assertAlmostEqual(sigma_rate, 2.1218, 4) 
