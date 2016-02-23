@@ -237,7 +237,7 @@ def check_time_event(dstore):
     with the periods found in the exposure.
     """
     time_event = dstore.attrs.get('time_event')
-    time_events = dstore['time_events']
+    time_events = dstore.get_attr('assetcol', 'time_events', ())
     if time_event and ast.literal_eval(time_event) not in time_events:
         inputs = ast.literal_eval(dstore.attrs['inputs'])
         raise ValueError(
@@ -360,7 +360,6 @@ class HazardCalculator(BaseCalculator):
                 self.cost_types = self.exposure.cost_types
             self.taxonomies = numpy.array(
                 sorted(self.exposure.taxonomies), '|S100')
-            self.datastore['time_events'] = sorted(self.exposure.time_events)
 
     def load_riskmodel(self):
         """
@@ -435,7 +434,9 @@ class HazardCalculator(BaseCalculator):
             self.sitecol = haz_sitecol
 
         if oq_hazard:
-            if 'time_events' in self.datastore.parent:
+            par = self.datastore.parent
+            if 'assetcol' in par and any(
+                    par.get_attr('assetcol', 'time_events')):
                 check_time_event(self.datastore)
             if oq_hazard.time_event != oq.time_event:
                 raise ValueError(
@@ -448,6 +449,8 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.build_asset_collection(
                 self.assets_by_site, oq.time_event)
+            self.datastore.set_attrs(
+                'assetcol', time_events=sorted(self.exposure.time_events))
             spec = set(oq.specific_assets)
             unknown = spec - set(self.assetcol['asset_ref'])
             if unknown:

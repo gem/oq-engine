@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Stored `time_events` and `CostCalculator` in the datastore as arrays
   * Added a tag `riskInvestigationTime` to the exported loss maps and curves
   * Made customizable the header of CSV files
 
