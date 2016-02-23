@@ -35,7 +35,7 @@ from openquake.commonlib import (
     readinput, riskmodels, datastore, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import apply_reduce, executor
-from openquake.risklib import riskinput
+from openquake.risklib import riskinput, riskmodels as rm
 from openquake.baselib.python3compat import with_metaclass
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -353,7 +353,8 @@ class HazardCalculator(BaseCalculator):
             all_cost_types = set(self.oqparam.all_cost_types)
             fname = self.oqparam.inputs['exposure']
             cc = readinput.get_exposure_lazy(fname, all_cost_types)[-1]
-            self.datastore['cost_calculator'] = cc
+            if cc.cost_types:
+                self.datastore['cost_calculator'] = cc
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
             if len(self.exposure.cost_types):
@@ -457,7 +458,10 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError('The specific asset(s) %s are not in the '
                                  'exposure' % ', '.join(unknown))
         elif hasattr(self, 'assetcol'):
-            cc = self.datastore['cost_calculator']
+            try:
+                cc = self.datastore['cost_calculator']
+            except KeyError:
+                cc = rm.CostCalculator({}, {}, True, True)  # dummy
             self.assets_by_site = riskinput.build_assets_by_site(
                 self.assetcol, self.taxonomies, oq.time_event, cc)
 
