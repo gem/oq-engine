@@ -39,6 +39,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/gmf1.csv', gmf1)
         self.assertEqualFiles('expected/gmf2.csv', gmf2)
 
+        [fname] = export(('gmfs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf-FromFile-PGA.csv', fname)
+
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')
