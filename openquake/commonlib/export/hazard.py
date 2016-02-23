@@ -33,8 +33,8 @@ from openquake.commonlib.export import export
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.writers import (
     scientificformat, floatformat, write_csv)
-from openquake.commonlib import writers, hazard_writers, util
-from openquake.calculators import calc, base
+from openquake.commonlib import writers, hazard_writers, util, readinput
+from openquake.calculators import calc, base, event_based
 
 F32 = numpy.float32
 
@@ -605,39 +605,82 @@ def export_gmf_spec(ekey, dstore, spec):
     :param dstore: datastore object
     :param spec: a string specifying what to export exactly
     """
-    assert 'scenario' in dstore.attrs['calculation_mode']
     num_ruptures = len(dstore['tags'])
     rupids = map(int, spec.split(','))
     for rupid in rupids:
         assert 0 <= rupid < num_ruptures, (rupid, num_ruptures)
-    tags, gmfs_by_trt_gsim = base.get_gmfs(dstore)
-    ruptags = tags[rupids]
+    ruptags = dstore['tags'][rupids]
     sitemesh = dstore['sitemesh']
     writer = writers.CsvWriter(fmt='%.5f')
-    for rupid, ruptag in zip(rupids, ruptags):
-        for (trt, gsim), gmfs in gmfs_by_trt_gsim.items():
-            dest = dstore.export_path('gmf-%s-%s.csv' % (gsim, ruptag))
-            data = util.compose_arrays(sitemesh, gmfs[:, rupid])
+    if 'scenario' in dstore.attrs['calculation_mode']:
+        _, gmfs_by_trt_gsim = base.get_gmfs(dstore)
+        for rupid, ruptag in zip(rupids, ruptags):
+            for (trt, gsim), gmfs in gmfs_by_trt_gsim.items():
+                dest = dstore.export_path('gmf-%s-%s.csv' % (gsim, ruptag))
+                data = util.compose_arrays(sitemesh, gmfs[:, rupid])
+                writer.save(data, dest)
+    else:  # event based
+        for gmfa, ruptag in _get_gmfs(dstore, ruptags):
+            dest = dstore.export_path('gmf-%s.csv' % ruptag)
+            data = util.compose_arrays(sitemesh, gmfa)
             writer.save(data, dest)
     return writer.getsaved()
 
 
+def _get_gmfs(dstore, ruptags):
+    oq = OqParam.from_(dstore.attrs)
+    rlzs_assoc = dstore['rlzs_assoc']
+    sitecol = dstore['sitecol'].complete
+    N = len(sitecol.complete)
+    ruptures = []
+    for colkey in dstore['sescollection']:
+        rup_by_tag = dstore['sescollection/' + colkey]
+        for ruptag in ruptags:
+            try:
+                rup = rup_by_tag[ruptag]
+            except KeyError:
+                pass
+            else:
+                ruptures.append(rup)
+    correl_model = readinput.get_correl_model(oq)
+    gsims_by_col = rlzs_assoc.get_gsims_by_col()
+    for rup, ruptag in zip(ruptures, ruptags):
+        trt_id = rlzs_assoc.csm_info.get_trt_id(rup.col_id)
+        gsims = gsims_by_col[rup.col_id]
+        rlzs = [rlz for gsim in map(str, gsims)
+                for rlz in rlzs_assoc[trt_id, gsim]]
+        gmf_dt = numpy.dtype([('%s~%03d' % (imt, rlz.ordinal), F32)
+                              for imt in oq.imtls for rlz in rlzs])
+        [gmf] = event_based.make_gmfs(
+            [rup], sitecol, oq.imtls, gsims, oq.truncation_level, correl_model)
+        gmfa = numpy.zeros(N, gmf_dt)
+        gmfa[rup.indices] = gmf
+        for gsim in map(str, gsims):
+            for rlz in rlzs_assoc[trt_id, gsim]:
+                for imt in oq.imtls:
+                    gmfa['%s~%03d' % (imt, rlz.ordinal)][rup.indices] = (
+                        gmf[gsim][imt])
+        yield gmfa, ruptag
+
+
 @export.add(('gmfs', 'csv'))
 def export_gmf_scenario(ekey, dstore):
-    assert 'scenario' in dstore.attrs['calculation_mode']
-    fields = ['%03d' % i for i in range(len(dstore['tags']))]
-    dt = numpy.dtype([(f, F32) for f in fields])
-    tags, gmfs_by_trt_gsim = base.get_gmfs(dstore)
-    sitemesh = dstore['sitemesh']
-    writer = writers.CsvWriter(fmt='%.5f')
-    for (trt, gsim), gmfs_ in gmfs_by_trt_gsim.items():
-        for imt in gmfs_.dtype.names:
-            gmfs = numpy.zeros(len(gmfs_), dt)
-            for i, gmf in enumerate(gmfs_):
-                gmfs[i] = tuple(gmfs_[imt][i])
-            dest = dstore.export_path('gmf-%s-%s.csv' % (gsim, imt))
-            data = util.compose_arrays(sitemesh, gmfs)
-            writer.save(data, dest)
+    if 'scenario' in dstore.attrs['calculation_mode']:
+        fields = ['%03d' % i for i in range(len(dstore['tags']))]
+        dt = numpy.dtype([(f, F32) for f in fields])
+        tags, gmfs_by_trt_gsim = base.get_gmfs(dstore)
+        sitemesh = dstore['sitemesh']
+        writer = writers.CsvWriter(fmt='%.5f')
+        for (trt, gsim), gmfs_ in gmfs_by_trt_gsim.items():
+            for imt in gmfs_.dtype.names:
+                gmfs = numpy.zeros(len(gmfs_), dt)
+                for i, gmf in enumerate(gmfs_):
+                    gmfs[i] = tuple(gmfs_[imt][i])
+                dest = dstore.export_path('gmf-%s-%s.csv' % (gsim, imt))
+                data = util.compose_arrays(sitemesh, gmfs)
+                writer.save(data, dest)
+    else:  # event based
+        return []
     return writer.getsaved()
 
 
