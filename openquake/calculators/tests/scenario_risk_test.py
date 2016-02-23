@@ -98,9 +98,8 @@ structural-mean
 ===============''')
 
         # testing the specific GMF exporter
-        [gmf1, gmf2] = export(('gmfs:0', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/gmf-BooreAtkinson2008.csv', gmf1)
-        self.assertEqualFiles('expected/gmf-ChiouYoungs2008.csv', gmf2)
+        [gmf] = export(('gmfs:0', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf-0.csv', gmf)
 
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_1g(self):

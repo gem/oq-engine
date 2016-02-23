@@ -614,11 +614,19 @@ def export_gmf_spec(ekey, dstore, spec):
     writer = writers.CsvWriter(fmt='%.5f')
     if 'scenario' in dstore.attrs['calculation_mode']:
         _, gmfs_by_trt_gsim = base.get_gmfs(dstore)
+        gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
+        imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
+        gmf_dt = numpy.dtype([('%s~%s' % (imt, gsim), F32)
+                              for imt in imts for gsim in gsims])
         for rupid, ruptag in zip(rupids, ruptags):
-            for (trt, gsim), gmfs in gmfs_by_trt_gsim.items():
-                dest = dstore.export_path('gmf-%s-%s.csv' % (gsim, ruptag))
-                data = util.compose_arrays(sitemesh, gmfs[:, rupid])
-                writer.save(data, dest)
+            gmfa = numpy.zeros(len(sitemesh), gmf_dt)
+            for gsim in gsims:
+                data = gmfs_by_trt_gsim[0, gsim][:, rupid]
+                for imt in imts:
+                    gmfa['%s~%s' % (imt, gsim)] = data[imt]
+            dest = dstore.export_path('gmf-%s.csv' % ruptag)
+            data = util.compose_arrays(sitemesh, gmfa)
+            writer.save(data, dest)
     else:  # event based
         for gmfa, ruptag in _get_gmfs(dstore, ruptags):
             dest = dstore.export_path('gmf-%s.csv' % ruptag)
