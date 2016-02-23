@@ -82,8 +82,8 @@ class IsotropicGaussian(BaseSmoothingKernel):
         max_dist = config['Length_Limit'] * config['BandWidth']
         smoothed_value = np.zeros(len(data), dtype=float)
         for iloc in range(0, len(data)):
-            dist_val = haversine(data[:, 1], data[:, 0],
-                                 data[iloc, 1], data[iloc, 0])
+            dist_val = haversine(data[:, 0], data[:, 1],
+                                 data[iloc, 0], data[iloc, 1])
 
             if is_3d:
                 dist_val = np.sqrt(dist_val.flatten() ** 2.0 +

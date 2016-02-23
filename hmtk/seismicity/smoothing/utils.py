@@ -123,7 +123,7 @@ def get_weichert_factor(beta, cmag, cyear, end_year):
         cval = np.hstack([dmag, cmag[-1] + (dmag[-1] - cmag[-2])])
     else:
         # Single completeness value so Weichert factor is unity
-        return 1.0, None
+        return 1.0/(end_year - cyear[0] + 1), None
 
     t_f = sum(np.exp(-beta * cval)) / sum((end_year - cyear + 1) *
                                           np.exp(-beta * cval))
@@ -194,6 +194,6 @@ def get_even_magnitude_completeness(completeness_table, catalogue=None):
         else:
             completeness_table = np.vstack([completeness_table,
                                             temp_table])
-    #completeness_table = np.vstack([completeness_table,
+    # completeness_table = np.vstack([completeness_table,
     #    np.array([[cyear[-1], cmag[-1]]])])
     return completeness_table, 0.1
