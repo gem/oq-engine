@@ -450,8 +450,9 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.build_asset_collection(
                 self.assets_by_site, oq.time_event)
-            self.datastore.set_attrs(
-                'assetcol', time_events=sorted(self.exposure.time_events))
+            if self.exposure.time_events:
+                self.datastore.set_attrs(
+                    'assetcol', time_events=sorted(self.exposure.time_events))
             spec = set(oq.specific_assets)
             unknown = spec - set(self.assetcol['asset_ref'])
             if unknown:
