@@ -437,7 +437,7 @@ class HazardCalculator(BaseCalculator):
         if oq_hazard:
             par = self.datastore.parent
             if 'assetcol' in par and any(
-                    par.get_attr('assetcol', 'time_events')):
+                    par.get_attr('assetcol', 'time_events', ())):
                 check_time_event(self.datastore)
             if oq_hazard.time_event != oq.time_event:
                 raise ValueError(
