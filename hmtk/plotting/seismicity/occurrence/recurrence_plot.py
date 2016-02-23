@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from hmtk.plotting.seismicity.catalogue_plots import \
         (get_completeness_adjusted_table, _save_image)
+from hmtk.seismicity.occurrence.utils import get_completeness_counts
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 from openquake.hazardlib.mfd.youngs_coppersmith_1985 import\
@@ -57,7 +58,7 @@ def _check_completeness_table(completeness, catalogue):
 
 
 def plot_recurrence_model(input_model, catalogue, completeness, dmag,
-        filename=None, filetype='png', dpi=300):
+        figure_size=(8, 8), filename=None, filetype='png', dpi=300):
     """
     Plot a calculated recurrence model over an observed catalogue, adjusted for
     time-varying completeness
@@ -66,21 +67,25 @@ def plot_recurrence_model(input_model, catalogue, completeness, dmag,
     # Get observed annual recurrence
     if not catalogue.end_year:
         catalogue.update_end_year()
-    obs_rates = get_completeness_adjusted_table(catalogue,
-                                                completeness,
-                                                input_model.bin_width,
-                                                catalogue.end_year)
+    cent_mag, t_per, n_obs = get_completeness_counts(catalogue,
+                                                     completeness,
+                                                     dmag)
+    obs_rates = n_obs / t_per
+    cum_obs_rates = np.array([np.sum(obs_rates[i:])
+                              for i in range(len(obs_rates))])
     # Create plot
-    plt.semilogy(obs_rates[:, 0] + dmag / 2., obs_rates[:, 1], 'bo')
+    plt.figure(figsize=figure_size)
+    plt.semilogy(cent_mag, obs_rates, 'bo')
     plt.semilogy(annual_rates[:, 0], annual_rates[:, 1], 'b-')
-    plt.semilogy(obs_rates[:, 0] + dmag / 2., obs_rates[:, 2], 'rs')
+    plt.semilogy(cent_mag, cum_obs_rates, 'rs')
     plt.semilogy(annual_rates[:, 0], cumulative_rates, 'r-')
-    plt.xlabel('Magnitude', fontsize='large')
-    plt.ylabel('Annual Rate', fontsize='large')
+    plt.xlabel('Magnitude', fontsize='16')
+    plt.ylabel('Annual Rate', fontsize='16')
     plt.legend(['Observed Incremental Rate',
                 'Model Incremental Rate',
                 'Observed Cumulative Rate',
-                'Model Cumulative Rate'])
+                'Model Cumulative Rate'], fontsize=14)
+    plt.tick_params(labelsize=12)
     _save_image(filename, filetype, dpi)
 
 def plot_trunc_gr_model(aval, bval, min_mag, max_mag, dmag, catalogue=None,
