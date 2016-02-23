@@ -682,7 +682,11 @@ def get_exposure_lazy(fname, ok_cost_types):
     try:
         area = conversions.area
     except NameError:
-        area = LiteralNode('area', dict(type=''))
+        # NB: the area type cannot be an empty string because when sending
+        # around the CostCalculator object one runs into this numpy bug on
+        # pickling dictionaries with empty strings:
+        # https://github.com/numpy/numpy/pull/5475
+        area = LiteralNode('area', dict(type='?'))
 
     # read the cost types and make some check
     cost_types = []
