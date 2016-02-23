@@ -409,16 +409,12 @@ def view_assetcol(token, dstore):
     Display the exposure in CSV format
     """
     assetcol = dstore['assetcol'].value
-    sitemesh = dstore['sitemesh'].value
     taxonomies = dstore['taxonomies'].value
     header = list(assetcol.dtype.names)
     columns = [None] * len(header)
     for i, field in enumerate(header):
         if field == 'taxonomy':
             columns[i] = taxonomies[assetcol[field]]
-        elif field == 'site_id':
-            header[i] = 'lon_lat'
-            columns[i] = sitemesh[assetcol[field]]
         else:
             columns[i] = assetcol[field]
     return write_csv(io.StringIO(), [header] + list(zip(*columns)))

@@ -35,7 +35,7 @@ from openquake.commonlib import (
     readinput, riskmodels, datastore, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import apply_reduce, executor
-from openquake.risklib import riskinput
+from openquake.risklib import riskinput, riskmodels as rm
 from openquake.baselib.python3compat import with_metaclass
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -237,7 +237,7 @@ def check_time_event(dstore):
     with the periods found in the exposure.
     """
     time_event = dstore.attrs.get('time_event')
-    time_events = dstore['time_events']
+    time_events = dstore.get_attr('assetcol', 'time_events', ())
     if time_event and ast.literal_eval(time_event) not in time_events:
         inputs = ast.literal_eval(dstore.attrs['inputs'])
         raise ValueError(
@@ -353,14 +353,14 @@ class HazardCalculator(BaseCalculator):
             all_cost_types = set(self.oqparam.all_cost_types)
             fname = self.oqparam.inputs['exposure']
             cc = readinput.get_exposure_lazy(fname, all_cost_types)[-1]
-            self.datastore['cost_calculator'] = cc
+            if cc.cost_types:
+                self.datastore['cost_calculator'] = cc
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
             if len(self.exposure.cost_types):
                 self.cost_types = self.exposure.cost_types
             self.taxonomies = numpy.array(
                 sorted(self.exposure.taxonomies), '|S100')
-            self.datastore['time_events'] = sorted(self.exposure.time_events)
 
     def load_riskmodel(self):
         """
@@ -435,7 +435,9 @@ class HazardCalculator(BaseCalculator):
             self.sitecol = haz_sitecol
 
         if oq_hazard:
-            if 'time_events' in self.datastore.parent:
+            parent = self.datastore.parent
+            if 'assetcol' in parent and any(
+                    parent.get_attr('assetcol', 'time_events', ())):
                 check_time_event(self.datastore)
             if oq_hazard.time_event != oq.time_event:
                 raise ValueError(
@@ -448,13 +450,24 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.build_asset_collection(
                 self.assets_by_site, oq.time_event)
+            if self.exposure.time_events:
+                self.datastore.set_attrs(
+                    'assetcol', time_events=sorted(self.exposure.time_events))
             spec = set(oq.specific_assets)
             unknown = spec - set(self.assetcol['asset_ref'])
             if unknown:
                 raise ValueError('The specific asset(s) %s are not in the '
                                  'exposure' % ', '.join(unknown))
         elif hasattr(self, 'assetcol'):
-            cc = self.datastore['cost_calculator']
+            try:
+                cc = self.datastore['cost_calculator']
+            except KeyError:
+                # the cost calculator can be missing: this happens when
+                # there are no cost types in damage calculations. Not saving
+                # the cost calculator is needed to work around yet another
+                # bug of HDF5 in Ubuntu 12.04 that makes it impossible to
+                # store numpy arrays of zero length
+                cc = rm.CostCalculator({}, {}, True, True)  # dummy
             self.assets_by_site = riskinput.build_assets_by_site(
                 self.assetcol, self.taxonomies, oq.time_event, cc)
 

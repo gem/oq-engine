@@ -210,7 +210,7 @@ class DataStore(collections.MutableMapping):
         :param name: name of the attribute
         :param default: value to return if the attribute is missing
         """
-        obj = self.hdf5[key]
+        obj = self[key]
         try:
             return obj.attrs[name]
         except KeyError:

@@ -49,6 +49,9 @@ class CostCalculator(object):
     """
     def __init__(self, cost_types, area_types,
                  deduct_abs=True, limit_abs=True):
+        if set(cost_types) != set(area_types):
+            raise ValueError('cost_types has keys %s, area_types has keys %s'
+                             % (sorted(cost_types), sorted(area_types)))
         for ct in cost_types.values():
             assert ct in ('aggregated', 'per_asset', 'per_area'), ct
         for at in area_types.values():
@@ -75,6 +78,26 @@ class CostCalculator(object):
                 return cost * area * number
         # this should never happen
         raise RuntimeError('Unable to compute cost')
+
+    def __toh5__(self):
+        dt = numpy.dtype([('cost_type', (bytes, 10)),
+                          ('area_type', (bytes, 10))])
+        loss_types = sorted(self.cost_types)
+        array = numpy.zeros(len(loss_types), dt)
+        array['cost_type'] = [self.cost_types[lt] for lt in loss_types]
+        array['area_type'] = [self.area_types[lt] for lt in loss_types]
+        attrs = dict(deduct_abs=self.deduct_abs, limit_abs=self.limit_abs,
+                     loss_types=loss_types)
+        return array, attrs
+
+    def __fromh5__(self, array, attrs):
+        loss_types = attrs.pop('loss_types')
+        vars(self).update(attrs)
+        self.cost_types = dict(zip(loss_types, array['cost_type']))
+        self.area_types = dict(zip(loss_types, array['area_type']))
+
+    def __repr__(self):
+        return '<%s %s>' % (self.__class__.__name__, vars(self))
 
 costcalculator = CostCalculator(
     cost_types=dict(structural='per_area'),
