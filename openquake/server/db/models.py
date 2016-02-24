@@ -124,7 +124,7 @@ class OqJob(djm.Model):
         (u'clean_up', u'Cleaning up'),
         (u'complete', u'Complete'),
     )
-    status = djm.TextField(choices=STATUS_CHOICES, default='pre_executing')
+    status = djm.TextField(choices=STATUS_CHOICES, default='executing')
     is_running = djm.BooleanField(default=True)
     start_time = djm.DateTimeField(editable=False, default=datetime.utcnow)
     stop_time = djm.DateTimeField(editable=False)
