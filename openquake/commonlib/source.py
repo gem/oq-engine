@@ -922,14 +922,13 @@ class SourceManager(object):
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
         if random_seed is not None:
             # generate unique seeds for each rupture with numpy.arange
-            self.src_seed = {}
+            self.src_serial = {}
             n = sum(trtmod.tot_ruptures() for trtmod in self.csm.trt_models)
-            rup_seeds = numpy.array(numpy.arange(n) + random_seed,
-                                    dtype=numpy.uint32)
+            rup_serial = numpy.arange(n, dtype=numpy.uint32)
             start = 0
             for src in self.csm.get_sources('all'):
                 nr = src.num_ruptures
-                self.src_seed[src.id] = rup_seeds[start:start + nr]
+                self.src_serial[src.id] = rup_serial[start:start + nr]
                 start += nr
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.csm.maxweight)
@@ -959,12 +958,12 @@ class SourceManager(object):
                         sources = list(sourceconverter.split_source(src))
                         self.split_map[src.trt_model_id, src.id] = sources
                     split_time = split_mon.dt
-                    self.set_seeds(src, sources)
+                    self.set_serial(src, sources)
                 for ss in self.split_map[src.trt_model_id, src.id]:
                     ss.id = src.id
                     yield ss
             else:
-                self.set_seeds(src)
+                self.set_serial(src)
                 yield src
             split_sources = self.split_map.get(
                 (src.trt_model_id, src.id), [src])
@@ -981,18 +980,18 @@ class SourceManager(object):
         filter_mon.flush()
         split_mon.flush()
 
-    def set_seeds(self, src, split_sources=()):
+    def set_serial(self, src, split_sources=()):
         """
-        Set a seed per each rupture in a source, managing also the
+        Set a serial number per each rupture in a source, managing also the
         case of split sources, if any.
         """
         if self.random_seed is not None:
-            src.seed = self.src_seed[src.id]
+            src.serial = self.src_serial[src.id]
             if split_sources:
                 start = 0
                 for ss in split_sources:
                     nr = ss.num_ruptures
-                    ss.seed = src.seed[start:start + nr]
+                    ss.serial = src.serial[start:start + nr]
                     start += nr
 
     def submit_sources(self, sitecol, siteidx=0):
