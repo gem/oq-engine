@@ -371,8 +371,8 @@ def build_ses_ruptures(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
                 tag = 'col=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-                    col_idx, ses_idx, src.source_id, rup.seed - random_seed,
-                    occ_no)
+                    col_idx, ses_idx, src.source_id,
+                    rup.seed - random_seed + 1, occ_no)
                 sesruptures.append(
                     SESRupture(rup, indices, rnd.randint(0, MAX_INT),
                                tag, col_idx))
