@@ -76,7 +76,7 @@ class JobFromFileTestCase(unittest.TestCase):
         job = engine.create_job('classical')
 
         self.assertEqual('openquake', job.user_name)
-        self.assertEqual('pre_executing', job.status)
+        self.assertEqual('executing', job.status)
 
         # Check the make sure it's in the database.
         try:
@@ -89,7 +89,7 @@ class JobFromFileTestCase(unittest.TestCase):
         job = engine.create_job('classical', user_name=user_name)
 
         self.assertEqual(user_name, job.user_name)
-        self.assertEqual('pre_executing', job.status)
+        self.assertEqual('executing', job.status)
 
         try:
             models.OqJob.objects.get(id=job.id)

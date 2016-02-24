@@ -116,7 +116,6 @@ class OqJob(djm.Model):
     hazard_calculation = djm.ForeignKey('OqJob', null=True)
     STATUS_CHOICES = (
         (u'created', u'Created'),
-        (u'pre_executing', u'Pre-Executing'),
         (u'executing', u'Executing'),
         (u'post_executing', u'Post-Executing'),
         (u'post_processing', u'Post-Processing'),
