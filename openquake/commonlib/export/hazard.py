@@ -683,6 +683,8 @@ def export_gmf_scenario(ekey, dstore):
                 data = util.compose_arrays(sitemesh, gmfs)
                 writer.save(data, dest)
     else:  # event based
+        logging.warn('Not exporting the full GMFs for event_based, but you can'
+                     ' specify the rupture ordinals with gmfs:R1,...,Rn')
         return []
     return writer.getsaved()
 
