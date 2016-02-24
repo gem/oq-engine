@@ -75,7 +75,7 @@ You are now ready to run the OQ Engine. First, try running one of the demos incl
 
 The output should look something like this:
 ```
-[2014-12-10 11:07:29,595 hazard job #114 - PROGRESS MainProcess/10696] **  pre_executing (hazard)
+[2014-12-10 11:07:29,595 hazard job #114 - PROGRESS MainProcess/10696] **  executing (hazard)
 [2014-12-10 11:07:29,620 hazard job #114 - PROGRESS MainProcess/10696] **  initializing sites
 [2014-12-10 11:07:31,107 hazard job #114 - PROGRESS MainProcess/10696] **  initializing site collection
 [2014-12-10 11:07:31,123 hazard job #114 - PROGRESS MainProcess/10696] **  initializing sources

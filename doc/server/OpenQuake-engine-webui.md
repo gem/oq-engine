@@ -59,7 +59,7 @@ The calculation is removed from the calculations list, but it is not actually re
 
 ### Calculation status
 
-A calculation can be in the following statuses: `pre_executing`, `executing`, `complete`, `failed`
+A calculation can be in the following statuses: `executing`, `complete`, `failed`
 
 ![WebUI calculations status](../img/WebUI-status.png)
 
