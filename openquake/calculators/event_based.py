@@ -27,6 +27,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import AccumDict, humansize
+from openquake.baselib.performance import DummyMonitor
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
@@ -35,8 +36,8 @@ from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.util import max_rel_diff_index
 
-from openquake.calculators import base, views
 from openquake.commonlib.oqvalidation import OqParam
+from openquake.calculators import base, views
 from openquake.calculators.calc import MAX_INT, gmvs_to_haz_curve
 from openquake.calculators.classical import ClassicalCalculator
 
@@ -307,7 +308,8 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for rup, rups in build_ses_ruptures(
-                src, num_occ_by_rup, s_sites, oq.maximum_distance, sitecol):
+                src, num_occ_by_rup, s_sites, oq.maximum_distance, sitecol,
+                oq.random_seed):
             sesruptures.extend(rups)
         dt = time.time() - t0
         calc_times.append((src.id, dt))
@@ -333,7 +335,7 @@ def sample_ruptures(src, num_ses, info):
     num_occ_by_rup = collections.defaultdict(AccumDict)
     # generating ruptures for the given source
     for rup_no, rup in enumerate(src.iter_ruptures()):
-        rup.seed = seed = src.seed[rup_no]
+        rup.seed = seed = src.serial[rup_no] + info.seed
         numpy.random.seed(seed)
         for col_id in col_ids:
             for ses_idx in range(1, num_ses + 1):
@@ -346,7 +348,7 @@ def sample_ruptures(src, num_ses, info):
 
 
 def build_ses_ruptures(
-        src, num_occ_by_rup, s_sites, maximum_distance, sitecol):
+        src, num_occ_by_rup, s_sites, maximum_distance, sitecol, random_seed):
     """
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated SESRuptures>)
@@ -369,7 +371,8 @@ def build_ses_ruptures(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
                 tag = 'col=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-                    col_idx, ses_idx, src.source_id, rup.seed, occ_no)
+                    col_idx, ses_idx, src.source_id,
+                    rup.seed - random_seed + 1, occ_no)
                 sesruptures.append(
                     SESRupture(rup, indices, rnd.randint(0, MAX_INT),
                                tag, col_idx))
@@ -472,7 +475,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
 # ######################## GMF calculator ############################ #
 
 def make_gmfs(ses_ruptures, sitecol, imts, gsims,
-              trunc_level, correl_model, monitor):
+              trunc_level, correl_model, monitor=DummyMonitor()):
     """
     :param ses_ruptures: a list of SESRuptures
     :param sitecol: a SiteCollection instance
