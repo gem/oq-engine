@@ -308,7 +308,8 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for rup, rups in build_ses_ruptures(
-                src, num_occ_by_rup, s_sites, oq.maximum_distance, sitecol):
+                src, num_occ_by_rup, s_sites, oq.maximum_distance, sitecol,
+                oq.random_seed):
             sesruptures.extend(rups)
         dt = time.time() - t0
         calc_times.append((src.id, dt))
@@ -347,7 +348,7 @@ def sample_ruptures(src, num_ses, info):
 
 
 def build_ses_ruptures(
-        src, num_occ_by_rup, s_sites, maximum_distance, sitecol):
+        src, num_occ_by_rup, s_sites, maximum_distance, sitecol, random_seed):
     """
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated SESRuptures>)
@@ -370,7 +371,8 @@ def build_ses_ruptures(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
                 tag = 'col=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-                    col_idx, ses_idx, src.source_id, rup.seed, occ_no)
+                    col_idx, ses_idx, src.source_id, rup.seed - random_seed,
+                    occ_no)
                 sesruptures.append(
                     SESRupture(rup, indices, rnd.randint(0, MAX_INT),
                                tag, col_idx))
