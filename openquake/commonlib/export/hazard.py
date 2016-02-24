@@ -616,17 +616,15 @@ def export_gmf_spec(ekey, dstore, spec):
         _, gmfs_by_trt_gsim = base.get_gmfs(dstore)
         gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
         imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
-        gmf_dt = numpy.dtype([('%s~%s' % (imt, gsim), F32)
-                              for imt in imts for gsim in gsims])
+        gmf_dt = numpy.dtype([(gsim, F32) for gsim in gsims])
         for rupid, ruptag in zip(rupids, ruptags):
-            gmfa = numpy.zeros(len(sitemesh), gmf_dt)
-            for gsim in gsims:
-                data = gmfs_by_trt_gsim[0, gsim][:, rupid]
-                for imt in imts:
-                    gmfa['%s~%s' % (imt, gsim)] = data[imt]
-            dest = dstore.export_path('gmf-%s.csv' % ruptag)
-            data = util.compose_arrays(sitemesh, gmfa)
-            writer.save(data, dest)
+            for imt in imts:
+                gmfa = numpy.zeros(len(sitemesh), gmf_dt)
+                for gsim in gsims:
+                    gmfa[gsim] = gmfs_by_trt_gsim[0, gsim][imt][:, rupid]
+                dest = dstore.export_path('gmf-%s-%s.csv' % (ruptag, imt))
+                data = util.compose_arrays(sitemesh, gmfa)
+                writer.save(data, dest)
     else:  # event based
         for gmfa, imt, ruptag in _get_gmfs(dstore, ruptags):
             dest = dstore.export_path('gmf-%s-%s.csv' % (ruptag, imt))
