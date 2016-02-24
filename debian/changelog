@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the default job status to 'executing' (was 'pre_executing')
   * Fixed the ordering of the logs in the Web UI
   * Removed the dependency from PostGIS
   * Restored the monitoring which was accidentally removed
