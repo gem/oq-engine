@@ -242,6 +242,10 @@ class DataStore(collections.MutableMapping):
         """
         return write_csv(self.export_path(key, 'csv'), self[key])
 
+    def flush(self):
+        """Flush the underlying hdf5 file"""
+        self.hdf5.flush()
+
     def close(self):
         """Close the underlying hdf5 file"""
         if self.parent:
