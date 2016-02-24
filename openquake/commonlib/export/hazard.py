@@ -606,7 +606,7 @@ def export_gmf_spec(ekey, dstore, spec):
     :param spec: a string specifying what to export exactly
     """
     num_ruptures = len(dstore['tags'])
-    rupids = map(int, spec.split(','))
+    rupids = [int(rid) - 1 for rid in spec.split(',')]
     for rupid in rupids:
         assert 0 <= rupid < num_ruptures, (rupid, num_ruptures)
     ruptags = dstore['tags'][rupids]

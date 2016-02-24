@@ -147,7 +147,7 @@ a3        RM       8.574770E+01 2.790150E+01 1.441384E+02 0.000000E+00
         self.assertEqual(len(fnames), 4)  # 2 IMT x 2 poes
 
         # export a single rupture
-        [f1, f2] = export(('gmfs:0', 'csv'), self.calc.datastore)
+        [f1, f2] = export(('gmfs:1', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/gmf-col=05'
             '~ses=0001~src=AS_TRAS334~rup=612343-01-PGA.csv', f1)
