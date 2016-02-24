@@ -18,6 +18,7 @@
 
 from __future__ import print_function
 import os
+import ast
 import logging
 
 from openquake.baselib import general, performance
@@ -32,6 +33,9 @@ def export(datastore_key, export_dir='.', calc_id=-1, exports='csv'):
     """
     logging.basicConfig(level=logging.INFO)
     dstore = datastore.read(calc_id)
+    parent_id = ast.literal_eval(dstore.attrs['hazard_calculation_id'])
+    if parent_id:
+        dstore.set_parent(datastore.read(parent_id))
     dstore.export_dir = export_dir
     with performance.PerformanceMonitor('export', measuremem=True) as mon:
         for fmt in exports.split(','):

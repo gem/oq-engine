@@ -28,13 +28,13 @@ from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.export import export_csv
-from openquake.commonlib.util import (
-    get_assets, compose_arrays, asset_dt)
+from openquake.commonlib.util import get_assets, compose_arrays
 
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
 
+F32 = numpy.float32
 Output = collections.namedtuple('Output', 'ltype path array')
 
 
@@ -391,10 +391,36 @@ def export_csq_total_csv(ekey, dstore):
 
 
 export.add(
-    ('dmg_by_asset', 'csv'),
     ('dmg_by_taxon', 'csv'),
     ('dmg_total', 'csv'),
 )(export_csv)
+
+
+@export.add(('dmg_by_asset', 'csv'))
+def export_dmg_by_asset_csv(ekey, dstore):
+    damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
+    dt_list = []
+    for ds in damage_states:
+        dt_list.append(('%s_mean' % ds, F32))
+        dt_list.append(('%s_std' % ds, F32))
+    damage_dt = numpy.dtype(dt_list)
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    rlzs = dstore['rlzs_assoc'].realizations
+    data = dstore[ekey[0]]
+    writer = writers.CsvWriter(fmt='%.6E')
+    assets = get_assets(dstore)
+    for loss_type in loss_types:
+        for rlz in rlzs:
+            dmg_by_asset = numpy.zeros(len(data), damage_dt)
+            gsim, = rlz.value
+            ms = data[loss_type][:, rlz.ordinal]
+            for i, ds in enumerate(damage_states):
+                dmg_by_asset['%s_mean' % ds] = ms['mean'][:, i]
+                dmg_by_asset['%s_std' % ds] = ms['stddev'][:, i]
+                fname = dstore.export_path(
+                    '%s-%s-%s.%s' % (ekey[0], gsim, loss_type, ekey[1]))
+            writer.save(compose_arrays(assets, dmg_by_asset), fname)
+    return writer.getsaved()
 
 
 def export_dmg_xml(key, dstore, damage_states, dmg_data, suffix):

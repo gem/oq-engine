@@ -18,7 +18,6 @@
 
 import os
 import re
-import ast
 import pydoc
 from openquake.baselib.python3compat import pickle
 import collections
@@ -147,7 +146,7 @@ class DataStore(collections.MutableMapping):
     and a dictionary and populating the object.
     For an example of use see :class:`openquake.hazardlib.site.SiteCollection`.
     """
-    def __init__(self, calc_id=None, datadir=DATADIR, parent=(),
+    def __init__(self, calc_id=None, datadir=DATADIR,
                  export_dir='.', params=(), mode=None):
         if not os.path.exists(datadir):
             os.makedirs(datadir)
@@ -162,7 +161,7 @@ class DataStore(collections.MutableMapping):
                                  'retrieve the %s' % (len(calc_ids), calc_id))
         else:  # use the given datastore
             self.calc_id = calc_id
-        self.parent = parent  # parent datastore (if any)
+        self.parent = ()  # can be set later
         self.datadir = datadir
         self.calc_dir = os.path.join(datadir, 'calc_%s' % self.calc_id)
         self.export_dir = export_dir
@@ -172,12 +171,6 @@ class DataStore(collections.MutableMapping):
         self.attrs = self.hdf5.attrs
         for name, value in params:
             self.attrs[name] = value
-        if not parent and 'hazard_calculation_id' in self.attrs:
-            parent_id = ast.literal_eval(self.attrs['hazard_calculation_id'])
-            if parent_id:
-                # NB: I am assuming that the parent is in the same datadir
-                # as the child
-                self.parent = read(parent_id, datadir=self.datadir)
 
     def set_parent(self, parent):
         """
