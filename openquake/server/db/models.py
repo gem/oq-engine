@@ -25,7 +25,6 @@
 Model representations of the OpenQuake DB tables.
 '''
 import os
-import collections
 from datetime import datetime
 
 from openquake.commonlib import datastore
@@ -214,6 +213,7 @@ class Log(djm.Model):
 
     class Meta:
         db_table = 'log'
+        ordering = ['id']
 
 
 def extract_from(objlist, attr):
