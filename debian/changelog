@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Saved half the space in absence of insured_losses in the event based risk
+    calculator
   * Added CSV exporters for the ground motion fields
   * Stored `time_events` and `CostCalculator` in the datastore as arrays
   * Made possible to generate the report even for descriptions with

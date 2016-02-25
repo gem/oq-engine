@@ -470,8 +470,7 @@ class Classical(RiskModel):
             loss_maps=values * maps)
 
 
-@registry.add('event_based_risk', 'event_based', 'event_based_rupture',
-              'eb_risk')
+@registry.add('event_based_risk', 'event_based', 'event_based_rupture')
 class ProbabilisticEventBased(RiskModel):
     """
     Implements the Probabilistic Event Based riskmodel
