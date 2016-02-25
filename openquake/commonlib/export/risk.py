@@ -411,7 +411,8 @@ def build_damage_array(data, damage_dt):
     :param damage_dt: a damage composite data type loss_type -> states
     :returns: a composite array of length N and dtype damage_dt
     """
-    dmg = numpy.zeros(len(data), damage_dt)
+    L = len(data) if data.shape else 1
+    dmg = numpy.zeros(L, damage_dt)
     for lt in damage_dt.names:
         for i, ms in numpy.ndenumerate(data[lt]):
             lst = []
