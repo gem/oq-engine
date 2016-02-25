@@ -35,7 +35,7 @@ F32 = numpy.float32
 
 
 @parallel.litetask
-def build_agg_curve(r_data, insured_losses, ses_ratio, curve_resolution,
+def build_agg_curve(r_data, insured_losses, ses_ratio, curve_resolution, L,
                     monitor):
     """
     Build the aggregate loss curve in parallel for each loss type
@@ -44,13 +44,15 @@ def build_agg_curve(r_data, insured_losses, ses_ratio, curve_resolution,
     :param r_data:
         a list of pairs `(r, data)` where `r` is a realization index and `data`
         is an array of pairs `(rupture_id, loss)` where loss is an array of
-        shape L, 2
+        shape L (in absence of insured losses) or L * 2 (with insured losses)
     :param insured_losses:
         job.ini configuration parameter
     :param ses_ratio:
         a ratio obtained from ses_per_logic_tree_path
     :param curve_resolution:
         the number of discretization steps for the loss curve
+    :param L:
+        the number of loss types
     :param monitor:
         a Monitor instance
     :returns:
@@ -60,17 +62,20 @@ def build_agg_curve(r_data, insured_losses, ses_ratio, curve_resolution,
     for r, data in r_data:
         if len(data) == 0:  # realization with no losses
             continue
-        E, L = data['loss'].shape[:2]
         for l in range(L):
+            if L == 1 and not insured_losses:
+                values = data['loss']
+            else:
+                values = data['loss'][:, l]
             losses, poes = scientific.event_based(
-                data['loss'][:, l, 0], ses_ratio, curve_resolution)
+                values, ses_ratio, curve_resolution)
             avg = scientific.average_loss((losses, poes))
             result[l, r, 'losses'] = losses
             result[l, r, 'poes'] = poes
             result[l, r, 'avg'] = avg
             if insured_losses:
                 losses_ins, poes_ins = scientific.event_based(
-                    data['loss'][:, l, 1], ses_ratio, curve_resolution)
+                    data['loss'][:, l + L], ses_ratio, curve_resolution)
                 avg_ins = scientific.average_loss((losses_ins, poes_ins))
                 result[l, r, 'losses_ins'] = losses_ins
                 result[l, r, 'poes_ins'] = poes_ins
@@ -118,10 +123,11 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
         a dictionary of numpy arrays of shape (L, R)
     """
     lti = riskmodel.lti  # loss type -> index
+    I = monitor.I
     L, R = len(lti), len(rlzs_assoc.realizations)
     ela_dt = numpy.dtype([('rup_id', U32), ('ass_id', U32),
-                          ('loss', (F32, (L, 2)))])
-    elt_dt = numpy.dtype([('rup_id', U32), ('loss', (F32, (L, 2)))])
+                          ('loss', (F32, L * I))])
+    elt_dt = numpy.dtype([('rup_id', U32), ('loss', (F32, L * I))])
 
     def zeroN2():
         return numpy.zeros((monitor.num_assets, 2))
@@ -174,9 +180,11 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     items = [[] for _ in range(R)]
     for (r, rid, aid), group in itertools.groupby(
             ass_losses, operator.itemgetter(0, 1, 2)):
-        loss = numpy.zeros((L, 2), F32)
+        loss = numpy.zeros(L * I, F32)
         for _r, _rid, _aid, l, loss2 in group:
-            loss[l] = loss2
+            loss[l] = loss2[0]
+            if I == 2:
+                loss[L + l] = loss2[1]
         items[r].append((rid, aid, loss))
     for r in range(R):
         items[r] = numpy.array(items[r], ela_dt)
@@ -186,9 +194,11 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     items = [[] for _ in range(R)]
     for (r, rid), group in itertools.groupby(
             ass_losses, operator.itemgetter(0, 1)):
-        loss = numpy.zeros((L, 2), F32)
+        loss = numpy.zeros(L * I, F32)
         for _r, _rid, _aid, l, loss2 in group:
-            loss[l] += loss2
+            loss[l] += loss2[0]
+            if I == 2:
+                loss[l + L] += loss2[1]
         items[r].append((rid, loss))
     for r in range(R):
         items[r] = numpy.array(items[r], elt_dt)
@@ -281,6 +291,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.monitor.num_assets = self.count_assets()
         self.monitor.avg_losses = self.oqparam.avg_losses
         self.monitor.asset_loss_table = self.oqparam.asset_loss_table
+        self.monitor.I = I = self.oqparam.insured_losses + 1
 
         self.N = N = len(self.assetcol)
         self.E = len(self.datastore['tags'])
@@ -290,11 +301,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.avg_losses = numpy.zeros((N, R), multi_avg_dt)
 
         ela_dt = numpy.dtype([('rup_id', U32), ('ass_id', U32),
-                              ('loss', (F32, (L, 2)))])
+                              ('loss', (F32, L * I))])
         self.asset_loss_table = [None] * R
         self.agg_loss_table = [None] * R
 
-        self.elt_dt = numpy.dtype([('rup_id', U32), ('loss', (F32, (L, 2)))])
+        self.elt_dt = numpy.dtype([('rup_id', U32), ('loss', (F32, L * I))])
         for rlz in self.rlzs_assoc.realizations:
             self.asset_loss_table[rlz.ordinal] = self.datastore.create_dset(
                 'asset_loss_table/rlz-%03d' % rlz.ordinal, ela_dt)
@@ -470,7 +481,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.datastore['agg_loss_table'].values())]
         ses_ratio = self.oqparam.ses_ratio
         result = parallel.apply_reduce(
-            build_agg_curve, (r_data, self.I, ses_ratio, C, self.monitor('')),
+            build_agg_curve, (r_data, self.I, ses_ratio, C, self.L,
+                              self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks)
         agg_curve = numpy.zeros(self.R, loss_curve_dt)
         for l, r, name in result:

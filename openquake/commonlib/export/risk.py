@@ -36,6 +36,7 @@ from openquake.commonlib.risk_writers import (
 
 F32 = numpy.float32
 Output = collections.namedtuple('Output', 'ltype path array')
+F32 = numpy.float32
 
 
 def extract_outputs(dkey, dstore, loss_type=None, ext=''):
@@ -166,11 +167,14 @@ def export_agg_losses_ebr(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
+    oq = OqParam.from_(dstore.attrs)
     agg_losses = dstore[ekey[0]]
     rlzs = dstore['rlzs_assoc'].realizations
     loss_types = list(dstore.get_attr('composite_risk_model', 'loss_types'))
     tags = dstore['tags'].value
-    ext_loss_types = loss_types + [lt + '_ins' for lt in loss_types]
+    ext_loss_types = loss_types[:]
+    if oq.insured_losses:
+        ext_loss_types.extend([lt + '_ins' for lt in loss_types])
     ext_dt = numpy.dtype(
         [('tag', (bytes, 100))] +
         [(elt, numpy.float32) for elt in ext_loss_types])
@@ -179,9 +183,9 @@ def export_agg_losses_ebr(ekey, dstore):
         rows = agg_losses['rlz-%03d' % rlz.ordinal]
         data = []
         for row in rows:
-            loss = row['loss']  # matrix L x 2
-            data.append((tags[row['rup_id']],) +
-                        tuple(loss[:, 0]) + tuple(loss[:, 1]))
+            loss = row['loss']  # float or array of size L or L x 2
+            loss_t = (loss,) if isinstance(loss, F32) else tuple(loss)
+            data.append((tags[row['rup_id']],) + loss_t)
         data.sort()
         dest = dstore.export_path('agg_losses-rlz%03d.csv' % rlz.ordinal)
         writer.save(numpy.array(data, ext_dt), dest)
