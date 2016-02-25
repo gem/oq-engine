@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Rewritten the CSV exporters for dmg_by_asset, dmg_by_taxo and dmg_total
   * Added CSV exporters for the ground motion fields
   * Stored `time_events` and `CostCalculator` in the datastore as arrays
   * Made possible to generate the report even for descriptions with
