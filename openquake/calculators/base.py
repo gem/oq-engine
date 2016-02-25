@@ -217,7 +217,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             rlzs = self.rlzs_assoc.realizations
             self.realizations = numpy.array(
                 [(r.uid, r.weight) for r in rlzs], rlz_dt)
-        # NB: the datastore must not be closed, it will be closed automatically
+        self.datastore.flush()
+        # NB: the datastore must not be closed, otherwise some tests
+        # will break; it will be closed automatically anyway
 
 
 def _set_nbytes(dkey, dstore):
