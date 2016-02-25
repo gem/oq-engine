@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import numpy
+
 
 class Hdf5Dataset(object):
     """
@@ -56,3 +58,9 @@ class Hdf5Dataset(object):
         self.dset.resize((newlength,))
         self.dset[self.length:newlength] = array
         self.length = newlength
+
+    def append(self, tup):
+        """
+        Append a compatible tuple of data to the underlying dataset
+        """
+        self.extend(numpy.array([tup], self.dtype))
