@@ -182,7 +182,7 @@ def export_agg_losses_ebr(ekey, dstore):
         rows = agg_losses['rlz-%03d' % rlz.ordinal]
         data = []
         for row in rows:
-            loss = row['loss']  # array L x 2
+            loss = row['loss']  # float or array of size L or L x 2
             loss_t = (loss,) if isinstance(loss, F32) else tuple(loss)
             data.append((tags[row['rup_id']],) + loss_t)
         data.sort()

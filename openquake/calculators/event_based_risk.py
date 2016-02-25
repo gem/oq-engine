@@ -44,7 +44,7 @@ def build_agg_curve(r_data, insured_losses, ses_ratio, curve_resolution, L,
     :param r_data:
         a list of pairs `(r, data)` where `r` is a realization index and `data`
         is an array of pairs `(rupture_id, loss)` where loss is an array of
-        shape L * 2
+        shape L (in absence of insured losses) or L * 2 (with insured losses)
     :param insured_losses:
         job.ini configuration parameter
     :param ses_ratio:
