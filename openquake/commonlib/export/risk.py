@@ -390,36 +390,80 @@ def export_csq_total_csv(ekey, dstore):
     return writer.getsaved()
 
 
-export.add(
-    ('dmg_by_taxon', 'csv'),
-    ('dmg_total', 'csv'),
-)(export_csv)
-
-
-@export.add(('dmg_by_asset', 'csv'))
-def export_dmg_by_asset_csv(ekey, dstore):
+def build_damage_dt(dstore):
+    """
+    :param dstore: a datastore instance
+    :returns: a composite dtype loss_type -> (mean_ds1, stdv_ds1, ...)
+    """
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
     dt_list = []
     for ds in damage_states:
         dt_list.append(('%s_mean' % ds, F32))
-        dt_list.append(('%s_std' % ds, F32))
+        dt_list.append(('%s_stdv' % ds, F32))
     damage_dt = numpy.dtype(dt_list)
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
+    return numpy.dtype([(lt, damage_dt) for lt in loss_types])
+
+
+def build_damage_array(data, damage_dt):
+    """
+    :param data: an array of length N with fields 'mean' and 'stddev'
+    :param damage_dt: a damage composite data type loss_type -> states
+    :returns: a composite array of length N and dtype damage_dt
+    """
+    dmg = numpy.zeros(len(data), damage_dt)
+    for lt in damage_dt.names:
+        for i, ms in numpy.ndenumerate(data[lt]):
+            lst = []
+            for m, s in zip(ms['mean'], ms['stddev']):
+                lst.append(m)
+                lst.append(s)
+            dmg[lt][i] = tuple(lst)
+    return dmg
+
+
+@export.add(('dmg_by_asset', 'csv'))
+def export_dmg_by_asset_csv(ekey, dstore):
+    damage_dt = build_damage_dt(dstore)
     rlzs = dstore['rlzs_assoc'].realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
-    for loss_type in loss_types:
-        for rlz in rlzs:
-            dmg_by_asset = numpy.zeros(len(data), damage_dt)
-            gsim, = rlz.value
-            ms = data[loss_type][:, rlz.ordinal]
-            for i, ds in enumerate(damage_states):
-                dmg_by_asset['%s_mean' % ds] = ms['mean'][:, i]
-                dmg_by_asset['%s_std' % ds] = ms['stddev'][:, i]
-                fname = dstore.export_path(
-                    '%s-%s-%s.%s' % (ekey[0], gsim, loss_type, ekey[1]))
-            writer.save(compose_arrays(assets, dmg_by_asset), fname)
+    for rlz in rlzs:
+        gsim, = rlz.value
+        dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
+        fname = dstore.export_path('%s-%s.%s' % (ekey[0], gsim, ekey[1]))
+        writer.save(compose_arrays(assets, dmg_by_asset), fname)
+    return writer.getsaved()
+
+
+@export.add(('dmg_by_taxon', 'csv'))
+def export_dmg_by_taxon_csv(ekey, dstore):
+    damage_dt = build_damage_dt(dstore)
+    taxonomies = dstore['taxonomies'].value
+    rlzs = dstore['rlzs_assoc'].realizations
+    data = dstore[ekey[0]]
+    writer = writers.CsvWriter(fmt='%.6E')
+    for rlz in rlzs:
+        gsim, = rlz.value
+        dmg_by_taxon = build_damage_array(data[:, rlz.ordinal], damage_dt)
+        fname = dstore.export_path('%s-%s.%s' % (ekey[0], gsim, ekey[1]))
+        array = compose_arrays(taxonomies, dmg_by_taxon, 'taxonomy')
+        writer.save(array, fname)
+    return writer.getsaved()
+
+
+@export.add(('dmg_total', 'csv'))
+def export_dmg_totalcsv(ekey, dstore):
+    damage_dt = build_damage_dt(dstore)
+    rlzs = dstore['rlzs_assoc'].realizations
+    data = dstore[ekey[0]]
+    writer = writers.CsvWriter(fmt='%.6E')
+    for rlz in rlzs:
+        gsim, = rlz.value
+        dmg_total = build_damage_array(data[rlz.ordinal], damage_dt)
+        fname = dstore.export_path('%s-%s.%s' % (ekey[0], gsim, ekey[1]))
+        writer.save(dmg_total, fname)
     return writer.getsaved()
 
 
