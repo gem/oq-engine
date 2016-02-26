@@ -102,6 +102,7 @@ a3        RM       8.574770E+01 2.790150E+01 1.441384E+02 0.000000E+00
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
+        # this is a test with statistics and without conditional_loss_poes
         out = self.run_calc(case_3.__file__, 'job_haz.ini,job_risk.ini',
                             exports='xml', individual_curves='false',
                             concurrent_tasks='4')
