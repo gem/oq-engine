@@ -390,14 +390,19 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
     # read calculation params and create the calculation profile
     params = readinput.get_params([cfg_file])
     params.update(extras)
-    # build and validate an OqParam object
-    oq = readinput.get_oqparam(params)
-    # create the current job
+
+    class oq:  # fake OqParam object
+        calculation_mode = params['calculation_mode']
+        description = params['description']
+        export_dir = params.get('export_dir', os.path.expanduser('~'))
+
+    # create a job and a calculator
     job = create_job(oq.calculation_mode, username, hazard_calculation_id)
-    calc = base.calculators(oq, PerformanceMonitor(''), calc_id=job.id)
-    calc.save_params()
-    job.description = oq.description
-    job.calc = calc
+    job.calc = base.calculators(oq, PerformanceMonitor(''), calc_id=job.id)
+    with logs.handle(job, log_level):
+        job.calc.oqparam = readinput.get_oqparam(params)
+        job.calc.save_params()
+        job.description = oq.description
     return job
 
 
