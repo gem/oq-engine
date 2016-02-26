@@ -268,10 +268,10 @@ class RiskModel(object):
         out_by_lr.rupids = tags
         loss_types = self.get_loss_types(imt)
         # extract the realizations from the first asset
-        for r, rlz in enumerate(sorted(hazards[0])):
-            hazs = [haz[rlz] for haz in hazards]  # hazard per each asset
-            for loss_type in loss_types:
+        for loss_type in loss_types:
+            for r, rlz in enumerate(sorted(hazards[0])):
                 l = self.compositemodel.lti[loss_type]
+                hazs = [haz[rlz] for haz in hazards]  # hazard per each asset
                 out = self(loss_type, assets, hazs, epsilons, tags)
                 if out:
                     out.hid = rlz.ordinal
