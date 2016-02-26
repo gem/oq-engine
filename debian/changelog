@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug such that in some circumstances the logging stream handler
+    was instantiated twice, resulting in duplicated logs
   * Changed the default job status to 'executing' (was 'pre_executing')
   * Fixed the ordering of the logs in the Web UI
   * Removed the dependency from PostGIS
