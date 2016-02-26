@@ -230,29 +230,6 @@ class List(list):
     # this is ugly, but we already did that, and there is no other easy way
 
 
-def out_by_rlz(riskmodel, assets, hazards, epsilons, tags, loss_type):
-    """
-    :param riskmodel: a RiskModel instance
-    :param assets: an array of assets of homogeneous taxonomy
-    :param hazards: an array of dictionaries per each asset
-    :param epsilons: an array of epsilons per each asset
-    :param tags: rupture tags
-
-    Yield lists out_by_rlz
-    """
-    out_by_rlz = List()
-    out_by_rlz.loss_type = loss_type
-    out_by_rlz.assets = assets
-    # extract the realizations from the first asset
-    for rlz in sorted(hazards[0]):
-        hazs = [haz[rlz] for haz in hazards]  # hazard per each asset
-        out = riskmodel(loss_type, assets, hazs, epsilons, tags)
-        out.hid = rlz.ordinal
-        out.weight = rlz.weight
-        out_by_rlz.append(out)
-    return out_by_rlz
-
-
 class RiskModel(object):
     """
     Base class. Can be used in the tests as a mock.
@@ -289,24 +266,21 @@ class RiskModel(object):
         :param epsilons: an array of epsilons per each asset
         :param tags: rupture tags
 
-        Yield lists out_by_rlz.
+        Yield lists out_by_rlz
         """
         for loss_type in self.get_loss_types(imt):
-            assets_ = assets
-            epsilons_ = epsilons
-            values = get_values(loss_type, assets, self.time_event)
-            ok = ~numpy.isnan(values)
-            if not ok.any():
-                # there are no assets with a value
-                continue
-            # there may be assets without a value
-            missing_value = not ok.all()
-            if missing_value:
-                assets_ = assets[ok]
-                hazards = hazards[ok]
-                epsilons_ = epsilons[ok]
-            yield out_by_rlz(
-                self, assets_, hazards, epsilons_, tags, loss_type)
+            out_by_rlz = List()
+            out_by_rlz.loss_type = loss_type
+            out_by_rlz.assets = assets
+            # extract the realizations from the first asset
+            for rlz in sorted(hazards[0]):
+                hazs = [haz[rlz] for haz in hazards]  # hazard per each asset
+                out = self(loss_type, assets, hazs, epsilons, tags)
+                if out:
+                    out.hid = rlz.ordinal
+                    out.weight = rlz.weight
+                    out_by_rlz.append(out)
+            yield out_by_rlz
 
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
@@ -692,6 +666,16 @@ class Scenario(RiskModel):
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
                  _tags=None):
         values = get_values(loss_type, assets, self.time_event)
+        ok = ~numpy.isnan(values)
+        if not ok.any():
+            # there are no assets with a value
+            return
+        # there may be assets without a value
+        missing_value = not ok.all()
+        if missing_value:
+            assets = assets[ok]
+            ground_motion_values = ground_motion_values[ok]
+            epsilons = epsilons[ok]
 
         # a matrix of N x E elements
         loss_ratio_matrix = self.risk_functions[loss_type].apply_to(
@@ -748,19 +732,6 @@ class Damage(RiskModel):
             [[scientific.scenario_damage(ffs, gmv) for gmv in gmvs]
              for gmvs in gmfs])
         return scientific.Output(assets, loss_type, damages=damages)
-
-    def gen_out_by_rlz(self, imt, assets, hazards, epsilons, tags):
-        """
-        :param imt: restrict the risk functions to this IMT
-        :param assets: an array of assets of homogeneous taxonomy
-        :param hazards: an array of dictionaries per each asset
-        :param epsilons: an array of epsilons per each asset
-        :param tags: rupture tags
-
-        Yield a single list of outputs
-        """
-        for loss_type in self.get_loss_types(imt):
-            yield out_by_rlz(self, assets, hazards, epsilons, tags, loss_type)
 
 
 @registry.add('classical_damage')
