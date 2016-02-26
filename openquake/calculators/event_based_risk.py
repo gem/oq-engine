@@ -550,7 +550,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if not all_stats:
             return
         loss_curves = numpy.zeros((self.N, self.Q1), self.loss_curve_dt)
-        loss_maps = numpy.zeros((self.N, self.Q1), self.loss_maps_dt)
+        if oq.conditional_loss_poes:
+            loss_maps = numpy.zeros((self.N, self.Q1), self.loss_maps_dt)
         for stats in all_stats:
             # there is one stat for each loss_type
             cb = self.riskmodel.curve_builders[ltypes.index(stats.loss_type)]
@@ -562,7 +563,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 oq.insured_losses)
             curves, maps = sb.get_curves_maps(stats)  # matrices (Q1, N)
             loss_curves[cb.loss_type] = curves.T
-            loss_maps[cb.loss_type] = maps.T
+            if oq.conditional_loss_poes:
+                loss_maps[cb.loss_type] = maps.T
 
         self.datastore['loss_curves-stats'] = loss_curves
         if oq.conditional_loss_poes:
