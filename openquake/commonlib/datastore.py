@@ -105,26 +105,6 @@ def get_last_calc_id(datadir):
     return calcs[-1]
 
 
-# a workaround against a deficiency of Python: os.path.exists and
-# os.access(path, os.F_OK) both gives False when the file exists
-# but it is not accessible; so we have to check that all the
-# parent directories are accessible manually; this is rather ugly
-def extract_paths(fname):
-    """
-    >>> extract_paths('/a/b/c')
-    ['/a', '/a/b', '/a/b/c']
-    """
-    paths = [fname]
-    path = fname
-    while True:
-        parent = os.path.dirname(path)
-        if parent == '/':
-            break
-        paths.append(parent)
-        path = parent
-    return paths[::-1]
-
-
 def read(calc_id, mode='r', datadir=DATADIR):
     """
     :param calc_id: calculation ID
@@ -137,11 +117,7 @@ def read(calc_id, mode='r', datadir=DATADIR):
     if calc_id < 0:  # retrieve an old datastore
         calc_id = get_calc_ids(datadir)[calc_id]
     fname = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
-    for path in extract_paths(fname):
-        if not os.access(path, os.F_OK):
-            raise IOError('No such file or directory: %r' % path)
-        elif not os.access(path, os.R_OK if mode == 'r' else os.W_OK):
-            raise OSError('No permission to access %r' % path)
+    open(fname).close()  # check if the file exists and is accessible
     return DataStore(calc_id, datadir, mode=mode)
 
 

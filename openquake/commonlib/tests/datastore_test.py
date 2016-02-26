@@ -103,5 +103,6 @@ class DataStoreTestCase(unittest.TestCase):
         fname = os.path.join(tmp, 'calc_42.hdf5')
         open(fname, 'w').write('')
         os.chmod(fname, 0)
-        with self.assertRaises(OSError):
+        with self.assertRaises(IOError) as ctx:
             read(42, datadir=tmp)
+        self.assertIn('Permission denied:', unicode(ctx.exception))
