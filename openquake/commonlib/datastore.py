@@ -105,6 +105,10 @@ def get_last_calc_id(datadir):
     return calcs[-1]
 
 
+# a workaround against a deficiency of Python: os.path.exists and
+# os.access(path, os.F_OK) both gives False when the file exists
+# but it is not accessible; so we have to check that all the
+# parent directories are accessible manually; this is rather ugly
 def extract_paths(fname):
     """
     >>> extract_paths('/a/b/c')
