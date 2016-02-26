@@ -117,10 +117,7 @@ def read(calc_id, mode='r', datadir=DATADIR):
     if calc_id < 0:  # retrieve an old datastore
         calc_id = get_calc_ids(datadir)[calc_id]
     fname = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
-    if not os.path.exists(fname):
-        raise OSError('File not found: %r' % fname)
-    if not os.access(fname, os.R_OK if mode == 'r' else os.W_OK):
-        raise OSError('No permission to access %r' % fname)
+    open(fname).close()  # check if the file exists and is accessible
     return DataStore(calc_id, datadir, mode=mode)
 
 

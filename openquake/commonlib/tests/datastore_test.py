@@ -17,9 +17,11 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import os
 import unittest
+import tempfile
 import numpy
-from openquake.commonlib.datastore import DataStore, view
+from openquake.commonlib.datastore import DataStore, view, read
 
 
 @view.add('key1_upper')
@@ -88,3 +90,19 @@ class DataStoreTestCase(unittest.TestCase):
         path = self.dstore.export_path('hello.txt')
         mo = re.match('\./hello_\d+', path)
         self.assertIsNotNone(mo)
+
+    def test_read(self):
+        # cas of a non-existing directory
+        with self.assertRaises(IOError):
+            read(42, datadir='/fake/directory')
+        # case of a non-existing file
+        with self.assertRaises(IOError):
+            read(42, datadir='/tmp')
+        # case of no read permission
+        tmp = tempfile.mkdtemp()
+        fname = os.path.join(tmp, 'calc_42.hdf5')
+        open(fname, 'w').write('')
+        os.chmod(fname, 0)
+        with self.assertRaises(IOError) as ctx:
+            read(42, datadir=tmp)
+        self.assertIn('Permission denied:', unicode(ctx.exception))
