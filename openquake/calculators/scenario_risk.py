@@ -55,12 +55,9 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     L = len(riskmodel.loss_types)
     R = len(rlzs_assoc.realizations)
     result = dict(agg=numpy.zeros((E, L, R, 2), F64), avg=[])
-    lt2idx = {lt: i for i, lt in enumerate(riskmodel.loss_types)}
-    for out_by_rlz in riskmodel.gen_outputs(
+    for out_by_lr in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor):
-        for out in out_by_rlz:
-            l = lt2idx[out.loss_type]
-            r = out.hid  # realization index
+        for (l, r), out in sorted(out_by_lr.items()):
             stats = numpy.zeros((len(out.assets), 4), F32)
             # this is ugly but using a composite array (i.e.
             # stats['mean'], stats['stddev'], ...) may return

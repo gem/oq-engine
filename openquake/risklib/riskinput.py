@@ -351,7 +351,7 @@ class CompositeRiskModel(collections.Mapping):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield the outputs generated as dictionaries
-        out_by_rlz.
+        out_by_lr.
 
         :param riskinputs: a list of riskinputs with consistent IMT
         :param rlzs_assoc: a RlzsAssoc instance
@@ -378,9 +378,8 @@ class CompositeRiskModel(collections.Mapping):
                                 epsilons.append(epsilon)
                         if not assets:
                             continue
-                        for out_by_rlz in self[taxonomy].gen_out_by_rlz(
-                                imt, assets, hazards, epsilons, tags):
-                            yield out_by_rlz
+                        yield self[taxonomy].out_by_lr(
+                            imt, assets, hazards, epsilons, tags)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]

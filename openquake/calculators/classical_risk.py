@@ -42,16 +42,13 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.PerformanceMonitor` instance
     """
-    lti = riskmodel.lti
     oq = monitor.oqparam
     ins = oq.insured_losses
 
     result = dict(
         loss_curves=[], loss_maps=[], stat_curves=[], stat_maps=[])
-    for out_by_rlz in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
-        l = lti[out_by_rlz.loss_type]
-        for out in out_by_rlz:
-            r = out.hid
+    for out_by_lr in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
+        for (l, r), out in sorted(out_by_lr.items()):
             for i, asset in enumerate(out.assets):
                 aid = asset.idx
                 avg = out.average_losses[i]
@@ -73,15 +70,15 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                     (l, r, aid, out.loss_maps[:, i]))
 
         # compute statistics
-        if len(out_by_rlz) > 1:
+        if len(rlzs_assoc.realizations) > 1:
             curve_resolution = out.loss_curves.shape[-1]
             statsbuilder = scientific.StatsBuilder(
                 oq.quantile_loss_curves,
                 oq.conditional_loss_poes, oq.poes_disagg,
                 curve_resolution, insured_losses=oq.insured_losses)
-            stats = statsbuilder.build(out_by_rlz)
+            stats = statsbuilder.build(out_by_lr.values())
             stat_curves, stat_maps = statsbuilder.get_curves_maps(stats)
-            for i, asset in enumerate(out_by_rlz.assets):
+            for i, asset in enumerate(out_by_lr.assets):
                 result['stat_curves'].append((l, asset.idx, stat_curves[:, i]))
                 if len(stat_maps):
                     result['stat_maps'].append((l, asset.idx, stat_maps[:, i]))

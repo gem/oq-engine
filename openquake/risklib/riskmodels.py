@@ -23,7 +23,7 @@ import collections
 import mock
 import numpy
 
-from openquake.baselib.general import CallableDict
+from openquake.baselib.general import CallableDict, AccumDict
 from openquake.commonlib import valid
 from openquake.risklib import utils, scientific
 
@@ -225,11 +225,6 @@ def get_values(loss_type, assets, time_event=None):
     return numpy.array([a.value(loss_type, time_event) for a in assets])
 
 
-class List(list):
-    """List subclass to which you can add attributes"""
-    # this is ugly, but we already did that, and there is no other easy way
-
-
 class RiskModel(object):
     """
     Base class. Can be used in the tests as a mock.
@@ -258,7 +253,7 @@ class RiskModel(object):
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
 
-    def gen_out_by_rlz(self, imt, assets, hazards, epsilons, tags):
+    def out_by_lr(self, imt, assets, hazards, epsilons, tags):
         """
         :param imt: restrict the risk functions to this IMT
         :param assets: an array of assets of homogeneous taxonomy
@@ -266,21 +261,23 @@ class RiskModel(object):
         :param epsilons: an array of epsilons per each asset
         :param tags: rupture tags
 
-        Yield lists out_by_rlz
+        Yield lists out_by_lr
         """
-        for loss_type in self.get_loss_types(imt):
-            out_by_rlz = List()
-            out_by_rlz.loss_type = loss_type
-            out_by_rlz.assets = assets
-            # extract the realizations from the first asset
-            for rlz in sorted(hazards[0]):
-                hazs = [haz[rlz] for haz in hazards]  # hazard per each asset
+        out_by_lr = AccumDict()
+        out_by_lr.assets = assets
+        out_by_lr.rupids = tags
+        loss_types = self.get_loss_types(imt)
+        # extract the realizations from the first asset
+        for r, rlz in enumerate(sorted(hazards[0])):
+            hazs = [haz[rlz] for haz in hazards]  # hazard per each asset
+            for loss_type in loss_types:
+                l = self.compositemodel.lti[loss_type]
                 out = self(loss_type, assets, hazs, epsilons, tags)
                 if out:
                     out.hid = rlz.ordinal
                     out.weight = rlz.weight
-                    out_by_rlz.append(out)
-            yield out_by_rlz
+                    out_by_lr[l, r] = out
+        return out_by_lr
 
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
