@@ -21,7 +21,6 @@ calculations."""
 
 import os
 import sys
-import time
 import getpass
 import operator
 import traceback
@@ -183,7 +182,9 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
 
 # keep this as a private function, since it is mocked by engine_test.py
 def _do_run_calc(job, exports, hazard_calculation_id):
-    job.calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id)
+    with job.calc.monitor:
+        job.calc.run(exports=exports,
+                     hazard_calculation_id=hazard_calculation_id)
 
 
 def del_calc(job_id):
@@ -294,10 +295,10 @@ def run_job(cfg_file, log_level, log_file, exports='',
             cfg_file, getpass.getuser(), log_level, exports,
             hazard_output_id=hazard_output_id,
             hazard_calculation_id=hazard_calculation_id)
-        t0 = time.time()
-        run_calc(job, log_level, log_file, exports,
-                 hazard_calculation_id=hazard_calculation_id)
-        duration = time.time() - t0
+        calc = run_calc(job, log_level, log_file, exports,
+                        hazard_calculation_id=hazard_calculation_id)
+        duration = calc.monitor.duration
+        calc.monitor.flush()
         if job.status == 'complete':
             print_results(job.id, duration, list_outputs)
         else:
@@ -398,7 +399,8 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
 
     # create a job and a calculator
     job = create_job(oq.calculation_mode, username, hazard_calculation_id)
-    job.calc = base.calculators(oq, PerformanceMonitor(''), calc_id=job.id)
+    monitor = PerformanceMonitor('total runtime', measuremem=True)
+    job.calc = base.calculators(oq, monitor, calc_id=job.id)
     with logs.handle(job, log_level):
         job.calc.oqparam = readinput.get_oqparam(params)
         job.calc.save_params()
