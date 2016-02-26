@@ -41,6 +41,7 @@ from openquake.engine.celery_node_monitor import CeleryNodeMonitor
 from openquake.server.db.schema.upgrades import upgrader
 
 from openquake.commonlib import readinput, valid, datastore, export
+from openquake.commonlib.oqvalidation import OqParam
 from openquake.calculators import base
 
 
@@ -391,12 +392,9 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
     # read calculation params and create the calculation profile
     params = readinput.get_params([cfg_file])
     params.update(extras)
-
-    class oq:  # fake OqParam object
-        calculation_mode = params['calculation_mode']
-        description = params['description']
-        export_dir = params.get('export_dir', os.path.expanduser('~'))
-
+    oq = OqParam(calculation_mode=params['calculation_mode'],
+                 description=params['description'],
+                 export_dir=params.get('export_dir', os.path.expanduser('~')))
     # create a job and a calculator
     job = create_job(oq.calculation_mode, username, hazard_calculation_id)
     monitor = PerformanceMonitor('total runtime', measuremem=True)
