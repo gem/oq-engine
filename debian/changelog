@@ -1,12 +1,4 @@
   [Michele Simionato]
-  * Using 32 bit floats for the GMFs, instead of 64, to save memory
-
-python-oq-hazardlib (0.18.0-0~precise01) precise; urgency=low
-
-  [Daniele Viganò, Matteo Nastasi]
-  * Updates Copyrights to 2016 and uniformize them
-
-  [Michele Simionato]
   * SiteCollection instances are now serializable in HDF5 format
 
   [Graeme Weatherill]
@@ -15,6 +7,7 @@ python-oq-hazardlib (0.18.0-0~precise01) precise; urgency=low
     weighted mean of the epistemic uncertainty adjustment factor
 
   [Nick Ackerley]
+  * Added Japan regionalization to GMPE of Atkinson & Boore (2003).
   * Implemented GMPE of Kanno et al. (2006) for shallow and deep earthquakes.
   * Implemented GMPE of Raghukanth & Iyengar (2007) for stable continental
     regions of peninsular India.
@@ -43,7 +36,6 @@ python-oq-hazardlib (0.18.0-0~precise01) precise; urgency=low
   [Yen-Shin Chen]
   * Modified the hypocentre_patch_index method to obtain the best solution
 
- -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 15 Feb 2016 11:27:19 +0100
 
 python-oq-hazardlib (0.17.0-0~precise01) precise; urgency=low
 
