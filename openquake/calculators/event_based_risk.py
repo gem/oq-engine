@@ -142,7 +142,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
 
             # aggregate losses per rupture
             for rup_id, all_losses, ins_losses in zip(
-                    out.tags, out.event_loss_per_asset,
+                    out.rupids, out.event_loss_per_asset,
                     out.insured_loss_per_asset):
                 for aid, groundloss, insuredloss in zip(
                         asset_ids, all_losses, ins_losses):
