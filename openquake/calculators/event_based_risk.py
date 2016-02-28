@@ -332,7 +332,19 @@ class EventBasedRiskCalculator(base.RiskCalculator):
              self.assets_by_site, self.monitor.new('task')),
             concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg,
             weight=operator.attrgetter('weight'),
-            key=operator.attrgetter('col_id'))
+            key=operator.attrgetter('col_id'),
+            posthook=self.save_data_transfer)
+
+    def save_data_transfer(self, taskmanager):
+        """
+        Save information about the data transfer in the risk calculation
+        as attributes of agg_loss_table
+        """
+        self.datastore.set_attrs(
+            'agg_loss_table',
+            sent=taskmanager.sent,
+            max_received=max(taskmanager.received),
+            tot_received=sum(taskmanager.received))
 
     def agg(self, acc, result):
         """
