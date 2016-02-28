@@ -227,6 +227,7 @@ class HeaderTranslator(object):
 htranslator = HeaderTranslator(
     asset_ref='asset_ref:|S20',
     ruptureId='tag:|S100',
+    rup_id='rup_id:uint32',
     taxonomy='taxonomy:|S100',
 )
 

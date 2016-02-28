@@ -166,13 +166,16 @@ def export_agg_losses_ebr(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     agg_losses = dstore[ekey[0]]
     rlzs = dstore['rlzs_assoc'].realizations
     writer = writers.CsvWriter(fmt='%10.6E')
     for rlz in rlzs:
-        for lt, data in agg_losses['rlz-%03d' % rlz.ordinal].items():
+        for loss_type in loss_types:
+            data = agg_losses['rlz-%03d/%s' % (rlz.ordinal, loss_type)]
+            data = sorted(data, key=operator.itemgetter(0))  # by rup_id
             dest = dstore.export_path(
-                'agg_losses-rlz%03d-%s.csv' % (rlz.ordinal, lt))
+                'agg_losses-rlz%03d-%s.csv' % (rlz.ordinal, loss_type))
             writer.save(data, dest)
     return writer.getsaved()
 
