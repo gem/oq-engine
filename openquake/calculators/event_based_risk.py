@@ -134,11 +134,13 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
 
     def zeroN2():
         return numpy.zeros((monitor.num_assets, 2))
-    result = dict(RC=square(L, R, list), IC=square(L, R, list))
+    result = dict(RC=square(L, R, list), IC=square(L, R, list),
+                  AGGLOSS=square(L, R, list))
+    if monitor.asset_loss_table:
+        result['ASSLOSS'] = square(L, R, list)
     if monitor.avg_losses:
         result['AVGLOSS'] = square(L, R, zeroN2)
-    ass_losses = collections.defaultdict(list)  # (l, r) -> [ela, ...]
-    agg_losses = collections.defaultdict(list)  # (l, r) -> [elt, ...]
+
     for out_by_lr in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor, assets_by_site):
         for (l, r), out in sorted(out_by_lr.items()):
@@ -164,22 +166,22 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
             if monitor.asset_loss_table:
                 items = sorted(asslosses.items())
                 if monitor.insured_losses:
-                    ass_losses[l, r].append(numpy.array(
+                    result['ASSLOSS'][l, r].append(numpy.array(
                         [(rid, aid, loss2[0], loss2[1])
                          for (rid, aid), loss2 in items], monitor.ela_dt))
                 else:
-                    ass_losses[l, r].append(numpy.array(
+                    result['ASSLOSS'][l, r].append(numpy.array(
                         [(rid, aid, loss2[0]) for (rid, aid), loss2 in items],
                         monitor.ela_dt))
 
             # agg losses
             items = sorted(agglosses.items())
             if monitor.insured_losses:
-                agg_losses[l, r].append(numpy.array(
+                result['AGGLOSS'][l, r].append(numpy.array(
                     [(rid, loss2[0], loss2[1]) for rid, loss2 in items],
                     monitor.elt_dt))
             else:
-                agg_losses[l, r].append(numpy.array(
+                result['AGGLOSS'][l, r].append(numpy.array(
                     [(rid, loss2[0]) for rid, loss2 in items], monitor.elt_dt))
 
             # dictionaries asset_idx -> array of counts
@@ -203,9 +205,6 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
                     # i.e. at each run one may get different results!!
                     arr[aid] = [avgloss, ins_avgloss]
                 result['AVGLOSS'][l, r] += arr
-
-    result['ASSLOSS'] = ass_losses
-    result['AGGLOSS'] = agg_losses
 
     for (l, r), lst in numpy.ndenumerate(result['RC']):
         result['RC'][l, r] = sum(lst, AccumDict())
@@ -344,11 +343,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         with self.monitor('saving event loss tables', autoflush=True):
             if self.oqparam.asset_loss_table:
-                for (l, r), arrays in result.pop('ASSLOSS').items():
+                for (l, r), arrays in numpy.ndenumerate(result.pop('ASSLOSS')):
                     for array in arrays:
                         self.ass_loss_table[l, r].extend(array)
                         self.ass_bytes += array.nbytes
-            for (l, r), arrays in result.pop('AGGLOSS').items():
+            for (l, r), arrays in numpy.ndenumerate(result.pop('AGGLOSS')):
                 for array in arrays:
                     self.agg_loss_table[l, r].extend(array)
                     self.agg_bytes += array.nbytes
@@ -363,7 +362,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param result:
             the dictionary returned by the .execute method
         """
-        self.datastore['ass_loss_table'].attrs['nbytes'] = self.ass_bytes
+        if self.oqparam.asset_loss_table:
+            self.datastore['ass_loss_table'].attrs['nbytes'] = self.ass_bytes
         self.datastore['agg_loss_table'].attrs['nbytes'] = self.agg_bytes
 
         # TODO: set nonzero_fraction
