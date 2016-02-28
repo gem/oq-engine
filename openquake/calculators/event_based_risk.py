@@ -175,14 +175,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
                         monitor.ela_dt))
 
             # agg losses
-            items = sorted(agglosses.items())
-            if monitor.insured_losses:
-                result['AGGLOSS'][l, r].append(numpy.array(
-                    [(rid, loss2[0], loss2[1]) for rid, loss2 in items],
-                    monitor.elt_dt))
-            else:
-                result['AGGLOSS'][l, r].append(numpy.array(
-                    [(rid, loss2[0]) for rid, loss2 in items], monitor.elt_dt))
+            result['AGGLOSS'][l, r].append(agglosses)
 
             # dictionaries asset_idx -> array of counts
             if riskmodel.curve_builders[l].user_provided:
@@ -206,6 +199,16 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
                     arr[aid] = [avgloss, ins_avgloss]
                 result['AVGLOSS'][l, r] += arr
 
+    for (l, r), lst in numpy.ndenumerate(result['AGGLOSS']):
+        items = sum(lst, AccumDict()).items()
+        if monitor.insured_losses:
+            array = numpy.array(
+                [(rid, loss2[0], loss2[1]) for rid, loss2 in items],
+                monitor.elt_dt)
+        else:
+            array = numpy.array(
+                [(rid, loss2[0]) for rid, loss2 in items], monitor.elt_dt)
+        result['AGGLOSS'][l, r] = array
     for (l, r), lst in numpy.ndenumerate(result['RC']):
         result['RC'][l, r] = sum(lst, AccumDict())
     for (l, r), lst in numpy.ndenumerate(result['IC']):
@@ -359,10 +362,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     for array in arrays:
                         self.ass_loss_table[l, r].extend(array)
                         self.ass_bytes += array.nbytes
-            for (l, r), arrays in numpy.ndenumerate(result.pop('AGGLOSS')):
-                for array in arrays:
-                    self.agg_loss_table[l, r].extend(array)
-                    self.agg_bytes += array.nbytes
+            for (l, r), array in numpy.ndenumerate(result.pop('AGGLOSS')):
+                self.agg_loss_table[l, r].extend(array)
+                self.agg_bytes += array.nbytes
             self.datastore.hdf5.flush()
 
         return acc + result
