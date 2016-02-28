@@ -19,6 +19,7 @@
 import os
 import time
 from datetime import datetime
+from multiprocessing.connection import Client
 
 import numpy
 import h5py
@@ -75,6 +76,10 @@ class PerformanceMonitor(object):
     The behaviour of the PerformanceMonitor can be customized by subclassing it
     and by overriding the method on_exit(), called at end and used to display
     or store the results of the analysis.
+
+    NB: if the .address and .authkey attributes are set, it is possible for
+    the monitor to send objects to that address, assuming there is
+    :class:`multiprocessing.connection.Listener` listening.
     """
     def __init__(self, operation, hdf5path=None,
                  autoflush=False, measuremem=False):
@@ -87,6 +92,7 @@ class PerformanceMonitor(object):
         self._start_time = self._stop_time = time.time()
         self.children = []
         self.counts = 0
+        self.address = None
 
     @property
     def dt(self):
@@ -124,6 +130,8 @@ class PerformanceMonitor(object):
         return numpy.array(data, perf_dt)
 
     def __enter__(self):
+        if self.address:
+            self.client = Client(self.address, authkey=self.authkey)
         self.exc = None  # exception
         self._start_time = time.time()
         if self.measuremem:
@@ -131,6 +139,8 @@ class PerformanceMonitor(object):
         return self
 
     def __exit__(self, etype, exc, tb):
+        if self.address:
+            self.client.close()
         self.exc = exc
         if self.measuremem:
             self.stop_mem = self.measure_mem()
@@ -144,6 +154,13 @@ class PerformanceMonitor(object):
         "To be overridden in subclasses"
         if self.autoflush:
             self.flush()
+
+    def send(self, obj):
+        """
+        Send back an object to the listener: this is only defined
+        if an .address has been defined.
+        """
+        return self.client.send(obj)
 
     def flush(self):
         """
