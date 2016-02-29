@@ -143,7 +143,8 @@ def view_contents(token, dstore):
     Returns the size of the contents of the datastore and its total size
     """
     oq = OqParam.from_(dstore.attrs)
-    rows = [(key, humansize(dstore.getsize(key))) for key in dstore]
+    data = sorted((dstore.getsize(key), key) for key in dstore)
+    rows = [(key, humansize(nbytes)) for nbytes, key in data]
     total = '\n%s : %s' % (
         dstore.hdf5path, humansize(os.path.getsize(dstore.hdf5path)))
     return rst_table(rows, header=(oq.description, '')) + total
