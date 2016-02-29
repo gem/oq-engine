@@ -34,7 +34,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def build_dtypes(insured_losses):
+def build_el_dtypes(insured_losses):
     """
     :returns: ela_dt and elt_dt
     """
@@ -47,16 +47,16 @@ def build_dtypes(insured_losses):
 
 
 @parallel.litetask
-def build_agg_curve(r_data, insured_losses, ses_ratio, curve_resolution, L,
+def build_agg_curve(lr_data, insured_losses, ses_ratio, curve_resolution, L,
                     monitor):
     """
     Build the aggregate loss curve in parallel for each loss type
     and realization pair.
 
-    :param r_data:
-        a list of triples `(l, r, data)` where `l` is a loss type index,
-        `r` is a realization index and `data`
-        is an array of kind `(rupture_id, loss, loss_ins)`
+    :param lr_data:
+        a list of triples `(l, r, data)` where `l` is the loss type index,
+        `r` is the realization index and `data` is an array of kind
+        `(rupture_id, loss)` or `(rupture_id, loss, loss_ins)`
     :param insured_losses:
         job.ini configuration parameter
     :param ses_ratio:
@@ -71,7 +71,7 @@ def build_agg_curve(r_data, insured_losses, ses_ratio, curve_resolution, L,
         a dictionary (r, l, i) -> (losses, poes, avg)
     """
     result = {}
-    for l, r, data in r_data:
+    for l, r, data in lr_data:
         if len(data) == 0:  # realization with no losses
             continue
         losses, poes = scientific.event_based(
@@ -309,7 +309,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.ass_loss_table = square(L, R, lambda: None)
         self.agg_loss_table = square(L, R, lambda: None)
 
-        self.ela_dt, self.elt_dt = mon.ela_dt, mon.elt_dt = build_dtypes(
+        self.ela_dt, self.elt_dt = mon.ela_dt, mon.elt_dt = build_el_dtypes(
             self.I)
         for (l, r) in itertools.product(range(L), range(R)):
             lt = loss_types[l]
@@ -500,11 +500,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         loss_curve_dt, _ = self.riskmodel.build_all_loss_dtypes(
             C, oq.conditional_loss_poes, oq.insured_losses)
         lts = self.riskmodel.loss_types
-        r_data = [(l, r, dset.dset.value) for (l, r), dset in
-                  numpy.ndenumerate(self.agg_loss_table)]
+        lr_data = [(l, r, dset.dset.value) for (l, r), dset in
+                   numpy.ndenumerate(self.agg_loss_table)]
         ses_ratio = self.oqparam.ses_ratio
         result = parallel.apply_reduce(
-            build_agg_curve, (r_data, self.I, ses_ratio, C, self.L,
+            build_agg_curve, (lr_data, self.I, ses_ratio, C, self.L,
                               self.monitor('')),
             concurrent_tasks=self.oqparam.concurrent_tasks)
         agg_curve = numpy.zeros(self.R, loss_curve_dt)
