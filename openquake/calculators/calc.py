@@ -255,11 +255,11 @@ def make_uhs(maps, imtls, poes):
     """
     imts, _ = get_imts_periods(imtls)
     N = len(maps)
-    I = len(imts)
-    uhs_dt = numpy.dtype([('poe~%s' % poe, (F32, I)) for poe in poes])
+    fields = ['poe~%s~%s' % (poe, imt)
+              for poe, imt in itertools.product(poes, imts)]
+    uhs_dt = numpy.dtype([(field, F32) for field in fields])
     uhs = numpy.zeros(N, uhs_dt)
-    for i in range(N):
-        for poe, poename in zip(poes, uhs_dt.names):
-            uhs[poename][i] = tuple(maps['%s~%s' % (imt, poe)][i]
-                                    for imt in imts)
+    for field in fields:
+        poe, imt = field.split('~')[1:]
+        uhs[field] = maps['%s~%s' % (imt, poe)]
     return uhs
