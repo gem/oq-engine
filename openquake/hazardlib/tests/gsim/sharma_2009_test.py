@@ -101,4 +101,3 @@ class SharmaEtAl2009TestCase(BaseGSIMTestCase):
             assert len(warning_stream) == 1
             assert issubclass(warning_stream[-1].category, UserWarning)
             assert 'not supported' in str(warning_stream[-1].message).lower()
-            assert np.all(np.isnan(mean))
