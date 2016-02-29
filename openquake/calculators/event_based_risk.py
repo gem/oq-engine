@@ -36,6 +36,7 @@ F32 = numpy.float32
 
 def build_el_dtypes(insured_losses):
     """
+    :param bool insured_losses: job.ini configuration parameter
     :returns: ela_dt and elt_dt
     """
     ela_list = [('rup_id', U32), ('ass_id', U32), ('loss', F32)]
@@ -377,14 +378,17 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             the dictionary returned by the .execute method
         """
         if self.oqparam.asset_loss_table:
-            self.datastore['ass_loss_table'].attrs['nbytes'] = self.ass_bytes
-        self.datastore['agg_loss_table'].attrs['nbytes'] = self.agg_bytes
+            asslt = self.datastore['ass_loss_table']
+            asslt.attrs['nbytes'] = self.ass_bytes
+            for rlz, dset in asslt.items():
+                for ds in dset.values():
+                    ds.attrs['nonzero_fraction'] = len(ds) / (self.N * self.E)
 
-        # TODO: set nonzero_fraction
-        # elt = self.datastore['ass_loss_table/rlz-%03d' % i]
-        #    alt = self.datastore['agg_loss_table/rlz-%03d' % i]
-        #    elt.attrs['nonzero_fraction'] = len(elt) / (self.N * self.E)
-        #    alt.attrs['nonzero_fraction'] = len(alt) / self.N
+        agglt = self.datastore['agg_loss_table']
+        agglt.attrs['nbytes'] = self.agg_bytes
+        for rlz, dset in agglt.items():
+            for ds in dset.values():
+                ds.attrs['nonzero_fraction'] = len(ds) / self.E
 
         insured_losses = self.oqparam.insured_losses
         ses_ratio = self.oqparam.ses_ratio
