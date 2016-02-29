@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import logging
 import operator
 import collections
 from functools import partial
@@ -31,7 +30,7 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, datastore, source, sourceconverter
+from openquake.commonlib import parallel, datastore, source
 from openquake.baselib.general import AccumDict
 
 from openquake.calculators import base, calc
