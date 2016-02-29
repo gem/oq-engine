@@ -415,24 +415,3 @@ def nonzero(val):
     :returns: the sum of the composite array `val`
     """
     return sum(val[k].sum() for k in val.dtype.names)
-
-
-def split_sources(sources, maxweight, splitmap):
-    """
-    Split the sources with weight greater than maxweight. `splitmap`
-    is a cache to avoid splitting twice the same source.
-    """
-    ss = []
-    for src in sources:
-        if src.weight > maxweight:
-            key = (src.trt_model_id, src.source_id)
-            try:
-                srcs = splitmap[key]
-            except KeyError:
-                logging.info('Splitting %s of weight %d > %d',
-                             src, src.weight, maxweight)
-                srcs = splitmap[key] = list(sourceconverter.split_source(src))
-            ss.extend(srcs)
-        else:
-            ss.append(src)
-    return ss
