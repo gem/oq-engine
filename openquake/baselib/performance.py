@@ -18,8 +18,10 @@
 
 import os
 import time
+import uuid
 from datetime import datetime
-from multiprocessing.connection import Client
+import multiprocessing
+from multiprocessing.connection import Listener, Client
 
 import numpy
 import h5py
@@ -52,6 +54,54 @@ else:  # Ubuntu 12.04
 
 perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
                        ('memory_mb', float), ('counts', int)])
+
+
+class Process(multiprocessing.Process):
+    def __init__(self, target, *args):
+        multiprocessing.Process.__init__(self, target=target, args=args)
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, *args):
+        self.join()
+
+
+class ListenerMonitor(Listener):
+    """
+    A listener with an associated monitor that can send back messages.
+    The sent messages can be read by iterating on the listener.
+
+    >>> def greetings(monitor):
+    ...     with monitor:
+    ...         monitor.send('hello')
+    ...         monitor.send('world')
+    >>> monitor = PerformanceMonitor('test')
+    >>> listener = ListenerMonitor(monitor, '')
+    >>> with Process(greetings, listener.monitor):
+    ...     list(listener)
+    ['hello', 'world']
+    """
+    def __init__(self, monitor, hostname):
+        authkey = bytes(uuid.uuid1())
+        Listener.__init__(self, (hostname, 0), authkey=authkey)
+        new = monitor.new(monitor.operation, measuremem=True)
+        new.address = self.address
+        new.authkey = authkey
+        self.monitor = new
+
+    def __iter__(self):
+        conn = self.accept()
+        while True:
+            try:
+                got = conn.recv()
+            except EOFError:  # the client closed the connection
+                break
+            else:
+                yield got
+        conn.close()
+        self.close()
 
 
 # this is not thread-safe
