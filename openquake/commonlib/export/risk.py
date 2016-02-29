@@ -172,8 +172,8 @@ def export_agg_losses_ebr(ekey, dstore):
     writer = writers.CsvWriter(fmt='%10.6E')
     for rlz in rlzs:
         for loss_type in loss_types:
-            data = agg_losses['rlz-%03d/%s' % (rlz.ordinal, loss_type)]
-            data = sorted(data, key=operator.itemgetter(0))  # by rup_id
+            data = agg_losses['rlz-%03d/%s' % (rlz.ordinal, loss_type)].value
+            data.sort(order='rup_id')
             dest = dstore.export_path(
                 'agg_losses-rlz%03d-%s.csv' % (rlz.ordinal, loss_type))
             writer.save(data, dest)
