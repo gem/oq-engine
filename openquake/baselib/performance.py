@@ -84,7 +84,7 @@ class ListenerMonitor(Listener):
     ['hello', 'world']
     """
     def __init__(self, monitor, hostname):
-        authkey = bytes(uuid.uuid1())
+        authkey = uuid.uuid1().bytes
         Listener.__init__(self, (hostname, 0), authkey=authkey)
         new = monitor.new(monitor.operation, measuremem=True)
         new.address = self.address
