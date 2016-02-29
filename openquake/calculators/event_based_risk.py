@@ -36,8 +36,11 @@ F32 = numpy.float32
 
 def build_el_dtypes(insured_losses):
     """
-    :param bool insured_losses: job.ini configuration parameter
-    :returns: ela_dt and elt_dt
+    :param bool insured_losses:
+        job.ini configuration parameter
+    :returns:
+        ela_dt and elt_dt i.e. the data types for event loss assets and
+        event loss table respectively
     """
     ela_list = [('rup_id', U32), ('ass_id', U32), ('loss', F32)]
     elt_list = [('rup_id', U32), ('loss', F32)]
@@ -58,7 +61,7 @@ def build_agg_curve(lr_data, insured_losses, ses_ratio, curve_resolution, L,
         a list of triples `(l, r, data)` where `l` is the loss type index,
         `r` is the realization index and `data` is an array of kind
         `(rupture_id, loss)` or `(rupture_id, loss, loss_ins)`
-    :param insured_losses:
+    :param bool insured_losses:
         job.ini configuration parameter
     :param ses_ratio:
         a ratio obtained from ses_per_logic_tree_path
