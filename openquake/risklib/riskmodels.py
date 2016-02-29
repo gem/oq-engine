@@ -23,7 +23,7 @@ import collections
 import mock
 import numpy
 
-from openquake.baselib.general import CallableDict
+from openquake.baselib.general import CallableDict, AccumDict
 from openquake.commonlib import valid
 from openquake.risklib import utils, scientific
 
@@ -225,11 +225,6 @@ def get_values(loss_type, assets, time_event=None):
     return numpy.array([a.value(loss_type, time_event) for a in assets])
 
 
-class List(list):
-    """List subclass to which you can add attributes"""
-    # this is ugly, but we already did that, and there is no other easy way
-
-
 class RiskModel(object):
     """
     Base class. Can be used in the tests as a mock.
@@ -258,29 +253,31 @@ class RiskModel(object):
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
 
-    def gen_out_by_rlz(self, imt, assets, hazards, epsilons, tags):
+    def out_by_lr(self, imt, assets, hazards, epsilons, rupids):
         """
         :param imt: restrict the risk functions to this IMT
         :param assets: an array of assets of homogeneous taxonomy
         :param hazards: an array of dictionaries per each asset
         :param epsilons: an array of epsilons per each asset
-        :param tags: rupture tags
-
-        Yield lists out_by_rlz
+        :param rupids: rupture indices
+        :returns: a dictionary (l, r) -> output
         """
-        for loss_type in self.get_loss_types(imt):
-            out_by_rlz = List()
-            out_by_rlz.loss_type = loss_type
-            out_by_rlz.assets = assets
-            # extract the realizations from the first asset
-            for rlz in sorted(hazards[0]):
-                hazs = [haz[rlz] for haz in hazards]  # hazard per each asset
-                out = self(loss_type, assets, hazs, epsilons, tags)
+        out_by_lr = AccumDict()
+        out_by_lr.assets = assets
+        out_by_lr.rupids = rupids
+        loss_types = self.get_loss_types(imt)
+        # extract the realizations from the first asset
+        for rlz in sorted(hazards[0]):
+            r = rlz.ordinal
+            hazs = [haz[rlz] for haz in hazards]  # hazard per each asset
+            for loss_type in loss_types:
+                out = self(loss_type, assets, hazs, epsilons, rupids)
                 if out:
-                    out.hid = rlz.ordinal
+                    l = self.compositemodel.lti[loss_type]
+                    out.hid = r
                     out.weight = rlz.weight
-                    out_by_rlz.append(out)
-            yield out_by_rlz
+                    out_by_lr[l, r] = out
+        return out_by_lr
 
     def __repr__(self):
         return '<%s%s>' % (self.__class__.__name__, list(self.risk_functions))
@@ -399,7 +396,7 @@ class Classical(RiskModel):
             for lt, vf in vulnerability_functions.items()}
 
     def __call__(self, loss_type, assets, hazard_curves, _epsilons=None,
-                 _tags=None):
+                 _rupids=None):
         """
         :param str loss_type:
             the loss type considered
@@ -596,7 +593,7 @@ class ProbabilisticEventBased(RiskModel):
             average_insured_losses=average_insured_losses,
             counts_matrix=cb.build_counts(loss_matrix),
             insured_counts_matrix=icounts,
-            tags=event_ids)
+            rupids=event_ids)
 
 
 @registry.add('classical_bcr')
@@ -619,7 +616,7 @@ class ClassicalBCR(RiskModel):
         self.hazard_imtls = hazard_imtls
         self.lrem_steps_per_interval = lrem_steps_per_interval
 
-    def __call__(self, loss_type, assets, hazard, _eps=None, _tags=None):
+    def __call__(self, loss_type, assets, hazard, _eps=None, _rupids=None):
         self.assets = assets
         vf = self.risk_functions[loss_type]
         imls = self.hazard_imtls[vf.imt]
@@ -664,7 +661,7 @@ class Scenario(RiskModel):
         self.time_event = time_event
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
-                 _tags=None):
+                 _rupids=None):
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():
@@ -717,7 +714,7 @@ class Damage(RiskModel):
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
 
-    def __call__(self, loss_type, assets, gmfs, _epsilons=None, _tags=None):
+    def __call__(self, loss_type, assets, gmfs, _epsilons=None, _rupids=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
@@ -751,7 +748,7 @@ class ClassicalDamage(Damage):
         self.risk_investigation_time = risk_investigation_time
 
     def __call__(self, loss_type, assets, hazard_curves, _epsilons=None,
-                 _tags=None):
+                 _rupids=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy

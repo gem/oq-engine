@@ -351,7 +351,7 @@ class CompositeRiskModel(collections.Mapping):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield the outputs generated as dictionaries
-        out_by_rlz.
+        out_by_lr.
 
         :param riskinputs: a list of riskinputs with consistent IMT
         :param rlzs_assoc: a RlzsAssoc instance
@@ -360,7 +360,7 @@ class CompositeRiskModel(collections.Mapping):
         mon_hazard = monitor('getting hazard')
         mon_risk = monitor('computing individual risk')
         for riskinput in riskinputs:
-            tags = riskinput.tags
+            rupids = riskinput.rupids
             assets_by_site = getattr(
                 riskinput, 'assets_by_site', assets_by_site)
             with mon_hazard:
@@ -378,9 +378,8 @@ class CompositeRiskModel(collections.Mapping):
                                 epsilons.append(epsilon)
                         if not assets:
                             continue
-                        for out_by_rlz in self[taxonomy].gen_out_by_rlz(
-                                imt, assets, hazards, epsilons, tags):
-                            yield out_by_rlz
+                        yield self[taxonomy].out_by_lr(
+                            imt, assets, hazards, epsilons, rupids)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -415,7 +414,7 @@ class RiskInput(object):
                 taxonomies_set.add(asset.taxonomy)
             self.weight += len(assets)
         self.taxonomies = sorted(taxonomies_set)
-        self.tags = None  # for API compatibility with RiskInputFromRuptures
+        self.rupids = None  # for API compatibility with RiskInputFromRuptures
         self.eps_dict = eps_dict
 
     @property
@@ -498,7 +497,7 @@ class RiskInputFromRuptures(object):
         self.weight = len(ses_ruptures)
         self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
         self.eps = epsilons  # matrix N x E, events in this block
-        self.tags = numpy.array([sr.ordinal for sr in ses_ruptures])
+        self.rupids = numpy.array([sr.ordinal for sr in ses_ruptures])
 
     def compute_expand_gmfs(self):
         """

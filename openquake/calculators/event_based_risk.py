@@ -135,16 +135,14 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     if monitor.avg_losses:
         result['AVGLOSS'] = square(L, R, zeroN2)
     ass_losses = []
-    for out_by_rlz in riskmodel.gen_outputs(
+    for out_by_lr in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor, assets_by_site):
-        for out in out_by_rlz:
-            l = lti[out.loss_type]
-            r = out.hid
+        for (l, r), out in sorted(out_by_lr.items()):
             asset_ids = [a.idx for a in out.assets]
 
             # aggregate losses per rupture
             for rup_id, all_losses, ins_losses in zip(
-                    out.tags, out.event_loss_per_asset,
+                    out.rupids, out.event_loss_per_asset,
                     out.insured_loss_per_asset):
                 for aid, groundloss, insuredloss in zip(
                         asset_ids, all_losses, ins_losses):

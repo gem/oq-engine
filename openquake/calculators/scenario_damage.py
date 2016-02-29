@@ -104,14 +104,11 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     E = monitor.oqparam.number_of_ground_motion_fields
     T = len(monitor.taxonomies)
     taxo2idx = {taxo: i for i, taxo in enumerate(monitor.taxonomies)}
-    lt2idx = {lt: i for i, lt in enumerate(riskmodel.loss_types)}
     result = dict(d_asset=[], d_taxon=numpy.zeros((T, L, R, E, D), F64),
                   c_asset=[], c_taxon=numpy.zeros((T, L, R, E), F64))
-    for out_by_rlz in riskmodel.gen_outputs(
+    for out_by_lr in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor):
-        for out in out_by_rlz:
-            l = lt2idx[out.loss_type]
-            r = out.hid
+        for (l, r), out in sorted(out_by_lr.items()):
             c_model = c_models.get(out.loss_type)
             for asset, fraction in zip(out.assets, out.damages):
                 t = taxo2idx[asset.taxonomy]
