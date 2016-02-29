@@ -207,7 +207,7 @@ class HeaderTranslator(object):
 
     >>> htranslator = HeaderTranslator(
     ...     asset_ref='asset_ref:|S20',
-    ...     ruptureId='tag:|S100',
+    ...     rup_id='rup_id:uint32',
     ...     taxonomy='taxonomy:|S100')
     >>> htranslator.read('asset_ref value:5'.split())
     ['asset_ref:|S20', 'value:5']
@@ -226,7 +226,6 @@ class HeaderTranslator(object):
 
 htranslator = HeaderTranslator(
     asset_ref='asset_ref:|S20',
-    ruptureId='tag:|S100',
     rup_id='rup_id:uint32',
     taxonomy='taxonomy:|S100',
 )
