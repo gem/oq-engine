@@ -27,7 +27,6 @@ from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.export import export_csv
 from openquake.commonlib.util import get_assets, compose_arrays
 
 from openquake.commonlib.risk_writers import (
@@ -167,28 +166,17 @@ def export_agg_losses_ebr(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    oq = OqParam.from_(dstore.attrs)
+    loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     agg_losses = dstore[ekey[0]]
     rlzs = dstore['rlzs_assoc'].realizations
-    loss_types = list(dstore.get_attr('composite_risk_model', 'loss_types'))
-    tags = dstore['tags'].value
-    ext_loss_types = loss_types[:]
-    if oq.insured_losses:
-        ext_loss_types.extend([lt + '_ins' for lt in loss_types])
-    ext_dt = numpy.dtype(
-        [('tag', (bytes, 100))] +
-        [(elt, numpy.float32) for elt in ext_loss_types])
     writer = writers.CsvWriter(fmt='%10.6E')
     for rlz in rlzs:
-        rows = agg_losses['rlz-%03d' % rlz.ordinal]
-        data = []
-        for row in rows:
-            loss = row['loss']  # float or array of size L or L x 2
-            loss_t = (loss,) if isinstance(loss, F32) else tuple(loss)
-            data.append((tags[row['rup_id']],) + loss_t)
-        data.sort()
-        dest = dstore.export_path('agg_losses-rlz%03d.csv' % rlz.ordinal)
-        writer.save(numpy.array(data, ext_dt), dest)
+        for loss_type in loss_types:
+            data = agg_losses['rlz-%03d/%s' % (rlz.ordinal, loss_type)].value
+            data.sort(order='rup_id')
+            dest = dstore.export_path(
+                'agg_losses-rlz%03d-%s.csv' % (rlz.ordinal, loss_type))
+            writer.save(data, dest)
     return writer.getsaved()
 
 
