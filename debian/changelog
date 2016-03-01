@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Fixed the uniform hazard spectra CSV export and used a more consistent
+    format
+  * Fixed a 32 bit/64 bit casting error for risk computations with a site model
+    starting from a non-empty datastore
   * Discriminate the case of a missing datastore from the case of having no
     permission to access it
   * Saved half the space in absence of insured_losses in the event based risk

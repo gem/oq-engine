@@ -254,12 +254,11 @@ def make_uhs(maps, imtls, poes):
         an composite array containing N uniform hazard maps
     """
     imts, _ = get_imts_periods(imtls)
+    imts_dt = numpy.dtype([(imt, F32) for imt in imts])
+    uhs_dt = numpy.dtype([('poe~%s' % poe, imts_dt) for poe in poes])
     N = len(maps)
-    I = len(imts)
-    uhs_dt = numpy.dtype([('poe~%s' % poe, (F32, I)) for poe in poes])
     uhs = numpy.zeros(N, uhs_dt)
-    for i in range(N):
-        for poe, poename in zip(poes, uhs_dt.names):
-            uhs[poename][i] = tuple(maps['%s~%s' % (imt, poe)][i]
-                                    for imt in imts)
+    for poe in poes:
+        for imt in imts:
+            uhs['poe~%s' % poe][imt] = maps['%s~%s' % (imt, poe)]
     return uhs
