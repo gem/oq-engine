@@ -36,6 +36,7 @@ if PY3:
     import configparser
     exec_ = eval('exec')
 
+    zip = zip
     range = range
     unicode = str
 
@@ -62,11 +63,12 @@ if PY3:
 else:  # Python 2
     import cPickle as pickle
     import ConfigParser as configparser
+    from itertools import izip as zip
 
     range = xrange
     round = round
     unicode = unicode
-    
+
     # taken from six
     def exec_(_code_, _globs_=None, _locs_=None):
         """Execute code in a namespace."""
