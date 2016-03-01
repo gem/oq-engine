@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import division
 import io
 import ast
 import os.path
@@ -24,6 +24,7 @@ import operator
 import decimal
 import functools
 import itertools
+import collections
 import numpy
 
 from openquake.baselib.general import humansize, groupby
@@ -421,6 +422,25 @@ def view_assetcol(token, dstore):
         else:
             columns[i] = assetcol[field]
     return write_csv(io.StringIO(), [header] + list(zip(*columns)))
+
+
+@view.add('biggest_block')
+def view_biggest_block(token, dstore):
+    """
+    Returns the size of the biggest block in an event based risk calculation
+    """
+    L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
+    R = len(dstore['rlzs_assoc'].realizations)
+    num_ruptures = len(dstore['tags'])
+    taxonomies = dstore['assetcol']['taxonomy']
+    [(taxo, counts)] = collections.Counter(taxonomies).most_common(1)
+    taxonomy = dstore['taxonomies'][taxo]
+    nbytes = counts * num_ruptures * L * R * 8
+    msg = ('The largest block is for taxonomy %s, contains %d assets and '
+           '%d ruptures for %d loss type(s) and %d realization(s); '
+           'size = %s / num_tasks') % (taxonomy, counts, num_ruptures, L, R,
+                                       humansize(nbytes))
+    return msg
 
 
 @view.add('fullreport')

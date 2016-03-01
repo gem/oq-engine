@@ -25,6 +25,7 @@ from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.commonlib import sap, datastore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.writers import write_csv
+from openquake.commonlib.reportwriter import set_ancestors
 from openquake.commonlib.util import rmsep
 from openquake.risklib import scientific
 
@@ -80,6 +81,7 @@ def show(what, calc_id=-1):
             print('#%d %s: %s' % row)
         return
     ds = datastore.read(calc_id)
+    set_ancestors(ds)
 
     # this part is experimental
     if what == 'rlzs' and 'hcurves' in ds:
