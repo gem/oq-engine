@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the uniform hazard spectra CSV export and used a more consistent
+    format
   * Discriminate the case of a missing datastore from the case of having no
     permission to access it
   * Saved half the space in absence of insured_losses in the event based risk
