@@ -367,7 +367,7 @@ class CompositeRiskModel(collections.Mapping):
                 # get assets, hazards, epsilons
                 a, h, e = riskinput.get_all(rlzs_assoc, assets_by_site)
             with mon_risk:
-                # compute the outputs by using the worklow
+                # compute the outputs with the appropriate riskmodels
                 for imt, taxonomies in riskinput.imt_taxonomies:
                     for taxonomy in taxonomies:
                         assets, hazards, epsilons = [], [], []
@@ -378,8 +378,16 @@ class CompositeRiskModel(collections.Mapping):
                                 epsilons.append(epsilon)
                         if not assets:
                             continue
-                        yield self[taxonomy].out_by_lr(
-                            imt, assets, hazards, epsilons, rupids)
+                        riskmodel = self[taxonomy]
+                        if rupids is None:
+                            yield riskmodel.out_by_lr(
+                                imt, assets, hazards, epsilons, rupids)
+                        else:  # event based risk
+                            # produce an output per asset, to save memory
+                            for ass, haz, eps in zip(
+                                    assets, hazards, epsilons):
+                                yield riskmodel.out_by_lr(
+                                    imt, [ass], [haz], [eps], rupids)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
