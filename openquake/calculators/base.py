@@ -452,6 +452,7 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.build_asset_collection(
                 self.assets_by_site, oq.time_event)
+            self.datastore.set_attrs('assetcol', nbytes=self.assetcol.nbytes)
             if self.exposure.time_events:
                 self.datastore.set_attrs(
                     'assetcol', time_events=sorted(self.exposure.time_events))
