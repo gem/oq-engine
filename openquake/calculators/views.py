@@ -301,7 +301,7 @@ def avglosses_data_transfer(token, dstore):
     N = len(dstore['assetcol'])
     R = len(dstore['rlzs_assoc'].realizations)
     L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
-    I = ast.literal_eval(dstore.attrs['insured_losses']) + 1
+    I = ast.literal_eval(dstore.attrs.get('insured_losses', 'False')) + 1
     ct = oq.concurrent_tasks
     size_bytes = N * R * L * I * 8 * ct  # 8 byte floats
     return (
