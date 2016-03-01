@@ -29,7 +29,7 @@ import numpy as np
 from scipy.constants import g
 
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import SA
+from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
 
@@ -47,6 +47,10 @@ class SharmaEtAl2009(GMPE):
     personal communication). This implementation is verified against test
     vector obtained from lead author.
 
+    Support for PGA has been added by assuming it to be equal to the spectral
+    acceleration at 0.04 s. This is assumed by the authors in the captions for
+    Figures 11-13 anyway.
+
     Reference:
 
     Sharma, M. L., Douglas, J., Bungum, H., and Kotadia, J. (2009).
@@ -63,7 +67,7 @@ class SharmaEtAl2009(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, SA])
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -190,14 +194,13 @@ class SharmaEtAl2009(GMPE):
         is_reverse = np.array(
             self.RAKE_THRESH < rup.rake < (180. - self.RAKE_THRESH))
 
-        is_strike_slip = ~is_reverse
-        is_strike_slip = is_strike_slip.astype(float)
-
         if is_normal.any():
-            msg = ('Normal faulting is not supported by %s'
-                   % type(self).__name__)
+            msg = ('Normal faulting not supported by %s; '
+                   'treating as strike-slip' % type(self).__name__)
             warnings.warn(msg, UserWarning)
-            is_strike_slip[is_normal] = np.nan
+
+        is_strike_slip = ~is_reverse | is_normal
+        is_strike_slip = is_strike_slip.astype(float)
 
         return is_strike_slip
 
@@ -207,6 +210,7 @@ class SharmaEtAl2009(GMPE):
     #: is 5% (Sharma et al., 2009, p. 1200).
     COEFFS = CoeffsTable(sa_damping=5., table="""\
      IMT      b1      b2      b3      b5      b6   sigma
+     pga  1.0170  0.1046 -1.0070 -0.0735 -0.3068  0.3227
     0.04  1.0170  0.1046 -1.0070 -0.0735 -0.3068  0.3227
     0.05  1.0280  0.1245 -1.0550 -0.0775 -0.3246  0.3350
     0.10  1.3820  0.1041 -1.0620 -0.1358 -0.3326  0.3427
