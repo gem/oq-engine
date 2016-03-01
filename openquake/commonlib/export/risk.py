@@ -103,7 +103,7 @@ def compactify(array):
 
 
 # this is used by classical_risk, event_based_risk and scenario_risk
-@export.add(('avg_losses-rlzs', 'csv'), ('loss_map-rlzs', 'csv'))
+@export.add(('avg_losses-rlzs', 'csv'), ('losses_by_asset', 'csv'))
 def export_avg_losses(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -115,7 +115,7 @@ def export_avg_losses(ekey, dstore):
     writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
         losses = avg_losses[:, rlz.ordinal]
-        dest = dstore.export_path('avg_losses-rlz%03d.csv' % rlz.ordinal)
+        dest = dstore.export_path('losses_by_asset-rlz%03d.csv' % rlz.ordinal)
         data = compose_arrays(assets, losses)
         writer.save(data, dest)
     return writer.getsaved()
@@ -577,7 +577,7 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
 
 
 # this is used by scenario_risk
-@export.add(('loss_map-rlzs', 'xml'), ('loss_map-rlzs', 'geojson'))
+@export.add(('losses_by_asset', 'xml'), ('losses_by_asset', 'geojson'))
 def export_loss_map_xml_geojson(ekey, dstore):
     oq = OqParam.from_(dstore.attrs)
     unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
