@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import logging
 import operator
 import collections
 from functools import partial
@@ -31,7 +30,7 @@ from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
     hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
 from openquake.risklib import scientific
-from openquake.commonlib import parallel, datastore, source, sourceconverter
+from openquake.commonlib import parallel, datastore, source
 from openquake.baselib.general import AccumDict
 
 from openquake.calculators import base, calc
@@ -415,24 +414,3 @@ def nonzero(val):
     :returns: the sum of the composite array `val`
     """
     return sum(val[k].sum() for k in val.dtype.names)
-
-
-def split_sources(sources, maxweight, splitmap):
-    """
-    Split the sources with weight greater than maxweight. `splitmap`
-    is a cache to avoid splitting twice the same source.
-    """
-    ss = []
-    for src in sources:
-        if src.weight > maxweight:
-            key = (src.trt_model_id, src.source_id)
-            try:
-                srcs = splitmap[key]
-            except KeyError:
-                logging.info('Splitting %s of weight %d > %d',
-                             src, src.weight, maxweight)
-                srcs = splitmap[key] = list(sourceconverter.split_source(src))
-            ss.extend(srcs)
-        else:
-            ss.append(src)
-    return ss

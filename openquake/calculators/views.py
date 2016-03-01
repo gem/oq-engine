@@ -37,8 +37,8 @@ from openquake.commonlib.writers import (
 
 # ########################## utility functions ############################## #
 
-FLOAT = (float, numpy.float32, numpy.float64)
-INT = (int, decimal.Decimal, numpy.uint32, numpy.int64)
+FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
+INT = (int, numpy.uint32, numpy.int64)
 
 
 def form(value):
