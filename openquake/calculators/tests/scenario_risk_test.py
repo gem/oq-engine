@@ -52,7 +52,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_3(self):
         out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
 
-        [fname] = out['loss_map-rlzs', 'csv']
+        [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
         [fname] = out['agglosses-rlzs', 'csv']
@@ -63,10 +63,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         out = self.run_calc(occupants.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv,xml')
 
-        [fname] = out['loss_map-rlzs', 'xml']
+        [fname] = out['losses_by_asset', 'xml']
         self.assertEqualFiles('expected/loss_map.xml', fname)
 
-        [fname] = out['loss_map-rlzs', 'csv']
+        [fname] = out['losses_by_asset', 'csv']
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
         [fname] = out['agglosses-rlzs', 'csv']

@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Reduced the data transfer for the average losses by a factor of 2
+    insured_losses is false in the event based risk calculator
   * Fixed the uniform hazard spectra CSV export and used a more consistent
     format
   * Fixed a 32 bit/64 bit casting error for risk computations with a site model

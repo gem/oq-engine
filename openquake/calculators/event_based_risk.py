@@ -136,14 +136,14 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     lti = riskmodel.lti  # loss type -> index
     L, R = len(lti), len(rlzs_assoc.realizations)
 
-    def zeroN2():
-        return numpy.zeros((monitor.num_assets, 2))
+    def zeroN():
+        return numpy.zeros((monitor.num_assets, monitor.insured_losses + 1))
     result = dict(RC=square(L, R, list), IC=square(L, R, list),
                   AGGLOSS=square(L, R, list))
     if monitor.asset_loss_table:
         result['ASSLOSS'] = square(L, R, list)
     if monitor.avg_losses:
-        result['AVGLOSS'] = square(L, R, zeroN2)
+        result['AVGLOSS'] = square(L, R, zeroN)
 
     for out_by_lr in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor, assets_by_site):
@@ -191,7 +191,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
 
             # average losses
             if monitor.avg_losses:
-                arr = numpy.zeros((monitor.num_assets, 2))
+                arr = zeroN()
                 for aid, avgloss, ins_avgloss in zip(
                         asset_ids, out.average_losses,
                         out.average_insured_losses):
@@ -200,7 +200,10 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
                     # the net effect is that the final loss is affected by
                     # the order in which the tasks are run, which is random
                     # i.e. at each run one may get different results!!
-                    arr[aid] = [avgloss, ins_avgloss]
+                    if monitor.insured_losses:
+                        arr[aid] = [avgloss, ins_avgloss]
+                    else:
+                        arr[aid] = avgloss
                 result['AVGLOSS'][l, r] += arr
 
     for (l, r), lst in numpy.ndenumerate(result['AGGLOSS']):

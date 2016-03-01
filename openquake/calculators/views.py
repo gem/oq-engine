@@ -301,10 +301,12 @@ def avglosses_data_transfer(token, dstore):
     N = len(dstore['assetcol'])
     R = len(dstore['rlzs_assoc'].realizations)
     L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
+    I = ast.literal_eval(dstore.attrs['insured_losses']) + 1
     ct = oq.concurrent_tasks
-    size_bytes = N * R * L * 2 * 8 * ct  # two 8 byte floats, loss and ins_loss
-    return ('%d asset(s) x %d realization(s) x %d loss type(s) x 2 losses x '
-            '8 bytes x %d tasks = %s' % (N, R, L, ct, humansize(size_bytes)))
+    size_bytes = N * R * L * I * 8 * ct  # 8 byte floats
+    return (
+        '%d asset(s) x %d realization(s) x %d loss type(s) x %d losses x '
+        '8 bytes x %d tasks = %s' % (N, R, L, I, ct, humansize(size_bytes)))
 
 
 # for scenario_risk
@@ -320,7 +322,7 @@ def view_totlosses(token, dstore):
         stats = ('mean', 'mean_ins')
     else:
         stats = ('mean',)
-    avglosses = dstore['loss_map-rlzs'].value
+    avglosses = dstore['losses_by_asset'].value
     dtlist = [('%s-%s' % (name, stat), numpy.float32)
               for name in avglosses.dtype.names for stat in stats]
     zero = numpy.zeros(avglosses.shape[1:], numpy.dtype(dtlist))
