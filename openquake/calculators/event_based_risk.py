@@ -116,38 +116,9 @@ def _old_loss_curves(asset_values, rcurves, ratios):
                         for avalue, poes in zip(asset_values, rcurves)])
 
 
-@parallel.litetask
-def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
-                     monitor):
-    """
-    :param riskinputs:
-        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param riskmodel:
-        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
-    :param rlzs_assoc:
-        a class:`openquake.commonlib.source.RlzsAssoc` instance
-    :param assets_by_site:
-        a representation of the exposure
-    :param monitor:
-        :class:`openquake.baselib.performance.PerformanceMonitor` instance
-    :returns:
-        a dictionary of numpy arrays of shape (L, R)
-    """
-    lti = riskmodel.lti  # loss type -> index
-    L, R = len(lti), len(rlzs_assoc.realizations)
-
-    def zeroN():
-        return numpy.zeros((monitor.num_assets, monitor.insured_losses + 1))
-    result = dict(RC=square(L, R, list), IC=square(L, R, list),
-                  AGGLOSS=square(L, R, list))
-    if monitor.asset_loss_table:
-        result['ASSLOSS'] = square(L, R, list)
-    if monitor.avg_losses:
-        result['AVGLOSS'] = square(L, R, zeroN)
-
-    for out_by_lr in riskmodel.gen_outputs(
-            riskinputs, rlzs_assoc, monitor, assets_by_site):
-        for (l, r), out in sorted(out_by_lr.items()):
+def _aggregate_output(output, compositemodel, zeroN, result, monitor):
+    # update the result dictionary with each output
+        for (l, r), out in sorted(output.items()):
             asset_ids = [a.idx for a in out.assets]
 
             # aggregate losses per rupture
@@ -182,7 +153,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
             result['AGGLOSS'][l, r].append(agglosses)
 
             # dictionaries asset_idx -> array of counts
-            if riskmodel.curve_builders[l].user_provided:
+            if compositemodel.curve_builders[l].user_provided:
                 result['RC'][l, r].append(dict(
                     zip(asset_ids, out.counts_matrix)))
                 if out.insured_counts_matrix.sum():
@@ -205,6 +176,40 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
                     else:
                         arr[aid] = avgloss
                 result['AVGLOSS'][l, r] += arr
+
+
+@parallel.litetask
+def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
+                     monitor):
+    """
+    :param riskinputs:
+        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
+    :param riskmodel:
+        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
+    :param rlzs_assoc:
+        a class:`openquake.commonlib.source.RlzsAssoc` instance
+    :param assets_by_site:
+        a representation of the exposure
+    :param monitor:
+        :class:`openquake.baselib.performance.PerformanceMonitor` instance
+    :returns:
+        a dictionary of numpy arrays of shape (L, R)
+    """
+    lti = riskmodel.lti  # loss type -> index
+    L, R = len(lti), len(rlzs_assoc.realizations)
+
+    def zeroN():
+        return numpy.zeros((monitor.num_assets, monitor.insured_losses + 1))
+    result = dict(RC=square(L, R, list), IC=square(L, R, list),
+                  AGGLOSS=square(L, R, list))
+    if monitor.asset_loss_table:
+        result['ASSLOSS'] = square(L, R, list)
+    if monitor.avg_losses:
+        result['AVGLOSS'] = square(L, R, zeroN)
+
+    for output in riskmodel.gen_outputs(
+            riskinputs, rlzs_assoc, monitor, assets_by_site):
+        _aggregate_output(output, riskmodel, zeroN, result, monitor)
 
     for (l, r), lst in numpy.ndenumerate(result['AGGLOSS']):
         items = sum(lst, AccumDict()).items()

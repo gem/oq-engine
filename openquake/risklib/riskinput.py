@@ -379,15 +379,8 @@ class CompositeRiskModel(collections.Mapping):
                         if not assets:
                             continue
                         riskmodel = self[taxonomy]
-                        if rupids is None:
-                            yield riskmodel.out_by_lr(
-                                imt, assets, hazards, epsilons, rupids)
-                        else:  # event based risk
-                            # produce an output per asset, to save memory
-                            for ass, haz, eps in zip(
-                                    assets, hazards, epsilons):
-                                yield riskmodel.out_by_lr(
-                                    imt, [ass], [haz], [eps], rupids)
+                        yield riskmodel.out_by_lr(
+                            imt, assets, hazards, epsilons, rupids)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
