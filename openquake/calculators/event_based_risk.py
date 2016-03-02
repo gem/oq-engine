@@ -124,7 +124,7 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
     assets = output.assets
     aid = assets[0].idx
     rupids = output.rupids
-    indices = [idx[rupid] for rupid in rupids]
+    indices = numpy.array([idx[rupid] for rupid in rupids])
     for (l, r), out in sorted(output.items()):
 
         # asslosses
@@ -183,9 +183,11 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     if monitor.avg_losses:
         result['AVGLOSS'] = square(L, R, zeroN)
 
+    agglosses_mon = monitor('aggregate losses', measuremem=False)
     for output in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor, assets_by_site):
-        _aggregate_output(output, riskmodel, agg, idx, result, monitor)
+        with agglosses_mon:
+            _aggregate_output(output, riskmodel, agg, idx, result, monitor)
     for (l, r), lst in numpy.ndenumerate(result['AGGLOSS']):
         records = numpy.array(
             [(rupids[i], loss) for i, loss in enumerate(agg[:, l, r])
