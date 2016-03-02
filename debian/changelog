@@ -1,3 +1,5 @@
+python-oq-engine (1.9.0-0~precise01) precise; urgency=low
+
   [Michele Simionato]
   * Fixed a bug such that in some circumstances the logging stream handler
     was instantiated twice, resulting in duplicated logs
@@ -10,6 +12,8 @@
     are multiple files for a single output
   * Introduced four new tables job, output, log, performance: all the other
     60+ database tables are not used anymore
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 02 Mar 2016 14:33:38 +0100
 
 python-oq-engine (1.8.0-0~precise01) precise; urgency=low
 
