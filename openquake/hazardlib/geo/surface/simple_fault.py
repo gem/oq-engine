@@ -273,9 +273,8 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             if numpy.allclose(dist_to_plane, 0., atol=25., rtol=0.):
                 return index
                 break
-        index = indexlist[np.argmin(dist_list)]
+        index = indexlist[numpy.argmin(dist_list)]
         return index
-
 
     @classmethod
     def get_surface_vertexes(cls, fault_trace,
