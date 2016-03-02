@@ -42,11 +42,9 @@ def build_el_dtypes(insured_losses):
         ela_dt and elt_dt i.e. the data types for event loss assets and
         event loss table respectively
     """
-    ela_list = [('rup_id', U32), ('ass_id', U32), ('loss', F32)]
-    elt_list = [('rup_id', U32), ('loss', F32)]
-    if insured_losses:
-        ela_list.append(('loss_ins', F32))
-        elt_list.append(('loss_ins', F32))
+    I = insured_losses + 1
+    ela_list = [('rup_id', U32), ('ass_id', U32), ('loss', (F32, I))]
+    elt_list = [('rup_id', U32), ('loss', (F32, I))]
     return numpy.dtype(ela_list), numpy.dtype(elt_list)
 
 
@@ -78,15 +76,20 @@ def build_agg_curve(lr_data, insured_losses, ses_ratio, curve_resolution, L,
     for l, r, data in lr_data:
         if len(data) == 0:  # realization with no losses
             continue
+        if insured_losses:
+            gloss = data['loss'][:, 0]
+            iloss = data['loss'][:, 1]
+        else:
+            gloss = data['loss']
         losses, poes = scientific.event_based(
-            data['loss'], ses_ratio, curve_resolution)
+            gloss, ses_ratio, curve_resolution)
         avg = scientific.average_loss((losses, poes))
         result[l, r, 'losses'] = losses
         result[l, r, 'poes'] = poes
         result[l, r, 'avg'] = avg
         if insured_losses:
             losses_ins, poes_ins = scientific.event_based(
-                data['loss_ins'], ses_ratio, curve_resolution)
+                iloss, ses_ratio, curve_resolution)
             avg_ins = scientific.average_loss((losses_ins, poes_ins))
             result[l, r, 'losses_ins'] = losses_ins
             result[l, r, 'poes_ins'] = poes_ins
@@ -116,62 +119,34 @@ def _old_loss_curves(asset_values, rcurves, ratios):
                         for avalue, poes in zip(asset_values, rcurves)])
 
 
-def _aggregate_output(output, compositemodel, lri, zeroN, result, monitor):
-    # update the result dictionary with each output
-    agg = collections.defaultdict(lambda: numpy.zeros(lri))
+def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
+    # update the result dictionary and the agg array with each output
+    assets = output.assets
+    aid = assets[0].idx
+    rupids = output.rupids
+    indices = [idx[rupid] for rupid in rupids]
     for (l, r), out in sorted(output.items()):
-        # aggregate losses per rupture
-        rupids = out.rupids
-        assets = out.assets
 
         # asslosses
         if monitor.asset_loss_table:
-            data = []
-            for (i, j), loss in numpy.ndenumerate(
-                    out.event_loss_per_asset):
-                if loss > 0:
-                    if monitor.insured_losses:
-                        tup = (rupids[i], assets[j], loss,
-                               out.insured_loss_per_asset[i, j])
-                    else:
-                        tup = (rupids[i], assets[j], loss)
-                    data.append(tup)
-                result['ASSLOSS'][l, r].append(
-                    numpy.array(data, monitor.ela_dt))
+            data = [(rupids[i], aid, loss)
+                    for i, loss in enumerate(out.losses)
+                    if loss.sum() > 0]
+            result['ASSLOSS'][l, r].append(
+                numpy.array(data, monitor.ela_dt))
 
         # agglosses
-        for i, loss in numpy.ndenumerate(out.agg_losses):
-            arr = agg[rupids[i]]
-            if loss > 0:
-                arr[l, r, 0] += loss
-                if monitor.insured_losses:
-                    arr[l, r, 1] += out.agg_insured_losses[i]
+        agg[indices, l, r] += out.losses
 
         # dictionaries asset_idx -> array of counts
         if compositemodel.curve_builders[l].user_provided:
-            result['RC'][l, r].append(dict(
-                zip(assets, out.counts_matrix)))
+            result['RC'][l, r].append({aid: out.counts_matrix})
             if out.insured_counts_matrix.sum():
-                result['IC'][l, r].append(dict(
-                    zip(assets, out.insured_counts_matrix)))
+                result['IC'][l, r].append({aid: out.insured_counts_matrix})
 
         # average losses
         if monitor.avg_losses:
-            arr = zeroN()
-            for aid, avgloss, ins_avgloss in zip(
-                    assets, out.average_losses,
-                    out.average_insured_losses):
-                # NB: here I cannot use numpy.float32, because the sum of
-                # numpy.float32 numbers is noncommutative!
-                # the net effect is that the final loss is affected by
-                # the order in which the tasks are run, which is random
-                # i.e. at each run one may get different results!!
-                if monitor.insured_losses:
-                    arr[aid] = [avgloss, ins_avgloss]
-                else:
-                    arr[aid] = avgloss
-            result['AVGLOSS'][l, r] += arr
-    return agg
+            result['AVGLOSS'][l, r][aid] += out.average_loss
 
 
 @parallel.litetask
@@ -194,6 +169,10 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     lti = riskmodel.lti  # loss type -> index
     L, R = len(lti), len(rlzs_assoc.realizations)
     I = monitor.insured_losses + 1
+    rupids = numpy.concatenate([ri.rupids for ri in riskinputs])
+    E = len(rupids)
+    idx = dict(zip(rupids, range(E)))
+    agg = numpy.zeros((E, L, R, I), F32)
 
     def zeroN():
         return numpy.zeros((monitor.num_assets, I))
@@ -204,18 +183,14 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     if monitor.avg_losses:
         result['AVGLOSS'] = square(L, R, zeroN)
 
-    agg = AccumDict()
     for output in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor, assets_by_site):
-        agg += _aggregate_output(output, riskmodel, (L, R, I),
-                                 zeroN, result, monitor)
-    for (l, r) in itertools.product(range(L), range(R)):
-        if not monitor.insured_losses:
-            data = [(rupid, loss[l, r]) for rupid, loss in agg.items()]
-        else:
-            data = [(rupid, loss[l, r, 0], loss[l, r, 1])
-                    for rupid, loss in agg.items()]
-        result['AGGLOSS'][l, r] = numpy.array(data, monitor.elt_dt)
+        _aggregate_output(output, riskmodel, agg, idx, result, monitor)
+    for (l, r), lst in numpy.ndenumerate(result['AGGLOSS']):
+        records = numpy.array(
+            [(rupids[i], loss) for i, loss in enumerate(agg[:, l, r])
+             if loss.sum() > 0], monitor.elt_dt)
+        result['AGGLOSS'][l, r] = records
     for (l, r), lst in numpy.ndenumerate(result['RC']):
         result['RC'][l, r] = sum(lst, AccumDict())
     for (l, r), lst in numpy.ndenumerate(result['IC']):
@@ -309,7 +284,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.N = N = len(self.assetcol)
         self.E = len(self.datastore['tags'])
 
-        # average losses, stored in a composite array of shape N, R, 2
+        # average losses, stored in a composite array of shape N, R
         multi_avg_dt = self.riskmodel.loss_type_dt(insured=self.I)
         self.avg_losses = numpy.zeros((N, R), multi_avg_dt)
 

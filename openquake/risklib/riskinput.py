@@ -22,6 +22,7 @@ import collections
 
 import numpy
 
+from openquake.baselib.python3compat import zip
 from openquake.baselib.general import groupby, split_in_blocks
 from openquake.baselib.performance import DummyMonitor
 from openquake.hazardlib.gsim.base import gsim_imt_dt
@@ -379,8 +380,15 @@ class CompositeRiskModel(collections.Mapping):
                         if not assets:
                             continue
                         riskmodel = self[taxonomy]
-                        yield riskmodel.out_by_lr(
-                            imt, assets, hazards, epsilons, rupids)
+                        if rupids is None:
+                            yield riskmodel.out_by_lr(
+                                imt, assets, hazards, epsilons, rupids)
+                        else:  # event based risk
+                            # produce an output per asset, to save memory
+                            for ass, haz, eps in zip(
+                                    assets, hazards, epsilons):
+                                yield riskmodel.out_by_lr(
+                                    imt, [ass], [haz], [eps], rupids)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
