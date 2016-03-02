@@ -27,6 +27,7 @@ from openquake.baselib.general import CallableDict, AccumDict
 from openquake.commonlib import valid
 from openquake.risklib import utils, scientific
 
+U32 = numpy.uint32
 F32 = numpy.float32
 registry = CallableDict()
 
@@ -586,9 +587,12 @@ class ProbabilisticEventBased(RiskModel):
         ila = ilm.T * values
         average_insured_losses = ilm.sum(axis=1) * self.ses_ratio
         return scientific.Output(
-            assets, loss_type,
+            numpy.array([a.idx for a in assets], U32),
+            loss_type,
             event_loss_per_asset=ela,
             insured_loss_per_asset=ila,
+            agg_losses=ela.sum(axis=1),
+            agg_insured_losses=ila.sum(axis=1),
             average_losses=average_losses,
             average_insured_losses=average_insured_losses,
             counts_matrix=cb.build_counts(loss_matrix),
