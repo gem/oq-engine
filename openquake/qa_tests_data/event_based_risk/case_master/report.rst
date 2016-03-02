@@ -18,7 +18,7 @@ width_of_mfd_bin             0.100
 area_source_discretization   10              
 random_seed                  24              
 master_seed                  0               
-concurrent_tasks             16              
+concurrent_tasks             32              
 avg_losses                   1               
 ============================ ================
 
@@ -91,15 +91,19 @@ Collections Realizations
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
-Number of tasks to generate 22       
-Sent data                   326.91 KB
-Total received data         129.33 KB
-Maximum received per task   15.2 KB  
+Number of tasks to generate 28       
+Sent data                   408.22 KB
+Total received data         157.39 KB
+Maximum received per task   15.1 KB  
 =========================== =========
+
+Maximum memory allocated for the GMFs
+-------------------------------------
+896 B
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-7 asset(s) x 6 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 16 tasks = 52.5 KB
+7 asset(s) x 6 realization(s) x 5 loss type(s) x 2 losses x 8 bytes x 32 tasks = 105 KB
 
 Exposure model
 --------------
@@ -121,8 +125,8 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            1         SimpleFaultSource    482    15        0.003       0.064      0.336    
-2            1         SimpleFaultSource    482    15        0.002       0.056      0.273    
-1            2         SimpleFaultSource    4.000  1         0.002       0.0        0.013    
-3            2         CharacteristicFaultS 1.000  1         0.002       0.0        0.003    
+2            1         SimpleFaultSource    482    15        0.002       0.057      0.314    
+0            1         SimpleFaultSource    482    15        0.005       0.065      0.274    
+1            2         SimpleFaultSource    4.000  1         0.002       0.0        0.019    
+3            2         CharacteristicFaultS 1.000  1         0.002       0.0        0.006    
 ============ ========= ==================== ====== ========= =========== ========== =========
