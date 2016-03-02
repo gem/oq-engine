@@ -1,8 +1,12 @@
+python-oq-hazardlib (0.19.0-0~precise01) precise; urgency=low
+
   [Nick Ackerley]
   * Added Japan regionalization to GMPE of Atkinson & Boore (2003).
 
   [Michele Simionato]
   * Using 32 bit floats for the GMFs, instead of 64, to save memory
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 02 Mar 2016 10:51:43 +0100
 
 python-oq-hazardlib (0.18.0-0~precise01) precise; urgency=low
 
