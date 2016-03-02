@@ -65,6 +65,7 @@ class ReportWriter(object):
         ruptures_per_trt='Number of ruptures per tectonic region type',
         rlzs_assoc='Realizations per (TRT, GSIM)',
         source_data_transfer='Expected data transfer for the sources',
+        biggest_ebr_gmf='Maximum memory allocated for the GMFs',
         avglosses_data_transfer='Estimated data transfer for the avglosses',
         exposure_info='Exposure model',
         short_source_info='Slowest sources',
@@ -112,6 +113,7 @@ class ReportWriter(object):
         if 'scenario' not in oq.calculation_mode:
             self.add('source_data_transfer')
         if oq.calculation_mode in ('event_based_risk',):
+            self.add('biggest_ebr_gmf')
             self.add('avglosses_data_transfer')
         if 'exposure' in oq.inputs:
             self.add('exposure_info')

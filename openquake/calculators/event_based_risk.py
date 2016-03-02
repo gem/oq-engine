@@ -221,6 +221,8 @@ class FakeMatrix(object):
         else:
             raise ValueError('Not a valid slice: %r' % sliceobj)
 
+riskinput_dt = numpy.dtype([('nruptures', U32), ('gmf_nbytes', U32)])
+
 
 @base.calculators.add('event_based_risk')
 class EventBasedRiskCalculator(base.RiskCalculator):
@@ -267,6 +269,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.sitecol.complete, all_ruptures, gsims_by_col,
             oq.truncation_level, correl_model, eps,
             oq.concurrent_tasks or 1))
+        data = []
+        for ri in self.riskinputs:
+            nruptures = len(ri.rupids)
+            gmf_nbytes = (nruptures * len(self.sitecol.complete) *
+                          len(ri.gsims) * len(ri.imts)) * 4
+            data.append((nruptures, gmf_nbytes))
+        self.datastore['riskinputs'] = numpy.array(data, riskinput_dt)
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
         # preparing empty datasets

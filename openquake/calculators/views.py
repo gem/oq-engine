@@ -424,8 +424,8 @@ def view_assetcol(token, dstore):
     return write_csv(io.StringIO(), [header] + list(zip(*columns)))
 
 
-@view.add('biggest_block')
-def view_biggest_block(token, dstore):
+@view.add('biggest_ebr_block')
+def view_biggest_ebr_block(token, dstore):
     """
     Returns the size of the biggest block in an event based risk calculation
     """
@@ -441,6 +441,15 @@ def view_biggest_block(token, dstore):
            'size = %s / num_tasks') % (taxonomy, counts, num_ruptures, L, R,
                                        humansize(nbytes))
     return msg
+
+
+@view.add('biggest_ebr_gmf')
+def view_biggest_ebr_gmf(token, dstore):
+    """
+    Returns the size of the biggest GMF in an event based risk calculation
+    """
+    max_gmf = max(dstore['riskinputs']['gmf_nbytes'])
+    return humansize(max_gmf)
 
 
 @view.add('fullreport')
