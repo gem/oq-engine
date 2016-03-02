@@ -952,7 +952,7 @@ class SourceManager(object):
                             self.maximum_distance, sitecol)
                     except:
                         etype, err, tb = sys.exc_info()
-                        msg = 'An error occurred with source id=%s. Error: %s'
+                        msg = 'An error occurred with source id=%s: %s'
                         msg %= (src.source_id, unicode(err))
                         raise_(etype, msg, tb)
                 filter_time = filter_mon.dt
