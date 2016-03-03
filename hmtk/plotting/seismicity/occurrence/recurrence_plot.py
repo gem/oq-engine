@@ -58,11 +58,17 @@ def _check_completeness_table(completeness, catalogue):
 
 
 def plot_recurrence_model(input_model, catalogue, completeness, dmag,
-        figure_size=(8, 8), filename=None, filetype='png', dpi=300):
+        figure_size=(10, 8), filename=None, filetype='png', dpi=300):
     """
     Plot a calculated recurrence model over an observed catalogue, adjusted for
     time-varying completeness
     """
+    if figure_size is None:
+        figure_size=(10, 8)
+    if filename is None:
+      	filename = "recurrence_model"
+    if dmag is None:
+        dmag = 0.1
     annual_rates, cumulative_rates = _get_recurrence_model(input_model)
     # Get observed annual recurrence
     if not catalogue.end_year:
@@ -79,6 +85,7 @@ def plot_recurrence_model(input_model, catalogue, completeness, dmag,
     plt.semilogy(annual_rates[:, 0], annual_rates[:, 1], 'b-')
     plt.semilogy(cent_mag, cum_obs_rates, 'rs')
     plt.semilogy(annual_rates[:, 0], cumulative_rates, 'r-')
+    plt.grid(which='both')
     plt.xlabel('Magnitude', fontsize='16')
     plt.ylabel('Annual Rate', fontsize='16')
     plt.legend(['Observed Incremental Rate',
@@ -89,7 +96,8 @@ def plot_recurrence_model(input_model, catalogue, completeness, dmag,
     _save_image(filename, filetype, dpi)
 
 def plot_trunc_gr_model(aval, bval, min_mag, max_mag, dmag, catalogue=None,
-        completeness=None, filename=None, filetype='png', dpi=300):
+        completeness=None, figure_size=None, filename=None, filetype='png', 
+        dpi=300):
     """
     Plots a Gutenberg-Richter model
     """
@@ -109,6 +117,8 @@ def plot_trunc_gr_model(aval, bval, min_mag, max_mag, dmag, catalogue=None,
                               catalogue,
                               completeness,
                               input_model.bin_width,
+                              figure_size,
                               filename,
                               filetype,
-                              dpi)
+              		      dpi)
+                    
