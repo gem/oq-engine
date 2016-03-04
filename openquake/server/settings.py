@@ -45,9 +45,6 @@ STATICFILES_DIRS = [
 
 DATABASES = oqe_settings.DATABASES
 
-DATABASE_ROUTERS = ['openquake.server.routers.AuthRouter']
-
-
 ALLOWED_HOSTS = ['*']
 
 AUTHENTICATION_BACKENDS = ()
@@ -146,15 +143,6 @@ except ImportError:
     pass
 
 if LOCKDOWN:
-    AUTH_DATABASES = {
-        'auth_db': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(os.path.dirname(__file__),
-                                 'engineserver.sqlite3'),
-        }
-    }
-
-    DATABASES.update(AUTH_DATABASES)
 
     AUTHENTICATION_BACKENDS += (
         'django.contrib.auth.backends.ModelBackend',
