@@ -30,7 +30,7 @@ GST = {'gsim_logic_tree': writetmp('''\
     <logicTree logicTreeID='lt1'>
         <logicTreeBranchingLevel branchingLevelID="bl1">
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
-                    applyToTectonicRegionType="active shallow crust">
+                    applyToTectonicRegionType="Active Shallow Crust">
                 <logicTreeBranch branchID="b1">
                     <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
@@ -128,6 +128,25 @@ class OqParamTestCase(unittest.TestCase):
                 calculation_mode='classical_risk', inputs=dict(site_model=''),
                 hazard_calculation_id=None, hazard_output_id=None,
                 sites='0.1 0.2', maximum_distance='0').validate()
+
+        oq = OqParam(
+            calculation_mode='event_based', inputs=GST,
+            intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
+            intensity_measure_types='PGV', sites='0.1 0.2',
+            reference_vs30_value='200',
+            maximum_distance='{"wrong TRT": 200}')
+        oq.inputs['source_model_logic_tree'] = 'something'
+
+        oq._gsims_by_trt = {'Active Shallow Crust': []}
+        self.assertFalse(oq.is_valid_maximum_distance())
+        self.assertIn('setting the maximum_distance for wrong TRT', oq.error)
+
+        oq._gsims_by_trt = {'Active Shallow Crust': [],
+                            'Stable Continental Crust': []}
+        oq.maximum_distance = {'Active Shallow Crust': 200}
+        self.assertFalse(oq.is_valid_maximum_distance())
+        self.assertEqual('missing distance for Stable Continental Crust '
+                         'and no default', oq.error)
 
     def test_imts_and_imtls(self):
         oq = OqParam(

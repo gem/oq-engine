@@ -309,14 +309,24 @@ class OqParam(valid.ParamSet):
         """
         if 'source_model_logic_tree' not in self.inputs:
             return True  # don't apply validation
+        gsim_lt = self.inputs['gsim_logic_tree']
+        trts = set(self.maximum_distance)
+        unknown = ', '.join(trts - set(self._gsims_by_trt) - set(['default']))
+        if unknown:
+            self.error = ('setting the maximum_distance for %s which is '
+                          'not in %s' % (unknown, gsim_lt))
+            return False
         for trt, val in self.maximum_distance.items():
             if val <= 0:
                 self.error = '%s=%r < 0' % (trt, val)
                 return False
             elif trt not in self._gsims_by_trt and trt != 'default':
-                self.error = 'tectonic region %r not in %s' % (
-                    trt, self.inputs['gsim_logic_tree'])
+                self.error = 'tectonic region %r not in %s' % (trt, gsim_lt)
                 return False
+        if 'default' not in trts and trts < set(self._gsims_by_trt):
+            missing = ', '.join(set(self._gsims_by_trt) - trts)
+            self.error = 'missing distance for %s and no default' % missing
+            return False
         return True
 
     def is_valid_intensity_measure_types(self):
