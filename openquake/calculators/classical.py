@@ -159,7 +159,7 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     try:
         max_dist = monitor.oqparam.maximum_distance[trt]
     except KeyError:
-        max_dist = monitor.oqparam.maximum_distance['other']
+        max_dist = monitor.oqparam.maximum_distance['default']
 
     dic = AccumDict()
     dic.siteslice = slice(siteidx, siteidx + len(sitecol))

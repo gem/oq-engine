@@ -949,7 +949,7 @@ class SourceManager(object):
                 try:
                     max_dist = self.maximum_distance[src.tectonic_region_type]
                 except KeyError:
-                    max_dist = self.maximum_distance['other']
+                    max_dist = self.maximum_distance['default']
                 with filter_mon:
                     try:
                         sites = src.filter_sites_by_distance_to_source(

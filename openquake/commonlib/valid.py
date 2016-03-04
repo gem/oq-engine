@@ -662,15 +662,15 @@ def floatdict(value):
         a Python dictionary key -> number
 
     >>> floatdict("200")
-    {'other': 200}
+    {'default': 200}
 
-    >>> text = "{'active shallow crust': 250., 'other': 200}"
+    >>> text = "{'active shallow crust': 250., 'default': 200}"
     >>> sorted(floatdict(text).items())
-    [('active shallow crust', 250.0), ('other', 200)]
+    [('active shallow crust', 250.0), ('default', 200)]
     """
     value = ast.literal_eval(value)
     if isinstance(value, (int, float)):
-        return {'other': value}
+        return {'default': value}
     return dict(value)
 
 

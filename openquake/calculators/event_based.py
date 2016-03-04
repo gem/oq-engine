@@ -295,7 +295,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     try:
         max_dist = oq.maximum_distance[trt]
     except KeyError:
-        max_dist = oq.maximum_distance['other']
+        max_dist = oq.maximum_distance['default']
 
     sesruptures = []
     calc_times = []

@@ -313,7 +313,7 @@ class OqParam(valid.ParamSet):
             if val <= 0:
                 self.error = '%s=%r < 0' % (trt, val)
                 return False
-            elif trt not in self._gsims_by_trt and trt != 'other':
+            elif trt not in self._gsims_by_trt and trt != 'default':
                 self.error = 'tectonic region %r not in %s' % (
                     trt, self.inputs['gsim_logic_tree'])
                 return False
