@@ -20,9 +20,25 @@ import os
 import mock
 import unittest
 import tempfile
+from openquake.baselib.general import writetmp
 from openquake.commonlib.oqvalidation import OqParam
 
 TMP = tempfile.gettempdir()
+
+GST = {'gsim_logic_tree': writetmp('''\
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+    <logicTree logicTreeID='lt1'>
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                    applyToTectonicRegionType="active shallow crust">
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>''')}
 
 
 class OqParamTestCase(unittest.TestCase):
@@ -31,9 +47,10 @@ class OqParamTestCase(unittest.TestCase):
         # if the job.ini file contains an unknown parameter, print a warning
         with mock.patch('logging.warn') as w:
             OqParam(
-                calculation_mode='classical', inputs=dict(site_model=''),
+                calculation_mode='classical', inputs=GST,
                 hazard_calculation_id=None, hazard_output_id=None,
                 maximum_distance='10', sites='0.1 0.2',
+                reference_vs30_value='200',
                 not_existing_param='XXX', export_dir=TMP,
                 intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
                 rupture_mesh_spacing='1.5').validate()
@@ -114,9 +131,10 @@ class OqParamTestCase(unittest.TestCase):
 
     def test_imts_and_imtls(self):
         oq = OqParam(
-            calculation_mode='event_based', inputs={},
+            calculation_mode='event_based', inputs=GST,
             intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
             intensity_measure_types='PGV', sites='0.1 0.2',
+            reference_vs30_value='200',
             maximum_distance='400')
         oq.validate()
         self.assertEqual(list(oq.imtls.keys()), ['PGA'])
@@ -134,9 +152,10 @@ class OqParamTestCase(unittest.TestCase):
     def test_create_export_dir(self):
         EDIR = os.path.join(TMP, 'nonexisting')
         OqParam(
-            calculation_mode='event_based', inputs={},
+            calculation_mode='event_based',
             sites='0.1 0.2',
-            intensity_measure_types='PGA',
+            reference_vs30_value='200',
+            intensity_measure_types='PGA', inputs=GST,
             maximum_distance='400',
             export_dir=EDIR,
         ).validate()
@@ -145,9 +164,10 @@ class OqParamTestCase(unittest.TestCase):
     def test_invalid_export_dir(self):
         with self.assertRaises(ValueError) as ctx:
             OqParam(
-                calculation_mode='event_based', inputs={},
+                calculation_mode='event_based', inputs=GST,
                 sites='0.1 0.2',
                 maximum_distance='400',
+                reference_vs30_value='200',
                 intensity_measure_types='PGA',
                 export_dir='/non/existing',
             ).validate()
@@ -156,9 +176,10 @@ class OqParamTestCase(unittest.TestCase):
 
     def test_missing_export_dir(self):
         oq = OqParam(
-            calculation_mode='event_based', inputs={},
+            calculation_mode='event_based', inputs=GST,
             sites='0.1 0.2',
             intensity_measure_types='PGA',
+            reference_vs30_value='200',
             maximum_distance='400')
         oq.validate()
         self.assertEqual(oq.export_dir, os.path.expanduser('~'))

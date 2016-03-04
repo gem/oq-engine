@@ -153,7 +153,8 @@ class OqParam(valid.ParamSet):
                                  'must be no `gsim` key')
             path = os.path.join(
                 self.base_path, self.inputs['gsim_logic_tree'])
-            for gsims in logictree.GsimLogicTree(path, []).values.values():
+            self._gsims_by_trt = logictree.GsimLogicTree(path, []).values
+            for gsims in self._gsims_by_trt.values():
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
@@ -304,10 +305,19 @@ class OqParam(valid.ParamSet):
 
     def is_valid_maximum_distance(self):
         """
-        The maximum_distance must be set for all hazard calculators
+        Invalid maximum_distance={maximum_distance}: {error}
         """
-        return (self.calculation_mode not in HAZARD_CALCULATORS or
-                getattr(self, 'maximum_distance', None))
+        if self.calculation_mode not in HAZARD_CALCULATORS:
+            return True
+        for trt, val in self.maximum_distance.items():
+            if val <= 0:
+                self.error = '%s=%r < 0' % (trt, val)
+                return False
+            elif trt not in self._gsims_by_trt and trt != 'other':
+                self.error = 'tectonic region %r not in %s' % (
+                    trt, self.inputs['gsim_logic_tree'])
+                return False
+        return True
 
     def is_valid_intensity_measure_types(self):
         """

@@ -969,7 +969,8 @@ class ParamSet(with_metaclass(MetaParamSet)):
         the underlying value.
         """
         dic = self.__dict__
-        return [(k, repr(dic[k])) for k in sorted(dic)]
+        return [(k, repr(dic[k])) for k in sorted(dic)
+                if not k.startswith('_')]
 
     def __init__(self, **names_vals):
         for name, val in names_vals.items():
@@ -998,11 +999,9 @@ class ParamSet(with_metaclass(MetaParamSet)):
                   if valid.startswith('is_valid_')]
         for is_valid in valids:
             if not is_valid():
-                dump = '\n'.join('%s=%s' % (n, v)
-                                 for n, v in sorted(self.__dict__.items()))
                 docstring = is_valid.__doc__.strip()
                 doc = textwrap.fill(docstring.format(**vars(self)))
-                raise ValueError(doc + '\nGot:\n' + dump)
+                raise ValueError(doc)
 
     def __iter__(self):
         for item in sorted(vars(self).items()):

@@ -313,7 +313,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for rup, rups in build_ses_ruptures(
-                src, num_occ_by_rup, s_sites, oq.maximum_distance, sitecol,
+                src, num_occ_by_rup, s_sites, max_dist, sitecol,
                 oq.random_seed):
             sesruptures.extend(rups)
         dt = time.time() - t0
