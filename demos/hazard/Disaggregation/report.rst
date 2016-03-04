@@ -5,21 +5,21 @@ num_sites = 1, sitecol = 684 B
 
 Parameters
 ----------
-============================ ==============
-calculation_mode             disaggregation
-number_of_logic_tree_samples 0             
-maximum_distance             200           
-investigation_time           50            
-ses_per_logic_tree_path      1             
-truncation_level             3.000         
-rupture_mesh_spacing         2.000         
-complex_fault_mesh_spacing   2.000         
-width_of_mfd_bin             0.100         
-area_source_discretization   5.000         
-random_seed                  23            
-master_seed                  0             
-concurrent_tasks             16            
-============================ ==============
+============================ ==============================================================
+calculation_mode             'disaggregation'                                              
+number_of_logic_tree_samples 0                                                             
+maximum_distance             {'Stable Continental Crust': 150, 'Active Shallow Crust': 200}
+investigation_time           50.0                                                          
+ses_per_logic_tree_path      1                                                             
+truncation_level             3.0                                                           
+rupture_mesh_spacing         2.0                                                           
+complex_fault_mesh_spacing   2.0                                                           
+width_of_mfd_bin             0.1                                                           
+area_source_discretization   5.0                                                           
+random_seed                  23                                                            
+master_seed                  0                                                             
+concurrent_tasks             16                                                            
+============================ ==============================================================
 
 Input files
 -----------
@@ -37,7 +37,7 @@ Composite source model
 ========= ====== ====================================== =============== ================
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations
 ========= ====== ====================================== =============== ================
-b11       1.00   `source_model.xml <source_model.xml>`_ trivial(1,1)    1/1             
+b11       1.000  `source_model.xml <source_model.xml>`_ trivial(1,1)    1/1             
 ========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
@@ -78,7 +78,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== =======
 Number of tasks to generate 17     
-Sent data                   5.26 MB
+Sent data                   5.27 MB
 =========================== =======
 
 Slowest sources
@@ -86,6 +86,6 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            2         SimpleFaultSource 1,334  1,334     0.002       0.331      0.0      
-1            1         AreaSource        102    205       0.001       0.066      0.0      
+0            2         SimpleFaultSource 1,334  1,334     0.002       0.330      0.0      
+1            1         AreaSource        102    205       0.001       0.063      0.0      
 ============ ========= ================= ====== ========= =========== ========== =========

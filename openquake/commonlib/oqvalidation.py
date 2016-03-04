@@ -89,7 +89,7 @@ class OqParam(valid.ParamSet):
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 0)
-    maximum_distance = valid.Param(valid.positivefloat)  # km
+    maximum_distance = valid.Param(valid.floatdict)  # km
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
     maximum_tile_weight = valid.Param(valid.positivefloat)
     mean_hazard_curves = valid.Param(valid.boolean, False)
@@ -153,7 +153,8 @@ class OqParam(valid.ParamSet):
                                  'must be no `gsim` key')
             path = os.path.join(
                 self.base_path, self.inputs['gsim_logic_tree'])
-            for gsims in logictree.GsimLogicTree(path, []).values.values():
+            self._gsims_by_trt = logictree.GsimLogicTree(path, []).values
+            for gsims in self._gsims_by_trt.values():
                 self.check_gsims(gsims)
         elif self.gsim is not None:
             self.check_gsims([self.gsim])
@@ -304,10 +305,29 @@ class OqParam(valid.ParamSet):
 
     def is_valid_maximum_distance(self):
         """
-        The maximum_distance must be set for all hazard calculators
+        Invalid maximum_distance={maximum_distance}: {error}
         """
-        return (self.calculation_mode not in HAZARD_CALCULATORS or
-                getattr(self, 'maximum_distance', None))
+        if 'source_model_logic_tree' not in self.inputs:
+            return True  # don't apply validation
+        gsim_lt = self.inputs['gsim_logic_tree']
+        trts = set(self.maximum_distance)
+        unknown = ', '.join(trts - set(self._gsims_by_trt) - set(['default']))
+        if unknown:
+            self.error = ('setting the maximum_distance for %s which is '
+                          'not in %s' % (unknown, gsim_lt))
+            return False
+        for trt, val in self.maximum_distance.items():
+            if val <= 0:
+                self.error = '%s=%r < 0' % (trt, val)
+                return False
+            elif trt not in self._gsims_by_trt and trt != 'default':
+                self.error = 'tectonic region %r not in %s' % (trt, gsim_lt)
+                return False
+        if 'default' not in trts and trts < set(self._gsims_by_trt):
+            missing = ', '.join(set(self._gsims_by_trt) - trts)
+            self.error = 'missing distance for %s and no default' % missing
+            return False
+        return True
 
     def is_valid_intensity_measure_types(self):
         """

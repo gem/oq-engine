@@ -63,7 +63,7 @@ export_dir = %s
                 'calculation_mode': 'event_based',
                 'truncation_level': 0.0,
                 'random_seed': 0,
-                'maximum_distance': 1.0,
+                'maximum_distance': {'default': 1},
                 'inputs': {'job_ini': job_config,
                            'site_model': site_model_input},
                 'sites': [(0.0, 0.0)],
@@ -77,7 +77,8 @@ export_dir = %s
 
             with mock.patch('logging.warn') as warn:
                 params = vars(readinput.get_oqparam(job_config))
-                self.assertEqual(expected_params, params)
+                for key in expected_params:
+                    self.assertEqual(expected_params[key], params[key])
                 items = sorted(params['inputs'].items())
                 keys, values = zip(*items)
                 self.assertEqual(('job_ini', 'site_model'), keys)
@@ -119,7 +120,7 @@ export_dir = %s
                 'calculation_mode': 'classical',
                 'truncation_level': 3.0,
                 'random_seed': 5,
-                'maximum_distance': 1.0,
+                'maximum_distance': {'default': 1},
                 'file_type': None,
                 'inputs': {'job_ini': source,
                            'sites': sites_csv},

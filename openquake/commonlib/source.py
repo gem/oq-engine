@@ -18,6 +18,7 @@
 
 from __future__ import division
 import io
+import sys
 import ast
 import copy
 import math
@@ -29,6 +30,7 @@ from xml.etree import ElementTree as etree
 
 import numpy
 
+from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import logictree, sourceconverter, parallel, valid
@@ -944,9 +946,19 @@ class SourceManager(object):
         for src in self.csm.get_sources(kind):
             filter_time = split_time = 0
             if self.filter_sources:
+                try:
+                    max_dist = self.maximum_distance[src.tectonic_region_type]
+                except KeyError:
+                    max_dist = self.maximum_distance['default']
                 with filter_mon:
-                    sites = src.filter_sites_by_distance_to_source(
-                        self.maximum_distance, sitecol)
+                    try:
+                        sites = src.filter_sites_by_distance_to_source(
+                            max_dist, sitecol)
+                    except:
+                        etype, err, tb = sys.exc_info()
+                        msg = 'An error occurred with source id=%s: %s'
+                        msg %= (src.source_id, unicode(err))
+                        raise_(etype, msg, tb)
                 filter_time = filter_mon.dt
                 if sites is None:
                     continue

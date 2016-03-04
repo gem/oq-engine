@@ -247,7 +247,8 @@ def view_params(token, dstore):
         params.append('avg_losses')
     if 'classical' in oq.calculation_mode:
         params.append('sites_per_tile')
-    return rst_table([(param, getattr(oq, param, None)) for param in params])
+    return rst_table([(param, repr(getattr(oq, param, None)))
+                      for param in params])
 
 
 def build_links(items):
