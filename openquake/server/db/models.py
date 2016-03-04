@@ -99,11 +99,6 @@ INPUT_TYPE_CHOICES = (
      u'Structural Vulnerability Retrofitted'))
 
 
-def getcursor():
-    """Return a cursor from a Django connection"""
-    return connection.cursor()
-
-
 # Tables in the 'uiapi' schema.
 
 class OqJob(djm.Model):

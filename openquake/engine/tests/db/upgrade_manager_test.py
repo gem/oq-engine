@@ -23,12 +23,11 @@ import psycopg2
 import importlib
 from contextlib import contextmanager
 
-from openquake.server.db.models import getcursor
+from django.db import connection
 from openquake.server.db.upgrade_manager import (
     upgrade_db, version_db, what_if_I_upgrade,
     VersionTooSmall, DuplicatedVersion)
 
-conn = getcursor().connection
 pkg = 'openquake.engine.tests.db.upgrades'
 upgrader = importlib.import_module(pkg).upgrader
 
@@ -63,6 +62,8 @@ class UpgradeManagerTestCase(unittest.TestCase):
     ## 0005-populate_model.py
 
     def setUp(self):
+        global conn
+        conn = connection.cursor().connection  # psycopg2 connection
         conn.autocommit = False
         conn.cursor().execute('CREATE SCHEMA test')
         conn.commit()  # make sure the schema really exists
