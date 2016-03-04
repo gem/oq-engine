@@ -63,6 +63,8 @@ class UpgradeManagerTestCase(unittest.TestCase):
 
     def setUp(self):
         global conn
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE",
+                              "openquake.server.settings")
         conn = connection.cursor().connection  # psycopg2 connection
         conn.autocommit = False
         conn.cursor().execute('CREATE SCHEMA test')
