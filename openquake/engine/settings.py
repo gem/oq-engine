@@ -27,17 +27,16 @@ DB_SECTION = config.get_section('database')
 
 INSTALLED_APPS = ('openquake.server.db',)
 
-DEFAULT_USER = 'admin'
 # We need a 'default' database to make Django happy:
 DATABASE = {
     'ENGINE': 'django.db.backends.postgresql_psycopg2',
     'NAME': DB_SECTION.get('name', 'openquake'),
-    'USER': DB_SECTION.get('%s_user' % DEFAULT_USER, 'oq_admin'),
-    'PASSWORD': DB_SECTION.get('%s_password' % DEFAULT_USER, 'openquake'),
+    'USER': DB_SECTION.get('admin_user', 'oq_admin'),
+    'PASSWORD': DB_SECTION.get('admin_password', 'openquake'),
     'HOST': DB_SECTION.get('host', 'localhost'),
     'PORT': DB_SECTION.get('port', '5432'),
 }
-DATABASES = {'admin': DATABASE, 'default': DATABASE}
+DATABASES = {'default': DATABASE}
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
