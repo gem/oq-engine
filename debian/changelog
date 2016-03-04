@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Reporting the source_id when the filtering fails
+
 python-oq-risklib (0.12.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
