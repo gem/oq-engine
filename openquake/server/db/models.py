@@ -34,7 +34,7 @@ if hasattr(django, 'setup'):
     django.setup()  # for Django >= 1.7
 from django.db import models as djm
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import connections
+from django.db import connection
 
 #: Kind of supported curve statistics
 STAT_CHOICES = (
@@ -99,9 +99,9 @@ INPUT_TYPE_CHOICES = (
      u'Structural Vulnerability Retrofitted'))
 
 
-def getcursor(route):
-    """Return a cursor from a Django route"""
-    return connections[route].cursor()
+def getcursor():
+    """Return a cursor from a Django connection"""
+    return connection.cursor()
 
 
 # Tables in the 'uiapi' schema.
