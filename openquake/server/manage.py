@@ -42,7 +42,7 @@ if __name__ == "__main__":
     # CommandError: You must set settings.ALLOWED_HOSTS if DEBUG is False.
 
     from openquake.server.db import models
-    models.getcursor('job_init').execute(
+    models.getcursor('admin').execute(
         # cleanup of the flag oq_job.is_running
         'UPDATE job SET is_running=false WHERE is_running')
 
