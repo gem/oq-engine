@@ -28,7 +28,7 @@ from openquake.server.db.upgrade_manager import (
     upgrade_db, version_db, what_if_I_upgrade,
     VersionTooSmall, DuplicatedVersion)
 
-pkg = 'openquake.engine.tests.db.upgrades'
+pkg = 'openquake.server.tests.db.upgrades'
 upgrader = importlib.import_module(pkg).upgrader
 
 
@@ -50,10 +50,10 @@ def temp_script(name, content):
 
 
 class UpgradeManagerTestCase(unittest.TestCase):
-    # Apply the scripts in openquake.engine.tests.db.upgrades to the database.
+    # Apply the scripts in openquake.server.tests.db.upgrades to the database.
     # All the tables in the test scripts are in the `test` schema, which is
     # automatically created an destroyed in the setUp/tearDown methods.
-    # This test consider the 5 scripts in openquake.engine.tests.db.upgrades:
+    # This test consider the 5 scripts in openquake.server.tests.db.upgrades:
 
     ## 0000-base_schema.sql
     ## 0001-populate.sql
@@ -70,13 +70,13 @@ class UpgradeManagerTestCase(unittest.TestCase):
 
     def test_missing_pkg(self):
         with self.assertRaises(SystemExit) as ctx:
-            upgrade_db(conn, 'openquake.engine.tests.db.not_exists')
+            upgrade_db(conn, 'openquake.server.tests.db.not_exists')
         self.assertTrue(str(ctx.exception).startswith(
-            'Could not import openquake.engine.tests.db.not_exists'))
+            'Could not import openquake.server.tests.db.not_exists'))
 
     def test_no_upgrades(self):
         with self.assertRaises(SystemExit) as ctx:
-            upgrade_db(conn, 'openquake.engine.tests.db.no_upgrades')
+            upgrade_db(conn, 'openquake.server.tests.db.no_upgrades')
         self.assertTrue(str(ctx.exception).startswith(
             'The upgrade_dir does not contain scripts matching the pattern'))
 
