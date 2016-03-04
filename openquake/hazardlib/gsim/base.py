@@ -59,7 +59,7 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     :param sorted_gsims: a list of GSIM instances, sorted lexicographically
     :param sorted_imts: a list of intensity measure type strings
     """
-    imt_dt = numpy.dtype([(imt, float) for imt in sorted_imts])
+    imt_dt = numpy.dtype([(imt, numpy.float32) for imt in sorted_imts])
     gsim_imt_dt = numpy.dtype(
         [('idx', numpy.uint32)] +
         [(str(gsim), imt_dt) for gsim in sorted_gsims])
