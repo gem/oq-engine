@@ -147,7 +147,7 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
         A comma-separated string of export types.
     """
     # first of all check the database version and exit if the db is outdated
-    upgrader.check_versions(django_db.connections['admin'])
+    upgrader.check_versions(django_db.connection)
     with logs.handle(job, log_level, log_file):  # run the job
         tb = 'None\n'
         try:
@@ -221,7 +221,7 @@ def del_calc(job_id):
         # directly because Django is so stupid that it reads from the database
         # all the records to delete before deleting them: thus, it runs out
         # of memory for large calculations
-        curs = models.getcursor('admin')
+        curs = models.getcursor()
         curs.execute('DELETE FROM job WHERE id=%s', (job_id,))
     else:
         # this doesn't belong to the current user
@@ -290,7 +290,7 @@ def run_job(cfg_file, log_level, log_file, exports='',
         Currently only 'xml' is supported.
     """
     # first of all check the database version and exit if the db is outdated
-    upgrader.check_versions(django_db.connections['admin'])
+    upgrader.check_versions(django_db.connection)
     with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=3):
         job = job_from_file(
             cfg_file, getpass.getuser(), log_level, exports,

@@ -88,7 +88,7 @@ def check_script(upgrade, dry_run=True, debug=True):
     :param debug: if True, print the queries which are executed
     """
     from openquake.server.db.models import getcursor
-    conn = WrappedConnection(getcursor('admin').connection, debug=debug)
+    conn = WrappedConnection(getcursor().connection, debug=debug)
     try:
         upgrade(conn)
     except:
