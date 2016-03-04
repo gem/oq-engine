@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Integrated the authentication database in the engine server database
+
+
 python-oq-engine (1.9.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
