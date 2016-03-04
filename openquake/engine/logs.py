@@ -148,7 +148,7 @@ class LogDatabaseHandler(logging.Handler):
 
     def emit(self, record):  # pylint: disable=E0202
         if record.levelno >= logging.INFO:
-            self.getcursor('job_init').execute(
+            self.getcursor('admin').execute(
                 """INSERT INTO log (job_id, timestamp, level, process, message)
                 VALUES (%s, %s, %s, %s, %s)""",
                 (self.job.id, datetime.utcnow(), record.levelname,
