@@ -899,7 +899,7 @@ class ParamSet(with_metaclass(MetaParamSet)):
     ...     b = Param(positivefloat)
     ...
     ...     def is_valid_not_too_big(self):
-    ...         "The sum of a and b must be under 10. "
+    ...         "The sum of a and b must be under 10: a={a} and b={b}"
     ...         return self.a + self.b < 10
 
     >>> mp = MyParams(a='1', b='7.2')
@@ -909,10 +909,7 @@ class ParamSet(with_metaclass(MetaParamSet)):
     >>> MyParams(a='1', b='9.2').validate()
     Traceback (most recent call last):
     ...
-    ValueError: The sum of a and b must be under 10.
-    Got:
-    a=1
-    b=9.2
+    ValueError: The sum of a and b must be under 10: a=1 and b=9.2
 
     The constrains are applied in lexicographic order. The attribute
     corresponding to a Param descriptor can be set as usual:
