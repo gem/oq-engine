@@ -140,6 +140,11 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
         a dictionary of probability arrays, with composite key
         (site.id, rlz.id, poe, imt, iml, trt_names).
     """
+    trt = sources[0].tectonic_region_type
+    try:
+        max_dist = oqparam.maximum_distance[trt]
+    except KeyError:
+        max_dist = oqparam.maximum_distance['default']
     trt_num = dict((trt, i) for i, trt in enumerate(trt_names))
     gsims = rlzs_assoc.gsims_by_trt_id[trt_model_id]
     result = {}  # site.id, rlz.id, poe, imt, iml, trt_names -> array
@@ -157,8 +162,7 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
 
         # generate source, rupture, sites once per site
         source_ruptures = list(
-            gen_ruptures_for_site(
-                site, sources, oqparam.maximum_distance, monitor))
+            gen_ruptures_for_site(site, sources, max_dist, monitor))
         if not source_ruptures:
             continue
 

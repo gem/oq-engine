@@ -654,6 +654,26 @@ def dictionary(value):
     return dic
 
 
+def floatdict(value):
+    """
+    :param value:
+        input string corresponding to a literal Python number or dictionary
+    :returns:
+        a Python dictionary key -> number
+
+    >>> floatdict("200")
+    {'default': 200}
+
+    >>> text = "{'active shallow crust': 250., 'default': 200}"
+    >>> sorted(floatdict(text).items())
+    [('active shallow crust', 250.0), ('default', 200)]
+    """
+    value = ast.literal_eval(value)
+    if isinstance(value, (int, float)):
+        return {'default': value}
+    return dict(value)
+
+
 # ########################### SOURCES/RUPTURES ############################# #
 
 def mag_scale_rel(value):
@@ -879,7 +899,7 @@ class ParamSet(with_metaclass(MetaParamSet)):
     ...     b = Param(positivefloat)
     ...
     ...     def is_valid_not_too_big(self):
-    ...         "The sum of a and b must be under 10. "
+    ...         "The sum of a and b must be under 10: a={a} and b={b}"
     ...         return self.a + self.b < 10
 
     >>> mp = MyParams(a='1', b='7.2')
@@ -889,10 +909,7 @@ class ParamSet(with_metaclass(MetaParamSet)):
     >>> MyParams(a='1', b='9.2').validate()
     Traceback (most recent call last):
     ...
-    ValueError: The sum of a and b must be under 10.
-    Got:
-    a=1
-    b=9.2
+    ValueError: The sum of a and b must be under 10: a=1 and b=9.2
 
     The constrains are applied in lexicographic order. The attribute
     corresponding to a Param descriptor can be set as usual:
@@ -949,7 +966,8 @@ class ParamSet(with_metaclass(MetaParamSet)):
         the underlying value.
         """
         dic = self.__dict__
-        return [(k, repr(dic[k])) for k in sorted(dic)]
+        return [(k, repr(dic[k])) for k in sorted(dic)
+                if not k.startswith('_')]
 
     def __init__(self, **names_vals):
         for name, val in names_vals.items():
@@ -978,11 +996,9 @@ class ParamSet(with_metaclass(MetaParamSet)):
                   if valid.startswith('is_valid_')]
         for is_valid in valids:
             if not is_valid():
-                dump = '\n'.join('%s=%s' % (n, v)
-                                 for n, v in sorted(self.__dict__.items()))
                 docstring = is_valid.__doc__.strip()
                 doc = textwrap.fill(docstring.format(**vars(self)))
-                raise ValueError(doc + '\nGot:\n' + dump)
+                raise ValueError(doc)
 
     def __iter__(self):
         for item in sorted(vars(self).items()):
