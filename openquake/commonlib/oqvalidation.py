@@ -307,8 +307,8 @@ class OqParam(valid.ParamSet):
         """
         Invalid maximum_distance={maximum_distance}: {error}
         """
-        if self.calculation_mode not in HAZARD_CALCULATORS:
-            return True
+        if 'source_model_logic_tree' not in self.inputs:
+            return True  # don't apply validation
         for trt, val in self.maximum_distance.items():
             if val <= 0:
                 self.error = '%s=%r < 0' % (trt, val)
