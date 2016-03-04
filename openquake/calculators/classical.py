@@ -148,7 +148,6 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     :returns:
         an AccumDict rlz -> curves
     """
-    max_dist = monitor.oqparam.maximum_distance
     truncation_level = monitor.oqparam.truncation_level
     imtls = monitor.oqparam.imtls
     trt_model_id = sources[0].trt_model_id
@@ -156,6 +155,11 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     for src in sources[1:]:
         assert src.trt_model_id == trt_model_id
     gsims = rlzs_assoc.gsims_by_trt_id[trt_model_id]
+    trt = sources[0].tectonic_region_type
+    try:
+        max_dist = monitor.oqparam.maximum_distance[trt]
+    except KeyError:
+        max_dist = monitor.oqparam.maximum_distance['other']
 
     dic = AccumDict()
     dic.siteslice = slice(siteidx, siteidx + len(sitecol))

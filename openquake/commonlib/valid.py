@@ -654,6 +654,26 @@ def dictionary(value):
     return dic
 
 
+def floatdict(value):
+    """
+    :param value:
+        input string corresponding to a literal Python number or dictionary
+    :returns:
+        a Python dictionary key -> number
+
+    >>> floatdict("200")
+    {'other': 200}
+
+    >>> text = "{'active shallow crust': 250., 'other': 200}"
+    >>> sorted(floatdict(text).items())
+    [('active shallow crust', 250.0), ('other', 200)]
+    """
+    value = ast.literal_eval(value)
+    if isinstance(value, (int, float)):
+        return {'other': value}
+    return dict(value)
+
+
 # ########################### SOURCES/RUPTURES ############################# #
 
 def mag_scale_rel(value):

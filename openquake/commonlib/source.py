@@ -946,10 +946,14 @@ class SourceManager(object):
         for src in self.csm.get_sources(kind):
             filter_time = split_time = 0
             if self.filter_sources:
+                try:
+                    max_dist = self.maximum_distance[src.tectonic_region_type]
+                except KeyError:
+                    max_dist = self.maximum_distance['other']
                 with filter_mon:
                     try:
                         sites = src.filter_sites_by_distance_to_source(
-                            self.maximum_distance, sitecol)
+                            max_dist, sitecol)
                     except:
                         etype, err, tb = sys.exc_info()
                         msg = 'An error occurred with source id=%s: %s'

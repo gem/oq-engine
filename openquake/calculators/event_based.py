@@ -291,14 +291,19 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     # sources of the same trt_model_id
     trt_model_id = sources[0].trt_model_id
     oq = monitor.oqparam
+    trt = sources[0].tectonic_region_type
+    try:
+        max_dist = oq.maximum_distance[trt]
+    except KeyError:
+        max_dist = oq.maximum_distance['other']
+
     sesruptures = []
     calc_times = []
 
     # Compute and save stochastic event sets
     for src in sources:
         t0 = time.time()
-        s_sites = src.filter_sites_by_distance_to_source(
-            oq.maximum_distance, sitecol)
+        s_sites = src.filter_sites_by_distance_to_source(max_dist, sitecol)
         if s_sites is None:
             continue
 
