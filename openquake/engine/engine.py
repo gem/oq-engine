@@ -221,7 +221,7 @@ def del_calc(job_id):
         # directly because Django is so stupid that it reads from the database
         # all the records to delete before deleting them: thus, it runs out
         # of memory for large calculations
-        curs = models.getcursor()
+        curs = django_db.connection.cursor()
         curs.execute('DELETE FROM job WHERE id=%s', (job_id,))
     else:
         # this doesn't belong to the current user
