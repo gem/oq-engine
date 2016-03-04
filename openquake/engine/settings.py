@@ -59,10 +59,7 @@ def _db_cfg(db_name):
     )
 
 
-_DB_NAMES = (
-    'admin',
-    'job_init',
-)
+_DB_NAMES = 'admin',
 
 DATABASES = dict((db, _db_cfg(db)) for db in _DB_NAMES)
 
@@ -76,8 +73,6 @@ DATABASES['default'] = {
     'HOST': DB_SECTION.get('host', 'localhost'),
     'PORT': DB_SECTION.get('port', '5432'),
 }
-
-DATABASE_ROUTERS = ['openquake.server.db.routers.OQRouter']
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
