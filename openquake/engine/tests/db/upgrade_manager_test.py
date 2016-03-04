@@ -28,7 +28,7 @@ from openquake.server.db.upgrade_manager import (
     upgrade_db, version_db, what_if_I_upgrade,
     VersionTooSmall, DuplicatedVersion)
 
-conn = getcursor('admin').connection
+conn = getcursor().connection
 pkg = 'openquake.engine.tests.db.upgrades'
 upgrader = importlib.import_module(pkg).upgrader
 
