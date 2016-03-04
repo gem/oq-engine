@@ -68,14 +68,14 @@ class ScenarioCalculator(base.HazardCalculator):
         rupture = readinput.get_rupture(self.oqparam)
         self.gsims = readinput.get_gsims(self.oqparam)
         self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
-
+        maxdist = self.oqparam.maximum_distance['default']
         with self.monitor('filtering sites', autoflush=True):
             self.sitecol = filters.filter_sites_by_distance_to_rupture(
-                rupture, self.oqparam.maximum_distance, self.sitecol)
+                rupture, maxdist, self.sitecol)
         if self.sitecol is None:
             raise RuntimeError(
-                'All sites were filtered out! '
-                'maximum_distance=%s km' % self.oqparam.maximum_distance)
+                'All sites were filtered out! maximum_distance=%s km' %
+                maxdist)
         self.tags = numpy.array(
             sorted(['scenario-%010d' % i for i in range(n_gmfs)]),
             (bytes, 100))
