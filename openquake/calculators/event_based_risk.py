@@ -24,6 +24,7 @@ import collections
 
 import numpy
 
+from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, humansize
 from openquake.calculators import base
 from openquake.commonlib import readinput, parallel
@@ -152,22 +153,15 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
 
             # aggregate losses per rupture
             asslosses = {}  # rup_id, aid -> loss
-            agglosses = {}  # rup_id -> loss
-            for rup_id, all_losses, ins_losses in zip(
-                    out.rupids, out.event_loss_per_asset,
-                    out.insured_loss_per_asset):
-                for aid, groundloss, insuredloss in zip(
-                        asset_ids, all_losses, ins_losses):
-                    if groundloss > 0:
-                        loss = numpy.array([groundloss, insuredloss], F32)
-                        asslosses[rup_id, aid] = loss
-                        try:
-                            agglosses[rup_id] += loss
-                        except KeyError:
-                            agglosses[rup_id] = loss
-
-            # ass losses
             if monitor.asset_loss_table:
+                for rup_id, all_losses, ins_losses in zip(
+                        out.rupids, out.event_loss_per_asset,
+                        out.insured_loss_per_asset):
+                    for aid, groundloss, insuredloss in zip(
+                            asset_ids, all_losses, ins_losses):
+                        if groundloss > 0:
+                            loss = numpy.array([groundloss, insuredloss], F32)
+                            asslosses[rup_id, aid] = loss
                 items = sorted(asslosses.items())
                 if monitor.insured_losses:
                     result['ASSLOSS'][l, r].append(numpy.array(
@@ -179,6 +173,12 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
                         monitor.ela_dt))
 
             # agg losses
+            glosses = out.event_loss_per_asset.sum(axis=1)
+            ilosses = out.insured_loss_per_asset.sum(axis=1)
+            agglosses = {
+                rupid: numpy.array([gloss, iloss], F32)
+                for rupid, gloss, iloss in zip(out.rupids, glosses, ilosses)
+                if gloss > 0}
             result['AGGLOSS'][l, r].append(agglosses)
 
             # dictionaries asset_idx -> array of counts
