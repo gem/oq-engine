@@ -66,7 +66,7 @@ a4,8.77477036E+01,2.79015007E+01,3,1,1.00000000E+01,1.00000000E+02,5.00000000E+0
         numpy.testing.assert_equal(
             assetcol, writers.read_composite_array(expected))
 
-    def test_get_all(self):
+    def test_get_hazard(self):
         self.assertEqual(
             list(self.riskmodel.get_imt_taxonomies()),
             [('PGA', set(['RM'])), ('SA(0.2)', set(['RC'])),
@@ -76,18 +76,18 @@ a4,8.77477036E+01,2.79015007E+01,3,1,1.00000000E+01,1.00000000E+02,5.00000000E+0
 
         ri_PGA = self.riskmodel.build_input(
             'PGA', hazard_by_site, self.assets_by_site, {})
-        aeh_by_site = ri_PGA.get_all(rlzs_assoc)
-        self.assertEqual(len(aeh_by_site), 3)
+        haz = ri_PGA.get_hazard(rlzs_assoc)
+        self.assertEqual(len(haz), 4)
 
         ri_SA_02 = self.riskmodel.build_input(
             'SA(0.2)', hazard_by_site, self.assets_by_site, {})
-        aeh_by_site = ri_SA_02.get_all(rlzs_assoc)
-        self.assertEqual(len(aeh_by_site), 1)
+        haz = ri_SA_02.get_hazard(rlzs_assoc)
+        self.assertEqual(len(haz), 4)
 
         ri_SA_05 = self.riskmodel.build_input(
             'SA(0.5)', hazard_by_site, self.assets_by_site, {})
-        aeh_by_site = ri_SA_05.get_all(rlzs_assoc)
-        self.assertEqual(len(aeh_by_site), 1)
+        haz = ri_SA_05.get_hazard(rlzs_assoc)
+        self.assertEqual(len(haz), 4)
 
     def test_from_ruptures(self):
         oq = self.oqparam
@@ -109,5 +109,5 @@ a4,8.77477036E+01,2.79015007E+01,3,1,1.00000000E+01,1.00000000E+02,5.00000000E+0
             self.sitecol, ses_ruptures, gsims_by_trt_id, oq.truncation_level,
             correl_model, eps, hint=1)
 
-        aeh_by_site = ri.get_all(rlzs_assoc, self.assets_by_site)
-        self.assertEqual(len(aeh_by_site), 4)
+        haz = ri.get_hazard(rlzs_assoc)
+        self.assertEqual(len(haz), 4)
