@@ -365,22 +365,17 @@ class CompositeRiskModel(collections.Mapping):
             assets_by_site = getattr(
                 riskinput, 'assets_by_site', assets_by_site)
             with mon_hazard:
-                # get assets, hazards, epsilons
-                ahe_by_site = riskinput.get_all(rlzs_assoc, assets_by_site)
+                # get assets, epsilons, hazard
+                aeh_by_site = riskinput.get_all(rlzs_assoc, assets_by_site)
             with mon_risk:
                 # compute the outputs by using the worklow
-                for imt, taxonomies in riskinput.imt_taxonomies:
-                    for taxonomy in taxonomies:
-                        for assets, hazard, epsilons in ahe_by_site:
-                            assets_, epsilons_ = [], []
-                            for asset, epsilon in zip(assets, epsilons):
-                                if asset.taxonomy == taxonomy:
-                                    assets_.append(asset)
-                                    epsilons_.append(epsilon)
-                            if not assets_:
-                                continue
-                            yield self[taxonomy].out_by_lr(
-                                imt, assets_, hazard[imt], epsilons_, rupids)
+                for assets_epsilons, hazard in aeh_by_site:
+                    for imt, taxonomies in riskinput.imt_taxonomies:
+                        for taxonomy in taxonomies:
+                            assets, epsilons = assets_epsilons[taxonomy]
+                            if assets:
+                                yield self[taxonomy].out_by_lr(
+                                    imt, assets, hazard[imt], epsilons, rupids)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -434,14 +429,18 @@ class RiskInput(object):
         """
         if assets_by_site is None:
             assets_by_site = self.assets_by_site
-        ahe_by_site = []
+        aeh_by_site = []
         for hazard, assets in zip(self.hazard_by_site, assets_by_site):
             if not assets:
                 continue
-            epsilons = [self.eps_dict.get(asset.idx, None) for asset in assets]
+            assets_epsilons = collections.defaultdict(lambda: ([], []))
+            for asset in assets:
+                a, e = assets_epsilons[asset.taxonomy]
+                a.append(asset)
+                e.append(self.eps_dict.get(asset.idx, None))
             haz = {self.imt: rlzs_assoc.combine(hazard)}
-            ahe_by_site.append((assets, haz, epsilons))
-        return ahe_by_site
+            aeh_by_site.append((assets_epsilons, haz))
+        return aeh_by_site
 
     def __repr__(self):
         return '<%s IMT=%s, taxonomy=%s, weight=%d>' % (
@@ -533,18 +532,22 @@ class RiskInputFromRuptures(object):
         gmfs = self.compute_expand_gmfs()
         gsims = list(map(str, self.gsims))
         trt_id = rlzs_assoc.csm_info.get_trt_id(self.col_id)
-        ahe_by_site = []
+        aeh_by_site = []
         for assets, hazard in zip(assets_by_site, gmfs.T):
             if not assets:
                 continue
+            assets_epsilons = collections.defaultdict(lambda: ([], []))
             haz_by_imt_rlz = {imt: {} for imt in self.imts}
             for gsim in gsims:
                 for imt in self.imts:
                     for rlz in rlzs_assoc[trt_id, gsim]:
                         haz_by_imt_rlz[imt][rlz] = hazard[gsim][imt]
-            epsilons = [self.eps[asset.idx] for asset in assets]
-            ahe_by_site.append((assets, haz_by_imt_rlz, epsilons))
-        return ahe_by_site
+            for asset in assets:
+                a, e = assets_epsilons[asset.taxonomy]
+                a.append(asset)
+                e.append(self.eps[asset.idx])
+            aeh_by_site.append((assets_epsilons, haz_by_imt_rlz))
+        return aeh_by_site
 
     def __repr__(self):
         return '<%s IMT_taxonomies=%s, weight=%d>' % (
