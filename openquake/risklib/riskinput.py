@@ -436,6 +436,8 @@ class RiskInput(object):
             assets_by_site = self.assets_by_site
         ahe_by_site = []
         for hazard, assets in zip(self.hazard_by_site, assets_by_site):
+            if not assets:
+                continue
             epsilons = [self.eps_dict.get(asset.idx, None) for asset in assets]
             haz = {self.imt: rlzs_assoc.combine(hazard)}
             ahe_by_site.append((assets, haz, epsilons))
@@ -533,6 +535,8 @@ class RiskInputFromRuptures(object):
         trt_id = rlzs_assoc.csm_info.get_trt_id(self.col_id)
         ahe_by_site = []
         for assets, hazard in zip(assets_by_site, gmfs.T):
+            if not assets:
+                continue
             haz_by_imt_rlz = {imt: {} for imt in self.imts}
             for gsim in gsims:
                 for imt in self.imts:

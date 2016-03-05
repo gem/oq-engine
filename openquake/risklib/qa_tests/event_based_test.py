@@ -75,9 +75,12 @@ class EventBasedTestCase(unittest.TestCase):
         wf.compositemodel = mock.MagicMock()
         # NB: we need a MagicMock since the riskmodel instance makes a call
         # self.riskmodel.curve_builders[self.riskmodel.lti[loss_type]]
-        out = wf(self.loss_type, assets, gmvs, epsilons, [1, 2, 3, 4, 5])
-        numpy.testing.assert_almost_equal(
-            out.average_losses, [0.02048617, 0.01940496])
+        o0 = wf(self.loss_type, [assets[0]], gmvs[0], [epsilons[0]],
+                [1, 2, 3, 4, 5])
+        o1 = wf(self.loss_type, [assets[1]], gmvs[1], [epsilons[1]],
+                [1, 2, 3, 4, 5])
+        numpy.testing.assert_almost_equal(o0.average_losses, 0.02048617)
+        numpy.testing.assert_almost_equal(o1.average_losses, 0.01940496)
 
     def test_mean_based_with_partial_correlation(self):
         # This is a regression test. Data has not been checked
@@ -109,9 +112,12 @@ class EventBasedTestCase(unittest.TestCase):
             insured_losses=False
             )
         wf.compositemodel = mock.MagicMock()
-        out = wf(self.loss_type, assets, gmvs, epsilons, [1, 2, 3, 4, 5])
-        numpy.testing.assert_almost_equal(
-            out.average_losses, [0.01987912, 0.01929152])
+        o0 = wf(self.loss_type, [assets[0]], gmvs[0], [epsilons[0]],
+                [1, 2, 3, 4, 5])
+        o1 = wf(self.loss_type, [assets[1]], gmvs[1], [epsilons[1]],
+                [1, 2, 3, 4, 5])
+        numpy.testing.assert_almost_equal(o0.average_losses, 0.01987912)
+        numpy.testing.assert_almost_equal(o1.average_losses, 0.01929152)
 
     def test_mean_based_with_perfect_correlation(self):
         # This is a regression test. Data has not been checked
@@ -145,9 +151,12 @@ class EventBasedTestCase(unittest.TestCase):
             insured_losses=False
             )
         wf.compositemodel = mock.MagicMock()
-        out = wf(self.loss_type, assets, gmvs, epsilons, [1, 2, 3, 4, 5])
-        numpy.testing.assert_almost_equal(
-            out.average_losses, [0.01952035, 0.01952035])
+        o0 = wf(self.loss_type, [assets[0]], gmvs[0], [epsilons[0]],
+                [1, 2, 3, 4, 5])
+        o1 = wf(self.loss_type, [assets[1]], gmvs[1], [epsilons[1]],
+                [1, 2, 3, 4, 5])
+        numpy.testing.assert_almost_equal(o0.average_losses, 0.01952035)
+        numpy.testing.assert_almost_equal(o1.average_losses, 0.01952035)
 
     def test_mean_based(self):
         epsilons = scientific.make_epsilons([gmf[0]], seed=1, correlation=0)
@@ -231,8 +240,6 @@ class EventBasedTestCase(unittest.TestCase):
             insured_losses=True
             )
         wf.compositemodel = mock.MagicMock()
-        out = wf(self.loss_type, assets, gmf[0:2], epsilons, [1, 2, 3, 4, 5])
-        numpy.testing.assert_almost_equal(
-            out.average_losses, [0.00473820568, 0.0047437959417])
-        numpy.testing.assert_almost_equal(
-            out.average_insured_losses, [0, 0])
+        out = wf(self.loss_type, assets, gmf[0], epsilons, [1, 2, 3, 4, 5])
+        numpy.testing.assert_almost_equal(out.average_losses, 0.00473820568)
+        numpy.testing.assert_almost_equal(out.average_insured_losses, 0)

@@ -76,24 +76,18 @@ a4,8.77477036E+01,2.79015007E+01,3,1,1.00000000E+01,1.00000000E+02,5.00000000E+0
 
         ri_PGA = self.riskmodel.build_input(
             'PGA', hazard_by_site, self.assets_by_site, {})
-        assets, hazards, epsilons = ri_PGA.get_all(rlzs_assoc)
-        self.assertEqual([a.id for a in assets], ['a0', 'a3', 'a4'])
-        self.assertEqual(set(a.taxonomy for a in assets), set(['RM']))
-        self.assertEqual(epsilons, [None, None, None])
+        ahe_by_site = ri_PGA.get_all(rlzs_assoc)
+        self.assertEqual(len(ahe_by_site), 3)
 
         ri_SA_02 = self.riskmodel.build_input(
             'SA(0.2)', hazard_by_site, self.assets_by_site, {})
-        assets, hazards, epsilons = ri_SA_02.get_all(rlzs_assoc)
-        self.assertEqual([a.id for a in assets], ['a1'])
-        self.assertEqual(set(a.taxonomy for a in assets), set(['RC']))
-        self.assertEqual(epsilons, [None])
+        ahe_by_site = ri_SA_02.get_all(rlzs_assoc)
+        self.assertEqual(len(ahe_by_site), 1)
 
         ri_SA_05 = self.riskmodel.build_input(
             'SA(0.5)', hazard_by_site, self.assets_by_site, {})
-        assets, hazards, epsilons = ri_SA_05.get_all(rlzs_assoc)
-        self.assertEqual([a.id for a in assets], ['a2'])
-        self.assertEqual(set(a.taxonomy for a in assets), set(['W']))
-        self.assertEqual(epsilons, [None])
+        ahe_by_site = ri_SA_05.get_all(rlzs_assoc)
+        self.assertEqual(len(ahe_by_site), 1)
 
     def test_from_ruptures(self):
         oq = self.oqparam
@@ -115,7 +109,9 @@ a4,8.77477036E+01,2.79015007E+01,3,1,1.00000000E+01,1.00000000E+02,5.00000000E+0
             self.sitecol, ses_ruptures, gsims_by_trt_id, oq.truncation_level,
             correl_model, eps, hint=1)
 
-        assets, hazards, epsilons = ri.get_all(rlzs_assoc, self.assets_by_site)
+        ahe_by_site = ri.get_all(rlzs_assoc, self.assets_by_site)
+        assets = sum([ahe[0] for ahe in ahe_by_site], [])
+        epsilons = sum([ahe[2] for ahe in ahe_by_site], [])
         self.assertEqual([a.id for a in assets],
                          [b'a0', b'a1', b'a2', b'a3', b'a4'])
         self.assertEqual(set(a.taxonomy for a in assets),
