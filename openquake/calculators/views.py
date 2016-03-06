@@ -444,13 +444,35 @@ def view_biggest_ebr_block(token, dstore):
     return msg
 
 
+def get_max_gmf_size(dstore):
+    """
+    Extract info about the largest GMF
+    """
+    oq = OqParam.from_(dstore.attrs)
+    n_sites = len(dstore['sitecol'].complete)
+    rlzs_assoc = dstore['rlzs_assoc']
+    num_ruptures = dstore.get_attr('tags', 'num_ruptures')
+    col = num_ruptures.argmax()
+    n_ruptures = num_ruptures[col]
+    trt_id = rlzs_assoc.csm_info.get_trt_id(col)
+    gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
+    n_imts = len(oq.imtls)
+    n_rlzs = max(len(rlzs_assoc[trt_id, gsim]) for gsim in gsims)
+    size = n_sites * n_rlzs * n_ruptures * n_imts * 4
+    return dict(n_rlzs=n_rlzs, n_imts=n_imts, n_sites=n_sites, size=size,
+                n_ruptures=n_ruptures, humansize=humansize(size), col=col,
+                trt=rlzs_assoc.csm_info.tmdict[trt_id].trt)
+
+
 @view.add('biggest_ebr_gmf')
 def view_biggest_ebr_gmf(token, dstore):
     """
     Returns the size of the biggest GMF in an event based risk calculation
     """
-    max_gmf = max(dstore['riskinputs']['gmf_nbytes'])
-    return humansize(max_gmf)
+    msg = ('The largest GMF block is for collection #%(col)d of type %(trt)r,'
+           '\ncontains %(n_imts)d IMT(s), %(n_sites)d site(s), %(n_rlzs)d '
+           'realization(s), and has a size of %(humansize)s / num_tasks')
+    return msg % get_max_gmf_size(dstore)
 
 
 @view.add('fullreport')
