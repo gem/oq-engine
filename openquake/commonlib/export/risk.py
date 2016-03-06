@@ -33,9 +33,9 @@ from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
 
-F32 = numpy.float32
 Output = collections.namedtuple('Output', 'ltype path array')
 F32 = numpy.float32
+U32 = numpy.uint32
 
 
 def extract_outputs(dkey, dstore, loss_type=None, ext=''):
@@ -158,6 +158,8 @@ def export_agg_losses(ekey, dstore):
         writer.save(data, dest)
     return writer.getsaved()
 
+agg_loss_dt = numpy.dtype([('rup_id', U32), ('loss', F32), ('loss_ins', F32)])
+
 
 # this is used by event_based_risk
 @export.add(('agg_loss_table', 'csv'))
@@ -176,7 +178,10 @@ def export_agg_losses_ebr(ekey, dstore):
             data.sort(order='rup_id')
             dest = dstore.export_path(
                 'agg_losses-rlz%03d-%s.csv' % (rlz.ordinal, loss_type))
-            writer.save(data, dest)
+            if data.dtype['loss'].shape == (2,):  # insured losses
+                writer.save(data.view(agg_loss_dt), dest)
+            else:
+                writer.save(data, dest)
     return writer.getsaved()
 
 
