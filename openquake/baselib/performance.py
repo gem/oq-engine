@@ -68,7 +68,7 @@ class Process(multiprocessing.Process):
         self.join()
 
 
-class ListenerMonitor(Listener):
+def read_all(listener):
     """
     A listener with an associated monitor that can send back messages.
     The sent messages can be read by iterating on the listener.
@@ -77,31 +77,23 @@ class ListenerMonitor(Listener):
     ...     with monitor:
     ...         monitor.send('hello')
     ...         monitor.send('world')
+    ...         monitor.send(SystemExit())
     >>> monitor = PerformanceMonitor('test')
-    >>> listener = ListenerMonitor(monitor, '')
-    >>> with Process(greetings, listener.monitor):
-    ...     list(listener)
+    >>> listener = monitor.make_listener('')
+    >>> with Process(greetings, monitor):
+    ...     list(read_all(listener))
     ['hello', 'world']
     """
-    def __init__(self, monitor, hostname):
-        authkey = uuid.uuid1().bytes
-        Listener.__init__(self, (hostname, 0), authkey=authkey)
-        new = monitor.new(monitor.operation, measuremem=True)
-        new.address = self.address
-        new.authkey = authkey
-        self.monitor = new
-
-    def __iter__(self):
-        conn = self.accept()
-        while True:
-            try:
-                got = conn.recv()
-            except EOFError:  # the client closed the connection
+    while True:
+        conn = listener.accept()
+        try:
+            got = conn.recv()
+            if isinstance(got, SystemExit):
                 break
-            else:
-                yield got
-        conn.close()
-        self.close()
+            yield got
+        finally:
+            conn.close()
+    listener.close()
 
 
 # this is not thread-safe
@@ -180,8 +172,6 @@ class PerformanceMonitor(object):
         return numpy.array(data, perf_dt)
 
     def __enter__(self):
-        if self.address:
-            self.client = Client(self.address, authkey=self.authkey)
         self.exc = None  # exception
         self._start_time = time.time()
         if self.measuremem:
@@ -189,8 +179,6 @@ class PerformanceMonitor(object):
         return self
 
     def __exit__(self, etype, exc, tb):
-        if self.address:
-            self.client.close()
         self.exc = exc
         if self.measuremem:
             self.stop_mem = self.measure_mem()
@@ -205,12 +193,28 @@ class PerformanceMonitor(object):
         if self.autoflush:
             self.flush()
 
+    def make_listener(self, hostname):
+        """
+        :param hostname: name of the server host, as seen by the clients
+        :returns: a Listener object listening on `hostname`
+        """
+        authkey = uuid.uuid1().bytes
+        listener = Listener((hostname, 0), authkey=authkey)
+        self.address = listener.address
+        self.authkey = authkey
+        return listener
+
     def send(self, obj):
         """
         Send back an object to the listener: this is only defined
         if an .address has been defined.
         """
-        return self.client.send(obj)
+        client = Client(self.address, authkey=self.authkey)
+        try:
+            res = client.send(obj)
+        finally:
+            client.close()
+        return res
 
     def flush(self):
         """
