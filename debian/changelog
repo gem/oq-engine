@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed a bug in the Web UI when running a risk calculation starting
+    from a previous calculation
+
 python-oq-engine (1.9.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
