@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed the description in the Web UI (before it was temporarily set to
+    the string "A job").
+
 python-oq-engine (1.9.1-0~precise01) precise; urgency=low
 
   [Michele Simionato]
