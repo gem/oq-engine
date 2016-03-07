@@ -78,7 +78,7 @@ def safely_call(func, *args):
 
 
 def run_calc(
-        job, calc_dir, callback_url=None, dbname="platform", log_file=None,
+        job, calc_dir, callback_url=None, log_file=None,
         hazard_calculation_id=None):
     """
     Run a calculation given the calculation ID. It is assumed that the
@@ -92,8 +92,6 @@ def run_calc(
         the directory with the input files
     :param callback_url:
         the URL to call at the end of the calculation
-    :param dbname:
-        the platform database name
     :param log_file:
         the name of the log file
     :param hazard_calculation_id:

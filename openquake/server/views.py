@@ -382,7 +382,7 @@ def run_calc(request):
                         status=status)
 
 
-def submit_job(job_file, temp_dir, dbname, user_name,
+def submit_job(job_file, temp_dir, user_name,
                callback_url=None, hazard_job_id=None, logfile=None):
     """
     Create a job object from the given job.ini file in the job directory
@@ -398,7 +398,7 @@ def submit_job(job_file, temp_dir, dbname, user_name,
 
     future = executor.submit(
         tasks.safely_call, tasks.run_calc, job, temp_dir,
-        callback_url, dbname, logfile, hazard_job_id)
+        callback_url, logfile, hazard_job_id)
     return job, future
 
 
