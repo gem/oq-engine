@@ -103,15 +103,17 @@ def cleanup_after_job(job, terminate, task_ids=()):
         logs.LOG.debug('Revoked task %s', tid)
 
 
-def create_job(calc_mode, user_name="openquake", hc_id=None):
+def create_job(calc_mode, description, user_name="openquake", hc_id=None):
     """
     Create job for the given user, return it.
 
     :param str calc_mode:
         Calculation mode, such as classical, event_based, etc
-    :param str username:
+    :param username:
         Username of the user who owns/started this job. If the username doesn't
         exist, a user record for this name will be created.
+    :param description:
+         Description of the calculation
     :param hc_id:
         If not None, then the created job is a risk job
     :returns:
@@ -121,7 +123,7 @@ def create_job(calc_mode, user_name="openquake", hc_id=None):
     job = models.OqJob.objects.create(
         id=calc_id,
         calculation_mode=calc_mode,
-        description='A job',
+        description=description,
         user_name=user_name,
         ds_calc_dir=os.path.join(datastore.DATADIR, 'calc_%s' % calc_id))
     if hc_id:
@@ -275,7 +277,7 @@ def print_outputs_summary(outputs, full=True):
 
 # this function is called only by openquake_cli.py, not by the engine server
 def run_job(cfg_file, log_level, log_file, exports='',
-            hazard_output_id=None, hazard_calculation_id=None):
+            hazard_calculation_id=None):
     """
     Run a job using the specified config file and other options.
 
@@ -294,7 +296,6 @@ def run_job(cfg_file, log_level, log_file, exports='',
     with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=3):
         job = job_from_file(
             cfg_file, getpass.getuser(), log_level, exports,
-            hazard_output_id=hazard_output_id,
             hazard_calculation_id=hazard_calculation_id)
         calc = run_calc(job, log_level, log_file, exports,
                         hazard_calculation_id=hazard_calculation_id)
@@ -365,7 +366,7 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
 
 @django_db.transaction.atomic
 def job_from_file(cfg_file, username, log_level='info', exports='',
-                  hazard_output_id=None, hazard_calculation_id=None, **extras):
+                  hazard_calculation_id=None, **extras):
     """
     Create a full job profile from a job config file.
 
@@ -377,8 +378,6 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
         Desired log level.
     :param exports:
         Comma-separated sting of desired export types
-    :param hazard_output_id:
-        Hazard output ID
     :param hazard_calculation_id:
         Hazard calculation ID
     :params extras:
@@ -396,13 +395,13 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
                  description=params['description'],
                  export_dir=params.get('export_dir', os.path.expanduser('~')))
     # create a job and a calculator
-    job = create_job(oq.calculation_mode, username, hazard_calculation_id)
+    job = create_job(oq.calculation_mode, oq.description, username,
+                     hazard_calculation_id)
     monitor = PerformanceMonitor('total runtime', measuremem=True)
     job.calc = base.calculators(oq, monitor, calc_id=job.id)
     with logs.handle(job, log_level):
         job.calc.oqparam = readinput.get_oqparam(params)
         job.calc.save_params()
-        job.description = oq.description
     return job
 
 

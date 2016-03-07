@@ -1,6 +1,15 @@
   [Michele Simionato]
   * Integrated the authentication database in the engine server database
+  * Fixed the description in the Web UI (before it was temporarily set to
+    the string "A job").
 
+python-oq-engine (1.9.1-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * Fixed a bug in the Web UI when running a risk calculation starting
+    from a previous calculation
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 07 Mar 2016 11:11:59 +0100
 
 python-oq-engine (1.9.0-0~precise01) precise; urgency=low
 
