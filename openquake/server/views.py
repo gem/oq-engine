@@ -360,8 +360,8 @@ def run_calc(request):
     user = utils.get_user_data(request)
 
     try:
-        job, _fut = submit_job(einfo[0], temp_dir, request.POST['database'],
-                               user['name'], callback_url, hazard_job_id)
+        job, _fut = submit_job(einfo[0], temp_dir, user['name'], callback_url,
+                               hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = exc.args[0]
