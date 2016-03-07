@@ -37,7 +37,6 @@ from openquake.baselib.performance import PerformanceMonitor
 from openquake.engine import logs
 from openquake.server.db import models
 from openquake.engine.utils import config, tasks
-from openquake.engine.celery_node_monitor import CeleryNodeMonitor
 from openquake.server.db.schema.upgrades import upgrader
 
 from openquake.commonlib import readinput, valid, datastore, export
@@ -293,18 +292,17 @@ def run_job(cfg_file, log_level, log_file, exports='',
     """
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connection)
-    with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=3):
-        job = job_from_file(
-            cfg_file, getpass.getuser(), log_level, exports,
-            hazard_calculation_id=hazard_calculation_id)
-        calc = run_calc(job, log_level, log_file, exports,
-                        hazard_calculation_id=hazard_calculation_id)
-        duration = calc.monitor.duration
-        calc.monitor.flush()
-        if job.status == 'complete':
-            print_results(job.id, duration, list_outputs)
-        else:
-            sys.exit('Calculation %s failed' % job.id)
+    job = job_from_file(
+        cfg_file, getpass.getuser(), log_level, exports,
+        hazard_calculation_id=hazard_calculation_id)
+    calc = run_calc(job, log_level, log_file, exports,
+                    hazard_calculation_id=hazard_calculation_id)
+    duration = calc.monitor.duration
+    calc.monitor.flush()
+    if job.status == 'complete':
+        print_results(job.id, duration, list_outputs)
+    else:
+        sys.exit('Calculation %s failed' % job.id)
     return job
 
 DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset_and_collapse_map')
