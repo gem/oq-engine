@@ -374,13 +374,12 @@ class CompositeRiskModel(collections.Mapping):
             with mon_risk:
                 # compute the outputs with the appropriate riskmodels
                 for asset_dict, hazard in zip(asset_dicts, hazard_by_site):
-                    for imt, taxonomies in riskinput.imt_taxonomies:
-                        for taxonomy in taxonomies:
-                            riskmodel = self[taxonomy]
-                            assets = asset_dict.get(taxonomy, [])
-                            if assets:
-                                epsilons = [riskinput.eps[asset.idx]
-                                            for asset in assets]
+                    for taxonomy, assets in asset_dict.items():
+                        riskmodel = self[taxonomy]
+                        epsilons = [riskinput.eps[asset.idx]
+                                    for asset in assets]
+                        for imt, taxonomies in riskinput.imt_taxonomies:
+                            if taxonomy in taxonomies:
                                 if rupids is None:
                                     yield riskmodel.out_by_lr(
                                         imt, assets, hazard[imt], epsilons)

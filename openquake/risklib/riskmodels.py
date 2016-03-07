@@ -19,7 +19,6 @@
 from __future__ import division
 import inspect
 import functools
-import collections
 import mock
 import numpy
 
