@@ -275,7 +275,7 @@ def print_outputs_summary(outputs, full=True):
 
 # this function is called only by openquake_cli.py, not by the engine server
 def run_job(cfg_file, log_level, log_file, exports='',
-            hazard_output_id=None, hazard_calculation_id=None):
+            hazard_calculation_id=None):
     """
     Run a job using the specified config file and other options.
 
@@ -294,7 +294,6 @@ def run_job(cfg_file, log_level, log_file, exports='',
     with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=3):
         job = job_from_file(
             cfg_file, getpass.getuser(), log_level, exports,
-            hazard_output_id=hazard_output_id,
             hazard_calculation_id=hazard_calculation_id)
         calc = run_calc(job, log_level, log_file, exports,
                         hazard_calculation_id=hazard_calculation_id)
@@ -365,7 +364,7 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
 
 @django_db.transaction.atomic
 def job_from_file(cfg_file, username, log_level='info', exports='',
-                  hazard_output_id=None, hazard_calculation_id=None, **extras):
+                  hazard_calculation_id=None, **extras):
     """
     Create a full job profile from a job config file.
 
@@ -377,8 +376,6 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
         Desired log level.
     :param exports:
         Comma-separated sting of desired export types
-    :param hazard_output_id:
-        Hazard output ID
     :param hazard_calculation_id:
         Hazard calculation ID
     :params extras:
