@@ -24,7 +24,6 @@ import urllib
 import urllib2
 
 from openquake.engine import engine
-from openquake.server.db import models as oqe_models
 
 from openquake.server.settings import DEBUG
 
@@ -78,9 +77,9 @@ def safely_call(func, *args):
         logger.error(str(e), exc_info=True)
 
 
-def run_calc(job, calc_dir,
-             callback_url=None, foreign_calc_id=None,
-             dbname="platform", log_file=None):
+def run_calc(
+        job, calc_dir, callback_url=None, dbname="platform", log_file=None,
+        hazard_calculation_id=None):
     """
     Run a calculation given the calculation ID. It is assumed that the
     entire calculation profile is already loaded into the oq-engine database
@@ -93,17 +92,20 @@ def run_calc(job, calc_dir,
         the directory with the input files
     :param callback_url:
         the URL to call at the end of the calculation
-    :param foreign_calc_id:
-        the calculation id on the platform
     :param dbname:
         the platform database name
+    :param log_file:
+        the name of the log file
+    :param hazard_calculation_id:
+        the previous calculation, if any
     """
     update_calculation(callback_url, status="started", engine_id=job.id)
 
     progress_handler = ProgressHandler(callback_url, job)
     logging.root.addHandler(progress_handler)
     try:
-        calc = engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports='')
+        calc = engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, '',
+                               hazard_calculation_id)
     except:  # catch the errors before task spawning
         # do not log the errors, since the engine already does that
         exctype, exc, tb = sys.exc_info()
@@ -119,8 +121,7 @@ def run_calc(job, calc_dir,
 
 def update_calculation(callback_url=None, **query):
     """
-    Update a foreign calculation by POSTing `query` data to
-    `callback_url`.
+    Update the log by POSTing `query` data to `callback_url`.
     """
     if callback_url is None:
         return
