@@ -28,8 +28,6 @@ from datetime import datetime
 
 import celery.task.control
 
-import openquake.engine
-
 from django.core import exceptions
 from django import db as django_db
 

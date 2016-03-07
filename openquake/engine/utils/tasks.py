@@ -23,17 +23,18 @@ from celery.result import ResultSet
 from celery.app import current_app
 from celery.task import task
 
-from openquake.commonlib import parallel
-from openquake.engine import logs, celery_node_monitor
+from openquake.commonlib import parallel, valid
+from openquake.engine import logs
 from openquake.engine.utils import config
 
 litetask = parallel.litetask
 celery_queue = config.get('amqp', 'celery_queue')
 SOFT_MEM_LIMIT = int(config.get('memory', 'soft_mem_limit'))
 HARD_MEM_LIMIT = int(config.get('memory', 'hard_mem_limit'))
+USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
 parallel.check_mem_usage.__defaults__ = (SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
 
-if celery_node_monitor.USE_CELERY:
+if USE_CELERY:
 
     class OqTaskManager(parallel.TaskManager):
         """
