@@ -19,10 +19,6 @@
 """Utility functions related to splitting work into tasks."""
 import types
 
-from celery.result import ResultSet
-from celery.app import current_app
-from celery.task import task
-
 from openquake.commonlib import parallel, valid
 from openquake.engine import logs
 from openquake.engine.utils import config
@@ -35,6 +31,9 @@ USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
 parallel.check_mem_usage.__defaults__ = (SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
 
 if USE_CELERY:
+    from celery.result import ResultSet
+    from celery.app import current_app
+    from celery.task import task
 
     class OqTaskManager(parallel.TaskManager):
         """

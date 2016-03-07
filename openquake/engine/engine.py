@@ -26,8 +26,6 @@ import operator
 import traceback
 from datetime import datetime
 
-import celery.task.control
-
 from django.core import exceptions
 from django import db as django_db
 
@@ -89,6 +87,7 @@ def cleanup_after_job(job, terminate, task_ids=()):
     :param bool terminate: the celery revoke command terminate flag
     :param task_ids: celery task IDs
     """
+    import celery.task.control
     # Using the celery API, terminate and revoke and terminate any running
     # tasks associated with the current job.
     if task_ids:
