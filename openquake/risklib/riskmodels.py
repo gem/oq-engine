@@ -27,6 +27,7 @@ from openquake.baselib.general import CallableDict, AccumDict
 from openquake.commonlib import valid
 from openquake.risklib import utils, scientific
 
+U32 = numpy.uint32
 F32 = numpy.float32
 registry = CallableDict()
 
@@ -253,13 +254,13 @@ class RiskModel(object):
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
 
-    def out_by_lr(self, imt, assets, hazard, epsilons, rupids):
+    def out_by_lr(self, imt, assets, hazard, epsilons, rupids=None):
         """
         :param imt: restrict the risk functions to this IMT
         :param assets: an array of assets of homogeneous taxonomy
         :param hazard: a dictionary rlz -> hazard per site
         :param epsilons: an array of epsilons per each asset
-        :param rupids: rupture indices
+        :param rupids: rupture indices (only for event based)
         :returns: a dictionary (l, r) -> output
         """
         out_by_lr = AccumDict()
@@ -514,69 +515,58 @@ class ProbabilisticEventBased(RiskModel):
             ses_ratio=self.ses_ratio)
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
-        self.return_loss_matrix = True
         self.loss_ratios = loss_ratios
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
-                 event_ids):
+                 rupids):
         """
         :param str loss_type: the loss type considered
 
         :param assets:
-           assets is an iterator over
-           :class:`openquake.risklib.scientific.Asset` instances
+           a list with a single asset
 
         :param ground_motion_values:
-           a numpy array with ground_motion_values of shape R
+           an array of E ground_motion_values
 
         :param epsilons:
-           a numpy array with stochastic values of shape N x R
+           a list with a single array of E stochastic values
 
-        :param event_ids:
-           a numpy array of R event ID (integer)
+        :param rupids:
+           a numpy array of E rupture IDs
 
         :returns:
             a :class:
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
-        n = len(assets)
-        loss_matrix = self.risk_functions[loss_type].apply_to(
-            [ground_motion_values] * n, epsilons)
-        # sum on ruptures; compute the fractional losses
-        average_losses = loss_matrix.sum(axis=1) * self.ses_ratio
-        values = get_values(loss_type, assets)
-        ela = loss_matrix.T * values  # matrix with T x N elements
+        E = len(rupids)
+        I = self.insured_losses + 1
+        loss_ratios = numpy.zeros((E, I), F32)
+        asset = assets[0]  # the only one
+        loss_ratios[:, 0] = ratios = self.risk_functions[loss_type].apply_to(
+            [ground_motion_values], epsilons)[0]  # shape E
         cb = self.compositemodel.curve_builders[
             self.compositemodel.lti[loss_type]]
-        # FIXME: ugly workaround for qa_tests.event_based_test; in Ubuntu 12.04
-        # MagicMock does not work well, so len(cb.ratios) gives an error
-        nratios = 1 if isinstance(cb, mock.Mock) else len(cb.ratios)
         if self.insured_losses and loss_type != 'occupants':
-            deductibles = numpy.array(
-                [a.deductible(loss_type) for a in assets])
-            limits = numpy.array(
-                [a.insurance_limit(loss_type) for a in assets])
-            ilm = utils.numpy_map(
-                scientific.insured_losses, loss_matrix, deductibles, limits)
+            deductible = asset.deductible(loss_type)
+            limit = asset.insurance_limit(loss_type)
+            ilm = scientific.insured_losses(ratios, deductible, limit)
+            loss_ratios[:, 1] = ilm
             icounts = cb.build_counts(ilm)
-        else:  # build a NaN matrix of size N x T
-            T = len(ground_motion_values)
-            ilm = numpy.empty((n, T))
-            ilm.fill(numpy.nan)
-            icounts = numpy.empty((n, nratios))
+        else:
+            # FIXME: ugly workaround for qa_tests.event_based_test; in Ubuntu
+            # 12.04 MagicMock does not work well, so len(cb.ratios) gives error
+            nratios = 1 if isinstance(cb, mock.Mock) else len(cb.ratios)
+            icounts = numpy.empty(nratios)
             icounts.fill(numpy.nan)
-        ila = ilm.T * values
-        average_insured_losses = ilm.sum(axis=1) * self.ses_ratio
         return scientific.Output(
-            assets, loss_type,
-            event_loss_per_asset=ela,
-            insured_loss_per_asset=ila,
-            average_losses=average_losses,
-            average_insured_losses=average_insured_losses,
-            counts_matrix=cb.build_counts(loss_matrix),
+            assets,
+            loss_type,
+            losses=loss_ratios * asset.value(loss_type),
+            average_loss=loss_ratios.sum(axis=0) * self.ses_ratio,
+            counts_matrix=cb.build_counts(loss_ratios),
             insured_counts_matrix=icounts,
-            rupids=event_ids)
+            rupids=rupids)
 
 
 @registry.add('classical_bcr')
