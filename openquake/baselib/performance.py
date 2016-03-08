@@ -176,12 +176,14 @@ class PerformanceMonitor(object):
         """
         Send a command to the listener, for instance `.send(print, 'hello')`
         """
-        client = Client(self.address, authkey=self.authkey)
-        try:
-            res = client.send(cmd)
-        finally:
-            client.close()
-        return res
+        if self.address:
+            client = Client(self.address, authkey=self.authkey)
+            try:
+                client.send(cmd)
+            finally:
+                client.close()
+        else:  # dummy monitor
+            cmd[0](*cmd[1:])
 
     def flush(self):
         """
