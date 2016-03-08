@@ -49,7 +49,8 @@ def no_distribute():
     return nd in ('1', 'true', 'yes')
 
 
-def check_mem_usage(soft_percent=90, hard_percent=100):
+def check_mem_usage(monitor=PerformanceMonitor(),
+                    soft_percent=90, hard_percent=100):
     """
     Display a warning if we are running out of memory
 
@@ -61,7 +62,8 @@ def check_mem_usage(soft_percent=90, hard_percent=100):
                           '(Used: %d%% / Allowed: %d%%)! Shutting down.' %
                           (used_mem_percent, hard_percent))
     elif used_mem_percent > soft_percent:
-        logging.warn('Using over %d%% of the memory!', used_mem_percent)
+        monitor.send(logging.warn, 'Using over %d%% of the memory!',
+                     used_mem_percent)
 
 
 def safely_call(func, args, pickle=False):
@@ -426,8 +428,8 @@ def litetask(func):
     must be a monitor object.
     """
     def wrapper(*args):
-        check_mem_usage()  # check if too much memory is used
         monitor = args[-1]
+        check_mem_usage(monitor)  # check if too much memory is used
         monitor.flush = NoFlush(monitor, func.__name__)
         with monitor('total ' + func.__name__, measuremem=True), \
                 GroundShakingIntensityModel.forbid_instantiation():
