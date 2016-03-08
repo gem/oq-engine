@@ -134,7 +134,7 @@ def view_col_rlz_assocs(name, dstore):
     :returns: an array with the association array col_ids -> rlz_ids
     """
     rlzs_assoc = dstore['rlzs_assoc']
-    num_ruptures = dstore['num_ruptures']
+    num_ruptures = dstore.get_attr('tags', 'num_ruptures')
     num_rlzs = len(rlzs_assoc.realizations)
     col_ids_list = [[] for _ in range(num_rlzs)]
     for rlz in rlzs_assoc.realizations:
@@ -392,7 +392,6 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
     """
     core_task = compute_ruptures
     tags = datastore.persistent_attribute('tags')
-    num_ruptures = datastore.persistent_attribute('num_ruptures')
     counts_per_rlz = datastore.persistent_attribute('counts_per_rlz')
     is_stochastic = True
 
@@ -460,6 +459,9 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                         sr.tag, len(sr.tag))
         with self.monitor('saving ruptures', autoflush=True):
             self.tags = numpy.array(tags, (bytes, 100))
+            self.datastore.set_attrs(
+                'tags',
+                num_ruptures=numpy.array([len(sc) for sc in sescollection]))
             for i, (sescol, col) in enumerate(zip(sescollection, cols)):
                 nr = len(sescol)
                 logging.info('Saving SES collection #%d with %d ruptures',
@@ -468,7 +470,6 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                 self.datastore[key] = sescol
                 self.datastore.set_attrs(key, num_ruptures=nr)
         with self.monitor('counts_per_rlz'):
-            self.num_ruptures = numpy.array(list(map(len, sescollection)))
             self.counts_per_rlz = counts_per_rlz(
                 len(self.sitecol), self.rlzs_assoc, sescollection)
             self.datastore['counts_per_rlz'].attrs[
