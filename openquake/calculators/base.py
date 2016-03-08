@@ -222,6 +222,22 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         # NB: the datastore must not be closed, otherwise some tests
         # will break; it will be closed automatically anyway
 
+    def save(self, key, value):
+        """
+        :param key: datastore key
+        :param value: an array to save for the given key
+        """
+        self.datastore[key] = value
+        self.datastore.flush()
+
+    def extend(self, key, value):
+        """
+        :param key: datastore key
+        :param value: an array extending the dataset with the given key
+        """
+        hdf5.Hdf5Dataset(self.datastore.hdf5[key]).extend(value)
+        self.datastore.flush()
+
 
 def _set_nbytes(dkey, dstore):
     # set the number of bytes assuming the dkey correspond to a flat group
@@ -714,21 +730,5 @@ class CmdLoop(object):
             args = cmd[1:]
             if callable(call):
                 call(*args)
-            else:  # assume it is a method name, like `save` or `extend`
-                getattr(self, call)(*args)
-
-    def save(self, key, value):
-        """
-        :param key: datastore key
-        :param value: an array to save for the given key
-        """
-        self.calculator.datastore[key] = value
-        self.calculator.datastore.flush()
-
-    def extend(self, key, value):
-        """
-        :param key: datastore key
-        :param value: an array extending the dataset with the given key
-        """
-        hdf5.Hdf5Dataset(self.calculator.datastore.hdf5[key]).extend(value)
-        self.calculator.datastore.flush()
+            else:  # assume `call` is a method name, like `save` or `extend`
+                getattr(self.calculator, call)(*args)
