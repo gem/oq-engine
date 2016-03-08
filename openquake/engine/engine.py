@@ -26,10 +26,6 @@ import operator
 import traceback
 from datetime import datetime
 
-import celery.task.control
-
-import openquake.engine
-
 from django.core import exceptions
 from django import db as django_db
 
@@ -37,7 +33,6 @@ from openquake.baselib.performance import PerformanceMonitor
 from openquake.engine import logs
 from openquake.server.db import models
 from openquake.engine.utils import config, tasks
-from openquake.engine.celery_node_monitor import CeleryNodeMonitor
 from openquake.server.db.schema.upgrades import upgrader
 
 from openquake.commonlib import readinput, valid, datastore, export
@@ -69,6 +64,41 @@ TERMINATE = valid.boolean(
 
 USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
 
+if USE_CELERY:
+    import celery.task.control
+
+    def set_concurrent_tasks_default():
+        """
+        Set the default for concurrent_tasks to twice the number of workers.
+        Returns the number of live celery nodes (i.e. the number of machines).
+        """
+        stats = celery.task.control.inspect(timeout=1).stats()
+        if not stats:
+            sys.exit("No live compute nodes, aborting calculation")
+        num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
+        OqParam.concurrent_tasks.default = 2 * num_cores
+        logs.LOG.info('Using %s, %d cores',
+                      ', '.join(sorted(stats)), num_cores)
+
+    def celery_cleanup(job, terminate, task_ids=()):
+        """
+        Release the resources used by an openquake job.
+        In particular revoke the running tasks (if any).
+
+        :param int job_id: the job id
+        :param bool terminate: the celery revoke command terminate flag
+        :param task_ids: celery task IDs
+        """
+        # Using the celery API, terminate and revoke and terminate any running
+        # tasks associated with the current job.
+        if task_ids:
+            logs.LOG.warn('Revoking %d tasks', len(task_ids))
+        else:  # this is normal when OQ_NO_DISTRIBUTE=1
+            logs.LOG.debug('No task to revoke')
+        for tid in task_ids:
+            celery.task.control.revoke(tid, terminate=terminate)
+            logs.LOG.debug('Revoked task %s', tid)
+
 
 class InvalidCalculationID(Exception):
     pass
@@ -80,27 +110,6 @@ RISK_HAZARD_MAP = dict(
     classical_bcr=['classical', 'classical_bcr'],
     classical_damage=['classical', 'classical_damage'],
     event_based_risk=['event_based', 'event_based_risk'])
-
-
-# this is called only if USE_CELERY is True
-def cleanup_after_job(job, terminate, task_ids=()):
-    """
-    Release the resources used by an openquake job.
-    In particular revoke the running tasks (if any).
-
-    :param int job_id: the job id
-    :param bool terminate: the celery revoke command terminate flag
-    :param task_ids: celery task IDs
-    """
-    # Using the celery API, terminate and revoke and terminate any running
-    # tasks associated with the current job.
-    if task_ids:
-        logs.LOG.warn('Revoking %d tasks', len(task_ids))
-    else:  # this is normal when OQ_NO_DISTRIBUTE=1
-        logs.LOG.debug('No task to revoke')
-    for tid in task_ids:
-        celery.task.control.revoke(tid, terminate=terminate)
-        logs.LOG.debug('Revoked task %s', tid)
 
 
 def create_job(calc_mode, description, user_name="openquake", hc_id=None):
@@ -150,6 +159,8 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
     """
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connection)
+    if USE_CELERY:
+        set_concurrent_tasks_default()
     with logs.handle(job, log_level, log_file):  # run the job
         tb = 'None\n'
         try:
@@ -173,7 +184,7 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
                 job.stop_time = datetime.utcnow()
                 job.save()
                 if USE_CELERY:
-                    cleanup_after_job(
+                    celery_cleanup(
                         job, TERMINATE, tasks.OqTaskManager.task_ids)
             except:
                 # log the finalization error only if there is no real error
@@ -293,18 +304,17 @@ def run_job(cfg_file, log_level, log_file, exports='',
     """
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connection)
-    with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=3):
-        job = job_from_file(
-            cfg_file, getpass.getuser(), log_level, exports,
-            hazard_calculation_id=hazard_calculation_id)
-        calc = run_calc(job, log_level, log_file, exports,
-                        hazard_calculation_id=hazard_calculation_id)
-        duration = calc.monitor.duration
-        calc.monitor.flush()
-        if job.status == 'complete':
-            print_results(job.id, duration, list_outputs)
-        else:
-            sys.exit('Calculation %s failed' % job.id)
+    job = job_from_file(
+        cfg_file, getpass.getuser(), log_level, exports,
+        hazard_calculation_id=hazard_calculation_id)
+    calc = run_calc(job, log_level, log_file, exports,
+                    hazard_calculation_id=hazard_calculation_id)
+    duration = calc.monitor.duration
+    calc.monitor.flush()
+    if job.status == 'complete':
+        print_results(job.id, duration, list_outputs)
+    else:
+        sys.exit('Calculation %s failed' % job.id)
     return job
 
 DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset_and_collapse_map')
