@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Integrated the authentication database in the engine server database
   * Fixed the description in the Web UI (before it was temporarily set to
     the string "A job").
 
