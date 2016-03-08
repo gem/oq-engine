@@ -64,6 +64,9 @@ TERMINATE = valid.boolean(
 
 USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
 
+if USE_CELERY:
+    import celery.task.control
+
 
 class InvalidCalculationID(Exception):
     pass
@@ -77,6 +80,20 @@ RISK_HAZARD_MAP = dict(
     event_based_risk=['event_based', 'event_based_risk'])
 
 
+# this is called only is USE_CELERY is True
+def set_concurrent_tasks_default():
+    """
+    Set the default for concurrent_tasks to twice the number of workers.
+    Returns the number of live celery nodes (i.e. the number of machines).
+    """
+    stats = celery.task.control.inspect(timeout=1).stats()
+    if not stats:
+        sys.exit("No live compute nodes, aborting calculation")
+    num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
+    OqParam.concurrent_tasks.default = 2 * num_cores
+    logs.LOG.info('Using %s, %d cores', ', '.join(sorted(stats)), num_cores)
+
+
 # this is called only if USE_CELERY is True
 def cleanup_after_job(job, terminate, task_ids=()):
     """
@@ -87,7 +104,6 @@ def cleanup_after_job(job, terminate, task_ids=()):
     :param bool terminate: the celery revoke command terminate flag
     :param task_ids: celery task IDs
     """
-    import celery.task.control
     # Using the celery API, terminate and revoke and terminate any running
     # tasks associated with the current job.
     if task_ids:
@@ -146,6 +162,8 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
     """
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(django_db.connection)
+    if USE_CELERY:
+        set_concurrent_tasks_default()
     with logs.handle(job, log_level, log_file):  # run the job
         tb = 'None\n'
         try:
