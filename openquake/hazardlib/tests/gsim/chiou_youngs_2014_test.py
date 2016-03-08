@@ -24,6 +24,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.calc import ground_motion_fields
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGV
+from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import Rupture, ParametricProbabilisticRupture
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
