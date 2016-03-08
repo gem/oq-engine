@@ -22,6 +22,7 @@ TODO: write documentation.
 from __future__ import print_function
 import os
 import sys
+import socket
 import logging
 import operator
 import traceback
@@ -62,8 +63,9 @@ def check_mem_usage(monitor=PerformanceMonitor(),
                           '(Used: %d%% / Allowed: %d%%)! Shutting down.' %
                           (used_mem_percent, hard_percent))
     elif used_mem_percent > soft_percent:
-        monitor.send(logging.warn, 'Using over %d%% of the memory!',
-                     used_mem_percent)
+        hostname = socket.gethostname()
+        monitor.send(logging.warn, 'Using over %d%% of the memory in %s!',
+                     used_mem_percent, hostname)
 
 
 def safely_call(func, args, pickle=False):
