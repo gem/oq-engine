@@ -31,6 +31,7 @@ from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
 
+
 class ChiouYoungs2014TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ChiouYoungs2014
 
@@ -104,6 +105,7 @@ class ChiouYoungs2014NearFaultTestCase(BaseGSIMTestCase):
         self.check('NGA/CY14/CY14_MEDIAN_RCDPP.csv',
                    max_discrep_percentage=0.05)
 
+
 class ChiouYoungs2014NearFaultTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ChiouYoungs2014NearFaultEffect
 
@@ -117,52 +119,56 @@ class ChiouYoungs2014NearFaultTestCase(BaseGSIMTestCase):
         self.check('NGA/CY14/CY14_MEDIAN_RCDPP.csv',
                    max_discrep_percentage=0.05)
 
+
 class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
 
     def make_rupture(self, rupture_class, **kwargs):
-      # Create the rupture surface.
-      upper_seismogenic_depth = 3.
-      lower_seismogenic_depth = 15.
-      dip = 90.
-      mesh_spacing = 1.
+        # Create the rupture surface.
+        upper_seismogenic_depth = 3.
+        lower_seismogenic_depth = 15.
+        dip = 90.
+        mesh_spacing = 1.
 
-      fault_trace_start = Point(28.531397, 40.8790859336)
-      fault_trace_end = Point(28.85, 40.9)
-      fault_trace = Line([fault_trace_start,fault_trace_end])
-      default_arguments = {
-          'mag': 6.5,
-          'rake': 180.,
-          'tectonic_region_type': const.TRT.STABLE_CONTINENTAL,
-          'hypocenter': Point(28.709146553353872, 40.890863701462457, 11.0),
-          'surface': SimpleFaultSurface.from_fault_data(
-              fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
-              dip=dip, mesh_spacing=mesh_spacing),
-          'source_typology': object(),
-          'rupture_slip_direction': 0.
-      }
-      default_arguments.update(kwargs)
-      kwargs = default_arguments
-      rupture = rupture_class(**kwargs)
-      for key in kwargs:
-          assert getattr(rupture, key) is kwargs[key]
-      return rupture
+        fault_trace_start = Point(28.531397, 40.8790859336)
+        fault_trace_end = Point(28.85, 40.9)
+        fault_trace = Line([fault_trace_start, fault_trace_end])
+        default_arguments = {
+            'mag': 6.5,
+            'rake': 180.,
+            'tectonic_region_type': const.TRT.STABLE_CONTINENTAL,
+            'hypocenter': Point(28.709146553353872, 40.890863701462457, 11.0),
+            'surface': SimpleFaultSurface.from_fault_data(
+                fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
+                dip=dip, mesh_spacing=mesh_spacing),
+            'source_typology': object(),
+            'rupture_slip_direction': 0.
+        }
+        default_arguments.update(kwargs)
+        kwargs = default_arguments
+        rupture = rupture_class(**kwargs)
+        for key in kwargs:
+            assert getattr(rupture, key) is kwargs[key]
+        return rupture
 
     def test_mearn_nearfault_distance_taper(self):
 
-      rupture = self.make_rupture(
-          ParametricProbabilisticRupture, occurrence_rate=0.01,
-          temporal_occurrence_model=PoissonTOM(50))
-      site1 = Site(location = Point(27.9, 41), vs30=1200., vs30measured=True, z1pt0=2.36, z2pt5=2.)
-      site2 = Site(location = Point(28.1, 41), vs30=1200., vs30measured=True, z1pt0=2.36, z2pt5=2.)
-      sites = SiteCollection([site1, site2])
+        rupture = self.make_rupture(
+            ParametricProbabilisticRupture, occurrence_rate=0.01,
+            temporal_occurrence_model=PoissonTOM(50))
+        site1 = Site(location=Point(27.9, 41), vs30=1200.,
+                     vs30measured=True, z1pt0=2.36, z2pt5=2.)
+        site2 = Site(location=Point(28.1, 41), vs30=1200.,
+                     vs30measured=True, z1pt0=2.36, z2pt5=2.)
+        sites = SiteCollection([site1, site2])
 
-      fields = ground_motion_fields(
-          rupture=rupture,
-          sites=sites,
-          imts=[PGV()],
-          gsim=ChiouYoungs2014NearFaultEffect(),
-          truncation_level=0,
-          realizations=1.
-      )
-      self.assertAlmostEquals(2.27328758, fields.values()[0][0], delta=1e-4)
-      self.assertAlmostEquals(3.38322998, fields.values()[0][1], delta=1e-4)
+        fields = ground_motion_fields(
+            rupture=rupture,
+            sites=sites,
+            imts=[PGV()],
+            gsim=ChiouYoungs2014NearFaultEffect(),
+            truncation_level=0,
+            realizations=1.
+        )
+        gmf = fields[PGV()]
+        self.assertAlmostEquals(2.27328758, gmf[0], delta=1e-4)
+        self.assertAlmostEquals(3.38322998, gmf[1], delta=1e-4)
