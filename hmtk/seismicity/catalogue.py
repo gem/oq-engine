@@ -69,10 +69,10 @@ class Catalogue(object):
         'SemiMajor90', 'SemiMinor90', 'ErrorStrike', 'depth',
         'depthError', 'magnitude', 'sigmaMagnitude']
 
-    INT_ATTRIBUTE_LIST = ['eventID', 'year', 'month', 'day', 'hour', 'minute',
+    INT_ATTRIBUTE_LIST = ['year', 'month', 'day', 'hour', 'minute',
                           'flag']
 
-    STRING_ATTRIBUTE_LIST = ['Agency', 'magnitudeType', 'comment']
+    STRING_ATTRIBUTE_LIST = ['eventID', 'Agency', 'magnitudeType', 'comment']
 
     TOTAL_ATTRIBUTE_LIST = list(
         (set(FLOAT_ATTRIBUTE_LIST).union(
@@ -143,7 +143,7 @@ class Catalogue(object):
                 self.data[key] = data_array[:, i].astype(int)
             else:
                 self.data[key] = data_array[:, i]
-            if not key in self.TOTAL_ATTRIBUTE_LIST:
+            if key not in self.TOTAL_ATTRIBUTE_LIST:
                 print 'Key %s not a recognised catalogue attribute' % key
 
         self.update_end_year()
@@ -416,12 +416,11 @@ class Catalogue(object):
             normalisation=normalisation,
             number_bootstraps=bootstrap)
 
-        
     def concatenate(self, catalogue):
         """
         This method attaches one catalogue to the current one
 
-        :parameter catalogue: 
+        :parameter catalogue:
             An instance of :class:`htmk.seismicity.catalogue.Catalogue`
         """
 
@@ -452,6 +451,7 @@ class Catalogue(object):
                     raise ValueError('unknown attibute')
         self.sort_catalogue_chronologically()
 
+
 def _merge_data(dat1, dat2):
     """
     Merge two data dictionaries containing catalogue data
@@ -461,9 +461,9 @@ def _merge_data(dat1, dat2):
 
     :parameter dictionary dat2:
         Catalogue data dictionary
-        
+
     :returns:
-        A catalogue data dictionary containing the information originally 
+        A catalogue data dictionary containing the information originally
         included in dat1 and dat2
     """
 
@@ -475,14 +475,14 @@ def _merge_data(dat1, dat2):
             cnt += 1
 
     if cnt:
-        raise Warning('Cannot merge catalogues with different' + 
+        raise Warning('Cannot merge catalogues with different' +
                       ' attributes')
         return None
-    else: 
+    else:
         for key in dat1.keys():
-            if isinstance(dat1[key], np.ndarray): 
+            if isinstance(dat1[key], np.ndarray):
                 dat1[key] = np.concatenate((dat1[key], dat2[key]), axis=0)
-            elif isinstance(dat1[key], list): 
+            elif isinstance(dat1[key], list):
                 dat1[key] += dat2[key]
             else:
                 raise ValueError('Unknown type')
