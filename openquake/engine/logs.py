@@ -25,6 +25,8 @@ import os.path
 import logging
 from datetime import datetime
 from contextlib import contextmanager
+from django.db import connection
+
 
 # Place the new level between info and warning
 logging.PROGRESS = 25
@@ -139,16 +141,14 @@ class LogDatabaseHandler(logging.Handler):
     Log stream handler
     """
     def __init__(self, job):
-        from openquake.server.db.models import getcursor
-        # avoid circular imports
-        self.getcursor = getcursor
+        self.getcursor = connection.cursor
         super(LogDatabaseHandler, self).__init__()
         self.job_type = job.job_type
         self.job = job
 
     def emit(self, record):  # pylint: disable=E0202
         if record.levelno >= logging.INFO:
-            self.getcursor('job_init').execute(
+            self.getcursor().execute(
                 """INSERT INTO log (job_id, timestamp, level, process, message)
                 VALUES (%s, %s, %s, %s, %s)""",
                 (self.job.id, datetime.utcnow(), record.levelname,
