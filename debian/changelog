@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Introduced a CmdLoop thread per each calculation; saved the performance
+    info in the database 
   * Made the dependency on celery required only in cluster installations
   * Integrated the authentication database in the engine server database
   * Fixed the description in the Web UI (before it was temporarily set to
