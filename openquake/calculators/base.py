@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import print_function
 import sys
 import abc
 import ast
@@ -24,6 +24,7 @@ import math
 import logging
 import operator
 import traceback
+import threading
 import collections
 
 import numpy
@@ -672,3 +673,45 @@ def get_gmfs(dstore):
                 for trt_id, gsim in gmfs:
                     gmfs[trt_id, gsim][sid, rupid] = gmv[gsim]
     return dstore['tags'].value, gmfs
+
+
+class CmdLoop(object):
+    """
+    A context manager processing commands in a dedicated thread. The commands
+    are sent by the monitor with the syntax `monitor.send(callable, *args)`
+    and processed as soon as they arrive. Here is an example of usage:
+
+    >> calc = Calculator(oqparam)
+    >> with CmdLoop(calc):
+    ..     calc.monitor.send(print, 'hello')
+    ..     calc.monitor.send(print, 'world')
+    hello
+    world
+    """
+    def __init__(self, calculator):
+        self.calculator = calculator
+        self.listener = calculator.monitor.make_listener()
+        self.thread = threading.Thread(target=self.loop)
+
+    def __enter__(self):
+        self.calculator.monitor.__enter__()
+        self.thread.start()
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        self.calculator.monitor.send(sys.exit)
+        self.calculator.monitor.__exit__(etype, exc, tb)
+        self.thread.join()
+        self.listener.close()
+
+    def loop(self):
+        while True:
+            conn = self.listener.accept()
+            cmd = conn.recv()
+            conn.close()
+            call = cmd[0]
+            args = cmd[1:]
+            if callable(call):
+                call(*args)
+            else:  # assume it is a method name
+                getattr(self, call)(*args)

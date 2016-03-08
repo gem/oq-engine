@@ -76,12 +76,14 @@ class CalculatorTestCase(unittest.TestCase):
         inis = job_ini.split(',')
         assert len(inis) in (1, 2), inis
         self.calc = self.get_calc(testfile, inis[0], **kw)
-        result = self.calc.run()
+        with base.CmdLoop(self.calc):
+            result = self.calc.run()
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
             self.calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
-            result.update(self.calc.run())
+            with base.CmdLoop(self.calc):
+                result.update(self.calc.run())
         return result
 
     def execute(self, testfile, job_ini):
