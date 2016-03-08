@@ -30,7 +30,7 @@ import collections
 import numpy
 
 from openquake.hazardlib.geo import geodetic
-from openquake.baselib import general
+from openquake.baselib import general, hdf5
 from openquake.baselib.performance import PerformanceMonitor
 from openquake.commonlib import (
     readinput, riskmodels, datastore, source, __version__)
@@ -703,6 +703,7 @@ class CmdLoop(object):
         self.calculator.monitor.__exit__(etype, exc, tb)
         self.thread.join()
         self.listener.close()
+        self.datastore.flush()
 
     def loop(self):
         while True:
@@ -715,3 +716,11 @@ class CmdLoop(object):
                 call(*args)
             else:  # assume it is a method name
                 getattr(self, call)(*args)
+
+    def save(self, key, value):
+        self.calculator.datastore[key] = value
+        self.calculator.datastore.flush()
+
+    def extend(self, key, value):
+        hdf5.Hdf5Dataset(self.calculator.datastore.hdf5[key]).extend(value)
+        self.calculator.datastore.flush()

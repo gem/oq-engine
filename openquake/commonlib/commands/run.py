@@ -75,13 +75,13 @@ def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params, monitor):
     Run both hazard and risk, one after the other
     """
     hcalc = base.calculators(readinput.get_oqparam(job_haz), monitor)
-    with CmdLoop(hcalc):
+    with base.CmdLoop(hcalc):
         hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                   exports=exports, **params)
         hc_id = hcalc.datastore.calc_id
         oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
     rcalc = base.calculators(oq, monitor)
-    with CmdLoop(rcalc):
+    with base.CmdLoop(rcalc):
         rcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports,
                   hazard_calculation_id=hc_id, **params)
     return rcalc
