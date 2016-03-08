@@ -26,6 +26,7 @@ import logging
 from datetime import datetime
 from contextlib import contextmanager
 from django.db import connection
+from openquake.baselib.performance import CmdLoop
 
 
 # Place the new level between info and warning
@@ -136,24 +137,26 @@ class LogFileHandler(logging.FileHandler):
         super(LogFileHandler, self).emit(record)
 
 
+def save(job_id, record):
+    connection.cursor().execute(
+        """INSERT INTO log (job_id, timestamp, level, process, message)
+        VALUES (%s, %s, %s, %s, %s)""",
+        (job_id, datetime.utcnow(), record.levelname,
+         '%s/%s' % (record.processName, record.process),
+         record.getMessage()))
+
+
 class LogDatabaseHandler(logging.Handler):
     """
     Log stream handler
     """
     def __init__(self, job):
-        self.getcursor = connection.cursor
         super(LogDatabaseHandler, self).__init__()
-        self.job_type = job.job_type
         self.job = job
 
     def emit(self, record):  # pylint: disable=E0202
         if record.levelno >= logging.INFO:
-            self.getcursor().execute(
-                """INSERT INTO log (job_id, timestamp, level, process, message)
-                VALUES (%s, %s, %s, %s, %s)""",
-                (self.job.id, datetime.utcnow(), record.levelname,
-                 '%s/%s' % (record.processName, record.process),
-                 record.getMessage()))
+            self.job.calc.monitor.send(save, self.job.id, record)
 
 
 @contextmanager
@@ -184,7 +187,8 @@ def handle(job, log_level='info', log_file=None):
         logging.root.addHandler(handler)
     set_level(log_level)
     try:
-        yield
+        with CmdLoop(job.calc.monitor):
+            yield
     finally:
         # sanity check to make sure that the logging on file is working
         if log_file and os.path.getsize(log_file) == 0:

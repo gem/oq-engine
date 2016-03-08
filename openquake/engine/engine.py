@@ -37,7 +37,7 @@ from openquake.server.db.schema.upgrades import upgrader
 
 from openquake.commonlib import readinput, valid, datastore, export
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.calculators import base
+from openquake.calculators import base, views
 
 
 def get_calc_id(job_id=None):
@@ -144,8 +144,7 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
     :param exports:
         A comma-separated string of export types.
     """
-    # first of all check the database version and exit if the db is outdated
-    upgrader.check_versions(django_db.connection)
+    mon = job.calc.monitor
     with logs.handle(job, log_level, log_file):  # run the job
         tb = 'None\n'
         try:
@@ -176,6 +175,7 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
                 if tb == 'None\n':
                     logs.LOG.error('finalizing', exc_info=True)
         expose_outputs(job.calc.datastore, job)
+    save_performance(job.calc.datastore, job)
     return job.calc
 
 
@@ -303,6 +303,16 @@ def run_job(cfg_file, log_level, log_file, exports='',
     return job
 
 DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset_and_collapse_map')
+
+
+def save_performance(dstore, job):
+    """
+    Save in the database the performance information about the given job
+    """
+    for rec in views.performance_view(dstore):
+        models.Performance.objects.create(
+            job=job, operation=rec['operation'], time_sec=rec['time_sec'],
+            memory_mb=rec['memory_mb'], counts=rec['counts'])
 
 
 def expose_outputs(dstore, job):
