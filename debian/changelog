@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Added to the PerformanceMonitor the ability to send commands
+
 python-oq-hazardlib (0.19.0-0~precise01) precise; urgency=low
 
   [Nick Ackerley]

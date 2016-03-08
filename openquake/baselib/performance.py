@@ -83,7 +83,7 @@ class PerformanceMonitor(object):
     the monitor to send commands to that address, assuming there is a
     :class:`multiprocessing.connection.Listener` listening.
     """
-    def __init__(self, operation, hdf5path=None,
+    def __init__(self, operation='dummy', hdf5path=None,
                  autoflush=False, measuremem=False):
         self.operation = operation
         self.hdf5path = hdf5path
@@ -238,29 +238,3 @@ class PerformanceMonitor(object):
                 humansize(self.mem))
         return '<%s %s, duration=%ss>' % (self.__class__.__name__,
                                           self.operation, self.duration)
-
-
-class DummyMonitor(PerformanceMonitor):
-    """
-    This class makes it easy to disable the monitoring in client code.
-    Disabling the monitor can improve the performance.
-    """
-    def __init__(self, operation='dummy', *args, **kw):
-        self.operation = operation
-        self.hdf5path = None
-        self.children = []
-        self.counts = 0
-        self._start_time = self._stop_time = time.time()
-
-    def __enter__(self):
-        self._start_time = time.time()
-        return self
-
-    def __exit__(self, etype, exc, tb):
-        self._stop_time = time.time()
-
-    def flush(self):
-        pass
-
-    def __repr__(self):
-        return '<%s>' % self.__class__.__name__
