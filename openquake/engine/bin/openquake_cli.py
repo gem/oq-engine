@@ -62,6 +62,7 @@ from openquake.calculators import views
 from openquake.server.db import models, upgrade_manager
 from openquake.engine.export import core
 from openquake.engine.tools.make_html_report import make_report
+from django.db import connection as conn
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
@@ -355,13 +356,11 @@ def main():
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
 
     if args.make_html_report:
-        conn = models.getcursor('admin').connection
         print 'Written', make_report(conn, args.make_html_report)
         sys.exit(0)
 
     if args.upgrade_db:
         logs.set_level('info')
-        conn = models.getcursor('admin').connection
         msg = upgrade_manager.what_if_I_upgrade(
             conn, extract_scripts='read_scripts')
         print msg
@@ -372,12 +371,10 @@ def main():
         sys.exit(0)
 
     if args.version_db:
-        conn = models.getcursor('admin').connection
         print upgrade_manager.version_db(conn)
         sys.exit(0)
 
     if args.what_if_I_upgrade:
-        conn = models.getcursor('admin').connection
         print upgrade_manager.what_if_I_upgrade(conn)
         sys.exit(0)
 

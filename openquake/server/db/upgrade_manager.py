@@ -22,6 +22,7 @@ import time
 import urllib
 import logging
 import importlib
+from django.db import connection
 
 
 class DuplicatedVersion(RuntimeError):
@@ -87,8 +88,7 @@ def check_script(upgrade, dry_run=True, debug=True):
     :param dry_run: if True, do not change the database
     :param debug: if True, print the queries which are executed
     """
-    from openquake.server.db.models import getcursor
-    conn = WrappedConnection(getcursor('admin').connection, debug=debug)
+    conn = WrappedConnection(connection, debug=debug)
     try:
         upgrade(conn)
     except:
