@@ -21,7 +21,14 @@ from openquake.hazardlib.gsim.chiou_youngs_2014 import (ChiouYoungs2014,
                                                         ChiouYoungs2014NearFaultEffect)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-
+from openquake.hazardlib.calc import ground_motion_fields
+from openquake.hazardlib import const
+from openquake.hazardlib.imt import PGV
+from openquake.hazardlib.source.rupture import Rupture, ParametricProbabilisticRupture
+from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.geo.surface import SimpleFaultSurface
+from openquake.hazardlib.geo.line import Line
+from openquake.hazardlib.geo.point import Point
 
 class ChiouYoungs2014TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ChiouYoungs2014
@@ -95,3 +102,66 @@ class ChiouYoungs2014NearFaultTestCase(BaseGSIMTestCase):
     def test_mean_near_fault(self):
         self.check('NGA/CY14/CY14_MEDIAN_RCDPP.csv',
                    max_discrep_percentage=0.05)
+
+class ChiouYoungs2014NearFaultTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ChiouYoungs2014NearFaultEffect
+
+    # First five tests use data ported from Kenneth Campbell
+    # tables for verifying NGA models, available from OpenSHA, see
+    # http://opensha.usc.edu/docs/opensha/NGA/Campbell_NGA_tests.zip
+    # This data is distributed under different license, see LICENSE.txt
+    # in tests/gsim/data/NGA
+
+    def test_mean_near_fault(self):
+        self.check('NGA/CY14/CY14_MEDIAN_RCDPP.csv',
+                   max_discrep_percentage=0.05)
+
+class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
+
+    def make_rupture(self, rupture_class, **kwargs):
+      # Create the rupture surface.
+      upper_seismogenic_depth = 3.
+      lower_seismogenic_depth = 15.
+      dip = 90.
+      mesh_spacing = 1.
+
+      fault_trace_start = Point(28.531397, 40.8790859336)
+      fault_trace_end = Point(28.85, 40.9)
+      fault_trace = Line([fault_trace_start,fault_trace_end])
+      default_arguments = {
+          'mag': 6.5,
+          'rake': 180.,
+          'tectonic_region_type': const.TRT.STABLE_CONTINENTAL,
+          'hypocenter': Point(28.709146553353872, 40.890863701462457, 11.0),
+          'surface': SimpleFaultSurface.from_fault_data(
+              fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
+              dip=dip, mesh_spacing=mesh_spacing),
+          'source_typology': object(),
+          'rupture_slip_direction': 0.
+      }
+      default_arguments.update(kwargs)
+      kwargs = default_arguments
+      rupture = rupture_class(**kwargs)
+      for key in kwargs:
+          assert getattr(rupture, key) is kwargs[key]
+      return rupture
+
+    def test_mearn_nearfault_distance_taper(self):
+
+      rupture = self.make_rupture(
+          ParametricProbabilisticRupture, occurrence_rate=0.01,
+          temporal_occurrence_model=PoissonTOM(50))
+      site1 = Site(location = Point(27.9, 41), vs30=1200., vs30measured=True, z1pt0=2.36, z2pt5=2.)
+      site2 = Site(location = Point(28.1, 41), vs30=1200., vs30measured=True, z1pt0=2.36, z2pt5=2.)
+      sites = SiteCollection([site1, site2])
+
+      fields = ground_motion_fields(
+          rupture=rupture,
+          sites=sites,
+          imts=[PGV()],
+          gsim=ChiouYoungs2014NearFaultEffect(),
+          truncation_level=0,
+          realizations=1.
+      )
+      self.assertAlmostEquals(2.27328758, fields.values()[0][0], delta=1e-4)
+      self.assertAlmostEquals(3.38322998, fields.values()[0][1], delta=1e-4)
