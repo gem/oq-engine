@@ -24,7 +24,6 @@ import operator
 import decimal
 import functools
 import itertools
-import collections
 import numpy
 
 from openquake.baselib.general import humansize, groupby
@@ -425,23 +424,35 @@ def view_assetcol(token, dstore):
     return write_csv(io.StringIO(), [header] + list(zip(*columns)))
 
 
-@view.add('biggest_block')
-def view_biggest_block(token, dstore):
+def get_max_gmf_size(dstore):
     """
-    Returns the size of the biggest block in an event based risk calculation
+    Extract info about the largest GMF
     """
-    L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
-    R = len(dstore['rlzs_assoc'].realizations)
-    num_ruptures = len(dstore['tags'])
-    taxonomies = dstore['assetcol']['taxonomy']
-    [(taxo, counts)] = collections.Counter(taxonomies).most_common(1)
-    taxonomy = dstore['taxonomies'][taxo]
-    nbytes = counts * num_ruptures * L * R * 8
-    msg = ('The largest block is for taxonomy %s, contains %d assets and '
-           '%d ruptures for %d loss type(s) and %d realization(s); '
-           'size = %s / num_tasks') % (taxonomy, counts, num_ruptures, L, R,
-                                       humansize(nbytes))
-    return msg
+    oq = OqParam.from_(dstore.attrs)
+    n_sites = len(dstore['sitecol'].complete)
+    rlzs_assoc = dstore['rlzs_assoc']
+    num_ruptures = dstore.get_attr('tags', 'num_ruptures')
+    col = num_ruptures.argmax()
+    n_ruptures = num_ruptures[col]
+    trt_id = rlzs_assoc.csm_info.get_trt_id(col)
+    gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
+    n_imts = len(oq.imtls)
+    n_rlzs = max(len(rlzs_assoc[trt_id, gsim]) for gsim in gsims)
+    size = n_sites * n_rlzs * n_ruptures * n_imts * 4  # 4 bytes per float
+    return dict(n_rlzs=n_rlzs, n_imts=n_imts, n_sites=n_sites, size=size,
+                n_ruptures=n_ruptures, humansize=humansize(size), col=col,
+                trt=rlzs_assoc.csm_info.tmdict[trt_id].trt)
+
+
+@view.add('biggest_ebr_gmf')
+def view_biggest_ebr_gmf(token, dstore):
+    """
+    Returns the size of the biggest GMF in an event based risk calculation
+    """
+    msg = ('The largest GMF block is for collection #%(col)d of type %(trt)r,'
+           '\ncontains %(n_imts)d IMT(s), %(n_sites)d site(s), %(n_rlzs)d '
+           'realization(s), and has a size of %(humansize)s / num_tasks')
+    return msg % get_max_gmf_size(dstore)
 
 
 @view.add('fullreport')

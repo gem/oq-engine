@@ -22,6 +22,7 @@ import collections
 
 import numpy
 
+from openquake.baselib.python3compat import zip
 from openquake.baselib.general import groupby, split_in_blocks
 from openquake.baselib.performance import PerformanceMonitor
 from openquake.hazardlib.gsim.base import gsim_imt_dt
@@ -31,6 +32,8 @@ F32 = numpy.float32
 
 FIELDS = ('site_id', 'lon', 'lat', 'asset_ref', 'taxonomy', 'area', 'number',
           'occupants', 'deductible~', 'insurance_limit~', 'retrofitted~')
+
+by_taxonomy = operator.attrgetter('taxonomy')
 
 
 def build_assets_by_site(assetcol, taxonomies, time_event, cc):
@@ -363,23 +366,28 @@ class CompositeRiskModel(collections.Mapping):
             rupids = riskinput.rupids
             assets_by_site = getattr(
                 riskinput, 'assets_by_site', assets_by_site)
+            asset_dicts = [groupby(assets, by_taxonomy)
+                           for assets in assets_by_site]
             with mon_hazard:
-                # get assets, hazards, epsilons
-                a, h, e = riskinput.get_all(rlzs_assoc, assets_by_site)
+                # get assets, epsilons, hazard
+                hazard_by_site = riskinput.get_hazard(rlzs_assoc)
             with mon_risk:
-                # compute the outputs by using the worklow
-                for imt, taxonomies in riskinput.imt_taxonomies:
-                    for taxonomy in taxonomies:
-                        assets, hazards, epsilons = [], [], []
-                        for asset, hazard, epsilon in zip(a, h, e):
-                            if asset.taxonomy == taxonomy:
-                                assets.append(asset)
-                                hazards.append(hazard[imt])
-                                epsilons.append(epsilon)
-                        if not assets:
-                            continue
-                        yield self[taxonomy].out_by_lr(
-                            imt, assets, hazards, epsilons, rupids)
+                # compute the outputs with the appropriate riskmodels
+                for asset_dict, hazard in zip(asset_dicts, hazard_by_site):
+                    for taxonomy, assets in asset_dict.items():
+                        riskmodel = self[taxonomy]
+                        epsilons = [riskinput.eps[asset.idx]
+                                    for asset in assets]
+                        for imt, taxonomies in riskinput.imt_taxonomies:
+                            if taxonomy in taxonomies:
+                                if rupids is None:
+                                    yield riskmodel.out_by_lr(
+                                        imt, assets, hazard[imt], epsilons)
+                                else:  # event based
+                                    for asset, eps in zip(assets, epsilons):
+                                        yield riskmodel.out_by_lr(
+                                            imt, [asset], hazard[imt], [eps],
+                                            rupids)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -415,31 +423,22 @@ class RiskInput(object):
             self.weight += len(assets)
         self.taxonomies = sorted(taxonomies_set)
         self.rupids = None  # for API compatibility with RiskInputFromRuptures
-        self.eps_dict = eps_dict
+        self.eps = eps_dict
 
     @property
     def imt_taxonomies(self):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def get_all(self, rlzs_assoc, assets_by_site=None):
+    def get_hazard(self, rlzs_assoc):
         """
         :param rlzs_assoc:
             :class:`openquake.commonlib.source.RlzsAssoc` instance
-        :param assets_by_site:
-            ignored, used only for compatibility with RiskInputFromRuptures
         :returns:
-            lists of assets, hazards and epsilons
+            list of hazard dictionaries imt -> rlz -> haz per each site
         """
-        assets, hazards, epsilons = [], [], []
-        if assets_by_site is None:
-            assets_by_site = self.assets_by_site
-        for hazard, assets_ in zip(self.hazard_by_site, assets_by_site):
-            for asset in assets_:
-                assets.append(asset)
-                hazards.append({self.imt: rlzs_assoc.combine(hazard)})
-                epsilons.append(self.eps_dict.get(asset.idx, None))
-        return assets, hazards, epsilons
+        return [{self.imt: rlzs_assoc.combine(hazard)}
+                for hazard in self.hazard_by_site]
 
     def __repr__(self):
         return '<%s IMT=%s, taxonomy=%s, weight=%d>' % (
@@ -456,7 +455,7 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     :returns: epsilons matrix of shape (num_assets, num_samples)
     """
     all_assets = (a for assets in assets_by_site for a in assets)
-    assets_by_taxo = groupby(all_assets, operator.attrgetter('taxonomy'))
+    assets_by_taxo = groupby(all_assets, by_taxonomy)
     num_assets = sum(map(len, assets_by_site))
     eps = numpy.zeros((num_assets, num_samples), numpy.float32)
     for taxonomy, assets in assets_by_taxo.items():
@@ -519,30 +518,25 @@ class RiskInputFromRuptures(object):
             gmfa[i] = expanded_gmf
         return gmfa  # array R x N
 
-    def get_all(self, rlzs_assoc, assets_by_site):
+    def get_hazard(self, rlzs_assoc):
         """
         :param rlzs_assoc:
             :class:`openquake.commonlib.source.RlzsAssoc` instance
-        :param assets_by_site:
-            list of list of assets per each hazard site
         :returns:
-            lists of assets, hazards and epsilons
+            lists of hazard dictionaries imt -> rlz -> haz
         """
-        assets, hazards, epsilons = [], [], []
         gmfs = self.compute_expand_gmfs()
         gsims = list(map(str, self.gsims))
         trt_id = rlzs_assoc.csm_info.get_trt_id(self.col_id)
-        for assets_, hazard in zip(assets_by_site, gmfs.T):
+        hazs = []
+        for hazard in gmfs.T:
             haz_by_imt_rlz = {imt: {} for imt in self.imts}
             for gsim in gsims:
                 for imt in self.imts:
                     for rlz in rlzs_assoc[trt_id, gsim]:
                         haz_by_imt_rlz[imt][rlz] = hazard[gsim][imt]
-            for asset in assets_:
-                assets.append(asset)
-                hazards.append(haz_by_imt_rlz)
-                epsilons.append(self.eps[asset.idx])
-        return assets, hazards, epsilons
+            hazs.append(haz_by_imt_rlz)
+        return hazs
 
     def __repr__(self):
         return '<%s IMT_taxonomies=%s, weight=%d>' % (

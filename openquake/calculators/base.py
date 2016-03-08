@@ -592,7 +592,8 @@ class RiskCalculator(HazardCalculator):
             for block in blocks:
                 indices = numpy.array([idx for idx, _weight in block])
                 reduced_assets = self.assets_by_site[indices]
-                reduced_eps = {}  # for the assets belonging to the indices
+                # dictionary of epsilons for the reduced assets
+                reduced_eps = collections.defaultdict(F32)
                 if len(eps):
                     for assets in reduced_assets:
                         for asset in assets:

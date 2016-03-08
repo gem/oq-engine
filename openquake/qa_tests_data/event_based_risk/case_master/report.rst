@@ -5,22 +5,22 @@ num_sites = 7, sitecol = 960 B
 
 Parameters
 ----------
-============================ ================
-calculation_mode             event_based_risk
-number_of_logic_tree_samples 0               
-maximum_distance             200             
-investigation_time           50              
-ses_per_logic_tree_path      2               
-truncation_level             3.000           
-rupture_mesh_spacing         2.000           
-complex_fault_mesh_spacing   2.000           
-width_of_mfd_bin             0.100           
-area_source_discretization   10              
-random_seed                  24              
-master_seed                  0               
-concurrent_tasks             16              
-avg_losses                   1               
-============================ ================
+============================ ==================
+calculation_mode             'event_based_risk'
+number_of_logic_tree_samples 0                 
+maximum_distance             {'default': 200.0}
+investigation_time           50.0              
+ses_per_logic_tree_path      2                 
+truncation_level             3.0               
+rupture_mesh_spacing         2.0               
+complex_fault_mesh_spacing   2.0               
+width_of_mfd_bin             0.1               
+area_source_discretization   10.0              
+random_seed                  24                
+master_seed                  0                 
+concurrent_tasks             16                
+avg_losses                   True              
+============================ ==================
 
 Input files
 -----------
@@ -70,32 +70,36 @@ Realizations per (TRT, GSIM)
   2,BooreAtkinson2008: ['<4,b2,b11_@,w=0.5625>']
   2,ChiouYoungs2008: ['<5,b2,b12_@,w=0.1875>']>
 
-Non-empty rupture collections
------------------------------
-=== ========= ==================== ============
-col smlt_path TRT                  num_ruptures
-=== ========= ==================== ============
-0   b1        Active Shallow Crust 1           
-1   b1        Stable Shallow Crust 101         
-2   b2        Active Shallow Crust 4           
-=== ========= ==================== ============
+Number of ruptures per tectonic region type
+-------------------------------------------
+================== ====== ==================== =========== ============ ======
+source_model       trt_id trt                  num_sources eff_ruptures weight
+================== ====== ==================== =========== ============ ======
+source_model_1.xml 0      Active Shallow Crust 1           1            482   
+source_model_1.xml 1      Stable Shallow Crust 1           101          4.000 
+source_model_2.xml 2      Active Shallow Crust 1           4            482   
+================== ====== ==================== =========== ============ ======
 
-Collections <-> realizations
-----------------------------
-=========== ============
-Collections Realizations
-0 1         0 1 2 3     
-2           4 5         
-=========== ============
+=============== ===
+#TRT models     3  
+#sources        3  
+#eff_ruptures   106
+filtered_weight 968
+=============== ===
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
 Number of tasks to generate 22       
-Sent data                   326.91 KB
-Total received data         129.33 KB
-Maximum received per task   15.2 KB  
+Sent data                   333.3 KB 
+Total received data         135.73 KB
+Maximum received per task   15.55 KB 
 =========================== =========
+
+Maximum memory allocated for the GMFs
+-------------------------------------
+The largest GMF block is for collection #1 of type 'Stable Shallow Crust',
+contains 4 IMT(s), 7 site(s), 2 realization(s), and has a size of 22.09 KB / num_tasks
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -121,8 +125,8 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            1         SimpleFaultSource    482    15        0.003       0.064      0.336    
-2            1         SimpleFaultSource    482    15        0.002       0.056      0.273    
+0            1         SimpleFaultSource    482    15        0.007       0.063      0.333    
+2            1         SimpleFaultSource    482    15        0.002       0.058      0.308    
 1            2         SimpleFaultSource    4.000  1         0.002       0.0        0.013    
-3            2         CharacteristicFaultS 1.000  1         0.002       0.0        0.003    
+3            2         CharacteristicFaultS 1.000  1         0.002       0.0        0.004    
 ============ ========= ==================== ====== ========= =========== ========== =========
