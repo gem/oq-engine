@@ -67,6 +67,38 @@ USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
 if USE_CELERY:
     import celery.task.control
 
+    def set_concurrent_tasks_default():
+        """
+        Set the default for concurrent_tasks to twice the number of workers.
+        Returns the number of live celery nodes (i.e. the number of machines).
+        """
+        stats = celery.task.control.inspect(timeout=1).stats()
+        if not stats:
+            sys.exit("No live compute nodes, aborting calculation")
+        num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
+        OqParam.concurrent_tasks.default = 2 * num_cores
+        logs.LOG.info('Using %s, %d cores',
+                      ', '.join(sorted(stats)), num_cores)
+
+    def celery_cleanup(job, terminate, task_ids=()):
+        """
+        Release the resources used by an openquake job.
+        In particular revoke the running tasks (if any).
+
+        :param int job_id: the job id
+        :param bool terminate: the celery revoke command terminate flag
+        :param task_ids: celery task IDs
+        """
+        # Using the celery API, terminate and revoke and terminate any running
+        # tasks associated with the current job.
+        if task_ids:
+            logs.LOG.warn('Revoking %d tasks', len(task_ids))
+        else:  # this is normal when OQ_NO_DISTRIBUTE=1
+            logs.LOG.debug('No task to revoke')
+        for tid in task_ids:
+            celery.task.control.revoke(tid, terminate=terminate)
+            logs.LOG.debug('Revoked task %s', tid)
+
 
 class InvalidCalculationID(Exception):
     pass
@@ -78,41 +110,6 @@ RISK_HAZARD_MAP = dict(
     classical_bcr=['classical', 'classical_bcr'],
     classical_damage=['classical', 'classical_damage'],
     event_based_risk=['event_based', 'event_based_risk'])
-
-
-# this is called only is USE_CELERY is True
-def set_concurrent_tasks_default():
-    """
-    Set the default for concurrent_tasks to twice the number of workers.
-    Returns the number of live celery nodes (i.e. the number of machines).
-    """
-    stats = celery.task.control.inspect(timeout=1).stats()
-    if not stats:
-        sys.exit("No live compute nodes, aborting calculation")
-    num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-    OqParam.concurrent_tasks.default = 2 * num_cores
-    logs.LOG.info('Using %s, %d cores', ', '.join(sorted(stats)), num_cores)
-
-
-# this is called only if USE_CELERY is True
-def cleanup_after_job(job, terminate, task_ids=()):
-    """
-    Release the resources used by an openquake job.
-    In particular revoke the running tasks (if any).
-
-    :param int job_id: the job id
-    :param bool terminate: the celery revoke command terminate flag
-    :param task_ids: celery task IDs
-    """
-    # Using the celery API, terminate and revoke and terminate any running
-    # tasks associated with the current job.
-    if task_ids:
-        logs.LOG.warn('Revoking %d tasks', len(task_ids))
-    else:  # this is normal when OQ_NO_DISTRIBUTE=1
-        logs.LOG.debug('No task to revoke')
-    for tid in task_ids:
-        celery.task.control.revoke(tid, terminate=terminate)
-        logs.LOG.debug('Revoked task %s', tid)
 
 
 def create_job(calc_mode, description, user_name="openquake", hc_id=None):
@@ -187,7 +184,7 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
                 job.stop_time = datetime.utcnow()
                 job.save()
                 if USE_CELERY:
-                    cleanup_after_job(
+                    celery_cleanup(
                         job, TERMINATE, tasks.OqTaskManager.task_ids)
             except:
                 # log the finalization error only if there is no real error
