@@ -15,12 +15,12 @@
 
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+from __future__ import print_function
 import os
 import time
 import uuid
+import socket
 from datetime import datetime
-import multiprocessing
 from multiprocessing.connection import Listener, Client
 
 import numpy
@@ -56,46 +56,6 @@ perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
                        ('memory_mb', float), ('counts', int)])
 
 
-class Process(multiprocessing.Process):
-    def __init__(self, target, *args):
-        multiprocessing.Process.__init__(self, target=target, args=args)
-
-    def __enter__(self):
-        self.start()
-        return self
-
-    def __exit__(self, *args):
-        self.join()
-
-
-def read_all(listener):
-    """
-    A listener with an associated monitor that can send back messages.
-    The sent messages can be read by iterating on the listener.
-
-    >>> def greetings(monitor):
-    ...     with monitor:
-    ...         monitor.send('hello')
-    ...         monitor.send('world')
-    ...         monitor.send(SystemExit())
-    >>> monitor = PerformanceMonitor('test')
-    >>> listener = monitor.make_listener('')
-    >>> with Process(greetings, monitor):
-    ...     list(read_all(listener))
-    ['hello', 'world']
-    """
-    while True:
-        conn = listener.accept()
-        try:
-            got = conn.recv()
-            if isinstance(got, SystemExit):
-                break
-            yield got
-        finally:
-            conn.close()
-    listener.close()
-
-
 # this is not thread-safe
 class PerformanceMonitor(object):
     """
@@ -120,7 +80,7 @@ class PerformanceMonitor(object):
     or store the results of the analysis.
 
     NB: if the .address and .authkey attributes are set, it is possible for
-    the monitor to send objects to that address, assuming there is
+    the monitor to send commands to that address, assuming there is a
     :class:`multiprocessing.connection.Listener` listening.
     """
     def __init__(self, operation, hdf5path=None,
@@ -193,25 +153,30 @@ class PerformanceMonitor(object):
         if self.autoflush:
             self.flush()
 
-    def make_listener(self, hostname):
+    def make_listener(self, hostname=None):
         """
-        :param hostname: name of the server host, as seen by the clients
-        :returns: a Listener object listening on `hostname`
+        :param hostname:
+            name of the server host, as seen by the clients
+        :returns:
+            a Listener object listening on `hostname` at a random port;
+            as a side effect, set the attributes .address and .authkey
         """
+        if hostname is None:
+            hostname = socket.gethostname()
         authkey = uuid.uuid1().bytes
+        authkey = None
         listener = Listener((hostname, 0), authkey=authkey)
         self.address = listener.address
         self.authkey = authkey
         return listener
 
-    def send(self, obj):
+    def send(self, *cmd):
         """
-        Send back an object to the listener: this is only defined
-        if an .address has been defined.
+        Send a command to the listener, for instance `.send(print, 'hello')`
         """
         client = Client(self.address, authkey=self.authkey)
         try:
-            res = client.send(obj)
+            res = client.send(cmd)
         finally:
             client.close()
         return res
