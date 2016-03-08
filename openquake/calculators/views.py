@@ -454,10 +454,9 @@ def view_fullreport(token, dstore):
     return ReportWriter(dstore).make_report()
 
 
-@view.add('performance')
-def view_performance(token, dstore):
+def performance_view(dstore):
     """
-    Display performance information
+    Returns the performance view as a numpy array.
     """
     data = sorted(dstore['performance_data'], key=operator.itemgetter(0))
     out = []
@@ -471,7 +470,15 @@ def view_performance(token, dstore):
             mem = max(mem, memory_mb)
         out.append((operation, time, mem, counts))
     out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
-    return rst_table(numpy.array(out, perf_dt))
+    return numpy.array(out, perf_dt)
+
+
+@view.add('performance')
+def view_performance(token, dstore):
+    """
+    Display performance information
+    """
+    return rst_table(performance_view(dstore))
 
 
 @view.add('required_params_per_trt')
