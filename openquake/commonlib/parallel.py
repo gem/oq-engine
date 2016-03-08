@@ -19,12 +19,13 @@
 """
 TODO: write documentation.
 """
-
+from __future__ import print_function
 import os
 import sys
 import logging
 import operator
 import traceback
+import threading
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from decorator import FunctionMaker
 
@@ -440,3 +441,39 @@ def litetask(func):
     return FunctionMaker.create(
         func, 'return _s_(_w_, (%(shortsignature)s,), pickle=True)',
         dict(_s_=safely_call, _w_=wrapper), task_func=func)
+
+
+class CmdLoop(object):
+    """
+    A context manager processing commands in a dedicated thread. The commands
+    are sent by the monitor with the syntax `monitor.send(callable, *args)`
+    and processed as soon as they arrive. Here is an example of usage:
+
+    >>> monitor = PerformanceMonitor('test')
+    >>> with CmdLoop(monitor):
+    ...     monitor.send(print, 'hello')
+    ...     monitor.send(print, 'world')
+    hello
+    world
+    """
+    def __init__(self, monitor):
+        self.monitor = monitor
+        self.listener = monitor.make_listener()
+        self.thread = threading.Thread(target=self.loop)
+
+    def __enter__(self):
+        self.thread.start()
+
+    def __exit__(self, etype, exc, tb):
+        self.monitor.send(sys.exit)
+        self.thread.join()
+        self.listener.close()
+
+    def loop(self):
+        while True:
+            conn = self.listener.accept()
+            cmd = conn.recv()
+            conn.close()
+            call = cmd[0]
+            args = cmd[1:]
+            call(*args)
