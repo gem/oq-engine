@@ -27,57 +27,16 @@ DB_SECTION = config.get_section('database')
 
 INSTALLED_APPS = ('openquake.server.db',)
 
-
-def _db_cfg(db_name):
-    """
-    Helper method to create db config items for the various roles and schemas.
-
-    :param db_name: The name of the database configuration. Configurations for
-        this name will be loaded from the site specific config file. If an item
-        doesn't exist in the config file, a default value will be used instead.
-
-    :returns: Configuration dict, structured like so::
-        {'ENGINE': 'django.db.backends.postgresql_psycopg2',
-         'NAME': 'openquake2',
-         'USER': 'openquake',
-         'PASSWORD': 'secret',
-         'HOST': 'localhost',
-         'PORT': '5432',
-        }
-
-
-    """
-
-    return dict(
-        ENGINE='django.db.backends.postgresql_psycopg2',
-        NAME=DB_SECTION.get('name', 'openquake'),
-        USER=DB_SECTION.get('%s_user' % db_name, 'openquake'),
-        PASSWORD=DB_SECTION.get('%s_password' % db_name, ''),
-        HOST=DB_SECTION.get('host', 'localhost'),
-        PORT=DB_SECTION.get('port', '5432'),
-        OPTIONS={'sslmode': 'disable'},
-    )
-
-
-_DB_NAMES = (
-    'admin',
-    'job_init',
-)
-
-DATABASES = dict((db, _db_cfg(db)) for db in _DB_NAMES)
-
-DEFAULT_USER = 'admin'
 # We need a 'default' database to make Django happy:
-DATABASES['default'] = {
+DATABASE = {
     'ENGINE': 'django.db.backends.postgresql_psycopg2',
     'NAME': DB_SECTION.get('name', 'openquake'),
-    'USER': DB_SECTION.get('%s_user' % DEFAULT_USER, 'oq_admin'),
-    'PASSWORD': DB_SECTION.get('%s_password' % DEFAULT_USER, 'openquake'),
+    'USER': DB_SECTION.get('admin_user', 'oq_admin'),
+    'PASSWORD': DB_SECTION.get('admin_password', 'openquake'),
     'HOST': DB_SECTION.get('host', 'localhost'),
     'PORT': DB_SECTION.get('port', '5432'),
 }
-
-DATABASE_ROUTERS = ['openquake.server.db.routers.OQRouter']
+DATABASES = {'default': DATABASE}
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
