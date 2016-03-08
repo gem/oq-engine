@@ -402,7 +402,7 @@ class Classical(RiskModel):
         :param assets:
             assets is an iterator over N
             :class:`openquake.risklib.scientific.Asset` instances
-        :param hazard_curves:
+        :param hazard_curve:
             an array of poes
         :param _epsilons:
             ignored, here only for API compatibility with other calculators
@@ -589,6 +589,14 @@ class ClassicalBCR(RiskModel):
         self.lrem_steps_per_interval = lrem_steps_per_interval
 
     def __call__(self, loss_type, assets, hazard, _eps=None, _rupids=None):
+        """
+        :param loss_type: the loss type
+        :param assets: a list of N assets of the same taxonomy
+        :param hazard: an hazard curve
+        :param _eps: dummy parameter, unused
+        :param _rupids: dummy parameter, unused
+        :returns: a :class:`openquake.risklib.scientific.Output` instance
+        """
         n = len(assets)
         self.assets = assets
         vf = self.risk_functions[loss_type]
@@ -690,7 +698,9 @@ class Damage(RiskModel):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
-        :param gmfs: an array of E elements
+        :param gmvs: an array of E elements
+        :param _epsilons: dummy parameter, unused
+        :param _rupids: dummy parameter, unused
         :returns: an array of N assets and an array of N x E x D elements
 
         where N is the number of points, E the number of events

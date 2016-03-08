@@ -24,7 +24,6 @@ import operator
 import decimal
 import functools
 import itertools
-import collections
 import numpy
 
 from openquake.baselib.general import humansize, groupby
@@ -439,7 +438,7 @@ def get_max_gmf_size(dstore):
     gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
     n_imts = len(oq.imtls)
     n_rlzs = max(len(rlzs_assoc[trt_id, gsim]) for gsim in gsims)
-    size = n_sites * n_rlzs * n_ruptures * n_imts * 4
+    size = n_sites * n_rlzs * n_ruptures * n_imts * 4  # 4 bytes per float
     return dict(n_rlzs=n_rlzs, n_imts=n_imts, n_sites=n_sites, size=size,
                 n_ruptures=n_ruptures, humansize=humansize(size), col=col,
                 trt=rlzs_assoc.csm_info.tmdict[trt_id].trt)
