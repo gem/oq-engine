@@ -107,9 +107,7 @@ class RunCalcTestCase(unittest.TestCase):
         job = engine.job_from_file(cfg, 'test_user')
         with tempfile.NamedTemporaryFile() as temp:
             with self.assertRaises(ZeroDivisionError), mock.patch(
-                    'openquake.engine.engine._do_run_calc', lambda *args: 1/0
-            ), mock.patch('openquake.engine.engine.cleanup_after_job',
-                          lambda job: None):
+                    'openquake.engine.engine._do_run_calc', lambda *args: 1/0):
                 engine.run_calc(job, 'info', temp.name, exports=[])
             logged = open(temp.name).read()
 
