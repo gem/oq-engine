@@ -62,11 +62,5 @@ class MonitorTestCase(unittest.TestCase):
         self.assertGreaterEqual(total_time, 0.3)
         self.mon.flush()
 
-    def test_send(self):
-        ls = []
-        self.mon.send(ls.append, 1)
-        self.mon.send(ls.append, 2)
-        self.assertEqual(ls, [1, 2])
-
     def test_pickleable(self):
         pickle.loads(pickle.dumps(self.mon))

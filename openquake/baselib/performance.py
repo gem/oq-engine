@@ -180,8 +180,6 @@ class PerformanceMonitor(object):
                 client.send(cmd)
             finally:
                 client.close()
-        else:  # dummy monitor
-            cmd[0](*cmd[1:])
 
     def flush(self):
         """
