@@ -34,7 +34,7 @@ def get_len(data, monitor):
 
 
 class TaskManagerTestCase(unittest.TestCase):
-    monitor = parallel.DummyMonitor()
+    monitor = parallel.PerformanceMonitor()
 
     def test_apply_reduce(self):
         res = parallel.apply_reduce(

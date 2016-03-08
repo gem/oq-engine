@@ -30,7 +30,7 @@ import numpy
 
 from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general
-from openquake.baselib.performance import DummyMonitor
+from openquake.baselib.performance import PerformanceMonitor
 from openquake.commonlib import (
     readinput, riskmodels, datastore, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
@@ -91,7 +91,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
 
-    def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
+    def __init__(self, oqparam, monitor=PerformanceMonitor(), calc_id=None):
         self.monitor = monitor
         self.datastore = datastore.DataStore(calc_id)
         self.monitor.hdf5path = self.datastore.hdf5path

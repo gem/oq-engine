@@ -23,7 +23,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import groupby, split_in_blocks
-from openquake.baselib.performance import DummyMonitor
+from openquake.baselib.performance import PerformanceMonitor
 from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific, riskmodels
 
@@ -508,7 +508,7 @@ class RiskInputFromRuptures(object):
         from openquake.calculators.event_based import make_gmfs
         gmfs = make_gmfs(
             self.ses_ruptures, self.sitecol, self.imts,
-            self.gsims, self.trunc_level, self.correl_model, DummyMonitor())
+            self.gsims, self.trunc_level, self.correl_model, PerformanceMonitor())
         gmf_dt = gsim_imt_dt(self.gsims, self.imts)
         N = len(self.sitecol.complete)
         R = len(gmfs)
