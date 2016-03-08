@@ -425,25 +425,6 @@ def view_assetcol(token, dstore):
     return write_csv(io.StringIO(), [header] + list(zip(*columns)))
 
 
-@view.add('biggest_ebr_block')
-def view_biggest_ebr_block(token, dstore):
-    """
-    Returns the size of the biggest block in an event based risk calculation
-    """
-    L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
-    R = len(dstore['rlzs_assoc'].realizations)
-    num_ruptures = len(dstore['tags'])
-    taxonomies = dstore['assetcol']['taxonomy']
-    [(taxo, counts)] = collections.Counter(taxonomies).most_common(1)
-    taxonomy = dstore['taxonomies'][taxo]
-    nbytes = counts * num_ruptures * L * R * 8
-    msg = ('The largest block is for taxonomy %s, contains %d assets and '
-           '%d ruptures for %d loss type(s) and %d realization(s); '
-           'size = %s / num_tasks') % (taxonomy, counts, num_ruptures, L, R,
-                                       humansize(nbytes))
-    return msg
-
-
 def get_max_gmf_size(dstore):
     """
     Extract info about the largest GMF

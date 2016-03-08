@@ -257,7 +257,7 @@ class RiskModel(object):
         """
         :param imt: restrict the risk functions to this IMT
         :param assets: an array of assets of homogeneous taxonomy
-        :param hazard: a dictionary rlz -> hazard per site
+        :param hazard: a dictionary rlz -> hazard
         :param epsilons: an array of epsilons per each asset
         :param rupids: rupture indices (only for event based)
         :returns: a dictionary (l, r) -> output
