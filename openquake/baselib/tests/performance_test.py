@@ -19,7 +19,7 @@ import time
 import unittest
 import pickle
 import numpy
-from openquake.baselib.performance import PerformanceMonitor, CmdLoop
+from openquake.baselib.performance import PerformanceMonitor
 
 
 # NB: tests for the HDF5 functionality are in risklib
