@@ -335,9 +335,13 @@ class TaskManager(object):
         :param acc: the initial value of the accumulator
         :returns: the final value of the accumulator
         """
-        num_tasks = len(self.results)
         if acc is None:
             acc = AccumDict()
+        num_tasks = len(self.results)
+        if num_tasks == 0:
+            logging.warn('No tasks were submitted')
+            return acc
+
         log_percent = log_percent_gen(self.name, num_tasks, self.progress)
         next(log_percent)
 
