@@ -17,9 +17,11 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import print_function
 import os
+import sys
 import time
 import uuid
 import socket
+import threading
 from datetime import datetime
 from multiprocessing.connection import Listener, Client
 
@@ -238,3 +240,39 @@ class PerformanceMonitor(object):
                 humansize(self.mem))
         return '<%s %s, duration=%ss>' % (self.__class__.__name__,
                                           self.operation, self.duration)
+
+
+class CmdLoop(object):
+    """
+    A context manager processing commands in a dedicated thread. The commands
+    are sent by the monitor with the syntax `monitor.send(callable, *args)`
+    and processed as soon as they arrive. Here is an example of usage:
+
+    >>> monitor = PerformanceMonitor('test')
+    >>> with CmdLoop(monitor):
+    ...     monitor.send(print, 'hello')
+    ...     monitor.send(print, 'world')
+    hello
+    world
+    """
+    def __init__(self, monitor):
+        self.monitor = monitor
+        self.listener = monitor.make_listener()
+        self.thread = threading.Thread(target=self.loop)
+
+    def __enter__(self):
+        self.thread.start()
+
+    def __exit__(self, etype, exc, tb):
+        self.monitor.send(sys.exit)
+        self.thread.join()
+        self.listener.close()
+
+    def loop(self):
+        while True:
+            conn = self.listener.accept()
+            cmd = conn.recv()
+            conn.close()
+            call = cmd[0]
+            args = cmd[1:]
+            call(*args)
