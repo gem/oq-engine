@@ -714,13 +714,21 @@ class CmdLoop(object):
             args = cmd[1:]
             if callable(call):
                 call(*args)
-            else:  # assume it is a method name
+            else:  # assume it is a method name, like `save` or `extend`
                 getattr(self, call)(*args)
 
     def save(self, key, value):
+        """
+        :param key: datastore key
+        :param value: an array to save for the given key
+        """
         self.calculator.datastore[key] = value
         self.calculator.datastore.flush()
 
     def extend(self, key, value):
+        """
+        :param key: datastore key
+        :param value: an array extending the dataset with the given key
+        """
         hdf5.Hdf5Dataset(self.calculator.datastore.hdf5[key]).extend(value)
         self.calculator.datastore.flush()
