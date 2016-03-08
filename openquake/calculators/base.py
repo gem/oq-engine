@@ -703,7 +703,7 @@ class CmdLoop(object):
         self.calculator.monitor.__exit__(etype, exc, tb)
         self.thread.join()
         self.listener.close()
-        self.datastore.flush()
+        self.calculator.datastore.flush()
 
     def loop(self):
         while True:
