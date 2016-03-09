@@ -29,7 +29,7 @@ from datetime import datetime
 from django.core import exceptions
 from django import db as django_db
 
-from openquake.baselib.performance import PerformanceMonitor
+from openquake.baselib.performance import Monitor
 from openquake.engine import logs
 from openquake.server.db import models
 from openquake.engine.utils import config, tasks
@@ -407,7 +407,7 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
     # create a job and a calculator
     job = create_job(oq.calculation_mode, oq.description, username,
                      hazard_calculation_id)
-    monitor = PerformanceMonitor('total runtime', measuremem=True)
+    monitor = Monitor('total runtime', measuremem=True)
     job.calc = base.calculators(oq, monitor, calc_id=job.id)
     with logs.handle(job, log_level):
         job.calc.oqparam = readinput.get_oqparam(params)
