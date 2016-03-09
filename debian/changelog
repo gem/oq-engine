@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Change the SESCollection exporter: now a single file is exported, before
+    we were exporting one file per source model path per tectonic region model
   * Changed the risk calculators to work in blocks of assets on the same site
   * Made it possible to set different integration distances for different
     tectonic region types

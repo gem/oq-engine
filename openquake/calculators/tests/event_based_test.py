@@ -25,6 +25,7 @@ import numpy.testing
 from openquake.baselib.general import groupby
 from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.util import max_rel_diff_index
+from openquake.commonlib.export import export
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_4, case_5, case_6, case_7, case_12,
@@ -264,3 +265,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         fnames = out['gmfs', 'txt']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
+
+        # check that a single rupture file is exported
+        [fname] = export(('sescollection', 'xml'), self.calc.datastore)
+        self.assertEqualFiles('expected/ses.xml', fname)

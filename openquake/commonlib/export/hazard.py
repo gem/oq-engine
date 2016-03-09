@@ -66,9 +66,8 @@ class SESCollection(object):
     """
     Stochastic Event Set Collection
     """
-    def __init__(self, idx_ses_dict, sm_lt_path, investigation_time=None):
+    def __init__(self, idx_ses_dict, investigation_time=None):
         self.idx_ses_dict = idx_ses_dict
-        self.sm_lt_path = sm_lt_path
         self.investigation_time = investigation_time
 
     def __iter__(self):
@@ -89,26 +88,23 @@ def export_ses_xml(ekey, dstore):
     except AttributeError:  # for scenario calculators don't export
         return []
     col_id = 0
-    fnames = []
+    sesruptures = []
     for sm in csm_info.source_models:
         for trt_model in sm.trt_models:
             colkey = 'sescollection/trtmod=%s-%s' % tuple(
                 csm_info.cols[col_id])
-            sesruptures = dstore[colkey].values()
+            sesruptures.extend(dstore[colkey].values())
             col_id += 1
-            ses_coll = SESCollection(
-                groupby(sesruptures, operator.attrgetter('ses_idx')),
-                sm.path, oq.investigation_time)
-            smpath = '_'.join(sm.path)
-            fname = 'ses-%d-smltp_%s.%s' % (trt_model.id, smpath, fmt)
-            dest = os.path.join(dstore.export_dir, fname)
-            globals()['_export_ses_' + fmt](dest, ses_coll)
-            fnames.append(os.path.join(dstore.export_dir, fname))
-    return fnames
+    ses_coll = SESCollection(
+        groupby(sesruptures, operator.attrgetter('ses_idx')),
+        oq.investigation_time)
+    dest = dstore.export_path('ses.' + fmt)
+    globals()['_export_ses_' + fmt](dest, ses_coll)
+    return [dest]
 
 
 def _export_ses_xml(dest, ses_coll):
-    writer = hazard_writers.SESXMLWriter(dest, '_'.join(ses_coll.sm_lt_path))
+    writer = hazard_writers.SESXMLWriter(dest)
     writer.serialize(ses_coll)
 
 
