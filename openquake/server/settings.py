@@ -19,7 +19,12 @@
 import os
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
-from openquake.engine import settings as oqe_settings
+
+from openquake.engine.utils import config
+
+DB_SECTION = config.get_section('database')
+
+INSTALLED_APPS = ('openquake.server.db',)
 
 OQSERVER_ROOT = os.path.dirname(__file__)
 
@@ -42,8 +47,16 @@ STATICFILES_DIRS = [
     os.path.join(OQSERVER_ROOT, 'static'),
 ]
 
-
-DATABASES = oqe_settings.DATABASES
+# We need a 'default' database to make Django happy:
+DATABASE = {
+    'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    'NAME': DB_SECTION.get('name', 'openquake'),
+    'USER': DB_SECTION.get('admin_user', 'oq_admin'),
+    'PASSWORD': DB_SECTION.get('admin_password', 'openquake'),
+    'HOST': DB_SECTION.get('host', 'localhost'),
+    'PORT': DB_SECTION.get('port', '5432'),
+}
+DATABASES = {'default': DATABASE}
 
 ALLOWED_HOSTS = ['*']
 
@@ -86,8 +99,8 @@ AUTH_EXEMPT_URLS = ()
 
 ROOT_URLCONF = 'openquake.server.urls'
 
-INSTALLED_APPS = ('django.contrib.staticfiles',
-                  'openquake.server',)
+INSTALLED_APPS += ('django.contrib.staticfiles',
+                   'openquake.server',)
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
