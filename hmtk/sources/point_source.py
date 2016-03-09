@@ -54,7 +54,6 @@ the class nrml.models.PointSource
 import warnings
 import numpy as np
 from openquake.hazardlib.geo.point import Point
-from openquake.nrmllib import models
 import hmtk.sources.source_conversion_utils as conv
 from openquake.hazardlib.source.point import PointSource
 
@@ -79,11 +78,10 @@ class mtkPointSource(object):
         Rupture aspect ratio
     :param mfd:
         Magnitude frequency distribution as instance of
-        :class: nrml.models.IncrementalMFD or
-        :class: nrml.models.TGRMFD
+        :class: openquake.hazardlib.mfd.BaseMFD
     :param list nodal_plane_dist:
-        List of :class: nrml.models.NodalPlane objects representing
-        nodal plane distribution
+        List of :class: openquake.hazardlib.geo.nodal_plane.NodalPlane
+        objects representing nodal plane distribution
     :param list hypo_depth_dist:
         List of :class: nrml.models.HypocentralDepth instances describing
         the hypocentral depth distribution
