@@ -13,6 +13,9 @@ python-oq-hazardlib (0.19.0-0~precise01) precise; urgency=low
 
 python-oq-hazardlib (0.18.0-0~precise01) precise; urgency=low
 
+  [Yen-Shin Chen]
+  * Fix a bug in ChiouYoungs2014NearFaultEffect
+
   [Daniele Viganò, Matteo Nastasi]
   * Updates Copyrights to 2016 and uniformize them
 

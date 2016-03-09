@@ -185,7 +185,10 @@ class ChiouYoungs2014(GMPE):
         # centered_ztor
         centered_ztor = self._get_centered_ztor(rup, Frv)
         #
-
+        dist_taper = np.fmax(1 - (np.fmax(dists.rrup - 40,
+                                  np.zeros_like(dists)) / 30.),
+                             np.zeros_like(dists))
+        dist_taper = dist_taper.astype(np.float64)
         ln_y_ref = (
             # first part of eq. 11
             C['c1']
@@ -208,9 +211,7 @@ class ChiouYoungs2014(GMPE):
             + (C['cg1'] + C['cg2'] / (np.cosh(max(rup.mag - C['cg3'], 0))))
             * dists.rrup
             # fifth part
-            + C['c8'] * np.fmax(1 - (np.fmax(dists.rrup - 40,
-                                np.zeros_like(dists)) / 30.),
-                                np.zeros_like(dists))[0]
+            + C['c8'] * dist_taper
             * min(max(rup.mag - 5.5, 0) / 0.8, 1.0)
             * np.exp(-1 * C['c8a'] * (rup.mag - C['c8b']) ** 2) * centered_dpp
             # sixth part
@@ -322,6 +323,7 @@ class ChiouYoungs2014PEER(ChiouYoungs2014):
                 # eq. 13
                 ret.append(0.65 * np.ones_like(sites.vs30))
         return ret
+
 
 class ChiouYoungs2014NearFaultEffect(ChiouYoungs2014):
     """
