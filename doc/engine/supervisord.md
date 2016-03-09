@@ -5,7 +5,7 @@ To `/etc/supervisord/conf.d/celeryd.conf` add:
 ```ini
 [program:celery]
 ; Installation from sources requires the PYTHONPATH to be set:
-;environment=PYTHONPATH="/usr/local/openquake/oq-engine:/usr/local/openquake/oq-hazardlib:/usr/local/openquake/oq-nrmllib:/usr/local/openquake/oq-risklib",DJANGO_SETTINGS_MODULE="openquake.engine.settings",OQ_LOCAL_CFG_PATH="openquake_worker.cfg"
+;environment=PYTHONPATH="/usr/local/openquake/oq-engine:/usr/local/openquake/oq-hazardlib:/usr/local/openquake/oq-nrmllib:/usr/local/openquake/oq-risklib",DJANGO_SETTINGS_MODULE="openquake.server.settings",OQ_LOCAL_CFG_PATH="openquake_worker.cfg"
 
 ; Precise
 ;command=celeryd --purge
