@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed openquake/engine/settings.py
   * Made the dependency on celery required only in cluster installations
   * Integrated the authentication database in the engine server database
   * Fixed the description in the Web UI (before it was temporarily set to
