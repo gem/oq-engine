@@ -19,14 +19,14 @@ import time
 import unittest
 import pickle
 import numpy
-from openquake.baselib.performance import PerformanceMonitor
+from openquake.baselib.performance import Monitor
 
 
 # NB: tests for the HDF5 functionality are in risklib
 class MonitorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.mon = PerformanceMonitor('test')
+        cls.mon = Monitor('test')
 
     def test_no_mem(self):
         mon = self.mon('test_no_mem')

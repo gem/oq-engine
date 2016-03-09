@@ -15,7 +15,6 @@
 
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-from __future__ import print_function
 import os
 import time
 import uuid
@@ -57,17 +56,17 @@ perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
 
 
 # this is not thread-safe
-class PerformanceMonitor(object):
+class Monitor(object):
     """
     Measure the resident memory occupied by a list of processes during
     the execution of a block of code. Should be used as a context manager,
     as follows::
 
-     with PerformanceMonitor('do_something') as mon:
+     with Monitor('do_something') as mon:
          do_something()
      print mon.mem
 
-    At the end of the block the PerformanceMonitor object will have the
+    At the end of the block the Monitor object will have the
     following 5 public attributes:
 
     .start_time: when the monitor started (a datetime object)
@@ -75,14 +74,33 @@ class PerformanceMonitor(object):
     .exc: usually None; otherwise the exception happened in the `with` block
     .mem: the memory delta in bytes
 
-    The behaviour of the PerformanceMonitor can be customized by subclassing it
+    The behaviour of the Monitor can be customized by subclassing it
     and by overriding the method on_exit(), called at end and used to display
     or store the results of the analysis.
 
-    NB: if the .address and .authkey attributes are set, it is possible for
-    the monitor to send commands to that address, assuming there is a
+    NB: if the .address attribute is set, it is possible for the monitor to
+    send commands to that address, assuming there is a
     :class:`multiprocessing.connection.Listener` listening.
     """
+    address = None
+    authkey = None
+    calc_id = None
+
+    @classmethod
+    def make_listener(cls, port):
+        """
+        :param port:
+            port of the listener
+        :returns:
+            a Listener object
+
+        As a side effect, sets the class attributes .address and .authkey
+        on the Monitor.
+        """
+        cls.address = (socket.gethostname(), port)
+        cls.authkey = uuid.uuid1().bytes
+        return Listener(cls.address, authkey=cls.authkey)
+
     def __init__(self, operation='dummy', hdf5path=None,
                  autoflush=False, measuremem=False):
         self.operation = operation
@@ -153,31 +171,14 @@ class PerformanceMonitor(object):
         if self.autoflush:
             self.flush()
 
-    def make_listener(self, hostname=None):
+    def send(self, *args):
         """
-        :param hostname:
-            name of the server host, as seen by the clients
-        :returns:
-            a Listener object listening on `hostname` at a random port;
-            as a side effect, set the attributes .address and .authkey
-        """
-        if hostname is None:
-            hostname = socket.gethostname()
-        authkey = uuid.uuid1().bytes
-        authkey = None
-        listener = Listener((hostname, 0), authkey=authkey)
-        self.address = listener.address
-        self.authkey = authkey
-        return listener
-
-    def send(self, *cmd):
-        """
-        Send a command to the listener, for instance `.send(print, 'hello')`
+        Send a command to the listener. Add the .calc_id as last argument.
         """
         if self.address:
             client = Client(self.address, authkey=self.authkey)
             try:
-                client.send(cmd)
+                client.send(args + (self.calc_id,))
             finally:
                 client.close()
 
