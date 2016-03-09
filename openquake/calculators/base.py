@@ -24,7 +24,6 @@ import math
 import logging
 import operator
 import traceback
-import threading
 import collections
 
 import numpy
@@ -95,6 +94,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
         self.monitor = monitor
         self.datastore = datastore.DataStore(calc_id)
+        self.monitor.calc_id = self.datastore.calc_id
         self.monitor.hdf5path = self.datastore.hdf5path
         self.datastore.export_dir = oqparam.export_dir
         self.oqparam = oqparam
@@ -690,46 +690,3 @@ def get_gmfs(dstore):
                 for trt_id, gsim in gmfs:
                     gmfs[trt_id, gsim][sid, rupid] = gmv[gsim]
     return dstore['tags'].value, gmfs
-
-
-class CmdLoop(object):
-    """
-    A context manager processing commands in a dedicated thread. The commands
-    are sent by the monitor with the syntax `monitor.send(callable, *args)`
-    and processed as soon as they arrive. Here is an example of usage:
-
-    >> calc = Calculator(oqparam)
-    >> with CmdLoop(calc):
-    ..     calc.monitor.send(print, 'hello')
-    ..     calc.monitor.send(print, 'world')
-    hello
-    world
-    """
-    def __init__(self, calculator):
-        self.calculator = calculator
-        self.listener = calculator.monitor.make_listener()
-        self.thread = threading.Thread(target=self.loop)
-
-    def __enter__(self):
-        self.calculator.monitor.__enter__()
-        self.thread.start()
-        return self
-
-    def __exit__(self, etype, exc, tb):
-        self.calculator.monitor.send(sys.exit)
-        self.calculator.monitor.__exit__(etype, exc, tb)
-        self.thread.join()
-        self.listener.close()
-        self.calculator.datastore.flush()
-
-    def loop(self):
-        while True:
-            conn = self.listener.accept()
-            cmd = conn.recv()
-            conn.close()
-            call = cmd[0]
-            args = cmd[1:]
-            if callable(call):
-                call(*args)
-            else:  # assume `call` is a method name, like `save` or `extend`
-                getattr(self.calculator, call)(*args)
