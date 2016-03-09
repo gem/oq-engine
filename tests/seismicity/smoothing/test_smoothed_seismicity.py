@@ -228,7 +228,7 @@ class TestSmoothingUtils(unittest.TestCase):
 
         # Test 2: Single value of completeness
         comp_table = np.array([[1960., 4.0]])
-        self.assertAlmostEqual(1.0,
+        self.assertAlmostEqual(1. / (2006. - 1960. + 1.),
             utils.get_weichert_factor(beta, comp_table[:, 1], comp_table[:, 0],
                                       end_year)[0])
 
