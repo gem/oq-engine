@@ -26,7 +26,6 @@ import logging
 from datetime import datetime
 from contextlib import contextmanager
 from django.db import connection
-from openquake.baselib.performance import CmdLoop
 
 
 # Place the new level between info and warning
@@ -187,8 +186,7 @@ def handle(job, log_level='info', log_file=None):
         logging.root.addHandler(handler)
     set_level(log_level)
     try:
-        with CmdLoop(job.calc.monitor):
-            yield
+        yield
     finally:
         # sanity check to make sure that the logging on file is working
         if log_file and os.path.getsize(log_file) == 0:
