@@ -19,6 +19,7 @@
 """Utility functions related to splitting work into tasks."""
 import types
 
+from openquake.baselib.performance import Monitor
 from openquake.commonlib import parallel, valid
 from openquake.engine import logs
 from openquake.engine.utils import config
@@ -28,7 +29,8 @@ celery_queue = config.get('amqp', 'celery_queue')
 SOFT_MEM_LIMIT = int(config.get('memory', 'soft_mem_limit'))
 HARD_MEM_LIMIT = int(config.get('memory', 'hard_mem_limit'))
 USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
-parallel.check_mem_usage.__defaults__ = (SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
+parallel.check_mem_usage.__defaults__ = (
+    Monitor(), SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
 
 if USE_CELERY:
     from celery.result import ResultSet
