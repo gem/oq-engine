@@ -48,11 +48,10 @@
 """
 Python tools for calculating activity rates on a grid from a source model
 """
-import argparse
 import numpy as np
 from openquake.commonlib.sourceconverter import (SourceConverter,
                                                  area_to_point_sources)
-from openquake.commonlib.source import parse_source_model
+from openquake.commonlib.source import SourceModelParser
 from openquake.hazardlib.source.complex_fault import ComplexFaultSource
 from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.source.simple_fault import SimpleFaultSource
@@ -60,6 +59,7 @@ from openquake.hazardlib.source.area import AreaSource
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.polygon import Polygon
+
 
 class RateGrid(object):
     """
@@ -112,8 +112,8 @@ class RateGrid(object):
 
     @classmethod
     def from_model_files(cls, limits, input_model, investigation_time=1.0,
-            simple_mesh_spacing=1.0, complex_mesh_spacing=5.0,
-            mfd_width=0.1, area_discretisation=10.0):
+                         simple_mesh_spacing=1.0, complex_mesh_spacing=5.0,
+                         mfd_width=0.1, area_discretisation=10.0):
         """
         Reads the hazard model from a file
         :param list limits:
@@ -137,10 +137,9 @@ class RateGrid(object):
                                     complex_mesh_spacing,
                                     mfd_width,
                                     area_discretisation)
-        full_model = parse_source_model(input_model, converter)
-        sources = []
-        for model in full_model:
-            sources.extend(list(model.sources))
+
+        parser = SourceModelParser(converter)
+        sources = parser.parse_sources(input_model)
         return cls(limits, sources, area_discretisation)
 
     def number_sources(self):
@@ -157,7 +156,7 @@ class RateGrid(object):
         """
         nsrcs = self.number_sources()
         for iloc, source in enumerate(self.source_model):
-            print "Source Number %s of %s, Name = %s, Typology = %s" %(
+            print "Source Number %s of %s, Name = %s, Typology = %s" % (
                 iloc + 1,
                 nsrcs,
                 source.name,
@@ -184,15 +183,15 @@ class RateGrid(object):
             Source hypocentre as instance of :class:
             openquake.hazardlib.geo.point.Point
         :returns:
-            xloc - Location of longitude cell 
-            yloc - Location of latitude cell 
+            xloc - Location of longitude cell
+            yloc - Location of latitude cell
         """
         if (location.longitude < self.xlim[0]) or\
-            (location.longitude > self.xlim[-1]):
+                (location.longitude > self.xlim[-1]):
             return None, None
         xloc = int(((location.longitude - self.xlim[0]) / self.xspc) + 1E-7)
         if (location.latitude < self.ylim[0]) or\
-            (location.latitude > self.ylim[-1]):
+                (location.latitude > self.ylim[-1]):
             return None, None
         yloc = int(((location.latitude - self.ylim[0]) / self.yspc) + 1E-7)
         return xloc, yloc
@@ -254,7 +253,7 @@ class RateGrid(object):
                                    rupt.surface.mesh.depths.flatten()])
             npts = np.shape(grd)[0]
             counter = np.histogramdd(grd,
-                                     bins = [self.xlim, self.ylim, self.zlim]
+                                     bins=[self.xlim, self.ylim, self.zlim]
                                      )[0]
             point_rate = rupt.occurrence_rate / float(npts)
             self.rates += (point_rate * counter)
@@ -315,7 +314,7 @@ class RatePolygon(RateGrid):
                 else:
                     for (prob, depth) in source.hypocenter_distribution.data:
                         if (depth < self.upper_depth) or\
-                            (depth > self.lower_depth):
+                                (depth > self.lower_depth):
                             continue
                         else:
                             self.rates += (prob * rate)
