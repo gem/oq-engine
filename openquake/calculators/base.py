@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from __future__ import print_function
 import sys
 import abc
 import ast
@@ -29,7 +28,7 @@ import collections
 import numpy
 
 from openquake.hazardlib.geo import geodetic
-from openquake.baselib import general, hdf5
+from openquake.baselib import general
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import (
     readinput, riskmodels, datastore, source, __version__)
@@ -221,22 +220,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore.flush()
         # NB: the datastore must not be closed, otherwise some tests
         # will break; it will be closed automatically anyway
-
-    def save(self, key, value):
-        """
-        :param key: datastore key
-        :param value: an array to save for the given key
-        """
-        self.datastore[key] = value
-        self.datastore.flush()
-
-    def extend(self, key, value):
-        """
-        :param key: datastore key
-        :param value: an array extending the dataset with the given key
-        """
-        hdf5.Hdf5Dataset(self.datastore.hdf5[key]).extend(value)
-        self.datastore.flush()
 
 
 def _set_nbytes(dkey, dstore):
