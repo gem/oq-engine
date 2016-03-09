@@ -252,6 +252,86 @@ class TestBootstrapHistograms(unittest.TestCase):
         self.x_sigma = None
         self.y_sigma = None
 
+    def test_hmtk_histogram_1D_general(self):
+        """
+        Tests the 1D hmtk histogram with the general case (i.e. no edge-cases)
+        Should be exactly equivalent to numpy's histogram function
+        """
+        xdata = np.random.uniform(0., 10., 100)
+        xbins = np.arange(0., 11., 1.)
+        np.testing.assert_array_almost_equal(
+            utils.hmtk_histogram_1D(xdata, xbins),
+            np.histogram(xdata, bins=xbins)[0].astype(float))
+    
+    def test_hmtk_histogram_1D_edgecase(self):
+        """
+        Tests the 1D hmtk histogram with edge cases
+        Should be exactly equivalent to numpy's histogram function
+        """
+        xdata = np.array([3.1, 4.1, 4.56, 4.8, 5.2])
+        xbins = np.arange(3.0, 5.35, 0.1)
+        expected_counter = np.array([0., 1., 0., 0., 0., 0., 0., 0., 0., 0.,
+                                      0., 1., 0., 0., 0., 1., 0., 0., 1., 0.,
+                                      0., 0., 1.])
+        np.testing.assert_array_almost_equal(
+            utils.hmtk_histogram_1D(xdata, xbins),
+            expected_counter)
+    
+    
+    def test_hmtk_histogram_2D_general(self):
+        """
+        Tests the 2D hmtk histogram with the general case (i.e. no edge-cases)
+        Should be exactly equivalent to numpy's histogram function
+        """
+        xdata = np.random.uniform(0., 10., 100)
+        ydata = np.random.uniform(10., 20., 100)
+        xbins = np.arange(0., 11., 1.)
+        ybins = np.arange(10., 21., 1.)
+        np.testing.assert_array_almost_equal(
+            utils.hmtk_histogram_2D(xdata, ydata, (xbins, ybins)),
+            np.histogram2d(xdata, ydata, bins=(xbins, ybins))[0].astype(float))
+
+    def test_hmtk_histogram_2D_edgecase(self):
+        """
+        Tests the 2D hmtk histogram with edge cases
+        Should be exactly equivalent to numpy's histogram function
+        """
+        xdata = np.array([3.1, 4.1, 4.56, 4.8, 5.2])
+        ydata = np.array([1990., 1991.2, 1994., 1997., 1998.2])
+
+        xbins = np.arange(3.0, 5.35, 0.1)
+        ybins = np.arange(1990., 2001.5, 1.)
+        
+        expected_counter = np.array(
+        #     90   91   92   93   94   95   96   97    98  99    00    
+            [[0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.0-3.1 
+             [1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.1-3.2 
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.2-3.3 
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.3-3.4
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.4-3.5
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.5-3.6
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.6-3.7
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.7-3.8
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.8-3.9
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #3.9-4.0
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.0-4.1
+             [0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.1-4.2
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.2-4.3
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.3-4.4
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.4-4.5
+             [0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.], #4.5-4.6
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.6-4.7
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.7-4.8
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.], #4.8-4.9
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #4.9-5.0
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #5.0-5.1
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.], #5.1-5.2
+             [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.]])#5.2-5.3
+        
+        np.testing.assert_array_almost_equal(
+            utils.hmtk_histogram_2D(xdata, ydata, bins=(xbins, ybins)),
+            expected_counter)
+
     def test_1D_bootstrap_no_uncertainty(self):
         """
         Tests the bootstrap 1D histrogram function with no uncertainties

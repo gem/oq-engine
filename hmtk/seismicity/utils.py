@@ -51,6 +51,8 @@
 import numpy as np
 from math import fabs
 from scipy.stats import truncnorm
+from scipy.stats._continuous_distns import (truncnorm_gen, _norm_cdf, _norm_sf,
+                                            _norm_ppf, _norm_isf)
 from shapely import geometry
 
 MARKER_NORMAL = np.array([0, 31, 59, 90, 120, 151, 181,
@@ -61,6 +63,38 @@ MARKER_LEAP = np.array([0, 31, 60, 91, 121, 152, 182,
 
 SECONDS_PER_DAY = 86400.0
 
+
+class hmtk_truncnorm_gen(truncnorm_gen):
+    """
+    At present, the scipy.stats.truncnorm.rvs object does not support
+    vector inputs for the bounds - this piece of duck punching changes that
+    """
+    def _argcheck(self, a, b):
+        self.a = a
+        self.b = b
+        self._nb = _norm_cdf(b)
+        self._na = _norm_cdf(a)
+        self._sb = _norm_sf(b)
+        self._sa = _norm_sf(a)
+        self._delta = self._nb - self._na
+        idx = self.a > 0
+        self._delta[idx] = -(self._sb[idx] - self._sa[idx])
+        self._logdelta = np.log(self._delta)
+        return (a != b)
+
+    def _ppf(self, q, a, b):
+        output = np.zeros_like(self.a)
+        idx = self.a > 0
+        if np.any(idx):
+            output[idx] = _norm_isf(q[idx]*self._sb[idx] +
+                                    self._sa[idx]*(-q[idx] + 1.0))
+        idx = np.logical_not(idx)
+        if np.any(idx):
+            output[idx] = _norm_ppf(q[idx]*self._nb[idx] +
+                                    self._na[idx]*(-q[idx] + 1.0))
+        return output
+
+hmtk_truncnorm = hmtk_truncnorm_gen(name="hmtk_truncnorm")
 
 def decimal_year(year, month, day):
     """
@@ -273,7 +307,6 @@ def piecewise_linear_scalar(params, xval):
         select = np.nonzero(turning_points <= xval)[0][-1] + 1
     return gradients[select] * xval + c_val[select]
 
-
 def sample_truncated_gaussian_vector(data, uncertainties, bounds=None):
     '''
     Samples a Gaussian distribution subject to boundaries on the data
@@ -292,19 +325,84 @@ def sample_truncated_gaussian_vector(data, uncertainties, bounds=None):
         if bounds[0] is not None:
             lower_bound = (bounds[0] - data) / uncertainties
         else:
-            lower_bound = -np.inf
+            lower_bound = -np.inf * np.ones_like(data)
 
         #if bounds[1] or (fabs(bounds[1]) < 1E-12):
         if bounds[1] is not None:
             upper_bound = (bounds[1] - data) / uncertainties
         else:
-            upper_bound = np.inf
-        sample = truncnorm.rvs(lower_bound, upper_bound, size=nvals)
+            upper_bound = np.inf * np.ones_like(data)
+        sample = hmtk_truncnorm.rvs(lower_bound, upper_bound, size=nvals)
 
     else:
         sample = np.random.normal(0., 1., nvals)
     return data + uncertainties * sample
 
+def hmtk_histogram_1D(values, intervals, offset=1.0E-10):
+    """
+    So, here's the problem. We tend to refer to certain data (like magnitudes)
+    rounded to the nearest 0.1 (or similar, i.e. 4.1, 5.7, 8.3 etc.). We also
+    like our tables to fall on on the same interval, i.e. 3.1, 3.2, 3.3 etc.
+    We usually assume that the counter should correspond to the low edge,
+    i.e. 3.1 is in the group 3.1 to 3.2 (i.e. L <= M < U).
+    Floating point precision can be a bitch! Because when we read in magnitudes
+    from files 3.1 might be represented as 3.0999999999 or as 3.1000000000001
+    and this is seemingly random. Similarly, if np.arange() is used to generate
+    the bin intervals then we see similar floating point problems emerging. As
+    we are frequently encountering density plots with empty rows or columns
+    where data should be but isn't because it has been assigned to the wrong
+    group.
+
+    Instead of using numpy's own historgram function we use a slower numpy
+    version that allows us to offset the intervals by a smaller amount and
+    ensure that 3.0999999999, 3.0, and 3.10000000001 would fall in the group
+    3.1 - 3.2!
+    :param numpy.ndarray values:
+        Values of data
+    :param numpy.ndarray intervals:
+        Data bins
+    :param float offset:
+        Small amount to offset the bins for floating point precision
+    :returns:
+        Count in each bin (as float)
+    """
+    nbins = len(intervals) - 1
+    counter = np.zeros(nbins, dtype=float)
+    x_ints = intervals - offset
+    for i in range(nbins):
+        idx = np.logical_and(values >= x_ints[i], values < x_ints[i + 1])
+        counter[i] += float(np.sum(idx))
+    return counter
+
+def hmtk_histogram_2D(xvalues, yvalues, bins, x_offset=1.0E-10,
+                      y_offset=1.0E-10):
+    """
+    See the explanation for the 1D case - now applied to 2D.
+    :param numpy.ndarray xvalues:
+        Values of x-data
+    :param numpy.ndarray yvalues:
+        Values of y-data
+    :param tuple bins:
+        Tuple containing bin intervals for x-data and y-data (as numpy arrays)
+    :param float x_offset:
+        Small amount to offset the x-bins for floating point precision
+    :param float y_offset:
+        Small amount to offset the y-bins for floating point precision
+    :returns:
+        Count in each bin (as float)
+    """
+    xbins, ybins = (bins[0] - x_offset, bins[1] - y_offset)
+    n_x = len(xbins) - 1
+    n_y = len(ybins) - 1
+    counter = np.zeros([n_y, n_x], dtype=float)
+    for j in range(n_y):
+        y_idx = np.logical_and(yvalues >= ybins[j], yvalues < ybins[j + 1])
+        x_vals = xvalues[y_idx]
+        for i in range(n_x):
+            idx = np.logical_and(x_vals >= xbins[i], x_vals < xbins[i + 1])
+            counter[j, i] += float(np.sum(idx))
+    return counter.T
+    
 
 def bootstrap_histogram_1D(
         values, intervals, uncertainties=None,
@@ -331,11 +429,12 @@ def bootstrap_histogram_1D(
     if not number_bootstraps or np.all(np.fabs(uncertainties < 1E-12)):
         # No bootstraps or all uncertaintes are zero - return ordinary
         # histogram
-        output = np.histogram(values, intervals)[0]
+        #output = np.histogram(values, intervals)[0]
+        output = hmtk_histogram_1D(values, intervals)
         if normalisation:
-            output = output.astype(float) / float(np.sum(output))
+            output = output / float(np.sum(output))
         else:
-            output = output.astype(float)
+            output = output
         return output
     else:
         temp_hist = np.zeros([len(intervals) - 1, number_bootstraps],
@@ -344,13 +443,14 @@ def bootstrap_histogram_1D(
             sample = sample_truncated_gaussian_vector(values,
                                                       uncertainties,
                                                       boundaries)
-            output = np.histogram(sample, intervals)[0]
+            #output = np.histogram(sample, intervals)[0]
+            output = hmtk_histogram_1D(sample, intervals)
             temp_hist[:, iloc] = output
         output = np.sum(temp_hist, axis=1)
         if normalisation:
-            output = output.astype(float) / float(np.sum(output))
+            output = output / float(np.sum(output))
         else:
-            output = output.astype(float) / float(number_bootstraps)
+            output = output / float(number_bootstraps)
         return output
 
 
@@ -394,9 +494,10 @@ def bootstrap_histogram_2D(
     '''
     if (xsigma is None and ysigma is None) or not number_bootstraps:
         # No sampling - return simple 2-D histrogram
-        output = np.histogram2d(xvalues, yvalues, bins=[xbins, ybins])[0]
+        #output = np.histogram2d(xvalues, yvalues, bins=[xbins, ybins])[0]
+        output = hmtk_histogram_2D(xvalues, yvalues, bins=(xbins, ybins))
         if normalisation:
-            output = output.astype(float) / float(np.sum(output))
+            output = output / float(np.sum(output))
         return output
 
     else:
@@ -413,9 +514,12 @@ def bootstrap_histogram_2D(
             ysample = sample_truncated_gaussian_vector(yvalues, ysigma,
                                                        boundaries[0])
 
-            temp_hist[:, :, iloc] = np.histogram2d(xsample,
-                                                   ysample,
-                                                   bins=[xbins, ybins])[0]
+            #temp_hist[:, :, iloc] = np.histogram2d(xsample,
+            #                                       ysample,
+            #                                       bins=[xbins, ybins])[0]
+            temp_hist[:, :, iloc] = hmtk_histogram_2D(xsample,
+                                                      ysample,
+                                                      bins=(xbins, ybins))
         if normalisation:
             output = np.sum(temp_hist, axis=2)
             output = output / np.sum(output)
