@@ -55,7 +55,6 @@ nrml.models.SimpleFaultSource
 import warnings
 import numpy as np
 from math import fabs
-from openquake.nrmllib import models
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
@@ -74,7 +73,8 @@ class mtkSimpleFaultSource(object):
     :param str trt:
         Tectonic region type
     :param geometry:
-        Instance of :class: nhlib.geo.surface.simple_fault.SimpleFaultSource
+        Instance of :class:
+        openquake.hazardlib.geo.surface.simple_fault.SimpleFaultSource
     :param float dip:
         Dip of the fault surface
     :param float upper_depth:
@@ -87,8 +87,7 @@ class mtkSimpleFaultSource(object):
         Rupture aspect ratio
     :param mfd:
         Magnitude frequency distribution as instance of
-        :class: nrml.models.IncrementalMFD or
-        :class: nrml.models.TGRMFD
+        :class: openquake.hazardlib.mfd.base.BaseMFD
     :param  float rake:
         Rake of fault
     :param catalogue:

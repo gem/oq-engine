@@ -54,7 +54,6 @@ nrml.models.AreaSource
 '''
 import warnings
 import numpy as np
-from openquake.nrmllib import models
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.polygon import Polygon
 from openquake.hazardlib.source.area import AreaSource
