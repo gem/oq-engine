@@ -21,6 +21,7 @@ import os
 import sys
 from django.core.management import execute_from_command_line
 from openquake.server.db.schema.upgrades import upgrader
+from openquake.server.datamanager import DataManager
 from openquake.server import executor
 from django.db import connection
 
@@ -34,5 +35,5 @@ if __name__ == "__main__":
     connection.cursor().execute(
         # cleanup of the flag oq_job.is_running
         'UPDATE job SET is_running=false WHERE is_running')
-    with executor:
+    with executor, DataManager(port=10000):
         execute_from_command_line(sys.argv)
