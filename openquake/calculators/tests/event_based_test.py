@@ -254,6 +254,10 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
 
+        # check that a single rupture file is exported
+        [fname] = export(('sescollection', 'xml'), self.calc.datastore)
+        self.assertEqualFiles('expected/ses.xml', fname)
+
     @attr('qa', 'hazard', 'event_based')
     def test_case_18(self):  # oversampling, 3 realizations
         expected = [
@@ -265,7 +269,3 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         fnames = out['gmfs', 'txt']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
-
-        # check that a single rupture file is exported
-        [fname] = export(('sescollection', 'xml'), self.calc.datastore)
-        self.assertEqualFiles('expected/ses.xml', fname)
