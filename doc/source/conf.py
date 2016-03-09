@@ -31,7 +31,7 @@
 import os
 import sys
 
-os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.engine.settings'
+os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.server.settings'
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
