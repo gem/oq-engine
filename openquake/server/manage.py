@@ -19,6 +19,8 @@
 
 import os
 import sys
+import uuid
+import socket
 from django.core.management import execute_from_command_line
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.datamanager import DataManager
@@ -35,5 +37,8 @@ if __name__ == "__main__":
     connection.cursor().execute(
         # cleanup of the flag oq_job.is_running
         'UPDATE job SET is_running=false WHERE is_running')
-    with executor, DataManager(port=10000):
+    address = (socket.gethostname(), 10000)
+    authkey = uuid.uuid1().bytes
+    with executor:
+        executor.submit(DataManager.listen, address, authkey)
         execute_from_command_line(sys.argv)

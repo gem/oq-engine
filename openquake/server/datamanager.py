@@ -17,27 +17,32 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-import threading
-from multiprocessing.connection import Client
-from openquake.baselib.performance import Monitor
+from multiprocessing.connection import Client, Listener
 from openquake.baselib.hdf5 import Hdf5Dataset
 from openquake.commonlib.datastore import read
 
 
 class DataManager(object):
-    def __init__(self, port):
-        self.listener = Monitor.make_listener(port)
-        self.thread = threading.Thread(target=self.loop)
+
+    @classmethod
+    def listen(cls, address, authkey):
+        self = cls(address, authkey)
+        with self:
+            self.loop()
+
+    def __init__(self, address, authkey):
+        self.address = address
+        self.authkey = authkey
 
     def __enter__(self):
-        self.thread.start()
+        print('Listening on %s...' % str(self.address))
+        self.listener = Listener(self.address, authkey=self.authkey)
         return self
 
     def __exit__(self, etype, exc, tb):
-        client = Client(Monitor.address, authkey=Monitor.authkey)
-        client.send(sys.exit)
+        client = Client(self.address, authkey=self.authkey)
+        client.send((sys.exit, 0))
         client.close()
-        self.thread.join()
         self.listener.close()
         for ds in self.dstore.values():
             ds.close()
@@ -45,9 +50,12 @@ class DataManager(object):
     def loop(self):
         self.dstore = {}
         while True:
-            conn = self.listener.accept()
-            cmd = conn.recv()
-            conn.close()
+            try:
+                conn = self.listener.accept()
+                cmd = conn.recv()
+            except BaseException:
+                conn.close()
+                raise
             call = cmd[0]
             if callable(call):
                 call(*cmd[1:])
