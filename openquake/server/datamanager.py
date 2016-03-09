@@ -26,6 +26,7 @@ class DataManager(object):
 
     @classmethod
     def listen(cls, address, authkey):
+        print 'PPPPPPPPPPPPPPPP'
         self = cls(address, authkey)
         with self:
             self.loop()
