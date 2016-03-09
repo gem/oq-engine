@@ -40,7 +40,7 @@ def calc_gmfs(tag_seed_pairs, computer, monitor):
     :param computer:
         :class:`openquake.hazardlib.calc.gmf.GMFComputer` instance
     :param monitor:
-        :class:`openquake.baselib.performance.PerformanceMonitor` instance
+        :class:`openquake.baselib.performance.Monitor` instance
     :returns:
         a dictionary tag -> gmf
     """

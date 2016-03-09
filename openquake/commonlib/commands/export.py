@@ -37,7 +37,7 @@ def export(datastore_key, export_dir='.', calc_id=-1, exports='csv'):
     if parent_id:
         dstore.set_parent(datastore.read(parent_id))
     dstore.export_dir = export_dir
-    with performance.PerformanceMonitor('export', measuremem=True) as mon:
+    with performance.Monitor('export', measuremem=True) as mon:
         for fmt in exports.split(','):
             fnames = export_((datastore_key, fmt), dstore)
             nbytes = sum(os.path.getsize(f) for f in fnames)

@@ -19,9 +19,10 @@
 """
 TODO: write documentation.
 """
-
+from __future__ import print_function
 import os
 import sys
+import socket
 import logging
 import operator
 import traceback
@@ -29,8 +30,7 @@ from concurrent.futures import as_completed, ProcessPoolExecutor
 from decorator import FunctionMaker
 
 from openquake.baselib.python3compat import pickle
-from openquake.baselib.performance import (
-    PerformanceMonitor, DummyMonitor, virtual_memory)
+from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import split_in_blocks, AccumDict, humansize
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
@@ -50,7 +50,8 @@ def no_distribute():
     return nd in ('1', 'true', 'yes')
 
 
-def check_mem_usage(soft_percent=90, hard_percent=100):
+def check_mem_usage(monitor=Monitor(),
+                    soft_percent=90, hard_percent=100):
     """
     Display a warning if we are running out of memory
 
@@ -62,7 +63,9 @@ def check_mem_usage(soft_percent=90, hard_percent=100):
                           '(Used: %d%% / Allowed: %d%%)! Shutting down.' %
                           (used_mem_percent, hard_percent))
     elif used_mem_percent > soft_percent:
-        logging.warn('Using over %d%% of the memory!', used_mem_percent)
+        hostname = socket.gethostname()
+        monitor.send('warn', 'Using over %d%% of the memory in %s!',
+                     used_mem_percent, hostname)
 
 
 def safely_call(func, args, pickle=False):
@@ -81,8 +84,8 @@ def safely_call(func, args, pickle=False):
     """
     if pickle:
         args = [a.unpickle() for a in args]
-    ismon = args and isinstance(args[-1], PerformanceMonitor)
-    mon = args[-1] if ismon else DummyMonitor()
+    ismon = args and isinstance(args[-1], Monitor)
+    mon = args[-1] if ismon else Monitor()
     try:
         res = func(*args), None, mon
     except:
@@ -153,7 +156,7 @@ def get_pickled_sizes(obj):
     Return the pickled sizes of an object and its direct attributes,
     ordered by decreasing size. Here is an example:
 
-    >> total_size, partial_sizes = get_pickled_sizes(PerformanceMonitor(''))
+    >> total_size, partial_sizes = get_pickled_sizes(Monitor(''))
     >> total_size
     345
     >> partial_sizes
@@ -407,7 +410,7 @@ class NoFlush(object):
         self.taskname = taskname
 
     def __call__(self):
-        raise RuntimeError('PerformanceMonitor(%r).flush() must not be called '
+        raise RuntimeError('Monitor(%r).flush() must not be called '
                            'by %s!' % (self.monitor.operation, self.taskname))
 
 
@@ -427,8 +430,8 @@ def litetask(func):
     must be a monitor object.
     """
     def wrapper(*args):
-        check_mem_usage()  # check if too much memory is used
         monitor = args[-1]
+        check_mem_usage(monitor)  # check if too much memory is used
         monitor.flush = NoFlush(monitor, func.__name__)
         with monitor('total ' + func.__name__, measuremem=True), \
                 GroundShakingIntensityModel.forbid_instantiation():

@@ -85,7 +85,7 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     :param rlzs_assoc:
         a class:`openquake.commonlib.source.RlzsAssoc` instance
     :param monitor:
-        :class:`openquake.baselib.performance.PerformanceMonitor` instance
+        :class:`openquake.baselib.performance.Monitor` instance
     :returns:
         a dictionary {'d_asset': [(l, r, a, mean-stddev), ...],
                       'd_taxonomy': damage array of shape T, L, R, E, D,

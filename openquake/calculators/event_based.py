@@ -27,7 +27,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import AccumDict, humansize
-from openquake.baselib.performance import DummyMonitor
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
@@ -481,7 +481,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
 # ######################## GMF calculator ############################ #
 
 def make_gmfs(ses_ruptures, sitecol, imts, gsims,
-              trunc_level, correl_model, monitor=DummyMonitor()):
+              trunc_level, correl_model, monitor=Monitor()):
     """
     :param ses_ruptures: a list of SESRuptures
     :param sitecol: a SiteCollection instance

@@ -23,7 +23,7 @@ import unittest
 import numpy
 
 from openquake.calculators import base
-from openquake.baselib.performance import PerformanceMonitor
+from openquake.baselib.performance import Monitor
 from openquake.commonlib import readinput, oqvalidation, datastore
 
 
@@ -66,7 +66,7 @@ class CalculatorTestCase(unittest.TestCase):
         oq = oqvalidation.OqParam(**params)
         oq.validate()
         # change this when debugging the test
-        monitor = PerformanceMonitor(self.testdir)
+        monitor = Monitor(self.testdir)
         return base.calculators(oq, monitor)
 
     def run_calc(self, testfile, job_ini, **kw):
@@ -76,12 +76,14 @@ class CalculatorTestCase(unittest.TestCase):
         inis = job_ini.split(',')
         assert len(inis) in (1, 2), inis
         self.calc = self.get_calc(testfile, inis[0], **kw)
-        result = self.calc.run()
+        with self.calc.monitor:
+            result = self.calc.run()
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
             self.calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
-            result.update(self.calc.run())
+            with self.calc.monitor:
+                result.update(self.calc.run())
         return result
 
     def execute(self, testfile, job_ini):

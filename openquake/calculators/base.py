@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 import sys
 import abc
 import ast
@@ -30,7 +29,7 @@ import numpy
 
 from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general
-from openquake.baselib.performance import DummyMonitor
+from openquake.baselib.performance import Monitor
 from openquake.commonlib import (
     readinput, riskmodels, datastore, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
@@ -91,9 +90,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
 
-    def __init__(self, oqparam, monitor=DummyMonitor(), calc_id=None):
+    def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
         self.monitor = monitor
         self.datastore = datastore.DataStore(calc_id)
+        self.monitor.calc_id = self.datastore.calc_id
         self.monitor.hdf5path = self.datastore.hdf5path
         self.datastore.export_dir = oqparam.export_dir
         self.oqparam = oqparam

@@ -42,7 +42,7 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     :param rlzs_assoc:
         associations (trt_id, gsim) -> realizations
     :param monitor:
-        :class:`openquake.baselib.performance.PerformanceMonitor` instance
+        :class:`openquake.baselib.performance.Monitor` instance
     """
     oq = monitor.oqparam
     ins = oq.insured_losses

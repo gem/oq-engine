@@ -330,6 +330,12 @@ class DataStore(collections.MutableMapping):
             return
         del self.hdf5[key]
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        self.close()
+
     def __iter__(self):
         if not self.hdf5:
             raise RuntimeError('%s is closed' % self)

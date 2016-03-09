@@ -37,7 +37,7 @@ import copy
 import operator
 
 from openquake.baselib.general import block_splitter
-from openquake.baselib.performance import PerformanceMonitor
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib import geo, mfd, pmf, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib.node import context, striptag
@@ -743,7 +743,7 @@ def filter_sources(sources, sitecol, maxdist):
     :param maxdist: maximum distance
     :returns: the filtered sources ordered by source_id
     """
-    mon = PerformanceMonitor('filter sources')
+    mon = Monitor('filter sources')
     if len(sources) * len(sitecol) > LOTS_OF_SOURCES_SITES:
         # filter in parallel on all available cores
         sources = parallel.TaskManager.apply_reduce(
