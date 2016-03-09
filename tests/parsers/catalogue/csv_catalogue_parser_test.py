@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -51,7 +51,6 @@ import numpy as np
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.parsers.catalogue.csv_catalogue_parser import (CsvCatalogueParser,
                                                          CsvCatalogueWriter)
-
 
 
 class CsvCatalogueParserTestCase(unittest.TestCase):
@@ -75,7 +74,7 @@ class CsvCatalogueParserTestCase(unittest.TestCase):
         Check that the some fields in the first row of the catalogue are read
         correctly
         """
-        self.assertEqual(self.cat.data['eventID'][0], 54)
+        self.assertEqual(self.cat.data['eventID'][0], '54')
         self.assertEqual(self.cat.data['Agency'][0], 'sheec')
         self.assertEqual(self.cat.data['year'][0], 1011)
 
@@ -84,7 +83,7 @@ class CsvCatalogueParserTestCase(unittest.TestCase):
         Check that the number of earthquakes read form the catalogue is
         correct
         """
-        self.assertEqual(self.cat.get_number_events(),8)
+        self.assertEqual(self.cat.get_number_events(), 8)
 
     def test_without_specifying_years(self):
         """
@@ -110,9 +109,6 @@ class CsvCatalogueParserTestCase(unittest.TestCase):
         self.assertEqual(self.cat.end_year, 1100)
 
 
-
-
-
 class TestCsvCatalogueWriter(unittest.TestCase):
     '''
     Tests the catalogue csv writer
@@ -124,21 +120,23 @@ class TestCsvCatalogueWriter(unittest.TestCase):
                                             'TEST_OUTPUT_CATALOGUE.csv')
         print self.output_filename
         self.catalogue = Catalogue()
-        self.catalogue.data['eventID'] = np.array([1, 2, 3, 4, 5])
+        self.catalogue.data['eventID'] = ['1', '2', '3', '4', '5']
         self.catalogue.data['magnitude'] = np.array([5.6, 5.4, 4.8, 4.3, 5.])
         self.catalogue.data['year'] = np.array([1960, 1965, 1970, 1980, 1990])
         self.catalogue.data['ErrorStrike'] = np.array([np.nan, np.nan, np.nan,
                                                        np.nan, np.nan])
-        self.magnitude_table =  np.array([[1990., 4.5], [1970., 5.5]])
+        self.magnitude_table = np.array([[1990., 4.5], [1970., 5.5]])
         self.flag = np.array([1, 1, 1, 1, 0], dtype=bool)
-
 
     def check_catalogues_are_equal(self, cat1, cat2):
         '''
         Compares two catalogues
         '''
-        np.testing.assert_array_equal(cat1.data['eventID'],
-                                      cat2.data['eventID'])
+        for key1, key2 in zip(cat1.data['eventID'], cat2.data['eventID']):
+            print key1, key2
+            assert key1 == key2
+        # np.testing.assert_array_equal(cat1.data['eventID'],
+        #                              cat2.data['eventID'])
         np.testing.assert_array_equal(cat1.data['year'],
                                       cat2.data['year'])
 
@@ -167,7 +165,7 @@ class TestCsvCatalogueWriter(unittest.TestCase):
         cat2 = parser.read_file()
 
         expected_catalogue = Catalogue()
-        expected_catalogue.data['eventID'] = np.array([1, 2, 3, 4])
+        expected_catalogue.data['eventID'] = ['1', '2', '3', '4']
         expected_catalogue.data['magnitude'] = np.array([5.6, 5.4, 4.8, 4.3])
         expected_catalogue.data['year'] = np.array([1960, 1965, 1970, 1980])
         expected_catalogue.data['ErrorStrike'] = np.array([np.nan, np.nan,
@@ -185,10 +183,10 @@ class TestCsvCatalogueWriter(unittest.TestCase):
         cat2 = parser.read_file()
 
         expected_catalogue = Catalogue()
-        expected_catalogue.data['eventID'] = np.array([1, 3, 5])
+        expected_catalogue.data['eventID'] = ['1', '3', '5']
         expected_catalogue.data['magnitude'] = np.array([5.6, 4.8, 5.0])
         expected_catalogue.data['year'] = np.array([1960, 1970, 1990])
-        expected_catalogue.data['ErrorStrike'] =np.array([np.nan, np.nan,
+        expected_catalogue.data['ErrorStrike'] = np.array([np.nan, np.nan,
                                                           np.nan])
         self.check_catalogues_are_equal(expected_catalogue, cat2)
 
@@ -206,12 +204,11 @@ class TestCsvCatalogueWriter(unittest.TestCase):
         cat2 = parser.read_file()
 
         expected_catalogue = Catalogue()
-        expected_catalogue.data['eventID'] =  np.array([1, 3])
+        expected_catalogue.data['eventID'] = ['1', '3']
         expected_catalogue.data['magnitude'] = np.array([5.6, 4.8])
         expected_catalogue.data['year'] = np.array([1960, 1970])
         expected_catalogue.data['ErrorStrike'] = np.array([np.nan, np.nan])
         self.check_catalogues_are_equal(expected_catalogue, cat2)
-
 
     def tearDown(self):
         '''
