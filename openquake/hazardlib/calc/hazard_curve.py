@@ -27,7 +27,7 @@ import collections
 import numpy
 
 from openquake.baselib.python3compat import range, raise_
-from openquake.baselib.performance import DummyMonitor
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
@@ -170,7 +170,7 @@ def hazard_curves_per_trt(
         sources, sites, imtls, gsims, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter,
-        maximum_distance=None, bbs=(), monitor=DummyMonitor()):
+        maximum_distance=None, bbs=(), monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.

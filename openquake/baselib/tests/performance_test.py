@@ -1,15 +1,32 @@
+#  -*- coding: utf-8 -*-
+#  vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#  Copyright (c) 2016, GEM Foundation
+
+#  OpenQuake is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Affero General Public License as published
+#  by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+
+#  OpenQuake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+
+#  You should have received a copy of the GNU Affero General Public License
+#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import time
 import unittest
 import pickle
 import numpy
-from openquake.baselib.performance import PerformanceMonitor
+from openquake.baselib.performance import Monitor
 
 
 # NB: tests for the HDF5 functionality are in risklib
 class MonitorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.mon = PerformanceMonitor('test')
+        cls.mon = Monitor('test')
 
     def test_no_mem(self):
         mon = self.mon('test_no_mem')
