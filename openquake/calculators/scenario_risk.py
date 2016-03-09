@@ -41,7 +41,7 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     :param rlzs_assoc:
         a class:`openquake.commonlib.source.RlzsAssoc` instance
     :param monitor:
-        :class:`openquake.baselib.performance.PerformanceMonitor` instance
+        :class:`openquake.baselib.performance.Monitor` instance
     :returns:
         a dictionary {
         'agg': array of shape (E, L, R, 2),

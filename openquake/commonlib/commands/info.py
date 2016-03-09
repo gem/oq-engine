@@ -19,7 +19,7 @@
 from __future__ import print_function
 import textwrap
 import logging
-from openquake.baselib.performance import PerformanceMonitor
+from openquake.baselib.performance import Monitor
 from openquake.commonlib import sap, nrml, readinput, reportwriter
 from openquake.calculators import base
 from openquake.hazardlib import gsim
@@ -54,7 +54,7 @@ def info(name, report=False):
     elif name.endswith('.xml'):
         print(nrml.read(name).to_str())
     elif name.endswith(('.ini', '.zip')):
-        with PerformanceMonitor('info', measuremem=True) as mon:
+        with Monitor('info', measuremem=True) as mon:
             if report:
                 print('Generated', reportwriter.build_report(name))
             else:

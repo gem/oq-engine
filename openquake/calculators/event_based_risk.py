@@ -163,7 +163,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     :param assets_by_site:
         a representation of the exposure
     :param monitor:
-        :class:`openquake.baselib.performance.PerformanceMonitor` instance
+        :class:`openquake.baselib.performance.Monitor` instance
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """

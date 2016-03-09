@@ -41,7 +41,7 @@ def classical_bcr(riskinputs, riskmodel, rlzs_assoc, bcr_dt, monitor):
     :param bcr_dt:
         data type with fields annual_loss_orig, annual_loss_retro, bcr
     :param monitor:
-        :class:`openquake.baselib.performance.PerformanceMonitor` instance
+        :class:`openquake.baselib.performance.Monitor` instance
     """
     result = {}  # (N, R) -> data
     for out_by_lr in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
