@@ -64,7 +64,7 @@ def check_mem_usage(monitor=Monitor(),
                           (used_mem_percent, hard_percent))
     elif used_mem_percent > soft_percent:
         hostname = socket.gethostname()
-        monitor.send(logging.warn, 'Using over %d%% of the memory in %s!',
+        monitor.send('warn', 'Using over %d%% of the memory in %s!',
                      used_mem_percent, hostname)
 
 
