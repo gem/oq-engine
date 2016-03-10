@@ -19,12 +19,9 @@
 
 import os
 import sys
-import socket
 from django.core.management import execute_from_command_line
 
-from openquake.engine.utils import config
 from openquake.server.db.schema.upgrades import upgrader
-from openquake.server.cmdserver import CmdServer, executor
 from django.db import connection
 
 # the code here is run in development mode; for instance
@@ -37,13 +34,4 @@ if __name__ == "__main__":
     connection.cursor().execute(
         # cleanup of the flag oq_job.is_running
         'UPDATE job SET is_running=false WHERE is_running')
-    port = int(config.get('cmdserver', 'port'))
-    authkey = config.get('cmdserver', 'authkey')
-    address = (socket.gethostname(), port)
-    cmdserver = CmdServer(address, authkey)
-    with executor:
-        executor.submit(cmdserver.loop)
-        try:
-            execute_from_command_line(sys.argv)
-        finally:
-            cmdserver.stop()
+    execute_from_command_line(sys.argv)
