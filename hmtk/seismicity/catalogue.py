@@ -335,8 +335,15 @@ class Catalogue(object):
         depth_hist = self.get_depth_distribution(depth_bins,
                                                  normalisation=True,
                                                  bootstrap=bootstrap)
+        # If the histogram does not sum to 1.0 then remove the difference
+        # from the lowest bin
+        depth_hist = np.around(depth_hist, 3)
+        while np.sum(depth_hist) > 1.0:
+            depth_hist[-1] -= (np.sum(depth_hist) - 1.0)
+            depth_hist = np.around(depth_hist, 3)
+        
         pmf_list = []
-        for iloc, prob in enumerate(np.around(depth_hist, 3)):
+        for iloc, prob in enumerate(depth_hist):
             pmf_list.append((prob,
                              (depth_bins[iloc] + depth_bins[iloc + 1]) / 2.0))
         return PMF(pmf_list)

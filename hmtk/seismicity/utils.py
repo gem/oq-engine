@@ -51,9 +51,46 @@
 import numpy as np
 from math import fabs
 from scipy.stats import truncnorm
-from scipy.stats._continuous_distns import (truncnorm_gen, _norm_cdf, _norm_sf,
-                                            _norm_ppf, _norm_isf)
 from shapely import geometry
+try:
+    from scipy.stats._continuous_distns import (truncnorm_gen,
+                                                _norm_cdf, _norm_sf,
+                                                _norm_ppf, _norm_isf)
+    class hmtk_truncnorm_gen(truncnorm_gen):
+        """
+        At present, the scipy.stats.truncnorm.rvs object does not support
+        vector inputs for the bounds - this piece of duck punching changes that
+        """
+        def _argcheck(self, a, b):
+            self.a = a
+            self.b = b
+            self._nb = _norm_cdf(b)
+            self._na = _norm_cdf(a)
+            self._sb = _norm_sf(b)
+            self._sa = _norm_sf(a)
+            self._delta = self._nb - self._na
+            idx = self.a > 0
+            self._delta[idx] = -(self._sb[idx] - self._sa[idx])
+            self._logdelta = np.log(self._delta)
+            return (a != b)
+
+        def _ppf(self, q, a, b):
+            output = np.zeros_like(self.a)
+            idx = self.a > 0
+            if np.any(idx):
+                output[idx] = _norm_isf(q[idx]*self._sb[idx] +
+                                        self._sa[idx]*(-q[idx] + 1.0))
+            idx = np.logical_not(idx)
+            if np.any(idx):
+                output[idx] = _norm_ppf(q[idx]*self._nb[idx] +
+                                        self._na[idx]*(-q[idx] + 1.0))
+            return output
+
+    hmtk_truncnorm = hmtk_truncnorm_gen(name="hmtk_truncnorm")
+except:
+    print "Continuous distributions not available on Scipy version < 0.15"
+    print "Bootstrap sampling of the depth distribution will raise an error"
+    hmtk_truncnorm = None
 
 MARKER_NORMAL = np.array([0, 31, 59, 90, 120, 151, 181,
                           212, 243, 273, 304, 334])
@@ -64,37 +101,7 @@ MARKER_LEAP = np.array([0, 31, 60, 91, 121, 152, 182,
 SECONDS_PER_DAY = 86400.0
 
 
-class hmtk_truncnorm_gen(truncnorm_gen):
-    """
-    At present, the scipy.stats.truncnorm.rvs object does not support
-    vector inputs for the bounds - this piece of duck punching changes that
-    """
-    def _argcheck(self, a, b):
-        self.a = a
-        self.b = b
-        self._nb = _norm_cdf(b)
-        self._na = _norm_cdf(a)
-        self._sb = _norm_sf(b)
-        self._sa = _norm_sf(a)
-        self._delta = self._nb - self._na
-        idx = self.a > 0
-        self._delta[idx] = -(self._sb[idx] - self._sa[idx])
-        self._logdelta = np.log(self._delta)
-        return (a != b)
 
-    def _ppf(self, q, a, b):
-        output = np.zeros_like(self.a)
-        idx = self.a > 0
-        if np.any(idx):
-            output[idx] = _norm_isf(q[idx]*self._sb[idx] +
-                                    self._sa[idx]*(-q[idx] + 1.0))
-        idx = np.logical_not(idx)
-        if np.any(idx):
-            output[idx] = _norm_ppf(q[idx]*self._nb[idx] +
-                                    self._na[idx]*(-q[idx] + 1.0))
-        return output
-
-hmtk_truncnorm = hmtk_truncnorm_gen(name="hmtk_truncnorm")
 
 def decimal_year(year, month, day):
     """

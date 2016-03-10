@@ -86,6 +86,13 @@ class BaseRecurrenceModel(object):
         '''
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def incremental_value(self, slip_moment, mmax, mag_value, bbar, dbar):
+        """
+        Returns the incremental rate of earthquakes with M = mag_value
+        """
+        raise NotImplementedError
+
 
 class Type1RecurrenceModel(BaseRecurrenceModel):
     '''
@@ -109,10 +116,28 @@ class Type1RecurrenceModel(BaseRecurrenceModel):
         :param float dbar:
             \bar{d} parameter
         '''
-        moment_ratio = slip_moment / _scale_moment(mmax)
         delta_m = mmax - mag_value
-        return ((dbar - bbar) / dbar) * moment_ratio * np.exp(bbar * (delta_m))
+        a_1 = self._get_a1(bbar, dbar, slip_moment, mmax)
+        return a_1 * np.exp(bbar * (delta_m)) * (delta_m > 0.0)
 
+    @staticmethod
+    def _get_a1(bbar, dbar, slip_moment, mmax):
+        """
+        Returns the A1 term (I.4 of Table 2 in Anderson & Luco)
+        """
+        return ((dbar - bbar) / dbar) * (slip_moment / _scale_moment(mmax))
+
+    def incremental_value(self, slip_moment, mmax, mag_value, bbar, dbar):
+        """
+        Returns the incremental rate of earthquakes with M = mag_value
+        """
+        delta_m = mmax - mag_value
+        dirac_term = np.zeros_like(mag_value)
+        dirac_term[np.fabs(delta_m) < 1.0E-12] = 1.0
+        a_1 = self._get_a1(bbar, dbar, slip_moment, mmax)
+        return a_1 * (bbar * np.exp(bbar * delta_m) * (delta_m > 0.0)) +\
+            a_1 * dirac_term
+    
 
 class Type2RecurrenceModel(BaseRecurrenceModel):
     '''
@@ -135,10 +160,24 @@ class Type2RecurrenceModel(BaseRecurrenceModel):
         :param float dbar:
             \bar{d} parameter
         '''
-        moment_ratio = slip_moment / _scale_moment(mmax)
         delta_m = mmax - mag_value
-        return (dbar - bbar) * moment_ratio * \
-               ((np.exp(bbar * delta_m) - 1.) / bbar)
+        a_2 = self._get_a2(bbar, dbar, slip_moment, mmax)
+        return a_2 * (np.exp(bbar * delta_m) - 1.) * (delta_m > 0.0)
+
+    @staticmethod
+    def _get_a2(bbar, dbar, slip_moment, mmax):
+        """
+        Returns the A2 value defined in II.4 of Table 2
+        """
+        return ((dbar - bbar) / bbar) * (slip_moment / _scale_moment(mmax))
+
+    def incremental_value(self, slip_moment, mmax, mag_value, bbar, dbar):
+        """
+        Returns the incremental rate with Mmax = Mag_value
+        """
+        delta_m = mmax - mag_value
+        a_2 = self._get_a2(bbar, dbar, slip_moment, mmax)
+        return a_2 * bbar * np.exp(bbar * delta_m) * (delta_m > 0.0) 
 
 
 class Type3RecurrenceModel(BaseRecurrenceModel):
@@ -162,11 +201,27 @@ class Type3RecurrenceModel(BaseRecurrenceModel):
         :param float dbar:
             \bar{d} parameter
         '''
-        moment_ratio = slip_moment / _scale_moment(mmax)
         delta_m = mmax - mag_value
-        rhs_1 = (dbar * (dbar - bbar)) / bbar
-        rhs_3 = (1. / bbar) * (np.exp(bbar * delta_m) - 1.) - delta_m
-        return rhs_1 * moment_ratio * rhs_3
+        a_3 = self._get_a3(bbar, dbar, slip_moment, mmax)
+        central_term = np.exp(bbar * delta_m) - 1.0 - (bbar * delta_m)
+        return a_3 * central_term * (delta_m > 0.0)
+
+    @staticmethod
+    def _get_a3(bbar, dbar, slip_moment, mmax):
+        """
+        Returns the A3 term (III.4 in Table  4)
+        """
+        return ((dbar * (dbar - bbar)) / (bbar ** 2.)) * (slip_moment /
+                                                          _scale_moment(mmax))
+
+    def incremental_value(self, slip_moment, mmax, mag_value, bbar, dbar):
+        """
+        Returns the incremental rate with Mmax = Mag_value
+        """
+        delta_m = mmax - mag_value
+        a_3 = self._get_a3(bbar, dbar, slip_moment, mmax)
+        return a_3 * bbar * (np.exp(bbar * delta_m) - 1.0) * (delta_m > 0.0)
+
 
 RECURRENCE_MAP = {'First': Type1RecurrenceModel(),
                   'Second': Type2RecurrenceModel(),
@@ -296,7 +351,6 @@ class AndersonLucoArbitrary(BaseMFDfromSlip):
                    'Anderson & Luco models')
             self.occurrence_rate = np.nan * np.ones(len(mags) - 1)
             return self.mmin, self.bin_width, self.occurrence_rate
-
         self.occurrence_rate = np.zeros(len(mags) - 1, dtype=float)
         for ival in range(0, len(mags) - 1):
             self.occurrence_rate[ival] = \
