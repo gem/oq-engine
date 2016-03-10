@@ -37,14 +37,8 @@ else
         exit 1
     fi
 
-    echo "=========================================================="
-    echo "WARNING!! You are running an unsupported version of Linux."
-    echo "WARNING!! Use this package at your own risk!"
-    echo "WARNING!! Press ENTER to continue:"
-    echo "=========================================================="
-    if tty -s; then
-        read -n 1 -s
-    fi
+    db_input high python-oq-engine/distro_alert || true
+    db_go
 fi
 
 PG_CONF="/etc/postgresql/$PG_VERSION/main/postgresql.conf"
