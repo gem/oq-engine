@@ -1,5 +1,4 @@
 Template: python-oq-engine/distro_alert
 Type: note
-Default: [an optional default value]
 Description: You are running an unsupported Linux distribution.
  Use this package at your own risk!
