@@ -358,8 +358,7 @@ def run_calc(request):
     user = utils.get_user_data(request)
 
     try:
-        job_id = cmdserver.cmd.start(
-            'submit_job', job_ini, user['name'], hazard_job_id)
+        job_id = cmdserver.submit_job(job_ini, user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = exc.args[0]
