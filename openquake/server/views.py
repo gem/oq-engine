@@ -44,7 +44,7 @@ from openquake.engine import engine as oq_engine, __version__ as oqversion
 from openquake.server.db import models as oqe_models
 from openquake.engine.export import core
 from openquake.engine.export.core import export_output, DataStoreExportError
-from openquake.server import tasks, executor, utils
+from openquake.server import cmdserver, tasks, utils
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -396,7 +396,7 @@ def submit_job(job_file, temp_dir, user_name,
         tasks.update_calculation(callback_url, status="failed", einfo=job)
         raise exctype(job)
 
-    future = executor.submit(
+    future = cmdserver.executor.submit(
         tasks.safely_call, tasks.run_calc, job, temp_dir,
         callback_url, logfile, hazard_job_id)
     return job, future
