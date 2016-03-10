@@ -336,7 +336,6 @@ def run_calc(request):
     :param request:
         a `django.http.HttpRequest` object.
     """
-    callback_url = request.POST.get('callback_url')
     hazard_job_id = request.POST.get('hazard_job_id')
 
     if hazard_job_id:
@@ -346,7 +345,6 @@ def run_calc(request):
     einfo, exctype, monitor = safely_call(
         _prepare_job, (request, hazard_job_id, candidates))
     if exctype:
-        tasks.update_calculation(callback_url, status="failed", einfo=einfo)
         return HttpResponse(json.dumps(einfo.splitlines()),
                             content_type=JSON, status=500)
     if not einfo:
@@ -360,8 +358,7 @@ def run_calc(request):
     user = utils.get_user_data(request)
 
     try:
-        job, _fut = submit_job(einfo[0], temp_dir, user['name'], callback_url,
-                               hazard_job_id)
+        job, _fut = submit_job(einfo[0], temp_dir, user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = exc.args[0]
@@ -383,7 +380,7 @@ def run_calc(request):
 
 
 def submit_job(job_file, temp_dir, user_name,
-               callback_url=None, hazard_job_id=None, logfile=None):
+               hazard_job_id=None, logfile=None):
     """
     Create a job object from the given job.ini file in the job directory
     and submit it to the job queue.
@@ -393,12 +390,11 @@ def submit_job(job_file, temp_dir, user_name,
         oq_engine.job_from_file, (ini, user_name, DEFAULT_LOG_LEVEL, '',
                                   hazard_job_id))
     if exctype:
-        tasks.update_calculation(callback_url, status="failed", einfo=job)
         raise exctype(job)
 
     future = executor.submit(
         tasks.safely_call, tasks.run_calc, job, temp_dir,
-        callback_url, logfile, hazard_job_id)
+        logfile, hazard_job_id)
     return job, future
 
 
