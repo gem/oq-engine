@@ -156,9 +156,10 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
     :param exports:
         A comma-separated string of export types.
     """
-    mon = job.calc.monitor
     if USE_CELERY:
         set_concurrent_tasks_default()
+    monitor = Monitor('total runtime', measuremem=True)
+    job.calc = base.calculators(job.oqparam, monitor, calc_id=job.id)
     with logs.handle(job, log_level, log_file):  # run the job
         tb = 'None\n'
         try:
@@ -384,11 +385,11 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
     # create a job and a calculator
     job = create_job(oq.calculation_mode, oq.description, username,
                      hazard_calculation_id)
-    monitor = Monitor('total runtime', measuremem=True)
-    job.calc = base.calculators(oq, monitor, calc_id=job.id)
+    job.oqparam = oq
+    calc = base.calculators(oq, calc_id=job.id)
     with logs.handle(job, log_level):
-        job.calc.oqparam = readinput.get_oqparam(params)
-        job.calc.save_params()
+        job.oqparam = readinput.get_oqparam(params)
+        calc.save_params()
     return job
 
 

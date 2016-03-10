@@ -44,7 +44,7 @@ from openquake.engine import engine as oq_engine, __version__ as oqversion
 from openquake.server.db import models as oqe_models
 from openquake.engine.export import core
 from openquake.engine.export.core import export_output, DataStoreExportError
-from openquake.server import cmdserver, tasks, utils
+from openquake.server import utils, cmdserver
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -346,7 +346,8 @@ def run_calc(request):
     einfo, exctype, monitor = safely_call(
         _prepare_job, (request, hazard_job_id, candidates))
     if exctype:
-        tasks.update_calculation(callback_url, status="failed", einfo=einfo)
+        cmdserver.update_calculation(
+            callback_url, status="failed", einfo=einfo)
         return HttpResponse(json.dumps(einfo.splitlines()),
                             content_type=JSON, status=500)
     if not einfo:
@@ -356,12 +357,12 @@ def run_calc(request):
                             status=500)
 
     temp_dir = os.path.dirname(einfo[0])
-
+    job_ini = os.path.join(temp_dir, einfo[0])
     user = utils.get_user_data(request)
 
     try:
-        job, _fut = submit_job(einfo[0], temp_dir, user['name'], callback_url,
-                               hazard_job_id)
+        job_id = cmdserver.cmd.start(
+            'submit_job', job_ini, user['name'], callback_url, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = exc.args[0]
@@ -373,33 +374,13 @@ def run_calc(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        calc = oqe_models.OqJob.objects.get(pk=job.id)
+        calc = oqe_models.OqJob.objects.get(pk=job_id)
         response_data = vars(calc.get_oqparam())
-        response_data['job_id'] = job.id
+        response_data['job_id'] = job_id
         response_data['status'] = calc.status
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
-
-
-def submit_job(job_file, temp_dir, user_name,
-               callback_url=None, hazard_job_id=None, logfile=None):
-    """
-    Create a job object from the given job.ini file in the job directory
-    and submit it to the job queue.
-    """
-    ini = os.path.join(temp_dir, job_file)
-    job, exctype, monitor = safely_call(
-        oq_engine.job_from_file, (ini, user_name, DEFAULT_LOG_LEVEL, '',
-                                  hazard_job_id))
-    if exctype:
-        tasks.update_calculation(callback_url, status="failed", einfo=job)
-        raise exctype(job)
-
-    future = cmdserver.executor.submit(
-        tasks.safely_call, tasks.run_calc, job, temp_dir,
-        callback_url, logfile, hazard_job_id)
-    return job, future
 
 
 def _get_calcs(request_get_dict, user_name, user_is_super=False, id=None):

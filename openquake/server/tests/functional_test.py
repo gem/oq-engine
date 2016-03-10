@@ -30,6 +30,9 @@ import subprocess
 
 import requests
 
+from openquake.server import cmdserver
+
+
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
 
@@ -98,6 +101,8 @@ class EngineServerTestCase(unittest.TestCase):
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload', '--nothreading'], env=env,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.Popen(
+            [sys.executable, '-m', 'openquake.server.cmdserver'], env=env)
         time.sleep(5)
 
     @classmethod
@@ -108,8 +113,9 @@ class EngineServerTestCase(unittest.TestCase):
         assert len(data) > 0
 
         not_relevant = cls.get('list', job_type='hazard', relevant='false')
-        assert not_relevant  # there should be at least 1 from test_err_1
         cls.proc.kill()
+        cmdserver.cmd.stop()
+        assert not_relevant  # there should be at least 1 from test_err_1
 
     # tests
 
