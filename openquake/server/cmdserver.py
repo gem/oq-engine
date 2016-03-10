@@ -21,7 +21,7 @@ import logging
 import urllib
 import urllib2
 import traceback
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from multiprocessing.connection import Client, Listener
 
 from openquake.baselib.hdf5 import Hdf5Dataset
@@ -36,7 +36,8 @@ AUTHKEY = config.get('cmdserver', 'authkey')
 DEFAULT_LOG_LEVEL = 'progress'
 
 # recommended setting for development
-executor = ProcessPoolExecutor(max_workers=1)
+# with processes it works only once and then the db connection is closed
+executor = ThreadPoolExecutor(max_workers=1)
 executor.future = {}  # job_id -> future
 
 # global commands
