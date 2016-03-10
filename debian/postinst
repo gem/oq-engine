@@ -32,8 +32,8 @@ elif [ "$LSB_RELEASE" = "trusty" ]; then
 else
     PG_VERSION=$(sudo -u postgres psql -c'show server_version' -At)
     PG_VERSION=$(echo "$PG_VERSION" | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/')
-    if [ -z "$PG_VERSION" ]; then
-        echo "ERROR!! This operating system is running an unsupported version of Postgres."
+    if [ -z "$PG_VERSION" -o ! -f "/etc/postgresql/$PG_VERSION/main/postgresql.conf" ]; then
+        echo "This operating system is running an unsupported version of Postgres."
         exit 1
     fi
 
