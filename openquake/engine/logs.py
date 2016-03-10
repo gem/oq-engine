@@ -170,7 +170,7 @@ def handle(job, log_level='info', log_file=None):
     :param log_file:
          log file path (if None, logs on stdout only)
     """
-    oq = job.calc.oqparam
+    oq = job.oqparam
     handlers = [LogDatabaseHandler(job)]  # log on db always
     if log_file is None:
         handlers.append(LogStreamHandler(job))
