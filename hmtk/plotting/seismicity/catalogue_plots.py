@@ -30,7 +30,7 @@ def build_filename(filename, filetype='png', resolution=300):
     if not filetype:
         filetype = 'png'
 
-    print filevals[0], filetype
+    #print filevals[0], filetype
     filename = filevals[0] + '.' + filetype
 
     if not resolution:

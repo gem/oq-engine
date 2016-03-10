@@ -99,9 +99,17 @@ class Type1RecurrenceModel(BaseRecurrenceModel):
         :param float beta:
             Beta value of formula defined in Eq. 20 of Anderson & Luco (1983)
         '''
-        return (((dbar - bbar) / dbar) * ((slip / 10.) / beta) *
-                np.exp(bbar * (mmax - mag_value)) *
-                np.exp(-(dbar / 2.) * mmax))
+        delta_m = (mmax - mag_value)
+        a_1 = self._get_a1_value(bbar, dbar, slip / 10., beta, mmax)
+        return a_1 * np.exp(bbar * delta_m) * (delta_m > 0.0)
+
+    @staticmethod
+    def _get_a1_value(bbar, dbar, slip, beta, mmax):
+        """
+        Returns the A1 value defined in I.9 (Table 2)
+        """
+        return ((dbar - bbar) / dbar) * (slip / beta) *\
+            np.exp(-(dbar / 2.) * mmax)
 
 
 class Type2RecurrenceModel(BaseRecurrenceModel):
@@ -127,12 +135,18 @@ class Type2RecurrenceModel(BaseRecurrenceModel):
         :param float beta:
             Beta value of formula defined in Eq. 20 of Anderson & Luco (1983)
         '''
+        delta_m = mmax - mag_value
+        a_2 = self._get_a2_value(bbar, dbar, slip / 10., beta, mmax)
+        return a_2 * (np.exp(bbar * delta_m) - 1.0) * (delta_m > 0.0)
 
-        return (((dbar - bbar) / (bbar)) * ((slip / 10.) / beta) *
-                (np.exp(bbar * (mmax - mag_value)) - 1.) *
-                np.exp(-(dbar / 2.) * mmax))
-
-
+    @staticmethod
+    def _get_a2_value(bbar, dbar, slip, beta, mmax):
+        """
+        Returns the A2 value defined in II.8 (Table 3)
+        """
+        return ((dbar - bbar) / bbar) * (slip / beta) *\
+            np.exp(-(dbar / 2.) * mmax)
+        
 class Type3RecurrenceModel(BaseRecurrenceModel):
     '''
     Calculate N(M > mag_value) using Anderson & Luco Type 1 formula as
@@ -156,9 +170,18 @@ class Type3RecurrenceModel(BaseRecurrenceModel):
         :param float beta:
             Beta value of formula defined in Eq. 20 of Anderson & Luco (1983)
         '''
-        return ((dbar * (dbar - bbar) / bbar) * ((slip / 10.) / beta) *
-                ((1. / bbar) * (np.exp(bbar * (mmax - mag_value)) - 1.) -
-                 (mmax - mag_value)) * np.exp(-(dbar / 2.) * mmax))
+        delta_m = mmax - mag_value
+        a_3 = self._get_a3_value(bbar, dbar, slip / 10., beta, mmax)
+        central_term = np.exp(bbar * delta_m) - 1.0 - (bbar * delta_m)
+        return a_3 * central_term * (delta_m > 0.0)
+
+    @staticmethod
+    def _get_a3_value(bbar, dbar, slip, beta, mmax):
+        """
+        Returns the A3 value defined in III.4 (Table 4)
+        """
+        return (dbar * (dbar - bbar) / (bbar ** 2.)) * (slip / beta) *\
+            np.exp(-(dbar / 2.) * mmax)
 
 
 RECURRENCE_MAP = {'First': Type1RecurrenceModel(),
