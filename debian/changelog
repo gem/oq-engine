@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Allow installation of the binary package on Ubuntu derivatives
+
   [Michele Simionato]
   * Removed openquake/engine/settings.py
   * Made the dependency on celery required only in cluster installations
