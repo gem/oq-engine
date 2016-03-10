@@ -97,21 +97,19 @@ class EngineServerTestCase(unittest.TestCase):
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_NO_DISTRIBUTE'] = '1'
+        subprocess.Popen(
+            [sys.executable, '-m', 'openquake.server.cmdserver'], env=env)
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload', '--nothreading'], env=env,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        subprocess.Popen(
-            [sys.executable, '-m', 'openquake.server.cmdserver'], env=env)
+            stdout=subprocess.PIPE)
         time.sleep(5)
 
     @classmethod
     def tearDownClass(cls):
         cls.wait()
-
         data = cls.get('list', job_type='hazard', relevant='true')
         assert len(data) > 0
-
         not_relevant = cls.get('list', job_type='hazard', relevant='false')
         cls.proc.kill()
         cmdserver.cmd.stop()
@@ -126,13 +124,14 @@ class EngineServerTestCase(unittest.TestCase):
 
     def test_ok(self):
         job_id = self.postzip('archive_ok.zip')
+        self.wait()
         log = self.get('%s/log/:' % job_id)
         self.assertGreater(len(log), 0)
-        self.wait()
         results = self.get('%s/results' % job_id)
         for res in results:
+            if res['type'] == 'gmfs':
+                continue  # exporting the GMFs would be too slow
             etype = res['outtypes'][0]  # get the first export type
-            # FIXME: see why there is 404 here
             text = self.get_text('result/%s' % res['id'], export_type=etype)
             self.assertGreater(len(text), 0)
         self.assertGreater(len(results), 0)

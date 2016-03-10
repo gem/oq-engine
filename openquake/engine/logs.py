@@ -155,7 +155,7 @@ class LogDatabaseHandler(logging.Handler):
 
     def emit(self, record):  # pylint: disable=E0202
         if record.levelno >= logging.INFO:
-            self.job.calc.monitor.send(save, self.job.id, record)
+            save(self.job.id, record)
 
 
 @contextmanager
