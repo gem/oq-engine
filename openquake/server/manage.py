@@ -19,10 +19,13 @@
 
 import os
 import sys
+import socket
 from django.core.management import execute_from_command_line
 
 from openquake.server.db.schema.upgrades import upgrader
+from openquake.server.cmdserver import cmd
 from django.db import connection
+
 
 # the code here is run in development mode; for instance
 # $ python manage.py runserver 0.0.0.0:8800
@@ -31,6 +34,15 @@ if __name__ == "__main__":
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
     # first of all check the database version and exit if the db is outdated
     upgrader.check_versions(connection)
+
+    # then check if the CmdServer is up
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    err = sock.connect_ex(cmd.address)
+    sock.close()
+    if err:
+        sys.exit('Please start the CmdServer: '
+                 'python -m openquake.server.cmdserver')
+
     connection.cursor().execute(
         # cleanup of the flag oq_job.is_running
         'UPDATE job SET is_running=false WHERE is_running')

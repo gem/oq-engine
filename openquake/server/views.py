@@ -41,7 +41,7 @@ from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib import nrml, readinput, valid
 from openquake.commonlib.parallel import safely_call
 from openquake.engine import engine as oq_engine, __version__ as oqversion
-from openquake.server.db import models as oqe_models
+from openquake.server.db import models
 from openquake.engine.export import core
 from openquake.engine.export.core import export_output, DataStoreExportError
 from openquake.server import utils, cmdserver
@@ -223,7 +223,7 @@ def calc_info(request, calc_id):
     executing, complete, etc.).
     """
     try:
-        calc = oqe_models.OqJob.objects.get(pk=calc_id)
+        calc = models.OqJob.objects.get(pk=calc_id)
         response_data = vars(calc.get_oqparam())
         response_data['status'] = calc.status
         response_data['start_time'] = str(calc.jobstats.start_time)
@@ -275,7 +275,7 @@ def calc_remove(request, calc_id):
     Remove the calculation id by setting the field oq_job.relevant to False.
     """
     try:
-        job = oqe_models.OqJob.objects.get(pk=calc_id)
+        job = models.OqJob.objects.get(pk=calc_id)
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
     try:
@@ -306,7 +306,7 @@ def get_log_slice(request, calc_id, start, stop):
     start = start or 0
     stop = stop or None
     try:
-        rows = oqe_models.Log.objects.filter(job_id=calc_id)[start:stop]
+        rows = models.Log.objects.filter(job_id=calc_id)[start:stop]
         response_data = map(log_to_json, rows)
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
@@ -320,7 +320,7 @@ def get_log_size(request, calc_id):
     Get the current number of lines in the log
     """
     try:
-        response_data = oqe_models.Log.objects.filter(job_id=calc_id).count()
+        response_data = models.Log.objects.filter(job_id=calc_id).count()
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
@@ -371,7 +371,7 @@ def run_calc(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        calc = oqe_models.OqJob.objects.get(pk=job_id)
+        calc = models.OqJob.objects.get(pk=job_id)
         response_data = vars(calc.get_oqparam())
         response_data['job_id'] = job_id
         response_data['status'] = calc.status
@@ -382,7 +382,7 @@ def run_calc(request):
 
 def _get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
     # helper to get job+calculation data from the oq-engine database
-    jobs = oqe_models.OqJob.objects.filter()
+    jobs = models.OqJob.objects.filter()
     if not user_is_super:
         jobs = jobs.filter(user_name=user_name)
 
@@ -422,7 +422,7 @@ def calc_results(request, calc_id):
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
     try:
-        oqjob = oqe_models.OqJob.objects.get(id=calc_id)
+        oqjob = models.OqJob.objects.get(id=calc_id)
         if not user['is_super'] and oqjob.user_name != user['name']:
             return HttpResponseNotFound()
     except ObjectDoesNotExist:
@@ -462,12 +462,12 @@ def get_traceback(request, calc_id):
     """
     # If the specified calculation doesn't exist throw back a 404.
     try:
-        oqe_models.OqJob.objects.get(id=calc_id)
+        models.OqJob.objects.get(id=calc_id)
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
     # FIXME: why this is returning two records??
-    response_data = [rec for rec in oqe_models.Log.objects.filter(
+    response_data = [rec for rec in models.Log.objects.filter(
         job_id=calc_id, level='CRITICAL')][1].message.splitlines()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
@@ -499,7 +499,7 @@ def get_result(request, result_id):
     # the job which it is related too is not complete,
     # throw back a 404.
     try:
-        output = oqe_models.Output.objects.get(id=result_id)
+        output = models.Output.objects.get(id=result_id)
         job = output.oq_job
         if not job.status == 'complete':
             return HttpResponseNotFound()
