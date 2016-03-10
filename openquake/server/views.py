@@ -336,7 +336,6 @@ def run_calc(request):
     :param request:
         a `django.http.HttpRequest` object.
     """
-    callback_url = request.POST.get('callback_url')
     hazard_job_id = request.POST.get('hazard_job_id')
 
     if hazard_job_id:
@@ -346,8 +345,6 @@ def run_calc(request):
     einfo, exctype, monitor = safely_call(
         _prepare_job, (request, hazard_job_id, candidates))
     if exctype:
-        cmdserver.update_calculation(
-            callback_url, status="failed", einfo=einfo)
         return HttpResponse(json.dumps(einfo.splitlines()),
                             content_type=JSON, status=500)
     if not einfo:
@@ -362,7 +359,7 @@ def run_calc(request):
 
     try:
         job_id = cmdserver.cmd.start(
-            'submit_job', job_ini, user['name'], callback_url, hazard_job_id)
+            'submit_job', job_ini, user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = exc.args[0]
