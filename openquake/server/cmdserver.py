@@ -17,16 +17,27 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+import logging
+from concurrent.futures import ThreadPoolExecutor
 from multiprocessing.connection import Client, Listener
+
 from openquake.baselib.hdf5 import Hdf5Dataset
 from openquake.commonlib.datastore import read
+from openquake.engine.utils import config
+
+# recommended setting for development
+executor = ThreadPoolExecutor(max_workers=1)
+
+# global commands
+
+exit = sys.exit
+info = logging.info
 
 
-class DataManager(object):
+class CmdServer(object):
 
     @classmethod
     def listen(cls, address, authkey):
-        print 'PPPPPPPPPPPPPPPP'
         self = cls(address, authkey)
         with self:
             self.loop()
@@ -35,40 +46,38 @@ class DataManager(object):
         self.address = address
         self.authkey = authkey
 
-    def __enter__(self):
-        print('Listening on %s...' % str(self.address))
-        self.listener = Listener(self.address, authkey=self.authkey)
-        return self
-
-    def __exit__(self, etype, exc, tb):
+    def stop(self):
         client = Client(self.address, authkey=self.authkey)
-        client.send((sys.exit, 0))
+        client.send(('exit', 0))
         client.close()
-        self.listener.close()
-        for ds in self.dstore.values():
-            ds.close()
 
     def loop(self):
-        self.dstore = {}
-        while True:
-            try:
-                conn = self.listener.accept()
-                cmd = conn.recv()
-            except BaseException:
-                conn.close()
-                raise
-            call = cmd[0]
-            if callable(call):
-                call(*cmd[1:])
-                continue
-            args = cmd[1:-1]
-            calc_id = cmd[-1]
-            try:
-                self.datastore = self.dstore[calc_id]
-            except KeyError:
-                self.datastore = self.dstore[calc_id] = read(calc_id, 'r+')
-            else:  # assume `call` is a method name, like `save` or `extend`
-                getattr(self, call)(*args)
+        dstore = {}
+        listener = Listener(self.address, authkey=self.authkey)
+        print('Listening on %s...' % str(self.address))
+        try:
+            while True:
+                conn = listener.accept()
+                try:
+                    cmd = conn.recv()
+                finally:
+                    conn.close()
+                name = cmd[0]
+                if name.startswith('.'):  # method
+                    args = cmd[1:-1]
+                    calc_id = cmd[-1]
+                    try:
+                        self.datastore = dstore[calc_id]
+                    except KeyError:
+                        ds = read(calc_id, 'r+')
+                        self.datastore = dstore[calc_id] = ds
+                    getattr(self, name[1:])(*args)
+                else:  # global function
+                    globals()[name](*cmd[1:])
+        finally:
+            listener.close()
+            for ds in dstore.values():
+                ds.close()
 
     def save(self, key, array):
         """
@@ -85,3 +94,10 @@ class DataManager(object):
         """
         Hdf5Dataset(self.datastore.hdf5[key]).extend(array)
         self.datastore.flush()
+
+
+if __name__ == '__main__':
+    port = int(config.get('cmdserver', 'port'))
+    authkey = config.get('cmdserver', 'authkey')
+    logging.basicConfig(level=logging.INFO)
+    CmdServer(('', port), authkey).loop()
