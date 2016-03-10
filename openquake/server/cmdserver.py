@@ -18,8 +18,6 @@
 
 import sys
 import logging
-import urllib
-import urllib2
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing.connection import Client, Listener
@@ -98,14 +96,24 @@ class CmdServer(object):
     def loop(self):
         dstore = {}
         listener = Listener(self.address, authkey=self.authkey)
-        print('Listening on %s...' % str(self.address))
+        print('Listening on %s:%d...' % self.address)
         try:
             while True:
-                conn = listener.accept()
+                try:
+                    conn = listener.accept()
+                except KeyboardInterrupt:
+                    break
+                except:
+                    # unauthenticated connection, for instance by a port
+                    # scanner such as the one in manage.py
+                    continue
                 try:
                     cmd = conn.recv()
                     name = cmd[0]
-                    if name.startswith('.'):  # method
+                    if name == '@stop':
+                        conn.send((None, None))
+                        break
+                    elif name.startswith('.'):  # method
                         args = cmd[1:-1]
                         calc_id = cmd[-1]
                         try:
@@ -118,6 +126,8 @@ class CmdServer(object):
                         args = cmd[1:]
                         call = globals()[name]
                     res, etype, _ = safely_call(call, args)
+                    if etype:
+                        logging.error(res)
                     conn.send((res, etype))
                 finally:
                     conn.close()
@@ -148,12 +158,12 @@ class CmdServer(object):
 
         :param cmd: a tuple with the name of the command and the arguments
         """
-        c = Client(self.address, authkey=self.authkey)
+        cl = Client(self.address, authkey=self.authkey)
         try:
-            c.send(cmd)
-            res, etype = c.recv()
+            cl.send(cmd)
+            res, etype = cl.recv()
         finally:
-            c.close()
+            cl.close()
         if etype:
             raise etype(res)
         return res
@@ -162,7 +172,7 @@ class CmdServer(object):
         """
         Send a command stopping the server cleanly
         """
-        self.start('exit', 0)
+        self.start('@stop')
 
 
 cmd = CmdServer(ADDRESS, AUTHKEY)

@@ -410,8 +410,6 @@ def main():
         print upgrade_manager.what_if_I_upgrade(conn)
         sys.exit(0)
 
-    run_job = engine.run_job
-
     # hazard or hazard+risk
     hc_id = args.hazard_calculation_id
     if hc_id and int(hc_id) < 0:
