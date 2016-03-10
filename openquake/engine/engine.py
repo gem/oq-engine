@@ -33,7 +33,6 @@ from openquake.baselib.performance import Monitor
 from openquake.engine import logs
 from openquake.server.db import models
 from openquake.engine.utils import config, tasks
-from openquake.server.db.schema.upgrades import upgrader
 
 from openquake.commonlib import readinput, valid, datastore, export
 from openquake.commonlib.oqvalidation import OqParam
@@ -284,38 +283,6 @@ def print_outputs_summary(outputs, full=True):
         if truncated:
             print ('Some outputs where not shown. You can see the full list '
                    'with the command\n`oq-engine --list-outputs`')
-
-
-# this function is called only by openquake_cli.py, not by the engine server
-def run_job(cfg_file, log_level, log_file, exports='',
-            hazard_calculation_id=None):
-    """
-    Run a job using the specified config file and other options.
-
-    :param str cfg_file:
-        Path to calculation config (INI-style) files.
-    :param str log_level:
-        'debug', 'info', 'warn', 'error', or 'critical'
-    :param str log_file:
-        Path to log file.
-    :param exports:
-        A comma-separated string of export types requested by the user.
-        Currently only 'xml' is supported.
-    """
-    # first of all check the database version and exit if the db is outdated
-    upgrader.check_versions(django_db.connection)
-    job = job_from_file(
-        cfg_file, getpass.getuser(), log_level, exports,
-        hazard_calculation_id=hazard_calculation_id)
-    calc = run_calc(job, log_level, log_file, exports,
-                    hazard_calculation_id=hazard_calculation_id)
-    duration = calc.monitor.duration
-    calc.monitor.flush()
-    if job.status == 'complete':
-        print_results(job.id, duration, list_outputs)
-    else:
-        sys.exit('Calculation %s failed' % job.id)
-    return job
 
 DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset_and_collapse_map')
 

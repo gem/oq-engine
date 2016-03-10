@@ -60,6 +60,7 @@ from openquake.engine import engine, logs
 from openquake.commonlib import datastore
 from openquake.calculators import views
 from openquake.server.db import models, upgrade_manager
+from openquake.server.db.schema.upgrades import upgrader
 from openquake.engine.export import core
 from openquake.engine.tools.make_html_report import make_report
 from django.db import connection as conn
@@ -199,6 +200,36 @@ def set_up_arg_parser():
         nargs=2, metavar=('CALCULATION_ID', 'TARGET_DIR'))
 
     return parser
+
+
+# this function is called only by openquake_cli.py, not by the engine server
+def run_job(cfg_file, log_level, log_file, exports='',
+            hazard_calculation_id=None):
+    """
+    Run a job using the specified config file and other options.
+
+    :param str cfg_file:
+        Path to calculation config (INI-style) files.
+    :param str log_level:
+        'debug', 'info', 'warn', 'error', or 'critical'
+    :param str log_file:
+        Path to log file.
+    :param exports:
+        A comma-separated string of export types requested by the user.
+        Currently only 'xml' is supported.
+    """
+    job = engine.job_from_file(
+        cfg_file, getpass.getuser(), log_level, exports,
+        hazard_calculation_id=hazard_calculation_id)
+    calc = engine.run_calc(job, log_level, log_file, exports,
+                           hazard_calculation_id=hazard_calculation_id)
+    duration = calc.monitor.duration
+    calc.monitor.flush()
+    if job.status == 'complete':
+        engine.print_results(job.id, duration, engine.list_outputs)
+    else:
+        sys.exit('Calculation %s failed' % job.id)
+    return job
 
 
 def list_calculations(job_type):
@@ -341,8 +372,9 @@ def main():
         sys.exit(0)
 
     if args.run or args.run_hazard or args.run_risk:
+        # check the database version and exit if the db is outdated
         # the logging will be configured in engine.py
-        pass
+        upgrader.check_versions(conn)
     else:
         # configure a basic logging
         logging.basicConfig(level=logging.INFO)
