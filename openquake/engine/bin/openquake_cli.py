@@ -243,6 +243,11 @@ def main():
         print __version__
         sys.exit(0)
 
+    # first of all check if the db is outdated
+    outdated = dbserver('check_outdated')
+    if outdated:
+        sys.exit(outdated)
+
     if args.run or args.run_hazard or args.run_risk:
         # the logging will be configured in engine.py
         pass
