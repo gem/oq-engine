@@ -20,9 +20,7 @@ import sys
 import logging
 from multiprocessing.connection import Client, Listener
 
-from openquake.baselib.hdf5 import Hdf5Dataset
 from openquake.commonlib.parallel import safely_call
-from openquake.commonlib.datastore import read
 from openquake.engine.utils import config
 
 PORT = int(config.get('dbserver', 'port'))
@@ -49,7 +47,6 @@ class DbServer(object):
         self.authkey = authkey
 
     def loop(self):
-        dstore = {}
         listener = Listener(self.address, authkey=self.authkey)
         print('Listening on %s:%d...' % self.address)
         try:
@@ -71,11 +68,6 @@ class DbServer(object):
                     elif name.startswith('.'):  # method
                         args = cmd[1:-1]
                         calc_id = cmd[-1]
-                        try:
-                            self.datastore = dstore[calc_id]
-                        except KeyError:
-                            ds = read(calc_id, 'r+')
-                            self.datastore = dstore[calc_id] = ds
                         call = getattr(self, name[1:])
                     else:  # global function
                         args = cmd[1:]
@@ -88,24 +80,6 @@ class DbServer(object):
                     conn.close()
         finally:
             listener.close()
-            for ds in dstore.values():
-                ds.close()
-
-    def save(self, key, array):
-        """
-        :param key: datastore key
-        :param array: an array to save for the given key
-        """
-        self.datastore[key] = array
-        self.datastore.flush()
-
-    def extend(self, key, array):
-        """
-        :param key: datastore key
-        :param array: an array extending the dataset with the given key
-        """
-        Hdf5Dataset(self.datastore.hdf5[key]).extend(array)
-        self.datastore.flush()
 
     def start(self, *cmd):
         """
@@ -130,7 +104,7 @@ class DbServer(object):
         self.start('@stop')
 
 
-cmd = DbServer(ADDRESS, AUTHKEY)
+dbserver = DbServer(ADDRESS, AUTHKEY)
 
 if __name__ == '__main__':
-    cmd.loop()
+    dbserver.loop()

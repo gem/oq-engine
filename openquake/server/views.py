@@ -327,19 +327,6 @@ def get_log_size(request, calc_id):
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
-def submit_job(job_ini, user_name, hazard_job_id=None,
-               loglevel=DEFAULT_LOG_LEVEL, logfile=None, exports=''):
-    """
-    Create a job object from the given job.ini file in the job directory
-    and submit it to the job queue. Returns the job ID.
-    """
-    job_id, oqparam = db.actions.job_from_file(
-        job_ini, user_name, hazard_job_id)
-    fut = executor.submit(engine.run_calc, job_id, oqparam, loglevel,
-                          logfile, exports, hazard_job_id)
-    return job_id, fut
-
-
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -389,6 +376,19 @@ def run_calc(request):
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
+
+
+def submit_job(job_ini, user_name, hazard_job_id=None,
+               loglevel=DEFAULT_LOG_LEVEL, logfile=None, exports=''):
+    """
+    Create a job object from the given job.ini file in the job directory
+    and submit it to the job queue. Returns the job ID.
+    """
+    job_id, oqparam = db.actions.job_from_file(
+        job_ini, user_name, hazard_job_id)
+    fut = executor.submit(engine.run_calc, job_id, oqparam, loglevel,
+                          logfile, exports, hazard_job_id)
+    return job_id, fut
 
 
 def _get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
