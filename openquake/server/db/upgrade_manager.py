@@ -218,16 +218,14 @@ class UpgradeManager(object):
     def check_versions(self, conn):
         """
         :param conn: a DB API 2 connection
-        :returns: a list with the versions that will be applied
+        :returns: a message with the versions that will be applied or None
         """
         scripts = self.read_scripts(skip_versions=self.get_db_versions(conn))
         versions = [s['version'] for s in scripts]
-        if scripts:
-            raise SystemExit(
-                'Your database is not updated. You can update it by running '
-                'oq-engine --upgrade-db which will process the '
-                'following new versions: %s' % versions)
-        return versions
+        if versions:
+            return ('Your database is not updated. You can update it by '
+                    'running oq-engine --upgrade-db which will process the '
+                    'following new versions: %s' % versions)
 
     def get_db_versions(self, conn):
         """
