@@ -21,23 +21,13 @@ calculations."""
 
 import sys
 import traceback
-from datetime import datetime
 
+from openquake.baselib.performance import Monitor
 from openquake.commonlib import valid
 from openquake.commonlib.oqvalidation import OqParam
+from openquake.calculators import base
 from openquake.engine import logs
 from openquake.engine.utils import config, tasks
-from openquake.server.db import actions
-
-
-def dbserver(action, *args):
-    """
-    A fake dispatcher to the database server.
-
-    :param action: database action to perform
-    :param args: arguments
-    """
-    return getattr(actions, action)(*args)
 
 TERMINATE = valid.boolean(
     config.get('celery', 'terminate_workers_on_revoke') or 'false')
@@ -60,12 +50,11 @@ if USE_CELERY:
         logs.LOG.info('Using %s, %d cores',
                       ', '.join(sorted(stats)), num_cores)
 
-    def celery_cleanup(job, terminate, task_ids=()):
+    def celery_cleanup(terminate, task_ids=()):
         """
         Release the resources used by an openquake job.
         In particular revoke the running tasks (if any).
 
-        :param int job_id: the job id
         :param bool terminate: the celery revoke command terminate flag
         :param task_ids: celery task IDs
         """
@@ -81,12 +70,15 @@ if USE_CELERY:
 
 
 # used by bin/openquake and openquake.server.views
-def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
+def run_calc(job_id, oqparam, log_level, log_file, exports,
+             hazard_calculation_id=None):
     """
     Run a calculation.
 
-    :param job:
-        :class:`openquake.server.db.model.OqJob` instance
+    :param job_id:
+        ID of the current job
+    :param oqparam:
+        :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param str log_level:
         The desired logging level. Valid choices are 'debug', 'info',
         'progress', 'warn', 'error', and 'critical'.
@@ -98,41 +90,37 @@ def run_calc(job, log_level, log_file, exports, hazard_calculation_id=None):
     """
     if USE_CELERY:
         set_concurrent_tasks_default()
-    with logs.handle(job, log_level, log_file):  # run the job
+    monitor = Monitor('total runtime', measuremem=True)
+    with logs.handle(job_id, log_level, log_file):  # run the job
+        calc = base.calculators(oqparam, monitor, calc_id=job_id)
         tb = 'None\n'
         try:
-            _do_run_calc(job, exports, hazard_calculation_id)
-            job.status = 'complete'
+            _do_run_calc(calc, exports, hazard_calculation_id)
+            logs.dbserver('finish', job_id, 'complete')
         except:
             tb = traceback.format_exc()
             try:
                 logs.LOG.critical(tb)
-                job.status = 'failed'
+                logs.dbserver('finish', job_id, 'failed')
             except:  # an OperationalError may always happen
                 sys.stderr.write(tb)
             raise
         finally:
-            # try to save the job stats on the database and then clean up;
             # if there was an error in the calculation, this part may fail;
             # in such a situation, we simply log the cleanup error without
             # taking further action, so that the real error can propagate
             try:
-                job.is_running = False
-                job.stop_time = datetime.utcnow()
-                job.save()
                 if USE_CELERY:
-                    celery_cleanup(
-                        job, TERMINATE, tasks.OqTaskManager.task_ids)
+                    celery_cleanup(TERMINATE, tasks.OqTaskManager.task_ids)
             except:
                 # log the finalization error only if there is no real error
                 if tb == 'None\n':
                     logs.LOG.error('finalizing', exc_info=True)
-        dbserver('expose_outputs', job.calc.datastore, job)
-    return job.calc
+        logs.dbserver('expose_outputs', job_id)
+    return job_id
 
 
 # keep this as a private function, since it is mocked by engine_test.py
-def _do_run_calc(job, exports, hazard_calculation_id):
-    with job.calc.monitor:
-        job.calc.run(exports=exports,
-                     hazard_calculation_id=hazard_calculation_id)
+def _do_run_calc(calc, exports, hazard_calculation_id):
+    with calc.monitor:
+        calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id)

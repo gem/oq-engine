@@ -40,7 +40,7 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR") is not None:
     )
 
 from openquake.engine import utils
-from openquake.engine.engine import dbserver
+from openquake.engine.logs import dbserver
 
 utils.config.abort_if_no_config_available()
 
@@ -86,18 +86,15 @@ def run_job(cfg_file, log_level, log_file, exports='',
     :param hazard_calculation_id:
         ID of the previous calculation or None
     """
-    job = dbserver('job_from_file',
-                   cfg_file, getpass.getuser(), log_level, exports,
-                   hazard_calculation_id)
-    calc = engine.run_calc(job, log_level, log_file, exports,
+    job_id, oqparam = dbserver(
+        'job_from_file',
+        cfg_file, getpass.getuser(), log_level, exports, hazard_calculation_id)
+    calc = engine.run_calc(job_id, oqparam, log_level, log_file, exports,
                            hazard_calculation_id=hazard_calculation_id)
-    duration = calc.monitor.duration
+    duration = calc.monitor.duration  # set this before monitor.flush()
     calc.monitor.flush()
-    if job.status == 'complete':
-        dbserver('print_results', job.id, duration)
-    else:
-        sys.exit('Calculation %s failed' % job.id)
-    return job.id
+    dbserver('print_results', job_id, duration)
+    return job_id
 
 
 def set_up_arg_parser():
@@ -113,7 +110,7 @@ def set_up_arg_parser():
         '--log-file', '-L',
         help=('Location to store log messages; if not specified, log messages'
               ' will be printed to the console (to stderr)'),
-        required=False, metavar='LOG_FILE', default='stderr')
+        required=False, metavar='LOG_FILE')
     general_grp.add_argument(
         '--log-level', '-l',
         help='Defaults to "info"', required=False,
@@ -317,7 +314,7 @@ def main():
         run_job(expanduser(args.run_hazard), args.log_level,
                 log_file, args.exports)
     elif args.delete_calculation is not None:
-        dbserver('del_calc', args.delete_calculation, args.yes)
+        dbserver('delete_calculation', args.delete_calculation, args.yes)
     # risk
     elif args.list_risk_calculations:
         dbserver('list_calculations', 'risk')
