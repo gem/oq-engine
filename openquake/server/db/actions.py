@@ -252,29 +252,20 @@ def print_outputs_summary(outputs, full=True):
 
 
 @db.transaction.atomic
-def job_from_file(cfg_file, username, log_level='info', exports='',
-                  hazard_calculation_id=None, **extras):
+def job_from_file(cfg_file, username, hazard_calculation_id=None):
     """
     Create a full job profile from a job config file.
 
     :param str cfg_file:
-        Path to the job.ini files.
+        Path to a job.ini file.
     :param str username:
         The user who will own this job profile and all results.
-    :param str log_level:
-        Desired log level.
-    :param exports:
-        Comma-separated sting of desired export types
     :param hazard_calculation_id:
-        Hazard calculation ID
-    :params extras:
-        Extra parameters (used only in the tests to override the params)
-
+        ID of a previous calculation or None
     :returns:
         a pair (job_id, oqparam)
     """
     oq = readinput.get_oqparam(cfg_file)
-    vars(oq).update(hazard_calculation_id=hazard_calculation_id, **extras)
     job = create_job(oq.calculation_mode, oq.description,
                      username, hazard_calculation_id)
     return job.id, oq
