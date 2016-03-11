@@ -40,11 +40,11 @@ from django.template import RequestContext
 from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib import nrml, readinput, valid
 from openquake.commonlib.parallel import safely_call
-from openquake.engine import engine as oq_engine, __version__ as oqversion
+from openquake.engine import __version__ as oqversion
 from openquake.server.db import models as oqe_models
 from openquake.engine.export import core
 from openquake.engine.export.core import export_output, DataStoreExportError
-from openquake.server import tasks, executor, utils
+from openquake.server import tasks, executor, utils, db
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -387,8 +387,8 @@ def submit_job(job_file, temp_dir, user_name,
     """
     ini = os.path.join(temp_dir, job_file)
     job, exctype, monitor = safely_call(
-        oq_engine.job_from_file, (ini, user_name, DEFAULT_LOG_LEVEL, '',
-                                  hazard_job_id))
+        db.actions.job_from_file, (ini, user_name, DEFAULT_LOG_LEVEL, '',
+                                   hazard_job_id))
     if exctype:
         raise exctype(job)
 
@@ -452,7 +452,7 @@ def calc_results(request, calc_id):
     # OrderedDict([('agg_loss_curve', ['xml', 'csv']), ...])
     output_types = groupby(export_output, lambda oe: oe[0],
                            lambda oes: [e for o, e in oes])
-    results = oq_engine.get_outputs(calc_id)
+    results = db.actions.get_outputs(calc_id)
     if not results:
         return HttpResponseNotFound()
 
