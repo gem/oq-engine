@@ -25,7 +25,7 @@ import os.path
 import logging
 from datetime import datetime
 from contextlib import contextmanager
-from django.db import connection
+from openquake.server.db import actions
 
 
 # Place the new level between info and warning
@@ -39,10 +39,20 @@ LEVELS = {'debug': logging.DEBUG,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 
-LOG_FORMAT = ('[%(asctime)s %(job_type)s job #%(job_id)s %(hostname)s '
+LOG_FORMAT = ('[%(asctime)s job #%(job_id)s %(hostname)s '
               '%(levelname)s %(processName)s/%(process)s] %(message)s')
 
 LOG = logging.getLogger()
+
+
+def dbcmd(action, *args):
+    """
+    A fake dispatcher to the database server.
+
+    :param action: database action to perform
+    :param args: arguments
+    """
+    return getattr(actions, action)(*args)
 
 
 def touch_log_file(log_file):
@@ -99,21 +109,18 @@ def _update_log_record(self, record):
     """
     if not hasattr(record, 'hostname'):
         record.hostname = '-'
-    if not hasattr(record, 'job_type'):
-        record.job_type = self.job_type
     if not hasattr(record, 'job_id'):
-        record.job_id = self.job.id
+        record.job_id = self.job_id
 
 
 class LogStreamHandler(logging.StreamHandler):
     """
     Log stream handler
     """
-    def __init__(self, job):
+    def __init__(self, job_id):
         super(LogStreamHandler, self).__init__()
         self.setFormatter(logging.Formatter(LOG_FORMAT))
-        self.job_type = job.job_type
-        self.job = job
+        self.job_id = job_id
 
     def emit(self, record):  # pylint: disable=E0202
         _update_log_record(self, record)
@@ -124,11 +131,10 @@ class LogFileHandler(logging.FileHandler):
     """
     Log file handler
     """
-    def __init__(self, job, log_file):
+    def __init__(self, job_id, log_file):
         super(LogFileHandler, self).__init__(log_file)
         self.setFormatter(logging.Formatter(LOG_FORMAT))
-        self.job_type = job.job_type
-        self.job = job
+        self.job_id = job_id
         self.log_file = log_file
 
     def emit(self, record):  # pylint: disable=E0202
@@ -149,39 +155,34 @@ class LogDatabaseHandler(logging.Handler):
     """
     Log stream handler
     """
-    def __init__(self, job):
+    def __init__(self, job_id):
         super(LogDatabaseHandler, self).__init__()
-        self.job = job
+        self.job_id = job_id
 
     def emit(self, record):  # pylint: disable=E0202
         if record.levelno >= logging.INFO:
-            save(self.job.id, record)
+            dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
+                     '%s/%s' % (record.processName, record.process),
+                     record.getMessage())
 
 
 @contextmanager
-def handle(job, log_level='info', log_file=None):
+def handle(job_id, log_level='info', log_file=None):
     """
     Context manager adding and removing log handlers.
 
-    :param job:
-         a :class:`openquake.server.db.models.OqJob` instance
+    :param job_id:
+         ID of the current job
     :param log_level:
          one of debug, info, warn, progress, error, critical
     :param log_file:
          log file path (if None, logs on stdout only)
     """
-    oq = job.oqparam
-    handlers = [LogDatabaseHandler(job)]  # log on db always
+    handlers = [LogDatabaseHandler(job_id)]  # log on db always
     if log_file is None:
-        handlers.append(LogStreamHandler(job))
-    elif log_file == 'stderr':
-        edir = oq.export_dir
-        log_file = os.path.join(edir, 'calc_%d.log' % job.id)
-        touch_log_file(log_file)  # check if writeable
-        handlers.append(LogStreamHandler(job))
-        handlers.append(LogFileHandler(job, log_file))
+        handlers.append(LogStreamHandler(job_id))
     else:
-        handlers.append(LogFileHandler(job, log_file))
+        handlers.append(LogFileHandler(job_id, log_file))
     for handler in handlers:
         logging.root.addHandler(handler)
     set_level(log_level)
