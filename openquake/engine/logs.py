@@ -45,7 +45,7 @@ LOG_FORMAT = ('[%(asctime)s job #%(job_id)s %(hostname)s '
 LOG = logging.getLogger()
 
 
-def dbserver(action, *args):
+def dbcmd(action, *args):
     """
     A fake dispatcher to the database server.
 
@@ -152,7 +152,7 @@ class LogDatabaseHandler(logging.Handler):
 
     def emit(self, record):  # pylint: disable=E0202
         if record.levelno >= logging.INFO:
-            dbserver('log', self.job_id, datetime.utcnow(), record.levelname,
+            dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
                      '%s/%s' % (record.processName, record.process),
                      record.getMessage())
 

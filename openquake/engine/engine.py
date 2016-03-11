@@ -96,14 +96,14 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         tb = 'None\n'
         try:
             _do_run_calc(calc, exports, hazard_calculation_id)
-            logs.dbserver('finish', job_id, 'complete')
-            logs.dbserver('expose_outputs', job_id)
+            logs.dbcmd('finish', job_id, 'complete')
+            logs.dbcmd('expose_outputs', job_id)
             logs.LOG.info('Calculation %d finished correctly', job_id)
         except:
             tb = traceback.format_exc()
             try:
                 logs.LOG.critical(tb)
-                logs.dbserver('finish', job_id, 'failed')
+                logs.dbcmd('finish', job_id, 'failed')
             except:  # an OperationalError may always happen
                 sys.stderr.write(tb)
             raise
