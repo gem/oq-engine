@@ -117,7 +117,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
                 if tb == 'None\n':
                     logs.LOG.error('finalizing', exc_info=True)
         logs.dbserver('expose_outputs', job_id)
-    return job_id
+    return calc
 
 
 # keep this as a private function, since it is mocked by engine_test.py
