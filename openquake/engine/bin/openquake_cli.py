@@ -243,11 +243,6 @@ def main():
         print __version__
         sys.exit(0)
 
-    # first of all check if the db is outdated
-    outdated = dbserver('check_outdated')
-    if outdated:
-        sys.exit(outdated)
-
     if args.run or args.run_hazard or args.run_risk:
         # the logging will be configured in engine.py
         pass
@@ -262,10 +257,6 @@ def main():
 
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
-
-    if args.make_html_report:
-        print 'Written', make_report(conn, args.make_html_report)
-        sys.exit(0)
 
     if args.upgrade_db:
         logs.set_level('info')
@@ -285,6 +276,11 @@ def main():
     if args.what_if_I_upgrade:
         print upgrade_manager.what_if_I_upgrade(conn)
         sys.exit(0)
+
+    # check if the db is outdated
+    outdated = dbserver('check_outdated')
+    if outdated:
+        sys.exit(outdated)
 
     # hazard or hazard+risk
     hc_id = args.hazard_calculation_id
@@ -336,6 +332,10 @@ def main():
             hazard_calculation_id=hc_id)
 
     # export
+    elif args.make_html_report:
+        print 'Written', make_report(conn, args.make_html_report)
+        sys.exit(0)
+
     elif args.list_outputs is not None:
         hc_id = dbserver('get_hc_id', args.list_outputs)
         dbserver('list_outputs', hc_id)
