@@ -40,11 +40,12 @@ from django.template import RequestContext
 from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib import nrml, readinput, valid
 from openquake.commonlib.parallel import safely_call
-from openquake.engine import engine as oq_engine, __version__ as oqversion
+from openquake.engine import __version__ as oqversion
 from openquake.server.db import models
 from openquake.engine.export import core
+from openquake.engine import engine
 from openquake.engine.export.core import export_output, DataStoreExportError
-from openquake.server import utils, cmdserver
+from openquake.server import executor, utils, db
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -326,6 +327,19 @@ def get_log_size(request, calc_id):
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
+def submit_job(job_ini, user_name, hazard_job_id=None,
+               loglevel=DEFAULT_LOG_LEVEL, logfile=None, exports=''):
+    """
+    Create a job object from the given job.ini file in the job directory
+    and submit it to the job queue. Returns the job ID.
+    """
+    job_id, oqparam = db.actions.job_from_file(
+        job_ini, user_name, hazard_job_id)
+    fut = executor.submit(engine.run_calc, job_id, oqparam, loglevel,
+                          logfile, exports, hazard_job_id)
+    return job_id, fut
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -353,12 +367,10 @@ def run_calc(request):
         return HttpResponse(content=json.dumps([msg]), content_type=JSON,
                             status=500)
 
-    temp_dir = os.path.dirname(einfo[0])
-    job_ini = os.path.join(temp_dir, einfo[0])
     user = utils.get_user_data(request)
 
     try:
-        job_id = cmdserver.submit_job(job_ini, user['name'], hazard_job_id)
+        job_id, _fut = submit_job(einfo[0], user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = exc.args[0]
@@ -433,7 +445,7 @@ def calc_results(request, calc_id):
     # OrderedDict([('agg_loss_curve', ['xml', 'csv']), ...])
     output_types = groupby(export_output, lambda oe: oe[0],
                            lambda oes: [e for o, e in oes])
-    results = oq_engine.get_outputs(calc_id)
+    results = db.actions.get_outputs(calc_id)
     if not results:
         return HttpResponseNotFound()
 
