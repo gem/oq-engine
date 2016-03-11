@@ -25,9 +25,9 @@ from openquake.commonlib.parallel import safely_call
 from openquake.commonlib.datastore import read
 from openquake.engine.utils import config
 
-PORT = int(config.get('cmdserver', 'port'))
+PORT = int(config.get('dbserver', 'port'))
 ADDRESS = ('', PORT)
-AUTHKEY = config.get('cmdserver', 'authkey')
+AUTHKEY = config.get('dbserver', 'authkey')
 DEFAULT_LOG_LEVEL = 'progress'
 
 # global commands
@@ -36,7 +36,7 @@ exit = sys.exit
 info = logging.info
 
 
-class CmdServer(object):
+class DbServer(object):
     """
     A server receiving and executing commands. Errors are trapped and
     we send back to the client pairs (result, exctype) for each command
@@ -109,7 +109,7 @@ class CmdServer(object):
 
     def start(self, *cmd):
         """
-        Send a command to the CmdServer.
+        Send a command to the DbServer.
 
         :param cmd: a tuple with the name of the command and the arguments
         """
@@ -130,7 +130,7 @@ class CmdServer(object):
         self.start('@stop')
 
 
-cmd = CmdServer(ADDRESS, AUTHKEY)
+cmd = DbServer(ADDRESS, AUTHKEY)
 
 if __name__ == '__main__':
     cmd.loop()
