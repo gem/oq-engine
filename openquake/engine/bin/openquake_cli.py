@@ -249,8 +249,8 @@ def main():
         logging.basicConfig(level=logging.INFO)
 
     # check if the DbServer is up
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     port = int(utils.config.get('dbserver', 'port'))
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     err = sock.connect_ex(('', port))
     sock.close()
     if err:

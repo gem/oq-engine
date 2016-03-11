@@ -142,15 +142,6 @@ class LogFileHandler(logging.FileHandler):
         super(LogFileHandler, self).emit(record)
 
 
-def save(job_id, record):
-    connection.cursor().execute(
-        """INSERT INTO log (job_id, timestamp, level, process, message)
-        VALUES (%s, %s, %s, %s, %s)""",
-        (job_id, datetime.utcnow(), record.levelname,
-         '%s/%s' % (record.processName, record.process),
-         record.getMessage()))
-
-
 class LogDatabaseHandler(logging.Handler):
     """
     Log stream handler
@@ -162,8 +153,8 @@ class LogDatabaseHandler(logging.Handler):
     def emit(self, record):  # pylint: disable=E0202
         if record.levelno >= logging.INFO:
             dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
-                     '%s/%s' % (record.processName, record.process),
-                     record.getMessage())
+                  '%s/%s' % (record.processName, record.process),
+                  record.getMessage())
 
 
 @contextmanager
