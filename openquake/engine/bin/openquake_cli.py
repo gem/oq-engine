@@ -87,8 +87,7 @@ def run_job(cfg_file, log_level, log_file, exports='',
         ID of the previous calculation or None
     """
     job_id, oqparam = dbserver(
-        'job_from_file',
-        cfg_file, getpass.getuser(), log_level, exports, hazard_calculation_id)
+        'job_from_file', cfg_file, getpass.getuser(), hazard_calculation_id)
     calc = engine.run_calc(job_id, oqparam, log_level, log_file, exports,
                            hazard_calculation_id=hazard_calculation_id)
     duration = calc.monitor.duration  # set this before monitor.flush()

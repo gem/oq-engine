@@ -50,8 +50,6 @@ METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
 JSON = 'application/json'
 
-DEFAULT_LOG_LEVEL = 'progress'
-
 #: For exporting calculation outputs, the client can request a specific format
 #: (xml, geojson, csv, etc.). If the client does not specify give them (NRML)
 #: XML by default.
@@ -388,8 +386,7 @@ def submit_job(job_file, temp_dir, user_name,
     """
     ini = os.path.join(temp_dir, job_file)
     err, exctype, monitor = safely_call(
-        db.actions.job_from_file, (ini, user_name, DEFAULT_LOG_LEVEL, '',
-                                   hazard_job_id))
+        db.actions.job_from_file, (ini, user_name, hazard_job_id))
     if exctype:
         raise exctype(err)
 
