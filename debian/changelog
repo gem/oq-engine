@@ -1,3 +1,6 @@
+  [Daniele Viganò, Matteo Nastasi]
+  * Allow installation of the binary package on Ubuntu derivatives
+
   [Michele Simionato]
   * Introduced a CmdLoop thread per each calculation; saved the performance
     info in the database
