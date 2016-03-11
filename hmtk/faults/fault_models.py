@@ -50,7 +50,7 @@ Module: hmtk.faults.fault_model implements the set of classes to allow for a
 calculation of the magnitude frequency distribution from the geological
 slip rate
 '''
-
+import warnings
 import numpy as np
 from math import fabs
 
@@ -260,6 +260,7 @@ class mtkActiveFault(object):
         self.area = self.geometry.get_area()
         self.config = None
         self.regionalisation = None
+        self.catalogue = None
 
     def get_tectonic_regionalisation(self, regionalisation, region_type=None):
         '''
@@ -298,6 +299,30 @@ class mtkActiveFault(object):
                         self.regionalisation.disp_length_ratio
                 break
         return
+
+    def select_catalogue(self, selector, distance, distance_metric="rupture",
+                         upper_eq_depth=None, lower_eq_depth=None):
+        """
+        Select earthquakes within a specied distance of the fault
+        """
+        if selector.catalogue.get_number_events() < 1:
+            raise ValueError('No events found in catalogue!')
+
+        # rupture metric is selected
+        if ('rupture' in distance_metric):
+            # Use rupture distance
+            self.catalogue = selector.within_rupture_distance(
+                self.geometry.surface,
+                distance,
+                upper_depth=upper_eq_depth,
+                lower_depth=lower_eq_depth)
+        else:
+            # Use Joyner-Boore distance
+            self.catalogue = selector.within_joyner_boore_distance(
+                self.geometry.surface,
+                distance,
+                upper_depth=upper_eq_depth,
+                lower_depth=lower_eq_depth)
 
     def _generate_branching_index(self):
         '''

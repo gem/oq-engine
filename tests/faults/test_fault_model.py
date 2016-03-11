@@ -56,6 +56,8 @@ from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 from openquake.nrmllib.models import IncrementalMFD
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from hmtk.sources.complex_fault_source import mtkComplexFaultSource
+from hmtk.seismicity.catalogue import Catalogue
+from hmtk.seismicity.selector import CatalogueSelector
 from hmtk.faults.mfd.characteristic import Characteristic
 from hmtk.faults.mfd.anderson_luco_area_mmax import AndersonLucoAreaMmax
 from hmtk.faults.tectonic_regionalisation import TectonicRegionalisation
@@ -450,6 +452,68 @@ class TestmtkActiveFault(unittest.TestCase):
         np.testing.assert_array_almost_equal(test_mfd.occur_rates,
                                              expected_rates)
 
+    def test_select_catalogue_rjb(self):
+        """
+        Tests catalogue selection with Joyner-Boore distance
+        """
+        self.fault = mtkActiveFault(
+            '001',
+            'A Fault',
+            self.simple_fault,
+            [(5., 0.5), (7., 0.5)],
+            0.,
+            None,
+            msr_sigma=[(-1.5, 0.15), (0., 0.7), (1.5, 0.15)])
+        cat1 = Catalogue()
+        cat1.data = {"eventID": ["001", "002", "003", "004"],
+                     "longitude": np.array([30.1, 30.1, 30.5, 31.5]),
+                     "latitude": np.array([30.0, 30.25, 30.4, 30.5]),
+                     "depth": np.array([5.0, 250.0, 10.0, 10.0])}
+        selector = CatalogueSelector(cat1)
+        # Select within 50 km of the fault
+        self.fault.select_catalogue(selector, 50.0,
+                                    distance_metric="joyner-boore")
+        np.testing.assert_array_almost_equal(
+            self.fault.catalogue.data["longitude"],
+            np.array([30.1, 30.1, 30.5]))
+        np.testing.assert_array_almost_equal(
+            self.fault.catalogue.data["latitude"],
+            np.array([30.0, 30.25, 30.4]))
+        np.testing.assert_array_almost_equal(
+            self.fault.catalogue.data["depth"],
+            np.array([5.0, 250.0, 10.0]))
+        
+    def test_select_catalogue_rrup(self):
+        """
+        Tests catalogue selection with Joyner-Boore distance
+        """
+        self.fault = mtkActiveFault(
+            '001',
+            'A Fault',
+            self.simple_fault,
+            [(5., 0.5), (7., 0.5)],
+            0.,
+            None,
+            msr_sigma=[(-1.5, 0.15), (0., 0.7), (1.5, 0.15)])
+
+        cat1 = Catalogue()
+        cat1.data = {"eventID": ["001", "002", "003", "004"],
+                     "longitude": np.array([30.1, 30.1, 30.5, 31.5]),
+                     "latitude": np.array([30.0, 30.25, 30.4, 30.5]),
+                     "depth": np.array([5.0, 250.0, 10.0, 10.0])}
+        selector = CatalogueSelector(cat1)
+        # Select within 50 km of the fault
+        self.fault.select_catalogue(selector, 50.0,
+                                    distance_metric="rupture")
+        np.testing.assert_array_almost_equal(
+            self.fault.catalogue.data["longitude"],
+            np.array([30.1, 30.5]))
+        np.testing.assert_array_almost_equal(
+            self.fault.catalogue.data["latitude"],
+            np.array([30.0, 30.4]))
+        np.testing.assert_array_almost_equal(
+            self.fault.catalogue.data["depth"],
+            np.array([5.0, 10.0]))
 
     def _build_mock_recurrence_branches(self):
         '''
