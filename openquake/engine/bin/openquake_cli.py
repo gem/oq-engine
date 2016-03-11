@@ -22,10 +22,9 @@ OpenQuake: software for seismic hazard and risk assessment
 """
 import logging
 import argparse
-import getpass
-import zipfile
 import os
 import sys
+import getpass
 
 from os.path import abspath
 from os.path import dirname
@@ -40,9 +39,10 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR") is not None:
         0, join(dirname(dirname(__file__)), "openquake")
     )
 
-from openquake.engine.utils import config
+from openquake.engine import utils
+from openquake.engine.logs import dbcmd
 
-config.abort_if_no_config_available()
+utils.config.abort_if_no_config_available()
 
 # Please note: the /usr/bin/oq-engine script requires a celeryconfig.py
 # file in the PYTHONPATH; when using binary packages, if a celeryconfig.py
@@ -70,6 +70,33 @@ HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 
 
+def run_job(cfg_file, log_level, log_file, exports='',
+            hazard_calculation_id=None):
+    """
+    Run a job using the specified config file and other options.
+
+    :param str cfg_file:
+        Path to calculation config (INI-style) files.
+    :param str log_level:
+        'debug', 'info', 'warn', 'error', or 'critical'
+    :param str log_file:
+        Path to log file.
+    :param exports:
+        A comma-separated string of export types requested by the user.
+        Currently only 'xml' is supported.
+    :param hazard_calculation_id:
+        ID of the previous calculation or None
+    """
+    job_id, oqparam = dbcmd(
+        'job_from_file', cfg_file, getpass.getuser(), hazard_calculation_id)
+    calc = engine.run_calc(job_id, oqparam, log_level, log_file, exports,
+                           hazard_calculation_id=hazard_calculation_id)
+    duration = calc.monitor.duration  # set this before monitor.flush()
+    calc.monitor.flush()
+    dbcmd('print_results', job_id, duration)
+    return job_id
+
+
 def set_up_arg_parser():
     """Set up and return an :class:`argparse.ArgumentParser` with all of the
     OpenQuake command line options."""
@@ -83,7 +110,7 @@ def set_up_arg_parser():
         '--log-file', '-L',
         help=('Location to store log messages; if not specified, log messages'
               ' will be printed to the console (to stderr)'),
-        required=False, metavar='LOG_FILE', default='stderr')
+        required=False, metavar='LOG_FILE')
     general_grp.add_argument(
         '--log-level', '-l',
         help='Defaults to "info"', required=False,
@@ -202,164 +229,6 @@ def set_up_arg_parser():
     return parser
 
 
-# this function is called only by openquake_cli.py, not by the engine server
-def run_job(cfg_file, log_level, log_file, exports='',
-            hazard_calculation_id=None):
-    """
-    Run a job using the specified config file and other options.
-
-    :param str cfg_file:
-        Path to calculation config (INI-style) files.
-    :param str log_level:
-        'debug', 'info', 'warn', 'error', or 'critical'
-    :param str log_file:
-        Path to log file.
-    :param exports:
-        A comma-separated string of export types requested by the user.
-        Currently only 'xml' is supported.
-    """
-    job = engine.job_from_file(
-        cfg_file, getpass.getuser(), log_level, exports,
-        hazard_calculation_id=hazard_calculation_id)
-    calc = engine.run_calc(job, log_level, log_file, exports,
-                           hazard_calculation_id=hazard_calculation_id)
-    duration = calc.monitor.duration
-    calc.monitor.flush()
-    if job.status == 'complete':
-        engine.print_results(job.id, duration, engine.list_outputs)
-    else:
-        sys.exit('Calculation %s failed' % job.id)
-    return job
-
-
-def list_calculations(job_type):
-    """
-    Print a summary of past calculations.
-
-    :param job_type: 'hazard' or 'risk'
-    """
-    jobs = [job for job in models.OqJob.objects.filter(
-        user_name=getpass.getuser()).order_by('start_time')
-            if job.job_type == job_type]
-
-    if len(jobs) == 0:
-        print 'None'
-    else:
-        print ('job_id |     status |          start_time | '
-               '        description')
-        for job in jobs:
-            descr = job.description
-            latest_job = job
-            if latest_job.is_running:
-                status = 'pending'
-            else:
-                if latest_job.status == 'complete':
-                    status = 'successful'
-                else:
-                    status = 'failed'
-            start_time = latest_job.start_time.strftime(
-                '%Y-%m-%d %H:%M:%S %Z'
-            )
-            print ('%6d | %10s | %s| %s' % (
-                job.id, status, start_time, descr)).encode('utf-8')
-
-
-def get_hc_id(hc_id):
-    """
-    If hc_id is negative, return the last calculation of the current user
-    """
-    hc_id = int(hc_id)
-    if hc_id > 0:
-        return hc_id
-    return models.OqJob.objects.filter(
-        user_name=getpass.getuser()).latest('id').id + hc_id + 1
-
-
-def export_outputs(hc_id, target_dir, export_type):
-    # make it possible commands like `oq-engine --eos -1 /tmp`
-    outputs = models.Output.objects.filter(oq_job=hc_id)
-    if not outputs:
-        sys.exit('Found nothing to export for job %s' % hc_id)
-    for output in outputs:
-        print 'Exporting %s...' % output
-        try:
-            export(output.id, target_dir, export_type)
-        except Exception as exc:
-            print exc
-
-
-def export(output_id, target_dir, export_type):
-    """
-    Simple UI wrapper around
-    :func:`openquake.engine.export.core.export` which prints a summary
-    of files exported, if any.
-    """
-    queryset = models.Output.objects.filter(pk=output_id)
-    if not queryset.exists():
-        print 'No output found for OUTPUT_ID %s' % output_id
-        return
-
-    if queryset.all()[0].oq_job.status != "complete":
-        print ("Exporting output produced by a job which did not run "
-               "successfully. Results might be uncomplete")
-
-    the_file = core.export(output_id, target_dir, export_type)
-    if the_file.endswith('.zip'):
-        dname = os.path.dirname(the_file)
-        fnames = zipfile.ZipFile(the_file).namelist()
-        print('Files exported:')
-        for fname in fnames:
-            print(os.path.join(dname, fname))
-    else:
-        print('File exported: %s' % the_file)
-
-
-def _touch_log_file(log_file):
-    """If a log file destination is specified, attempt to open the file in
-    'append' mode ('a'). If the specified file is not writable, an
-    :exc:`IOError` will be raised."""
-    open(abspath(log_file), 'a').close()
-
-
-def delete_uncompleted_calculations():
-    for job in models.OqJob.objects.filter(
-            oqjob__user_name=getpass.getuser()).exclude(
-            oqjob__status="successful"):
-        del_calc(job.id, True)
-
-
-def del_calc(job_id, confirmed=False):
-    """
-    Delete a calculation and all associated outputs.
-    """
-    if confirmed or confirm(
-            'Are you sure you want to delete this calculation and all '
-            'associated outputs?\nThis action cannot be undone. (y/n): '):
-        try:
-            engine.del_calc(job_id)
-        except RuntimeError as err:
-            print err
-
-
-def confirm(prompt):
-    """
-    Ask for confirmation, given a ``prompt`` and return a boolean value.
-    """
-    while True:
-        try:
-            answer = raw_input(prompt)
-        except KeyboardInterrupt:
-            # the user presses ctrl+c, just say 'no'
-            return False
-
-        answer = answer.strip().lower()
-
-        if answer not in ('y', 'n'):
-            print 'Please enter y or n'
-            continue
-        return answer == 'y'
-
-
 def main():
     arg_parser = set_up_arg_parser()
 
@@ -380,16 +249,12 @@ def main():
         logging.basicConfig(level=logging.INFO)
 
     if args.config_file:
-        os.environ[config.OQ_CONFIG_FILE_VAR] = \
+        os.environ[utils.config.OQ_CONFIG_FILE_VAR] = \
             abspath(expanduser(args.config_file))
-        config.refresh()
+        utils.config.refresh()
 
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
-
-    if args.make_html_report:
-        print 'Written', make_report(conn, args.make_html_report)
-        sys.exit(0)
 
     if args.upgrade_db:
         logs.set_level('info')
@@ -398,7 +263,7 @@ def main():
         print msg
         if msg.startswith('Your database is already updated'):
             pass
-        elif args.yes or confirm('Proceed? (y/n) '):
+        elif args.yes or utils.confirm('Proceed? (y/n) '):
             upgrade_manager.upgrade_db(conn)
         sys.exit(0)
 
@@ -410,11 +275,16 @@ def main():
         print upgrade_manager.what_if_I_upgrade(conn)
         sys.exit(0)
 
+    # check if the db is outdated
+    outdated = dbcmd('check_outdated')
+    if outdated:
+        sys.exit(outdated)
+
     # hazard or hazard+risk
     hc_id = args.hazard_calculation_id
     if hc_id and int(hc_id) < 0:
         # make it possible commands like `oq-engine --run job_risk.ini --hc -1`
-        hc_id = get_hc_id(int(hc_id))
+        hc_id = dbcmd('get_hc_id', int(hc_id))
     if args.run:
         job_inis = map(expanduser, args.run.split(','))
         if len(job_inis) not in (1, 2):
@@ -427,28 +297,28 @@ def main():
 
         if len(job_inis) == 2:
             # run hazard
-            job = run_job(job_inis[0], args.log_level,
-                          log_file, args.exports)
+            job_id = run_job(job_inis[0], args.log_level,
+                             log_file, args.exports)
             # run risk
             run_job(job_inis[1], args.log_level, log_file,
-                    args.exports, hazard_calculation_id=job.id)
+                    args.exports, hazard_calculation_id=job_id)
         else:
             run_job(
                 expanduser(args.run), args.log_level, log_file,
                 args.exports, hazard_calculation_id=hc_id)
     # hazard
     elif args.list_hazard_calculations:
-        list_calculations('hazard')
+        dbcmd('list_calculations', 'hazard')
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         run_job(expanduser(args.run_hazard), args.log_level,
                 log_file, args.exports)
     elif args.delete_calculation is not None:
-        del_calc(args.delete_calculation, args.yes)
+        dbcmd('delete_calculation', args.delete_calculation, args.yes)
     # risk
     elif args.list_risk_calculations:
-        list_calculations('risk')
+        dbcmd('list_calculations', 'risk')
     elif args.run_risk is not None:
         if args.hazard_calculation_id is None:
             sys.exit(MISSING_HAZARD_MSG)
@@ -460,22 +330,29 @@ def main():
             hazard_calculation_id=hc_id)
 
     # export
+    elif args.make_html_report:
+        print 'Written', make_report(conn, args.make_html_report)
+        sys.exit(0)
+
     elif args.list_outputs is not None:
-        engine.list_outputs(get_hc_id(args.list_outputs))
+        hc_id = dbcmd('get_hc_id', args.list_outputs)
+        dbcmd('list_outputs', hc_id)
     elif args.show_view is not None:
         job_id, view_name = args.show_view
         print views.view(view_name, datastore.read(int(job_id)))
 
     elif args.export_output is not None:
         output_id, target_dir = args.export_output
-        export(int(output_id), expanduser(target_dir), exports)
+        dbcmd('export_output', int(output_id), expanduser(target_dir),
+                 exports)
 
     elif args.export_outputs is not None:
+        hc_id = dbcmd('get_hc_id', args.list_outputs)
         job_id, target_dir = args.export_outputs
-        export_outputs(get_hc_id(job_id), expanduser(target_dir), exports)
+        dbcmd('export_outputs', hc_id, expanduser(target_dir), exports)
 
     elif args.delete_uncompleted_calculations:
-        delete_uncompleted_calculations()
+        dbcmd('delete_uncompleted_calculations')
     else:
         arg_parser.print_usage()
 

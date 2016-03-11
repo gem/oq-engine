@@ -18,14 +18,11 @@
 
 import sys
 import logging
-import traceback
-from concurrent.futures import ThreadPoolExecutor
 from multiprocessing.connection import Client, Listener
 
 from openquake.baselib.hdf5 import Hdf5Dataset
 from openquake.commonlib.parallel import safely_call
 from openquake.commonlib.datastore import read
-from openquake.engine import engine
 from openquake.engine.utils import config
 
 PORT = int(config.get('cmdserver', 'port'))
@@ -33,52 +30,10 @@ ADDRESS = ('', PORT)
 AUTHKEY = config.get('cmdserver', 'authkey')
 DEFAULT_LOG_LEVEL = 'progress'
 
-# recommended setting for development
-# with processes it works only once and then the db connection is closed
-executor = ThreadPoolExecutor(max_workers=1)
-executor.future = {}  # job_id -> future
-
 # global commands
 
 exit = sys.exit
 info = logging.info
-
-
-def run_calc(job, log_file=None, hazard_calculation_id=None):
-    """
-    Run a calculation given the calculation ID. It is assumed that the
-    entire calculation profile is already loaded into the oq-engine database
-    and is ready to execute. This function never fails; errors are trapped
-    but not logged since the engine already logs them.
-
-    :param job:
-        the job object
-    :param log_file:
-        the name of the log file
-    :param hazard_calculation_id:
-        the previous calculation, if any
-    """
-    try:
-        calc = engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, '',
-                               hazard_calculation_id)
-    except:  # catch the errors before task spawning
-        # do not log the errors, since the engine already does that
-        exctype, exc, tb = sys.exc_info()
-        einfo = ''.join(traceback.format_tb(tb))
-        einfo += '%s: %s' % (exctype.__name__, exc)
-        raise
-    calc.datastore.close()
-
-
-def submit_job(job_ini, user_name, hazard_job_id=None, logfile=None):
-    """
-    Create a job object from the given job.ini file in the job directory
-    and submit it to the job queue. Returns the job ID.
-    """
-    job = engine.job_from_file(job_ini, user_name, 'info', '', hazard_job_id)
-    fut = executor.submit(run_calc, job, logfile, hazard_job_id)
-    executor.future[job.id] = fut
-    return job.id
 
 
 class CmdServer(object):
