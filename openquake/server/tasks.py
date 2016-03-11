@@ -46,26 +46,6 @@ except ImportError:
     sys.path.append('/usr/share/openquake/engine')
 
 
-class ProgressHandler(logging.Handler):
-    """
-    A logging handler to update the status of the job as seen
-    from the platform.
-    """
-    def __init__(self, callback_url, job):
-        logging.Handler.__init__(self)
-        self.callback_url = callback_url
-        self.job = job
-
-    def emit(self, record):
-        """
-        Update the status field on icebox_calculation with the percentage
-        """
-        update_calculation(
-            self.callback_url,
-            status=record.getMessage(),
-            description=self.job.description)
-
-
 def safely_call(func, *args):
     """
     Call the given procedure with the given arguments safely, i.e.
@@ -78,8 +58,7 @@ def safely_call(func, *args):
 
 
 def run_calc(
-        job, calc_dir, callback_url=None, log_file=None,
-        hazard_calculation_id=None):
+        job, calc_dir, log_file=None, hazard_calculation_id=None):
     """
     Run a calculation given the calculation ID. It is assumed that the
     entire calculation profile is already loaded into the oq-engine database
@@ -90,17 +69,11 @@ def run_calc(
         the job object
     :param calc_dir:
         the directory with the input files
-    :param callback_url:
-        the URL to call at the end of the calculation
     :param log_file:
         the name of the log file
     :param hazard_calculation_id:
         the previous calculation, if any
     """
-    update_calculation(callback_url, status="started", engine_id=job.id)
-
-    progress_handler = ProgressHandler(callback_url, job)
-    logging.root.addHandler(progress_handler)
     try:
         calc = engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, '',
                                hazard_calculation_id)
@@ -109,20 +82,6 @@ def run_calc(
         exctype, exc, tb = sys.exc_info()
         einfo = ''.join(traceback.format_tb(tb))
         einfo += '%s: %s' % (exctype.__name__, exc)
-        update_calculation(callback_url, status="failed", einfo=einfo)
         raise
-    finally:
-        logging.root.removeHandler(progress_handler)
     calc.datastore.close()
     shutil.rmtree(calc_dir)
-
-
-def update_calculation(callback_url=None, **query):
-    """
-    Update the log by POSTing `query` data to `callback_url`.
-    """
-    if callback_url is None:
-        return
-    # post to an external service
-    url = urllib2.urlopen(callback_url, data=urllib.urlencode(query))
-    url.close()
