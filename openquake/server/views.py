@@ -40,17 +40,15 @@ from django.template import RequestContext
 from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib import nrml, readinput, valid
 from openquake.commonlib.parallel import safely_call
-from openquake.engine import engine as oq_engine, __version__ as oqversion
+from openquake.engine import __version__ as oqversion
 from openquake.server.db import models as oqe_models
 from openquake.engine.export import core
 from openquake.engine.export.core import export_output, DataStoreExportError
-from openquake.server import tasks, executor, utils
+from openquake.server import tasks, executor, utils, db
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
 JSON = 'application/json'
-
-DEFAULT_LOG_LEVEL = 'progress'
 
 #: For exporting calculation outputs, the client can request a specific format
 #: (xml, geojson, csv, etc.). If the client does not specify give them (NRML)
@@ -358,7 +356,8 @@ def run_calc(request):
     user = utils.get_user_data(request)
 
     try:
-        job, _fut = submit_job(einfo[0], temp_dir, user['name'], hazard_job_id)
+        job_id, _fut = submit_job(
+            einfo[0], temp_dir, user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = exc.args[0]
@@ -370,9 +369,9 @@ def run_calc(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        calc = oqe_models.OqJob.objects.get(pk=job.id)
+        calc = oqe_models.OqJob.objects.get(pk=job_id)
         response_data = vars(calc.get_oqparam())
-        response_data['job_id'] = job.id
+        response_data['job_id'] = job_id
         response_data['status'] = calc.status
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
@@ -386,16 +385,16 @@ def submit_job(job_file, temp_dir, user_name,
     and submit it to the job queue.
     """
     ini = os.path.join(temp_dir, job_file)
-    job, exctype, monitor = safely_call(
-        oq_engine.job_from_file, (ini, user_name, DEFAULT_LOG_LEVEL, '',
-                                  hazard_job_id))
+    err, exctype, monitor = safely_call(
+        db.actions.job_from_file, (ini, user_name, hazard_job_id))
     if exctype:
-        raise exctype(job)
+        raise exctype(err)
 
+    job_id, oqparam = err
     future = executor.submit(
-        tasks.safely_call, tasks.run_calc, job, temp_dir,
-        logfile, hazard_job_id)
-    return job, future
+        tasks.safely_call, tasks.run_calc, job_id, oqparam,
+        temp_dir, logfile, hazard_job_id)
+    return job_id, future
 
 
 def _get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
@@ -452,7 +451,7 @@ def calc_results(request, calc_id):
     # OrderedDict([('agg_loss_curve', ['xml', 'csv']), ...])
     output_types = groupby(export_output, lambda oe: oe[0],
                            lambda oes: [e for o, e in oes])
-    results = oq_engine.get_outputs(calc_id)
+    results = db.actions.get_outputs(calc_id)
     if not results:
         return HttpResponseNotFound()
 
