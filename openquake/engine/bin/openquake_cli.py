@@ -40,7 +40,7 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR") is not None:
     )
 
 from openquake.engine import utils
-from openquake.engine.logs import dbserver
+from openquake.engine.logs import dbcmd
 
 utils.config.abort_if_no_config_available()
 
@@ -86,13 +86,13 @@ def run_job(cfg_file, log_level, log_file, exports='',
     :param hazard_calculation_id:
         ID of the previous calculation or None
     """
-    job_id, oqparam = dbserver(
+    job_id, oqparam = dbcmd(
         'job_from_file', cfg_file, getpass.getuser(), hazard_calculation_id)
     calc = engine.run_calc(job_id, oqparam, log_level, log_file, exports,
                            hazard_calculation_id=hazard_calculation_id)
     duration = calc.monitor.duration  # set this before monitor.flush()
     calc.monitor.flush()
-    dbserver('print_results', job_id, duration)
+    dbcmd('print_results', job_id, duration)
     return job_id
 
 
@@ -274,7 +274,7 @@ def main():
         sys.exit(0)
 
     # check if the db is outdated
-    outdated = dbserver('check_outdated')
+    outdated = dbcmd('check_outdated')
     if outdated:
         sys.exit(outdated)
 
@@ -282,7 +282,7 @@ def main():
     hc_id = args.hazard_calculation_id
     if hc_id and int(hc_id) < 0:
         # make it possible commands like `oq-engine --run job_risk.ini --hc -1`
-        hc_id = dbserver('get_hc_id', int(hc_id))
+        hc_id = dbcmd('get_hc_id', int(hc_id))
     if args.run:
         job_inis = map(expanduser, args.run.split(','))
         if len(job_inis) not in (1, 2):
@@ -306,17 +306,17 @@ def main():
                 args.exports, hazard_calculation_id=hc_id)
     # hazard
     elif args.list_hazard_calculations:
-        dbserver('list_calculations', 'hazard')
+        dbcmd('list_calculations', 'hazard')
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         run_job(expanduser(args.run_hazard), args.log_level,
                 log_file, args.exports)
     elif args.delete_calculation is not None:
-        dbserver('delete_calculation', args.delete_calculation, args.yes)
+        dbcmd('delete_calculation', args.delete_calculation, args.yes)
     # risk
     elif args.list_risk_calculations:
-        dbserver('list_calculations', 'risk')
+        dbcmd('list_calculations', 'risk')
     elif args.run_risk is not None:
         if args.hazard_calculation_id is None:
             sys.exit(MISSING_HAZARD_MSG)
@@ -333,24 +333,24 @@ def main():
         sys.exit(0)
 
     elif args.list_outputs is not None:
-        hc_id = dbserver('get_hc_id', args.list_outputs)
-        dbserver('list_outputs', hc_id)
+        hc_id = dbcmd('get_hc_id', args.list_outputs)
+        dbcmd('list_outputs', hc_id)
     elif args.show_view is not None:
         job_id, view_name = args.show_view
         print views.view(view_name, datastore.read(int(job_id)))
 
     elif args.export_output is not None:
         output_id, target_dir = args.export_output
-        dbserver('export_output', int(output_id), expanduser(target_dir),
+        dbcmd('export_output', int(output_id), expanduser(target_dir),
                  exports)
 
     elif args.export_outputs is not None:
-        hc_id = dbserver('get_hc_id', args.list_outputs)
+        hc_id = dbcmd('get_hc_id', args.list_outputs)
         job_id, target_dir = args.export_outputs
-        dbserver('export_outputs', hc_id, expanduser(target_dir), exports)
+        dbcmd('export_outputs', hc_id, expanduser(target_dir), exports)
 
     elif args.delete_uncompleted_calculations:
-        dbserver('delete_uncompleted_calculations')
+        dbcmd('delete_uncompleted_calculations')
     else:
         arg_parser.print_usage()
 
