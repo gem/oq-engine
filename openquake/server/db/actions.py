@@ -188,7 +188,7 @@ def delete_uncompleted_calculations():
         del_calc(job.id, True)
 
 
-def engine_del_calc(job_id, confirmed=False):
+def delete_calculation(job_id, confirmed=False):
     """
     Delete a calculation and all associated outputs.
     """
