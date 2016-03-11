@@ -37,7 +37,7 @@ from django.core import exceptions
 
 from openquake.baselib.general import writetmp as touch
 
-from openquake.server.db import models
+from openquake.server.db import actions
 from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine.utils import config
@@ -98,16 +98,15 @@ def get_data_path(file_name):
     return os.path.join(DATA_DIR, file_name)
 
 
-def run_job(cfg, exports='xml,csv', hazard_calculation_id=None,
-            hazard_output_id=None, **params):
+def run_job(cfg, exports='xml,csv', hazard_calculation_id=None, **params):
     """
     Given the path to a job config file and a hazard_calculation_id
     or a output, run the job.
 
     :returns: a calculator object
     """
-    job = get_job(cfg, hazard_calculation_id=hazard_calculation_id,
-                  hazard_output_id=hazard_output_id, **params)
+    job = actions.job_from_file(
+        cfg, 'openquake', 'error', [], hazard_calculation_id, **params)
     job.is_running = True
     job.save()
 
@@ -288,19 +287,3 @@ def random_string(length=16):
     while len(result) < length:
         result += random.choice(string.letters + string.digits)
     return result
-
-
-def get_job(cfg, username="openquake", hazard_calculation_id=None,
-            hazard_output_id=None, **extras):
-    """
-    Given a path to a config file and a hazard_calculation_id
-    (or, alternatively, a hazard_output_id, create a
-    :class:`openquake.server.db.models.OqJob` object for a risk calculation.
-    """
-    if hazard_output_id and not hazard_calculation_id:
-        hazard_calculation_id = models.Output.objects.get(
-            pk=hazard_output_id).oq_job.id
-    return engine.job_from_file(
-        cfg, username, 'error', [],
-        hazard_calculation_id=hazard_calculation_id,
-        hazard_output_id=hazard_output_id, **extras)
