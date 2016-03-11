@@ -58,15 +58,15 @@ def safely_call(func, *args):
 
 
 def run_calc(
-        job, calc_dir, log_file=None, hazard_calculation_id=None):
+        job_id, oqparam, calc_dir, log_file=None, hazard_calculation_id=None):
     """
     Run a calculation given the calculation ID. It is assumed that the
     entire calculation profile is already loaded into the oq-engine database
     and is ready to execute. This function never fails; errors are trapped
     but not logged since the engine already logs them.
 
-    :param job:
-        the job object
+    :param job_id:
+        the job ID
     :param calc_dir:
         the directory with the input files
     :param log_file:
@@ -75,8 +75,8 @@ def run_calc(
         the previous calculation, if any
     """
     try:
-        calc = engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, '',
-                               hazard_calculation_id)
+        calc = engine.run_calc(job_id, oqparam, DEFAULT_LOG_LEVEL, log_file,
+                               '', hazard_calculation_id)
     except:  # catch the errors before task spawning
         # do not log the errors, since the engine already does that
         exctype, exc, tb = sys.exc_info()
