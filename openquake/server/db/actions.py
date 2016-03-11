@@ -20,15 +20,14 @@ import sys
 import zipfile
 import getpass
 import operator
+from datetime import datetime
 
 from django.core import exceptions
 from django import db
 
-from openquake.baselib.performance import Monitor
-from openquake.commonlib import datastore, readinput, oqvalidation, export
-from openquake.calculators import base
+from openquake.commonlib import datastore, readinput, export
 from openquake.server.db import models
-from openquake.engine import utils, logs
+from openquake.engine import utils
 from openquake.engine.export import core
 from openquake.server.db.schema.upgrades import upgrader
 
@@ -189,7 +188,7 @@ def delete_uncompleted_calculations():
         del_calc(job.id, True)
 
 
-def del_calc(job_id, confirmed=False):
+def engine_del_calc(job_id, confirmed=False):
     """
     Delete a calculation and all associated outputs.
     """
@@ -272,56 +271,42 @@ def job_from_file(cfg_file, username, log_level='info', exports='',
         Extra parameters (used only in the tests to override the params)
 
     :returns:
-        :class:`openquake.server.db.models.OqJob` object
-    :raises:
-        `RuntimeError` if the input job configuration is not valid
+        a pair (job_id, oqparam)
     """
-    # read calculation params and create the calculation profile
-    params = readinput.get_params([cfg_file])
-    params.update(extras)
-    oq = oqvalidation.OqParam(
-        calculation_mode=params['calculation_mode'],
-        description=params['description'],
-        export_dir=params.get('export_dir', os.path.expanduser('~')))
-    # create a job and a calculator
+    oq = readinput.get_oqparam(cfg_file)
+    vars(oq).update(hazard_calculation_id=hazard_calculation_id, **extras)
     job = create_job(oq.calculation_mode, oq.description,
                      username, hazard_calculation_id)
-    monitor = Monitor('total runtime', measuremem=True)
-    job.calc = base.calculators(oq, monitor, calc_id=job.id)
-    with logs.handle(job, log_level):
-        job.calc.oqparam = readinput.get_oqparam(params)
-        job.calc.save_params()
-    return job
+    return job.id, oq
 
 DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset_and_collapse_map')
 
 
-def expose_outputs(dstore, job):
+def expose_outputs(job_id):
     """
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
 
-    :param dstore: a datastore instance
-    :param job: an OqJob instance
+    :param job_id: job ID
     """
     exportable = set(ekey[0] for ekey in export.export)
-    oq = job.calc.oqparam
-
-    # small hack: remove the sescollection outputs from scenario
-    # calculators, as requested by Vitor
-    calcmode = oq.calculation_mode
-    if 'scenario' in calcmode and 'sescollection' in exportable:
-        exportable.remove('sescollection')
-    uhs = oq.uniform_hazard_spectra
-    if uhs and 'hmaps' in dstore:
-        models.Output.objects.create_output(job, 'uhs', ds_key='uhs')
-
-    for key in dstore:
-        if key in exportable:
-            if key == 'realizations' and len(dstore['realizations']) == 1:
-                continue  # there is no point in exporting a single realization
-            models.Output.objects.create_output(
-                job, DISPLAY_NAME.get(key, key), ds_key=key)
+    job = models.OqJob.objects.get(pk=job_id)
+    with datastore.read(
+            job.id, datadir=os.path.dirname(job.ds_calc_dir)) as dstore:
+        # small hack: remove the sescollection outputs from scenario
+        # calculators, as requested by Vitor
+        calcmode = job.calculation_mode
+        if 'scenario' in calcmode and 'sescollection' in exportable:
+            exportable.remove('sescollection')
+        uhs = dstore.get_attr('/', 'uniform_hazard_spectra')
+        if uhs and 'hmaps' in dstore:
+            models.Output.objects.create_output(job, 'uhs', ds_key='uhs')
+        for key in dstore:
+            if key in exportable:
+                if key == 'realizations' and len(dstore['realizations']) == 1:
+                    continue  # do not export a single realization
+                models.Output.objects.create_output(
+                    job, DISPLAY_NAME.get(key, key), ds_key=key)
 
 
 def check_hazard_risk_consistency(haz_job, risk_mode):
@@ -350,6 +335,15 @@ def check_hazard_risk_consistency(haz_job, risk_mode):
             (risk_mode, ok_mode, prev_mode))
 
 
+def finish(job_id, status):
+    """
+    Set the job columns `is_running`, `status`, and `stop_time`
+    """
+    job = models.OqJob.objects.get(pk=job_id)
+    job.is_running = False
+    job.status = status
+    job.stop_time = datetime.utcnow()
+    job.save()
 
 
 def del_calc(job_id):
@@ -396,3 +390,12 @@ def del_calc(job_id):
         pass
     else:
         print('Removed %s' % job.ds_calc_dir + '.hdf5')
+
+
+def log(job_id, timestamp, level, process, message):
+    """
+    Write a log record in the database
+    """
+    models.Log.objects.create(
+        job_id=job_id, timestamp=timestamp,
+        level=level, process=process, message=message)

@@ -358,7 +358,8 @@ def run_calc(request):
     user = utils.get_user_data(request)
 
     try:
-        job, _fut = submit_job(einfo[0], temp_dir, user['name'], hazard_job_id)
+        job_id, _fut = submit_job(
+            einfo[0], temp_dir, user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = exc.args[0]
@@ -370,9 +371,9 @@ def run_calc(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        calc = oqe_models.OqJob.objects.get(pk=job.id)
+        calc = oqe_models.OqJob.objects.get(pk=job_id)
         response_data = vars(calc.get_oqparam())
-        response_data['job_id'] = job.id
+        response_data['job_id'] = job_id
         response_data['status'] = calc.status
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
@@ -386,16 +387,17 @@ def submit_job(job_file, temp_dir, user_name,
     and submit it to the job queue.
     """
     ini = os.path.join(temp_dir, job_file)
-    job, exctype, monitor = safely_call(
+    err, exctype, monitor = safely_call(
         db.actions.job_from_file, (ini, user_name, DEFAULT_LOG_LEVEL, '',
                                    hazard_job_id))
     if exctype:
-        raise exctype(job)
+        raise exctype(err)
 
+    job_id, oqparam = err
     future = executor.submit(
-        tasks.safely_call, tasks.run_calc, job, temp_dir,
-        logfile, hazard_job_id)
-    return job, future
+        tasks.safely_call, tasks.run_calc, job_id, oqparam,
+        temp_dir, logfile, hazard_job_id)
+    return job_id, future
 
 
 def _get_calcs(request_get_dict, user_name, user_is_super=False, id=None):

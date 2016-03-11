@@ -24,8 +24,9 @@ file formats."""
 import os
 import ast
 import zipfile
+import logging
+
 from openquake.server.db import models
-from openquake.engine.logs import LOG
 from openquake.baselib.general import CallableDict
 from openquake.commonlib.export import export as ds_export
 from openquake.commonlib import datastore
@@ -103,7 +104,7 @@ def export(output_id, target, export_type='xml,geojson,csv'):
         key = (rtype, exptype)
         if key in export_output:
             return export_output(key, output, target)
-    LOG.warn(
+    logging.warn(
         'No "%(fmt)s" exporter is available for "%(rtype)s"'
         ' outputs' % dict(fmt=export_type, rtype=rtype))
 
