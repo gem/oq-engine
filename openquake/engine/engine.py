@@ -97,6 +97,8 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         try:
             _do_run_calc(calc, exports, hazard_calculation_id)
             logs.dbserver('finish', job_id, 'complete')
+            logs.dbserver('expose_outputs', job_id)
+            logs.LOG.info('Calculation %d finished correctly', job_id)
         except:
             tb = traceback.format_exc()
             try:
@@ -116,7 +118,6 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
                 # log the finalization error only if there is no real error
                 if tb == 'None\n':
                     logs.LOG.error('finalizing', exc_info=True)
-        logs.dbserver('expose_outputs', job_id)
     return calc
 
 
