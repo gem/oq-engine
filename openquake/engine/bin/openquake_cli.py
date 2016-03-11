@@ -24,6 +24,7 @@ import logging
 import argparse
 import os
 import sys
+import socket
 import getpass
 
 from os.path import abspath
@@ -241,12 +242,20 @@ def main():
         sys.exit(0)
 
     if args.run or args.run_hazard or args.run_risk:
-        # check the database version and exit if the db is outdated
         # the logging will be configured in engine.py
-        upgrader.check_versions(conn)
+        pass
     else:
         # configure a basic logging
         logging.basicConfig(level=logging.INFO)
+
+    # check if the DbServer is up
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    port = int(utils.config.get('dbserver', 'port'))
+    err = sock.connect_ex(('', port))
+    sock.close()
+    if err:
+        sys.exit('Please start the DbServer: '
+                 'python -m openquake.server.dbserver')
 
     if args.config_file:
         os.environ[utils.config.OQ_CONFIG_FILE_VAR] = \
