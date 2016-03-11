@@ -31,9 +31,8 @@ from openquake.engine import engine
 from openquake.engine.tests.utils import helpers
 
 
-def get_job(cfg, username, **params):
-    job_id, oq = actions.job_from_file(
-        cfg, username, 'error', [], **params)
+def get_job(cfg, username, hazard_calculation_id=None):
+    job_id, oq = actions.job_from_file(cfg, username, hazard_calculation_id)
     return models.OqJob.objects.get(pk=job_id)
 
 
