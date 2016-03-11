@@ -49,8 +49,11 @@ UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
 UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 
 
-# first of all check the database version and exit if the db is outdated
-upgrader.check_versions(db.connection)
+def check_outdated():
+    """
+    Check if the db is outdated
+    """
+    return upgrader.check_versions(db.connection)
 
 
 def create_job(calc_mode, description, user_name="openquake", hc_id=None):
