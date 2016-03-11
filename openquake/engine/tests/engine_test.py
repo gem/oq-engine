@@ -32,8 +32,9 @@ from openquake.engine.tests.utils import helpers
 
 
 def get_job(cfg, username, **params):
-    return actions.job_from_file(
+    job_id, oq = actions.job_from_file(
         cfg, username, 'error', [], **params)
+    return models.OqJob.objects.get(pk=job_id)
 
 
 class FakeJob(object):
@@ -109,11 +110,11 @@ class RunCalcTestCase(unittest.TestCase):
     """
     def test(self):
         cfg = helpers.get_data_path('event_based_hazard/job.ini')
-        job = actions.job_from_file(cfg, 'test_user')
+        job_id, oq = actions.job_from_file(cfg, 'test_user')
         with tempfile.NamedTemporaryFile() as temp:
             with self.assertRaises(ZeroDivisionError), mock.patch(
                     'openquake.engine.engine._do_run_calc', lambda *args: 1/0):
-                engine.run_calc(job, 'info', temp.name, exports=[])
+                engine.run_calc(job_id, oq, 'info', temp.name, exports=[])
             logged = open(temp.name).read()
 
             # make sure the real error has been logged
