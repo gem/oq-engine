@@ -25,6 +25,8 @@ import os.path
 import logging
 from datetime import datetime
 from contextlib import contextmanager
+from multiprocessing.connection import Client
+from openquake.engine.utils.config import DBS_ADDRESS, DBS_AUTHKEY
 from openquake.server.db import actions
 
 
@@ -45,7 +47,7 @@ LOG_FORMAT = ('[%(asctime)s job #%(job_id)s %(hostname)s '
 LOG = logging.getLogger()
 
 
-def dbcmd(action, *args):
+def _dbcmd(action, *args):
     """
     A fake dispatcher to the database server.
 
@@ -53,6 +55,24 @@ def dbcmd(action, *args):
     :param args: arguments
     """
     return getattr(actions, action)(*args)
+
+
+def dbcmd(action, *args):
+    """
+    A dispatcher to the database server.
+
+    :param action: database action to perform
+    :param args: arguments
+    """
+    cl = Client(DBS_ADDRESS, authkey=DBS_AUTHKEY)
+    try:
+        cl.send((action,) + args)
+        res, etype = cl.recv()
+    finally:
+        cl.close()
+    if etype:
+        raise etype(res)
+    return res
 
 
 def touch_log_file(log_file):

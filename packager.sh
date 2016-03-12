@@ -323,7 +323,7 @@ _devtest_innervm_run () {
 
     ssh $lxc_ip "sudo service postgresql restart"
     ssh $lxc_ip "set -e ; sudo su postgres -c \"cd oq-engine ; openquake/engine/bin/oq_create_db --yes --db-name=openquake2\""
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine ; bin/oq-engine --upgrade-db --yes"
+    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine ; python -m openquake.server.dbserver ; bin/oq-engine --upgrade-db --yes"
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         if [ -n "$GEM_DEVTEST_SKIP_SLOW_TESTS" ]; then
@@ -512,7 +512,7 @@ _pkgtest_innervm_run () {
     # configure the machine to run tests
     ssh $lxc_ip "sudo service postgresql restart"
     # XXX: should the --upgrade-db command go in the postint script?
-    ssh $lxc_ip "set -e; oq-engine --upgrade-db --yes"
+    ssh $lxc_ip "set -e; python -m openquake.server.dbserver ; oq-engine --upgrade-db --yes"
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # Is the GEM_USE_CELERY flag is set, use celery to run the demos

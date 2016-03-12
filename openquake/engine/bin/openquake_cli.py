@@ -88,8 +88,9 @@ def run_job(cfg_file, log_level, log_file, exports='',
     :param hazard_calculation_id:
         ID of the previous calculation or None
     """
+    job_ini = os.path.abspath(cfg_file)
     job_id, oqparam = dbcmd(
-        'job_from_file', cfg_file, getpass.getuser(), hazard_calculation_id)
+        'job_from_file', job_ini, getpass.getuser(), hazard_calculation_id)
     calc = engine.run_calc(job_id, oqparam, log_level, log_file, exports,
                            hazard_calculation_id=hazard_calculation_id)
     duration = calc.monitor.duration  # set this before monitor.flush()
