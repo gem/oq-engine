@@ -85,6 +85,13 @@ def create_job(calc_mode, description, user_name="openquake", hc_id=None):
     return job
 
 
+def delete_uncompleted_calculations():
+    for job in models.OqJob.objects.filter(
+            oqjob__user_name=getpass.getuser()).exclude(
+            oqjob__status="successful"):
+        del_calc(job.id, True)
+
+
 def get_hc_id(hc_id):
     """
     If hc_id is negative, return the last calculation of the current user
@@ -182,13 +189,6 @@ def export_output(output_id, target_dir, export_type):
         print('File exported: %s' % the_file)
 
 
-def delete_uncompleted_calculations():
-    for job in models.OqJob.objects.filter(
-            oqjob__user_name=getpass.getuser()).exclude(
-            oqjob__status="successful"):
-        del_calc(job.id, True)
-
-
 def delete_calculation(job_id, confirmed=False):
     """
     Delete a calculation and all associated outputs.
@@ -222,17 +222,6 @@ def list_outputs(job_id, full=True):
     print_outputs_summary(outputs, full)
 
 
-# this is patched in the tests
-def get_outputs(job_id):
-    """
-    :param job_id:
-        ID of a calculation.
-    :returns:
-        A sequence of :class:`openquake.server.db.models.Output` objects
-    """
-    return models.Output.objects.filter(oq_job=job_id)
-
-
 def print_outputs_summary(outputs, full=True):
     """
     List of :class:`openquake.server.db.models.Output` objects.
@@ -250,6 +239,18 @@ def print_outputs_summary(outputs, full=True):
         if truncated:
             print ('Some outputs where not shown. You can see the full list '
                    'with the command\n`oq-engine --list-outputs`')
+
+
+
+# this is patched in the tests
+def get_outputs(job_id):
+    """
+    :param job_id:
+        ID of a calculation.
+    :returns:
+        A sequence of :class:`openquake.server.db.models.Output` objects
+    """
+    return models.Output.objects.filter(oq_job=job_id)
 
 
 @db.transaction.atomic
