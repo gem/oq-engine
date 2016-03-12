@@ -497,6 +497,11 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                 'gmfs_nbytes'] = get_gmfs_nbytes(
                 len(self.sitecol), len(self.oqparam.imtls),
                 self.rlzs_assoc, sescollection)
+        numsites = self.datastore['rup_info']['numsites']
+        multiplicity = self.datastore['rup_info']['multiplicity']
+        spr = numpy.average(numsites, weights=multiplicity)
+        self.datastore.set_attrs('rup_info', sites_per_rupture=spr)
+        self.datastore.set_nbytes('rup_info')
 
 
 # ######################## GMF calculator ############################ #
