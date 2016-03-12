@@ -43,6 +43,13 @@ from openquake.calculators.classical import ClassicalCalculator
 
 # ######################## rupture calculator ############################ #
 
+U16 = numpy.uint16
+U32 = numpy.uint32
+
+rup_info_dt = numpy.dtype([
+    ('col', U16), ('rupserial', U32),
+    ('multiplicity', U16), ('numsites', U32)])
+
 # a numpy record storing the number of ruptures and ground motion fields
 # for each realization
 counts_dt = numpy.dtype([('rup', int), ('gmf', int)])
@@ -298,6 +305,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         max_dist = oq.maximum_distance['default']
 
     sesruptures = []
+    rup_info = []
     calc_times = []
 
     # Compute and save stochastic event sets
@@ -312,14 +320,16 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        for rup, rups in build_ses_ruptures(
+        for rup, rups, rupi in build_ses_ruptures(
                 src, num_occ_by_rup, s_sites, max_dist, sitecol,
                 oq.random_seed):
             sesruptures.extend(rups)
+            rup_info.append(rupi)
         dt = time.time() - t0
         calc_times.append((src.id, dt))
     res = AccumDict({trt_model_id: sesruptures})
     res.calc_times = calc_times
+    res.rup_info = numpy.array(rup_info, rup_info_dt)
     return res
 
 
@@ -358,6 +368,7 @@ def build_ses_ruptures(
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated SESRuptures>)
     """
+    totsites = len(sitecol)
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         # filtering ruptures
         r_sites = filter_sites_by_distance_to_rupture(
@@ -366,23 +377,30 @@ def build_ses_ruptures(
             # ignore ruptures which are far away
             del num_occ_by_rup[rup]  # save memory
             continue
-        indices = r_sites.indices if len(r_sites) < len(sitecol) \
-            else None  # None means that nothing was filtered
+        if len(r_sites) < totsites:
+            indices = r_sites.indices
+            numsites = len(indices)
+        else:
+            indices = None  # None means that nothing was filtered
+            numsites = totsites
 
         # creating SESRuptures
         sesruptures = []
+        multiplicity = 0
+        serial = rup.seed - random_seed + 1
         rnd = random.Random(rup.seed)
         for (col_idx, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
                 tag = 'col=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-                    col_idx, ses_idx, src.source_id,
-                    rup.seed - random_seed + 1, occ_no)
+                    col_idx, ses_idx, src.source_id, serial, occ_no)
                 sesruptures.append(
                     SESRupture(rup, indices, rnd.randint(0, MAX_INT),
                                tag, col_idx))
+                multiplicity += 1
         if sesruptures:
-            yield rup, sesruptures
+            rup_info = (col_idx, serial, multiplicity, numsites)
+            yield rup, sesruptures, rup_info
 
 
 @base.calculators.add('event_based_rupture')
@@ -408,10 +426,13 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
 
     def agg_curves(self, acc, val):
         """
-        For the rupture calculator, just increment the AccumDict
-        trt_id -> ruptures
+        For the rupture calculator, increment the AccumDict trt_id -> ruptures
+        and save the rup_info
         """
         acc += val
+        if not hasattr(self, 'rup_info'):
+            self.rup_info = self.datastore.create_dset('rup_info', rup_info_dt)
+        self.rup_info.extend(val.rup_info)
 
     def zerodict(self):
         """
