@@ -430,10 +430,12 @@ class RiskInput(object):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def get_hazard(self, rlzs_assoc):
+    def get_hazard(self, rlzs_assoc, monitor):
         """
         :param rlzs_assoc:
             :class:`openquake.commonlib.source.RlzsAssoc` instance
+        :param monitor:
+            a :class:`openquake.baselib.performance.Monitor` instance
         :returns:
             list of hazard dictionaries imt -> rlz -> haz per each site
         """
@@ -522,6 +524,8 @@ class RiskInputFromRuptures(object):
         """
         :param rlzs_assoc:
             :class:`openquake.commonlib.source.RlzsAssoc` instance
+        :param monitor:
+            a :class:`openquake.baselib.performance.Monitor` instance
         :returns:
             lists of hazard dictionaries imt -> rlz -> haz
         """
