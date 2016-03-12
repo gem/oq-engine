@@ -342,11 +342,11 @@ def main():
     elif args.export_output is not None:
         output_id, target_dir = args.export_output
         dbcmd('export_output', int(output_id), expanduser(target_dir),
-                 exports)
+              exports)
 
     elif args.export_outputs is not None:
-        hc_id = dbcmd('get_hc_id', args.export_outputs[0])
         job_id, target_dir = args.export_outputs
+        hc_id = dbcmd('get_hc_id', job_id)
         dbcmd('export_outputs', hc_id, expanduser(target_dir), exports)
 
     elif args.delete_uncompleted_calculations:
