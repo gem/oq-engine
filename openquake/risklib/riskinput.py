@@ -23,6 +23,7 @@ import collections
 import numpy
 
 from openquake.baselib.python3compat import zip
+from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, split_in_blocks
 from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific, riskmodels
@@ -430,7 +431,7 @@ class RiskInput(object):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def get_hazard(self, rlzs_assoc, monitor):
+    def get_hazard(self, rlzs_assoc, monitor=Monitor()):
         """
         :param rlzs_assoc:
             :class:`openquake.commonlib.source.RlzsAssoc` instance
@@ -520,7 +521,7 @@ class RiskInputFromRuptures(object):
             gmfa[i] = expanded_gmf
         return gmfa  # array R x N
 
-    def get_hazard(self, rlzs_assoc, monitor):
+    def get_hazard(self, rlzs_assoc, monitor=Monitor()):
         """
         :param rlzs_assoc:
             :class:`openquake.commonlib.source.RlzsAssoc` instance
