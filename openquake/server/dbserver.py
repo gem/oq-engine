@@ -18,14 +18,12 @@
 
 import sys
 import logging
-from multiprocessing.connection import Client, Listener
+from multiprocessing.connection import Listener
 
 from openquake.commonlib.parallel import safely_call
 from openquake.engine.utils import config
+from openquake.server.db import actions
 
-PORT = int(config.get('dbserver', 'port'))
-ADDRESS = ('', PORT)
-AUTHKEY = config.get('dbserver', 'authkey')
 DEFAULT_LOG_LEVEL = 'progress'
 
 # global commands
@@ -65,13 +63,9 @@ class DbServer(object):
                     if name == '@stop':
                         conn.send((None, None))
                         break
-                    elif name.startswith('.'):  # method
-                        args = cmd[1:-1]
-                        calc_id = cmd[-1]
-                        call = getattr(self, name[1:])
                     else:  # global function
                         args = cmd[1:]
-                        call = globals()[name]
+                        call = getattr(actions, name)
                     res, etype, _ = safely_call(call, args)
                     if etype:
                         logging.error(res)
@@ -81,30 +75,5 @@ class DbServer(object):
         finally:
             listener.close()
 
-    def start(self, *cmd):
-        """
-        Send a command to the DbServer.
-
-        :param cmd: a tuple with the name of the command and the arguments
-        """
-        cl = Client(self.address, authkey=self.authkey)
-        try:
-            cl.send(cmd)
-            res, etype = cl.recv()
-        finally:
-            cl.close()
-        if etype:
-            raise etype(res)
-        return res
-
-    def stop(self):
-        """
-        Send a command stopping the server cleanly
-        """
-        self.start('@stop')
-
-
-dbserver = DbServer(ADDRESS, AUTHKEY)
-
 if __name__ == '__main__':
-    dbserver.loop()
+    DbServer(config.DBS_ADDRESS, config.DBS_AUTHKEY).loop()
