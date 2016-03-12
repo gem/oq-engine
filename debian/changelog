@@ -1,3 +1,6 @@
+  [Daniele Viganò, Michele Simionato]
+  * Fixed a bug in `oq-engine --export-outputs`
+
   [Daniele Viganò, Matteo Nastasi]
   * Allow installation of the binary package on Ubuntu derivatives
 
