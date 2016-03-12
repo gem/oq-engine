@@ -345,7 +345,7 @@ def main():
                  exports)
 
     elif args.export_outputs is not None:
-        hc_id = dbcmd('get_hc_id', args.list_outputs)
+        hc_id = dbcmd('get_hc_id', args.export_outputs[0])
         job_id, target_dir = args.export_outputs
         dbcmd('export_outputs', hc_id, expanduser(target_dir), exports)
 
