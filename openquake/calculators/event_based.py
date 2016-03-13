@@ -32,8 +32,7 @@ from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.hazardlib import geo, site, calc
-from openquake.hazardlib.gsim.base import (
-    gsim_imt_dt, RuptureContext, ContextMaker)
+from openquake.hazardlib.gsim.base import gsim_imt_dt, ContextMaker
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.util import max_rel_diff_index
 
@@ -336,7 +335,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     res = AccumDict({trt_model_id: sesruptures})
     res.calc_times = calc_times
     res.rup_info = numpy.array(rup_info, rup_info_dt)
-    res.trt = trt.replace(' ', '_')
+    res.trt = trt
     return res
 
 
@@ -441,7 +440,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                 dset = self.rup_info[val.trt]
             except KeyError:
                 dset = self.rup_info[val.trt] = self.datastore.create_dset(
-                    'rup_info/' + val.trt, val.rup_info.dtype)
+                    'rup_data/' + val.trt, val.rup_info.dtype)
             dset.extend(val.rup_info)
 
     def zerodict(self):
@@ -514,7 +513,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
             mul = numpy.average(multiplicity, weights=numsites)
             self.datastore.set_attrs(dset.name, sites_per_rupture=spr,
                                      multiplicity=mul)
-        self.datastore.set_nbytes('rup_info')
+        self.datastore.set_nbytes('rup_data')
 
 
 # ######################## GMF calculator ############################ #
