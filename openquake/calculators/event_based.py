@@ -303,12 +303,12 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
 
     cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[trt_model_id])
     params = cmaker.REQUIRES_RUPTURE_PARAMETERS
-    rup_info_dt = numpy.dtype(
+    rup_data_dt = numpy.dtype(
         [('rupserial', U32), ('multiplicity', U16), ('numsites', U32)] + [
             (param, F32) for param in params])
 
     sesruptures = []
-    rup_info = []
+    rup_data = []
     calc_times = []
 
     # Compute and save stochastic event sets
@@ -328,13 +328,13 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
                 oq.random_seed):
             rc = cmaker.make_rupture_context(rup)
             ruptparams = tuple(getattr(rc, param) for param in params)
-            rup_info.append((serial, multiplicity, numsites) + ruptparams)
+            rup_data.append((serial, multiplicity, numsites) + ruptparams)
             sesruptures.extend(rups)
         dt = time.time() - t0
         calc_times.append((src.id, dt))
     res = AccumDict({trt_model_id: sesruptures})
     res.calc_times = calc_times
-    res.rup_info = numpy.array(rup_info, rup_info_dt)
+    res.rup_data = numpy.array(rup_data, rup_data_dt)
     res.trt = trt
     return res
 
@@ -432,16 +432,16 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
     def agg_curves(self, acc, val):
         """
         For the rupture calculator, increment the AccumDict trt_id -> ruptures
-        and save the rup_info
+        and save the rup_data
         """
         acc += val
-        if len(val.rup_info):
+        if len(val.rup_data):
             try:
-                dset = self.rup_info[val.trt]
+                dset = self.rup_data[val.trt]
             except KeyError:
-                dset = self.rup_info[val.trt] = self.datastore.create_dset(
-                    'rup_data/' + val.trt, val.rup_info.dtype)
-            dset.extend(val.rup_info)
+                dset = self.rup_data[val.trt] = self.datastore.create_dset(
+                    'rup_data/' + val.trt, val.rup_data.dtype)
+            dset.extend(val.rup_data)
 
     def zerodict(self):
         """
@@ -506,7 +506,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                 'gmfs_nbytes'] = get_gmfs_nbytes(
                 len(self.sitecol), len(self.oqparam.imtls),
                 self.rlzs_assoc, sescollection)
-        for dset in self.rup_info.values():
+        for dset in self.rup_data.values():
             numsites = dset.dset['numsites']
             multiplicity = dset.dset['multiplicity']
             spr = numpy.average(numsites, weights=multiplicity)
