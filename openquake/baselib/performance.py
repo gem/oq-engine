@@ -17,10 +17,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import time
-import uuid
-import socket
 from datetime import datetime
-from multiprocessing.connection import Listener, Client
+from multiprocessing.connection import Client
 
 import numpy
 import h5py
@@ -85,21 +83,6 @@ class Monitor(object):
     address = None
     authkey = None
     calc_id = None
-
-    @classmethod
-    def make_listener(cls, port):
-        """
-        :param port:
-            port of the listener
-        :returns:
-            a Listener object
-
-        As a side effect, sets the class attributes .address and .authkey
-        on the Monitor.
-        """
-        cls.address = (socket.gethostname(), port)
-        cls.authkey = uuid.uuid1().bytes
-        return Listener(cls.address, authkey=cls.authkey)
 
     def __init__(self, operation='dummy', hdf5path=None,
                  autoflush=False, measuremem=False):
