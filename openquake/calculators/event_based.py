@@ -32,7 +32,8 @@ from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.hazardlib import geo, site, calc
-from openquake.hazardlib.gsim.base import gsim_imt_dt
+from openquake.hazardlib.gsim.base import (
+    gsim_imt_dt, RuptureContext, ContextMaker)
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.util import max_rel_diff_index
 
@@ -45,10 +46,7 @@ from openquake.calculators.classical import ClassicalCalculator
 
 U16 = numpy.uint16
 U32 = numpy.uint32
-
-rup_info_dt = numpy.dtype([
-    ('col', U16), ('rupserial', U32),
-    ('multiplicity', U16), ('numsites', U32)])
+F32 = numpy.float32
 
 # a numpy record storing the number of ruptures and ground motion fields
 # for each realization
@@ -304,6 +302,12 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     except KeyError:
         max_dist = oq.maximum_distance['default']
 
+    cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[trt_model_id])
+    params = cmaker.REQUIRES_RUPTURE_PARAMETERS
+    rup_info_dt = numpy.dtype(
+        [('rupserial', U32), ('multiplicity', U16), ('numsites', U32)] + [
+            (param, F32) for param in params])
+
     sesruptures = []
     rup_info = []
     calc_times = []
@@ -320,16 +324,19 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        for rup, rups, rupi in build_ses_ruptures(
+        for rup, rups, (serial, multiplicity, numsites) in build_ses_ruptures(
                 src, num_occ_by_rup, s_sites, max_dist, sitecol,
                 oq.random_seed):
+            rc = cmaker.make_rupture_context(rup)
+            ruptparams = tuple(getattr(rc, param) for param in params)
+            rup_info.append((serial, multiplicity, numsites) + ruptparams)
             sesruptures.extend(rups)
-            rup_info.append(rupi)
         dt = time.time() - t0
         calc_times.append((src.id, dt))
     res = AccumDict({trt_model_id: sesruptures})
     res.calc_times = calc_times
     res.rup_info = numpy.array(rup_info, rup_info_dt)
+    res.trt = trt.replace(' ', '_')
     return res
 
 
@@ -399,8 +406,7 @@ def build_ses_ruptures(
                                tag, col_idx))
                 multiplicity += 1
         if sesruptures:
-            rup_info = (col_idx, serial, multiplicity, numsites)
-            yield rup, sesruptures, rup_info
+            yield rup, sesruptures, (serial, multiplicity, numsites)
 
 
 @base.calculators.add('event_based_rupture')
@@ -430,9 +436,13 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         and save the rup_info
         """
         acc += val
-        if not hasattr(self, 'rup_info'):
-            self.rup_info = self.datastore.create_dset('rup_info', rup_info_dt)
-        self.rup_info.extend(val.rup_info)
+        if len(val.rup_info):
+            try:
+                dset = self.rup_info[val.trt]
+            except KeyError:
+                dset = self.rup_info[val.trt] = self.datastore.create_dset(
+                    'rup_info/' + val.trt, val.rup_info.dtype)
+            dset.extend(val.rup_info)
 
     def zerodict(self):
         """
@@ -497,10 +507,13 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                 'gmfs_nbytes'] = get_gmfs_nbytes(
                 len(self.sitecol), len(self.oqparam.imtls),
                 self.rlzs_assoc, sescollection)
-        numsites = self.datastore['rup_info']['numsites']
-        multiplicity = self.datastore['rup_info']['multiplicity']
-        spr = numpy.average(numsites, weights=multiplicity)
-        self.datastore.set_attrs('rup_info', sites_per_rupture=spr)
+        for dset in self.rup_info.values():
+            numsites = dset.dset['numsites']
+            multiplicity = dset.dset['multiplicity']
+            spr = numpy.average(numsites, weights=multiplicity)
+            mul = numpy.average(multiplicity, weights=numsites)
+            self.datastore.set_attrs(dset.name, sites_per_rupture=spr,
+                                     multiplicity=mul)
         self.datastore.set_nbytes('rup_info')
 
 
