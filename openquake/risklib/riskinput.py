@@ -23,8 +23,8 @@ import collections
 import numpy
 
 from openquake.baselib.python3compat import zip
-from openquake.baselib.general import groupby, split_in_blocks
 from openquake.baselib.performance import Monitor
+from openquake.baselib.general import groupby, split_in_blocks
 from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific, riskmodels
 
@@ -370,7 +370,8 @@ class CompositeRiskModel(collections.Mapping):
                            for assets in assets_by_site]
             with mon_hazard:
                 # get assets, epsilons, hazard
-                hazard_by_site = riskinput.get_hazard(rlzs_assoc)
+                hazard_by_site = riskinput.get_hazard(
+                    rlzs_assoc, mon_hazard(measuremem=False))
             with mon_risk:
                 # compute the outputs with the appropriate riskmodels
                 for asset_dict, hazard in zip(asset_dicts, hazard_by_site):
@@ -430,10 +431,12 @@ class RiskInput(object):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
 
-    def get_hazard(self, rlzs_assoc):
+    def get_hazard(self, rlzs_assoc, monitor=Monitor()):
         """
         :param rlzs_assoc:
             :class:`openquake.commonlib.source.RlzsAssoc` instance
+        :param monitor:
+            a :class:`openquake.baselib.performance.Monitor` instance
         :returns:
             list of hazard dictionaries imt -> rlz -> haz per each site
         """
@@ -498,7 +501,7 @@ class RiskInputFromRuptures(object):
         self.eps = epsilons  # matrix N x E, events in this block
         self.rupids = numpy.array([sr.ordinal for sr in ses_ruptures])
 
-    def compute_expand_gmfs(self):
+    def compute_expand_gmfs(self, monitor):
         """
         :returns:
             an array R x N where N is the number of sites and
@@ -507,7 +510,7 @@ class RiskInputFromRuptures(object):
         from openquake.calculators.event_based import make_gmfs
         gmfs = make_gmfs(
             self.ses_ruptures, self.sitecol, self.imts,
-            self.gsims, self.trunc_level, self.correl_model, Monitor())
+            self.gsims, self.trunc_level, self.correl_model, monitor)
         gmf_dt = gsim_imt_dt(self.gsims, self.imts)
         N = len(self.sitecol.complete)
         R = len(gmfs)
@@ -518,14 +521,16 @@ class RiskInputFromRuptures(object):
             gmfa[i] = expanded_gmf
         return gmfa  # array R x N
 
-    def get_hazard(self, rlzs_assoc):
+    def get_hazard(self, rlzs_assoc, monitor=Monitor()):
         """
         :param rlzs_assoc:
             :class:`openquake.commonlib.source.RlzsAssoc` instance
+        :param monitor:
+            a :class:`openquake.baselib.performance.Monitor` instance
         :returns:
             lists of hazard dictionaries imt -> rlz -> haz
         """
-        gmfs = self.compute_expand_gmfs()
+        gmfs = self.compute_expand_gmfs(monitor)
         gsims = list(map(str, self.gsims))
         trt_id = rlzs_assoc.csm_info.get_trt_id(self.col_id)
         hazs = []

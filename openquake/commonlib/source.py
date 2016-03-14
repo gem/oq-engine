@@ -918,7 +918,6 @@ class SourceManager(object):
         self.monitor = monitor
         self.filter_sources = filter_sources
         self.num_tiles = num_tiles
-        self.rlzs_assoc = csm.info.get_rlzs_assoc()
         self.split_map = {}  # trt_model_id, source_id -> split sources
         self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
@@ -1017,6 +1016,7 @@ class SourceManager(object):
             maxweight = math.ceil(self.csm.maxweight * self.num_tiles / 4)
         else:
             maxweight = self.csm.maxweight
+        rlzs_assoc = self.csm.info.get_rlzs_assoc()
         for kind in ('light', 'heavy'):
             sources = list(self.get_sources(kind, sitecol))
             if not sources:
@@ -1031,7 +1031,7 @@ class SourceManager(object):
                     operator.attrgetter('weight'),
                     operator.attrgetter('trt_model_id')):
                 sent = self.tm.submit(block, sitecol, siteidx,
-                                      self.rlzs_assoc, self.monitor.new())
+                                      rlzs_assoc, self.monitor.new())
                 self.source_chunks.append((len(block), block.weight, sent))
                 nblocks += 1
             logging.info('Sent %d sources in %d block(s)',

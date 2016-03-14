@@ -32,7 +32,7 @@ from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.hazardlib import geo, site, calc
-from openquake.hazardlib.gsim.base import gsim_imt_dt
+from openquake.hazardlib.gsim.base import gsim_imt_dt, ContextMaker
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.util import max_rel_diff_index
 
@@ -42,6 +42,10 @@ from openquake.calculators.calc import MAX_INT, gmvs_to_haz_curve
 from openquake.calculators.classical import ClassicalCalculator
 
 # ######################## rupture calculator ############################ #
+
+U16 = numpy.uint16
+U32 = numpy.uint32
+F32 = numpy.float32
 
 # a numpy record storing the number of ruptures and ground motion fields
 # for each realization
@@ -297,7 +301,14 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     except KeyError:
         max_dist = oq.maximum_distance['default']
 
+    cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[trt_model_id])
+    params = cmaker.REQUIRES_RUPTURE_PARAMETERS
+    rup_data_dt = numpy.dtype(
+        [('rupserial', U32), ('multiplicity', U16), ('numsites', U32)] + [
+            (param, F32) for param in params])
+
     sesruptures = []
+    rup_data = []
     calc_times = []
 
     # Compute and save stochastic event sets
@@ -312,14 +323,19 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        for rup, rups in build_ses_ruptures(
+        for rup, rups, (serial, multiplicity, numsites) in build_ses_ruptures(
                 src, num_occ_by_rup, s_sites, max_dist, sitecol,
                 oq.random_seed):
+            rc = cmaker.make_rupture_context(rup)
+            ruptparams = tuple(getattr(rc, param) for param in params)
+            rup_data.append((serial, multiplicity, numsites) + ruptparams)
             sesruptures.extend(rups)
         dt = time.time() - t0
         calc_times.append((src.id, dt))
     res = AccumDict({trt_model_id: sesruptures})
     res.calc_times = calc_times
+    res.rup_data = numpy.array(rup_data, rup_data_dt)
+    res.trt = trt
     return res
 
 
@@ -358,6 +374,7 @@ def build_ses_ruptures(
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated SESRuptures>)
     """
+    totsites = len(sitecol)
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         # filtering ruptures
         r_sites = filter_sites_by_distance_to_rupture(
@@ -366,23 +383,29 @@ def build_ses_ruptures(
             # ignore ruptures which are far away
             del num_occ_by_rup[rup]  # save memory
             continue
-        indices = r_sites.indices if len(r_sites) < len(sitecol) \
-            else None  # None means that nothing was filtered
+        if len(r_sites) < totsites:
+            indices = r_sites.indices
+            numsites = len(indices)
+        else:
+            indices = None  # None means that nothing was filtered
+            numsites = totsites
 
         # creating SESRuptures
         sesruptures = []
+        multiplicity = 0
+        serial = rup.seed - random_seed + 1
         rnd = random.Random(rup.seed)
         for (col_idx, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
                 tag = 'col=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-                    col_idx, ses_idx, src.source_id,
-                    rup.seed - random_seed + 1, occ_no)
+                    col_idx, ses_idx, src.source_id, serial, occ_no)
                 sesruptures.append(
                     SESRupture(rup, indices, rnd.randint(0, MAX_INT),
                                tag, col_idx))
+                multiplicity += 1
         if sesruptures:
-            yield rup, sesruptures
+            yield rup, sesruptures, (serial, multiplicity, numsites)
 
 
 @base.calculators.add('event_based_rupture')
@@ -408,10 +431,17 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
 
     def agg_curves(self, acc, val):
         """
-        For the rupture calculator, just increment the AccumDict
-        trt_id -> ruptures
+        For the rupture calculator, increment the AccumDict trt_id -> ruptures
+        and save the rup_data
         """
         acc += val
+        if len(val.rup_data):
+            try:
+                dset = self.rup_data[val.trt]
+            except KeyError:
+                dset = self.rup_data[val.trt] = self.datastore.create_dset(
+                    'rup_data/' + val.trt, val.rup_data.dtype)
+            dset.extend(val.rup_data)
 
     def zerodict(self):
         """
@@ -476,6 +506,14 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                 'gmfs_nbytes'] = get_gmfs_nbytes(
                 len(self.sitecol), len(self.oqparam.imtls),
                 self.rlzs_assoc, sescollection)
+        for dset in self.rup_data.values():
+            numsites = dset.dset['numsites']
+            multiplicity = dset.dset['multiplicity']
+            spr = numpy.average(numsites, weights=multiplicity)
+            mul = numpy.average(multiplicity, weights=numsites)
+            self.datastore.set_attrs(dset.name, sites_per_rupture=spr,
+                                     multiplicity=mul)
+        self.datastore.set_nbytes('rup_data')
 
 
 # ######################## GMF calculator ############################ #
