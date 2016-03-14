@@ -172,12 +172,10 @@ class GmfComputer(object):
         :param seeds:
             S seeds for the numpy random number generator
         :returns:
-            a list of numpy arrays of dtype gmf_dt and length num_sites
+            a numpy array of dtype gmf_dt and shape (num_seeds, num_sites)
         """
-        n = len(self.sites)
-        gmfs = []
-        for seed in seeds:
-            gmfa = numpy.zeros(n, self.gmf_dt)
+        gmfa = numpy.zeros((len(seeds), len(self.sites)), self.gmf_dt)
+        for i, seed in enumerate(seeds):
             for gsim in self.gsims:
                 gs = str(gsim)
                 for imt, value in self._compute(
@@ -188,10 +186,9 @@ class GmfComputer(object):
                     # not an array, flatten does not work and the only
                     # way to extract the numbers is the map before!
                     # something is wrong and must be fixed in the future
-                    for i, gmv in enumerate(array):
-                        gmfa[i][gs][imt] = gmv
-            gmfs.append(gmfa)
-        return gmfs
+                    for j, gmv in enumerate(array):
+                        gmfa[i, j][gs][imt] = gmv
+        return gmfa
 
 
 # this is not used in the engine; it is still useful for usage in IPython

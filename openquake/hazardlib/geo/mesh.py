@@ -128,11 +128,6 @@ class Mesh(object):
             A new object of the same type that borrows a portion of geometry
             from this mesh (doesn't copy the array, just references it).
         """
-        assert (isinstance(item, slice) or
-                (isinstance(item, (list, tuple)) and
-                 all(isinstance(subitem, slice) for subitem in item))
-                ), '%s objects can only be indexed by slices' % \
-            type(self).__name__
         lons = self.lons[item]
         lats = self.lats[item]
         depths = None
