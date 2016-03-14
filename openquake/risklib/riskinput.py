@@ -325,13 +325,14 @@ class CompositeRiskModel(collections.Mapping):
 
     def build_inputs_from_ruptures(self, sitecol, all_ruptures,
                                    gsims_by_col, trunc_level, correl_model,
-                                   eps, hint):
+                                   seed, eps, hint):
         """
         :param sitecol: a SiteCollection instance
         :param all_ruptures: the complete list of SESRupture instances
         :param gsims_by_col: a dictionary of GSIM instances
         :param trunc_level: the truncation level (or None)
         :param correl_model: the correlation model (or None)
+        :param seed: the random seed
         :param eps: a matrix of epsilons
         :param hint: hint for how many blocks to generate
 
@@ -346,7 +347,8 @@ class CompositeRiskModel(collections.Mapping):
             gsims = gsims_by_col[ses_ruptures[0].col_id]
             yield RiskInputFromRuptures(
                 imt_taxonomies, sitecol, ses_ruptures,
-                gsims, trunc_level, correl_model, eps[:, rup_start:rup_stop])
+                gsims, trunc_level, correl_model, seed,
+                eps[:, rup_start:rup_stop])
             rup_start = rup_stop
 
     def gen_outputs(self, riskinputs, rlzs_assoc, monitor,
@@ -488,7 +490,7 @@ class RiskInputFromRuptures(object):
     :params eps: a matrix of epsilons
     """
     def __init__(self, imt_taxonomies, sitecol, ses_ruptures,
-                 gsims, trunc_level, correl_model, epsilons):
+                 gsims, trunc_level, correl_model, random_seed, epsilons):
         self.imt_taxonomies = imt_taxonomies
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
@@ -496,6 +498,7 @@ class RiskInputFromRuptures(object):
         self.gsims = gsims
         self.trunc_level = trunc_level
         self.correl_model = correl_model
+        self.random_seed = random_seed
         self.weight = len(ses_ruptures)
         self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
         self.eps = epsilons  # matrix N x E, events in this block
@@ -510,7 +513,8 @@ class RiskInputFromRuptures(object):
         from openquake.calculators.event_based import make_gmfs
         gmfs = make_gmfs(
             self.ses_ruptures, self.sitecol, self.imts,
-            self.gsims, self.trunc_level, self.correl_model, monitor)
+            self.gsims, self.trunc_level, self.correl_model,
+            self.random_seed, monitor)
         gmf_dt = gsim_imt_dt(self.gsims, self.imts)
         N = len(self.sitecol.complete)
         R = len(gmfs)

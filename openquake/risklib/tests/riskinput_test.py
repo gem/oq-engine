@@ -107,7 +107,7 @@ a4,8.77477036E+01,2.79015007E+01,3,1,1.00000000E+01,1.00000000E+02,5.00000000E+0
 
         [ri] = self.riskmodel.build_inputs_from_ruptures(
             self.sitecol, ses_ruptures, gsims_by_trt_id, oq.truncation_level,
-            correl_model, eps, hint=1)
+            correl_model, oq.random_seed, eps, hint=1)
 
         haz = ri.get_hazard(rlzs_assoc)
         self.assertEqual(len(haz), 4)
