@@ -175,7 +175,6 @@ class GmfComputer(object):
             a list of numpy arrays of dtype gmf_dt and length num_sites
         """
         n = len(self.sites)
-        indices = self.sites.indices
         gmfs = []
         for seed in seeds:
             gmfa = numpy.zeros(n, self.gmf_dt)
@@ -190,7 +189,6 @@ class GmfComputer(object):
                     # way to extract the numbers is the map before!
                     # something is wrong and must be fixed in the future
                     for i, gmv in enumerate(array):
-                        gmfa[i]['idx'] = indices[i]
                         gmfa[i][gs][imt] = gmv
             gmfs.append(gmfa)
         return gmfs
