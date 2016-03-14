@@ -25,9 +25,8 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict, groupby, humansize
+from openquake.baselib.general import groupby, humansize
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.site import FilteredSiteCollection
 from openquake.hazardlib.calc import disagg
 from openquake.commonlib.export import export
 from openquake.commonlib.oqvalidation import OqParam
@@ -58,8 +57,7 @@ class SES(object):
         self.ordinal = ordinal
 
     def __iter__(self):
-        for sesrup in self.ruptures:
-            yield sesrup.export()
+        return iter(self.ruptures)
 
 
 class SESCollection(object):
@@ -90,14 +88,17 @@ def export_ses_xml(ekey, dstore):
         return []
     col_id = 0
     fnames = []
+    mesh = dstore['sitemesh'].value
     for sm in csm_info.source_models:
         for trt_model in sm.trt_models:
             colkey = 'sescollection/trtmod=%s-%s' % tuple(
                 csm_info.cols[col_id])
-            sesruptures = dstore[colkey].values()
+            ruptures = []
+            for sr in dstore[colkey].values():
+                ruptures.extend(sr.export(mesh))
             col_id += 1
             ses_coll = SESCollection(
-                groupby(sesruptures, operator.attrgetter('ses_idx')),
+                groupby(ruptures, operator.attrgetter('ses_idx')),
                 sm.path, oq.investigation_time)
             smpath = '_'.join(sm.path)
             fname = 'ses-%d-smltp_%s.%s' % (trt_model.id, smpath, fmt)
@@ -115,8 +116,8 @@ def _export_ses_xml(dest, ses_coll):
 def _export_ses_csv(dest, ses_coll):
     rows = []
     for ses in ses_coll:
-        for sesrup in ses:
-            rows.append([sesrup.tag, sesrup.seed])
+        for rup in ses:
+            rows.append([rup.tag, rup.seed])
     write_csv(dest, sorted(rows, key=operator.itemgetter(0)))
 
 
@@ -144,14 +145,6 @@ class GmfSet(object):
                 self.investigation_time,
                 self.stochastic_event_set_id, '\n'.join(
                     sorted(str(g) for g in self.gmfset))))
-
-
-def get_ses_idx(tag):
-    """
-    >>> get_ses_idx("col=00~ses=0007~src=1-3~rup=018-01")
-    7
-    """
-    return int(tag.split('~')[1][4:])
 
 
 class GroundMotionField(object):
@@ -217,7 +210,7 @@ class GmfCollection(object):
     def __init__(self, sitecol, ruptures, gmfs, investigation_time):
         self.sitecol = sitecol
         self.ruptures = ruptures
-        self.imts = sorted(gmfs[0].dtype.fields)
+        self.imts = gmfs[0].dtype.names
         self.gmfs_by_imt = {imt: [gmf[imt] for gmf in gmfs]
                             for imt in self.imts}
         self.investigation_time = investigation_time
@@ -228,76 +221,13 @@ class GmfCollection(object):
             gmfs = self.gmfs_by_imt[imt_str]
             imt, sa_period, sa_damping = from_string(imt_str)
             for rupture, gmf in zip(self.ruptures, gmfs):
-                if hasattr(rupture, 'indices'):  # event based
-                    indices = (list(range(len(self.sitecol)))
-                               if rupture.indices is None
-                               else rupture.indices)
-                    sites = FilteredSiteCollection(
-                        indices, self.sitecol)
-                    ses_idx = get_ses_idx(rupture.tag)
-                else:  # scenario
-                    sites = self.sitecol
-                    ses_idx = 1
                 nodes = (GroundMotionFieldNode(gmv, loc)
-                         for loc, gmv in zip(sites.mesh, gmf))
-                gmfset[ses_idx].append(
+                         for loc, gmv in zip(rupture.mesh, gmf))
+                gmfset[rupture.ses_idx].append(
                     GroundMotionField(
                         imt, sa_period, sa_damping, rupture.tag, nodes))
         for ses_idx in sorted(gmfset):
             yield GmfSet(gmfset[ses_idx], self.investigation_time, ses_idx)
-
-
-def export_gmf_xml(key, dest, sitecol, ruptures, gmfs, rlz,
-                   investigation_time):
-    """
-    :param key: output_type and export_type
-    :param dest: name of the exported file
-    :param sitecol: the full site collection
-    :param ruptures: an ordered list of ruptures
-    :param gmfs: a matrix of ground motion fields of shape (R, N)
-    :param rlz: a realization object
-    :param investigation_time: investigation time (None for scenario)
-    """
-    if hasattr(rlz, 'gsim_rlz'):  # event based
-        smltpath = '_'.join(rlz.sm_lt_path)
-        gsimpath = rlz.gsim_rlz.uid
-    else:  # scenario
-        smltpath = ''
-        gsimpath = rlz.uid
-    writer = hazard_writers.EventBasedGMFXMLWriter(
-        dest, sm_lt_path=smltpath, gsim_lt_path=gsimpath)
-    writer.serialize(
-        GmfCollection(sitecol, ruptures, gmfs, investigation_time))
-    return {key: [dest]}
-
-
-def export_gmf_txt(key, dest, sitecol, ruptures, gmfs, rlz,
-                   investigation_time):
-    """
-    :param key: output_type and export_type
-    :param dest: name of the exported file
-    :param sitecol: the full site collection
-    :param ruptures: an ordered list of ruptures
-    :param gmfs: an orderd list of ground motion fields
-    :param rlz: a realization object
-    :param investigation_time: investigation time (None for scenario)
-    """
-    imts = list(gmfs[0].dtype.fields)
-    # the csv file has the form
-    # tag,indices,gmvs_imt_1,...,gmvs_imt_N
-    rows = []
-    for rupture, gmf in zip(ruptures, gmfs):
-        try:
-            indices = rupture.indices
-        except AttributeError:
-            indices = sitecol.indices
-        if indices is None:
-            indices = list(range(len(sitecol)))
-        row = [rupture.tag, ' '.join(map(str, indices))] + \
-              [gmf[imt] for imt in imts]
-        rows.append(row)
-    write_csv(dest, rows)
-    return {key: [dest]}
 
 # ####################### export hazard curves ############################ #
 
@@ -543,7 +473,7 @@ def export_hmaps_xml_json(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('gmfs', 'xml'), ('gmfs', 'txt'))
+@export.add(('gmf_data', 'xml'), ('gmf_data', 'txt'))
 def export_gmf(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -558,38 +488,26 @@ def export_gmf(ekey, dstore):
     fmt = ekey[-1]
     if 'sescollection' not in dstore:  # scenario from file calculation
         sitecol, tags, gmfs = base.get_gmfs(dstore)
-
-        class Rupture:
-            pass
-        ruptures = []
-        for tag in tags:
-            rup = Rupture()
-            rup.tag = tag
-            ruptures.append(rup)
+        ruptures = [event_based.Rupture(tag, sitecol.mesh) for tag in tags]
         [rlz] = rlzs_assoc.realizations  # there is a single realization
         fname = build_name(dstore, rlz, 'gmf', fmt, samples)
         globals()['export_gmf_%s' % fmt](
             ('gmf', fmt), fname, sitecol,
             ruptures, gmfs, rlz, investigation_time)
         return [fname]
-
-    rupture_by_tag = AccumDict()
-    for colkey in dstore['sescollection']:
-        rupture_by_tag += dstore['sescollection/' + colkey]
-    all_tags = dstore['tags'].value
-    gmfs = dstore[ekey[0]]
-    nbytes = gmfs.attrs['nbytes']
+    sid_data = dstore['sid_data']
+    gmf_data = dstore['gmf_data']
+    nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    for rlz, gmf_by_idx in zip(
-            rlzs_assoc.realizations, rlzs_assoc.combine_gmfs(gmfs)):
-        tags = all_tags[list(gmf_by_idx)]
-        gmfs = list(gmf_by_idx.values())
-        if not gmfs:
-            continue
-        ruptures = [rupture_by_tag[tag] for tag in tags]
+    for rlz, gmf_by_tag in zip(rlzs_assoc.realizations,
+                               rlzs_assoc.combine_gmfs(gmf_data, sid_data)):
+        tags = sorted(gmf_by_tag)
+        ruptures = [event_based.Rupture(tag, sitecol.mesh, gmf_by_tag.indices)
+                    for tag in tags]
+        gmfs = [gmf_by_tag[tag] for tag in tags]
         fname = build_name(dstore, rlz, 'gmf', fmt, samples)
         fnames.append(fname)
         globals()['export_gmf_%s' % fmt](
@@ -631,6 +549,59 @@ def export_gmf_spec(ekey, dstore, spec):
             data = util.compose_arrays(sitemesh, gmfa)
             writer.save(data, dest)
     return writer.getsaved()
+
+
+def export_gmf_xml(key, dest, sitecol, ruptures, gmfs, rlz,
+                   investigation_time):
+    """
+    :param key: output_type and export_type
+    :param dest: name of the exported file
+    :param sitecol: the full site collection
+    :param ruptures: an ordered list of ruptures
+    :param gmfs: a matrix of ground motion fields of shape (R, N)
+    :param rlz: a realization object
+    :param investigation_time: investigation time (None for scenario)
+    """
+    if hasattr(rlz, 'gsim_rlz'):  # event based
+        smltpath = '_'.join(rlz.sm_lt_path)
+        gsimpath = rlz.gsim_rlz.uid
+    else:  # scenario
+        smltpath = ''
+        gsimpath = rlz.uid
+    writer = hazard_writers.EventBasedGMFXMLWriter(
+        dest, sm_lt_path=smltpath, gsim_lt_path=gsimpath)
+    writer.serialize(
+        GmfCollection(sitecol, ruptures, gmfs, investigation_time))
+    return {key: [dest]}
+
+
+def export_gmf_txt(key, dest, sitecol, ruptures, gmfs, rlz,
+                   investigation_time):
+    """
+    :param key: output_type and export_type
+    :param dest: name of the exported file
+    :param sitecol: the full site collection
+    :param ruptures: an ordered list of ruptures
+    :param gmfs: an orderd list of ground motion fields
+    :param rlz: a realization object
+    :param investigation_time: investigation time (None for scenario)
+    """
+    imts = list(gmfs[0].dtype.fields)
+    # the csv file has the form
+    # tag,indices,gmvs_imt_1,...,gmvs_imt_N
+    rows = []
+    for rupture, gmf in zip(ruptures, gmfs):
+        try:
+            indices = rupture.indices
+        except AttributeError:
+            indices = sitecol.indices
+        if indices is None:
+            indices = list(range(len(sitecol)))
+        row = [rupture.tag, ' '.join(map(str, indices))] + \
+              [gmf[imt] for imt in imts]
+        rows.append(row)
+    write_csv(dest, rows)
+    return {key: [dest]}
 
 
 def _get_gmfs(dstore, ruptags):

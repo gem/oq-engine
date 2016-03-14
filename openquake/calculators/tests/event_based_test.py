@@ -106,14 +106,14 @@ class EventBasedTestCase(CalculatorTestCase):
         # here the <AreaSource 1> is light and not split
         out = self.run_calc(blocksize.__file__, 'job.ini',
                             concurrent_tasks='3', exports='txt')
-        [fname] = out['gmfs', 'txt']
+        [fname] = out['gmf_data', 'txt']
         self.assertEqualFiles('expected/0-ChiouYoungs2008.txt',
                               fname, sorted)
 
         # here the <AreaSource 1> is heavy and split
         out = self.run_calc(blocksize.__file__, 'job.ini',
                             concurrent_tasks='4', exports='txt')
-        [fname] = out['gmfs', 'txt']
+        [fname] = out['gmf_data', 'txt']
         self.assertEqualFiles('expected/0-ChiouYoungs2008.txt',
                               fname, sorted)
 
@@ -121,7 +121,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,txt,xml')
 
-        [fname] = out['gmfs', 'txt']
+        [fname] = out['gmf_data', 'txt']
         self.assertEqualFiles(
             'expected/0-SadighEtAl1997.txt', fname, sorted)
 
@@ -136,7 +136,7 @@ class EventBasedTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='txt,csv')
-        [fname] = out['gmfs', 'txt']
+        [fname] = out['gmf_data', 'txt']
         self.assertEqualFiles(
             'expected/SadighEtAl1997.txt', fname, sorted)
 
@@ -148,13 +148,13 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_2bis(self):  # oversampling
         out = self.run_calc(case_2.__file__, 'job_2.ini',
                             exports='txt,csv,xml')
-        ltr = out['gmfs', 'txt']  # 2 realizations, 1 TRT
+        ltr = out['gmf_data', 'txt']  # 2 realizations, 1 TRT
         self.assertEqualFiles(
             'expected/gmf-smltp_b1-gsimltp_b1-ltr_0.txt', ltr[0])
         self.assertEqualFiles(
             'expected/gmf-smltp_b1-gsimltp_b1-ltr_1.txt', ltr[1])
 
-        ltr0 = out['gmfs', 'xml'][0]
+        ltr0 = out['gmf_data', 'xml'][0]
         self.assertEqualFiles('expected/gmf-smltp_b1-gsimltp_b1-ltr_0.xml',
                               ltr0)
 
@@ -183,7 +183,7 @@ gmf-smltp_b2-gsimltp_@_b2_4_@_@.txt
 gmf-smltp_b2-gsimltp_@_b2_5_@_@.txt
 gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         out = self.run_calc(case_5.__file__, 'job.ini', exports='txt')
-        fnames = out['gmfs', 'txt']
+        fnames = out['gmf_data', 'txt']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
 
@@ -231,7 +231,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
     @attr('qa', 'hazard', 'event_based')
     def test_case_13(self):
         out = self.run_calc(case_13.__file__, 'job.ini', exports='txt,csv')
-        [fname] = out['gmfs', 'txt']
+        [fname] = out['gmf_data', 'txt']
         self.assertEqualFiles('expected/0-BooreAtkinson2008.txt',
                               fname, sorted)
 
@@ -261,6 +261,6 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
             'gmf-smltp_b1-gsimltp_CF-ltr_2.txt',
         ]
         out = self.run_calc(case_18.__file__, 'job.ini', exports='txt')
-        fnames = out['gmfs', 'txt']
+        fnames = out['gmf_data', 'txt']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)

@@ -444,29 +444,29 @@ class RlzsAssoc(collections.Mapping):
                 ad[rlz] = agg(ad[rlz], value)
         return ad
 
-    def combine_gmfs(self, gmfs):
+    def combine_gmfs(self, gmf_data, sid_data):
         """
-        :param gmfs: datastore /gmfs object
-        :returns: a list of dictionaries rupid -> gmf array
+        :param gmf_data: dataset gmf_data
+        :param sid_data: dataset sid_data
+        :returns: a list of dictionaries tag -> gmvs
         """
         gsims_by_col = self.get_gsims_by_col()
-        dicts = [{} for rlz in self.realizations]
-        for col_id, gsims in enumerate(gsims_by_col):
-            try:
-                dataset = gmfs['col%02d' % col_id]
-            except KeyError:  # empty dataset
-                continue
+        dicts = [AccumDict() for rlz in self.realizations]
+        for serial in gmf_data:
+            gmf = gmf_data[serial]
+            indices = sid_data[serial].value
+            tags = gmf.attrs['tags']
+            col_id = gmf.attrs['col_id']
             trt_id = self.csm_info.get_trt_id(col_id)
-            gmfs_by_rupid = groupby(
-                dataset.value, lambda row: row['idx'], list)
-            for gsim in gsims:
+            for gsim in gsims_by_col[col_id]:
                 gs = str(gsim)
                 for rlz in self.rlzs_assoc[trt_id, gs]:
+                    dic = dicts[rlz.ordinal]
+                    dic.indices = indices
                     col_ids = self.col_ids_by_rlz[rlz]
                     if not col_ids or col_id in col_ids:
-                        for rupid, rows in gmfs_by_rupid.items():
-                            dicts[rlz.ordinal][rupid] = numpy.array(
-                                [r[gs] for r in rows], rows[0][gs].dtype)
+                        for i, tag in enumerate(tags):
+                            dic[tag] = gmf[i][gs]
         return dicts
 
     def combine(self, results, agg=agg_prob):

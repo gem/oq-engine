@@ -21,7 +21,6 @@ import os.path
 import random
 import operator
 import logging
-import itertools
 import collections
 
 import numpy
@@ -221,55 +220,78 @@ def get_geom(surface, is_from_fault_source, is_multi_surface):
     return lons, lats, depths
 
 
-# this is very ugly for compatibility with the Django API in the engine
-# TODO: simplify this, now that the old calculators have been removed
+def get_ses_idx(tag):
+    """
+    >>> get_ses_idx("col=00~ses=0007~src=1-3~rup=018-01")
+    7
+    """
+    return int(tag.split('~')[1][4:])
+
+
+class Rupture(object):
+    """
+    Simplified Rupture class with attributes tag, mesh, ses_idx
+    """
+    def __init__(self, tag, mesh, indices=None):
+        if len(tag) > 100:
+            logging.error(
+                'The tag %s is long %d characters, it will be truncated '
+                'to 100 characters in the /tags array', tag, len(tag))
+        self.tag = tag
+        if indices is None:  # scenario
+            self.mesh = mesh
+            self.ses_idx = 1
+        else:  # event based
+            self.mesh = mesh[indices]
+            self.ses_idx = get_ses_idx(tag)
+
+
 class SESRupture(object):
-    def __init__(self, rupture, indices, seed, tag, col_id):
+    def __init__(self, rupture, indices, seeds, tags, col_id, serial):
         self.rupture = rupture
         self.indices = indices
-        self.seed = seed
-        self.tag = tag
+        self.seeds = numpy.array(seeds)
+        self.tags = numpy.array(tags)
         self.col_id = col_id
-        # extract the SES ordinal (>=1) from the rupture tag
-        # for instance 'col=00~ses=0001~src=1~rup=001-01' => 1
-        pieces = tag.split('~')
-        self.ses_idx = int(pieces[1].split('=')[1])
-        self.ordinal = None  # to be set
+        self.serial = serial
 
-    def export(self):
+    def export(self, mesh):
         """
-        Return a new SESRupture object, with all the attributes set
+        Yield Rupture objects, with all the attributes set
         suitable to export in XML format.
         """
         rupture = self.rupture
-        new = self.__class__(
-            rupture, self.indices, self.seed, self.tag, self.col_id)
-        new.rupture = new
-        new.is_from_fault_source = iffs = isinstance(
-            rupture.surface, (geo.ComplexFaultSurface, geo.SimpleFaultSurface))
-        new.is_multi_surface = ims = isinstance(
-            rupture.surface, geo.MultiSurface)
-        new.lons, new.lats, new.depths = get_geom(
-            rupture.surface, iffs, ims)
-        new.surface = rupture.surface
-        new.strike = rupture.surface.get_strike()
-        new.dip = rupture.surface.get_dip()
-        new.rake = rupture.rake
-        new.hypocenter = rupture.hypocenter
-        new.tectonic_region_type = rupture.tectonic_region_type
-        new.magnitude = new.mag = rupture.mag
-        new.top_left_corner = None if iffs or ims else (
-            new.lons[0], new.lats[0], new.depths[0])
-        new.top_right_corner = None if iffs or ims else (
-            new.lons[1], new.lats[1], new.depths[1])
-        new.bottom_left_corner = None if iffs or ims else (
-            new.lons[2], new.lats[2], new.depths[2])
-        new.bottom_right_corner = None if iffs or ims else (
-            new.lons[3], new.lats[3], new.depths[3])
-        return new
+        for seed, tag in zip(self.seeds, self.tags):
+            new = Rupture(tag, mesh, self.indices)
+            new.seed = seed
+            new.tag = tag
+            new.rupture = new
+            new.is_from_fault_source = iffs = isinstance(
+                rupture.surface, (geo.ComplexFaultSurface,
+                                  geo.SimpleFaultSurface))
+            new.is_multi_surface = ims = isinstance(
+                rupture.surface, geo.MultiSurface)
+            new.lons, new.lats, new.depths = get_geom(
+                rupture.surface, iffs, ims)
+            new.surface = rupture.surface
+            new.strike = rupture.surface.get_strike()
+            new.dip = rupture.surface.get_dip()
+            new.rake = rupture.rake
+            new.hypocenter = rupture.hypocenter
+            new.tectonic_region_type = rupture.tectonic_region_type
+            new.magnitude = new.mag = rupture.mag
+            new.top_left_corner = None if iffs or ims else (
+                new.lons[0], new.lats[0], new.depths[0])
+            new.top_right_corner = None if iffs or ims else (
+                new.lons[1], new.lats[1], new.depths[1])
+            new.bottom_left_corner = None if iffs or ims else (
+                new.lons[2], new.lats[2], new.depths[2])
+            new.bottom_right_corner = None if iffs or ims else (
+                new.lons[3], new.lats[3], new.depths[3])
+            yield new
 
     def __lt__(self, other):
-        return self.tag < other.tag
+        return self.serial < other.serial
 
 
 @parallel.litetask
@@ -300,7 +322,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         max_dist = oq.maximum_distance[trt]
     except KeyError:
         max_dist = oq.maximum_distance['default']
-
+    totsites = len(sitecol)
     cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[trt_model_id])
     params = cmaker.REQUIRES_RUPTURE_PARAMETERS
     rup_data_dt = numpy.dtype(
@@ -323,13 +345,14 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
-        for rup, rups, (serial, multiplicity, numsites) in build_ses_ruptures(
+        for sr in build_ses_ruptures(
                 src, num_occ_by_rup, s_sites, max_dist, sitecol,
                 oq.random_seed):
-            rc = cmaker.make_rupture_context(rup)
+            nsites = totsites if sr.indices is None else len(sr.indices)
+            rc = cmaker.make_rupture_context(sr.rupture)
             ruptparams = tuple(getattr(rc, param) for param in params)
-            rup_data.append((serial, multiplicity, numsites) + ruptparams)
-            sesruptures.extend(rups)
+            rup_data.append((sr.serial, len(sr.tags), nsites) + ruptparams)
+            sesruptures.append(sr)
         dt = time.time() - t0
         calc_times.append((src.id, dt))
     res = AccumDict({trt_model_id: sesruptures})
@@ -385,27 +408,23 @@ def build_ses_ruptures(
             continue
         if len(r_sites) < totsites:
             indices = r_sites.indices
-            numsites = len(indices)
         else:
             indices = None  # None means that nothing was filtered
-            numsites = totsites
 
         # creating SESRuptures
-        sesruptures = []
-        multiplicity = 0
         serial = rup.seed - random_seed + 1
         rnd = random.Random(rup.seed)
+        tags = []
+        seeds = []
         for (col_idx, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
                 tag = 'col=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
                     col_idx, ses_idx, src.source_id, serial, occ_no)
-                sesruptures.append(
-                    SESRupture(rup, indices, rnd.randint(0, MAX_INT),
-                               tag, col_idx))
-                multiplicity += 1
-        if sesruptures:
-            yield rup, sesruptures, (serial, multiplicity, numsites)
+                seeds.append(rnd.randint(0, MAX_INT))
+                tags.append(tag)
+        if tags:
+            yield SESRupture(rup, indices, seeds, tags, col_idx, serial)
 
 
 @base.calculators.add('event_based_rupture')
@@ -475,18 +494,10 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         cols = self.rlzs_assoc.csm_info.cols  # pairs (trt_id, idx)
         sescollection = numpy.array([{} for col_id in range(nc)])
         tags = []
-        ordinal = 0
         for trt_id in sorted(result):
             for sr in sorted(result[trt_id]):
-                sr.ordinal = ordinal
-                ordinal += 1
-                sescollection[sr.col_id][sr.tag] = sr
-                tags.append(sr.tag)
-                if len(sr.tag) > 100:
-                    logging.error(
-                        'The tag %s is long %d characters, it will be '
-                        'truncated to 100 characters in the /tags array',
-                        sr.tag, len(sr.tag))
+                sescollection[sr.col_id][sr.serial] = sr
+                tags.extend(sr.tags)
         with self.monitor('saving ruptures', autoflush=True):
             self.tags = numpy.array(tags, (bytes, 100))
             self.datastore.set_attrs(
@@ -518,6 +529,9 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
 
 # ######################## GMF calculator ############################ #
 
+GmfaSidsTags = collections.namedtuple('GmfaSidsTags', 'gmfa sids tags')
+
+
 def make_gmfs(ses_ruptures, sitecol, imts, gsims,
               trunc_level, correl_model, random_seed, monitor=Monitor()):
     """
@@ -529,25 +543,21 @@ def make_gmfs(ses_ruptures, sitecol, imts, gsims,
     :param correl_model: correlation model instance
     :param random_seed: random_seed parameter
     :param monitor: a monitor instance
-    :returns: a list of arrays, one for each rupture
+    :returns: a dictionary serial -> GmfaSidsTags
     """
-    gmfs = {}
+    dic = {}  # serial -> GmfaSidsTags
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
-    for rupture, group in itertools.groupby(
-            ses_ruptures, operator.attrgetter('rupture')):
-        sesruptures = list(group)
-        indices = sesruptures[0].indices
-        r_sites = (sitecol if indices is None else
-                   site.FilteredSiteCollection(indices, sitecol.complete))
+    for sr in ses_ruptures:
+        r_sites = (sitecol if sr.indices is None else
+                   site.FilteredSiteCollection(sr.indices, sitecol.complete))
         with ctx_mon:
             computer = calc.gmf.GmfComputer(
-                rupture, r_sites, imts, gsims, trunc_level, correl_model)
+                sr.rupture, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
-            serial = rupture.seed - random_seed + 1
-            seeds = [sr.seed for sr in sesruptures]
-            gmfs[serial] = computer.compute(seeds)
-    return gmfs
+            dic[sr.serial] = GmfaSidsTags(computer.compute(sr.seeds),
+                                          r_sites.indices, sr.tags)
+    return dic
 
 
 @parallel.litetask
@@ -574,10 +584,11 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
     tot_sites = len(sitecol.complete)
-    num_sites = len(sitecol)
-    gmfs = make_gmfs(ses_ruptures, sitecol, oq.imtls, gsims,
-                     trunc_level, correl_model, oq.random_seed, monitor)
-    result = {(trt_id, col_id): gmfs if oq.ground_motion_fields else None}
+    gmfa_sids_tags = make_gmfs(
+        ses_ruptures, sitecol, oq.imtls, gsims,
+        trunc_level, correl_model, oq.random_seed, monitor)
+    result = {(trt_id, col_id): gmfa_sids_tags if oq.ground_motion_fields
+              else None}
     if oq.hazard_curves_from_gmfs:
         with monitor('bulding hazard curves', measuremem=False):
             duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
@@ -585,9 +596,9 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
 
             # collect the gmvs by site
             gmvs_by_sid = collections.defaultdict(list)
-            for sr, gmf in zip(ses_ruptures, gmfs):
-                site_ids = get_site_ids(sr, num_sites)
-                for sid, gmv in zip(site_ids, gmf):
+            for serial in gmfa_sids_tags:
+                gst = gmfa_sids_tags[serial]
+                for sid, gmv in zip(gst.sids, gst.gmfa):
                     gmvs_by_sid[sid].append(gmv)
 
             # build the hazard curves for each GSIM
@@ -638,7 +649,6 @@ class EventBasedCalculator(ClassicalCalculator):
         """
         super(EventBasedCalculator, self).pre_execute()
         self.sesruptures = []
-        self.datasets = {}
         for col_id, col in enumerate(self.rlzs_assoc.csm_info.cols):
             sescol = self.datastore['sescollection/trtmod=%s-%s' % tuple(col)]
             for tag, sesrup in sorted(sescol.items()):
@@ -661,11 +671,14 @@ class EventBasedCalculator(ClassicalCalculator):
         for trt_id, gsim_or_col in res:
             if isinstance(gsim_or_col, int) and save_gmfs:
                 with sav_mon:
-                    rupids, gmfa = res[trt_id, gsim_or_col]
-                    dataset = self.datasets[gsim_or_col]
-                    dataset.attrs['trt_model_id'] = trt_id
-                    dataset.extend(gmfa)
-                    self.nbytes += gmfa.nbytes
+                    gmfa_sids_tags = res[trt_id, gsim_or_col]
+                    for serial in sorted(gmfa_sids_tags):
+                        gst = gmfa_sids_tags[serial]
+                        self.datastore['gmf_data/%s' % serial] = gst.gmfa
+                        self.datastore['sid_data/%s' % serial] = gst.sids
+                        self.datastore.set_attrs('gmf_data/%s' % serial,
+                                                 col_id=gsim_or_col,
+                                                 tags=gst.tags)
                     self.datastore.hdf5.flush()
             elif isinstance(gsim_or_col, str):  # aggregate hcurves
                 with agg_mon:
@@ -689,20 +702,19 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor.oqparam = oq
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
-        self.nbytes = 0
         curves_by_trt_gsim = parallel.apply_reduce(
             self.core_task.__func__,
             (self.sesruptures, self.sitecol, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             acc=zerodict, agg=self.combine_curves_and_save_gmfs,
-            key=operator.attrgetter('col_id'))
+            key=operator.attrgetter('serial'))
         if oq.ground_motion_fields:
             # sanity check on the saved gmfs size
-            expected_nbytes = self.datastore[
-                'counts_per_rlz'].attrs['gmfs_nbytes']
-            self.datastore['gmfs'].attrs['nbytes'] = self.nbytes
-            assert self.nbytes == expected_nbytes, (
-                self.nbytes, expected_nbytes)
+            # expected_nbytes = self.datastore[
+            #    'counts_per_rlz'].attrs['gmfs_nbytes']
+            self.datastore.set_nbytes('gmf_data')
+            self.datastore.set_nbytes('sid_data')
+            # assert nbytes == expected_nbytes, (nbytes, expected_nbytes)
         return curves_by_trt_gsim
 
     def post_execute(self, result):
