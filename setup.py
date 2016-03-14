@@ -53,7 +53,7 @@ setup(
         'numpy',
         'scipy',
         'decorator',
-        'psutil >= 0.4.1, < 3.0.0',
+        'psutil >= 0.4.1',
     ],
     author='GEM Foundation',
     author_email='devops@openquake.org',
