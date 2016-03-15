@@ -230,10 +230,14 @@ class SESRupture(object):
         self.col_id = col_id
         self.serial = serial
 
+    @property
+    def multiplicity(self):
+        return len(self.seeds)
+
     def export(self, mesh):
         """
-        Yield Rupture objects, with all the attributes set
-        suitable to export in XML format.
+        Yield :class:`openquake.commonlib.util.Rupture` objects, with all the
+        attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
         for seed, tag in zip(self.seeds, self.tags):
@@ -268,6 +272,10 @@ class SESRupture(object):
 
     def __lt__(self, other):
         return self.serial < other.serial
+
+    def __repr__(self):
+        return '<%s #%d, col_id=%d>' % (self.__class__.__name__,
+                                        self.serial, self.col_id)
 
 
 @parallel.litetask
@@ -532,8 +540,8 @@ def make_gmfs(ses_ruptures, sitecol, imts, gsims,
             computer = calc.gmf.GmfComputer(
                 sr.rupture, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
-            dic[sr.serial] = GmfaSidsTags(computer.compute(sr.seeds),
-                                          r_sites.indices, sr.tags)
+            gmfa = computer.compute(sr.seeds)
+            dic[sr.serial] = GmfaSidsTags(gmfa, r_sites.indices, sr.tags)
     return dic
 
 
