@@ -209,6 +209,12 @@ def set_up_arg_parser():
         nargs=2, metavar=('CALCULATION_ID', 'VIEW_NAME'))
 
     export_grp.add_argument(
+        '--show-log',
+        '--sl',
+        help='Show the log of the specified calculation',
+        nargs=1, metavar='CALCULATION_ID')
+
+    export_grp.add_argument(
         '--exports', action="store",
         default='',
         help=(
@@ -338,6 +344,9 @@ def main():
     elif args.show_view is not None:
         job_id, view_name = args.show_view
         print views.view(view_name, datastore.read(int(job_id)))
+    elif args.show_log is not None:
+        hc_id = dbcmd('get_hc_id', args.show_log[0])
+        print dbcmd('get_log', hc_id)
 
     elif args.export_output is not None:
         output_id, target_dir = args.export_output
