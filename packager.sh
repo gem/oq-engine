@@ -589,6 +589,13 @@ celeryd_wait $GEM_MAXLOOP"
             fi
         done
 
+        # print the log of the last calculation
+        oq-engine --show-log -1
+
+        # Try to export a set of results AFTER the calculation
+        echo \"Exporting calculation #1\"
+        oq-engine --eos 1 /tmp/eos_1
+
         for demo_dir in \$(find . -type d | sort); do
             if [ -f \$demo_dir/job_hazard.ini ]; then
             cd \$demo_dir
