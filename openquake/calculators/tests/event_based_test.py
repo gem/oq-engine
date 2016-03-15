@@ -55,9 +55,10 @@ def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
         the interval to consider
     """
     assert len(gmvs_site_1) == len(gmvs_site_2)
-
     half_delta = float(delta_gmv) / 2
-    gmv_close = lambda v: (gmv - half_delta <= v <= gmv + half_delta)
+
+    def gmv_close(v):
+        return (gmv - half_delta <= v <= gmv + half_delta)
     count = 0
     for gmv_site_1, gmv_site_2 in zip(gmvs_site_1, gmvs_site_2):
         if gmv_close(gmv_site_1) and gmv_close(gmv_site_2):
@@ -80,16 +81,11 @@ class EventBasedTestCase(CalculatorTestCase):
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = DataStore(self.calc.datastore.calc_id)
-            gmf_by_rupid = groupby(
-                dstore['gmfs/col00'].value,
-                lambda row: row['idx'],
-                lambda rows: [row['BooreAtkinson2008']['PGA'] for row in rows])
+            # read an array of shape 37672 ruptures x 2 sites
+            gmfa = dstore['gmf_data/1']['BooreAtkinson2008']['PGA']
             dstore.close()
-            gmvs_site_1 = []
-            gmvs_site_2 = []
-            for rupid, gmf in gmf_by_rupid.items():
-                gmvs_site_1.append(gmf[0])
-                gmvs_site_2.append(gmf[1])
+            gmvs_site_1 = gmfa[:, 0]
+            gmvs_site_2 = gmfa[:, 1]
             joint_prob_0_5 = joint_prob_of_occurrence(
                 gmvs_site_1, gmvs_site_2, 0.5, oq.investigation_time,
                 oq.ses_per_logic_tree_path)

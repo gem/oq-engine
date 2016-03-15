@@ -32,7 +32,8 @@ from openquake.commonlib.export import export
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.writers import (
     scientificformat, floatformat, write_csv)
-from openquake.commonlib import writers, hazard_writers, util, readinput
+from openquake.commonlib import (
+    writers, hazard_writers, util, readinput, source)
 from openquake.calculators import calc, base, event_based
 
 F32 = numpy.float32
@@ -201,17 +202,17 @@ class GmfCollection(object):
     Object converting the parameters
 
     :param sitecol: SiteCollection
-    :rupture_tags: tags of the ruptures
-    :gmfs_by_imt: dictionary of GMFs by IMT
+    :param ruptures: ruptures
+    :param investigation_time: investigation time
 
     into an object with the right form for the EventBasedGMFXMLWriter.
     Iterating over a GmfCollection yields GmfSet objects.
     """
-    def __init__(self, sitecol, ruptures, gmfs, investigation_time):
+    def __init__(self, sitecol, ruptures, investigation_time):
         self.sitecol = sitecol
         self.ruptures = ruptures
-        self.imts = gmfs[0].dtype.names
-        self.gmfs_by_imt = {imt: [gmf[imt] for gmf in gmfs]
+        self.imts = ruptures[0].gmf.dtype.names
+        self.gmfs_by_imt = {imt: [rup.gmf[imt] for rup in ruptures]
                             for imt in self.imts}
         self.investigation_time = investigation_time
 
@@ -221,8 +222,10 @@ class GmfCollection(object):
             gmfs = self.gmfs_by_imt[imt_str]
             imt, sa_period, sa_damping = from_string(imt_str)
             for rupture, gmf in zip(self.ruptures, gmfs):
+                mesh = self.sitecol.mesh[rupture.indices]
+                assert len(mesh) == len(gmf), (len(mesh), len(gmf))
                 nodes = (GroundMotionFieldNode(gmv, loc)
-                         for loc, gmv in zip(rupture.mesh, gmf))
+                         for gmv, loc in zip(gmf, mesh))
                 gmfset[rupture.ses_idx].append(
                     GroundMotionField(
                         imt, sa_period, sa_damping, rupture.tag, nodes))
@@ -488,12 +491,11 @@ def export_gmf(ekey, dstore):
     fmt = ekey[-1]
     if 'sescollection' not in dstore:  # scenario from file calculation
         sitecol, tags, gmfs = base.get_gmfs(dstore)
-        ruptures = [event_based.Rupture(tag, sitecol.mesh) for tag in tags]
+        ruptures = [source.Rupture(tag, sitecol.indices) for tag in tags]
         [rlz] = rlzs_assoc.realizations  # there is a single realization
         fname = build_name(dstore, rlz, 'gmf', fmt, samples)
         globals()['export_gmf_%s' % fmt](
-            ('gmf', fmt), fname, sitecol,
-            ruptures, gmfs, rlz, investigation_time)
+            ('gmf', fmt), fname, sitecol, ruptures, rlz, investigation_time)
         return [fname]
     sid_data = dstore['sid_data']
     gmf_data = dstore['gmf_data']
@@ -502,17 +504,13 @@ def export_gmf(ekey, dstore):
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    for rlz, gmf_by_tag in zip(rlzs_assoc.realizations,
+    for rlz, rup_by_tag in zip(rlzs_assoc.realizations,
                                rlzs_assoc.combine_gmfs(gmf_data, sid_data)):
-        tags = sorted(gmf_by_tag)
-        ruptures = [event_based.Rupture(tag, sitecol.mesh, gmf_by_tag.indices)
-                    for tag in tags]
-        gmfs = [gmf_by_tag[tag] for tag in tags]
+        ruptures = [rup_by_tag[tag] for tag in sorted(rup_by_tag)]
         fname = build_name(dstore, rlz, 'gmf', fmt, samples)
         fnames.append(fname)
         globals()['export_gmf_%s' % fmt](
-            ('gmf', fmt), fname, sitecol,
-            ruptures, gmfs, rlz, investigation_time)
+            ('gmf', fmt), fname, sitecol, ruptures, rlz, investigation_time)
     return fnames
 
 
@@ -551,14 +549,12 @@ def export_gmf_spec(ekey, dstore, spec):
     return writer.getsaved()
 
 
-def export_gmf_xml(key, dest, sitecol, ruptures, gmfs, rlz,
-                   investigation_time):
+def export_gmf_xml(key, dest, sitecol, ruptures, rlz, investigation_time):
     """
     :param key: output_type and export_type
     :param dest: name of the exported file
     :param sitecol: the full site collection
     :param ruptures: an ordered list of ruptures
-    :param gmfs: a matrix of ground motion fields of shape (R, N)
     :param rlz: a realization object
     :param investigation_time: investigation time (None for scenario)
     """
@@ -571,34 +567,27 @@ def export_gmf_xml(key, dest, sitecol, ruptures, gmfs, rlz,
     writer = hazard_writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path=smltpath, gsim_lt_path=gsimpath)
     writer.serialize(
-        GmfCollection(sitecol, ruptures, gmfs, investigation_time))
+        GmfCollection(sitecol, ruptures, investigation_time))
     return {key: [dest]}
 
 
-def export_gmf_txt(key, dest, sitecol, ruptures, gmfs, rlz,
-                   investigation_time):
+def export_gmf_txt(key, dest, sitecol, ruptures, rlz, investigation_time):
     """
     :param key: output_type and export_type
     :param dest: name of the exported file
     :param sitecol: the full site collection
     :param ruptures: an ordered list of ruptures
-    :param gmfs: an orderd list of ground motion fields
     :param rlz: a realization object
     :param investigation_time: investigation time (None for scenario)
     """
-    imts = list(gmfs[0].dtype.fields)
+    imts = ruptures[0].gmf.dtype.names
     # the csv file has the form
     # tag,indices,gmvs_imt_1,...,gmvs_imt_N
     rows = []
-    for rupture, gmf in zip(ruptures, gmfs):
-        try:
-            indices = rupture.indices
-        except AttributeError:
-            indices = sitecol.indices
-        if indices is None:
-            indices = list(range(len(sitecol)))
+    for rupture in ruptures:
+        indices = rupture.indices
         row = [rupture.tag, ' '.join(map(str, indices))] + \
-              [gmf[imt] for imt in imts]
+              [rupture.gmf[imt] for imt in imts]
         rows.append(row)
     write_csv(dest, rows)
     return {key: [dest]}

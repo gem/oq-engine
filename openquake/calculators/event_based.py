@@ -26,13 +26,14 @@ import collections
 import numpy
 
 from openquake.baselib.general import AccumDict, humansize
+from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.hazardlib import geo, site, calc
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import readinput, parallel, datastore
+from openquake.commonlib import readinput, parallel, datastore, source
 from openquake.commonlib.util import max_rel_diff_index
 
 from openquake.commonlib.oqvalidation import OqParam
@@ -220,32 +221,6 @@ def get_geom(surface, is_from_fault_source, is_multi_surface):
     return lons, lats, depths
 
 
-def get_ses_idx(tag):
-    """
-    >>> get_ses_idx("col=00~ses=0007~src=1-3~rup=018-01")
-    7
-    """
-    return int(tag.split('~')[1][4:])
-
-
-class Rupture(object):
-    """
-    Simplified Rupture class with attributes tag, mesh, ses_idx
-    """
-    def __init__(self, tag, mesh, indices=None):
-        if len(tag) > 100:
-            logging.error(
-                'The tag %s is long %d characters, it will be truncated '
-                'to 100 characters in the /tags array', tag, len(tag))
-        self.tag = tag
-        if indices is None:  # scenario
-            self.mesh = mesh
-            self.ses_idx = 1
-        else:  # event based
-            self.mesh = mesh[indices]
-            self.ses_idx = get_ses_idx(tag)
-
-
 class SESRupture(object):
     def __init__(self, rupture, indices, seeds, tags, col_id, serial):
         self.rupture = rupture
@@ -262,7 +237,8 @@ class SESRupture(object):
         """
         rupture = self.rupture
         for seed, tag in zip(self.seeds, self.tags):
-            new = Rupture(tag, mesh, self.indices)
+            new = source.Rupture(tag, self.indices)
+            new.mesh = mesh[self.indices]
             new.seed = seed
             new.tag = tag
             new.rupture = new
@@ -548,10 +524,11 @@ def make_gmfs(ses_ruptures, sitecol, imts, gsims,
     dic = {}  # serial -> GmfaSidsTags
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
+    sites = sitecol.complete
     for sr in ses_ruptures:
-        r_sites = (sitecol if sr.indices is None else
-                   site.FilteredSiteCollection(sr.indices, sitecol.complete))
         with ctx_mon:
+            r_sites = (sitecol if sr.indices is None else
+                       site.FilteredSiteCollection(sr.indices, sites))
             computer = calc.gmf.GmfComputer(
                 sr.rupture, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
@@ -598,8 +575,8 @@ def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
             gmvs_by_sid = collections.defaultdict(list)
             for serial in gmfa_sids_tags:
                 gst = gmfa_sids_tags[serial]
-                for sid, gmv in zip(gst.sids, gst.gmfa):
-                    gmvs_by_sid[sid].append(gmv)
+                for sid, gmvs in zip(gst.sids, gst.gmfa.T):
+                    gmvs_by_sid[sid].extend(gmvs)
 
             # build the hazard curves for each GSIM
             for gsim in gsims:
@@ -707,7 +684,7 @@ class EventBasedCalculator(ClassicalCalculator):
             (self.sesruptures, self.sitecol, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             acc=zerodict, agg=self.combine_curves_and_save_gmfs,
-            key=operator.attrgetter('serial'))
+            key=operator.attrgetter('col_id'))
         if oq.ground_motion_fields:
             # sanity check on the saved gmfs size
             # expected_nbytes = self.datastore[
