@@ -390,3 +390,16 @@ def log(job_id, timestamp, level, process, message):
     models.Log.objects.create(
         job_id=job_id, timestamp=timestamp,
         level=level, process=process, message=message)
+
+
+def get_log(job_id):
+    """
+    Extract the logs as a big string
+    """
+    logs = models.Log.objects.filter(job=job_id).order_by('id')
+    lines = []
+    for log in logs:
+        time = str(log.timestamp)[:-4]  # strip decimals
+        line = '[%s #%d %s] %s' % (time, job_id, log.level, log.message)
+        lines.append(line)
+    return '\n'.join(lines)
