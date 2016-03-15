@@ -520,7 +520,7 @@ def export_gmf_spec(ekey, dstore, spec):
         gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
         imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
         gmf_dt = numpy.dtype([(gsim, F32) for gsim in gsims])
-        ruptags = dstore['tags'][rupids - 1]
+        ruptags = dstore['tags'].value[rupids - 1]
         for rupid, ruptag in zip(rupids, ruptags):
             for imt in imts:
                 gmfa = numpy.zeros(len(sitemesh), gmf_dt)
