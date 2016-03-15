@@ -23,6 +23,7 @@ from __future__ import print_function
 import os
 import sys
 import socket
+import inspect
 import logging
 import operator
 import traceback
@@ -87,7 +88,10 @@ def safely_call(func, args, pickle=False):
     ismon = args and isinstance(args[-1], Monitor)
     mon = args[-1] if ismon else Monitor()
     try:
-        res = func(*args), None, mon
+        got = func(*args)
+        if inspect.isgenerator(got):
+            got = list(got)
+        res = got, None, mon
     except:
         etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
