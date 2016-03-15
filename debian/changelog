@@ -1,3 +1,14 @@
+  [Michele Simionato]
+  * Added a command `oq-engine --show-log <job_id>`
+
+  [Daniele Viganò]
+  * Use the 'postgresql' meta package as dependency of the .deb
+    package to support newer versions of Postgres; this makes
+    Trusty package installable on Ubuntu 16.04 and Debian 8
+
+  [Daniele Viganò, Michele Simionato]
+  * Fixed a bug in `oq-engine --export-outputs`
+
   [Daniele Viganò, Matteo Nastasi]
   * Allow installation of the binary package on Ubuntu derivatives
 
