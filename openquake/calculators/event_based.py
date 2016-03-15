@@ -33,8 +33,8 @@ from openquake.hazardlib.calc.filters import \
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.hazardlib import geo, site, calc
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import readinput, parallel, datastore, source
-from openquake.commonlib.util import max_rel_diff_index
+from openquake.commonlib import readinput, parallel, datastore
+from openquake.commonlib.util import max_rel_diff_index, Rupture
 
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.calculators import base, views
@@ -237,7 +237,7 @@ class SESRupture(object):
         """
         rupture = self.rupture
         for seed, tag in zip(self.seeds, self.tags):
-            new = source.Rupture(tag, self.indices)
+            new = Rupture(tag, self.indices)
             new.mesh = mesh[self.indices]
             new.seed = seed
             new.tag = tag

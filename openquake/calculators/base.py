@@ -649,7 +649,7 @@ def get_gmfs(dstore):
 
     # else from rupture
     sitecol = dstore['sitecol']
-    gmf = dstore['gmfs/col00'].value
+    gmfa = dstore['gmf_data/1'].value
     # NB: if the hazard site collection has N sites, the hazard
     # filtered site collection for the nonzero GMFs has N' <= N sites
     # whereas the risk site collection associated to the assets
@@ -661,15 +661,14 @@ def get_gmfs(dstore):
     risk_indices = set(sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
     imt_dt = numpy.dtype([(imt, F32) for imt in oq.imtls])
-    gmf_by_idx = general.groupby(gmf, lambda row: row['idx'])
-    R = len(gmf_by_idx)
-    # build a matrix N x R for each GSIM realization
-    gmfs = {(trt_id, gsim): numpy.zeros((N, R), imt_dt)
+    E = gmfa.shape[0]
+    # build a matrix N x E for each GSIM realization
+    gmfs = {(trt_id, gsim): numpy.zeros((N, E), imt_dt)
             for trt_id, gsim in dstore['rlzs_assoc']}
-    for rupid, rows in sorted(gmf_by_idx.items()):
-        assert len(haz_sitecol.indices) == len(rows), (
-            len(haz_sitecol.indices), len(rows))
-        for sid, gmv in zip(haz_sitecol.indices, rows):
+    for rupid, gmf in enumerate(gmfa):
+        assert len(haz_sitecol.indices) == len(gmf), (
+            len(haz_sitecol.indices), len(gmf))
+        for sid, gmv in zip(haz_sitecol.indices, gmf):
             if sid in risk_indices:
                 for trt_id, gsim in gmfs:
                     gmfs[trt_id, gsim][sid, rupid] = gmv[gsim]

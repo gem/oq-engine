@@ -33,7 +33,8 @@ import numpy
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.commonlib.node import read_nodes
-from openquake.commonlib import logictree, sourceconverter, parallel, valid
+from openquake.commonlib import (
+    logictree, sourceconverter, parallel, valid, util)
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
 MAX_INT = 2 ** 31 - 1
@@ -294,32 +295,6 @@ def agg_prob(acc, prob):
     return 1. - (1. - acc) * (1. - prob)
 
 
-def get_ses_idx(tag):
-    """
-    >>> get_ses_idx("col=00~ses=0007~src=1-3~rup=018-01")
-    7
-    """
-    return int(tag.split('~')[1][4:])
-
-
-class Rupture(object):
-    """
-    Simplified Rupture class with attributes tag, indices, ses_idx,
-    used in export.
-    """
-    def __init__(self, tag, indices=None):
-        if len(tag) > 100:
-            logging.error(
-                'The tag %s is long %d characters, it will be truncated '
-                'to 100 characters in the /tags array', tag, len(tag))
-        self.tag = tag
-        self.indices = indices
-        if indices is None:  # scenario
-            self.ses_idx = 1
-        else:  # event based
-            self.ses_idx = get_ses_idx(tag)
-
-
 class RlzsAssoc(collections.Mapping):
     """
     Realization association class. It should not be instantiated directly,
@@ -474,7 +449,7 @@ class RlzsAssoc(collections.Mapping):
         """
         :param gmf_data: dataset gmf_data
         :param sid_data: dataset sid_data
-        :returns: a list of dictionaries tag -> gmvs
+        :returns: a list of R dictionaries tag -> rupture
         """
         gsims_by_col = self.get_gsims_by_col()
         dicts = [AccumDict() for rlz in self.realizations]
@@ -492,7 +467,7 @@ class RlzsAssoc(collections.Mapping):
                     col_ids = self.col_ids_by_rlz[rlz]
                     if not col_ids or col_id in col_ids:
                         for i, tag in enumerate(tags):
-                            ebrup = Rupture(tag, indices)
+                            ebrup = util.Rupture(tag, indices)
                             ebrup.gmf = gmf[i][gs]
                             dic[tag] = ebrup
         return dicts

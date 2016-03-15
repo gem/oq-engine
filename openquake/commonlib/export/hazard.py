@@ -212,17 +212,15 @@ class GmfCollection(object):
         self.sitecol = sitecol
         self.ruptures = ruptures
         self.imts = ruptures[0].gmf.dtype.names
-        self.gmfs_by_imt = {imt: [rup.gmf[imt] for rup in ruptures]
-                            for imt in self.imts}
         self.investigation_time = investigation_time
 
     def __iter__(self):
         gmfset = collections.defaultdict(list)
         for imt_str in self.imts:
-            gmfs = self.gmfs_by_imt[imt_str]
             imt, sa_period, sa_damping = from_string(imt_str)
-            for rupture, gmf in zip(self.ruptures, gmfs):
+            for rupture in self.ruptures:
                 mesh = self.sitecol.mesh[rupture.indices]
+                gmf = rupture.gmf[imt_str]
                 assert len(mesh) == len(gmf), (len(mesh), len(gmf))
                 nodes = (GroundMotionFieldNode(gmv, loc)
                          for gmv, loc in zip(gmf, mesh))
@@ -489,14 +487,6 @@ def export_gmf(ekey, dstore):
                           else oq.investigation_time)
     samples = oq.number_of_logic_tree_samples
     fmt = ekey[-1]
-    if 'sescollection' not in dstore:  # scenario from file calculation
-        sitecol, tags, gmfs = base.get_gmfs(dstore)
-        ruptures = [source.Rupture(tag, sitecol.indices) for tag in tags]
-        [rlz] = rlzs_assoc.realizations  # there is a single realization
-        fname = build_name(dstore, rlz, 'gmf', fmt, samples)
-        globals()['export_gmf_%s' % fmt](
-            ('gmf', fmt), fname, sitecol, ruptures, rlz, investigation_time)
-        return [fname]
     sid_data = dstore['sid_data']
     gmf_data = dstore['gmf_data']
     nbytes = gmf_data.attrs['nbytes']

@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import logging
 import numpy
 
 F32 = numpy.float32
@@ -126,3 +127,32 @@ def get_assets(dstore):
     asset_data = [(a['asset_ref'], taxo[a['taxonomy']], a['lon'], a['lat'])
                   for a in assetcol]
     return numpy.array(asset_data, asset_dt)
+
+
+def get_ses_idx(tag):
+    """
+    >>> get_ses_idx("col=00~ses=0007~src=1-3~rup=018-01")
+    7
+    """
+    return int(tag.split('~')[1][4:])
+
+
+class Rupture(object):
+    """
+    Simplified Rupture class with attributes tag, indices, ses_idx,
+    used in export.
+    """
+    def __init__(self, tag, indices=None):
+        if isinstance(tag, int):  # scenario
+            self.tag = 'scenario-%010d' % tag
+            self.indices = indices
+            self.ses_idx = 1
+            return
+        # event based
+        if len(tag) > 100:
+            logging.error(
+                'The tag %s is long %d characters, it will be truncated '
+                'to 100 characters in the /tags array', tag, len(tag))
+        self.tag = tag
+        self.indices = indices
+        self.ses_idx = get_ses_idx(tag)
