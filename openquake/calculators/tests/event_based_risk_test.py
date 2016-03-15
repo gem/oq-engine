@@ -84,10 +84,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 ========= ======== ============ ============ ============ ==============
 asset_ref taxonomy lon          lat          structural   structural_ins
 ========= ======== ============ ============ ============ ==============
-a0        RM       8.129850E+01 2.910980E+01 1.700938E+02 1.292497E+00  
-a1        RC       8.308230E+01 2.790060E+01 1.219089E+02 1.382179E+00  
-a2        W        8.574770E+01 2.790150E+01 1.549710E+02 9.837796E+01  
-a3        RM       8.574770E+01 2.790150E+01 1.441384E+02 0.000000E+00  
+a0        RM       8.129850E+01 2.910980E+01 1.700921E+02 1.298676E+00  
+a1        RC       8.308230E+01 2.790060E+01 1.219079E+02 1.386576E+00  
+a2        W        8.574770E+01 2.790150E+01 1.549683E+02 9.837444E+01  
+a3        RM       8.574770E+01 2.790150E+01 1.441427E+02 0.000000E+00  
 ========= ======== ============ ============ ============ ==============''')
 
     @attr('qa', 'risk', 'event_based_risk')
@@ -148,13 +148,9 @@ a3        RM       8.574770E+01 2.790150E+01 1.441384E+02 0.000000E+00
         self.assertEqual(len(fnames), 4)  # 2 IMT x 2 poes
 
         # export a single rupture
-        [f1, f2] = export(('gmfs:1', 'csv'), self.calc.datastore)
-        self.assertEqualFiles(
-            'expected/gmf-col=05'
-            '~ses=0001~src=AS_TRAS334~rup=612343-01-PGA.csv', f1)
-        self.assertEqualFiles(
-            'expected/gmf-col=05'
-            '~ses=0001~src=AS_TRAS334~rup=612343-01-SA(0.5).csv', f2)
+        [f1, f2] = export(('gmfs:1298560', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf-1298560-PGA.csv', f1)
+        self.assertEqualFiles('expected/gmf-1298560-SA(0.5).csv', f2)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):

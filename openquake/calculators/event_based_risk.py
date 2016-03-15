@@ -268,6 +268,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 self.assets_by_site, self.E, oq.master_seed,
                 oq.asset_correlation)
             logging.info('Generated %s epsilons', eps.shape)
+
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
             self.sitecol.complete, all_ruptures, gsims_by_col,
             oq.truncation_level, correl_model, oq.random_seed, eps,

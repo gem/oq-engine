@@ -28,6 +28,7 @@ from openquake.baselib.general import groupby, split_in_blocks
 from openquake.hazardlib.gsim.base import gsim_imt_dt
 from openquake.risklib import scientific, riskmodels
 
+U32 = numpy.uint32
 F32 = numpy.float32
 
 FIELDS = ('site_id', 'lon', 'lat', 'asset_ref', 'taxonomy', 'area', 'number',
@@ -505,7 +506,7 @@ class RiskInputFromRuptures(object):
         rupids = []
         for sr in ses_ruptures:
             rupids.extend(sr.rupids)
-        self.rupids = numpy.array(rupids, F32)
+        self.rupids = numpy.array(rupids, U32)
 
     def compute_expand_gmfa(self, monitor):
         """
@@ -523,12 +524,15 @@ class RiskInputFromRuptures(object):
         E = len(self.rupids)
         gmfa = numpy.zeros((E, N), gmf_dt)
         start = 0
-        for sesrup, serial in zip(self.ses_ruptures, gst):
-            array = gst[serial].gmfa
+        for sesrup in self.ses_ruptures:
+            array = gst[sesrup.serial].gmfa
             n = len(array)  # number of seeds
-            expanded_gmf = numpy.zeros((n, N), array.dtype)
-            expanded_gmf[:, sesrup.indices] = array
-            gmfa[start: start + n] = expanded_gmf
+            if sesrup.indices is not None:
+                expanded_array = numpy.zeros((n, N), array.dtype)
+                expanded_array[:, sesrup.indices] = array
+                gmfa[start: start + n] = expanded_array
+            else:
+                gmfa[start: start + n] = array
             start += n
         return gmfa  # array E x N
 

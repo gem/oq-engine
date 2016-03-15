@@ -512,11 +512,7 @@ def export_gmf_spec(ekey, dstore, spec):
     :param dstore: datastore object
     :param spec: a string specifying what to export exactly
     """
-    num_ruptures = len(dstore['tags'])
-    rupids = [int(rid) - 1 for rid in spec.split(',')]
-    for rupid in rupids:
-        assert 0 <= rupid < num_ruptures, (rupid, num_ruptures)
-    ruptags = dstore['tags'][rupids]
+    rupids = numpy.array([int(rid) for rid in spec.split(',')])
     sitemesh = dstore['sitemesh']
     writer = writers.CsvWriter(fmt='%.5f')
     if 'scenario' in dstore.attrs['calculation_mode']:
@@ -524,6 +520,7 @@ def export_gmf_spec(ekey, dstore, spec):
         gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
         imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
         gmf_dt = numpy.dtype([(gsim, F32) for gsim in gsims])
+        ruptags = dstore['tags'][rupids - 1]
         for rupid, ruptag in zip(rupids, ruptags):
             for imt in imts:
                 gmfa = numpy.zeros(len(sitemesh), gmf_dt)
@@ -533,8 +530,8 @@ def export_gmf_spec(ekey, dstore, spec):
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
     else:  # event based
-        for gmfa, imt, ruptag in _get_gmfs(dstore, ruptags):
-            dest = dstore.export_path('gmf-%s-%s.csv' % (ruptag, imt))
+        for gmfa, imt, serial in _get_gmfs(dstore, rupids):
+            dest = dstore.export_path('gmf-%s-%s.csv' % (serial, imt))
             data = util.compose_arrays(sitemesh, gmfa)
             writer.save(data, dest)
     return writer.getsaved()
@@ -584,37 +581,39 @@ def export_gmf_txt(key, dest, sitecol, ruptures, rlz, investigation_time):
     return {key: [dest]}
 
 
-def _get_gmfs(dstore, ruptags):
+def _get_gmfs(dstore, rupserials):
     oq = OqParam.from_(dstore.attrs)
     rlzs_assoc = dstore['rlzs_assoc']
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
     ruptures = []
     for colkey in dstore['sescollection']:
-        rup_by_tag = dstore['sescollection/' + colkey]
-        for ruptag in ruptags:
+        coll = dstore['sescollection/' + colkey]
+        for serial in rupserials:
             try:
-                rup = rup_by_tag[ruptag]
+                rup = coll[serial]
             except KeyError:
                 pass
             else:
                 ruptures.append(rup)
     correl_model = readinput.get_correl_model(oq)
     gsims_by_col = rlzs_assoc.get_gsims_by_col()
-    for rup, ruptag in zip(ruptures, ruptags):
+    for rup in ruptures:
         trt_id = rlzs_assoc.csm_info.get_trt_id(rup.col_id)
         gsims = gsims_by_col[rup.col_id]
         rlzs = [rlz for gsim in map(str, gsims)
                 for rlz in rlzs_assoc[trt_id, gsim]]
         gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
-        [gmf] = event_based.make_gmfs(
-            [rup], sitecol, oq.imtls, gsims, oq.truncation_level, correl_model)
+        [gst] = event_based.make_gmfs(
+            [rup], sitecol, oq.imtls, gsims, oq.truncation_level,
+            correl_model, oq.random_seed).values()
         for imt in oq.imtls:
             gmfa = numpy.zeros(N, gmf_dt)
             for gsim in map(str, gsims):
+                data = gst.gmfa[gsim][imt]
                 for rlz in rlzs_assoc[trt_id, gsim]:
-                    gmfa['%03d' % rlz.ordinal][rup.indices] = gmf[gsim][imt]
-            yield gmfa, imt, ruptag
+                    gmfa['%03d' % rlz.ordinal][rup.indices] = data
+            yield gmfa, imt, rup.serial
 
 
 @export.add(('gmfs', 'csv'))
