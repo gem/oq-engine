@@ -326,6 +326,7 @@ class HazardCalculator(BaseCalculator):
                         self.oqparam)
                     self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
                     self.datastore['csm_info'] = self.rlzs_assoc.csm_info
+                    self.rup_data = {}
 
                     # we could manage limits here
                     self.job_info = readinput.get_job_info(

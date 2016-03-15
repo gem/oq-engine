@@ -27,7 +27,8 @@ from openquake.commonlib.riskmodels import get_risk_files
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
 HAZARD_CALCULATORS = [
-    'classical', 'disaggregation', 'event_based', 'scenario']
+    'classical', 'disaggregation', 'event_based', 'scenario',
+    'event_based_rupture']
 
 RISK_CALCULATORS = [
     'classical_risk', 'event_based_risk', 'scenario_risk',

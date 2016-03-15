@@ -475,7 +475,7 @@ def get_source_models(oqparam, source_model_lt, in_memory=True):
         weight = rlz.weight / num_samples
         num_gsim_paths = (num_samples if oqparam.number_of_logic_tree_samples
                           else gsim_lt.get_num_paths())
-        logging.info('Read source model %d/%d with %d gsim realization(s)',
+        logging.info('Processed source model %d/%d with %d gsim path(s)',
                      i + 1, num_source_models, num_gsim_paths)
         yield source.SourceModel(
             sm, weight, smpath, trt_models, gsim_lt, i, num_samples)

@@ -297,7 +297,7 @@ class TaskManager(object):
         # log a warning if too much memory is used
         if self.no_distribute:
             sent = 0
-            res = safely_call(self.task_func, args)
+            res = (self.task_func(*args), None, args[-1])
         else:
             piks = pickle_sequence(args)
             sent = sum(len(p) for p in piks)
