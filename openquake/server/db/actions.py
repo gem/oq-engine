@@ -399,7 +399,7 @@ def get_log(job_id):
     logs = models.Log.objects.filter(job=job_id).order_by('id')
     lines = []
     for log in logs:
-        time = str(log.timestamp)[:-7]  # strip decimals
-        line = '%s %s %s %s' % (time, log.level, log.process, log.message)
+        time = str(log.timestamp)[:-4]  # strip decimals
+        line = '[%s #%d %s] %s' % (time, job_id, log.level, log.message)
         lines.append(line)
     return '\n'.join(lines)
