@@ -215,11 +215,12 @@ class GmfCollection(object):
         self.investigation_time = investigation_time
 
     def __iter__(self):
+        completemesh = self.sitecol.complete.mesh
         gmfset = collections.defaultdict(list)
         for imt_str in self.imts:
             imt, sa_period, sa_damping = from_string(imt_str)
             for rupture in self.ruptures:
-                mesh = self.sitecol.mesh[rupture.indices]
+                mesh = completemesh[rupture.indices]
                 gmf = rupture.gmf[imt_str]
                 assert len(mesh) == len(gmf), (len(mesh), len(gmf))
                 nodes = (GroundMotionFieldNode(gmv, loc)
