@@ -16,9 +16,9 @@ export DH_OPTIONS
 
 bd=openquake/bin
 
-TRUSTY_DEP = python-amqp, python-django, postgresql-9.3
+TRUSTY_DEP = python-amqp, python-django
 TRUSTY_REC =
-PRECISE_DEP = python-django16, postgresql-9.1
+PRECISE_DEP = python-django16
 PRECISE_REC =
 
 ifeq ($(shell lsb_release --codename --short),trusty)
