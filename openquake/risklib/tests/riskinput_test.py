@@ -58,9 +58,6 @@ class RiskInputTestCase(unittest.TestCase):
 asset_ref:|S100,lon,lat,site_id:uint32,taxonomy:uint32:,number,area,occupants:float64:,structural:float64:,deductible~structural:float64:,insurance_limit~structural:float64:
 a0,8.12985001E+01,2.91098003E+01,0,1,3.00000000E+00,1.00000000E+01,1.00000000E+01,1.00000000E+02,2.50000000E+01,1.00000000E+02
 a1,8.30822983E+01,2.79006004E+01,1,0,5.00000000E+02,1.00000000E+01,2.00000000E+01,4.00000000E-01,1.00000000E-01,2.00000000E-01
-a2,8.57477036E+01,2.79015007E+01,2,2,1.00000000E+03,1.00000000E+01,3.00000000E+01,1.00000000E-01,2.00000000E-02,8.00000000E-02
-a3,8.57477036E+01,2.79015007E+01,2,1,1.00000000E+01,1.00000000E+00,0.00000000E+00,5.00000000E+02,1.00000000E+03,3.00000000E+03
-a4,8.77477036E+01,2.79015007E+01,3,1,1.00000000E+01,1.00000000E+02,5.00000000E+01,5.00000000E+02,1.00000000E+03,3.00000000E+03
 ''')
         assetcol = riskinput.build_asset_collection(self.assets_by_site)
         numpy.testing.assert_equal(
@@ -71,23 +68,23 @@ a4,8.77477036E+01,2.79015007E+01,3,1,1.00000000E+01,1.00000000E+02,5.00000000E+0
             list(self.riskmodel.get_imt_taxonomies()),
             [('PGA', set(['RM'])), ('SA(0.2)', set(['RC'])),
              ('SA(0.5)', set(['W']))])
-        self.assertEqual(len(self.sitecol), 4)
-        hazard_by_site = [{}] * 4
+        self.assertEqual(len(self.sitecol), 2)
+        hazard_by_site = [{}] * 2
 
         ri_PGA = self.riskmodel.build_input(
             'PGA', hazard_by_site, self.assets_by_site, {})
         haz = ri_PGA.get_hazard(rlzs_assoc)
-        self.assertEqual(len(haz), 4)
+        self.assertEqual(len(haz), 2)
 
         ri_SA_02 = self.riskmodel.build_input(
             'SA(0.2)', hazard_by_site, self.assets_by_site, {})
         haz = ri_SA_02.get_hazard(rlzs_assoc)
-        self.assertEqual(len(haz), 4)
+        self.assertEqual(len(haz), 2)
 
         ri_SA_05 = self.riskmodel.build_input(
             'SA(0.5)', hazard_by_site, self.assets_by_site, {})
         haz = ri_SA_05.get_hazard(rlzs_assoc)
-        self.assertEqual(len(haz), 4)
+        self.assertEqual(len(haz), 2)
 
     def test_from_ruptures(self):
         oq = self.oqparam
@@ -110,4 +107,4 @@ a4,8.77477036E+01,2.79015007E+01,3,1,1.00000000E+01,1.00000000E+02,5.00000000E+0
             correl_model, eps, hint=1)
 
         haz = ri.get_hazard(rlzs_assoc)
-        self.assertEqual(len(haz), 4)
+        self.assertEqual(len(haz), 2)
