@@ -137,7 +137,6 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
                 numpy.array(data, monitor.ela_dt))
 
         # agglosses
-        print indices, out.losses
         agg[indices, l, r] += out.losses
 
         # dictionaries asset_idx -> array of counts
