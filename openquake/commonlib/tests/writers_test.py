@@ -84,7 +84,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
         with StreamingXMLWriter(devnull) as writer:
             for asset in assetgen(1000):
                 writer.serialize(asset)
-        allocated = proc.get_memory_info().rss - rss
+        allocated = memory_info(proc).rss - rss
         self.assertLess(allocated, 204800)  # < 200 KB
 
     def test_zero_node(self):
