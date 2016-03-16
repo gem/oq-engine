@@ -500,7 +500,7 @@ class RiskInputFromRuptures(object):
         self.trunc_level = trunc_level
         self.correl_model = correl_model
         self.random_seed = random_seed
-        self.weight = len(ses_ruptures)
+        self.weight = sum(sr.multiplicity for sr in ses_ruptures)
         self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
         self.eps = epsilons  # matrix N x E, events in this block
         rupids = []

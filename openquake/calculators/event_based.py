@@ -692,7 +692,8 @@ class EventBasedCalculator(ClassicalCalculator):
             (self.sesruptures, self.sitecol, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             acc=zerodict, agg=self.combine_curves_and_save_gmfs,
-            key=operator.attrgetter('col_id'))
+            key=operator.attrgetter('col_id'),
+            weight=operator.attrgetter('multiplicity'))
         if oq.ground_motion_fields:
             # sanity check on the saved gmfs size
             # expected_nbytes = self.datastore[
