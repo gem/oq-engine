@@ -137,6 +137,7 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
                 numpy.array(data, monitor.ela_dt))
 
         # agglosses
+        print indices, out.losses
         agg[indices, l, r] += out.losses
 
         # dictionaries asset_idx -> array of counts
@@ -246,20 +247,18 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         correl_model = readinput.get_correl_model(oq)
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
-
+        self.N = len(self.assetcol)
+        self.E = len(self.tags)
+        tag2rupid = dict(zip(self.tags, range(self.E)))
         logging.info('Populating the risk inputs')
         rup_by_serial = AccumDict()
         for colkey in self.datastore['sescollection']:
             rup_by_serial += self.datastore['sescollection/' + colkey]
         all_ruptures = []
-        rupid = 0
         for serial in sorted(rup_by_serial):
             sr = rup_by_serial[serial]
-            sr.rupids = range(rupid, rupid + sr.multiplicity)
-            rupid += sr.multiplicity
+            sr.rupids = [tag2rupid[tag] for tag in sr.tags]
             all_ruptures.append(sr)
-        self.N = len(self.assetcol)
-        self.E = len(self.tags)
         if not self.riskmodel.covs:
             # do not generate epsilons
             eps = FakeMatrix(self.N, self.E)

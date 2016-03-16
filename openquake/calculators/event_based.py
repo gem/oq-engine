@@ -478,10 +478,11 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         cols = self.rlzs_assoc.csm_info.cols  # pairs (trt_id, idx)
         sescollection = numpy.array([{} for col_id in range(nc)])
         tags = []
-        for trt_id in sorted(result):
-            for sr in sorted(result[trt_id]):
+        for trt_id in result:
+            for sr in result[trt_id]:
                 sescollection[sr.col_id][sr.serial] = sr
                 tags.extend(sr.tags)
+        tags.sort()
         with self.monitor('saving ruptures', autoflush=True):
             self.tags = numpy.array(tags, (bytes, 100))
             self.datastore.set_attrs(
