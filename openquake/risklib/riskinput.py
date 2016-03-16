@@ -366,7 +366,7 @@ class CompositeRiskModel(collections.Mapping):
         mon_hazard = monitor('getting hazard')
         mon_risk = monitor('computing individual risk')
         for riskinput in riskinputs:
-            rupids = riskinput.rupids
+            eids = riskinput.eids
             assets_by_site = getattr(
                 riskinput, 'assets_by_site', assets_by_site)
             asset_dicts = [groupby(assets, by_taxonomy)
@@ -384,14 +384,14 @@ class CompositeRiskModel(collections.Mapping):
                                     for asset in assets]
                         for imt, taxonomies in riskinput.imt_taxonomies:
                             if taxonomy in taxonomies:
-                                if rupids is None:
+                                if eids is None:
                                     yield riskmodel.out_by_lr(
                                         imt, assets, hazard[imt], epsilons)
                                 else:  # event based
                                     for asset, eps in zip(assets, epsilons):
                                         yield riskmodel.out_by_lr(
                                             imt, [asset], hazard[imt], [eps],
-                                            rupids)
+                                            eids)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -426,7 +426,7 @@ class RiskInput(object):
                 taxonomies_set.add(asset.taxonomy)
             self.weight += len(assets)
         self.taxonomies = sorted(taxonomies_set)
-        self.rupids = None  # for API compatibility with RiskInputFromRuptures
+        self.eids = None  # for API compatibility with RiskInputFromRuptures
         self.eps = eps_dict
 
     @property
@@ -503,10 +503,10 @@ class RiskInputFromRuptures(object):
         self.weight = sum(sr.multiplicity for sr in ses_ruptures)
         self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
         self.eps = epsilons  # matrix N x E, events in this block
-        rupids = []
+        eids = []
         for sr in ses_ruptures:
-            rupids.extend(sr.rupids)
-        self.rupids = numpy.array(rupids, U32)
+            eids.extend(sr.eids)
+        self.eids = numpy.array(eids, U32)
 
     def compute_expand_gmfa(self, monitor):
         """
@@ -521,7 +521,7 @@ class RiskInputFromRuptures(object):
             self.random_seed, monitor)
         gmf_dt = gsim_imt_dt(self.gsims, self.imts)
         N = len(self.sitecol.complete)
-        E = len(self.rupids)
+        E = len(self.eids)
         gmfa = numpy.zeros((E, N), gmf_dt)
         start = 0
         for sesrup in self.ses_ruptures:

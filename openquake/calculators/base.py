@@ -665,11 +665,11 @@ def get_gmfs(dstore):
     # build a matrix N x E for each GSIM realization
     gmfs = {(trt_id, gsim): numpy.zeros((N, E), imt_dt)
             for trt_id, gsim in dstore['rlzs_assoc']}
-    for rupid, gmf in enumerate(gmfa):
+    for eid, gmf in enumerate(gmfa):
         assert len(haz_sitecol.indices) == len(gmf), (
             len(haz_sitecol.indices), len(gmf))
         for sid, gmv in zip(haz_sitecol.indices, gmf):
             if sid in risk_indices:
                 for trt_id, gsim in gmfs:
-                    gmfs[trt_id, gsim][sid, rupid] = gmv[gsim]
+                    gmfs[trt_id, gsim][sid, eid] = gmv[gsim]
     return dstore['etags'].value, gmfs

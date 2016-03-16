@@ -512,7 +512,7 @@ def export_gmf_spec(ekey, dstore, spec):
     :param dstore: datastore object
     :param spec: a string specifying what to export exactly
     """
-    rupids = numpy.array([int(rid) for rid in spec.split(',')])
+    eids = numpy.array([int(rid) for rid in spec.split(',')])
     sitemesh = dstore['sitemesh']
     writer = writers.CsvWriter(fmt='%.5f')
     if 'scenario' in dstore.attrs['calculation_mode']:
@@ -520,17 +520,17 @@ def export_gmf_spec(ekey, dstore, spec):
         gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
         imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
         gmf_dt = numpy.dtype([(gsim, F32) for gsim in gsims])
-        rupetags = dstore['etags'].value[rupids - 1]
-        for rupid, rupetag in zip(rupids, rupetags):
+        rupetags = dstore['etags'].value[eids - 1]
+        for eid, rupetag in zip(eids, rupetags):
             for imt in imts:
                 gmfa = numpy.zeros(len(sitemesh), gmf_dt)
                 for gsim in gsims:
-                    gmfa[gsim] = gmfs_by_trt_gsim[0, gsim][imt][:, rupid]
+                    gmfa[gsim] = gmfs_by_trt_gsim[0, gsim][imt][:, eid]
                 dest = dstore.export_path('gmf-%s-%s.csv' % (rupetag, imt))
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
     else:  # event based
-        for gmfa, imt, serial in _get_gmfs(dstore, rupids):
+        for gmfa, imt, serial in _get_gmfs(dstore, eids):
             dest = dstore.export_path('gmf-%s-%s.csv' % (serial, imt))
             data = util.compose_arrays(sitemesh, gmfa)
             writer.save(data, dest)

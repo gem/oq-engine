@@ -124,13 +124,13 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
     # update the result dictionary and the agg array with each output
     assets = output.assets
     aid = assets[0].idx
-    rupids = output.rupids
-    indices = numpy.array([idx[rupid] for rupid in rupids])
+    eids = output.eids
+    indices = numpy.array([idx[eid] for eid in eids])
     for (l, r), out in sorted(output.items()):
 
         # asslosses
         if monitor.asset_loss_table:
-            data = [(rupids[i], aid, loss)
+            data = [(eids[i], aid, loss)
                     for i, loss in enumerate(out.losses)
                     if loss.sum() > 0]
             result['ASSLOSS'][l, r].append(
@@ -170,9 +170,9 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     lti = riskmodel.lti  # loss type -> index
     L, R = len(lti), len(rlzs_assoc.realizations)
     I = monitor.insured_losses + 1
-    rupids = numpy.concatenate([ri.rupids for ri in riskinputs])
-    E = len(rupids)
-    idx = dict(zip(rupids, range(E)))
+    eids = numpy.concatenate([ri.eids for ri in riskinputs])
+    E = len(eids)
+    idx = dict(zip(eids, range(E)))
     agg = numpy.zeros((E, L, R, I), F32)
 
     def zeroN():
@@ -191,7 +191,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
             _aggregate_output(output, riskmodel, agg, idx, result, monitor)
     for (l, r), lst in numpy.ndenumerate(result['AGGLOSS']):
         records = numpy.array(
-            [(rupids[i], loss) for i, loss in enumerate(agg[:, l, r])
+            [(eids[i], loss) for i, loss in enumerate(agg[:, l, r])
              if loss.sum() > 0], monitor.elt_dt)
         result['AGGLOSS'][l, r] = records
     for (l, r), lst in numpy.ndenumerate(result['RC']):
@@ -248,7 +248,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
         self.N = len(self.assetcol)
         self.E = len(self.etags)
-        etag2rupid = dict(zip(self.etags, range(self.E)))
+        etag2eid = dict(zip(self.etags, range(self.E)))
         logging.info('Populating the risk inputs')
         rup_by_serial = AccumDict()
         for colkey in self.datastore['sescollection']:
@@ -256,7 +256,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         all_ruptures = []
         for serial in sorted(rup_by_serial):
             sr = rup_by_serial[serial]
-            sr.rupids = [etag2rupid[etag] for etag in sr.etags]
+            sr.eids = [etag2eid[etag] for etag in sr.etags]
             all_ruptures.append(sr)
         if not self.riskmodel.covs:
             # do not generate epsilons
