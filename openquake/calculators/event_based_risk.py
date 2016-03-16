@@ -247,8 +247,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         correl_model = readinput.get_correl_model(oq)
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
         self.N = len(self.assetcol)
-        self.E = len(self.tags)
-        tag2rupid = dict(zip(self.tags, range(self.E)))
+        self.E = len(self.etags)
+        etag2rupid = dict(zip(self.etags, range(self.E)))
         logging.info('Populating the risk inputs')
         rup_by_serial = AccumDict()
         for colkey in self.datastore['sescollection']:
@@ -256,7 +256,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         all_ruptures = []
         for serial in sorted(rup_by_serial):
             sr = rup_by_serial[serial]
-            sr.rupids = [tag2rupid[tag] for tag in sr.tags]
+            sr.rupids = [etag2rupid[etag] for etag in sr.etags]
             all_ruptures.append(sr)
         if not self.riskmodel.covs:
             # do not generate epsilons
@@ -288,7 +288,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         mon.insured_losses = self.I
 
         self.N = N = len(self.assetcol)
-        self.E = len(self.datastore['tags'])
+        self.E = len(self.datastore['etags'])
 
         # average losses, stored in a composite array of shape N, R
         multi_avg_dt = self.riskmodel.loss_type_dt(insured=self.I)

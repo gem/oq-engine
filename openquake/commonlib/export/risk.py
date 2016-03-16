@@ -149,12 +149,12 @@ def export_agg_losses(ekey, dstore):
     """
     agg_losses = compactify(dstore[ekey[0]].value)
     rlzs = dstore['rlzs_assoc'].realizations
-    tags = dstore['tags'].value
+    etags = dstore['etags'].value
     writer = writers.CsvWriter(fmt='%10.6E')
     for rlz in rlzs:
         losses = agg_losses[:, rlz.ordinal]
         dest = dstore.export_path('agg_losses-rlz%03d.csv' % rlz.ordinal)
-        data = compose_arrays(tags, losses)
+        data = compose_arrays(etags, losses)
         writer.save(data, dest)
     return writer.getsaved()
 

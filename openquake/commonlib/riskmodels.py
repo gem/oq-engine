@@ -69,7 +69,7 @@ def get_risk_files(inputs):
 # ########################### vulnerability ############################## #
 
 def filter_vset(elem):
-    return elem.tag.endswith('discreteVulnerabilitySet')
+    return elem.etag.endswith('discreteVulnerabilitySet')
 
 
 @obj_to_node.add('VulnerabilityFunction')

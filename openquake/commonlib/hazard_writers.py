@@ -321,9 +321,9 @@ def gen_gmfs(gmf_set):
         if gmf.imt == 'SA':
             gmf_node['saPeriod'] = str(gmf.sa_period)
             gmf_node['saDamping'] = str(gmf.sa_damping)
-        tag = gmf.rupture_id
-        if tag:
-            gmf_node['ruptureId'] = tag
+        etag = gmf.rupture_id
+        if etag:
+            gmf_node['ruptureId'] = etag
         sorted_nodes = sorted(gmf)
         gmf_node.nodes = (
             node.Node(
@@ -403,7 +403,7 @@ def rupture_to_element(rupture, parent=None):
     Convert a rupture object into an Element object.
 
     :param rupture:
-        must have attributes .rupture, .tag and .seed
+        must have attributes .rupture, .etag and .seed
     :param parent:
         if None a new element is created, otherwise a sub element is
         attached to the parent.
@@ -416,7 +416,7 @@ def rupture_to_element(rupture, parent=None):
     rup_elem.append(et.Comment('rupture seed=%d' % rupture.seed))
 
     rup = rupture.rupture
-    rup_elem.set('id', rupture.tag)
+    rup_elem.set('id', rupture.etag)
     rup_elem.set('magnitude', str(rup.magnitude))
     rup_elem.set('strike', str(rup.strike))
     rup_elem.set('dip', str(rup.dip))
@@ -538,7 +538,7 @@ class SESXMLWriter(object):
             * be iterable, yielding a sequence of "rupture" objects
 
             Each rupture" should have the following attributes:
-            * `tag`
+            * `etag`
             * `magnitude`
             * `strike`
             * `dip`

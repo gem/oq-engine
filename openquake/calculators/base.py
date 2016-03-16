@@ -78,7 +78,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     """
     sitemesh = datastore.persistent_attribute('sitemesh')
     sitecol = datastore.persistent_attribute('sitecol')
-    tags = datastore.persistent_attribute('tags')
+    etags = datastore.persistent_attribute('etags')
     rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
     realizations = datastore.persistent_attribute('realizations')
     assetcol = datastore.persistent_attribute('assetcol')
@@ -638,14 +638,14 @@ def get_gmfs(dstore):
     oq = OqParam.from_(dstore.attrs)
     if 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
-        sitecol, tags, gmfs_by_imt = readinput.get_gmfs(oq)
+        sitecol, etags, gmfs_by_imt = readinput.get_gmfs(oq)
 
         # reduce the gmfs matrices to the filtered sites
         for imt in oq.imtls:
             gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
 
         logging.info('Preparing the risk input')
-        return tags, {(0, 'FromFile'): gmfs_by_imt}
+        return etags, {(0, 'FromFile'): gmfs_by_imt}
 
     # else from rupture
     sitecol = dstore['sitecol']
@@ -672,4 +672,4 @@ def get_gmfs(dstore):
             if sid in risk_indices:
                 for trt_id, gsim in gmfs:
                     gmfs[trt_id, gsim][sid, rupid] = gmv[gsim]
-    return dstore['tags'].value, gmfs
+    return dstore['etags'].value, gmfs

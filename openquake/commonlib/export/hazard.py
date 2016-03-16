@@ -53,7 +53,7 @@ class SES(object):
     # exported XML file and the schema constraints the number to be
     # nonzero
     def __init__(self, ruptures, investigation_time, ordinal=1):
-        self.ruptures = sorted(ruptures, key=operator.attrgetter('tag'))
+        self.ruptures = sorted(ruptures, key=operator.attrgetter('etag'))
         self.investigation_time = investigation_time
         self.ordinal = ordinal
 
@@ -118,7 +118,7 @@ def _export_ses_csv(dest, ses_coll):
     rows = []
     for ses in ses_coll:
         for rup in ses:
-            rows.append([rup.tag, rup.seed])
+            rows.append([rup.etag, rup.seed])
     write_csv(dest, sorted(rows, key=operator.itemgetter(0)))
 
 
@@ -227,7 +227,7 @@ class GmfCollection(object):
                          for gmv, loc in zip(gmf, mesh))
                 gmfset[rupture.ses_idx].append(
                     GroundMotionField(
-                        imt, sa_period, sa_damping, rupture.tag, nodes))
+                        imt, sa_period, sa_damping, rupture.etag, nodes))
         for ses_idx in sorted(gmfset):
             yield GmfSet(gmfset[ses_idx], self.investigation_time, ses_idx)
 
@@ -495,9 +495,9 @@ def export_gmf(ekey, dstore):
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    for rlz, rup_by_tag in zip(rlzs_assoc.realizations,
+    for rlz, rup_by_etag in zip(rlzs_assoc.realizations,
                                rlzs_assoc.combine_gmfs(gmf_data, sid_data)):
-        ruptures = [rup_by_tag[tag] for tag in sorted(rup_by_tag)]
+        ruptures = [rup_by_etag[etag] for etag in sorted(rup_by_etag)]
         fname = build_name(dstore, rlz, 'gmf', fmt, samples)
         fnames.append(fname)
         globals()['export_gmf_%s' % fmt](
@@ -520,13 +520,13 @@ def export_gmf_spec(ekey, dstore, spec):
         gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
         imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
         gmf_dt = numpy.dtype([(gsim, F32) for gsim in gsims])
-        ruptags = dstore['tags'].value[rupids - 1]
-        for rupid, ruptag in zip(rupids, ruptags):
+        rupetags = dstore['etags'].value[rupids - 1]
+        for rupid, rupetag in zip(rupids, rupetags):
             for imt in imts:
                 gmfa = numpy.zeros(len(sitemesh), gmf_dt)
                 for gsim in gsims:
                     gmfa[gsim] = gmfs_by_trt_gsim[0, gsim][imt][:, rupid]
-                dest = dstore.export_path('gmf-%s-%s.csv' % (ruptag, imt))
+                dest = dstore.export_path('gmf-%s-%s.csv' % (rupetag, imt))
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
     else:  # event based
@@ -570,11 +570,11 @@ def export_gmf_txt(key, dest, sitecol, ruptures, rlz, investigation_time):
     """
     imts = ruptures[0].gmf.dtype.names
     # the csv file has the form
-    # tag,indices,gmvs_imt_1,...,gmvs_imt_N
+    # etag,indices,gmvs_imt_1,...,gmvs_imt_N
     rows = []
     for rupture in ruptures:
         indices = rupture.indices
-        row = [rupture.tag, ' '.join(map(str, indices))] + \
+        row = [rupture.etag, ' '.join(map(str, indices))] + \
               [rupture.gmf[imt] for imt in imts]
         rows.append(row)
     write_csv(dest, rows)
@@ -619,9 +619,9 @@ def _get_gmfs(dstore, rupserials):
 @export.add(('gmfs', 'csv'))
 def export_gmf_scenario(ekey, dstore):
     if 'scenario' in dstore.attrs['calculation_mode']:
-        fields = ['%03d' % i for i in range(len(dstore['tags']))]
+        fields = ['%03d' % i for i in range(len(dstore['etags']))]
         dt = numpy.dtype([(f, F32) for f in fields])
-        tags, gmfs_by_trt_gsim = base.get_gmfs(dstore)
+        etags, gmfs_by_trt_gsim = base.get_gmfs(dstore)
         sitemesh = dstore['sitemesh']
         writer = writers.CsvWriter(fmt='%.5f')
         for (trt, gsim), gmfs_ in gmfs_by_trt_gsim.items():

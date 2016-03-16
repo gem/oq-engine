@@ -449,14 +449,14 @@ class RlzsAssoc(collections.Mapping):
         """
         :param gmf_data: dataset gmf_data
         :param sid_data: dataset sid_data
-        :returns: a list of R dictionaries tag -> rupture
+        :returns: a list of R dictionaries etag -> rupture
         """
         gsims_by_col = self.get_gsims_by_col()
         dicts = [AccumDict() for rlz in self.realizations]
         for serial in gmf_data:
             gmf = gmf_data[serial]
             indices = sid_data[serial].value
-            tags = gmf.attrs['tags']
+            etags = gmf.attrs['etags']
             col_id = gmf.attrs['col_id']
             trt_id = self.csm_info.get_trt_id(col_id)
             for gsim in gsims_by_col[col_id]:
@@ -466,10 +466,10 @@ class RlzsAssoc(collections.Mapping):
                     dic.indices = indices
                     col_ids = self.col_ids_by_rlz[rlz]
                     if not col_ids or col_id in col_ids:
-                        for i, tag in enumerate(tags):
-                            ebrup = util.Rupture(tag, indices)
+                        for i, etag in enumerate(etags):
+                            ebrup = util.Rupture(etag, indices)
                             ebrup.gmf = gmf[i][gs]
-                            dic[tag] = ebrup
+                            dic[etag] = ebrup
         return dicts
 
     def combine(self, results, agg=agg_prob):

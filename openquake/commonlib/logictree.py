@@ -89,7 +89,7 @@ class RlzsAssoc(collections.Mapping):
         """
         :param gmf_data: dataset gmf_data
         :param sid_data: dataset sid_data
-        :returns: a list of R dictionaries tag -> rupture
+        :returns: a list of R dictionaries etag -> rupture
         """
         dicts = [{} for rlz in self.realizations]
         gmf = gmf_data['1']
@@ -99,7 +99,7 @@ class RlzsAssoc(collections.Mapping):
             for i, gmvs in enumerate(gmf):
                 rup = util.Rupture(i, indices)
                 rup.gmf = gmvs[gsim]
-                dicts[rlz.ordinal][rup.tag] = rup
+                dicts[rlz.ordinal][rup.etag] = rup
         return dicts
 
     def __iter__(self):
@@ -688,7 +688,7 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         Can be overriden by subclasses. Base class implementation does nothing.
 
         :param tree_node:
-            ``etree.Element`` object with tag "logicTree".
+            ``etree.Element`` object with etag "logicTree".
         :param root_branchset:
             An instance of :class:`BranchSet` which is about to become
             the root branchset for this tree.

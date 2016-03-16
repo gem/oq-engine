@@ -35,7 +35,7 @@ class ScenarioCalculator(base.HazardCalculator):
 
     def pre_execute(self):
         """
-        Read the site collection and initialize GmfComputer, tags and seeds
+        Read the site collection and initialize GmfComputer, etags and seeds
         """
         super(ScenarioCalculator, self).pre_execute()
         trunc_level = self.oqparam.truncation_level
@@ -52,22 +52,22 @@ class ScenarioCalculator(base.HazardCalculator):
             raise RuntimeError(
                 'All sites were filtered out! maximum_distance=%s km' %
                 maxdist)
-        self.tags = numpy.array(
+        self.etags = numpy.array(
             sorted(['scenario-%010d' % i for i in range(n_gmfs)]),
             (bytes, 100))
         self.computer = GmfComputer(
             rupture, self.sitecol, self.oqparam.imtls, self.gsims,
             trunc_level, correl_model)
         rnd = random.Random(self.oqparam.random_seed)
-        self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
-                               for tag in self.tags]
+        self.etag_seed_pairs = [(etag, rnd.randint(0, calc.MAX_INT))
+                               for etag in self.etags]
 
     def execute(self):
         """
-        Compute the GMFs and return a dictionary gmf_by_tag
+        Compute the GMFs and return a dictionary gmf_by_etag
         """
         with self.monitor('computing gmfs', autoflush=True):
-            tags, seeds = zip(*self.tag_seed_pairs)
+            etags, seeds = zip(*self.etag_seed_pairs)
             return self.computer.compute(seeds)
 
     def post_execute(self, gmfa):
