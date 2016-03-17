@@ -322,8 +322,8 @@ _devtest_innervm_run () {
         done"
 
     ssh $lxc_ip "sudo service postgresql restart"
-    ssh $lxc_ip "set -e ; python -m openquake.server.dbserver ; sudo su postgres -c \"cd oq-engine ; openquake/engine/bin/oq_create_db --yes --db-name=openquake2\""
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine ; python -m openquake.server.dbserver ; bin/oq-engine --upgrade-db --yes"
+    ssh $lxc_ip "set -e ; sudo su postgres -c \"cd oq-engine ; openquake/engine/bin/oq_create_db --yes --db-name=openquake2\""
+    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine ; python -m openquake.server.dbserver &; sleep 1 ; bin/oq-engine --upgrade-db --yes"
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         if [ -n "$GEM_DEVTEST_SKIP_SLOW_TESTS" ]; then
