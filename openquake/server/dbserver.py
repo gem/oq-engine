@@ -46,7 +46,7 @@ class DbServer(object):
 
     def loop(self):
         listener = Listener(self.address, authkey=self.authkey)
-        print('Listening on %s:%d...' % self.address)
+        logging.info('Listening on %s:%d...' % self.address)
         try:
             while True:
                 try:
@@ -58,17 +58,22 @@ class DbServer(object):
                     # scanner such as the one in manage.py
                     continue
                 try:
-                    cmd = conn.recv()
+                    cmd = conn.recv()  # a list [name, arg1, ... argN]
                     name = cmd[0]
                     if name == '@stop':
+                        # this is a somewaht special command, so I am using
+                        # the convention of prepending an `@` to its name
+                        # in the future I may add more special commands
                         conn.send((None, None))
                         break
-                    else:  # global function
+                    else:  # call the function named `name` in db.actions
                         args = cmd[1:]
-                        call = getattr(actions, name)
-                    res, etype, _ = safely_call(call, args)
+                        func = getattr(actions, name)
+                    # call the function by trapping any error
+                    res, etype, _ = safely_call(func, args)
                     if etype:
                         logging.error(res)
+                    # send back the result and the exception class
                     conn.send((res, etype))
                 finally:
                     conn.close()
@@ -76,4 +81,5 @@ class DbServer(object):
             listener.close()
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     DbServer(config.DBS_ADDRESS, config.DBS_AUTHKEY).loop()
