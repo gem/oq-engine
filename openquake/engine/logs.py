@@ -27,7 +27,6 @@ from datetime import datetime
 from contextlib import contextmanager
 from multiprocessing.connection import Client
 from openquake.engine.utils.config import DBS_ADDRESS, DBS_AUTHKEY
-from openquake.server.db import actions
 
 
 # Place the new level between info and warning
