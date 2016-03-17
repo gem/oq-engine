@@ -16,12 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
 import getpass
 import subprocess
 import tempfile
 import unittest
-from StringIO import StringIO
 import mock
 
 from openquake.server.db import models, actions
@@ -101,23 +99,6 @@ class JobFromFileTestCase(unittest.TestCase):
             models.OqJob.objects.get(id=job.id)
         except exceptions.ObjectDoesNotExist:
             self.fail('Job was not found in the database')
-
-
-class RunCalcTestCase(unittest.TestCase):
-    """
-    Test engine.run_calc in case of errors
-    """
-    def test(self):
-        cfg = helpers.get_data_path('event_based_hazard/job.ini')
-        job_id, oq = actions.job_from_file(cfg, 'test_user')
-        with tempfile.NamedTemporaryFile() as temp:
-            with self.assertRaises(ZeroDivisionError), mock.patch(
-                    'openquake.engine.engine._do_run_calc', lambda *args: 1/0):
-                engine.run_calc(job_id, oq, 'info', temp.name, exports=[])
-            logged = open(temp.name).read()
-
-            # make sure the real error has been logged
-            self.assertIn('integer division or modulo by zero', logged)
 
 
 class OpenquakeCliTestCase(unittest.TestCase):
@@ -262,14 +243,8 @@ class PrintSummaryTestCase(unittest.TestCase):
     outputs = [FakeOutput(i, 'gmf') for i in range(1, 12)]
 
     def print_outputs_summary(self, full):
-        orig_stdout = sys.stdout
-        sys.stdout = StringIO()
-        try:
-            actions.print_outputs_summary(self.outputs, full)
-            got = sys.stdout.getvalue()
-        finally:
-            sys.stdout = orig_stdout
-        return got
+        got = actions.print_outputs_summary(self.outputs, full)
+        return '\n'.join(got)
 
     def test_print_outputs_summary_full(self):
         self.assertEqual(self.print_outputs_summary(full=True), '''\
@@ -284,8 +259,7 @@ class PrintSummaryTestCase(unittest.TestCase):
    8 | gmf
    9 | gmf
   10 | gmf
-  11 | gmf
-''')
+  11 | gmf''')
 
     def test_print_outputs_summary_short(self):
         self.assertEqual(
@@ -303,5 +277,4 @@ class PrintSummaryTestCase(unittest.TestCase):
   10 | gmf
  ... | 1 additional output(s)
 Some outputs where not shown. You can see the full list with the command
-`oq-engine --list-outputs`
-''')
+`oq-engine --list-outputs`''')

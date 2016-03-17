@@ -27,7 +27,6 @@ from django import db
 
 from openquake.commonlib import datastore, readinput, export
 from openquake.server.db import models
-from openquake.engine import utils
 from openquake.engine.export import core
 from openquake.calculators import views
 from openquake.server.db.schema.upgrades import upgrader
@@ -120,7 +119,7 @@ def get_calc_id(job_id=None):
 
 def list_calculations(job_type):
     """
-    Print a summary of past calculations.
+    Yield a summary of past calculations.
 
     :param job_type: 'hazard' or 'risk'
     """
@@ -129,9 +128,9 @@ def list_calculations(job_type):
             if job.job_type == job_type]
 
     if len(jobs) == 0:
-        print 'None'
+        yield 'None'
     else:
-        print ('job_id |     status |          start_time | '
+        yield ('job_id |     status |          start_time | '
                '        description')
         for job in jobs:
             descr = job.description
@@ -146,7 +145,7 @@ def list_calculations(job_type):
             start_time = latest_job.start_time.strftime(
                 '%Y-%m-%d %H:%M:%S %Z'
             )
-            print ('%6d | %10s | %s| %s' % (
+            yield ('%6d | %10s | %s| %s' % (
                 job.id, status, start_time, descr)).encode('utf-8')
 
 
@@ -156,56 +155,37 @@ def export_outputs(hc_id, target_dir, export_type):
     if not outputs:
         sys.exit('Found nothing to export for job %s' % hc_id)
     for output in outputs:
-        print('Exporting %s...' % output)
+        yield('Exporting %s...' % output)
         try:
             export_output(output.id, target_dir, export_type)
         except Exception as exc:
-            print(exc)
+            yield(exc)
 
 
 def export_output(output_id, target_dir, export_type):
     """
     Simple UI wrapper around
-    :func:`openquake.engine.export.core.export` which prints a summary
+    :func:`openquake.engine.export.core.export` which yields a summary
     of files exported, if any.
     """
     queryset = models.Output.objects.filter(pk=output_id)
     if not queryset.exists():
-        print 'No output found for OUTPUT_ID %s' % output_id
+        yield 'No output found for OUTPUT_ID %s' % output_id
         return
 
     if queryset.all()[0].oq_job.status != "complete":
-        print ("Exporting output produced by a job which did not run "
+        yield ("Exporting output produced by a job which did not run "
                "successfully. Results might be uncomplete")
 
     the_file = core.export(output_id, target_dir, export_type)
     if the_file.endswith('.zip'):
         dname = os.path.dirname(the_file)
         fnames = zipfile.ZipFile(the_file).namelist()
-        print('Files exported:')
+        yield('Files exported:')
         for fname in fnames:
-            print(os.path.join(dname, fname))
+            yield(os.path.join(dname, fname))
     else:
-        print('File exported: %s' % the_file)
-
-
-def delete_calculation(job_id, confirmed=False):
-    """
-    Delete a calculation and all associated outputs.
-    """
-    if confirmed or utils.confirm(
-            'Are you sure you want to delete this calculation and all '
-            'associated outputs?\nThis action cannot be undone. (y/n): '):
-        try:
-            del_calc(job_id)
-        except RuntimeError as err:
-            print(err)
-
-
-def print_results(job_id, duration):
-    print('Calculation %d completed in %d seconds. Results:' % (
-        job_id, duration))
-    list_outputs(job_id, full=False)
+        yield('File exported: %s' % the_file)
 
 
 def list_outputs(job_id, full=True):
@@ -219,7 +199,7 @@ def list_outputs(job_id, full=True):
         If True produce a full listing, otherwise a short version
     """
     outputs = get_outputs(job_id)
-    print_outputs_summary(outputs, full)
+    return print_outputs_summary(outputs, full)
 
 
 def print_outputs_summary(outputs, full=True):
@@ -228,16 +208,16 @@ def print_outputs_summary(outputs, full=True):
     """
     if len(outputs) > 0:
         truncated = False
-        print '  id | name'
+        yield '  id | name'
         outs = sorted(outputs, key=operator.attrgetter('display_name'))
         for i, o in enumerate(outs):
             if not full and i >= 10:
-                print ' ... | %d additional output(s)' % (len(outs) - 10)
+                yield ' ... | %d additional output(s)' % (len(outs) - 10)
                 truncated = True
                 break
-            print '%4d | %s' % (o.id, o.display_name)
+            yield '%4d | %s' % (o.id, o.display_name)
         if truncated:
-            print ('Some outputs where not shown. You can see the full list '
+            yield ('Some outputs where not shown. You can see the full list '
                    'with the command\n`oq-engine --list-outputs`')
 
 
@@ -380,8 +360,6 @@ def del_calc(job_id):
         os.remove(job.ds_calc_dir + '.hdf5')
     except:  # already removed or missing permission
         pass
-    else:
-        print('Removed %s' % job.ds_calc_dir + '.hdf5')
 
 
 def log(job_id, timestamp, level, process, message):
@@ -398,12 +376,9 @@ def get_log(job_id):
     Extract the logs as a big string
     """
     logs = models.Log.objects.filter(job=job_id).order_by('id')
-    lines = []
     for log in logs:
         time = str(log.timestamp)[:-4]  # strip decimals
-        line = '[%s #%d %s] %s' % (time, job_id, log.level, log.message)
-        lines.append(line)
-    return '\n'.join(lines)
+        yield '[%s #%d %s] %s' % (time, job_id, log.level, log.message)
 
 
 def save_performance(job_id):
