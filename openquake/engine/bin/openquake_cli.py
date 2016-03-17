@@ -95,8 +95,24 @@ def run_job(cfg_file, log_level, log_file, exports='',
                            hazard_calculation_id=hazard_calculation_id)
     duration = calc.monitor.duration  # set this before monitor.flush()
     calc.monitor.flush()
-    dbcmd('print_results', job_id, duration)
+    print('Calculation %d completed in %d seconds. Results:' % (
+        job_id, duration))
+    for line in dbcmd('list_outputs', job_id, False):
+        print line
     return job_id
+
+
+def delete_calculation(job_id, confirmed=False):
+    """
+    Delete a calculation and all associated outputs.
+    """
+    if confirmed or utils.confirm(
+            'Are you sure you want to delete this calculation and all '
+            'associated outputs?\nThis action cannot be undone. (y/n): '):
+        try:
+            dbcmd('del_calc', job_id)
+        except RuntimeError as err:
+            print(err)
 
 
 def set_up_arg_parser():
@@ -324,7 +340,8 @@ def main():
                 args.exports, hazard_calculation_id=hc_id)
     # hazard
     elif args.list_hazard_calculations:
-        dbcmd('list_calculations', 'hazard')
+        for line in dbcmd('list_calculations', 'hazard'):
+            print line
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
@@ -334,7 +351,8 @@ def main():
         dbcmd('delete_calculation', args.delete_calculation, args.yes)
     # risk
     elif args.list_risk_calculations:
-        dbcmd('list_calculations', 'risk')
+        for line in dbcmd('list_calculations', 'risk'):
+            print line
     elif args.run_risk is not None:
         if args.hazard_calculation_id is None:
             sys.exit(MISSING_HAZARD_MSG)
@@ -358,17 +376,21 @@ def main():
         print views.view(view_name, datastore.read(int(job_id)))
     elif args.show_log is not None:
         hc_id = dbcmd('get_hc_id', args.show_log[0])
-        print dbcmd('get_log', hc_id)
+        for line in dbcmd('get_log', hc_id):
+            print line
 
     elif args.export_output is not None:
         output_id, target_dir = args.export_output
-        dbcmd('export_output', int(output_id), expanduser(target_dir),
-              exports)
+        for line in dbcmd('export_output', int(output_id),
+                          expanduser(target_dir), exports):
+            print line
 
     elif args.export_outputs is not None:
         job_id, target_dir = args.export_outputs
         hc_id = dbcmd('get_hc_id', job_id)
-        dbcmd('export_outputs', hc_id, expanduser(target_dir), exports)
+        for line in dbcmd('export_outputs', hc_id, expanduser(target_dir),
+                          exports):
+            print line
 
     elif args.delete_uncompleted_calculations:
         dbcmd('delete_uncompleted_calculations')
