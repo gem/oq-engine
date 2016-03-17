@@ -272,10 +272,11 @@ def main():
         logging.basicConfig(level=logging.INFO)
 
     # check if the DbServer is up
-    port = int(utils.config.get('dbserver', 'port'))
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    err = sock.connect_ex(('', port))
-    sock.close()
+    try:
+        err = sock.connect_ex(utils.config.DBS_ADDRESS)
+    finally:
+        sock.close()
     if err:
         sys.exit('Please start the DbServer: '
                  'python -m openquake.server.dbserver')
