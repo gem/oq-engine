@@ -370,7 +370,8 @@ def main():
 
     elif args.list_outputs is not None:
         hc_id = dbcmd('get_hc_id', args.list_outputs)
-        dbcmd('list_outputs', hc_id)
+        for line in dbcmd('list_outputs', hc_id):
+            print line
     elif args.show_view is not None:
         job_id, view_name = args.show_view
         print views.view(view_name, datastore.read(int(job_id)))
