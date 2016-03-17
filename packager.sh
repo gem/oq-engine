@@ -609,7 +609,7 @@ celeryd_wait $GEM_MAXLOOP"
         python -m openquake.server.stop"
     fi
 
-    ssh $lxc_ip "oq-engine --make-html-report today"
+    ssh $lxc_ip "python -m openquake.server.dbserver & sleep 1 ; oq-engine --make-html-report today ; python -m openquake.server.stop"
     scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
