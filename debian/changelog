@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Made more robust the killing of processes by patching concurrent.futures
   * Improved the validation of NRML files
   * Added a command `oq-engine --show-log <job_id>`
 
