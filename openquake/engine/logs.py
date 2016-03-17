@@ -47,16 +47,6 @@ LOG_FORMAT = ('[%(asctime)s job #%(job_id)s %(hostname)s '
 LOG = logging.getLogger()
 
 
-def _dbcmd(action, *args):
-    """
-    A fake dispatcher to the database server.
-
-    :param action: database action to perform
-    :param args: arguments
-    """
-    return getattr(actions, action)(*args)
-
-
 def dbcmd(action, *args):
     """
     A dispatcher to the database server.
