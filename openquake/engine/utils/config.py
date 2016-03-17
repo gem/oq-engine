@@ -176,5 +176,5 @@ def refresh():
 
 
 port = int(get('dbserver', 'port'))
-DBS_ADDRESS = ('', port)
+DBS_ADDRESS = (get('dbserver', 'host'), port)
 DBS_AUTHKEY = get('dbserver', 'authkey')
