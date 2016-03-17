@@ -116,7 +116,7 @@ class ProbabilisticRupture(object):
         self.bottom_left_corner = bottom_left_corner
 
 
-class SESRupture(object):
+class EBRupture(object):
 
     def __init__(self, rupture, ses, seed=0, etag="TAG"):
         self.rupture = rupture
@@ -465,7 +465,7 @@ class SESXMLWriterTestCase(HazardWriterTestCase):
             depths=[[10.5, 10.6],
                     [10.7, 10.8],
                     ])
-        ses1 = SES(1, 50.0, [SESRupture(pr1, 1), SESRupture(pr2, 1)])
+        ses1 = SES(1, 50.0, [EBRupture(pr1, 1), EBRupture(pr2, 1)])
 
         pr3 = ProbabilisticRupture(
             3,
@@ -501,8 +501,8 @@ class SESXMLWriterTestCase(HazardWriterTestCase):
             lats=[1.0, 1.0, -1.0, -1.0, 1.1, 2.0, 0.0, 0.9],
             depths=[21.0, 21.0, 59.0, 59.0, 20.0, 20.0, 80.0, 80.0])
 
-        ses2 = SES(2, 40.0, [SESRupture(pr3, 1), SESRupture(pr4, 1),
-                             SESRupture(pr5, 1)])
+        ses2 = SES(2, 40.0, [EBRupture(pr3, 1), EBRupture(pr4, 1),
+                             EBRupture(pr5, 1)])
 
         sm_lt_path = 'b8_b9_b10'
 

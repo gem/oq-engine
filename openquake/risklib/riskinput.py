@@ -329,7 +329,7 @@ class CompositeRiskModel(collections.Mapping):
                                    seed, eps, hint):
         """
         :param sitecol: a SiteCollection instance
-        :param all_ruptures: the complete list of SESRupture instances
+        :param all_ruptures: the complete list of EBRupture instances
         :param gsims_by_col: a dictionary of GSIM instances
         :param trunc_level: the truncation level (or None)
         :param correl_model: the correlation model (or None)
@@ -484,7 +484,7 @@ class RiskInputFromRuptures(object):
     :param imt_taxonomies: list given by the risk model
     :param sitecol: SiteCollection instance
     :param assets_by_site: list of list of assets
-    :param ses_ruptures: ordered array of SESRuptures
+    :param ses_ruptures: ordered array of EBRuptures
     :param gsims: list of GSIM instances
     :param trunc_level: truncation level for the GSIMs
     :param correl_model: correlation model for the GSIMs

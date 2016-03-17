@@ -29,7 +29,7 @@ class MyScenarioCalculator(base.BaseCalculator):
         [self.gsim] = readinput.get_gsims(self.oqparam)
         self.imts = readinput.get_imts(self.oqparam)
         self.rupture = readinput.get_rupture(self.oqparam)
-        self.rupture_etags = [  # used in the export phase
+        self.etags = [  # used in the export phase
             'etag%d' % i
             for i in range(self.oqparam.number_of_ground_motion_fields)]
 
@@ -45,5 +45,5 @@ class MyScenarioCalculator(base.BaseCalculator):
     def post_execute(self, result):
         result = {str(imt): gmvs for imt, gmvs in result.items()}
         out = export('gmf_xml', self.oqparam.export_dir, self.sitecol,
-                     self.rupture_etags, result)
+                     self.etags, result)
         return out

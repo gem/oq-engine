@@ -54,7 +54,7 @@ counts_dt = numpy.dtype([('rup', int), ('gmf', int)])
 
 def num_affected_sites(rupture, num_sites):
     """
-    :param rupture: a SESRupture object
+    :param rupture: a EBRupture object
     :param num_sites: the total number of sites
     :returns: the number of sites affected by the rupture
     """
@@ -64,7 +64,7 @@ def num_affected_sites(rupture, num_sites):
 
 def get_site_ids(rupture, num_sites):
     """
-    :param rupture: a SESRupture object
+    :param rupture: a EBRupture object
     :param num_sites: the total number of sites
     :returns: the indices of the sites affected by the rupture
     """
@@ -77,7 +77,7 @@ def counts_per_rlz(num_sites, rlzs_assoc, sescollection):
     """
     :param num_sites: the number of sites
     :param rlzs_assoc: an instance of RlzsAssoc
-    :param sescollection: a list of dictionaries etag -> SESRupture
+    :param sescollection: a list of dictionaries etag -> EBRupture
     :returns: the numbers of nonzero GMFs, for each realization
     """
     rlzs = rlzs_assoc.realizations
@@ -102,7 +102,7 @@ def get_gmfs_nbytes(num_sites, num_imts, rlzs_assoc, sescollection):
     :param num_sites: the number of sites
     :param num_imts: the number of IMTs
     :param rlzs_assoc: an instance of RlzsAssoc
-    :param sescollection: a list of dictionaries etag -> SESRupture
+    :param sescollection: a list of dictionaries etag -> EBRupture
     :returns: the number of bytes required to store the GMFs
     """
     nbytes = 0
@@ -221,7 +221,7 @@ def get_geom(surface, is_from_fault_source, is_multi_surface):
     return lons, lats, depths
 
 
-class SESRupture(object):
+class EBRupture(object):
     def __init__(self, rupture, indices, seeds, etags, col_id, serial):
         self.rupture = rupture
         self.indices = indices
@@ -379,7 +379,7 @@ def build_ses_ruptures(
         src, num_occ_by_rup, s_sites, maximum_distance, sitecol, random_seed):
     """
     Filter the ruptures stored in the dictionary num_occ_by_rup and
-    yield pairs (rupture, <list of associated SESRuptures>)
+    yield pairs (rupture, <list of associated EBRuptures>)
     """
     totsites = len(sitecol)
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
@@ -395,7 +395,7 @@ def build_ses_ruptures(
         else:
             indices = None  # None means that nothing was filtered
 
-        # creating SESRuptures
+        # creating EBRuptures
         serial = rup.seed - random_seed + 1
         rnd = random.Random(rup.seed)
         etags = []
@@ -408,7 +408,7 @@ def build_ses_ruptures(
                 seeds.append(rnd.randint(0, MAX_INT))
                 etags.append(etag)
         if etags:
-            yield SESRupture(rup, indices, seeds, etags, col_idx, serial)
+            yield EBRupture(rup, indices, seeds, etags, col_idx, serial)
 
 
 @base.calculators.add('event_based_rupture')
@@ -472,7 +472,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         """
         Save the SES collection and the array counts_per_rlz
         """
-        logging.info('Generated %d SESRuptures',
+        logging.info('Generated %d EBRuptures',
                      sum(len(v) for v in result.values()))
         nc = self.rlzs_assoc.csm_info.num_collections
         cols = self.rlzs_assoc.csm_info.cols  # pairs (trt_id, idx)
@@ -514,13 +514,13 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
 
 # ######################## GMF calculator ############################ #
 
-GmfaSidsTags = collections.namedtuple('GmfaSidsTags', 'gmfa sids etags')
+GmfaSidsEtags = collections.namedtuple('GmfaSidsEtags', 'gmfa sids etags')
 
 
 def make_gmfs(ses_ruptures, sitecol, imts, gsims,
               trunc_level, correl_model, random_seed, monitor=Monitor()):
     """
-    :param ses_ruptures: a list of SESRuptures
+    :param ses_ruptures: a list of EBRuptures
     :param sitecol: a SiteCollection instance
     :param imts: an ordered list of intensity measure type strings
     :param gsims: an order list of GSIM instance
@@ -528,9 +528,9 @@ def make_gmfs(ses_ruptures, sitecol, imts, gsims,
     :param correl_model: correlation model instance
     :param random_seed: random_seed parameter
     :param monitor: a monitor instance
-    :returns: a dictionary serial -> GmfaSidsTags
+    :returns: a dictionary serial -> GmfaSidsEtags
     """
-    dic = {}  # serial -> GmfaSidsTags
+    dic = {}  # serial -> GmfaSidsEtags
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
@@ -542,7 +542,7 @@ def make_gmfs(ses_ruptures, sitecol, imts, gsims,
                 sr.rupture, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
             gmfa = computer.compute(sr.seeds)
-            dic[sr.serial] = GmfaSidsTags(gmfa, r_sites.indices, sr.etags)
+            dic[sr.serial] = GmfaSidsEtags(gmfa, r_sites.indices, sr.etags)
     return dic
 
 
@@ -550,7 +550,7 @@ def make_gmfs(ses_ruptures, sitecol, imts, gsims,
 def compute_gmfs_and_curves(ses_ruptures, sitecol, rlzs_assoc, monitor):
     """
     :param ses_ruptures:
-        a list of blocks of SESRuptures of the same SESCollection
+        a list of blocks of EBRuptures of the same SESCollection
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param rlzs_assoc:
