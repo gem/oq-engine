@@ -64,6 +64,9 @@ from openquake.engine.export import core
 from openquake.engine.tools.make_html_report import make_report
 from django.db import connection as conn
 
+from openquake.commonlib.concurrent_futures_process_mpatch import (
+    concurrent_futures_process_monkeypatch)
+
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
@@ -86,6 +89,8 @@ def run_job(cfg_file, log_level, log_file, exports='',
     :param hazard_calculation_id:
         ID of the previous calculation or None
     """
+    # if the master dies, automatically kill the workers
+    concurrent_futures_process_monkeypatch()
     job_id, oqparam = dbcmd(
         'job_from_file', cfg_file, getpass.getuser(), hazard_calculation_id)
     calc = engine.run_calc(job_id, oqparam, log_level, log_file, exports,
