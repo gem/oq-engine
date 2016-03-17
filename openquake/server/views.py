@@ -45,7 +45,8 @@ from openquake.server.db import models
 from openquake.engine.export import core
 from openquake.engine import engine, logs
 from openquake.engine.export.core import export_output, DataStoreExportError
-from openquake.server import executor, utils, db
+from openquake.server import executor, utils
+from openquake.server.db import actions
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -72,7 +73,7 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
 
 # disable logs.dbcmd when inside the Web UI
 def dbcmd(action, *args):
-    return getattr(db.actions, action)(*args)
+    return getattr(actions, action)(*args)
 logs.dbcmd = dbcmd
 
 
@@ -387,7 +388,7 @@ def submit_job(job_ini, user_name, hazard_job_id=None,
     Create a job object from the given job.ini file in the job directory
     and submit it to the job queue. Returns the job ID.
     """
-    job_id, oqparam = db.actions.job_from_file(
+    job_id, oqparam = actions.job_from_file(
         job_ini, user_name, hazard_job_id)
     fut = executor.submit(engine.run_calc, job_id, oqparam, loglevel,
                           logfile, exports, hazard_job_id)
@@ -448,7 +449,7 @@ def calc_results(request, calc_id):
     # OrderedDict([('agg_loss_curve', ['xml', 'csv']), ...])
     output_types = groupby(export_output, lambda oe: oe[0],
                            lambda oes: [e for o, e in oes])
-    results = db.actions.get_outputs(calc_id)
+    results = actions.get_outputs(calc_id)
     if not results:
         return HttpResponseNotFound()
 
