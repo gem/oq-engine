@@ -25,10 +25,9 @@ from datetime import datetime
 from django.core import exceptions
 from django import db
 
-from openquake.commonlib import datastore, readinput, export
+from openquake.commonlib import datastore, readinput
 from openquake.server.db import models
 from openquake.engine.export import core
-from openquake.calculators import views
 from openquake.server.db.schema.upgrades import upgrader
 
 
@@ -221,7 +220,6 @@ def print_outputs_summary(outputs, full=True):
                    'with the command\n`oq-engine --list-outputs`')
 
 
-# this is patched in the tests
 def get_outputs(job_id):
     """
     :param job_id:
@@ -254,31 +252,18 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
 DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset_and_collapse_map')
 
 
-def expose_outputs(job_id):
+def create_outputs(job_id, dskeys):
     """
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
 
-    :param job_id: job ID
+    :param job_id: ID of the current job
+    :param dskeys: a list of datastore keys
     """
-    exportable = set(ekey[0] for ekey in export.export)
     job = models.OqJob.objects.get(pk=job_id)
-    with datastore.read(
-            job.id, datadir=os.path.dirname(job.ds_calc_dir)) as dstore:
-        # small hack: remove the sescollection outputs from scenario
-        # calculators, as requested by Vitor
-        calcmode = job.calculation_mode
-        if 'scenario' in calcmode and 'sescollection' in exportable:
-            exportable.remove('sescollection')
-        uhs = dstore.get_attr('/', 'uniform_hazard_spectra', False)
-        if uhs and 'hmaps' in dstore:
-            models.Output.objects.create_output(job, 'uhs', ds_key='uhs')
-        for key in dstore:
-            if key in exportable:
-                if key == 'realizations' and len(dstore['realizations']) == 1:
-                    continue  # do not export a single realization
-                models.Output.objects.create_output(
-                    job, DISPLAY_NAME.get(key, key), ds_key=key)
+    for key in dskeys:
+        models.Output.objects.create_output(
+            job, DISPLAY_NAME.get(key, key), ds_key=key)
 
 
 def check_hazard_risk_consistency(haz_job, risk_mode):
@@ -381,15 +366,12 @@ def get_log(job_id):
         yield '[%s #%d %s] %s' % (time, job_id, log.level, log.message)
 
 
-def save_performance(job_id):
+def save_performance(job_id, records):
     """
     Save in the database the performance information about the given job
     """
-    job = models.OqJob.objects.get(id=job_id)
-    with datastore.read(
-            job_id, datadir=os.path.dirname(job.ds_calc_dir)) as dstore:
-        for rec in views.performance_view(dstore):
-            models.Performance.objects.create(
-                job_id=job_id, operation=rec['operation'],
-                time_sec=rec['time_sec'], memory_mb=rec['memory_mb'],
-                counts=rec['counts'])
+    for rec in records:
+        models.Performance.objects.create(
+            job_id=job_id, operation=rec['operation'],
+            time_sec=rec['time_sec'], memory_mb=rec['memory_mb'],
+            counts=rec['counts'])
