@@ -43,7 +43,7 @@ from openquake.commonlib.parallel import safely_call
 from openquake.engine import __version__ as oqversion
 from openquake.server.db import models
 from openquake.engine.export import core
-from openquake.engine import engine
+from openquake.engine import engine, logs
 from openquake.engine.export.core import export_output, DataStoreExportError
 from openquake.server import executor, utils, db
 
@@ -68,6 +68,12 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
                   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
                   'Access-Control-Max-Age': 1000,
                   'Access-Control-Allow-Headers': '*'}
+
+
+# disable logs.dbcmd when inside the Web UI
+def dbcmd(action, *args):
+    return getattr(db.actions, action)(*args)
+logs.dbcmd = dbcmd
 
 
 # Credit for this decorator to https://gist.github.com/aschem/1308865.
@@ -224,12 +230,12 @@ def calc_info(request, calc_id):
     executing, complete, etc.).
     """
     try:
-        calc = models.OqJob.objects.get(pk=calc_id)
-        response_data = vars(calc.get_oqparam())
-        response_data['status'] = calc.status
-        response_data['start_time'] = str(calc.jobstats.start_time)
-        response_data['stop_time'] = str(calc.jobstats.stop_time)
-        response_data['is_running'] = calc.is_running
+        job = models.OqJob.objects.get(pk=calc_id)
+        response_data = {}
+        response_data['status'] = job.status
+        response_data['start_time'] = str(job.start_time)
+        response_data['stop_time'] = str(job.stop_time)
+        response_data['is_running'] = job.is_running
 
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
@@ -355,7 +361,6 @@ def run_calc(request):
                             status=500)
 
     user = utils.get_user_data(request)
-
     try:
         job_id, _fut = submit_job(einfo[0], user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
@@ -369,10 +374,8 @@ def run_calc(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        calc = models.OqJob.objects.get(pk=job_id)
-        response_data = vars(calc.get_oqparam())
-        response_data['job_id'] = job_id
-        response_data['status'] = calc.status
+        job = models.OqJob.objects.get(pk=job_id)
+        response_data = dict(job_id=job_id, status=job.status)
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
