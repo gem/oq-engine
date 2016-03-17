@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Introduced a dbserver to mediate the interaction with the database
+  * Improved the validation of NRML files
   * Added a command `oq-engine --show-log <job_id>`
 
   [Daniele Viganò]
