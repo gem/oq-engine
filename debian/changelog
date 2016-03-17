@@ -1,3 +1,10 @@
+python-oq-risklib (0.12.1-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * Improved the validation of NRML files
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 17 Mar 2016 14:29:04 +0100
+
 python-oq-risklib (0.12.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
