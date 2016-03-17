@@ -496,7 +496,7 @@ def export_gmf(ekey, dstore):
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
     for rlz, rup_by_etag in zip(rlzs_assoc.realizations,
-                               rlzs_assoc.combine_gmfs(gmf_data, sid_data)):
+                                rlzs_assoc.combine_gmfs(gmf_data, sid_data)):
         ruptures = [rup_by_etag[etag] for etag in sorted(rup_by_etag)]
         fname = build_name(dstore, rlz, 'gmf', fmt, samples)
         fnames.append(fname)
@@ -520,13 +520,14 @@ def export_gmf_spec(ekey, dstore, spec):
         gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
         imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
         gmf_dt = numpy.dtype([(gsim, F32) for gsim in gsims])
-        rupetags = dstore['etags'].value[eids - 1]
-        for eid, rupetag in zip(eids, rupetags):
+        etags = dstore['etags']
+        for eid in eids:
+            etag = etags[eid]
             for imt in imts:
                 gmfa = numpy.zeros(len(sitemesh), gmf_dt)
                 for gsim in gsims:
                     gmfa[gsim] = gmfs_by_trt_gsim[0, gsim][imt][:, eid]
-                dest = dstore.export_path('gmf-%s-%s.csv' % (rupetag, imt))
+                dest = dstore.export_path('gmf-%s-%s.csv' % (etag, imt))
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
     else:  # event based
