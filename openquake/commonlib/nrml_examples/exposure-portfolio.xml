@@ -15,7 +15,7 @@
       <costTypes>
           <costType name="business_interruption" type="per_area" unit="EUR"/>
           <costType name="contents" type="per_area" unit="USD"/>
-          <costType name="non_structural" type="aggregated" unit="YEN" />
+          <costType name="nonstructural" type="aggregated" unit="YEN" />
           <costType name="structural" type="aggregated" unit="YEN"
                     retrofittedType="aggregated" retrofittedUnit="EUR"/>
       </costTypes>
