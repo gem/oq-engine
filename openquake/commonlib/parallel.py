@@ -37,10 +37,10 @@ from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
 
 executor = ProcessPoolExecutor()
-# the num_tasks_hint is chosen to be 4 times bigger than the name of
+# the num_tasks_hint is chosen to be 2 times bigger than the name of
 # cores; it is a heuristic number to get a good distribution;
 # it has no more significance than that
-executor.num_tasks_hint = executor._max_workers * 4
+executor.num_tasks_hint = executor._max_workers * 2
 
 
 def no_distribute():
