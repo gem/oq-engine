@@ -250,8 +250,7 @@ _pkgbuild_innervm_run () {
 #                       files and install them
 #                     - builds oq-hazardlib speedups
 #                     - installs oq-engine sources on lxc
-#                     - set up postgres
-#                     - upgrade db
+#                     - set up db
 #                     - runs tests
 #                     - runs coverage
 #                     - collects all tests output files from lxc
@@ -316,14 +315,7 @@ _devtest_innervm_run () {
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
     # configure the machine to run tests
-    ssh $lxc_ip "set -e
-        for dbu in oq_job_init oq_admin; do
-            sudo sed -i \"1ilocal   openquake2   \$dbu                   md5\" /etc/postgresql/*/main/pg_hba.conf
-        done"
-
-    ssh $lxc_ip "sudo service postgresql restart"
-    ssh $lxc_ip "set -e ; sudo su postgres -c \"cd oq-engine ; openquake/engine/bin/oq_create_db --yes --db-name=openquake2\""
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" "
+    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; sudo -u openquake \$PWD/oq-engine/bin/oq_create_db"
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         if [ -n "$GEM_DEVTEST_SKIP_SLOW_TESTS" ]; then
@@ -415,8 +407,7 @@ _builddoc_innervm_run () {
 #                     - copies 'oq-*' package repositories on lxc
 #                     - adds repositories to apt sources on lxc
 #                     - performs package tests (install, remove, reinstall ..)
-#                     - set up postgres
-#                     - upgrade db
+#                     - set up db
 #                     - runs celeryd if GEM_USE_CELERY is set
 #                     - executes demos
 #
@@ -510,7 +501,6 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
     # configure the machine to run tests
-    ssh $lxc_ip "sudo service postgresql restart"
     # XXX: should the --upgrade-db command go in the postint script?
     ssh $lxc_ip "set -e; python -m openquake.server.dbserver & sleep 1; oq-engine --upgrade-db --yes ; python -m openquake.server.stop"
 
