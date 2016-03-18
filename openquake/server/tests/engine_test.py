@@ -19,12 +19,28 @@
 import getpass
 import subprocess
 import unittest
+import tempfile
 import mock
 
-from openquake.server.db import models, actions
+from django.db import connection
 from django.core import exceptions
-
+from openquake.server.db import models, actions, upgrade_manager
+from openquake.server.settings import DATABASE
 from openquake.server.tests import helpers
+
+tmpfile = tempfile.NamedTemporaryFile()
+
+
+def setup_module():
+    DATABASE['name'] = tmpfile.name
+    connection.cursor()  # connect to the db
+    print 'Using the database', tmpfile.name
+    upgrade_manager.upgrade_db(connection.connection)
+
+
+def teardown_module():
+    connection.close()
+    tmpfile.close()
 
 
 def get_job(cfg, username, hazard_calculation_id=None):

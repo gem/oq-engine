@@ -24,4 +24,3 @@ from concurrent.futures import ThreadPoolExecutor
 executor = ThreadPoolExecutor(max_workers=1)
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'openquake.server.settings')
-

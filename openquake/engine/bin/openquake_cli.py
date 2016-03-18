@@ -269,16 +269,15 @@ def main():
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
 
-    if getpass.getuser() != 'openquake':
-        # check if the DbServer is up
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            err = sock.connect_ex(config.DBS_ADDRESS)
-        finally:
-            sock.close()
-        if err:
-            sys.exit('Please start the DbServer: '
-                     'sudo -u openquake python -m openquake.server.dbserver &')
+    # check if the DbServer is up
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        err = sock.connect_ex(config.DBS_ADDRESS)
+    finally:
+        sock.close()
+    if err:
+        sys.exit('Please start the DbServer: '
+                 'sudo -u openquake python -m openquake.server.dbserver &')
 
     if args.upgrade_db:
         logs.set_level('info')
