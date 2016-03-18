@@ -1,4 +1,3 @@
 #!/bin/bash
 # run this script as user openquake
-touch /home/openquake/db.sqlite
-oq-engine --upgrade-db -y
+PYTHONPATH=$1 python -m openquake.server.db.upgrade_manager /home/openquake/db.sqlite
