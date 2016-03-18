@@ -40,11 +40,12 @@ from django.template import RequestContext
 from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib import nrml, readinput, valid
 from openquake.commonlib.parallel import safely_call
+from openquake.commonlib.export import export
 from openquake.engine import __version__ as oqversion
 from openquake.server.db import models
 from openquake.engine.export import core
 from openquake.engine import engine
-from openquake.engine.export.core import export_output, DataStoreExportError
+from openquake.engine.export.core import DataStoreExportError
 from openquake.server import executor, utils
 from openquake.server.db import actions
 
@@ -441,7 +442,7 @@ def calc_results(request, calc_id):
     # NB: export_output has as keys the list (output_type, extension)
     # so this returns an ordered map output_type -> extensions such as
     # OrderedDict([('agg_loss_curve', ['xml', 'csv']), ...])
-    output_types = groupby(export_output, lambda oe: oe[0],
+    output_types = groupby(export, lambda oe: oe[0],
                            lambda oes: [e for o, e in oes])
     results = actions.get_outputs(calc_id)
     if not results:
