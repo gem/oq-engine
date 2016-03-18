@@ -1,4 +1,4 @@
 #!/bin/bash
 # run this script as user openquake
-touch $HOME/db.sqlite
+touch /home/openquake/db.sqlite
 oq-engine --upgrade-db -y
