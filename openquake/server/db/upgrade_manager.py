@@ -22,7 +22,6 @@ import time
 import urllib
 import logging
 import importlib
-from django.db import connection
 
 
 class DuplicatedVersion(RuntimeError):
@@ -80,15 +79,17 @@ class WrappedConnection(object):
         return curs
 
 
-def check_script(upgrade, dry_run=True, debug=True):
+# not used right now
+def check_script(upgrade, conn, dry_run=True, debug=True):
     """
     An utility to debug upgrade scripts written in Python
 
     :param upgrade: upgrade procedure
+    :param conn: a DB API 2 connection
     :param dry_run: if True, do not change the database
     :param debug: if True, print the queries which are executed
     """
-    conn = WrappedConnection(connection, debug=debug)
+    conn = WrappedConnection(conn, debug=debug)
     try:
         upgrade(conn)
     except:
