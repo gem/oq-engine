@@ -318,7 +318,7 @@ _devtest_innervm_run () {
     ssh $lxc_ip "set -e 
     export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\"
     sudo useradd -m openquake
-    sudo -u openquake \$PWD/oq-engine/bin/oq-engine --upgrade-db"
+    sudo -u openquake python \$PWD/oq-engine/openquake/server/db/upgrade_manager.py /home/openquake/db.sqlite"
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         if [ -n "$GEM_DEVTEST_SKIP_SLOW_TESTS" ]; then
