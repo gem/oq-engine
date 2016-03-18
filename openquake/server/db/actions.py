@@ -316,7 +316,6 @@ def del_calc(job_id):
     except exceptions.ObjectDoesNotExist:
         raise RuntimeError('Unable to delete hazard calculation: '
                            'ID=%s does not exist' % job_id)
-
     user = getpass.getuser()
     if job.user_name == user:
         # we are allowed to delete this
@@ -331,14 +330,7 @@ def del_calc(job_id):
         if assoc_outputs.count() > 0:
             raise RuntimeError(
                 msg % ', '.join(str(x.id) for x in assoc_outputs))
-
-        # No risk calculation are referencing what we want to delete.
-        # Carry on with the deletion. Notice that we cannot use job.delete()
-        # directly because Django is so stupid that it reads from the database
-        # all the records to delete before deleting them: thus, it runs out
-        # of memory for large calculations
-        curs = db.connection.cursor()
-        curs.execute('DELETE FROM job WHERE id=%s', (job_id,))
+        job.delete()
     else:
         # this doesn't belong to the current user
         raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
