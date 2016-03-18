@@ -25,7 +25,6 @@
 Model representations of the OpenQuake DB tables.
 '''
 import os
-import collections
 from datetime import datetime
 
 from openquake.commonlib import datastore
@@ -35,7 +34,7 @@ if hasattr(django, 'setup'):
     django.setup()  # for Django >= 1.7
 from django.db import models as djm
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import connections
+from django.db import connection
 
 #: Kind of supported curve statistics
 STAT_CHOICES = (
@@ -100,11 +99,6 @@ INPUT_TYPE_CHOICES = (
      u'Structural Vulnerability Retrofitted'))
 
 
-def getcursor(route):
-    """Return a cursor from a Django route"""
-    return connections[route].cursor()
-
-
 # Tables in the 'uiapi' schema.
 
 class OqJob(djm.Model):
@@ -117,7 +111,6 @@ class OqJob(djm.Model):
     hazard_calculation = djm.ForeignKey('OqJob', null=True)
     STATUS_CHOICES = (
         (u'created', u'Created'),
-        (u'pre_executing', u'Pre-Executing'),
         (u'executing', u'Executing'),
         (u'post_executing', u'Post-Executing'),
         (u'post_processing', u'Post-Processing'),
@@ -125,7 +118,7 @@ class OqJob(djm.Model):
         (u'clean_up', u'Cleaning up'),
         (u'complete', u'Complete'),
     )
-    status = djm.TextField(choices=STATUS_CHOICES, default='pre_executing')
+    status = djm.TextField(choices=STATUS_CHOICES, default='executing')
     is_running = djm.BooleanField(default=True)
     start_time = djm.DateTimeField(editable=False, default=datetime.utcnow)
     stop_time = djm.DateTimeField(editable=False)
@@ -201,6 +194,7 @@ class Log(djm.Model):
 
     class Meta:
         db_table = 'log'
+        ordering = ['id']
 
 
 def extract_from(objlist, attr):

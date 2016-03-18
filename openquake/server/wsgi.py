@@ -21,8 +21,8 @@ from django.core.wsgi import get_wsgi_application
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "openquake.server.settings")
 
-from openquake.server.db import models
-models.getcursor('job_init').execute(
+from django.db import connection
+connection.cursor().execute(
     # cleanup of the flag oq_job.is_running
     'UPDATE job SET is_running=0 WHERE is_running=1')
 

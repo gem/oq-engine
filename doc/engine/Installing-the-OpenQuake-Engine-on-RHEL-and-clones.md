@@ -8,7 +8,7 @@ This documentation explains how to install the OpenQuake Engine on RHEL 7 and it
 The following dependencies are required. They will be installed automatically by the `oq-engine` package:
 
 ```
-sudo python-amqp python-celery numpy scipy python-shapely python-psycopg2 python-django python-setuptools python-psutil python-mock python-futures rabbitmq-server postgresql-server postgis
+sudo python-amqp python-celery numpy scipy python-shapely python-psycopg2 python-django python-setuptools python-psutil python-mock python-futures rabbitmq-server postgresql-server
 ```
 
 
@@ -77,7 +77,7 @@ sudo -u postgres dropdb openquake2
 ## Run a demo
 ```bash
 $ oq-engine --rh=/usr/share/openquake/risklib/demos/hazard/AreaSourceClassicalPSHA/job.ini
-[2015-05-31 18:17:58,996 hazard job #407 - PROGRESS MainProcess/1562] **  pre_executing (hazard)
+[2015-05-31 18:17:58,996 hazard job #407 - PROGRESS MainProcess/1562] **  executing (hazard)
 [2015-05-31 18:17:59,088 hazard job #407 - PROGRESS MainProcess/1562] **  initializing sites
 [2015-05-31 18:17:59,660 hazard job #407 - PROGRESS MainProcess/1562] **  initializing site collection
 [2015-05-31 18:17:59,679 hazard job #407 - PROGRESS MainProcess/1562] **  initializing sources

@@ -7,8 +7,6 @@ fi
 help() {
 cat <<HSD
 This script must be run as postgres user.
-Table space paths are created as needed (unless this is turned off
-by the user).
 
 !! The database must not exist already !!
 
@@ -16,8 +14,6 @@ The command line arguments are as follows:
 
     --db-name=name         The name of the database to set up.
     --db-port=port         The postgresql server port (default: 5432)
-    --no-tab-spaces        Don't check/create table spaces and their paths
-    --tab-spaces-only      Check/create table spaces and their paths and exit
     --verbose              Enable verbose output
     --load-fixtures=path   Load test fixtures from path
     --yes                  Don't pause for user input, assume yes on all questions
@@ -29,24 +25,10 @@ exit 0
 # Stop at the first error in a batch to give a chance to see the error message
 psql_batch_options='--set ON_ERROR_STOP=1'
 
-# Where do the table spaces live?
-if [ -f /etc/redhat-release ]; then
-    # On RedHat derivates (CentOS/Scientific/RHEL, Fedora) we need a custom path for ts
-    tspace_path='/var/lib/pgsql/ts'
-else
-    # As default we use the Debian and derivates (including Ubuntu) default path
-    tspace_path='/var/lib/postgresql/ts'
-fi
-
-# What table spaces should be created?
-tspace_list="hzrdi hzrdr riski riskr uiapi"
-
 # defaults to be overridden by the arguments given in the command-line
 db_port=5432
 db_name="openquake2"
 user_interaction="on"
-check_table_spaces="on"
-table_spaces_only="off"
 verbose="off"
 fixtures=""
 
@@ -69,12 +51,6 @@ do
         ;;
     --db-port=*)
         db_port=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
-        ;;
-    --no-tab-spaces)
-        check_table_spaces="off"
-        ;;
-    --tab-spaces-only)
-        table_spaces_only="on"
         ;;
     -v|--verbose)
         verbose="on"
@@ -111,10 +87,6 @@ if [ "$(whoami)" != "postgres" ]; then
 fi
 
 
-if [ "$table_spaces_only" == "on" ]; then
-    check_table_spaces="on"
-fi
-
 # Create OpenQuake database group if not present.
 echo ".. creating roles .."
 oq_group_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_group WHERE groname = '$db_group_name';"`
@@ -130,39 +102,6 @@ for role in $db_roles; do
     fi
 done
 
-echo -n ".. Current table spaces: "
-echo `psql -p $db_port -U $db_admin_user -c '\db' -d postgres $psql_batch_options | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }'`
-
-if [ "$check_table_spaces" == "on" ]; then
-    # Create table spaces if needed.
-    for tspace in $tspace_list; do
-        full_ts_name="${tspace}_ts"
-        full_tspace_path="$tspace_path/$full_ts_name"
-
-        # Create table space path if needed.
-        test -d "$full_tspace_path"
-        if [ $? -ne 0 ]; then
-            echo ".. Creating table space path $full_tspace_path .."
-            mkdir -p $full_tspace_path
-            chown -R postgres.postgres $full_tspace_path
-        fi
-
-        # Create the actual table space.
-        ts_found=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_tablespace WHERE spcname = '$full_ts_name';"`
-        if [ $ts_found -eq 0 ]; then
-            psql -p $db_port -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name OWNER oq_admin LOCATION'$full_tspace_path'" $psql_batch_options
-        else  # grant permission to existing tablespaces, to be sure
-            psql -p $db_port -d postgres -U $db_admin_user -c \
-            "GRANT CREATE ON tablespace $full_ts_name TO oq_admin" \
-            $psql_batch_options
-        fi
-    done
-fi
-
-if [ "$table_spaces_only" == "on" ]; then
-    exit 0
-fi
-
 # Exit at the first error, should not be on the first line, otherwise it
 # exits too early (at the `read` command)
 set -e
@@ -177,24 +116,3 @@ fi
 
 echo ".. Creating database $db_name .."
 psql -p $db_port -d postgres -U $db_admin_user -c "CREATE DATABASE $db_name OWNER oq_admin" $psql_batch_options
-
-# Load the PostGIS stuff into the newly created OpenQuake database, must be run as postgres
-db_version=$(psql -c'show server_version' -At)
-db_version=( ${db_version//./ } )
-if [ "${db_version[0]}" == "9" ] && [ "${db_version[1]}" == "1" ]; then  # in Ubuntu 12.04
-    postgres_contrib="/usr/share/postgresql/9.1/contrib"
-    postgis="$postgres_contrib/postgis-1.5"
-    echo ".. Loading postgis functions/data into $db_name .."
-    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/postgis.sql
-    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/spatial_ref_sys.sql
-    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgres_contrib/postgis_comments.sql
-else  # assume you are using a newer version of PostgreSQL
-    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c'CREATE EXTENSION postgis'
-    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c'CREATE EXTENSION postgis_topology'
-fi
-
-
-# fix ownership of three public tables from postgres to oq_admin
-psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TABLE spatial_ref_sys OWNER TO oq_admin"
-psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TABLE geometry_columns OWNER TO oq_admin"
-psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER TABLE geography_columns OWNER TO oq_admin"

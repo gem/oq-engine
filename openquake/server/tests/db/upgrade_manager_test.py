@@ -23,13 +23,12 @@ import unittest
 import importlib
 from contextlib import contextmanager
 
-from openquake.server.db.models import getcursor
+from django.db import connection
 from openquake.server.db.upgrade_manager import (
     upgrade_db, version_db, what_if_I_upgrade,
     VersionTooSmall, DuplicatedVersion)
 
-conn = getcursor('job_init').connection
-pkg = 'openquake.engine.tests.db.upgrades'
+pkg = 'openquake.server.tests.db.upgrades'
 upgrader = importlib.import_module(pkg).upgrader
 
 
@@ -49,12 +48,13 @@ def temp_script(name, content):
     finally:
         os.remove(fname)
 
+
 # temporarily skipped
 class _UpgradeManagerTestCase(unittest.TestCase):
-    # Apply the scripts in openquake.engine.tests.db.upgrades to the database.
+    # Apply the scripts in openquake.server.tests.db.upgrades to the database.
     # All the tables in the test scripts are in the `test` schema, which is
     # automatically created an destroyed in the setUp/tearDown methods.
-    # This test consider the 5 scripts in openquake.engine.tests.db.upgrades:
+    # This test consider the 5 scripts in openquake.server.tests.db.upgrades:
 
     # 0000-base_schema.sql
     # 0001-populate.sql
@@ -63,6 +63,10 @@ class _UpgradeManagerTestCase(unittest.TestCase):
     # 0005-populate_model.py
 
     def setUp(self):
+        global conn
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE",
+                              "openquake.server.settings")
+        conn = connection.cursor().connection  # sqlite connection
         tables = conn.execute(
             "SELECT name FROM sqlite_master WHERE name LIKE 'test_%'")
         for table in tables:
@@ -73,13 +77,13 @@ class _UpgradeManagerTestCase(unittest.TestCase):
 
     def test_missing_pkg(self):
         with self.assertRaises(SystemExit) as ctx:
-            upgrade_db(conn, 'openquake.engine.tests.db.not_exists')
+            upgrade_db(conn, 'openquake.server.tests.db.not_exists')
         self.assertTrue(str(ctx.exception).startswith(
-            'Could not import openquake.engine.tests.db.not_exists'))
+            'Could not import openquake.server.tests.db.not_exists'))
 
     def test_no_upgrades(self):
         with self.assertRaises(SystemExit) as ctx:
-            upgrade_db(conn, 'openquake.engine.tests.db.no_upgrades')
+            upgrade_db(conn, 'openquake.server.tests.db.no_upgrades')
         self.assertTrue(str(ctx.exception).startswith(
             'The upgrade_dir does not contain scripts matching the pattern'))
 
