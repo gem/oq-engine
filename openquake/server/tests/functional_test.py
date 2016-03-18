@@ -95,6 +95,9 @@ class EngineServerTestCase(unittest.TestCase):
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_NO_DISTRIBUTE'] = '1'
+        # let's impersonate the user openquake, the one running the WebUI:
+        # we need to set LOGNAME on Linux and USERNAME on Windows
+        env['LOGNAME'] = env['USERNAME'] = 'openquake'
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload', '--nothreading'], env=env,

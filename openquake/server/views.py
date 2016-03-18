@@ -43,7 +43,7 @@ from openquake.commonlib.parallel import safely_call
 from openquake.engine import __version__ as oqversion
 from openquake.server.db import models
 from openquake.engine.export import core
-from openquake.engine import engine, logs
+from openquake.engine import engine
 from openquake.engine.export.core import export_output, DataStoreExportError
 from openquake.server import executor, utils
 from openquake.server.db import actions
@@ -69,12 +69,6 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
                   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
                   'Access-Control-Max-Age': 1000,
                   'Access-Control-Allow-Headers': '*'}
-
-
-# disable logs.dbcmd when inside the Web UI
-def dbcmd(action, *args):
-    return getattr(actions, action)(*args)
-logs.dbcmd = dbcmd
 
 
 # Credit for this decorator to https://gist.github.com/aschem/1308865.
