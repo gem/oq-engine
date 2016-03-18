@@ -11,7 +11,6 @@ CREATE TABLE job(
      relevant BOOL DEFAULT true,
      ds_calc_dir TEXT NOT NULL);
 
-
 CREATE TABLE log(
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      job_id INTEGER NOT NULL REFERENCES job (id) ON DELETE CASCADE,
@@ -19,16 +18,12 @@ CREATE TABLE log(
      level TEXT NOT NULL,
      process TEXT NOT NULL,
      message TEXT NOT NULL);   
-
-
 CREATE TABLE output(
      id INTEGER PRIMARY KEY AUTOINCREMENT,     
      oq_job_id INTEGER NOT NULL REFERENCES job (id) ON DELETE CASCADE,
      display_name TEXT NOT NULL,
      last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
      ds_key TEXT NOT NULL);
-
-
 CREATE TABLE performance(
      id INTEGER PRIMARY KEY AUTOINCREMENT,
      job_id INTEGER NOT NULL REFERENCES job (id) ON DELETE CASCADE,

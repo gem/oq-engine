@@ -59,7 +59,7 @@ The calculation is removed from the calculations list, but it is not actually re
 
 ### Calculation status
 
-A calculation can be in the following statuses: `pre_executing`, `executing`, `complete`, `failed`
+A calculation can be in the following statuses: `executing`, `complete`, `failed`
 
 ![WebUI calculations status](../img/WebUI-status.png)
 
@@ -73,13 +73,10 @@ LOCKDOWN = True
 ```
 #### Sessions and users DB bootstrap
 ```bash
-python manage.py syncdb --database=auth_db
+python manage.py syncdb
 ```
 
-#### Add a new local superuser
-```bash
-python manage.py createsuperuser --database=auth_db
-```
+and add a a new local superuser
 
 #### PAM
 Authentication can rely on system users through `PAM`, the [Pluggable Authentication Module](https://en.wikipedia.org/wiki/Pluggable_authentication_module). To use this feature the [django-pam](https://github.com/tehmaze/django-pam) extension must be installed and activated
