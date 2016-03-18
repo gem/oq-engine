@@ -197,24 +197,6 @@ class Log(djm.Model):
         ordering = ['id']
 
 
-def extract_from(objlist, attr):
-    """
-    Extract an attribute from a list of Django objects, by scanning
-    them in order until a not None attribute is found. If nothing is
-    found, or if an exception ObjectDoesNotExist is raised, return None.
-
-    :param objlist: the list of Django objects
-    :param str attr: the name of the attribute to look for
-    """
-    for obj in objlist:
-        try:
-            value = getattr(obj, attr, None)
-        except ObjectDoesNotExist:
-            value = None
-        if value is not None:
-            return value
-
-
 class OutputManager(djm.Manager):
     """
     Manager class to filter and create Output objects

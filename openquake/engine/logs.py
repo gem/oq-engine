@@ -46,31 +46,23 @@ LOG_FORMAT = ('[%(asctime)s job #%(job_id)s %(hostname)s '
 
 LOG = logging.getLogger()
 
-USER = getpass.getuser()
 
-if USER == 'openquake':  # direct access to the database
-    from openquake.server.db import actions
+def dbcmd(action, *args):
+    """
+    A dispatcher to the database server.
 
-    def dbcmd(action, *args):
-        return getattr(actions, action)(*args)
-
-else:  # mediated access via the dbserver
-    def dbcmd(action, *args):
-        """
-        A dispatcher to the database server.
-
-        :param action: database action to perform
-        :param args: arguments
-        """
-        client = Client(DBS_ADDRESS, authkey=DBS_AUTHKEY)
-        try:
-            client.send((action,) + args)
-            res, etype = client.recv()
-        finally:
-            client.close()
-        if etype:
-            raise etype(res)
-        return res
+    :param action: database action to perform
+    :param args: arguments
+    """
+    client = Client(DBS_ADDRESS, authkey=DBS_AUTHKEY)
+    try:
+        client.send((action,) + args)
+        res, etype = client.recv()
+    finally:
+        client.close()
+    if etype:
+        raise etype(res)
+    return res
 
 
 def touch_log_file(log_file):
