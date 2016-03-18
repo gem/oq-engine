@@ -317,7 +317,7 @@ _devtest_innervm_run () {
     # configure the machine to run tests
     ssh $lxc_ip "set -e 
     export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\"
-    useradd -m openquake
+    sudo useradd -m openquake
     sudo -u openquake \$PWD/oq-engine/bin/oq_create_db"
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
