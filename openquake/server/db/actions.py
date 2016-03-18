@@ -29,6 +29,7 @@ from openquake.commonlib import datastore, readinput
 from openquake.server.db import models
 from openquake.engine.export import core
 from openquake.server.db.schema.upgrades import upgrader
+from openquake.server.db import upgrade_manager
 
 
 class InvalidCalculationID(Exception):
@@ -366,6 +367,15 @@ def get_log(job_id):
         yield '[%s #%d %s] %s' % (time, job_id, log.level, log.message)
 
 
+def get_output(output_id):
+    """
+    :param output_id: ID of an Output object
+    :returns: (ds_key, calc_id, dirname)
+    """
+    out = models.Output.objects.get(pk=output_id)
+    return out.ds_key, out.oq_job.id, os.path.dirname(out.oq_job.ds_calc_dir)
+
+
 def save_performance(job_id, records):
     """
     Save in the database the performance information about the given job
@@ -375,3 +385,21 @@ def save_performance(job_id, records):
             job_id=job_id, operation=rec['operation'],
             time_sec=rec['time_sec'], memory_mb=rec['memory_mb'],
             counts=rec['counts'])
+
+
+# ########################## upgrade operations ########################## #
+
+def what_if_I_upgrade(extract_scripts):
+    conn = db.connection.connection
+    return upgrade_manager.what_if_I_upgrade(
+        conn, extract_scripts=extract_scripts)
+
+
+def version_db():
+    conn = db.connection.connection
+    return upgrade_manager.version_db(conn)
+
+
+def upgrade_db():
+    conn = db.connection.connection
+    return upgrade_manager.upgrade_db(conn)

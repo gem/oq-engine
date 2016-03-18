@@ -18,15 +18,13 @@
 
 import getpass
 import subprocess
-import tempfile
 import unittest
 import mock
 
 from openquake.server.db import models, actions
 from django.core import exceptions
 
-from openquake.engine import engine
-from openquake.engine.tests.utils import helpers
+from openquake.server.tests import helpers
 
 
 def get_job(cfg, username, hazard_calculation_id=None):

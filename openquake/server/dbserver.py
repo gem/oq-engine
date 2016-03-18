@@ -23,6 +23,7 @@ from multiprocessing.connection import Listener
 from openquake.commonlib.parallel import safely_call
 from openquake.engine.utils import config
 from openquake.server.db import actions
+from django.db import connection
 
 DEFAULT_LOG_LEVEL = 'progress'
 
@@ -48,6 +49,7 @@ class DbServer(object):
         listener = Listener(self.address, authkey=self.authkey)
         logging.info('Listening on %s:%d...' % self.address)
         try:
+            connection.cursor()  # bind the db
             while True:
                 try:
                     conn = listener.accept()

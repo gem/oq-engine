@@ -413,3 +413,10 @@ def what_if_I_upgrade(conn, pkg_name='openquake.server.db.schema.upgrades',
         msg += ('\nEven dangerous scripts are fine if they '
                 'affect empty tables or data you are not interested in.')
     return msg
+
+
+if __name__ == '__main__':
+    import sys
+    import sqlite3
+    conn = sqlite3.connect(sys.argv[1])
+    upgrade_db(conn)
