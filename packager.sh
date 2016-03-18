@@ -315,7 +315,10 @@ _devtest_innervm_run () {
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
     # configure the machine to run tests
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; sudo -u openquake \$PWD/oq-engine/bin/oq_create_db"
+    ssh $lxc_ip "set -e 
+    export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\"
+    useradd -m openquake
+    sudo -u openquake \$PWD/oq-engine/bin/oq_create_db"
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         if [ -n "$GEM_DEVTEST_SKIP_SLOW_TESTS" ]; then
