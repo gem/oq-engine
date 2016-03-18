@@ -419,5 +419,6 @@ def what_if_I_upgrade(conn, pkg_name='openquake.server.db.schema.upgrades',
 if __name__ == '__main__':
     import sys
     import sqlite3
+    logging.basicConfig(level=logging.INFO)
     conn = sqlite3.connect(sys.argv[1])
     upgrade_db(conn)
