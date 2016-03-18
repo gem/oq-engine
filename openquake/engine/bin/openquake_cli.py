@@ -271,15 +271,16 @@ def main():
         # configure a basic logging
         logging.basicConfig(level=logging.INFO)
 
-    # check if the DbServer is up
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        err = sock.connect_ex(utils.config.DBS_ADDRESS)
-    finally:
-        sock.close()
-    if err:
-        sys.exit('Please start the DbServer: '
-                 'python -m openquake.server.dbserver')
+    if getpass.getuser() != 'openquake':
+        # check if the DbServer is up
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            err = sock.connect_ex(utils.config.DBS_ADDRESS)
+        finally:
+            sock.close()
+        if err:
+            sys.exit('Please start the DbServer: '
+                     'sudo -u openquake python -m openquake.server.dbserver &')
 
     if args.config_file:
         os.environ[utils.config.OQ_CONFIG_FILE_VAR] = \
