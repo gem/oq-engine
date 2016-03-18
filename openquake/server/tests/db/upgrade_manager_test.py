@@ -20,10 +20,10 @@ import os
 import mock
 import sqlite3
 import unittest
+import tempfile
 import importlib
 from contextlib import contextmanager
 
-from django.db import connection
 from openquake.server.db.upgrade_manager import (
     upgrade_db, version_db, what_if_I_upgrade,
     VersionTooSmall, DuplicatedVersion)
@@ -49,8 +49,7 @@ def temp_script(name, content):
         os.remove(fname)
 
 
-# temporarily skipped
-class _UpgradeManagerTestCase(unittest.TestCase):
+class UpgradeManagerTestCase(unittest.TestCase):
     # Apply the scripts in openquake.server.tests.db.upgrades to the database.
     # All the tables in the test scripts are in the `test` schema, which is
     # automatically created an destroyed in the setUp/tearDown methods.
@@ -63,17 +62,18 @@ class _UpgradeManagerTestCase(unittest.TestCase):
     # 0005-populate_model.py
 
     def setUp(self):
-        global conn
-        os.environ.setdefault("DJANGO_SETTINGS_MODULE",
-                              "openquake.server.settings")
-        conn = connection.cursor().connection  # sqlite connection
+        global conn, tmpfile
+        tmpfile = tempfile.NamedTemporaryFile()
+        tmpfile.close()
+        conn = sqlite3.connect(tmpfile.name)
         tables = conn.execute(
             "SELECT name FROM sqlite_master WHERE name LIKE 'test_%'")
         for table in tables:
             conn.execute('DROP TABLE %s' % table)
 
     def tearDown(self):
-        pass
+        conn.close()
+        os.remove(tmpfile.name)
 
     def test_missing_pkg(self):
         with self.assertRaises(SystemExit) as ctx:
@@ -106,10 +106,9 @@ class _UpgradeManagerTestCase(unittest.TestCase):
                 what_if_I_upgrade(conn, pkg, 'read_scripts')
 
     def test_syntax_error(self):
-        with self.assertRaises(sqlite3.ProgrammingError) as ctx:
+        with self.assertRaises(sqlite3.OperationalError) as ctx:
             upgrade_db(conn, pkg, skip_versions=['0001'])
-        self.assertTrue(str(ctx.exception).startswith(
-            'syntax error at or near'))
+        self.assertIn('syntax error', str(ctx.exception))
 
     def test_insert_error(self):
         with self.assertRaises(sqlite3.IntegrityError):
