@@ -87,7 +87,7 @@ CELERY_IMPORTS = [
     "openquake.calculators.scenario_damage",
     ]
 
-os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.engine.settings"
+os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
 try:
     from openquake.engine.utils import tasks
     # as a side effect, this import replaces the litetask with oqtask

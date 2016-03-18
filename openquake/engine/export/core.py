@@ -22,12 +22,14 @@ file formats."""
 
 
 import os
+import ast
 import zipfile
+import logging
+
 from openquake.server.db import models
-from openquake.engine.logs import LOG
 from openquake.baselib.general import CallableDict
 from openquake.commonlib.export import export as ds_export
-from openquake.commonlib.datastore import DataStore
+from openquake.commonlib import datastore
 
 export_output = CallableDict()
 
@@ -58,7 +60,10 @@ def export_from_datastore(output_key, output, target):
     ds_key, fmt = output_key
     assert ds_key == output.ds_key, (ds_key, output.ds_key)
     datadir = os.path.dirname(output.oq_job.ds_calc_dir)
-    dstore = DataStore(output.oq_job.id, datadir, mode='r')
+    dstore = datastore.read(output.oq_job.id, datadir=datadir)
+    parent_id = ast.literal_eval(dstore.attrs['hazard_calculation_id'])
+    if parent_id:
+        dstore.set_parent(datastore.read(parent_id, datadir=datadir))
     dstore.export_dir = target
     try:
         exported = ds_export((output.ds_key, fmt), dstore)
@@ -99,7 +104,7 @@ def export(output_id, target, export_type='xml,geojson,csv'):
         key = (rtype, exptype)
         if key in export_output:
             return export_output(key, output, target)
-    LOG.warn(
+    logging.warn(
         'No "%(fmt)s" exporter is available for "%(rtype)s"'
         ' outputs' % dict(fmt=export_type, rtype=rtype))
 

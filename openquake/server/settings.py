@@ -19,7 +19,12 @@
 import os
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
-from openquake.engine import settings as oqe_settings
+
+from openquake.engine.utils import config
+
+DB_SECTION = config.get_section('dbserver')
+
+INSTALLED_APPS = ('openquake.server.db',)
 
 OQSERVER_ROOT = os.path.dirname(__file__)
 
@@ -42,12 +47,15 @@ STATICFILES_DIRS = [
     os.path.join(OQSERVER_ROOT, 'static'),
 ]
 
-
-DATABASES = oqe_settings.DATABASES
-
-DATABASE_ROUTERS = ['openquake.server.routers.AuthRouter',
-                    'openquake.server.db.routers.OQRouter', ]
-
+# We need a 'default' database to make Django happy:
+DATABASE = {
+    'ENGINE': 'django.db.backends.sqlite3',
+    'NAME': DB_SECTION.get('file'),
+    'USER': 'openquake',
+    'HOST': DB_SECTION.get('host'),
+    'PORT': DB_SECTION.get('port'),
+}
+DATABASES = {'default': DATABASE}
 
 ALLOWED_HOSTS = ['*']
 
@@ -90,8 +98,8 @@ AUTH_EXEMPT_URLS = ()
 
 ROOT_URLCONF = 'openquake.server.urls'
 
-INSTALLED_APPS = ('django.contrib.staticfiles',
-                  'openquake.server',)
+INSTALLED_APPS += ('django.contrib.staticfiles',
+                   'openquake.server',)
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -147,15 +155,6 @@ except ImportError:
     pass
 
 if LOCKDOWN:
-    AUTH_DATABASES = {
-        'auth_db': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(os.path.dirname(__file__),
-                                 'engineserver.sqlite3'),
-        }
-    }
-
-    DATABASES.update(AUTH_DATABASES)
 
     AUTHENTICATION_BACKENDS += (
         'django.contrib.auth.backends.ModelBackend',

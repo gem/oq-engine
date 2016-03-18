@@ -40,11 +40,13 @@ from django.template import RequestContext
 from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib import nrml, readinput, valid
 from openquake.commonlib.parallel import safely_call
-from openquake.engine import engine as oq_engine, __version__ as oqversion
-from openquake.server.db import models as oqe_models
+from openquake.engine import __version__ as oqversion
+from openquake.server.db import models
 from openquake.engine.export import core
+from openquake.engine import engine, logs
 from openquake.engine.export.core import export_output, DataStoreExportError
-from openquake.server import tasks, executor, utils
+from openquake.server import executor, utils
+from openquake.server.db import actions
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -67,6 +69,12 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
                   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
                   'Access-Control-Max-Age': 1000,
                   'Access-Control-Allow-Headers': '*'}
+
+
+# disable logs.dbcmd when inside the Web UI
+def dbcmd(action, *args):
+    return getattr(actions, action)(*args)
+logs.dbcmd = dbcmd
 
 
 # Credit for this decorator to https://gist.github.com/aschem/1308865.
@@ -99,8 +107,7 @@ def _get_base_url(request):
     return base_url
 
 
-def _prepare_job(request, hazard_output_id, hazard_job_id,
-                 candidates):
+def _prepare_job(request, hazard_job_id, candidates):
     """
     Creates a temporary directory, move uploaded files there and
     select the job file by looking at the candidate names.
@@ -184,7 +191,7 @@ def validate_nrml(request):
             'Please provide the "xml_text" parameter')
     xml_file = writetmp(xml_text, suffix='.xml')
     try:
-        nrml.read(xml_file)
+        nrml.parse(xml_file)
     except etree.ParseError as exc:
         return _make_response(error_msg=exc.message.message,
                               error_line=exc.message.lineno,
@@ -224,12 +231,12 @@ def calc_info(request, calc_id):
     executing, complete, etc.).
     """
     try:
-        calc = oqe_models.OqJob.objects.get(pk=calc_id)
-        response_data = vars(calc.get_oqparam())
-        response_data['status'] = calc.status
-        response_data['start_time'] = str(calc.jobstats.start_time)
-        response_data['stop_time'] = str(calc.jobstats.stop_time)
-        response_data['is_running'] = calc.is_running
+        job = models.OqJob.objects.get(pk=calc_id)
+        response_data = {}
+        response_data['status'] = job.status
+        response_data['start_time'] = str(job.start_time)
+        response_data['stop_time'] = str(job.stop_time)
+        response_data['is_running'] = job.is_running
 
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
@@ -276,7 +283,7 @@ def calc_remove(request, calc_id):
     Remove the calculation id by setting the field oq_job.relevant to False.
     """
     try:
-        job = oqe_models.OqJob.objects.get(pk=calc_id)
+        job = models.OqJob.objects.get(pk=calc_id)
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
     try:
@@ -307,7 +314,7 @@ def get_log_slice(request, calc_id, start, stop):
     start = start or 0
     stop = stop or None
     try:
-        rows = oqe_models.Log.objects.filter(job_id=calc_id)[start:stop]
+        rows = models.Log.objects.filter(job_id=calc_id)[start:stop]
         response_data = map(log_to_json, rows)
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
@@ -321,7 +328,7 @@ def get_log_size(request, calc_id):
     Get the current number of lines in the log
     """
     try:
-        response_data = oqe_models.Log.objects.filter(job_id=calc_id).count()
+        response_data = models.Log.objects.filter(job_id=calc_id).count()
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
@@ -337,20 +344,15 @@ def run_calc(request):
     :param request:
         a `django.http.HttpRequest` object.
     """
-    callback_url = request.POST.get('callback_url')
-    foreign_calc_id = request.POST.get('foreign_calculation_id')
-
-    hazard_output_id = request.POST.get('hazard_output_id')
     hazard_job_id = request.POST.get('hazard_job_id')
 
-    if hazard_output_id or hazard_job_id:
+    if hazard_job_id:
         candidates = ("job_risk.ini", "job.ini")
     else:
-        candidates = ("job_hazard.ini", "job.ini")
+        candidates = ("job_hazard.ini", "job_haz.ini", "job.ini")
     einfo, exctype, monitor = safely_call(
-        _prepare_job, (request, hazard_output_id, hazard_job_id, candidates))
+        _prepare_job, (request, hazard_job_id, candidates))
     if exctype:
-        tasks.update_calculation(callback_url, status="failed", einfo=einfo)
         return HttpResponse(json.dumps(einfo.splitlines()),
                             content_type=JSON, status=500)
     if not einfo:
@@ -359,14 +361,9 @@ def run_calc(request):
         return HttpResponse(content=json.dumps([msg]), content_type=JSON,
                             status=500)
 
-    temp_dir = os.path.dirname(einfo[0])
-
     user = utils.get_user_data(request)
-
     try:
-        job, _fut = submit_job(einfo[0], temp_dir, request.POST['database'],
-                               user['name'], callback_url, foreign_calc_id,
-                               hazard_output_id, hazard_job_id)
+        job_id, _fut = submit_job(einfo[0], user['name'], hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = exc.args[0]
@@ -378,40 +375,29 @@ def run_calc(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        calc = oqe_models.OqJob.objects.get(pk=job.id)
-        response_data = vars(calc.get_oqparam())
-        response_data['job_id'] = job.id
-        response_data['status'] = calc.status
+        job = models.OqJob.objects.get(pk=job_id)
+        response_data = dict(job_id=job_id, status=job.status)
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
 
 
-def submit_job(job_file, temp_dir, dbname, user_name,
-               callback_url=None, foreign_calc_id=None,
-               hazard_output_id=None, hazard_job_id=None,
-               logfile=None):
+def submit_job(job_ini, user_name, hazard_job_id=None,
+               loglevel=DEFAULT_LOG_LEVEL, logfile=None, exports=''):
     """
     Create a job object from the given job.ini file in the job directory
-    and submit it to the job queue.
+    and submit it to the job queue. Returns the job ID.
     """
-    ini = os.path.join(temp_dir, job_file)
-    job, exctype, monitor = safely_call(
-        oq_engine.job_from_file, (ini, user_name, DEFAULT_LOG_LEVEL, '',
-                                  hazard_output_id, hazard_job_id))
-    if exctype:
-        tasks.update_calculation(callback_url, status="failed", einfo=job)
-        raise exctype(job)
-
-    future = executor.submit(
-        tasks.safely_call, tasks.run_calc, job, temp_dir,
-        callback_url, foreign_calc_id, dbname, logfile)
-    return job, future
+    job_id, oqparam = actions.job_from_file(
+        job_ini, user_name, hazard_job_id)
+    fut = executor.submit(engine.run_calc, job_id, oqparam, loglevel,
+                          logfile, exports, hazard_job_id)
+    return job_id, fut
 
 
 def _get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
     # helper to get job+calculation data from the oq-engine database
-    jobs = oqe_models.OqJob.objects.filter()
+    jobs = models.OqJob.objects.filter()
     if not user_is_super:
         jobs = jobs.filter(user_name=user_name)
 
@@ -451,7 +437,7 @@ def calc_results(request, calc_id):
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
     try:
-        oqjob = oqe_models.OqJob.objects.get(id=calc_id)
+        oqjob = models.OqJob.objects.get(id=calc_id)
         if not user['is_super'] and oqjob.user_name != user['name']:
             return HttpResponseNotFound()
     except ObjectDoesNotExist:
@@ -463,7 +449,7 @@ def calc_results(request, calc_id):
     # OrderedDict([('agg_loss_curve', ['xml', 'csv']), ...])
     output_types = groupby(export_output, lambda oe: oe[0],
                            lambda oes: [e for o, e in oes])
-    results = oq_engine.get_outputs(calc_id)
+    results = actions.get_outputs(calc_id)
     if not results:
         return HttpResponseNotFound()
 
@@ -491,12 +477,12 @@ def get_traceback(request, calc_id):
     """
     # If the specified calculation doesn't exist throw back a 404.
     try:
-        oqe_models.OqJob.objects.get(id=calc_id)
+        models.OqJob.objects.get(id=calc_id)
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
     # FIXME: why this is returning two records??
-    response_data = [rec for rec in oqe_models.Log.objects.filter(
+    response_data = [rec for rec in models.Log.objects.filter(
         job_id=calc_id, level='CRITICAL')][1].message.splitlines()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
@@ -528,7 +514,7 @@ def get_result(request, result_id):
     # the job which it is related too is not complete,
     # throw back a 404.
     try:
-        output = oqe_models.Output.objects.get(id=result_id)
+        output = models.Output.objects.get(id=result_id)
         job = output.oq_job
         if not job.status == 'complete':
             return HttpResponseNotFound()
