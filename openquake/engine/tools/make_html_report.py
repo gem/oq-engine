@@ -112,8 +112,10 @@ ORDER BY stop_time
 '''
 
 PAGE_TEMPLATE = '''\
+<!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css" />
 <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js"></script>
@@ -177,7 +179,8 @@ def make_report(conn, isodate='today'):
         (job_id, user, start_time, stop_time, status, duration) = stats[0]
         try:
             ds = read(job_id, datadir=os.path.dirname(ds_calc))
-            report = html_parts(view_fullreport('fullreport', ds))
+            txt = view_fullreport('fullreport', ds).decode('utf-8')
+            report = html_parts(txt)
         except Exception as exc:
             report = dict(
                 html_title='Could not generate report: %s' % cgi.escape(
@@ -197,5 +200,5 @@ def make_report(conn, isodate='today'):
         'Report last updated: %s' % datetime.datetime.now())
     fname = 'jobs-%s.html' % isodate
     with open(fname, 'w') as f:
-        f.write(PAGE_TEMPLATE % page)
+        f.write(PAGE_TEMPLATE % page.encode('utf-8'))
     return fname

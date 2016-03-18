@@ -1,3 +1,51 @@
+  [Michele Simionato]
+  * Introduced a dbserver to mediate the interaction with the database
+  * Improved the validation of NRML files
+  * Added a command `oq-engine --show-log <job_id>`
+
+  [Daniele Viganò]
+  * Use the 'postgresql' meta package as dependency of the .deb
+    package to support newer versions of Postgres; this makes
+    Trusty package installable on Ubuntu 16.04 and Debian 8
+
+  [Daniele Viganò, Michele Simionato]
+  * Fixed a bug in `oq-engine --export-outputs`
+
+  [Daniele Viganò, Matteo Nastasi]
+  * Allow installation of the binary package on Ubuntu derivatives
+
+  [Michele Simionato]
+  * Removed openquake/engine/settings.py
+  * Made the dependency on celery required only in cluster installations
+  * Integrated the authentication database in the engine server database
+  * Fixed the description in the Web UI (before it was temporarily set to
+    the string "A job").
+
+python-oq-engine (1.9.1-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * Fixed a bug in the Web UI when running a risk calculation starting
+    from a previous calculation
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 07 Mar 2016 11:11:59 +0100
+
+python-oq-engine (1.9.0-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * Fixed a bug such that in some circumstances the logging stream handler
+    was instantiated twice, resulting in duplicated logs
+  * Changed the default job status to 'executing' (was 'pre_executing')
+  * Fixed the ordering of the logs in the Web UI
+  * Removed the dependency from PostGIS
+  * Restored the monitoring which was accidentally removed
+  * Removed the obsolete option `--hazard-output-id`
+  * Printed the names of the files exported by the engine, even when there
+    are multiple files for a single output
+  * Introduced four new tables job, output, log, performance: all the other
+    60+ database tables are not used anymore
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 02 Mar 2016 14:33:38 +0100
+
 python-oq-engine (1.8.0-0~precise01) precise; urgency=low
 
   [Michele Simionato]
