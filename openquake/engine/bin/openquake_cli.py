@@ -271,6 +271,14 @@ def main():
         # configure a basic logging
         logging.basicConfig(level=logging.INFO)
 
+    if args.config_file:
+        os.environ[utils.config.OQ_CONFIG_FILE_VAR] = \
+            abspath(expanduser(args.config_file))
+        utils.config.refresh()
+
+    if args.no_distribute:
+        os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
+
     if getpass.getuser() != 'openquake':
         # check if the DbServer is up
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -282,31 +290,25 @@ def main():
             sys.exit('Please start the DbServer: '
                      'sudo -u openquake python -m openquake.server.dbserver &')
 
-    if args.config_file:
-        os.environ[utils.config.OQ_CONFIG_FILE_VAR] = \
-            abspath(expanduser(args.config_file))
-        utils.config.refresh()
-
-    if args.no_distribute:
-        os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
+    conn.cursor()  # connect to the database, so that conn.connection is valid
 
     if args.upgrade_db:
         logs.set_level('info')
         msg = upgrade_manager.what_if_I_upgrade(
-            conn, extract_scripts='read_scripts')
+            conn.connection, extract_scripts='read_scripts')
         print msg
         if msg.startswith('Your database is already updated'):
             pass
         elif args.yes or utils.confirm('Proceed? (y/n) '):
-            upgrade_manager.upgrade_db(conn)
+            upgrade_manager.upgrade_db(conn.connection)
         sys.exit(0)
 
     if args.version_db:
-        print upgrade_manager.version_db(conn)
+        print upgrade_manager.version_db(conn.connection)
         sys.exit(0)
 
     if args.what_if_I_upgrade:
-        print upgrade_manager.what_if_I_upgrade(conn)
+        print upgrade_manager.what_if_I_upgrade(conn.connection)
         sys.exit(0)
 
     # check if the db is outdated

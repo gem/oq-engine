@@ -1,4 +1,3 @@
 #!/bin/bash
-db_name = "/home/openquake/db.sqlite"
-echo ".. Creating database $db_name ..."
-touch $db_name
+touch /home/openquake/db.sqlite
+oq-engine --upgrade-db -y
