@@ -24,6 +24,7 @@ from docutils.examples import html_parts
 
 from openquake.commonlib.datastore import read
 from openquake.calculators.views import view_fullreport
+from openquake.engine.logs import dbcmd
 
 tablecounter = itertools.count(0)
 
@@ -34,19 +35,6 @@ def html(header_rows):
     """
     name = 'table%d' % next(tablecounter)
     return HtmlTable([map(str, row) for row in header_rows], name).render()
-
-
-class Fetcher(object):
-    """
-    Small wrapper over a DB API 2 cursor
-    """
-    def __init__(self, curs):
-        self.curs = curs
-
-    def query(self, templ, *args):
-        self.curs.execute(templ, args)
-        header = [r[0] for r in self.curs.description]
-        return [header] + self.curs.fetchall()
 
 
 class HtmlTable(object):
@@ -154,26 +142,24 @@ def make_tabs(tag_ids, tag_status, tag_contents):
     return templ % ('\n'.join(lis), '\n'.join(contents))
 
 
-def make_report(conn, isodate='today'):
+def make_report(isodate='today'):
     """
     Build a HTML report with the computations performed at the given isodate.
     Return the name of the report, which is saved in the current directory.
     """
     if isodate == 'today':
         isodate = datetime.date.today().isoformat()
-    curs = conn.cursor()
-    fetcher = Fetcher(curs)
     tag_ids = []
     tag_status = []
     tag_contents = []
 
-    jobs = fetcher.query(ALL_JOBS, isodate, isodate)[1:]
+    jobs = dbcmd('fetch', ALL_JOBS, isodate, isodate)[1:]
     page = '<h2>%d job(s) finished before midnight of %s</h2>' % (
         len(jobs), isodate)
     for job_id, user, status, ds_calc in jobs:
         tag_ids.append(job_id)
         tag_status.append(status)
-        stats = fetcher.query(JOB_STATS, job_id)[1:]
+        stats = dbcmd('fetch', JOB_STATS, job_id)[1:]
         if not stats:
             continue
         (job_id, user, start_time, stop_time, status, duration) = stats[0]
@@ -189,7 +175,7 @@ def make_report(conn, isodate='today'):
 
         page = report['html_title']
 
-        job_stats = html(fetcher.query(JOB_STATS, job_id))
+        job_stats = dbcmd('fetch', JOB_STATS, job_id)
         page += job_stats
 
         page += report['fragment']

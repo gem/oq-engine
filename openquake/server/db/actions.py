@@ -379,6 +379,17 @@ def save_performance(job_id, records):
             counts=rec['counts'])
 
 
+# used in make_report
+def fetch(templ, *args):
+    """
+    Run queries directly on the database. Return header + rows
+    """
+    curs = db.connection.cursor()
+    curs.execute(templ, args)
+    header = [r[0] for r in curs.description]
+    return [header] + curs.fetchall()
+
+
 # ########################## upgrade operations ########################## #
 
 def what_if_I_upgrade(extract_scripts):
