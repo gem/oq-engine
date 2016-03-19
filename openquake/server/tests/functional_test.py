@@ -27,10 +27,9 @@ import json
 import time
 import unittest
 import subprocess
+import tempfile
 
 import requests
-
-
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
 
@@ -98,10 +97,13 @@ class EngineServerTestCase(unittest.TestCase):
         # let's impersonate the user openquake, the one running the WebUI:
         # we need to set LOGNAME on Linux and USERNAME on Windows
         env['LOGNAME'] = env['USERNAME'] = 'openquake'
+        fh, tmpfile = tempfile.mkstemp()
+        os.close(fh)
+        tmpdb = 'tmpdb=' + tmpfile
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
-             cls.hostport, '--noreload', '--nothreading'], env=env,
-            stdout=subprocess.PIPE)
+             cls.hostport, '--noreload', '--nothreading', tmpdb],
+            env=env, stdout=subprocess.PIPE)
         time.sleep(5)
 
     @classmethod

@@ -16,10 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-# !!! it is important to keep this dependent only on the standard library !!! #
-# in this way it can be executed as the `openquake` user without need to set
-# the PYTHONPATH
-
 import os
 import re
 import time
