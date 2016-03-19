@@ -216,9 +216,8 @@ class FakeMatrix(object):
             return numpy.zeros(e, F32)
         elif len(sliceobj) == 2:
             n = self.shape[0]
-            s1, s2 = sliceobj
-            size2 = s2.stop - s2.start
-            return self.__class__(n, size2)
+            _, indices = sliceobj
+            return self.__class__(n, len(indices))
         else:
             raise ValueError('Not a valid slice: %r' % sliceobj)
 

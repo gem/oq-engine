@@ -341,16 +341,15 @@ class CompositeRiskModel(collections.Mapping):
         """
         imt_taxonomies = self.get_imt_taxonomies()
         by_col = operator.attrgetter('col_id')
-        rup_start = rup_stop = 0
         for ses_ruptures in split_in_blocks(
                 all_ruptures, hint or 1, key=by_col):
-            rup_stop += sum(sr.multiplicity for sr in ses_ruptures)
+            eids = []
+            for sr in ses_ruptures:
+                eids.extend(sr.eids)
             gsims = gsims_by_col[ses_ruptures[0].col_id]
             yield RiskInputFromRuptures(
                 imt_taxonomies, sitecol, ses_ruptures,
-                gsims, trunc_level, correl_model, seed,
-                eps[:, rup_start:rup_stop])
-            rup_start = rup_stop
+                gsims, trunc_level, correl_model, seed, eps[:, eids], eids)
 
     def gen_outputs(self, riskinputs, rlzs_assoc, monitor,
                     assets_by_site=None):
@@ -491,7 +490,8 @@ class RiskInputFromRuptures(object):
     :params eps: a matrix of epsilons
     """
     def __init__(self, imt_taxonomies, sitecol, ses_ruptures,
-                 gsims, trunc_level, correl_model, random_seed, epsilons):
+                 gsims, trunc_level, correl_model, random_seed,
+                 epsilons, eids):
         self.imt_taxonomies = imt_taxonomies
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
@@ -502,11 +502,8 @@ class RiskInputFromRuptures(object):
         self.random_seed = random_seed
         self.weight = sum(sr.multiplicity for sr in ses_ruptures)
         self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
+        self.eids = eids  # E events
         self.eps = epsilons  # matrix N x E, events in this block
-        eids = []
-        for sr in ses_ruptures:
-            eids.extend(sr.eids)
-        self.eids = numpy.array(eids, U32)
 
     def compute_expand_gmfa(self, monitor):
         """
