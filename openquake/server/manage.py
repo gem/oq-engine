@@ -20,20 +20,46 @@
 import os
 import sys
 from django.core.management import execute_from_command_line
-from openquake.server.db.schema.upgrades import upgrader
-from openquake.server import executor
 from django.db import connection
 
+from openquake.server.db.schema.upgrades import upgrader
+from openquake.server import executor
+from openquake.server.db import upgrade_manager, actions
+from openquake.server.settings import DATABASE
+from openquake.engine import logs
+
+
+def use_tmp_db(tmpfile):
+    # upgrade the temporary db used in the functional tests
+    logs.dbcmd = lambda action, *args: getattr(actions, action)(*args)
+    DATABASE['NAME'] = tmpfile
+    connection.cursor()  # connect to the db
+    upgrade_manager.upgrade_db(connection.connection)
+
+
+def parse_args(argv):
+    # manages the argument "tmpdb=XXX" used in the functional tests
+    args = []
+    dbname = None
+    for arg in argv:
+        if arg.startswith('tmpdb='):
+            dbname = arg[6:]
+        else:
+            args.append(arg)
+    return args, dbname
 
 # the code here is run in development mode; for instance
 # $ python manage.py runserver 0.0.0.0:8800
 if __name__ == "__main__":
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
-    # first of all check the database version and exit if the db is outdated
-    upgrader.check_versions(connection)
-    connection.cursor().execute(
-        # cleanup of the flag oq_job.is_running
-        'UPDATE job SET is_running=0 WHERE is_running=1')
+    argv, dbname = parse_args(sys.argv)
+    if dbname:  # this is used in the functional tests
+        use_tmp_db(dbname)
+    else:
+        # check the database version
+        upgrader.check_versions(connection)
+        connection.cursor().execute(  # reset the flag job.is_running
+            'UPDATE job SET is_running=0 WHERE is_running=1')
     with executor:
-        execute_from_command_line(sys.argv)
+        execute_from_command_line(argv)
