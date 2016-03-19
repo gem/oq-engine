@@ -546,7 +546,7 @@ celeryd_wait $GEM_MAXLOOP"
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
         set -e
 
-        # sudo useradd -m openquake
+        sudo useradd -m openquake -g openquake
         sudo -u openquake python \$PWD/oq-engine/openquake/server/db/upgrade_manager.py /home/openquake/db.sqlite
         sudo -u openquake python -m openquake.server.dbserver & sleep 1
 
