@@ -315,11 +315,6 @@ _devtest_innervm_run () {
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
     # configure the machine to run tests
-    ssh $lxc_ip "set -e 
-    export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\"
-    sudo useradd -m openquake
-    sudo -u openquake python \$PWD/oq-engine/openquake/server/db/upgrade_manager.py /home/openquake/db.sqlite"
-
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         if [ -n "$GEM_DEVTEST_SKIP_SLOW_TESTS" ]; then
             # skip slow tests
