@@ -91,8 +91,7 @@ def export_ses_xml(ekey, dstore):
     mesh = dstore['sitemesh'].value
     for sm in csm_info.source_models:
         for trt_model in sm.trt_models:
-            colkey = 'sescollection/trtmod=%s-%s' % tuple(
-                csm_info.cols[col_id])
+            colkey = 'sescollection/col=%02d' % col_id
             ruptures = []
             for sr in dstore[colkey].values():
                 ruptures.extend(sr.export(mesh))
@@ -514,12 +513,12 @@ def export_gmf_spec(ekey, dstore, spec):
     eids = numpy.array([int(rid) for rid in spec.split(',')])
     sitemesh = dstore['sitemesh']
     writer = writers.CsvWriter(fmt='%.5f')
+    etags = dstore['etags']
     if 'scenario' in dstore.attrs['calculation_mode']:
         _, gmfs_by_trt_gsim = base.get_gmfs(dstore)
         gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
         imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
         gmf_dt = numpy.dtype([(gsim, F32) for gsim in gsims])
-        etags = dstore['etags']
         for eid in eids:
             etag = etags[eid]
             for imt in imts:
@@ -530,10 +529,12 @@ def export_gmf_spec(ekey, dstore, spec):
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
     else:  # event based
-        for gmfa, imt, serial in _get_gmfs(dstore, eids):
-            dest = dstore.export_path('gmf-%s-%s.csv' % (serial, imt))
-            data = util.compose_arrays(sitemesh, gmfa)
-            writer.save(data, dest)
+        for eid in eids:
+            etag = etags[eid]
+            for gmfa, imt in _get_gmfs(dstore, etag):
+                dest = dstore.export_path('gmf-%s-%s.csv' % (eid, imt))
+                data = util.compose_arrays(sitemesh, gmfa)
+                writer.save(data, dest)
     return writer.getsaved()
 
 
@@ -581,39 +582,32 @@ def export_gmf_txt(key, dest, sitecol, ruptures, rlz, investigation_time):
     return {key: [dest]}
 
 
-def _get_gmfs(dstore, rupserials):
+def _get_gmfs(dstore, etag):
     oq = OqParam.from_(dstore.attrs)
     rlzs_assoc = dstore['rlzs_assoc']
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
-    ruptures = []
-    for colkey in dstore['sescollection']:
-        coll = dstore['sescollection/' + colkey]
-        for serial in rupserials:
-            try:
-                rup = coll[serial]
-            except KeyError:
-                pass
-            else:
-                ruptures.append(rup)
+    col_id, serial = util.get_col_serial(etag)
+    coll = dstore['sescollection/col=%02d' % col_id]
+    rup = coll[serial]
+    etag_idx = list(rup.etags).index(etag)
     correl_model = readinput.get_correl_model(oq)
     gsims_by_col = rlzs_assoc.get_gsims_by_col()
-    for rup in ruptures:
-        trt_id = rlzs_assoc.csm_info.get_trt_id(rup.col_id)
-        gsims = gsims_by_col[rup.col_id]
-        rlzs = [rlz for gsim in map(str, gsims)
-                for rlz in rlzs_assoc[trt_id, gsim]]
-        gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
-        [gst] = event_based.make_gmfs(
-            [rup], sitecol, oq.imtls, gsims, oq.truncation_level,
-            correl_model, oq.random_seed).values()
-        for imt in oq.imtls:
-            gmfa = numpy.zeros(N, gmf_dt)
-            for gsim in map(str, gsims):
-                data = gst.gmfa[gsim][imt]
-                for rlz in rlzs_assoc[trt_id, gsim]:
-                    gmfa['%03d' % rlz.ordinal][rup.indices] = data
-            yield gmfa, imt, rup.serial
+    trt_id = rlzs_assoc.csm_info.get_trt_id(col_id)
+    gsims = gsims_by_col[rup.col_id]
+    rlzs = [rlz for gsim in map(str, gsims)
+            for rlz in rlzs_assoc[trt_id, gsim]]
+    gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
+    [gst] = event_based.make_gmfs(
+        [rup], sitecol, oq.imtls, gsims, oq.truncation_level,
+        correl_model, oq.random_seed).values()
+    for imt in oq.imtls:
+        gmfa = numpy.zeros(N, gmf_dt)
+        for gsim in map(str, gsims):
+            data = gst.gmfa[gsim][imt][etag_idx]
+            for rlz in rlzs_assoc[trt_id, gsim]:
+                gmfa['%03d' % rlz.ordinal][rup.indices] = data
+        yield gmfa, imt
 
 
 @export.add(('gmfs', 'csv'))

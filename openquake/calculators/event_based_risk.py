@@ -248,16 +248,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
         self.N = len(self.assetcol)
         self.E = len(self.etags)
-        etag2eid = dict(zip(self.etags, range(self.E)))
         logging.info('Populating the risk inputs')
         rup_by_serial = AccumDict()
         for colkey in self.datastore['sescollection']:
             rup_by_serial += self.datastore['sescollection/' + colkey]
-        all_ruptures = []
-        for serial in sorted(rup_by_serial):
-            sr = rup_by_serial[serial]
-            sr.eids = [etag2eid[etag] for etag in sr.etags]
-            all_ruptures.append(sr)
+        all_ruptures = [rup_by_serial[s] for s in sorted(rup_by_serial)]
         if not self.riskmodel.covs:
             # do not generate epsilons
             eps = FakeMatrix(self.N, self.E)

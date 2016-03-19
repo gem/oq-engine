@@ -137,6 +137,17 @@ def get_ses_idx(etag):
     return int(etag.split('~')[1][4:])
 
 
+def get_col_serial(etag):
+    """
+    >>> get_col_serial("col=00~ses=0007~src=1-3~rup=018-01")
+    (0, 18)
+    """
+    col, ses, src, rup = etag.split('~')
+    col_id = int(col.split('=')[1])
+    serial = int(rup.split('=')[1].split('-')[0])
+    return col_id, serial
+
+
 class Rupture(object):
     """
     Simplified Rupture class with attributes etag, indices, ses_idx,
