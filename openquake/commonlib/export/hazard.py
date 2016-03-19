@@ -532,7 +532,7 @@ def export_gmf_spec(ekey, dstore, spec):
         for eid in eids:
             etag = etags[eid]
             for gmfa, imt in _get_gmfs(dstore, etag):
-                dest = dstore.export_path('gmf-%s-%s.csv' % (eid, imt))
+                dest = dstore.export_path('gmf-%s-%s.csv' % (etag, imt))
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
     return writer.getsaved()
