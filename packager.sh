@@ -547,7 +547,7 @@ celeryd_wait $GEM_MAXLOOP"
         set -e
 
         sudo useradd -m openquake
-        sudo -u openquake python \$PWD/oq-engine/openquake/server/db/upgrade_manager.py /home/openquake/db.sqlite"
+        sudo -u openquake python \$PWD/oq-engine/openquake/server/db/upgrade_manager.py /home/openquake/db.sqlite
         sudo -u openquake python -m openquake.server.dbserver & sleep 1
 
         if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
