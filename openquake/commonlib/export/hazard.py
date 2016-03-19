@@ -32,8 +32,7 @@ from openquake.commonlib.export import export
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.writers import (
     scientificformat, floatformat, write_csv)
-from openquake.commonlib import (
-    writers, hazard_writers, util, readinput, source)
+from openquake.commonlib import writers, hazard_writers, util, readinput
 from openquake.calculators import calc, base, event_based
 
 F32 = numpy.float32
