@@ -53,6 +53,7 @@ except ImportError:
 from openquake.engine.utils import confirm, config
 import openquake.engine
 from openquake.engine import engine, logs
+from openquake.engine.tools.make_html_report import make_report
 from openquake.commonlib import datastore
 from openquake.calculators import views
 
@@ -354,9 +355,7 @@ def main():
 
     # export
     elif args.make_html_report:
-        from django.db import connection as conn
-        from openquake.engine.tools.make_html_report import make_report
-        print 'Written', make_report(conn, args.make_html_report)
+        print 'Written', make_report(args.make_html_report)
         sys.exit(0)
 
     elif args.list_outputs is not None:
