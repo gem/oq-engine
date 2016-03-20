@@ -116,7 +116,7 @@ def _export_ses_csv(dest, ses_coll):
     rows = []
     for ses in ses_coll:
         for rup in ses:
-            rows.append([rup.etag, rup.seed])
+            rows.append([rup.etag])
     write_csv(dest, sorted(rows, key=operator.itemgetter(0)))
 
 

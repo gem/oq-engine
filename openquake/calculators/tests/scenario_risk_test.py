@@ -96,8 +96,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 ===============
 structural-mean
 ===============
-2.687250E+03   
-3.234137E+03   
+2.235958E+03   
+2.754788E+03   
 ===============''')
 
         # testing the specific GMF exporter
