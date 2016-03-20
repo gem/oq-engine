@@ -161,12 +161,11 @@ class EBRupture(object):
     """
     An event based rupture. It is a wrapper over a hazardlib rupture
     object, containing an array of site indices affected by the rupture,
-    as well as the tags and the seeds of the corresponding seismic events.
+    as well as the tags of the corresponding seismic events.
     """
-    def __init__(self, rupture, indices, seeds, etags, trt_id, serial):
+    def __init__(self, rupture, indices, etags, trt_id, serial):
         self.rupture = rupture
         self.indices = indices
-        self.seeds = numpy.array(seeds)
         self.etags = numpy.array(etags)
         self.trt_id = trt_id
         self.serial = serial
@@ -184,10 +183,9 @@ class EBRupture(object):
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        for seed, etag in zip(self.seeds, self.etags):
+        for etag in self.etags:
             new = Rupture(etag, self.indices)
             new.mesh = mesh[self.indices]
-            new.seed = seed
             new.etag = etag
             new.rupture = new
             new.is_from_fault_source = iffs = isinstance(
@@ -341,19 +339,15 @@ def build_eb_ruptures(
 
         # creating EBRuptures
         serial = rup.seed - random_seed + 1
-        rnd = random.Random(rup.seed)
         etags = []
-        seeds = []
         for (col_idx, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
                 etag = 'col=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
                     col_idx, ses_idx, src.source_id, serial, occ_no)
-                seeds.append(rnd.randint(0, MAX_INT))
                 etags.append(etag)
         if etags:
-            yield EBRupture(
-                rup, indices, seeds, etags, src.trt_model_id, serial)
+            yield EBRupture(rup, indices, etags, src.trt_model_id, serial)
 
 
 @base.calculators.add('event_based_rupture')

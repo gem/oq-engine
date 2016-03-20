@@ -413,8 +413,6 @@ def rupture_to_element(rupture, parent=None):
     else:
         rup_elem = et.SubElement(parent, 'rupture')
 
-    rup_elem.append(et.Comment('rupture seed=%d' % rupture.seed))
-
     rup = rupture.rupture
     rup_elem.set('id', rupture.etag)
     rup_elem.set('magnitude', str(rup.magnitude))
