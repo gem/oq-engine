@@ -190,6 +190,23 @@ class GmfComputer(object):
                         gmfa[i, j][gs][imt] = gmv
         return gmfa
 
+    def calcgmfs(self, multiplicity, seed):
+        """
+        Compute the ground motion field for the given sites and seeds.
+
+        :param multiplicity:
+            the number of GMFs to return
+        :param seed:
+            seed for the numpy random number generator
+        :returns:
+            a numpy array of dtype gmf_dt and shape (multiplicity, num_sites)
+        """
+        gmfa = numpy.zeros((multiplicity, len(self.sites)), self.gmf_dt)
+        for gsim in self.gsims:
+            for imt, gmv in self._compute(seed, gsim, multiplicity).items():
+                gmfa[str(gsim)][imt] = gmv.T  # from N x M -> M x N
+        return gmfa
+
 
 # this is not used in the engine; it is still useful for usage in IPython
 # when demonstrating hazardlib capabilities
