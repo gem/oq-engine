@@ -244,7 +244,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             return
         oq = self.oqparam
         correl_model = readinput.get_correl_model(oq)
-        gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
         self.N = len(self.assetcol)
         self.E = len(self.etags)
         logging.info('Populating the risk inputs')
@@ -262,7 +261,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             logging.info('Generated %s epsilons', eps.shape)
 
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
-            self.sitecol.complete, all_ruptures, gsims_by_col,
+            self.sitecol.complete, all_ruptures,
+            self.rlzs_assoc.gsims_by_trt_id,
             oq.truncation_level, correl_model, oq.random_seed, eps,
             oq.concurrent_tasks or 1))
         logging.info('Built %d risk inputs', len(self.riskinputs))
@@ -317,7 +317,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
              self.assets_by_site, self.monitor.new('task')),
             concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg,
             weight=operator.attrgetter('weight'),
-            key=operator.attrgetter('col_id'),
+            key=operator.attrgetter('trt_id'),
             posthook=self.save_data_transfer)
 
     def save_data_transfer(self, taskmanager):

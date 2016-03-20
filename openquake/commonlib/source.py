@@ -372,12 +372,6 @@ class RlzsAssoc(collections.Mapping):
                 if trt_model.id == trt_model_id:
                     return smodel.ordinal
 
-    def get_gsims_by_col(self):
-        """Return a list of lists of GSIMs of length num_collections"""
-        # TODO: add a special case for sampling?
-        return [self.gsims_by_trt_id.get(col['trt_id'], [])
-                for col in self.csm_info.cols]
-
     # this useful to extract the ruptures affecting a given realization
     def get_col_ids(self, rlz):
         """
@@ -451,25 +445,21 @@ class RlzsAssoc(collections.Mapping):
         :param sid_data: dataset sid_data
         :returns: a list of R dictionaries etag -> rupture
         """
-        gsims_by_col = self.get_gsims_by_col()
         dicts = [AccumDict() for rlz in self.realizations]
         for serial in gmf_data:
             gmf = gmf_data[serial]
             indices = sid_data[serial].value
             etags = gmf.attrs['etags']
-            col_id = gmf.attrs['col_id']
-            trt_id = self.csm_info.get_trt_id(col_id)
-            for gsim in gsims_by_col[col_id]:
+            trt_id = gmf.attrs['trt_id']
+            for gsim in self.gsims_by_trt_id[trt_id]:
                 gs = str(gsim)
                 for rlz in self.rlzs_assoc[trt_id, gs]:
                     dic = dicts[rlz.ordinal]
                     dic.indices = indices
-                    col_ids = self.col_ids_by_rlz[rlz]
-                    if not col_ids or col_id in col_ids:
-                        for i, etag in enumerate(etags):
-                            ebrup = util.Rupture(etag, indices)
-                            ebrup.gmf = gmf[i][gs]
-                            dic[etag] = ebrup
+                    for i, etag in enumerate(etags):
+                        ebrup = util.Rupture(etag, indices)
+                        ebrup.gmf = gmf[i][gs]
+                        dic[etag] = ebrup
         return dicts
 
     def combine(self, results, agg=agg_prob):
@@ -653,7 +643,7 @@ class CompositionInfo(object):
         """
         Return the number of underlying collections
         """
-        return len(self.cols)
+        return sum(len(sm.trt_models) for sm in self.source_models)
 
     def get_num_rlzs(self, source_model=None):
         """
