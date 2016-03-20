@@ -163,12 +163,12 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the tags and the seeds of the corresponding seismic events.
     """
-    def __init__(self, rupture, indices, seeds, etags, col_id, serial):
+    def __init__(self, rupture, indices, seeds, etags, trt_id, serial):
         self.rupture = rupture
         self.indices = indices
         self.seeds = numpy.array(seeds)
         self.etags = numpy.array(etags)
-        self.col_id = col_id
+        self.trt_id = trt_id
         self.serial = serial
 
     @property
@@ -218,8 +218,8 @@ class EBRupture(object):
         return self.serial < other.serial
 
     def __repr__(self):
-        return '<%s #%d, col_id=%d>' % (self.__class__.__name__,
-                                        self.serial, self.col_id)
+        return '<%s #%d, trt_id=%d>' % (self.__class__.__name__,
+                                        self.serial, self.trt_id)
 
 
 @parallel.litetask
@@ -352,7 +352,8 @@ def build_eb_ruptures(
                 seeds.append(rnd.randint(0, MAX_INT))
                 etags.append(etag)
         if etags:
-            yield EBRupture(rup, indices, seeds, etags, col_idx, serial)
+            yield EBRupture(
+                rup, indices, seeds, etags, src.trt_model_id, serial)
 
 
 @base.calculators.add('event_based_rupture')
@@ -418,12 +419,11 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         logging.info('Generated %d EBRuptures',
                      sum(len(v) for v in result.values()))
         nc = self.rlzs_assoc.csm_info.num_collections
-        cols = self.rlzs_assoc.csm_info.cols  # pairs (trt_id, idx)
-        sescollection = numpy.array([{} for col_id in range(nc)])
+        sescollection = numpy.array([{} for trt_id in range(nc)])
         etags = []
         for trt_id in result:
             for ebr in result[trt_id]:
-                sescollection[ebr.col_id][ebr.serial] = ebr
+                sescollection[trt_id][ebr.serial] = ebr
                 etags.extend(ebr.etags)
         etags.sort()
         etag2eid = dict(zip(etags, range(len(etags))))
@@ -432,16 +432,15 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
             self.datastore.set_attrs(
                 'etags',
                 num_ruptures=numpy.array([len(sc) for sc in sescollection]))
-            for i, (sescol, col) in enumerate(zip(sescollection, cols)):
+            for i, sescol in enumerate(sescollection):
                 for ebr in sescol.values():
                     ebr.eids = [etag2eid[etag] for etag in ebr.etags]
                 nr = len(sescol)
                 logging.info('Saving SES collection #%d with %d ruptures',
                              i, nr)
-                key = 'sescollection/col=%02d' % i
+                key = 'sescollection/trt=%02d' % i
                 self.datastore[key] = sescol
-                self.datastore.set_attrs(
-                    key, num_ruptures=nr, trt_model_id=col[0], occur=col[1])
+                self.datastore.set_attrs(key, num_ruptures=nr, trt_model_id=i)
         for dset in self.rup_data.values():
             numsites = dset.dset['numsites']
             multiplicity = dset.dset['multiplicity']
@@ -505,17 +504,15 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, rlzs_assoc, monitor):
     oq = monitor.oqparam
     # NB: by construction each block is a non-empty list with
     # ruptures of the same col_id and therefore trt_model_id
-    col_id = eb_ruptures[0].col_id
-    trt_id = rlzs_assoc.csm_info.get_trt_id(col_id)
-    gsims = rlzs_assoc.get_gsims_by_col()[col_id]
+    trt_id = eb_ruptures[0].trt_id
+    gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
     tot_sites = len(sitecol.complete)
     gmfa_sids_etags = make_gmfs(
         eb_ruptures, sitecol, oq.imtls, gsims,
         trunc_level, correl_model, oq.random_seed, monitor)
-    result = {(trt_id, col_id): gmfa_sids_etags if oq.ground_motion_fields
-              else None}
+    result = {trt_id: gmfa_sids_etags if oq.ground_motion_fields else None}
     if oq.hazard_curves_from_gmfs:
         with monitor('bulding hazard curves', measuremem=False):
             duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
@@ -576,8 +573,8 @@ class EventBasedCalculator(ClassicalCalculator):
         """
         super(EventBasedCalculator, self).pre_execute()
         self.sesruptures = []
-        for col_id, col in enumerate(self.rlzs_assoc.csm_info.cols):
-            sescol = self.datastore['sescollection/col=%02d' % col_id]
+        for trt_id in range(self.rlzs_assoc.csm_info.num_collections):
+            sescol = self.datastore['sescollection/trt=%02d' % trt_id]
             for etag, sesrup in sorted(sescol.items()):
                 sesrup = sescol[etag]
                 self.sesruptures.append(sesrup)
@@ -595,23 +592,21 @@ class EventBasedCalculator(ClassicalCalculator):
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         save_gmfs = self.oqparam.ground_motion_fields
-        for trt_id, gsim_or_col in res:
-            if isinstance(gsim_or_col, int) and save_gmfs:
+        for trt_id in res:
+            if isinstance(trt_id, int) and save_gmfs:
                 with sav_mon:
-                    gmfa_sids_etags = res[trt_id, gsim_or_col]
+                    gmfa_sids_etags = res[trt_id]
                     for serial in sorted(gmfa_sids_etags):
                         gst = gmfa_sids_etags[serial]
                         self.datastore['gmf_data/%s' % serial] = gst.gmfa
                         self.datastore['sid_data/%s' % serial] = gst.sids
                         self.datastore.set_attrs('gmf_data/%s' % serial,
-                                                 col_id=gsim_or_col,
+                                                 trt_id=trt_id,
                                                  etags=gst.etags)
                     self.datastore.hdf5.flush()
-            elif isinstance(gsim_or_col, str):  # aggregate hcurves
+            elif isinstance(trt_id, tuple):  # aggregate hcurves
                 with agg_mon:
-                    curves_by_imt = res[trt_id, gsim_or_col]
-                    self.agg_dicts(
-                        acc, AccumDict({(trt_id, gsim_or_col): curves_by_imt}))
+                    self.agg_dicts(acc, {trt_id: res[trt_id]})
         sav_mon.flush()
         agg_mon.flush()
         return acc
@@ -634,7 +629,7 @@ class EventBasedCalculator(ClassicalCalculator):
             (self.sesruptures, self.sitecol, self.rlzs_assoc, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             acc=zerodict, agg=self.combine_curves_and_save_gmfs,
-            key=operator.attrgetter('col_id'),
+            key=operator.attrgetter('trt_id'),
             weight=operator.attrgetter('multiplicity'))
         if oq.ground_motion_fields:
             self.datastore.set_nbytes('gmf_data')

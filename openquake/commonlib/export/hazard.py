@@ -91,7 +91,7 @@ def export_ses_xml(ekey, dstore):
     mesh = dstore['sitemesh'].value
     for sm in csm_info.source_models:
         for trt_model in sm.trt_models:
-            colkey = 'sescollection/col=%02d' % col_id
+            colkey = 'sescollection/trt=%02d' % trt_model.id
             ruptures = []
             for sr in dstore[colkey].values():
                 ruptures.extend(sr.export(mesh))
@@ -588,13 +588,12 @@ def _get_gmfs(dstore, etag):
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
     col_id, serial = util.get_col_serial(etag)
-    coll = dstore['sescollection/col=%02d' % col_id]
+    trt_id = rlzs_assoc.csm_info.get_trt_id(col_id)
+    coll = dstore['sescollection/trt=%02d' % trt_id]
     rup = coll[serial]
     etag_idx = list(rup.etags).index(etag)
     correl_model = readinput.get_correl_model(oq)
-    gsims_by_col = rlzs_assoc.get_gsims_by_col()
-    trt_id = rlzs_assoc.csm_info.get_trt_id(col_id)
-    gsims = gsims_by_col[rup.col_id]
+    gsims = rlzs_assoc.gsims_by_trt_id[rup.trt_id]
     rlzs = [rlz for gsim in map(str, gsims)
             for rlz in rlzs_assoc[trt_id, gsim]]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])

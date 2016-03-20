@@ -325,12 +325,12 @@ class CompositeRiskModel(collections.Mapping):
                          hazards_by_site, assets_by_site, eps_dict)
 
     def build_inputs_from_ruptures(self, sitecol, all_ruptures,
-                                   gsims_by_col, trunc_level, correl_model,
+                                   gsims_by_trt_id, trunc_level, correl_model,
                                    seed, eps, hint):
         """
         :param sitecol: a SiteCollection instance
         :param all_ruptures: the complete list of EBRupture instances
-        :param gsims_by_col: a dictionary of GSIM instances
+        :param gsims_by_trt_id: a dictionary of GSIM instances
         :param trunc_level: the truncation level (or None)
         :param correl_model: the correlation model (or None)
         :param seed: the random seed
@@ -340,13 +340,13 @@ class CompositeRiskModel(collections.Mapping):
         Yield :class:`RiskInputFromRuptures` instances.
         """
         imt_taxonomies = self.get_imt_taxonomies()
-        by_col = operator.attrgetter('col_id')
+        by_trt_id = operator.attrgetter('trt_id')
         for ses_ruptures in split_in_blocks(
-                all_ruptures, hint or 1, key=by_col):
+                all_ruptures, hint or 1, key=by_trt_id):
             eids = []
             for sr in ses_ruptures:
                 eids.extend(sr.eids)
-            gsims = gsims_by_col[ses_ruptures[0].col_id]
+            gsims = gsims_by_trt_id[ses_ruptures[0].trt_id]
             yield RiskInputFromRuptures(
                 imt_taxonomies, sitecol, ses_ruptures,
                 gsims, trunc_level, correl_model, seed, eps[:, eids], eids)
@@ -495,7 +495,7 @@ class RiskInputFromRuptures(object):
         self.imt_taxonomies = imt_taxonomies
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
-        self.col_id = ses_ruptures[0].col_id
+        self.trt_id = ses_ruptures[0].trt_id
         self.gsims = gsims
         self.trunc_level = trunc_level
         self.correl_model = correl_model
@@ -544,13 +544,12 @@ class RiskInputFromRuptures(object):
         """
         gmfa = self.compute_expand_gmfa(monitor)
         gsims = list(map(str, self.gsims))
-        trt_id = rlzs_assoc.csm_info.get_trt_id(self.col_id)
         hazs = []
         for gmvs in gmfa.T:  # shape (N, E)
             haz_by_imt_rlz = {imt: {} for imt in self.imts}
             for gsim in gsims:
                 for imt in self.imts:
-                    for rlz in rlzs_assoc[trt_id, gsim]:
+                    for rlz in rlzs_assoc[self.trt_id, gsim]:
                         haz_by_imt_rlz[imt][rlz] = gmvs[gsim][imt]
             hazs.append(haz_by_imt_rlz)
         return hazs
