@@ -18,7 +18,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     -122.57 38.113
                 </gml:pos>
             </gml:Point>
-            <loss assetRef="a3" value="0.000560113"/>
+            <loss assetRef="a3" value="0.000553644"/>
         </node>
         <node>
             <gml:Point>
@@ -26,7 +26,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     -122.114 38.113
                 </gml:pos>
             </gml:Point>
-            <loss assetRef="a2" value="0.00106173"/>
+            <loss assetRef="a2" value="0.0010618"/>
         </node>
         <node>
             <gml:Point>
@@ -34,7 +34,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     -122.0 37.91
                 </gml:pos>
             </gml:Point>
-            <loss assetRef="a5" value="0.000855613"/>
+            <loss assetRef="a5" value="0.000847155"/>
         </node>
         <node>
             <gml:Point>
@@ -42,7 +42,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     -122.0 38.0
                 </gml:pos>
             </gml:Point>
-            <loss assetRef="a4" value="0.00136744"/>
+            <loss assetRef="a4" value="0.00129898"/>
         </node>
         <node>
             <gml:Point>
@@ -50,7 +50,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     -122.0 38.113
                 </gml:pos>
             </gml:Point>
-            <loss assetRef="a1" value="0.00229016"/>
+            <loss assetRef="a1" value="0.00233141"/>
         </node>
         <node>
             <gml:Point>
@@ -58,7 +58,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     -122.0 38.225
                 </gml:pos>
             </gml:Point>
-            <loss assetRef="a6" value="0.00117568"/>
+            <loss assetRef="a6" value="0.00121872"/>
         </node>
         <node>
             <gml:Point>
@@ -66,7 +66,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     -121.886 38.113
                 </gml:pos>
             </gml:Point>
-            <loss assetRef="a7" value="0.000988922"/>
+            <loss assetRef="a7" value="0.000906593"/>
         </node>
     </lossMap>
 </nrml>

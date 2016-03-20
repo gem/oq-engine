@@ -176,7 +176,7 @@ class EBRupture(object):
         """
         How many times the underlying rupture occurs.
         """
-        return len(self.seeds)
+        return len(self.etags)
 
     def export(self, mesh):
         """
@@ -481,7 +481,8 @@ def make_gmfs(eb_ruptures, sitecol, imts, gsims,
             computer = calc.gmf.GmfComputer(
                 ebr.rupture, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
-            gmfa = computer.compute(ebr.seeds)
+            gmfa = computer.calcgmfs(
+                ebr.multiplicity, ebr.serial + random_seed)
             dic[ebr.serial] = GmfaSidsEtags(gmfa, r_sites.indices, ebr.etags)
     return dic
 
