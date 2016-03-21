@@ -653,7 +653,7 @@ col=00|ses=0001|src=test|rup=001-01,0 1,2.67031000E-01 3.34878000E-01
         with self.assertRaises(readinput.InvalidFile):
             readinput.get_gmfs_from_txt(self.oqparam, fname)
 
-    def test_not_ordered_tags(self):
+    def test_not_ordered_etags(self):
         fname = general.writetmp('''\
 0 0,0 1
 col=00|ses=0001|src=test|rup=001-02,0 1,1.59434000E-01 3.92602000E-01
@@ -697,14 +697,14 @@ class TestReadGmfXmlTestCase(unittest.TestCase):
 
     def test_ok(self):
         fname = os.path.join(DATADIR,  'gmfdata.xml')
-        sitecol, tags, gmfa = readinput.get_scenario_from_nrml(
+        sitecol, etags, gmfa = readinput.get_scenario_from_nrml(
             self.oqparam, fname)
         coords = zip(sitecol.mesh.lons, sitecol.mesh.lats)
         self.assertEqual(writers.write_csv(StringIO(), coords), '''\
 0.000000E+00,0.000000E+00
 0.000000E+00,1.000000E-01
 0.000000E+00,2.000000E-01''')
-        self.assertEqual('\n'.join(tags), '''\
+        self.assertEqual('\n'.join(etags), '''\
 scenario-0000000000
 scenario-0000000001
 scenario-0000000002
@@ -722,7 +722,7 @@ PGV,PGA
         fname = os.path.join(DATADIR,  'gmfdata_err.xml')
         with self.assertRaises(readinput.InvalidFile) as ctx:
             readinput.get_scenario_from_nrml(self.oqparam, fname)
-        self.assertIn("Found a missing tag 'scenario-0000000001'",
+        self.assertIn("Found a missing etag 'scenario-0000000001'",
                       str(ctx.exception))
 
     def test_err2(self):

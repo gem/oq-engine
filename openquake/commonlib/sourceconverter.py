@@ -718,7 +718,7 @@ class SourceConverter(RuptureConverter):
 def parse_ses_ruptures(fname):
     """
     Convert a stochasticEventSetCollection file into a set of SES,
-    each one containing ruptures with a tag and a seed.
+    each one containing ruptures with an etag and a seed.
     """
     raise NotImplementedError('parse_ses_ruptures')
 

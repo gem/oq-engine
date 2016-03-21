@@ -35,7 +35,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg.csv', fname)
 
         # check the exported GMFs
-        [gmf1, gmf2] = export(('gmfs:1,2', 'csv'), self.calc.datastore)
+        [gmf1, gmf2] = export(('gmfs:0,1', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf1.csv', gmf1)
         self.assertEqualFiles('expected/gmf2.csv', gmf2)
 
@@ -101,7 +101,7 @@ structural-mean
 ===============''')
 
         # testing the specific GMF exporter
-        [gmf] = export(('gmfs:1', 'csv'), self.calc.datastore)
+        [gmf] = export(('gmfs:0', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-0-PGA.csv', gmf)
 
     @attr('qa', 'risk', 'scenario_risk')

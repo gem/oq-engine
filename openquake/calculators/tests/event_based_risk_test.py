@@ -84,7 +84,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 ========= ======== ============ ============ ============ ==============
 asset_ref taxonomy lon          lat          structural   structural_ins
 ========= ======== ============ ============ ============ ==============
-a0        RM       8.129850E+01 2.910980E+01 1.700938E+02 1.292497E+00  
+a0        RM       8.129850E+01 2.910980E+01 1.700937E+02 1.292497E+00  
 a1        RC       8.308230E+01 2.790060E+01 1.219089E+02 1.382179E+00  
 a2        W        8.574770E+01 2.790150E+01 1.549710E+02 9.837796E+01  
 a3        RM       8.574770E+01 2.790150E+01 1.441384E+02 0.000000E+00  
@@ -148,7 +148,7 @@ a3        RM       8.574770E+01 2.790150E+01 1.441384E+02 0.000000E+00
         self.assertEqual(len(fnames), 4)  # 2 IMT x 2 poes
 
         # export a single rupture
-        [f1, f2] = export(('gmfs:1', 'csv'), self.calc.datastore)
+        [f1, f2] = export(('gmfs:0', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/gmf-col=05'
             '~ses=0001~src=AS_TRAS334~rup=612343-01-PGA.csv', f1)
@@ -161,6 +161,6 @@ a3        RM       8.574770E+01 2.790150E+01 1.441384E+02 0.000000E+00
         # the case of a site_model.xml with 7 sites but only 1 asset
         out = self.run_calc(case_4a.__file__, 'job_hazard.ini',
                             exports='txt')
-        [fname] = out['gmfs', 'txt']
+        [fname] = out['gmf_data', 'txt']
         self.assertEqualFiles(
             'expected/gmf-smltp_b1-gsimltp_b1.txt', fname)

@@ -78,7 +78,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     """
     sitemesh = datastore.persistent_attribute('sitemesh')
     sitecol = datastore.persistent_attribute('sitecol')
-    tags = datastore.persistent_attribute('tags')
+    etags = datastore.persistent_attribute('etags')
     rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
     realizations = datastore.persistent_attribute('realizations')
     assetcol = datastore.persistent_attribute('assetcol')
@@ -638,18 +638,18 @@ def get_gmfs(dstore):
     oq = OqParam.from_(dstore.attrs)
     if 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
-        sitecol, tags, gmfs_by_imt = readinput.get_gmfs(oq)
+        sitecol, etags, gmfs_by_imt = readinput.get_gmfs(oq)
 
         # reduce the gmfs matrices to the filtered sites
         for imt in oq.imtls:
             gmfs_by_imt[imt] = gmfs_by_imt[imt][sitecol.indices]
 
         logging.info('Preparing the risk input')
-        return tags, {(0, 'FromFile'): gmfs_by_imt}
+        return etags, {(0, 'FromFile'): gmfs_by_imt}
 
     # else from rupture
     sitecol = dstore['sitecol']
-    gmf = dstore['gmfs/col00'].value
+    gmfa = dstore['gmf_data/1'].value
     # NB: if the hazard site collection has N sites, the hazard
     # filtered site collection for the nonzero GMFs has N' <= N sites
     # whereas the risk site collection associated to the assets
@@ -661,16 +661,15 @@ def get_gmfs(dstore):
     risk_indices = set(sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
     imt_dt = numpy.dtype([(imt, F32) for imt in oq.imtls])
-    gmf_by_idx = general.groupby(gmf, lambda row: row['idx'])
-    R = len(gmf_by_idx)
-    # build a matrix N x R for each GSIM realization
-    gmfs = {(trt_id, gsim): numpy.zeros((N, R), imt_dt)
+    E = gmfa.shape[0]
+    # build a matrix N x E for each GSIM realization
+    gmfs = {(trt_id, gsim): numpy.zeros((N, E), imt_dt)
             for trt_id, gsim in dstore['rlzs_assoc']}
-    for rupid, rows in sorted(gmf_by_idx.items()):
-        assert len(haz_sitecol.indices) == len(rows), (
-            len(haz_sitecol.indices), len(rows))
-        for sid, gmv in zip(haz_sitecol.indices, rows):
+    for eid, gmf in enumerate(gmfa):
+        assert len(haz_sitecol.indices) == len(gmf), (
+            len(haz_sitecol.indices), len(gmf))
+        for sid, gmv in zip(haz_sitecol.indices, gmf):
             if sid in risk_indices:
                 for trt_id, gsim in gmfs:
-                    gmfs[trt_id, gsim][sid, rupid] = gmv[gsim]
-    return dstore['tags'].value, gmfs
+                    gmfs[trt_id, gsim][sid, eid] = gmv[gsim]
+    return dstore['etags'].value, gmfs

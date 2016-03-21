@@ -85,26 +85,3 @@ a1,8.30822983E+01,2.79006004E+01,1,0,5.00000000E+02,1.00000000E+01,2.00000000E+0
             'SA(0.5)', hazard_by_site, self.assets_by_site, {})
         haz = ri_SA_05.get_hazard(rlzs_assoc)
         self.assertEqual(len(haz), 2)
-
-    def test_from_ruptures(self):
-        oq = self.oqparam
-        correl_model = readinput.get_correl_model(oq)
-        rupcalc = event_based.EventBasedRuptureCalculator(oq)
-        rupcalc.run()
-        dstore = get_datastore(rupcalc)
-
-        # this is case with a single SES collection
-        ses_ruptures = dstore['sescollection/trtmod=0-0'].values()
-
-        gsims_by_trt_id = rupcalc.rlzs_assoc.gsims_by_trt_id
-
-        eps = riskinput.make_eps(
-            self.assets_by_site, len(ses_ruptures), oq.master_seed,
-            oq.asset_correlation)
-
-        [ri] = self.riskmodel.build_inputs_from_ruptures(
-            self.sitecol, ses_ruptures, gsims_by_trt_id, oq.truncation_level,
-            correl_model, eps, hint=1)
-
-        haz = ri.get_hazard(rlzs_assoc)
-        self.assertEqual(len(haz), 2)

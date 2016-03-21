@@ -185,7 +185,8 @@ class DataStore(collections.MutableMapping):
         Set the `nbytes` attribute on the HDF5 object identified by `key`.
         """
         obj = self.hdf5[key]
-        obj.attrs['nbytes'] = ByteCounter.get_nbytes(obj)
+        obj.attrs['nbytes'] = nbytes = ByteCounter.get_nbytes(obj)
+        return nbytes
 
     def set_attrs(self, key, **kw):
         """

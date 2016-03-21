@@ -431,7 +431,7 @@ def get_max_gmf_size(dstore):
     oq = OqParam.from_(dstore.attrs)
     n_sites = len(dstore['sitecol'].complete)
     rlzs_assoc = dstore['rlzs_assoc']
-    num_ruptures = dstore.get_attr('tags', 'num_ruptures')
+    num_ruptures = dstore.get_attr('etags', 'num_ruptures')
     col = num_ruptures.argmax()
     n_ruptures = num_ruptures[col]
     trt_id = rlzs_assoc.csm_info.get_trt_id(col)

@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import logging
 import numpy
 
 F32 = numpy.float32
@@ -85,7 +86,7 @@ def rmsep(array_ref, array, min_value=0.01):
     return numpy.sqrt(reldiffsquare.mean())
 
 
-def compose_arrays(a1, a2, firstfield='tag'):
+def compose_arrays(a1, a2, firstfield='etag'):
     """
     Compose composite arrays by generating an extended datatype containing
     all the fields. The two arrays must have the same length.
@@ -126,3 +127,43 @@ def get_assets(dstore):
     asset_data = [(a['asset_ref'], taxo[a['taxonomy']], a['lon'], a['lat'])
                   for a in assetcol]
     return numpy.array(asset_data, asset_dt)
+
+
+def get_ses_idx(etag):
+    """
+    >>> get_ses_idx("col=00~ses=0007~src=1-3~rup=018-01")
+    7
+    """
+    return int(etag.split('~')[1][4:])
+
+
+def get_col_serial(etag):
+    """
+    >>> get_col_serial("col=00~ses=0007~src=1-3~rup=018-01")
+    (0, 18)
+    """
+    col, ses, src, rup = etag.split('~')
+    col_id = int(col.split('=')[1])
+    serial = int(rup.split('=')[1].split('-')[0])
+    return col_id, serial
+
+
+class Rupture(object):
+    """
+    Simplified Rupture class with attributes etag, indices, ses_idx,
+    used in export.
+    """
+    def __init__(self, etag, indices=None):
+        if isinstance(etag, int):  # scenario
+            self.etag = 'scenario-%010d' % etag
+            self.indices = indices
+            self.ses_idx = 1
+            return
+        # event based
+        if len(etag) > 100:
+            logging.error(
+                'The etag %s is long %d characters, it will be truncated '
+                'to 100 characters in the /etags array', etag, len(etag))
+        self.etag = etag
+        self.indices = indices
+        self.ses_idx = get_ses_idx(etag)

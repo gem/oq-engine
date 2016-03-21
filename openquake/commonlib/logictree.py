@@ -24,11 +24,11 @@ A logic tree object must be iterable and yielding realizations, i.e. objects
 with attributes `value`, `weight`, `lt_path` and `ordinal`.
 """
 
-import abc
 import os
-import sys
-import random
 import re
+import sys
+import abc
+import random
 import itertools
 import collections
 import operator
@@ -36,14 +36,12 @@ from collections import namedtuple
 from decimal import Decimal
 from xml.etree import ElementTree as etree
 
-import numpy
-
 from openquake.baselib.general import groupby
 from openquake.baselib.python3compat import raise_
 import openquake.hazardlib
 from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib import geo
-from openquake.commonlib import valid
+from openquake.commonlib import valid, util
 from openquake.commonlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 
@@ -86,19 +84,22 @@ class RlzsAssoc(collections.Mapping):
         """
         return {self.rlzs_assoc[key][0]: result[key] for key in result}
 
-    def combine_gmfs(self, gmfs):  # this is used in the export
+    # this is used in the scenario export
+    def combine_gmfs(self, gmf_data, sid_data):
         """
-        :param gmfs: datastore /gmfs object
-        :returns: a list of dictionaries rupid -> gmf array
+        :param gmf_data: dataset gmf_data
+        :param sid_data: dataset sid_data
+        :returns: a list of R dictionaries etag -> rupture
         """
-        gmfs_by_rupid = groupby(
-            gmfs['col00'].value, lambda row: row['idx'], list)
         dicts = [{} for rlz in self.realizations]
+        gmf = gmf_data['1']  # '1' is the serial of the only rupture there is
+        indices = sid_data['1'].value
         for rlz in self.realizations:
-            gs = str(rlz)
-            for rupid, rows in gmfs_by_rupid.items():
-                dicts[rlz.ordinal][rupid] = numpy.array(
-                    [r[gs] for r in rows], rows[0][gs].dtype)
+            gsim = str(rlz)
+            for i, gmvs in enumerate(gmf):
+                rup = util.Rupture(i, indices)
+                rup.gmf = gmvs[gsim]
+                dicts[rlz.ordinal][rup.etag] = rup
         return dicts
 
     def __iter__(self):
@@ -687,7 +688,7 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
         Can be overriden by subclasses. Base class implementation does nothing.
 
         :param tree_node:
-            ``etree.Element`` object with tag "logicTree".
+            ``etree.Element`` object with etag "logicTree".
         :param root_branchset:
             An instance of :class:`BranchSet` which is about to become
             the root branchset for this tree.
