@@ -157,13 +157,13 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
     def test_wrong_indexing(self):
         coords = numpy.arange(16)
         mesh = self._make_mesh(coords, coords, coords)
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             mesh[1]
         coords = coords.reshape((4, 4))
         mesh = self._make_mesh(coords, coords, coords)
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             mesh[1]
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(IndexError):
             mesh[1:, 5]
 
     def test_preserving_the_type(self):

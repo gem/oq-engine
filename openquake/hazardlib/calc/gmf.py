@@ -172,13 +172,10 @@ class GmfComputer(object):
         :param seeds:
             S seeds for the numpy random number generator
         :returns:
-            a list of numpy arrays of dtype gmf_dt and length num_sites
+            a numpy array of dtype gmf_dt and shape (num_seeds, num_sites)
         """
-        n = len(self.sites)
-        indices = self.sites.indices
-        gmfs = []
-        for seed in seeds:
-            gmfa = numpy.zeros(n, self.gmf_dt)
+        gmfa = numpy.zeros((len(seeds), len(self.sites)), self.gmf_dt)
+        for i, seed in enumerate(seeds):
             for gsim in self.gsims:
                 gs = str(gsim)
                 for imt, value in self._compute(
@@ -189,11 +186,26 @@ class GmfComputer(object):
                     # not an array, flatten does not work and the only
                     # way to extract the numbers is the map before!
                     # something is wrong and must be fixed in the future
-                    for i, gmv in enumerate(array):
-                        gmfa[i]['idx'] = indices[i]
-                        gmfa[i][gs][imt] = gmv
-            gmfs.append(gmfa)
-        return gmfs
+                    for j, gmv in enumerate(array):
+                        gmfa[i, j][gs][imt] = gmv
+        return gmfa
+
+    def calcgmfs(self, multiplicity, seeds):
+        """
+        Compute the ground motion field for the given sites and seeds.
+
+        :param multiplicity:
+            the number of GMFs to return
+        :param seeds:
+            seeds for the numpy random number generator, one per GSIM
+        :returns:
+            a numpy array of dtype gmf_dt and shape (multiplicity, num_sites)
+        """
+        gmfa = numpy.zeros((multiplicity, len(self.sites)), self.gmf_dt)
+        for seed, gsim in zip(seeds, self.gsims):
+            for imt, gmv in self._compute(seed, gsim, multiplicity).items():
+                gmfa[str(gsim)][imt] = gmv.T
+        return gmfa
 
 
 # this is not used in the engine; it is still useful for usage in IPython

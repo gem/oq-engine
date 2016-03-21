@@ -128,11 +128,8 @@ class Mesh(object):
             A new object of the same type that borrows a portion of geometry
             from this mesh (doesn't copy the array, just references it).
         """
-        assert (isinstance(item, slice) or
-                (isinstance(item, (list, tuple)) and
-                 all(isinstance(subitem, slice) for subitem in item))
-                ), '%s objects can only be indexed by slices' % \
-            type(self).__name__
+        if isinstance(item, int):
+            raise ValueError('You must pass a slice, not an index: %s' % item)
         lons = self.lons[item]
         lats = self.lats[item]
         depths = None
@@ -393,7 +390,7 @@ class RectangularMesh(Mesh):
             objects.
         """
         assert points is not None and len(points) > 0 and len(points[0]) > 0, \
-               'list of at least one non-empty list of points is required'
+            'list of at least one non-empty list of points is required'
         lons = numpy.zeros((len(points), len(points[0])), dtype=float)
         lats = lons.copy()
         depths = lons.copy()
