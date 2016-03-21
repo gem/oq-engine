@@ -18,7 +18,6 @@
 
 import time
 import os.path
-import random
 import operator
 import logging
 import collections
@@ -37,7 +36,7 @@ from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.util import max_rel_diff_index, Rupture
 
 from openquake.calculators import base, views
-from openquake.calculators.calc import MAX_INT, gmvs_to_haz_curve
+from openquake.calculators.calc import gmvs_to_haz_curve
 from openquake.calculators.classical import ClassicalCalculator
 
 # ######################## rupture calculator ############################ #
@@ -467,6 +466,7 @@ def make_gmfs(eb_ruptures, sitecol, imts, gsims,
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
+    num_gsims = len(gsims)
     for ebr in eb_ruptures:
         with ctx_mon:
             r_sites = (sitecol if ebr.indices is None else
@@ -474,8 +474,8 @@ def make_gmfs(eb_ruptures, sitecol, imts, gsims,
             computer = calc.gmf.GmfComputer(
                 ebr.rupture, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
-            gmfa = computer.calcgmfs(
-                ebr.multiplicity, ebr.serial + random_seed)
+            seeds = [ebr.serial + random_seed] * num_gsims
+            gmfa = computer.calcgmfs(ebr.multiplicity, seeds)
             dic[ebr.serial] = GmfaSidsEtags(gmfa, r_sites.indices, ebr.etags)
     return dic
 
