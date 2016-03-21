@@ -23,6 +23,7 @@ from __future__ import print_function
 import os
 import sys
 import socket
+import inspect
 import logging
 import operator
 import traceback
@@ -36,10 +37,10 @@ from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
 
 executor = ProcessPoolExecutor()
-# the num_tasks_hint is chosen to be 4 times bigger than the name of
+# the num_tasks_hint is chosen to be 2 times bigger than the name of
 # cores; it is a heuristic number to get a good distribution;
 # it has no more significance than that
-executor.num_tasks_hint = executor._max_workers * 4
+executor.num_tasks_hint = executor._max_workers * 2
 
 
 def no_distribute():
@@ -87,7 +88,10 @@ def safely_call(func, args, pickle=False):
     ismon = args and isinstance(args[-1], Monitor)
     mon = args[-1] if ismon else Monitor()
     try:
-        res = func(*args), None, mon
+        got = func(*args)
+        if inspect.isgenerator(got):
+            got = list(got)
+        res = got, None, mon
     except:
         etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
@@ -293,7 +297,7 @@ class TaskManager(object):
         # log a warning if too much memory is used
         if self.no_distribute:
             sent = 0
-            res = safely_call(self.task_func, args)
+            res = (self.task_func(*args), None, args[-1])
         else:
             piks = pickle_sequence(args)
             sent = sum(len(p) for p in piks)

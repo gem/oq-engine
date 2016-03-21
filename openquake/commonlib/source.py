@@ -33,7 +33,8 @@ import numpy
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.commonlib.node import read_nodes
-from openquake.commonlib import logictree, sourceconverter, parallel, valid
+from openquake.commonlib import (
+    logictree, sourceconverter, parallel, valid, util)
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
 MAX_INT = 2 ** 31 - 1
@@ -371,12 +372,6 @@ class RlzsAssoc(collections.Mapping):
                 if trt_model.id == trt_model_id:
                     return smodel.ordinal
 
-    def get_gsims_by_col(self):
-        """Return a list of lists of GSIMs of length num_collections"""
-        # TODO: add a special case for sampling?
-        return [self.gsims_by_trt_id.get(col['trt_id'], [])
-                for col in self.csm_info.cols]
-
     # this useful to extract the ruptures affecting a given realization
     def get_col_ids(self, rlz):
         """
@@ -444,29 +439,27 @@ class RlzsAssoc(collections.Mapping):
                 ad[rlz] = agg(ad[rlz], value)
         return ad
 
-    def combine_gmfs(self, gmfs):
+    def combine_gmfs(self, gmf_data, sid_data):
         """
-        :param gmfs: datastore /gmfs object
-        :returns: a list of dictionaries rupid -> gmf array
+        :param gmf_data: dataset gmf_data
+        :param sid_data: dataset sid_data
+        :returns: a list of R dictionaries etag -> rupture
         """
-        gsims_by_col = self.get_gsims_by_col()
-        dicts = [{} for rlz in self.realizations]
-        for col_id, gsims in enumerate(gsims_by_col):
-            try:
-                dataset = gmfs['col%02d' % col_id]
-            except KeyError:  # empty dataset
-                continue
-            trt_id = self.csm_info.get_trt_id(col_id)
-            gmfs_by_rupid = groupby(
-                dataset.value, lambda row: row['idx'], list)
-            for gsim in gsims:
+        dicts = [AccumDict() for rlz in self.realizations]
+        for serial in gmf_data:
+            gmf = gmf_data[serial]
+            indices = sid_data[serial].value
+            etags = gmf.attrs['etags']
+            trt_id = gmf.attrs['trt_id']
+            for gsim in self.gsims_by_trt_id[trt_id]:
                 gs = str(gsim)
                 for rlz in self.rlzs_assoc[trt_id, gs]:
-                    col_ids = self.col_ids_by_rlz[rlz]
-                    if not col_ids or col_id in col_ids:
-                        for rupid, rows in gmfs_by_rupid.items():
-                            dicts[rlz.ordinal][rupid] = numpy.array(
-                                [r[gs] for r in rows], rows[0][gs].dtype)
+                    dic = dicts[rlz.ordinal]
+                    dic.indices = indices
+                    for i, etag in enumerate(etags):
+                        ebrup = util.Rupture(etag, indices)
+                        ebrup.gmf = gmf[i][gs]
+                        dic[etag] = ebrup
         return dicts
 
     def combine(self, results, agg=agg_prob):
@@ -650,7 +643,7 @@ class CompositionInfo(object):
         """
         Return the number of underlying collections
         """
-        return len(self.cols)
+        return sum(len(sm.trt_models) for sm in self.source_models)
 
     def get_num_rlzs(self, source_model=None):
         """
@@ -918,7 +911,6 @@ class SourceManager(object):
         self.monitor = monitor
         self.filter_sources = filter_sources
         self.num_tiles = num_tiles
-        self.rlzs_assoc = csm.info.get_rlzs_assoc()
         self.split_map = {}  # trt_model_id, source_id -> split sources
         self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
@@ -1017,6 +1009,7 @@ class SourceManager(object):
             maxweight = math.ceil(self.csm.maxweight * self.num_tiles / 4)
         else:
             maxweight = self.csm.maxweight
+        rlzs_assoc = self.csm.info.get_rlzs_assoc()
         for kind in ('light', 'heavy'):
             sources = list(self.get_sources(kind, sitecol))
             if not sources:
@@ -1031,7 +1024,7 @@ class SourceManager(object):
                     operator.attrgetter('weight'),
                     operator.attrgetter('trt_model_id')):
                 sent = self.tm.submit(block, sitecol, siteidx,
-                                      self.rlzs_assoc, self.monitor.new())
+                                      rlzs_assoc, self.monitor.new())
                 self.source_chunks.append((len(block), block.weight, sent))
                 nblocks += 1
             logging.info('Sent %d sources in %d block(s)',

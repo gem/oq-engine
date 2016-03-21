@@ -253,24 +253,24 @@ class RiskModel(object):
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
 
-    def out_by_lr(self, imt, assets, hazard, epsilons, rupids=None):
+    def out_by_lr(self, imt, assets, hazard, epsilons, eids=None):
         """
         :param imt: restrict the risk functions to this IMT
         :param assets: an array of assets of homogeneous taxonomy
         :param hazard: a dictionary rlz -> hazard
         :param epsilons: an array of epsilons per each asset
-        :param rupids: rupture indices (only for event based)
+        :param eids: rupture indices (only for event based)
         :returns: a dictionary (l, r) -> output
         """
         out_by_lr = AccumDict()
         out_by_lr.assets = assets
-        out_by_lr.rupids = rupids
+        out_by_lr.eids = eids
         loss_types = self.get_loss_types(imt)
         # extract the realizations from the first asset
         for rlz in sorted(hazard):
             r = rlz.ordinal
             for loss_type in loss_types:
-                out = self(loss_type, assets, hazard[rlz], epsilons, rupids)
+                out = self(loss_type, assets, hazard[rlz], epsilons, eids)
                 if out:
                     l = self.compositemodel.lti[loss_type]
                     out.hid = r
@@ -395,7 +395,7 @@ class Classical(RiskModel):
             for lt, vf in vulnerability_functions.items()}
 
     def __call__(self, loss_type, assets, hazard_curve, _epsilons=None,
-                 _rupids=None):
+                 _eids=None):
         """
         :param str loss_type:
             the loss type considered
@@ -517,7 +517,7 @@ class ProbabilisticEventBased(RiskModel):
         self.loss_ratios = loss_ratios
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
-                 rupids):
+                 eids):
         """
         :param str loss_type: the loss type considered
 
@@ -530,7 +530,7 @@ class ProbabilisticEventBased(RiskModel):
         :param epsilons:
            a list with a single array of E stochastic values
 
-        :param rupids:
+        :param eids:
            a numpy array of E rupture IDs
 
         :returns:
@@ -538,7 +538,7 @@ class ProbabilisticEventBased(RiskModel):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
-        E = len(rupids)
+        E = len(eids)
         I = self.insured_losses + 1
         loss_ratios = numpy.zeros((E, I), F32)
         asset = assets[0]  # the only one
@@ -565,7 +565,7 @@ class ProbabilisticEventBased(RiskModel):
             average_loss=loss_ratios.sum(axis=0) * self.ses_ratio,
             counts_matrix=cb.build_counts(loss_ratios),
             insured_counts_matrix=icounts,
-            rupids=rupids)
+            eids=eids)
 
 
 @registry.add('classical_bcr')
@@ -588,13 +588,13 @@ class ClassicalBCR(RiskModel):
         self.hazard_imtls = hazard_imtls
         self.lrem_steps_per_interval = lrem_steps_per_interval
 
-    def __call__(self, loss_type, assets, hazard, _eps=None, _rupids=None):
+    def __call__(self, loss_type, assets, hazard, _eps=None, _eids=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
         :param hazard: an hazard curve
         :param _eps: dummy parameter, unused
-        :param _rupids: dummy parameter, unused
+        :param _eids: dummy parameter, unused
         :returns: a :class:`openquake.risklib.scientific.Output` instance
         """
         n = len(assets)
@@ -642,7 +642,7 @@ class Scenario(RiskModel):
         self.time_event = time_event
 
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
-                 _rupids=None):
+                 _eids=None):
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():
@@ -694,13 +694,13 @@ class Damage(RiskModel):
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
 
-    def __call__(self, loss_type, assets, gmvs, _epsilons=None, _rupids=None):
+    def __call__(self, loss_type, assets, gmvs, _epsilons=None, _eids=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
         :param gmvs: an array of E elements
         :param _epsilons: dummy parameter, unused
-        :param _rupids: dummy parameter, unused
+        :param _eids: dummy parameter, unused
         :returns: an array of N assets and an array of N x E x D elements
 
         where N is the number of points, E the number of events
@@ -730,7 +730,7 @@ class ClassicalDamage(Damage):
         self.risk_investigation_time = risk_investigation_time
 
     def __call__(self, loss_type, assets, hazard_curve, _epsilons=None,
-                 _rupids=None):
+                 _eids=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy

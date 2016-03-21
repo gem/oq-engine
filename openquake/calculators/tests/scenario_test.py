@@ -46,24 +46,22 @@ def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
 class ScenarioHazardTestCase(CalculatorTestCase):
 
     def frequencies(self, case, fst_value, snd_value):
-        result = self.execute(case.__file__, 'job.ini')
+        gmfa = self.execute(case.__file__, 'job.ini')
         [imt] = self.calc.oqparam.imtls
         [gsim] = list(map(str, self.calc.gsims))
-        gmf = numpy.array([result[tag][gsim][imt] for tag in sorted(result)]).T
+        gmf = gmfa[gsim][imt]
         realizations = float(self.calc.oqparam.number_of_ground_motion_fields)
-        gmvs_within_range_fst = count_close(fst_value, gmf[0], gmf[1])
-        gmvs_within_range_snd = count_close(snd_value, gmf[0], gmf[1])
+        gmvs_within_range_fst = count_close(fst_value, gmf[:, 0], gmf[:, 1])
+        gmvs_within_range_snd = count_close(snd_value, gmf[:, 0], gmf[:, 1])
         return (gmvs_within_range_fst / realizations,
                 gmvs_within_range_snd / realizations)
 
     def medians(self, case):
-        result = self.execute(case.__file__, 'job.ini')
+        gmfa = self.execute(case.__file__, 'job.ini')
         [gsim] = list(map(str, self.calc.gsims))
         median = self.calc.oqparam.imtls.copy()
         for imt in median:
-            gmfs = numpy.array([result[tag][gsim][imt]  # shape (N, R)
-                                for tag in sorted(result)]).T
-            median[imt] = list(map(numpy.median, gmfs))  # shape N
+            median[imt] = numpy.median(gmfa[gsim][imt], axis=0)  # shape N
         return median
 
     @attr('qa', 'hazard', 'scenario')
@@ -83,7 +81,7 @@ class ScenarioHazardTestCase(CalculatorTestCase):
         with writers.floatformat('%5.1E'):
             out = self.run_calc(case_1.__file__, 'job.ini', exports='xml')
         raise unittest.SkipTest  # because of the rounding errors
-        self.assertEqualFiles('expected.xml', out['gmfs', 'xml'][0])
+        self.assertEqualFiles('expected.xml', out['gmf_data', 'xml'][0])
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_1bis(self):
@@ -91,7 +89,7 @@ class ScenarioHazardTestCase(CalculatorTestCase):
         out = self.run_calc(case_1.__file__, 'job.ini',
                             maximum_distance='0.1', exports='txt')
         self.assertEqualFiles(
-            'BooreAtkinson2008_gmf.txt', out['gmfs', 'txt'][0])
+            'BooreAtkinson2008_gmf.txt', out['gmf_data', 'txt'][0])
 
     @attr('qa', 'hazard', 'scenario')
     def test_case_2(self):
@@ -142,11 +140,11 @@ class ScenarioHazardTestCase(CalculatorTestCase):
     def test_case_9(self):
         with writers.floatformat('%10.6E'):
             out = self.run_calc(case_9.__file__, 'job.ini', exports='xml')
-        f1, f2 = out['gmfs', 'xml']
+        f1, f2 = out['gmf_data', 'xml']
         self.assertEqualFiles('LinLee2008SSlab_gmf.xml', f1)
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.xml', f2)
 
         out = self.run_calc(case_9.__file__, 'job.ini', exports='txt')
-        f1, f2 = out['gmfs', 'txt']
+        f1, f2 = out['gmf_data', 'txt']
         self.assertEqualFiles('LinLee2008SSlab_gmf.txt', f1)
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.txt', f2)

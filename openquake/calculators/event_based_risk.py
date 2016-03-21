@@ -124,13 +124,13 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
     # update the result dictionary and the agg array with each output
     assets = output.assets
     aid = assets[0].idx
-    rupids = output.rupids
-    indices = numpy.array([idx[rupid] for rupid in rupids])
+    eids = output.eids
+    indices = numpy.array([idx[eid] for eid in eids])
     for (l, r), out in sorted(output.items()):
 
         # asslosses
         if monitor.asset_loss_table:
-            data = [(rupids[i], aid, loss)
+            data = [(eids[i], aid, loss)
                     for i, loss in enumerate(out.losses)
                     if loss.sum() > 0]
             result['ASSLOSS'][l, r].append(
@@ -170,9 +170,9 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
     lti = riskmodel.lti  # loss type -> index
     L, R = len(lti), len(rlzs_assoc.realizations)
     I = monitor.insured_losses + 1
-    rupids = numpy.concatenate([ri.rupids for ri in riskinputs])
-    E = len(rupids)
-    idx = dict(zip(rupids, range(E)))
+    eids = numpy.concatenate([ri.eids for ri in riskinputs])
+    E = len(eids)
+    idx = dict(zip(eids, range(E)))
     agg = numpy.zeros((E, L, R, I), F32)
 
     def zeroN():
@@ -191,7 +191,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
             _aggregate_output(output, riskmodel, agg, idx, result, monitor)
     for (l, r), lst in numpy.ndenumerate(result['AGGLOSS']):
         records = numpy.array(
-            [(rupids[i], loss) for i, loss in enumerate(agg[:, l, r])
+            [(eids[i], loss) for i, loss in enumerate(agg[:, l, r])
              if loss.sum() > 0], monitor.elt_dt)
         result['AGGLOSS'][l, r] = records
     for (l, r), lst in numpy.ndenumerate(result['RC']):
@@ -216,9 +216,8 @@ class FakeMatrix(object):
             return numpy.zeros(e, F32)
         elif len(sliceobj) == 2:
             n = self.shape[0]
-            s1, s2 = sliceobj
-            size2 = s2.stop - s2.start
-            return self.__class__(n, size2)
+            _, indices = sliceobj
+            return self.__class__(n, len(indices))
         else:
             raise ValueError('Not a valid slice: %r' % sliceobj)
 
@@ -245,17 +244,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             return
         oq = self.oqparam
         correl_model = readinput.get_correl_model(oq)
-        gsims_by_col = self.rlzs_assoc.get_gsims_by_col()
-
-        logging.info('Populating the risk inputs')
-        rup_by_tag = AccumDict()
-        for colkey in self.datastore['sescollection']:
-            rup_by_tag += self.datastore['sescollection/' + colkey]
-        all_ruptures = [rup_by_tag[tag] for tag in sorted(rup_by_tag)]
-        for i, rup in enumerate(all_ruptures):
-            rup.ordinal = i
         self.N = len(self.assetcol)
-        self.E = len(all_ruptures)
+        self.E = len(self.etags)
+        logging.info('Populating the risk inputs')
+        rup_by_serial = AccumDict()
+        for colkey in self.datastore['sescollection']:
+            rup_by_serial += self.datastore['sescollection/' + colkey]
+        all_ruptures = [rup_by_serial[s] for s in sorted(rup_by_serial)]
         if not self.riskmodel.covs:
             # do not generate epsilons
             eps = FakeMatrix(self.N, self.E)
@@ -264,9 +259,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 self.assets_by_site, self.E, oq.master_seed,
                 oq.asset_correlation)
             logging.info('Generated %s epsilons', eps.shape)
+
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
-            self.sitecol.complete, all_ruptures, gsims_by_col,
-            oq.truncation_level, correl_model, eps,
+            self.sitecol.complete, all_ruptures,
+            self.rlzs_assoc.gsims_by_trt_id,
+            oq.truncation_level, correl_model, oq.random_seed, eps,
             oq.concurrent_tasks or 1))
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
@@ -285,7 +282,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         mon.insured_losses = self.I
 
         self.N = N = len(self.assetcol)
-        self.E = len(self.datastore['tags'])
+        self.E = len(self.datastore['etags'])
 
         # average losses, stored in a composite array of shape N, R
         multi_avg_dt = self.riskmodel.loss_type_dt(insured=self.I)
@@ -320,7 +317,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
              self.assets_by_site, self.monitor.new('task')),
             concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg,
             weight=operator.attrgetter('weight'),
-            key=operator.attrgetter('col_id'),
+            key=operator.attrgetter('trt_id'),
             posthook=self.save_data_transfer)
 
     def save_data_transfer(self, taskmanager):

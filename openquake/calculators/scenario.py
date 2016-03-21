@@ -17,35 +17,13 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import random
-import collections
 
 import numpy
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
-from openquake.commonlib import readinput, parallel, datastore
-
+from openquake.commonlib import readinput
 from openquake.calculators import base, calc
-
-Rupture = collections.namedtuple('Rupture', 'tag seed rupture')
-
-
-@parallel.litetask
-def calc_gmfs(tag_seed_pairs, computer, monitor):
-    """
-    Computes several GMFs in parallel, one for each tag and seed.
-
-    :param tag_seed_pairs:
-        list of pairs (rupture tag, rupture seed)
-    :param computer:
-        :class:`openquake.hazardlib.calc.gmf.GMFComputer` instance
-    :param monitor:
-        :class:`openquake.baselib.performance.Monitor` instance
-    :returns:
-        a dictionary tag -> gmf
-    """
-    tags, seeds = zip(*tag_seed_pairs)
-    return dict(zip(tags, computer.compute(seeds)))
 
 
 @base.calculators.add('scenario')
@@ -53,13 +31,11 @@ class ScenarioCalculator(base.HazardCalculator):
     """
     Scenario hazard calculator
     """
-    core_task = calc_gmfs
-    tags = datastore.persistent_attribute('tags')
     is_stochastic = True
 
     def pre_execute(self):
         """
-        Read the site collection and initialize GmfComputer, tags and seeds
+        Read the site collection and initialize GmfComputer, etags and seeds
         """
         super(ScenarioCalculator, self).pre_execute()
         trunc_level = self.oqparam.truncation_level
@@ -76,41 +52,29 @@ class ScenarioCalculator(base.HazardCalculator):
             raise RuntimeError(
                 'All sites were filtered out! maximum_distance=%s km' %
                 maxdist)
-        self.tags = numpy.array(
+        self.etags = numpy.array(
             sorted(['scenario-%010d' % i for i in range(n_gmfs)]),
             (bytes, 100))
         self.computer = GmfComputer(
             rupture, self.sitecol, self.oqparam.imtls, self.gsims,
             trunc_level, correl_model)
         rnd = random.Random(self.oqparam.random_seed)
-        self.tag_seed_pairs = [(tag, rnd.randint(0, calc.MAX_INT))
-                               for tag in self.tags]
-        self.datastore['sescollection/trtmod=0-0'] = {
-            tag: Rupture(tag, seed, rupture)
-            for tag, seed in self.tag_seed_pairs}
+        self.etag_seed_pairs = [(etag, rnd.randint(0, calc.MAX_INT))
+                               for etag in self.etags]
 
     def execute(self):
         """
-        Compute the GMFs in parallel and return a dictionary gmf_by_tag
+        Compute the GMFs and return a dictionary gmf_by_etag
         """
         with self.monitor('computing gmfs', autoflush=True):
-            args = (self.tag_seed_pairs, self.computer,
-                    self.monitor('calc_gmfs'))
-            gmf_by_tag = parallel.apply_reduce(
-                self.core_task.__func__, args,
-                concurrent_tasks=self.oqparam.concurrent_tasks)
-            return gmf_by_tag
+            etags, seeds = zip(*self.etag_seed_pairs)
+            return self.computer.compute(seeds)
 
-    def post_execute(self, gmf_by_tag):
+    def post_execute(self, gmfa):
         """
-        :param gmf_by_tag: a dictionary tag -> gmf
+        :param gmfa: an array of shape (E, N)
         """
         with self.monitor('saving gmfs', autoflush=True):
-            data = []
-            for ordinal, tag in enumerate(sorted(gmf_by_tag)):
-                gmf = gmf_by_tag[tag]
-                gmf['idx'] = ordinal
-                data.append(gmf)
-            gmfa = numpy.concatenate(data)
-            self.datastore['gmfs/col00'] = gmfa
-            self.datastore['gmfs'].attrs['nbytes'] = gmfa.nbytes
+            self.datastore['gmf_data/1'] = gmfa
+            self.datastore['gmf_data'].attrs['nbytes'] = gmfa.nbytes
+            self.datastore['sid_data/1'] = self.sitecol.indices
