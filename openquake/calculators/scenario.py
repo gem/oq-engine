@@ -69,6 +69,7 @@ class ScenarioCalculator(base.HazardCalculator):
         :param gmfa: an array of shape (E, N)
         """
         with self.monitor('saving gmfs', autoflush=True):
+            # there is a single rupture in gmf_data/1
             self.datastore['gmf_data/1'] = gmfa
             self.datastore['gmf_data'].attrs['nbytes'] = gmfa.nbytes
             self.datastore['sid_data/1'] = self.sitecol.indices
