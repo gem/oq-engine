@@ -474,8 +474,8 @@ def make_gmfs(eb_ruptures, sitecol, imts, gsims,
             computer = calc.gmf.GmfComputer(
                 ebr.rupture, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
-            seeds = [ebr.serial + random_seed] * num_gsims
-            gmfa = computer.calcgmfs(ebr.multiplicity, seeds)
+            seed = ebr.serial + random_seed
+            gmfa = computer.calcgmfs(ebr.multiplicity, seed)
             dic[ebr.serial] = GmfaSidsEtags(gmfa, r_sites.indices, ebr.etags)
     return dic
 
