@@ -466,7 +466,6 @@ def make_gmfs(eb_ruptures, sitecol, imts, gsims,
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
-    num_gsims = len(gsims)
     for ebr in eb_ruptures:
         with ctx_mon:
             r_sites = (sitecol if ebr.indices is None else
