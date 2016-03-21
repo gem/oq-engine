@@ -92,7 +92,7 @@ class RlzsAssoc(collections.Mapping):
         :returns: a list of R dictionaries etag -> rupture
         """
         dicts = [{} for rlz in self.realizations]
-        gmf = gmf_data['1']
+        gmf = gmf_data['1']  # '1' is the serial of the only rupture there is
         indices = sid_data['1'].value
         for rlz in self.realizations:
             gsim = str(rlz)
