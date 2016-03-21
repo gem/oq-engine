@@ -1,5 +1,7 @@
   [Michele Simionato]
   * Changed the GMF calculator to use a single seed per unique rupture
+  * Changed the event based calculators to avoid duplicating ruptures
+    occurring more than once
   * Changed the risk calculators to work in blocks of assets on the same site
   * Made it possible to set different integration distances for different
     tectonic region types
