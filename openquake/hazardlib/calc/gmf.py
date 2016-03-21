@@ -190,19 +190,19 @@ class GmfComputer(object):
                         gmfa[i, j][gs][imt] = gmv
         return gmfa
 
-    def calcgmfs(self, multiplicity, seeds):
+    def calcgmfs(self, multiplicity, seed):
         """
         Compute the ground motion field for the given sites and seeds.
 
         :param multiplicity:
             the number of GMFs to return
-        :param seeds:
-            seeds for the numpy random number generator, one per GSIM
+        :param seed:
+            seed for the numpy random number generator
         :returns:
             a numpy array of dtype gmf_dt and shape (multiplicity, num_sites)
         """
         gmfa = numpy.zeros((multiplicity, len(self.sites)), self.gmf_dt)
-        for seed, gsim in zip(seeds, self.gsims):
+        for gsim in self.gsims:
             for imt, gmv in self._compute(seed, gsim, multiplicity).items():
                 gmfa[str(gsim)][imt] = gmv.T
         return gmfa
