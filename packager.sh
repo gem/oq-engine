@@ -323,7 +323,7 @@ _devtest_innervm_run () {
 
     ssh $lxc_ip "sudo service postgresql restart"
     ssh $lxc_ip "set -e ; sudo su postgres -c \"cd oq-engine ; openquake/engine/bin/oq_create_db --yes --db-name=openquake2\""
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine ; bin/oq-engine --upgrade-db --yes"
+    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine ; python -m openquake.server.dbserver & sleep 1 ; bin/oq-engine --upgrade-db --yes ; python -m openquake.server.stop"
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         if [ -n "$GEM_DEVTEST_SKIP_SLOW_TESTS" ]; then
@@ -512,7 +512,7 @@ _pkgtest_innervm_run () {
     # configure the machine to run tests
     ssh $lxc_ip "sudo service postgresql restart"
     # XXX: should the --upgrade-db command go in the postint script?
-    ssh $lxc_ip "set -e; oq-engine --upgrade-db --yes"
+    ssh $lxc_ip "set -e; python -m openquake.server.dbserver & sleep 1; oq-engine --upgrade-db --yes ; python -m openquake.server.stop"
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # Is the GEM_USE_CELERY flag is set, use celery to run the demos
@@ -560,6 +560,9 @@ celeryd_wait $GEM_MAXLOOP"
         # run all of the hazard and risk demos
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
         set -e
+        # first, start the dbserver
+        python -m openquake.server.dbserver & sleep 1
+
         if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
             export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
             set -x
@@ -602,10 +605,11 @@ celeryd_wait $GEM_MAXLOOP"
             oq-engine --run-risk job_risk.ini --exports csv,xml --hazard-calculation-id -1
             cd -
             fi
-        done"
+        done
+        python -m openquake.server.stop"
     fi
 
-    ssh $lxc_ip "oq-engine --make-html-report today"
+    ssh $lxc_ip "python -m openquake.server.dbserver & sleep 1 ; oq-engine --make-html-report today ; python -m openquake.server.stop"
     scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"

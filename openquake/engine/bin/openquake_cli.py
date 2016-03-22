@@ -24,6 +24,7 @@ import logging
 import argparse
 import os
 import sys
+import socket
 import getpass
 
 from os.path import abspath
@@ -61,6 +62,7 @@ from openquake.engine import engine, logs
 from openquake.commonlib import datastore
 from openquake.calculators import views
 from openquake.server.db import models, upgrade_manager
+from openquake.server.db.schema.upgrades import upgrader
 from openquake.engine.export import core
 from openquake.engine.tools.make_html_report import make_report
 from django.db import connection as conn
@@ -90,16 +92,33 @@ def run_job(cfg_file, log_level, log_file, exports='',
     :param hazard_calculation_id:
         ID of the previous calculation or None
     """
+    job_ini = os.path.abspath(cfg_file)
     # if the master dies, automatically kill the workers
     concurrent_futures_process_monkeypatch()
     job_id, oqparam = dbcmd(
-        'job_from_file', cfg_file, getpass.getuser(), hazard_calculation_id)
+        'job_from_file', job_ini, getpass.getuser(), hazard_calculation_id)
     calc = engine.run_calc(job_id, oqparam, log_level, log_file, exports,
                            hazard_calculation_id=hazard_calculation_id)
     duration = calc.monitor.duration  # set this before monitor.flush()
     calc.monitor.flush()
-    dbcmd('print_results', job_id, duration)
+    print('Calculation %d completed in %d seconds. Results:' % (
+        job_id, duration))
+    for line in dbcmd('list_outputs', job_id, False):
+        print line
     return job_id
+
+
+def delete_calculation(job_id, confirmed=False):
+    """
+    Delete a calculation and all associated outputs.
+    """
+    if confirmed or utils.confirm(
+            'Are you sure you want to delete this calculation and all '
+            'associated outputs?\nThis action cannot be undone. (y/n): '):
+        try:
+            dbcmd('del_calc', job_id)
+        except RuntimeError as err:
+            print(err)
 
 
 def set_up_arg_parser():
@@ -258,6 +277,17 @@ def main():
         # configure a basic logging
         logging.basicConfig(level=logging.INFO)
 
+    if getpass.getuser() != 'openquake':
+        # check if the DbServer is up
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            err = sock.connect_ex(utils.config.DBS_ADDRESS)
+        finally:
+            sock.close()
+        if err:
+            sys.exit('Please start the DbServer: '
+                     'sudo -u openquake python -m openquake.server.dbserver &')
+
     if args.config_file:
         os.environ[utils.config.OQ_CONFIG_FILE_VAR] = \
             abspath(expanduser(args.config_file))
@@ -318,7 +348,8 @@ def main():
                 args.exports, hazard_calculation_id=hc_id)
     # hazard
     elif args.list_hazard_calculations:
-        dbcmd('list_calculations', 'hazard')
+        for line in dbcmd('list_calculations', 'hazard'):
+            print line
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
@@ -328,7 +359,8 @@ def main():
         dbcmd('delete_calculation', args.delete_calculation, args.yes)
     # risk
     elif args.list_risk_calculations:
-        dbcmd('list_calculations', 'risk')
+        for line in dbcmd('list_calculations', 'risk'):
+            print line
     elif args.run_risk is not None:
         if args.hazard_calculation_id is None:
             sys.exit(MISSING_HAZARD_MSG)
@@ -346,23 +378,28 @@ def main():
 
     elif args.list_outputs is not None:
         hc_id = dbcmd('get_hc_id', args.list_outputs)
-        dbcmd('list_outputs', hc_id)
+        for line in dbcmd('list_outputs', hc_id):
+            print line
     elif args.show_view is not None:
         job_id, view_name = args.show_view
         print views.view(view_name, datastore.read(int(job_id)))
     elif args.show_log is not None:
         hc_id = dbcmd('get_hc_id', args.show_log[0])
-        print dbcmd('get_log', hc_id)
+        for line in dbcmd('get_log', hc_id):
+            print line
 
     elif args.export_output is not None:
         output_id, target_dir = args.export_output
-        dbcmd('export_output', int(output_id), expanduser(target_dir),
-              exports)
+        for line in dbcmd('export_output', int(output_id),
+                          expanduser(target_dir), exports):
+            print line
 
     elif args.export_outputs is not None:
         job_id, target_dir = args.export_outputs
         hc_id = dbcmd('get_hc_id', job_id)
-        dbcmd('export_outputs', hc_id, expanduser(target_dir), exports)
+        for line in dbcmd('export_outputs', hc_id, expanduser(target_dir),
+                          exports):
+            print line
 
     elif args.delete_uncompleted_calculations:
         dbcmd('delete_uncompleted_calculations')

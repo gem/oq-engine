@@ -25,7 +25,8 @@ import traceback
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import valid
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.calculators import base
+from openquake.commonlib import export
+from openquake.calculators import base, views
 from openquake.engine import logs
 from openquake.engine.utils import config, tasks
 
@@ -69,7 +70,31 @@ if USE_CELERY:
             logs.LOG.debug('Revoked task %s', tid)
 
 
-# used by bin/openquake and openquake.server.views
+def expose_outputs(dstore):
+    """
+    Build a correspondence between the outputs in the datastore and the
+    ones in the database.
+
+    :param dstore: datastore
+    """
+    exportable = set(ekey[0] for ekey in export.export)
+    # small hack: remove the sescollection outputs from scenario
+    # calculators, as requested by Vitor
+    calcmode = dstore.get_attr('/', 'calculation_mode')
+    if 'scenario' in calcmode and 'sescollection' in exportable:
+        exportable.remove('sescollection')
+    outkeys = []
+    uhs = dstore.get_attr('/', 'uniform_hazard_spectra', False)
+    if uhs and 'hmaps' in dstore:
+        outkeys.append('uhs')
+    for key in dstore:
+        if key in exportable:
+            if key == 'realizations' and len(dstore['realizations']) == 1:
+                continue  # do not export a single realization
+            outkeys.append(key)
+    logs.dbcmd('create_outputs', dstore.calc_id, outkeys)
+
+
 def run_calc(job_id, oqparam, log_level, log_file, exports,
              hazard_calculation_id=None):
     """
@@ -97,7 +122,9 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         try:
             _do_run_calc(calc, exports, hazard_calculation_id)
             logs.dbcmd('finish', job_id, 'complete')
-            logs.dbcmd('expose_outputs', job_id)
+            expose_outputs(calc.datastore)
+            records = views.performance_view(calc.datastore)
+            logs.dbcmd('save_performance', job_id, records)
             logs.LOG.info('Calculation %d finished correctly', job_id)
         except:
             tb = traceback.format_exc()
@@ -121,7 +148,6 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     return calc
 
 
-# keep this as a private function, since it is mocked by engine_test.py
 def _do_run_calc(calc, exports, hazard_calculation_id):
     with calc.monitor:
         calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id)

@@ -23,9 +23,11 @@ Set up some system-wide loggers
 
 import os.path
 import logging
+import getpass
 from datetime import datetime
 from contextlib import contextmanager
-from openquake.server.db import actions
+from multiprocessing.connection import Client
+from openquake.engine.utils.config import DBS_ADDRESS, DBS_AUTHKEY
 
 
 # Place the new level between info and warning
@@ -44,15 +46,31 @@ LOG_FORMAT = ('[%(asctime)s job #%(job_id)s %(hostname)s '
 
 LOG = logging.getLogger()
 
+USER = getpass.getuser()
 
-def dbcmd(action, *args):
-    """
-    A fake dispatcher to the database server.
+if USER == 'openquake':  # direct access to the database
+    from openquake.server.db import actions
 
-    :param action: database action to perform
-    :param args: arguments
-    """
-    return getattr(actions, action)(*args)
+    def dbcmd(action, *args):
+        return getattr(actions, action)(*args)
+
+else:  # mediated access via the dbserver
+    def dbcmd(action, *args):
+        """
+        A dispatcher to the database server.
+
+        :param action: database action to perform
+        :param args: arguments
+        """
+        client = Client(DBS_ADDRESS, authkey=DBS_AUTHKEY)
+        try:
+            client.send((action,) + args)
+            res, etype = client.recv()
+        finally:
+            client.close()
+        if etype:
+            raise etype(res)
+        return res
 
 
 def touch_log_file(log_file):
@@ -153,8 +171,8 @@ class LogDatabaseHandler(logging.Handler):
     def emit(self, record):  # pylint: disable=E0202
         if record.levelno >= logging.INFO:
             dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
-                     '%s/%s' % (record.processName, record.process),
-                     record.getMessage())
+                  '%s/%s' % (record.processName, record.process),
+                  record.getMessage())
 
 
 @contextmanager

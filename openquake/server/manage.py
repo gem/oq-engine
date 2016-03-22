@@ -20,7 +20,9 @@
 import os
 import sys
 from django.core.management import execute_from_command_line
+from openquake.server.db.schema.upgrades import upgrader
 from openquake.server import executor
+from django.db import connection
 
 
 # the code here is run in development mode; for instance
@@ -28,12 +30,8 @@ from openquake.server import executor
 if __name__ == "__main__":
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
-    # notice that the import must be done after the os.environ.setdefault;
-    # the issue is that importing openquake.engine sets a wrong
-    # DJANGO_SETTINGS_MODULE environment variable, causing the irritating
-    # CommandError: You must set settings.ALLOWED_HOSTS if DEBUG is False.
-
-    from django.db import connection
+    # first of all check the database version and exit if the db is outdated
+    upgrader.check_versions(connection)
     connection.cursor().execute(
         # cleanup of the flag oq_job.is_running
         'UPDATE job SET is_running=false WHERE is_running')
