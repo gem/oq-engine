@@ -53,7 +53,7 @@ def no_distribute():
     """
     True if the variable OQ_DISTRIBUTE is "no"
     """
-    return OQ_DISTRIBUTE == 'no'
+    return os.environ.get('OQ_DISTRIBUTE', 'futures').lower() == 'no'
 
 
 def check_mem_usage(monitor=Monitor(),
