@@ -43,17 +43,26 @@ executor.num_tasks_hint = executor._max_workers * 2
 
 OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
 
+
 if OQ_DISTRIBUTE == 'celery':
     from celery.result import ResultSet
     from celery.app import current_app
     from celery.task import task
 
 
+def oq_distribute():
+    """
+    Return the current value of the variable OQ_DISTRIBUTE; if undefined,
+    return 'futures'.
+    """
+    return os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
+
+
 def no_distribute():
     """
     True if the variable OQ_DISTRIBUTE is "no"
     """
-    return os.environ.get('OQ_DISTRIBUTE', 'futures').lower() == 'no'
+    return oq_distribute() == 'no'
 
 
 def check_mem_usage(monitor=Monitor(),
@@ -324,40 +333,22 @@ class TaskManager(object):
             self.task_ids.append(res.task_id)
             return res
 
-    if OQ_DISTRIBUTE == 'futures':
+    def aggregate_result_set(self, agg, acc):
+        """
+        Loop on a set results and update the accumulator
+        by using the aggregation function.
 
-        def aggregate_result_set(self, agg, acc):
-            """
-            Loop on a set of futures and update the accumulator
-            by using the aggregation function.
-
-            :param agg: the aggregation function, (acc, val) -> new acc
-            :param acc: the initial value of the accumulator
-            :returns: the final value of the accumulator
-            """
-            for future in as_completed(self.results):
-                check_mem_usage()
-                # log a warning if too much memory is used
-                result = future.result()
-                if isinstance(result, BaseException):
-                    raise result
-                self.received.append(len(result))
-                acc = agg(acc, result.unpickle())
+        :param agg: the aggregation function, (acc, val) -> new acc
+        :param acc: the initial value of the accumulator
+        :returns: the final value of the accumulator
+        """
+        if not self.results:
             return acc
 
-    elif OQ_DISTRIBUTE == 'celery':
+        distribute = oq_distribute()  # not called for distribute == 'no'
 
-        def aggregate_result_set(self, agg, acc):
-            """
-            Loop on a set of celery AsyncResults and update the accumulator
-            by using the aggregation function.
+        if distribute == 'celery':
 
-            :param agg: the aggregation function, (acc, val) -> new acc
-            :param acc: the initial value of the accumulator
-            :returns: the final value of the accumulator
-            """
-            if not self.results:
-                return acc
             backend = current_app().backend
             amqp_backend = backend.__class__.__name__.startswith('AMQP')
             rset = ResultSet(self.results)
@@ -373,6 +364,18 @@ class TaskManager(object):
                 if amqp_backend:
                     # work around a celery bug
                     del backend._cache[task_id]
+            return acc
+
+        elif distribute == 'futures':
+
+            for future in as_completed(self.results):
+                check_mem_usage()
+                # log a warning if too much memory is used
+                result = future.result()
+                if isinstance(result, BaseException):
+                    raise result
+                self.received.append(len(result))
+                acc = agg(acc, result.unpickle())
             return acc
 
     def reduce(self, agg=operator.add, acc=None, posthook=None):
