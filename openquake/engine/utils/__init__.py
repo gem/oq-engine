@@ -28,7 +28,6 @@ USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
 if USE_CELERY:
     os.environ['OQ_DISTRIBUTE'] = 'celery'
 
-
 # NB: this import must go AFTER the setting of OQ_DISTRIBUTE
 from openquake.commonlib import parallel
 
