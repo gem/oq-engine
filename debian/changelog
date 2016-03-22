@@ -1,5 +1,8 @@
   [Michele Simionato]
   * Introduced a dbserver to mediate the interaction with the database
+  * Made more robust the killing of processes by patching concurrent.futures
+  * Fixed a critical bug with celery not being used even when `use_celery`
+    was true.
   * Improved the validation of NRML files
   * Added a command `oq-engine --show-log <job_id>`
 
