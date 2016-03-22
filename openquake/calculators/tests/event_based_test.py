@@ -251,10 +251,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
 
         # check that a single rupture file is exported even if there are
         # several collections
-        out = self.run_calc(
-            case_17.__file__, 'job.ini', exports='xml',
-            investigation_time='1', ground_motion_fields='false')
-        [fname] = out['sescollection', 'xml']
+        [fname] = export(('sescollection', 'xml'), self.calc.datastore)
         self.assertEqualFiles('expected/ses.xml', fname)
 
     @attr('qa', 'hazard', 'event_based')
