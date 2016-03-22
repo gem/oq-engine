@@ -450,7 +450,7 @@ GmfaSidsEtags = collections.namedtuple('GmfaSidsEtags', 'gmfa sids etags')
 
 
 def make_gmfs(eb_ruptures, sitecol, imts, gsims,
-              trunc_level, correl_model, random_seed, monitor=Monitor()):
+              trunc_level, correl_model, monitor=Monitor()):
     """
     :param eb_ruptures: a list of EBRuptures
     :param sitecol: a SiteCollection instance
@@ -458,7 +458,6 @@ def make_gmfs(eb_ruptures, sitecol, imts, gsims,
     :param gsims: an order list of GSIM instance
     :param trunc_level: truncation level
     :param correl_model: correlation model instance
-    :param random_seed: random_seed parameter
     :param monitor: a monitor instance
     :returns: a dictionary serial -> GmfaSidsEtags
     """
@@ -473,8 +472,7 @@ def make_gmfs(eb_ruptures, sitecol, imts, gsims,
             computer = calc.gmf.GmfComputer(
                 ebr.rupture, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
-            seed = ebr.serial + random_seed
-            gmfa = computer.calcgmfs(ebr.multiplicity, seed)
+            gmfa = computer.calcgmfs(ebr.multiplicity, ebr.rupture.seed)
             dic[ebr.serial] = GmfaSidsEtags(gmfa, r_sites.indices, ebr.etags)
     return dic
 
@@ -503,8 +501,8 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, rlzs_assoc, monitor):
     correl_model = readinput.get_correl_model(oq)
     tot_sites = len(sitecol.complete)
     gmfa_sids_etags = make_gmfs(
-        eb_ruptures, sitecol, oq.imtls, gsims,
-        trunc_level, correl_model, oq.random_seed, monitor)
+        eb_ruptures, sitecol, oq.imtls, gsims, trunc_level, correl_model,
+        monitor)
     result = {trt_id: gmfa_sids_etags if oq.ground_motion_fields else None}
     if oq.hazard_curves_from_gmfs:
         with monitor('bulding hazard curves', measuremem=False):
