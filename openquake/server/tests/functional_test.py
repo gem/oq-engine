@@ -96,8 +96,7 @@ class EngineServerTestCase(unittest.TestCase):
         env['OQ_DISTRIBUTE'] = 'no'
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
-             cls.hostport, '--noreload', '--nothreading'], env=env,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+             cls.hostport, '--noreload', '--nothreading'], env=env)
         time.sleep(5)
 
     @classmethod
