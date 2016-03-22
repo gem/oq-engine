@@ -517,11 +517,8 @@ class SESXMLWriter(object):
         GSIM logic tree branch identifier of the logic tree realization which
         produced this collection of stochastic event sets.
     """
-    # gsim_lt_path is there only for backward compatibility, it is scheduled
-    # for complete removal (MS)
-    def __init__(self, dest, sm_lt_path, gsim_lt_path=None):
+    def __init__(self, dest):
         self.dest = dest
-        self.sm_lt_path = sm_lt_path
 
     def serialize(self, data):
         """
@@ -583,7 +580,6 @@ class SESXMLWriter(object):
             root = et.Element('nrml')
             ses_container = et.SubElement(
                 root, 'stochasticEventSetCollection')
-            ses_container.set(SM_TREE_PATH, self.sm_lt_path)
             for ses in data:
                 ruptures = list(ses)
                 if not ruptures:  # empty SES, don't export it
@@ -594,7 +590,6 @@ class SESXMLWriter(object):
                 ses_elem.set('investigationTime', str(ses.investigation_time))
                 for rupture in ruptures:
                     rupture_to_element(rupture, ses_elem)
-
             nrml.write(list(root), fh)
 
 

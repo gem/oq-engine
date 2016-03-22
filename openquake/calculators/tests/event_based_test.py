@@ -24,6 +24,7 @@ import numpy.testing
 
 from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.util import max_rel_diff_index
+from openquake.commonlib.export import export
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_4, case_5, case_6, case_7, case_12,
@@ -246,6 +247,11 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         fnames = out['hcurves', 'csv']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
+
+        # check that a single rupture file is exported even if there are
+        # several collections
+        [fname] = export(('sescollection', 'xml'), self.calc.datastore)
+        self.assertEqualFiles('expected/ses.xml', fname)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_18(self):  # oversampling, 3 realizations
