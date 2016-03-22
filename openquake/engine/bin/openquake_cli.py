@@ -39,7 +39,6 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR") is not None:
         0, join(dirname(dirname(__file__)), "openquake")
     )
 
-import openquake.engine.utils.tasks  # really ugly import with side effects
 from openquake.engine import utils
 from openquake.engine.logs import dbcmd
 
@@ -49,10 +48,11 @@ utils.config.abort_if_no_config_available()
 # file in the PYTHONPATH; when using binary packages, if a celeryconfig.py
 # is not available the OpenQuake Engine default celeryconfig.py, located
 # in /usr/share/openquake/engine, is used.
-try:
-    import celeryconfig
-except ImportError:
-    sys.path.append('/usr/share/openquake/engine')
+if utils.USE_CELERY:
+    try:
+        import celeryconfig
+    except ImportError:
+        sys.path.append('/usr/share/openquake/engine')
 
 import openquake.engine
 
