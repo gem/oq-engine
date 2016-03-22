@@ -19,7 +19,7 @@
 import os
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import valid
-from openquake.engine.utils import config
+from openquake.engine import config
 
 SOFT_MEM_LIMIT = int(config.get('memory', 'soft_mem_limit'))
 HARD_MEM_LIMIT = int(config.get('memory', 'hard_mem_limit'))
