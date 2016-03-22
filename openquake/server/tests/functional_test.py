@@ -93,7 +93,7 @@ class EngineServerTestCase(unittest.TestCase):
     def setUpClass(cls):
         cls.job_ids = []
         env = os.environ.copy()
-        env['OQ_NO_DISTRIBUTE'] = '1'
+        env['OQ_DISTRIBUTE'] = 'no'
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload', '--nothreading'], env=env,
