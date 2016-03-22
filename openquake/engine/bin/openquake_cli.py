@@ -40,6 +40,7 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR") is not None:
         0, join(dirname(dirname(__file__)), "openquake")
     )
 
+import openquake.engine.utils.tasks  # really ugly import with side effects
 
 # Please note: the /usr/bin/oq-engine script requires a celeryconfig.py
 # file in the PYTHONPATH; when using binary packages, if a celeryconfig.py
@@ -56,6 +57,9 @@ from openquake.engine import engine, logs
 from openquake.engine.tools.make_html_report import make_report
 from openquake.commonlib import datastore
 from openquake.calculators import views
+
+from openquake.commonlib.concurrent_futures_process_mpatch import (
+    concurrent_futures_process_monkeypatch)
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
@@ -79,6 +83,8 @@ def run_job(cfg_file, log_level, log_file, exports='',
     :param hazard_calculation_id:
         ID of the previous calculation or None
     """
+    # if the master dies, automatically kill the workers
+    concurrent_futures_process_monkeypatch()
     job_ini = os.path.abspath(cfg_file)
     job_id, oqparam = logs.dbcmd(
         'job_from_file', job_ini, getpass.getuser(), hazard_calculation_id)
