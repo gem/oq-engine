@@ -258,7 +258,7 @@ def main():
         utils.config.refresh()
 
     if args.no_distribute:
-        os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
+        os.environ['OQ_DISTRIBUTE'] = 'no'
 
     if args.upgrade_db:
         logs.set_level('info')
