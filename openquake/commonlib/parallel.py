@@ -35,20 +35,25 @@ from openquake.baselib.performance import Monitor, virtual_memory
 from openquake.baselib.general import split_in_blocks, AccumDict, humansize
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
-
 executor = ProcessPoolExecutor()
 # the num_tasks_hint is chosen to be 2 times bigger than the name of
 # cores; it is a heuristic number to get a good distribution;
 # it has no more significance than that
 executor.num_tasks_hint = executor._max_workers * 2
 
+OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
+
+if OQ_DISTRIBUTE == 'celery':
+    from celery.result import ResultSet
+    from celery.app import current_app
+    from celery.task import task
+
 
 def no_distribute():
     """
-    True if the variable OQ_NO_DISTRIBUTE is true
+    True if the variable OQ_DISTRIBUTE is "no"
     """
-    nd = os.environ.get('OQ_NO_DISTRIBUTE', '').lower()
-    return nd in ('1', 'true', 'yes')
+    return OQ_DISTRIBUTE == 'no'
 
 
 def check_mem_usage(monitor=Monitor(),
@@ -213,6 +218,7 @@ class TaskManager(object):
     """
     executor = executor
     progress = staticmethod(logging.info)
+    task_ids = []
 
     @classmethod
     def restart(cls):
@@ -290,7 +296,7 @@ class TaskManager(object):
         """
         Submit a function with the given arguments to the process pool
         and add a Future to the list `.results`. If the variable
-        OQ_NO_DISTRIBUTE is set, the function is run in process and the
+        OQ_DISTRIBUTE is set, the function is run in process and the
         result is returned.
         """
         check_mem_usage()
@@ -302,7 +308,7 @@ class TaskManager(object):
             piks = pickle_sequence(args)
             sent = sum(len(p) for p in piks)
             res = self._submit(piks)
-            self.sent += sent
+        self.sent += sent
         self.results.append(res)
         return sent
 
@@ -311,27 +317,63 @@ class TaskManager(object):
         if self.oqtask is self.task_func:
             return self.executor.submit(
                 safely_call, self.task_func, piks, True)
-        else:  # call the decorated task
+        elif OQ_DISTRIBUTE == 'futures':  # call the decorated task
             return self.executor.submit(self.oqtask, *piks)
+        elif OQ_DISTRIBUTE == 'celery':
+            res = self.oqtask.delay(*piks)
+            self.task_ids.append(res.task_id)
+            return res
 
-    def aggregate_result_set(self, agg, acc):
-        """
-        Loop on a set of futures and update the accumulator
-        by using the aggregation function.
+    if OQ_DISTRIBUTE == 'futures':
 
-        :param agg: the aggregation function, (acc, val) -> new acc
-        :param acc: the initial value of the accumulator
-        :returns: the final value of the accumulator
-        """
-        for future in as_completed(self.results):
-            check_mem_usage()
-            # log a warning if too much memory is used
-            result = future.result()
-            if isinstance(result, BaseException):
-                raise result
-            self.received.append(len(result))
-            acc = agg(acc, result.unpickle())
-        return acc
+        def aggregate_result_set(self, agg, acc):
+            """
+            Loop on a set of futures and update the accumulator
+            by using the aggregation function.
+
+            :param agg: the aggregation function, (acc, val) -> new acc
+            :param acc: the initial value of the accumulator
+            :returns: the final value of the accumulator
+            """
+            for future in as_completed(self.results):
+                check_mem_usage()
+                # log a warning if too much memory is used
+                result = future.result()
+                if isinstance(result, BaseException):
+                    raise result
+                self.received.append(len(result))
+                acc = agg(acc, result.unpickle())
+            return acc
+
+    elif OQ_DISTRIBUTE == 'celery':
+
+        def aggregate_result_set(self, agg, acc):
+            """
+            Loop on a set of celery AsyncResults and update the accumulator
+            by using the aggregation function.
+
+            :param agg: the aggregation function, (acc, val) -> new acc
+            :param acc: the initial value of the accumulator
+            :returns: the final value of the accumulator
+            """
+            if not self.results:
+                return acc
+            backend = current_app().backend
+            amqp_backend = backend.__class__.__name__.startswith('AMQP')
+            rset = ResultSet(self.results)
+            for task_id, result_dict in rset.iter_native():
+                idx = self.task_ids.index(task_id)
+                self.task_ids.pop(idx)
+                check_mem_usage()  # warn if too much memory is used
+                result = result_dict['result']
+                if isinstance(result, BaseException):
+                    raise result
+                self.received.append(len(result))
+                acc = agg(acc, result.unpickle())
+                if amqp_backend:
+                    # work around a celery bug
+                    del backend._cache[task_id]
+            return acc
 
     def reduce(self, agg=operator.add, acc=None, posthook=None):
         """
@@ -428,7 +470,7 @@ def rec_delattr(mon, name):
         delattr(mon, name)
 
 
-def litetask(func):
+def litetask_futures(func):
     """
     Add monitoring support to the decorated function. The last argument
     must be a monitor object.
@@ -447,3 +489,17 @@ def litetask(func):
     return FunctionMaker.create(
         func, 'return _s_(_w_, (%(shortsignature)s,), pickle=True)',
         dict(_s_=safely_call, _w_=wrapper), task_func=func)
+
+
+if OQ_DISTRIBUTE == 'celery':
+    def litetask_celery(task_func):
+        """
+        Wrapper around celery.task
+        """
+        tsk = task(litetask_futures(task_func), queue='celery')
+        tsk.__func__ = tsk
+        tsk.task_func = task_func
+        return tsk
+    litetask = litetask_celery
+else:
+    litetask = litetask_futures
