@@ -21,7 +21,6 @@ import types
 
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import parallel, valid
-from openquake.engine import logs
 from openquake.engine.utils import config
 
 litetask = parallel.litetask
@@ -48,7 +47,6 @@ if USE_CELERY:
 
         Progress report is built-in.
         """
-        progress = staticmethod(logs.LOG.progress)
         task_ids = []
 
         def _submit(self, pickled_args):
@@ -106,7 +104,3 @@ if USE_CELERY:
     parallel.litetask = oqtask
     parallel.apply_reduce = OqTaskManager.apply_reduce
     parallel.starmap = OqTaskManager.starmap
-
-else:  # no celery
-
-    parallel.TaskManager.progress = staticmethod(logs.LOG.progress)
