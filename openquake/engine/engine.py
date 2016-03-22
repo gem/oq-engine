@@ -26,8 +26,7 @@ from openquake.baselib.performance import Monitor
 from openquake.commonlib import valid, parallel
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.calculators import base
-from openquake.engine import logs
-from openquake.engine.utils import config
+from openquake.engine import logs, config
 
 TERMINATE = valid.boolean(
     config.get('celery', 'terminate_workers_on_revoke') or 'false')

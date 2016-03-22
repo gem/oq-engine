@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Test related to code in openquake/utils/config.py
+Test related to code in openquake/engine/config.py
 """
 
 
@@ -25,7 +25,7 @@ import os
 import textwrap
 import unittest
 
-from openquake.engine.utils import config
+from openquake.engine import config
 
 from openquake.engine.tests.utils.helpers import ConfigTestCase
 from openquake.engine.tests.utils.helpers import patch
@@ -33,7 +33,7 @@ from openquake.engine.tests.utils.helpers import touch
 
 
 class ConfigTestCase(ConfigTestCase, unittest.TestCase):
-    """Tests the behaviour of the utils.config.Config class."""
+    """Tests the behaviour of the config.Config class."""
 
     def setUp(self):
         self.setup_config()
@@ -185,7 +185,7 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
 
 
 class GetSectionTestCase(unittest.TestCase):
-    """Tests the behaviour of utils.config.get_section()"""
+    """Tests the behaviour of config.get_section()"""
 
     def tearDown(self):
         config.cfg.cfg.clear()
@@ -205,7 +205,7 @@ class GetSectionTestCase(unittest.TestCase):
 
 
 class GetTestCase(unittest.TestCase):
-    """Tests the behaviour of utils.config.get()"""
+    """Tests the behaviour of config.get()"""
 
     def tearDown(self):
         config.cfg.cfg.clear()
@@ -213,7 +213,7 @@ class GetTestCase(unittest.TestCase):
 
     def test_get_with_empty_section_data(self):
         # config.get() returns `None` if the section data dict is empty
-        with patch('openquake.engine.utils.config.get_section') as mock:
+        with patch('openquake.engine.config.get_section') as mock:
             mock.return_value = dict()
             self.assertTrue(config.get("whatever", "key") is None)
             self.assertEqual(1, mock.call_count)
@@ -222,7 +222,7 @@ class GetTestCase(unittest.TestCase):
     def test_get_with_nonempty_section_data_and_known_key(self):
         # config.get() correctly returns the configuration datum for known
         # sections/keys
-        with patch('openquake.engine.utils.config.get_section') as mock:
+        with patch('openquake.engine.config.get_section') as mock:
             mock.return_value = dict(a=11)
             self.assertEqual(11, config.get("hmmm", "a"))
             self.assertEqual(1, mock.call_count)
@@ -230,7 +230,7 @@ class GetTestCase(unittest.TestCase):
 
     def test_get_with_unknown_key(self):
         """config.get() returns `None` if the `key` is not known."""
-        with patch('openquake.engine.utils.config.get_section') as mock:
+        with patch('openquake.engine.config.get_section') as mock:
             mock.return_value = dict(b=1)
             self.assertTrue(config.get("arghh", "c") is None)
             self.assertEqual(1, mock.call_count)
@@ -239,7 +239,7 @@ class GetTestCase(unittest.TestCase):
 
 class FlagSetTestCase(ConfigTestCase, unittest.TestCase):
     """
-    Tests for openquake.engine.utils.config.flag_set()
+    Tests for openquake.engine.config.flag_set()
     """
 
     def setUp(self):

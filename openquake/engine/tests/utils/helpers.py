@@ -38,9 +38,7 @@ from django.core import exceptions
 from openquake.baselib.general import writetmp as touch
 
 from openquake.server.db import actions
-from openquake.engine import engine
-from openquake.engine import logs
-from openquake.engine.utils import config
+from openquake.engine import engine, logs, config
 
 CD = os.path.dirname(__file__)  # current directory
 

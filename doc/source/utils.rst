@@ -15,8 +15,3 @@ OpenQuake python code base.
 --------------
 
 .. automodule:: openquake.engine.utils.version
-
-:mod:`config`
--------------
-
-.. automodule:: openquake.engine.utils.config
