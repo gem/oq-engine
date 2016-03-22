@@ -39,6 +39,7 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR") is not None:
         0, join(dirname(dirname(__file__)), "openquake")
     )
 
+import openquake.engine.utils.tasks  # really ugly import with side effects
 from openquake.engine import utils
 from openquake.engine.logs import dbcmd
 
