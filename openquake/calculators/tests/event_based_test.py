@@ -22,7 +22,6 @@ from nose.plugins.attrib import attr
 
 import numpy.testing
 
-from openquake.baselib.general import groupby
 from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.commonlib.export import export
@@ -250,8 +249,12 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got, sorted)
 
-        # check that a single rupture file is exported
-        [fname] = export(('sescollection', 'xml'), self.calc.datastore)
+        # check that a single rupture file is exported even if there are
+        # several collections
+        out = self.run_calc(
+            case_17.__file__, 'job.ini', exports='xml',
+            investigation_time='1', ground_motion_fields='false')
+        [fname] = out['sescollection', 'xml']
         self.assertEqualFiles('expected/ses.xml', fname)
 
     @attr('qa', 'hazard', 'event_based')
