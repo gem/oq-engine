@@ -519,7 +519,7 @@ _pkgtest_innervm_run () {
         if [ "$GEM_USE_CELERY" ]; then
             ssh $lxc_ip "sudo sed -i 's/use_celery = false/use_celery = true/g' /etc/openquake/openquake.cfg" 
             # run celeryd daemon
-            ssh $lxc_ip "cd /usr/share/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
+            ssh $lxc_ip "cd /usr/share/openquake/engine ; celeryd --config openquake.engine.celeryconfig >/tmp/celeryd.log 2>&1 3>&1 &"
 
             # wait for celeryd startup time
             ssh $lxc_ip "
@@ -1251,7 +1251,6 @@ sed -i "s/^\([ ${TB}]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__i
 # mods pre-packaging
 mv LICENSE         openquake/engine
 mv README.md       openquake/engine/README
-mv celeryconfig.py openquake/engine
 mv openquake.cfg   openquake/engine
 
 if [ $BUILD_ON_LXC -eq 1 ]; then
