@@ -288,7 +288,6 @@ def main():
         sys.exit('Please start the DbServer: '
                  'sudo -u openquake python -m openquake.server.dbserver &')
 
-        os.environ[config.OQ_CONFIG_FILE_VAR] = \
     if args.upgrade_db:
         logs.set_level('info')
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')

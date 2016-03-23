@@ -104,7 +104,8 @@ class JobFromFileTestCase(unittest.TestCase):
     def test_create_job_specified_user(self):
         user_name = helpers.random_string()
         job = actions.create_job(
-            'classical', 'test_create_job_specified_user', user_name=user_name)
+            'classical', 'test_create_job_specified_user',
+            user_name=user_name)
 
         self.assertEqual(user_name, job.user_name)
         self.assertEqual('executing', job.status)
