@@ -21,7 +21,7 @@ import logging
 from multiprocessing.connection import Listener
 
 from openquake.commonlib.parallel import safely_call
-from openquake.engine.utils import config
+from openquake.engine import config
 from openquake.server.db import actions
 from django.db import connection
 
