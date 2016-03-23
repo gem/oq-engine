@@ -68,6 +68,14 @@ HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
 
 
+def get_job_id(job_id, username=None):
+    username = username or getpass.getuser()
+    job_id = logs.dbcmd('get_job_id', job_id, username)
+    if not job_id:
+        sys.exit('Job %s of %s not found' % (job_id, username))
+    return job_id
+
+
 def run_job(cfg_file, log_level, log_file, exports='',
             hazard_calculation_id=None):
     """
@@ -311,10 +319,10 @@ def main():
         sys.exit(outdated)
 
     # hazard or hazard+risk
-    hc_id = args.hazard_calculation_id
-    if hc_id and int(hc_id) < 0:
-        # make it possible commands like `oq-engine --run job_risk.ini --hc -1`
-        hc_id = logs.dbcmd('get_hc_id', int(hc_id))
+    if args.hazard_calculation_id:
+        hc_id = get_job_id(args.hazard_calculation_id)
+    else:
+        hc_id = None
     if args.run:
         job_inis = map(expanduser, args.run.split(','))
         if len(job_inis) not in (1, 2):
@@ -367,14 +375,14 @@ def main():
         sys.exit(0)
 
     elif args.list_outputs is not None:
-        hc_id = logs.dbcmd('get_hc_id', args.list_outputs)
+        hc_id = get_job_id(args.list_outputs)
         for line in logs.dbcmd('list_outputs', hc_id):
             print line
     elif args.show_view is not None:
         job_id, view_name = args.show_view
         print views.view(view_name, datastore.read(int(job_id)))
     elif args.show_log is not None:
-        hc_id = logs.dbcmd('get_hc_id', args.show_log[0])
+        hc_id = get_job_id(args.show_log[0])
         for line in logs.dbcmd('get_log', hc_id):
             print line
 
@@ -386,9 +394,9 @@ def main():
 
     elif args.export_outputs is not None:
         job_id, target_dir = args.export_outputs
-        hc_id = logs.dbcmd('get_hc_id', job_id)
-        for line in logs.dbcmd('export_outputs', hc_id, expanduser(target_dir),
-                               exports):
+        hc_id = get_job_id(job_id)
+        for line in logs.dbcmd('export_outputs', hc_id,
+                               expanduser(target_dir), exports):
             print line
 
     elif args.delete_uncompleted_calculations:

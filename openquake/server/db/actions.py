@@ -64,8 +64,8 @@ def create_job(calc_mode, description, user_name="openquake", hc_id=None):
     :param str calc_mode:
         Calculation mode, such as classical, event_based, etc
     :param username:
-        Username of the user who owns/started this job. If the username doesn't
-        exist, a user record for this name will be created.
+        Username of the user who owns/started this job. If the username
+        doesn't exist, a user record for this name will be created.
     :param description:
          Description of the calculation
     :param hc_id:
@@ -93,15 +93,19 @@ def delete_uncompleted_calculations():
         del_calc(job.id, True)
 
 
-def get_hc_id(hc_id):
+def get_job_id(job_id, username):
     """
-    If hc_id is negative, return the last calculation of the current user
+    If job_id is negative, return the last calculation of the current
+    user, otherwise returns the job_id unchanged.
     """
-    hc_id = int(hc_id)
-    if hc_id > 0:
-        return hc_id
-    return models.OqJob.objects.filter(
-        user_name=getpass.getuser()).latest('id').id + hc_id + 1
+    job_id = int(job_id)
+    if job_id > 0:
+        return job_id
+    my_jobs = models.OqJob.objects.filter(user_name=username)
+    if not my_jobs.count():
+        return
+    else:
+        return my_jobs.latest('id').id + job_id
 
 
 def get_calc_id(job_id=None):
@@ -151,11 +155,11 @@ def list_calculations(job_type):
                 job.id, status, start_time, descr)).encode('utf-8')
 
 
-def export_outputs(hc_id, target_dir, export_type):
+def export_outputs(job_id, target_dir, export_type):
     # make it possible commands like `oq-engine --eos -1 /tmp`
-    outputs = models.Output.objects.filter(oq_job=hc_id)
+    outputs = models.Output.objects.filter(oq_job=job_id)
     if not outputs:
-        sys.exit('Found nothing to export for job %s' % hc_id)
+        sys.exit('Found nothing to export for job %s' % job_id)
     for output in outputs:
         yield('Exporting %s...' % output)
         try:
