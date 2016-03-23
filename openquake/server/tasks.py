@@ -34,17 +34,6 @@ DEFAULT_LOG_LEVEL = 'debug' if DEBUG else 'progress'
 logger = logging.getLogger(__name__)
 
 
-# Please note: the OpenQuake Engine server requires a celeryconfig.py
-# file in the PYTHONPATH; when using binary packages, if a celeryconfig.py
-# is not available the OpenQuake Engine default celeryconfig.py, located
-# in /usr/share/openquake/engine, is used.
-if utils.USE_CELERY:
-    try:
-        import celeryconfig
-    except ImportError:
-        sys.path.append('/usr/share/openquake/engine')
-
-
 def safely_call(func, *args):
     """
     Call the given procedure with the given arguments safely, i.e.
