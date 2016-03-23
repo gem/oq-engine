@@ -45,12 +45,6 @@ OQ_DISTRIBUTE = os.environ.get('OQ_DISTRIBUTE', 'futures').lower()
 
 
 if OQ_DISTRIBUTE == 'celery':
-    # a terribly hack to put celeryconfig in the PYTHONPATH for
-    # installations from packages
-    try:
-        import celeryconfig
-    except ImportError:
-        sys.path.append('/usr/share/openquake/engine')
 
     from celery.result import ResultSet
     from celery.app import current_app
