@@ -20,10 +20,8 @@ import sys
 import logging
 import traceback
 import shutil
-import urllib
-import urllib2
 
-from openquake.engine import engine
+from openquake.engine import engine, utils
 
 from openquake.server.settings import DEBUG
 
@@ -40,10 +38,11 @@ logger = logging.getLogger(__name__)
 # file in the PYTHONPATH; when using binary packages, if a celeryconfig.py
 # is not available the OpenQuake Engine default celeryconfig.py, located
 # in /usr/share/openquake/engine, is used.
-try:
-    import celeryconfig
-except ImportError:
-    sys.path.append('/usr/share/openquake/engine')
+if utils.USE_CELERY:
+    try:
+        import celeryconfig
+    except ImportError:
+        sys.path.append('/usr/share/openquake/engine')
 
 
 def safely_call(func, *args):

@@ -39,20 +39,20 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR") is not None:
         0, join(dirname(dirname(__file__)), "openquake")
     )
 
-import openquake.engine.utils.tasks  # really ugly import with side effects
-from openquake.engine import utils
+from openquake.engine import utils, config
 from openquake.engine.logs import dbcmd
 
-utils.config.abort_if_no_config_available()
+config.abort_if_no_config_available()
 
 # Please note: the /usr/bin/oq-engine script requires a celeryconfig.py
 # file in the PYTHONPATH; when using binary packages, if a celeryconfig.py
 # is not available the OpenQuake Engine default celeryconfig.py, located
 # in /usr/share/openquake/engine, is used.
-try:
-    import celeryconfig
-except ImportError:
-    sys.path.append('/usr/share/openquake/engine')
+if utils.USE_CELERY:
+    try:
+        import celeryconfig
+    except ImportError:
+        sys.path.append('/usr/share/openquake/engine')
 
 import openquake.engine
 
@@ -259,12 +259,12 @@ def main():
         logging.basicConfig(level=logging.INFO)
 
     if args.config_file:
-        os.environ[utils.config.OQ_CONFIG_FILE_VAR] = \
+        os.environ[config.OQ_CONFIG_FILE_VAR] = \
             abspath(expanduser(args.config_file))
-        utils.config.refresh()
+        config.refresh()
 
     if args.no_distribute:
-        os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
+        os.environ['OQ_DISTRIBUTE'] = 'no'
 
     if args.upgrade_db:
         logs.set_level('info')
