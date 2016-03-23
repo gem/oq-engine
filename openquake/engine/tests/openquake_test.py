@@ -23,7 +23,7 @@ Tests for code in :mod:`openquake.engine.__init__`.
 import os
 import unittest
 
-import openquake.engine
+from openquake.commonlib.parallel import no_distribute
 
 from mock import patch
 
@@ -32,32 +32,23 @@ class NoDistributeTestCase(unittest.TestCase):
 
     def test_no_distribute_not_set(self):
         with patch.dict('os.environ'):
-            if openquake.engine.NO_DISTRIBUTE_VAR in os.environ:
-                os.environ.pop(openquake.engine.NO_DISTRIBUTE_VAR)
+            if 'OQ_DISTRIBUTE' in os.environ:
+                os.environ.pop('OQ_DISTRIBUTE')
 
-            self.assertFalse(openquake.engine.no_distribute())
+            self.assertFalse(no_distribute())
 
     def test_no_distribute_set_true(self):
         with patch.dict('os.environ'):
-            os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
-            self.assertTrue(openquake.engine.no_distribute())
-
-            os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = 'true'
-            self.assertTrue(openquake.engine.no_distribute())
-
-            os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = 'yes'
-            self.assertTrue(openquake.engine.no_distribute())
-
-            os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = 't'
-            self.assertTrue(openquake.engine.no_distribute())
+            os.environ['OQ_DISTRIBUTE'] = 'no'
+            self.assertTrue(no_distribute())
 
     def test_no_distribute_set_false(self):
         with patch.dict('os.environ'):
-            os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '0'
-            self.assertFalse(openquake.engine.no_distribute())
+            os.environ['OQ_DISTRIBUTE'] = 'celery'
+            self.assertFalse(no_distribute())
 
-            os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = 'false'
-            self.assertFalse(openquake.engine.no_distribute())
+            os.environ['OQ_DISTRIBUTE'] = 'futures'
+            self.assertFalse(no_distribute())
 
-            os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = 'blarg'
-            self.assertFalse(openquake.engine.no_distribute())
+            os.environ['OQ_DISTRIBUTE'] = 'blarg'
+            self.assertFalse(no_distribute())
