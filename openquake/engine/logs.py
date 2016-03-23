@@ -28,14 +28,9 @@ from contextlib import contextmanager
 from openquake.server.db import actions
 
 
-# Place the new level between info and warning
-logging.PROGRESS = 25
-logging.addLevelName(logging.PROGRESS, "PROGRESS")
-
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
           'warn': logging.WARNING,
-          'progress': logging.PROGRESS,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 
@@ -62,37 +57,6 @@ def touch_log_file(log_file):
     :exc:`IOError` will be raised.
     """
     open(os.path.abspath(log_file), 'a').close()
-
-
-def _log_progress(msg, *args, **kwargs):
-    """
-    Log the message using the progress reporting logging level.
-
-    ``args`` and ``kwargs`` are the same as :meth:`logging.Logger.debug`,
-    except that this method has an additional possible keyword: ``indent``.
-
-    Normally, progress messages are logged with a '** ' prefix. If ``indent``
-    is `True`, messages will be logged with a '**  >' prefix.
-
-    If ``indent`` is not specified, it will default to `False`.
-    """
-    indent = kwargs.get('indent')
-
-    if indent is None:
-        indent = False
-    else:
-        # 'indent' is an invalid kwarg for the logger's _log method
-        # we need to remove it before we call _log:
-        del kwargs['indent']
-
-    if indent:
-        prefix = '**  >'
-    else:
-        prefix = '** '
-
-    msg = '%s %s' % (prefix, msg)
-    LOG._log(logging.PROGRESS, msg, args, **kwargs)
-LOG.progress = _log_progress
 
 
 def set_level(level):
@@ -153,8 +117,8 @@ class LogDatabaseHandler(logging.Handler):
     def emit(self, record):  # pylint: disable=E0202
         if record.levelno >= logging.INFO:
             dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
-                     '%s/%s' % (record.processName, record.process),
-                     record.getMessage())
+                  '%s/%s' % (record.processName, record.process),
+                  record.getMessage())
 
 
 @contextmanager
@@ -165,7 +129,7 @@ def handle(job_id, log_level='info', log_file=None):
     :param job_id:
          ID of the current job
     :param log_level:
-         one of debug, info, warn, progress, error, critical
+         one of debug, info, warn, error, critical
     :param log_file:
          log file path (if None, logs on stdout only)
     """
