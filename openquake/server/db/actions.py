@@ -50,8 +50,10 @@ UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 
 def check_outdated():
     """
-    Check if the db is outdated
+    Check if the db is outdated, called before starting anything
     """
+    db.connection.cursor().execute(  # reset the flag job.is_running
+        'UPDATE job SET is_running=0 WHERE is_running=1')
     return upgrader.check_versions(db.connection)
 
 
