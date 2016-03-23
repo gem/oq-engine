@@ -16,6 +16,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+from openquake.baselib.performance import Monitor
+from openquake.commonlib import valid
+from openquake.engine import config
+
+SOFT_MEM_LIMIT = int(config.get('memory', 'soft_mem_limit'))
+HARD_MEM_LIMIT = int(config.get('memory', 'hard_mem_limit'))
+USE_CELERY = valid.boolean(config.get('celery', 'use_celery') or 'false')
+
+if USE_CELERY:
+    os.environ['OQ_DISTRIBUTE'] = 'celery'
+
+# NB: this import must go AFTER the setting of OQ_DISTRIBUTE
+from openquake.commonlib import parallel
+
+parallel.check_mem_usage.__defaults__ = (
+    Monitor(), SOFT_MEM_LIMIT, HARD_MEM_LIMIT)
+
 
 def confirm(prompt):
     """
