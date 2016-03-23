@@ -40,16 +40,18 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR") is not None:
         0, join(dirname(dirname(__file__)), "openquake")
     )
 
-import openquake.engine.utils.tasks  # really ugly import with side effects
+from openquake.engine import utils, config
+config.abort_if_no_config_available()
 
 # Please note: the /usr/bin/oq-engine script requires a celeryconfig.py
 # file in the PYTHONPATH; when using binary packages, if a celeryconfig.py
 # is not available the OpenQuake Engine default celeryconfig.py, located
 # in /usr/share/openquake/engine, is used.
-try:
-    import celeryconfig
-except ImportError:
-    sys.path.append('/usr/share/openquake/engine')
+if utils.USE_CELERY:
+    try:
+        import celeryconfig
+    except ImportError:
+        sys.path.append('/usr/share/openquake/engine')
 
 from openquake.engine.utils import confirm, config
 import openquake.engine
@@ -286,6 +288,7 @@ def main():
         sys.exit('Please start the DbServer: '
                  'sudo -u openquake python -m openquake.server.dbserver &')
 
+        os.environ[config.OQ_CONFIG_FILE_VAR] = \
     if args.upgrade_db:
         logs.set_level('info')
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')
