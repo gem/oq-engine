@@ -80,6 +80,11 @@ def show(what, calc_id=-1):
         for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
             print('#%d %s: %s' % row)
         return
+    elif what == 'views':
+        for name in sorted(datastore.view):
+            print(name)
+        return
+
     ds = datastore.read(calc_id)
     set_ancestors(ds)
 
