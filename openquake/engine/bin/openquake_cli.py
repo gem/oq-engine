@@ -44,16 +44,6 @@ from openquake.engine.logs import dbcmd
 
 config.abort_if_no_config_available()
 
-# Please note: the /usr/bin/oq-engine script requires a celeryconfig.py
-# file in the PYTHONPATH; when using binary packages, if a celeryconfig.py
-# is not available the OpenQuake Engine default celeryconfig.py, located
-# in /usr/share/openquake/engine, is used.
-if utils.USE_CELERY:
-    try:
-        import celeryconfig
-    except ImportError:
-        sys.path.append('/usr/share/openquake/engine')
-
 import openquake.engine
 
 from openquake.engine import __version__
