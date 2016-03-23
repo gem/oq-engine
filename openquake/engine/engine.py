@@ -23,12 +23,11 @@ import sys
 import traceback
 
 from openquake.baselib.performance import Monitor
-from openquake.commonlib import valid
+from openquake.commonlib import valid, parallel
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import export
 from openquake.calculators import base, views
-from openquake.engine import logs
-from openquake.engine.utils import config, tasks
+from openquake.engine import logs, config
 
 TERMINATE = valid.boolean(
     config.get('celery', 'terminate_workers_on_revoke') or 'false')
@@ -63,7 +62,7 @@ if USE_CELERY:
         # tasks associated with the current job.
         if task_ids:
             logs.LOG.warn('Revoking %d tasks', len(task_ids))
-        else:  # this is normal when OQ_NO_DISTRIBUTE=1
+        else:  # this is normal when OQ_DISTRIBUTE=no
             logs.LOG.debug('No task to revoke')
         for tid in task_ids:
             celery.task.control.revoke(tid, terminate=terminate)
@@ -140,7 +139,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             # taking further action, so that the real error can propagate
             try:
                 if USE_CELERY:
-                    celery_cleanup(TERMINATE, tasks.OqTaskManager.task_ids)
+                    celery_cleanup(TERMINATE, parallel.TaskManager.task_ids)
             except:
                 # log the finalization error only if there is no real error
                 if tb == 'None\n':
