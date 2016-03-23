@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import getpass
 import subprocess
 import unittest
@@ -28,19 +29,19 @@ from openquake.server.db import models, actions, upgrade_manager
 from openquake.server.settings import DATABASE
 from openquake.server.tests import helpers
 
-tmpfile = tempfile.NamedTemporaryFile()
-
 
 def setup_module():
-    DATABASE['name'] = tmpfile.name
+    global tmpfile
+    fh, tmpfile = tempfile.mkstemp()
+    os.close(fh)
+    DATABASE['name'] = tmpfile
     connection.cursor()  # connect to the db
-    print 'Using the database', tmpfile.name
+    print 'Using the database', tmpfile
     upgrade_manager.upgrade_db(connection.connection)
 
 
 def teardown_module():
     connection.close()
-    tmpfile.close()
 
 
 def get_job(cfg, username, hazard_calculation_id=None):
