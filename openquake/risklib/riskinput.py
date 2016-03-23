@@ -26,6 +26,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, split_in_blocks
 from openquake.hazardlib.gsim.base import gsim_imt_dt
+from openquake.commonlib import valid
 from openquake.risklib import scientific, riskmodels
 
 U32 = numpy.uint32
@@ -109,7 +110,7 @@ def build_asset_collection(assets_by_site, time_event=None):
             taxonomies.add(asset.taxonomy)
     sorted_taxonomies = sorted(taxonomies)
     asset_dt = numpy.dtype(
-        [('asset_ref', '|S100'),
+        [('asset_ref', (bytes, valid.ASSET_ID_LENGTH)),
          ('lon', F32), ('lat', F32), ('site_id', numpy.uint32),
          ('taxonomy', numpy.uint32), ('number', F32), ('area', F32)] +
         [(name, float) for name in float_fields])
