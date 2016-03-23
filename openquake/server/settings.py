@@ -20,7 +20,7 @@ import os
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
 
-from openquake.engine.utils import config
+from openquake.engine import config
 
 DB_SECTION = config.get_section('dbserver')
 

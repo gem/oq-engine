@@ -68,20 +68,3 @@ __version__ += git_suffix(__file__)
 # The path to the OpenQuake root directory
 OPENQUAKE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-NO_DISTRIBUTE_VAR = 'OQ_NO_DISTRIBUTE'
-
-
-def no_distribute():
-    """
-    Check the `OQ_NO_DISTRIBUTE` environment var to determine if calculations
-    should be distributed or not.
-
-    :returns:
-        `True` if the envvar value is "true", "yes", "t", or "1", regardless of
-        case. Otherwise, return `False`.
-
-        If the variable is undefined, it defaults to `False`.
-    """
-    nd = os.environ.get(NO_DISTRIBUTE_VAR)
-    if nd:
-        return nd.lower() in ("true", "yes", "t", "1")

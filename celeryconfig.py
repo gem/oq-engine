@@ -26,6 +26,9 @@ eventually.
 import os
 import sys
 
+os.environ["OQ_DISTRIBUTE"] = "celery"
+os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
+
 # just in the case that are you using oq-engine from sources
 # with the rest of oq libraries installed into the system (or a
 # virtual environment) you must set this environment variable
@@ -33,7 +36,7 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR"):
     sys.modules['openquake'].__dict__["__path__"].insert(
         0, os.path.join(os.path.dirname(__file__), "openquake"))
 
-from openquake.engine.utils import config
+from openquake.engine import config
 
 config.abort_if_no_config_available()
 
@@ -86,11 +89,3 @@ CELERY_IMPORTS = [
     "openquake.calculators.scenario_risk",
     "openquake.calculators.scenario_damage",
     ]
-
-os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.server.settings"
-try:
-    from openquake.engine.utils import tasks
-    # as a side effect, this import replaces the litetask with oqtask
-    # this is hackish, but we need it for task registration
-except ImportError:  # circular import with celery 2, only affecting nose
-    pass
