@@ -276,7 +276,7 @@ def main():
         config.refresh()
 
     if args.no_distribute:
-        os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
+        os.environ['OQ_DISTRIBUTE'] = 'no'
 
     # check if the DbServer is up
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
