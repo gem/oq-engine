@@ -369,8 +369,8 @@ def sum_table(records):
 @view.add('mean_avg_losses')
 def view_mean_avg_losses(token, dstore):
     try:
-        array = dstore['avg_losses-stats']  # shape (S, N)
-        data = array[0, :]
+        array = dstore['avg_losses-stats']  # shape (N, S)
+        data = array[:, 0]
     except KeyError:
         array = dstore['avg_losses-rlzs']  # shape (N, R)
         data = array[:, 0]
