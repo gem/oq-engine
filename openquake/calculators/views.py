@@ -310,6 +310,17 @@ def avglosses_data_transfer(token, dstore):
         '8 bytes x %d tasks = %s' % (N, R, L, I, ct, humansize(size_bytes)))
 
 
+@view.add('ebr_data_transfer')
+def ebr_data_transfer(token, dstore):
+    """
+    Display the data transferred in an event based risk calculation
+    """
+    attrs = dstore['agg_loss_table'].attrs
+    sent = humansize(attrs['sent'])
+    received = humansize(attrs['tot_received'])
+    return 'Event Based Risk: sent %s, received %s' % (sent, received)
+
+
 # for scenario_risk
 @view.add('totlosses')
 def view_totlosses(token, dstore):
