@@ -135,8 +135,9 @@ def handle(job_id, log_level='info', log_file=None):
     """
     handlers = [LogDatabaseHandler(job_id)]  # log on db always
     if log_file is None:
-        if not logging.root.handlers:
-            # add a StreamHandler if not already there
+        # add a StreamHandler if not already there
+        if not any(h for h in logging.root.handlers
+                   if isinstance(h, logging.StreamHandler)):
             handlers.append(LogStreamHandler(job_id))
     else:
         handlers.append(LogFileHandler(job_id, log_file))
