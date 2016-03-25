@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Introduced a dbserver to mediate the interaction with the database
+  * Fixed in a more robust way the duplicated log bug
   * Made more robust the killing of processes by patching concurrent.futures
   * Fixed a critical bug with celery not being used even when `use_celery`
     was true.
