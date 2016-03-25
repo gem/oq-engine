@@ -183,7 +183,6 @@ class Log(djm.Model):
     LOG_LEVEL_CHOICES = (
         (u'debug', u'Debug'),
         (u'info', u'Info'),
-        (u'progress', u'Progress'),
         (u'warn', u'Warn'),
         (u'error', u'Error'),
         (u'critical', u'Critical'),
