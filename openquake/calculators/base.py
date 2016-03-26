@@ -353,6 +353,7 @@ class HazardCalculator(BaseCalculator):
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
             self.exposure = readinput.get_exposure(self.oqparam)
+            self.datastore['asset_refs'] = self.exposure.asset_refs
             all_cost_types = set(self.oqparam.all_cost_types)
             fname = self.oqparam.inputs['exposure']
             cc = readinput.get_exposure_lazy(fname, all_cost_types)[-1]
@@ -457,11 +458,6 @@ class HazardCalculator(BaseCalculator):
             if self.exposure.time_events:
                 self.datastore.set_attrs(
                     'assetcol', time_events=sorted(self.exposure.time_events))
-            spec = set(oq.specific_assets)
-            unknown = spec - set(self.assetcol['asset_ref'])
-            if unknown:
-                raise ValueError('The specific asset(s) %s are not in the '
-                                 'exposure' % ', '.join(unknown))
         elif hasattr(self, 'assetcol'):
             try:
                 cc = self.datastore['cost_calculator']
@@ -528,7 +524,6 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-    specific_assets = datastore.persistent_attribute('specific_assets')
     extra_args = ()  # to be overridden in subclasses
 
     def check_poes(self, curves_by_trt_gsim):
