@@ -151,8 +151,8 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
 
 
 @parallel.litetask
-def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
-                     monitor):
+def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assetcol, taxonomies,
+                     cc, monitor):
     """
     :param riskinputs:
         a list of :class:`openquake.risklib.riskinput.RiskInput` objects
@@ -160,8 +160,8 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param rlzs_assoc:
         a class:`openquake.commonlib.source.RlzsAssoc` instance
-    :param assets_by_site:
-        a representation of the exposure
+    :param assetcol:
+        AssetCollection instance
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
@@ -185,6 +185,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assets_by_site,
         result['AVGLOSS'] = square(L, R, zeroN)
 
     agglosses_mon = monitor('aggregate losses', measuremem=False)
+    assets_by_site = assetcol.assets_by_site(taxonomies, cc)
     for output in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor, assets_by_site):
         with agglosses_mon:
@@ -311,10 +312,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
+        cc = self.datastore['cost_calculator']
+        taxonomies = self.taxonomies
         return apply_reduce(
             self.core_task.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc,
-             self.assets_by_site, self.monitor.new('task')),
+             self.assetcol, taxonomies, cc, self.monitor.new('task')),
             concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_id'),
@@ -465,7 +468,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         if cb.user_provided:
                             lm = loss_maps[cb.loss_type]
                             for r, lmaps in cb.build_loss_maps(
-                                    self.assetcol, rcurves):
+                                    self.assetcol.array, rcurves):
                                 lm[:, r] = lmaps
                     self.datastore['loss_maps-rlzs'] = loss_maps
 
@@ -509,7 +512,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if 'rcurves-rlzs' not in self.datastore:
             return []
         all_data = []
-        assets = self.datastore['asset_refs'].value[self.assetcol['idx']]
+        assets = self.datastore['asset_refs'].value[self.assetcol.array['idx']]
         rlzs = self.rlzs_assoc.realizations
         insured = self.oqparam.insured_losses
         if self.oqparam.avg_losses:

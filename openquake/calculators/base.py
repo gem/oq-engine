@@ -239,7 +239,7 @@ def check_time_event(dstore):
     with the periods found in the exposure.
     """
     time_event = dstore.attrs.get('time_event')
-    time_events = dstore.get_attr('assetcol', 'time_events', ())
+    time_events = dstore['assetcol'].time_events
     if time_event and ast.literal_eval(time_event) not in time_events:
         inputs = ast.literal_eval(dstore.attrs['inputs'])
         raise ValueError(
@@ -441,8 +441,7 @@ class HazardCalculator(BaseCalculator):
 
         if oq_hazard:
             parent = self.datastore.parent
-            if 'assetcol' in parent and any(
-                    parent.get_attr('assetcol', 'time_events', ())):
+            if 'assetcol' in parent and any(parent['assetcol'].time_events):
                 check_time_event(self.datastore)
             if oq_hazard.time_event != oq.time_event:
                 raise ValueError(
@@ -453,12 +452,9 @@ class HazardCalculator(BaseCalculator):
         # save mesh and asset collection
         self.save_mesh()
         if hasattr(self, 'assets_by_site'):
-            self.assetcol = riskinput.build_asset_collection(
-                self.assets_by_site, oq.time_event)
-            self.datastore.set_attrs('assetcol', nbytes=self.assetcol.nbytes)
-            if self.exposure.time_events:
-                self.datastore.set_attrs(
-                    'assetcol', time_events=sorted(self.exposure.time_events))
+            self.assetcol = riskinput.AssetCollection(
+                self.assets_by_site, oq.time_event,
+                time_events=sorted(self.exposure.time_events))
         elif hasattr(self, 'assetcol'):
             try:
                 cc = self.datastore['cost_calculator']
@@ -469,8 +465,8 @@ class HazardCalculator(BaseCalculator):
                 # bug of HDF5 in Ubuntu 12.04 that makes it impossible to
                 # store numpy arrays of zero length
                 cc = rm.CostCalculator({}, {}, True, True)  # dummy
-            self.assets_by_site = riskinput.build_assets_by_site(
-                self.assetcol, self.taxonomies, oq.time_event, cc)
+            self.assets_by_site = self.assetcol.assets_by_site(
+                self.taxonomies, cc)
 
     def save_mesh(self):
         """
@@ -609,8 +605,6 @@ class RiskCalculator(HazardCalculator):
         Require a `.core_task` to be defined with signature
         (riskinputs, riskmodel, rlzs_assoc, monitor).
         """
-        riskinput.build_asset_collection(
-            self.assets_by_site, self.oqparam.time_event)
         self.monitor.oqparam = self.oqparam
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:

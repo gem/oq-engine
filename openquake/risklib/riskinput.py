@@ -37,41 +37,68 @@ FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy', 'area', 'number',
 by_taxonomy = operator.attrgetter('taxonomy')
 
 
-def build_assets_by_site(assetcol, taxonomies, time_event, cc):
-    """
-    :param assetcol: the asset collection as a composite array
-    :param taxomies: an array of taxonomy strings
-    :param time_event: time event string (or None)
-    :param cc: :class:`openquake.risklib.riskmodels.CostCalculator` instance
-    :returns: an array of lists with the assets by each site
-    """
-    fields = assetcol.dtype.names
-    site_ids = sorted(set(assetcol['site_id']))
-    loss_types = sorted(f for f in fields if not f.startswith(FIELDS))
-    deduc = [n for n in fields if n.startswith('deductible~')]
-    i_lim = [n for n in fields if n.startswith('insurance_limit~')]
-    retro = [n for n in fields if n.startswith('retrofitted~')]
-    assets_by_site = [[] for sid in site_ids]
-    index = dict(zip(site_ids, range(len(site_ids))))
-    for i, a in enumerate(assetcol):
-        sid = a['site_id']
-        values = {lt: a[lt] for lt in loss_types}
-        if 'occupants' in fields:
-            values['occupants_' + str(time_event)] = a['occupants']
-        asset = riskmodels.Asset(
-            a['idx'],
-            taxonomies[a['taxonomy']],
-            number=a['number'],
-            location=(a['lon'], a['lat']),
-            values=values,
-            area=a['area'],
-            deductibles={lt: a[lt] for lt in deduc},
-            insurance_limits={lt: a[lt] for lt in i_lim},
-            retrofitteds={lt: a[lt] for lt in retro},
-            calc=cc,
-            ordinal=i)
-        assets_by_site[index[sid]].append(asset)
-    return numpy.array(assets_by_site)
+class AssetCollection(object):
+    def __init__(self, assets_by_site, time_event, time_events=()):
+        self.time_event = time_event
+        self.time_events = time_events
+        self.array = build_asset_collection(assets_by_site, time_event)
+
+    def assets_by_site(self, taxonomies, cc):
+        """
+        :param assetcol: the asset collection as a composite array
+        :param taxomies: an array of taxonomy strings
+        :param time_event: time event string (or None)
+        :param cc: :class:`openquake.risklib.riskmodels.CostCalculator` object
+        :returns: an array of lists with the assets by each site
+        """
+        assetcol = self.array
+        fields = assetcol.dtype.names
+        site_ids = sorted(set(assetcol['site_id']))
+        loss_types = sorted(f for f in fields if not f.startswith(FIELDS))
+        deduc = [n for n in fields if n.startswith('deductible~')]
+        i_lim = [n for n in fields if n.startswith('insurance_limit~')]
+        retro = [n for n in fields if n.startswith('retrofitted~')]
+        D, I, R = (len('deductible~'), len('insurance_limit~'),
+                   len('retrofitted~'))
+        assets_by_site = [[] for sid in site_ids]
+        index = dict(zip(site_ids, range(len(site_ids))))
+        for i, a in enumerate(assetcol):
+            sid = a['site_id']
+            values = {lt: a[lt] for lt in loss_types}
+            if 'occupants' in fields:
+                values['occupants_' + str(self.time_event)] = a['occupants']
+            asset = riskmodels.Asset(
+                a['idx'],
+                taxonomies[a['taxonomy']],
+                number=a['number'],
+                location=(a['lon'], a['lat']),
+                values=values,
+                area=a['area'],
+                deductibles={lt[D:]: a[lt] for lt in deduc},
+                insurance_limits={lt[I:]: a[lt] for lt in i_lim},
+                retrofitteds={lt[R:]: a[lt] for lt in retro},
+                calc=cc, ordinal=i)
+            assets_by_site[index[sid]].append(asset)
+        return numpy.array(assets_by_site)
+
+    def __getitem__(self, indices):
+        new = object.__new__(self.__class__)
+        new.time_event = self.time_event
+        new.array = self.array[indices]
+        return new
+
+    def __len__(self):
+        return len(self.array)
+
+    def __toh5__(self):
+        attrs = {'time_event': self.time_event or 'None',
+                 'time_events': self.time_events,
+                 'nbytes': self.array.nbytes}
+        return self.array, attrs
+
+    def __fromh5__(self, assetcol, attrs):
+        vars(self).update(attrs)
+        self.array = assetcol
 
 
 def build_asset_collection(assets_by_site, time_event=None):
@@ -312,16 +339,16 @@ class CompositeRiskModel(collections.Mapping):
                     imt_taxonomies[rf.imt].add(riskmodel.taxonomy)
         return sorted(imt_taxonomies.items())
 
-    def build_input(self, imt, hazards_by_site, assets_by_site, eps_dict):
+    def build_input(self, imt, hazards_by_site, assetcol, eps_dict):
         """
         :param imt: an Intensity Measure Type
         :param hazards_by_site: an array of hazards per each site
-        :param assets_by_site: an array of assets per each site
+        :param assetcol: AssetCollection instance
         :param eps_dict: a dictionary of epsilons
         :returns: a :class:`RiskInput` instance
         """
         return RiskInput(self.get_imt_taxonomies(imt),
-                         hazards_by_site, assets_by_site, eps_dict)
+                         hazards_by_site, assetcol, eps_dict)
 
     def build_inputs_from_ruptures(self, sitecol, all_ruptures,
                                    gsims_by_trt_id, trunc_level, correl_model,
@@ -360,13 +387,14 @@ class CompositeRiskModel(collections.Mapping):
         :param riskinputs: a list of riskinputs with consistent IMT
         :param rlzs_assoc: a RlzsAssoc instance
         :param monitor: a monitor object used to measure the performance
+        :param assets_by_site: not None only for event based risk
         """
         mon_hazard = monitor('getting hazard')
         mon_risk = monitor('computing individual risk')
         for riskinput in riskinputs:
             eids = riskinput.eids
-            assets_by_site = getattr(
-                riskinput, 'assets_by_site', assets_by_site)
+            assets_by_site = getattr(riskinput, 'assets_by_site',
+                                     assets_by_site)
             asset_dicts = [groupby(assets, by_taxonomy)
                            for assets in assets_by_site]
             with mon_hazard:
@@ -406,6 +434,7 @@ class RiskInput(object):
     :param hazard_by_site: array of hazards, one per site
     :param assets_by_site: array of assets, one per site
     :param eps_dict: dictionary of epsilons
+    :param cc: CostCalculator
     """
     def __init__(self, imt_taxonomies, hazard_by_site, assets_by_site,
                  eps_dict):
