@@ -126,7 +126,7 @@ class Asset(object):
                  insurance_limits=None,
                  retrofitteds=None,
                  calc=costcalculator,
-                 idx=None):
+                 ordinal=None):
         """
         :param asset_id:
             an unique identifier of the assets within the given exposure
@@ -148,8 +148,8 @@ class Asset(object):
             asset retrofitting values keyed by loss types
         :param calc:
             cost calculator instance
-        :param idx:
-            asset collection index
+        :param ordinal:
+            asset collection ordinal
         """
         self.id = asset_id
         self.taxonomy = taxonomy
@@ -161,7 +161,7 @@ class Asset(object):
         self.deductibles = deductibles
         self.insurance_limits = insurance_limits
         self.calc = calc
-        self.idx = idx
+        self.ordinal = ordinal
         self._cost = {}  # cache for the costs
 
     def value(self, loss_type, time_event=None):

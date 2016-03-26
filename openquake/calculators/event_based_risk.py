@@ -123,7 +123,7 @@ def _old_loss_curves(asset_values, rcurves, ratios):
 def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
     # update the result dictionary and the agg array with each output
     assets = output.assets
-    aid = assets[0].idx
+    aid = assets[0].ordinal
     eids = output.eids
     indices = numpy.array([idx[eid] for eid in eids])
     for (l, r), out in sorted(output.items()):

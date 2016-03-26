@@ -551,7 +551,7 @@ class RiskCalculator(HazardCalculator):
         """
         self.check_poes(hazards_by_key)
 
-        # add asset.idx as side effect
+        # add asset.ordinal as side effect
         riskinput.build_asset_collection(
             self.assets_by_site, self.oqparam.time_event)
         imtls = self.oqparam.imtls
@@ -577,7 +577,7 @@ class RiskCalculator(HazardCalculator):
                 if len(eps):
                     for assets in reduced_assets:
                         for asset in assets:
-                            reduced_eps[asset.idx] = eps[asset.idx]
+                            reduced_eps[asset.ordinal] = eps[asset.ordinal]
 
                 # collect the hazards by key into hazards by imt
                 hdata = collections.defaultdict(lambda: [{} for _ in indices])

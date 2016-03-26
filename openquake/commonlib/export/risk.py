@@ -671,7 +671,7 @@ def export_loss_csv(ekey, dstore, data, suffix):
         header = ['LossType', 'Unit', 'Mean', 'Standard Deviation']
     else:  # loss_map
         header = ['LossType', 'Unit', 'Asset', 'Mean', 'Standard Deviation']
-        data.sort(key=operator.itemgetter(2))  # order by asset_ref
+        data.sort(key=operator.itemgetter(2))  # order by asset idx
     writers.write_csv(dest, [header] + data, fmt='%11.7E')
     return dest
 
@@ -857,6 +857,7 @@ BcrData = collections.namedtuple(
 @export.add(('bcr-rlzs', 'xml'))
 def export_bcr_map_rlzs(ekey, dstore):
     assetcol = dstore['assetcol']
+    aref = dstore['asset_refs'].value
     sitemesh = dstore['sitemesh']
     bcr_data = dstore['bcr-rlzs']
     N, R = bcr_data.shape
@@ -876,7 +877,7 @@ def export_bcr_map_rlzs(ekey, dstore):
             data = []
             for ass, value in zip(assetcol, rlz_data):
                 loc = Location(sitemesh[ass['site_id']])
-                data.append(BcrData(loc, ass['asset_ref'],
+                data.append(BcrData(loc, aref[ass['idx']],
                                     value['annual_loss_orig'],
                                     value['annual_loss_retro'],
                                     value['bcr']))
