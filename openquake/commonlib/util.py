@@ -123,9 +123,10 @@ def get_assets(dstore):
     :returns: an ordered array of records (asset_ref, taxonomy, lon, lat)
     """
     assetcol = dstore['assetcol']
+    asset_refs = dstore['asset_refs'].value
     taxo = dstore['taxonomies'].value
-    asset_data = [(a['asset_ref'], taxo[a['taxonomy']], a['lon'], a['lat'])
-                  for a in assetcol]
+    asset_data = [(asset_refs[a['idx']], taxo[a['taxonomy']],
+                   a['lon'], a['lat']) for a in assetcol]
     return numpy.array(asset_data, asset_dt)
 
 

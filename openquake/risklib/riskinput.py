@@ -31,7 +31,7 @@ from openquake.risklib import scientific, riskmodels
 U32 = numpy.uint32
 F32 = numpy.float32
 
-FIELDS = ('site_id', 'lon', 'lat', 'asset_ref', 'taxonomy', 'area', 'number',
+FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy', 'area', 'number',
           'occupants', 'deductible~', 'insurance_limit~', 'retrofitted~')
 
 by_taxonomy = operator.attrgetter('taxonomy')
@@ -59,7 +59,7 @@ def build_assets_by_site(assetcol, taxonomies, time_event, cc):
         if 'occupants' in fields:
             values['occupants_' + str(time_event)] = a['occupants']
         asset = riskmodels.Asset(
-            a['asset_ref'],
+            a['idx'],
             taxonomies[a['taxonomy']],
             number=a['number'],
             location=(a['lon'], a['lat']),
@@ -109,9 +109,8 @@ def build_asset_collection(assets_by_site, time_event=None):
             taxonomies.add(asset.taxonomy)
     sorted_taxonomies = sorted(taxonomies)
     asset_dt = numpy.dtype(
-        [('asset_ref', '|S100'),
-         ('lon', F32), ('lat', F32), ('site_id', numpy.uint32),
-         ('taxonomy', numpy.uint32), ('number', F32), ('area', F32)] +
+        [('idx', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
+         ('taxonomy', U32), ('number', F32), ('area', F32)] +
         [(name, float) for name in float_fields])
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
@@ -129,7 +128,7 @@ def build_asset_collection(assets_by_site, time_event=None):
                     value = asset.number
                 elif field == 'area':
                     value = asset.area
-                elif field == 'asset_ref':
+                elif field == 'idx':
                     value = asset.id
                 elif field == 'site_id':
                     value = sid

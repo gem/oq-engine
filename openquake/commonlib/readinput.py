@@ -819,8 +819,8 @@ def get_exposure(oqparam):
             values['occupants_None'] = tot_occupants / len(occupancies)
         area = float(asset.attrib.get('area', 1))
         ass = riskmodels.Asset(
-            asset_id, taxonomy, number, location, values, area,
-            deductibles, insurance_limits, retrofitteds, cc, idx)
+            idx, taxonomy, number, location, values, area,
+            deductibles, insurance_limits, retrofitteds, cc)
         exposure.assets.append(ass)
         exposure.taxonomies.add(taxonomy)
     if region:

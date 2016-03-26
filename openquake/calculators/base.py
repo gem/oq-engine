@@ -353,7 +353,8 @@ class HazardCalculator(BaseCalculator):
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
             self.exposure = readinput.get_exposure(self.oqparam)
-            self.datastore['asset_refs'] = self.exposure.asset_refs
+            self.datastore['asset_refs'] = numpy.array(
+                self.exposure.asset_refs, (bytes, 100))
             all_cost_types = set(self.oqparam.all_cost_types)
             fname = self.oqparam.inputs['exposure']
             cc = readinput.get_exposure_lazy(fname, all_cost_types)[-1]

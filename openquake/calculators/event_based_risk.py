@@ -509,7 +509,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if 'rcurves-rlzs' not in self.datastore:
             return []
         all_data = []
-        assets = self.assetcol['asset_ref']
+        assets = self.datastore['asset_refs'].value[self.assetcol['idx']]
         rlzs = self.rlzs_assoc.realizations
         insured = self.oqparam.insured_losses
         if self.oqparam.avg_losses:
