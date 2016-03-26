@@ -266,6 +266,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.rlzs_assoc.gsims_by_trt_id,
             oq.truncation_level, correl_model, oq.random_seed, eps,
             oq.concurrent_tasks or 1))
+        nbytes = AccumDict(total=0)
+        for ri in self.riskinputs:
+            total, sizes = parallel.get_pickled_sizes(ri)
+            nbytes += dict(sizes)
+            nbytes['total'] += total
+        for name, n in nbytes.items():
+            nbytes[name] = humansize(n)
+        if 'job_info' in self.datastore:
+            self.datastore.set_attrs('job_info', **nbytes)
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
         # preparing empty datasets
@@ -313,7 +322,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
         cc = self.datastore['cost_calculator']
-        taxonomies = self.taxonomies
+        try:
+            taxonomies = self.taxonomies.value
+        except AttributeError:
+            taxonomies = self.taxonomies
         return apply_reduce(
             self.core_task.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc,

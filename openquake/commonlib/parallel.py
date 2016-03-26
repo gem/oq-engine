@@ -323,6 +323,7 @@ class TaskManager(object):
         else:
             piks = pickle_sequence(args)
             sent = sum(len(p) for p in piks)
+            logging.debug('submitting %s', piks)
             res = self._submit(piks)
         self.sent += sent
         self.results.append(res)
