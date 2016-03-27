@@ -273,8 +273,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             nbytes['total'] += total
         for name, n in nbytes.items():
             nbytes[name] = humansize(n)
-        if 'job_info' in self.datastore:
-            self.datastore.set_attrs('job_info', **nbytes)
+        if 'job_info' not in self.datastore:
+            self.datastore['job_info'] = ()
+        self.datastore.set_attrs('job_info', **nbytes)
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
         # preparing empty datasets
