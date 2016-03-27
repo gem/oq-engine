@@ -454,7 +454,7 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.AssetCollection(
                 self.assets_by_site, oq.time_event,
-                time_events=sorted(self.exposure.time_events))
+                time_events=sorted(self.exposure.time_events) or '')
         elif hasattr(self, 'assetcol'):
             try:
                 cc = self.datastore['cost_calculator']

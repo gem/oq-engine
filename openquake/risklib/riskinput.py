@@ -38,7 +38,7 @@ by_taxonomy = operator.attrgetter('taxonomy')
 
 
 class AssetCollection(object):
-    def __init__(self, assets_by_site, time_event, time_events=()):
+    def __init__(self, assets_by_site, time_event, time_events=''):
         self.time_event = time_event
         self.time_events = time_events
         self.array = build_asset_collection(assets_by_site, time_event)
