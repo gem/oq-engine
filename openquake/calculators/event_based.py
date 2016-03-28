@@ -439,7 +439,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                 logging.info('Saving SES collection #%d with %d ruptures',
                              i, nr)
                 key = 'sescollection/trt=%02d' % i
-                self.datastore[key] = sescol
+                self.datastore[key] = sescol.values()
                 self.datastore.set_attrs(key, num_ruptures=nr, trt_model_id=i)
         for dset in self.rup_data.values():
             numsites = dset.dset['numsites']
@@ -574,9 +574,7 @@ class EventBasedCalculator(ClassicalCalculator):
         self.sesruptures = []
         for trt_id in range(self.rlzs_assoc.csm_info.num_collections):
             sescol = self.datastore['sescollection/trt=%02d' % trt_id]
-            for etag, sesrup in sorted(sescol.items()):
-                sesrup = sescol[etag]
-                self.sesruptures.append(sesrup)
+            self.sesruptures.extend(sescol)
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """

@@ -287,7 +287,9 @@ class DataStore(collections.MutableMapping):
         return val
 
     def __setitem__(self, key, value):
-        if (not isinstance(value, numpy.ndarray) or
+        if isinstance(value, dict):
+            val = value
+        elif (not isinstance(value, numpy.ndarray) or
                 value.dtype is numpy.dtype(object)):
             val = numpy.array(pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
         else:

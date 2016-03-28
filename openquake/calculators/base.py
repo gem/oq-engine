@@ -386,15 +386,14 @@ class HazardCalculator(BaseCalculator):
                                    'which are not in the risk model' % missing)
 
         # save the risk models and loss_ratios in the datastore
+        crm = {}
         for taxonomy, rmodel in rm.items():
             for loss_type, rf in sorted(rmodel.risk_functions.items()):
-                key = 'composite_risk_model/%s-%s' % (taxonomy, loss_type)
-                self.datastore[key] = rf
+                crm['%s-%s' % (taxonomy, loss_type)] = rf
             if hasattr(rmodel, 'retro_functions'):
                 for loss_type, rf in sorted(rmodel.retro_functions.items()):
-                    key = 'composite_risk_model/%s-%s-retrofitted' % (
-                        taxonomy, loss_type)
-                    self.datastore[key] = rf
+                    crm['%s-%s-retrofitted' % (taxonomy, loss_type)] = rf
+        self.datastore['composite_risk_model'] = crm
         attrs = self.datastore['composite_risk_model'].attrs
         attrs['loss_types'] = rm.loss_types
         if rm.damage_states:
