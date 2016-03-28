@@ -584,8 +584,10 @@ def _get_gmfs(dstore, etag):
     col_id, serial = util.get_col_serial(etag)
     trt_id = rlzs_assoc.csm_info.get_trt_id(col_id)
     coll = dstore['sescollection/trt=%02d' % trt_id]
-    rup = coll[serial]
-    etag_idx = list(rup.etags).index(etag)
+    for rup in coll:
+        for etag_idx, tag in enumerate(rup.etags):
+            if tag == etag:
+                break
     correl_model = readinput.get_correl_model(oq)
     gsims = rlzs_assoc.gsims_by_trt_id[rup.trt_id]
     rlzs = [rlz for gsim in map(str, gsims)
