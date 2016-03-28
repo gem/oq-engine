@@ -158,9 +158,9 @@ class File(h5py.File):
     >>> f = File('/tmp/x.h5', 'w')
     >>> f['dic'] = dict(a=dict(x=1, y=2), b=3)
     >>> dic = f['dic']
-    >>> dic['a']
-    OrderedDict([(u'x', 1), (u'y', 2)])
-    >>> dic['b']
+    >>> dic['a']['x'].value
+    1
+    >>> dic['b'].value
     3
     >>> f.close()
     """
@@ -186,17 +186,17 @@ class File(h5py.File):
     def __getitem__(self, path):
         h5obj = super(File, self).__getitem__(path)
         h5attrs = h5obj.attrs
-        is_group = not hasattr(h5obj, 'shape')
-        if is_group:
-            dic = collections.OrderedDict()
-            for k, v in sorted(h5obj.items()):
-                key = '%s/%s' % (path, k)
-                dic[k] = self[key]
-            return dic
-        elif '__pyclass__' in h5attrs:
+        if '__pyclass__' in h5attrs:
             cls = pydoc.locate(h5attrs.pop('__pyclass__'))
             obj = cls.__new__(cls)
             obj.__fromh5__(h5obj, h5attrs)
             return obj
         else:
-            return h5obj.value
+            return h5obj
+
+    def __delitem__(self, key):
+        if (h5py.version.version <= '2.0.1' and not
+                hasattr(super(File, self).__getitem__(key), 'shape')):
+            # avoid bug when deleting groups that produces a segmentation fault
+            return
+        super(File, self).__delitem__(key)
