@@ -17,8 +17,10 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import ast
+import pydoc
 import collections
 import numpy
+import h5py
 
 
 class Hdf5Dataset(object):
@@ -145,3 +147,56 @@ class LiteralAttrs(object):
             else:
                 dd[name] = ast.literal_eval(literal.decode('utf8'))
         vars(self).update(dd)
+
+
+class File(h5py.File):
+    """
+    Subclass of :class:`h5py.File` able to store and retrieve objects
+    conform to the HDF5 protocol used by the OpenQuake software.
+    It works recursively also for dictionaries name->obj.
+
+    >>> f = File('/tmp/x.h5', 'w')
+    >>> f['dic'] = dict(a=dict(x=1, y=2), b=3)
+    >>> dic = f['dic']
+    >>> dic['a']
+    OrderedDict([(u'x', 1), (u'y', 2)])
+    >>> dic['b']
+    3
+    >>> f.close()
+    """
+    def __setitem__(self, path, obj):
+        cls = obj.__class__
+        if hasattr(obj, '__toh5__'):
+            obj, attrs = obj.__toh5__()
+            pyclass = '%s.%s' % (cls.__module__, cls.__name__)
+        else:
+            pyclass = ''
+        if isinstance(obj, dict):
+            for k, v in sorted(obj.items()):
+                key = '%s/%s' % (path, k)
+                self[key] = v
+        else:
+            super(File, self).__setitem__(path, obj)
+        a = super(File, self).__getitem__(path).attrs
+        if pyclass:
+            a['__pyclass__'] = pyclass
+            for k, v in sorted(attrs.items()):
+                a[k] = v
+
+    def __getitem__(self, path):
+        h5obj = super(File, self).__getitem__(path)
+        h5attrs = h5obj.attrs
+        is_group = not hasattr(h5obj, 'shape')
+        if is_group:
+            dic = collections.OrderedDict()
+            for k, v in sorted(h5obj.items()):
+                key = '%s/%s' % (path, k)
+                dic[k] = self[key]
+            return dic
+        elif '__pyclass__' in h5attrs:
+            cls = pydoc.locate(h5attrs.pop('__pyclass__'))
+            obj = cls.__new__(cls)
+            obj.__fromh5__(h5obj, h5attrs)
+            return obj
+        else:
+            return h5obj.value
