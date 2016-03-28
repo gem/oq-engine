@@ -24,6 +24,7 @@ import collections
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, humansize
 from openquake.calculators import base
@@ -271,11 +272,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             total, sizes = parallel.get_pickled_sizes(ri)
             nbytes += dict(sizes)
             nbytes['total'] += total
-        for name, n in nbytes.items():
-            nbytes[name] = humansize(n)
         if 'job_info' not in self.datastore:
-            self.datastore['job_info'] = ()
-        self.datastore.set_attrs('job_info', **nbytes)
+            job_info = hdf5.LiteralAttrs()
+        else:
+            job_info = self.datastore['job_info']
+        job_info.riskinputs = nbytes
+        self.datastore['job_info'] = job_info
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
         # preparing empty datasets

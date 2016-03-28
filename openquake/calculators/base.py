@@ -332,9 +332,9 @@ class HazardCalculator(BaseCalculator):
                     self.job_info = readinput.get_job_info(
                         self.oqparam, self.csm, self.sitecol)
                     logging.info('Expected output size=%s',
-                                 self.job_info['output_weight'])
+                                 self.job_info.hazard['output_weight'])
                     logging.info('Total weight of the sources=%s',
-                                 self.job_info['input_weight'])
+                                 self.job_info.hazard['input_weight'])
                 with self.monitor('managing sources', autoflush=True):
                     self.send_sources()
                 self.manager.store_source_info(
