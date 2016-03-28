@@ -67,32 +67,17 @@ class Hdf5Dataset(object):
         """
         self.extend(numpy.array([tup], self.dtype))
 
-KEYLEN = 50
-VALUELEN = 200
-info_dt = numpy.dtype([('key', (bytes, KEYLEN)), ('value', (bytes, VALUELEN))])
-
-
-def check_len(key, value):
-    """
-    Check the lengths of `key` and `value` and raise a ValueError if they
-    are too long. Otherwise, returns the pair (key, value).
-    """
-    if len(key) > KEYLEN:
-        raise ValueError(
-            'An instance of Serializable cannot have '
-            'public attributes longer than %d chars; '
-            '%r has %d chars' % (KEYLEN, key, len(key)))
-    rep = repr(value)
-    if len(rep) > VALUELEN:
-        raise ValueError(
-            'Attribute %r too long: %d > %d' % (key, len(rep), VALUELEN))
-    return key, rep
-
 
 class LiteralAttrs(object):
     """
-    A mixin class to serialize attributes to HDF5. It treats specially
-    dictionaries. It works at a single level of nesting.
+    A class to serialize attributes to HDF5. The goal is to store simple
+    parameters as an HDF5 table in a readable way. The attributes are
+    expected to be short, i.e. the names must be under 50 chars and
+    and the length of their string representation under 200 chars.
+    This is customizable by overriding the class variables KEYLEN
+    and VALUELEN respectively.
+    The implementation treats specially dictionary attributes, by
+    storing them as `attrname.keyname` strings, see the example below:
 
     >>> class Ser(LiteralAttrs):
     ...     def __init__(self, a, b):
@@ -100,16 +85,44 @@ class LiteralAttrs(object):
     ...         self.b = b
     >>> ser = Ser(1, dict(x='xxx', y='yyy'))
     >>> arr, attrs = ser.__toh5__()
-    >>> print arr
-    [('a', '1') ('b.x', "'xxx'") ('b.y', "'yyy'")]
+    >>> for k, v in arr:
+    ...     print('%s=%s' % (k.decode('utf8'), v.decode('utf8')))
+    a=1
+    b.x='xxx'
+    b.y='yyy'
     >>> s = object.__new__(Ser)
     >>> s.__fromh5__(arr, attrs)
     >>> s.a
     1
     >>> s.b['x']
     'xxx'
+
+    The implentation is not recursive, i.e. there will be at most
+    one dot in the serialized names (in the example here `a`, `b.x`, `b.y`).
     """
+    KEYLEN = 50
+    VALUELEN = 200
+
+    def _check_len(self, key, value):
+        """
+        Check the lengths of `key` and `value` and raise a ValueError if they
+        are too long. Otherwise, returns the pair (key, value).
+        """
+        if len(key) > self.KEYLEN:
+            raise ValueError(
+                'An instance of Serializable cannot have '
+                'public attributes longer than %d chars; '
+                '%r has %d chars' % (self.KEYLEN, key, len(key)))
+        rep = repr(value)
+        if len(rep) > self.VALUELEN:
+            raise ValueError(
+                'Attribute %s=%s too long: %d > %d' %
+                (key, rep, len(rep), self.VALUELEN))
+        return key, rep
+
     def __toh5__(self):
+        info_dt = numpy.dtype([('key', (bytes, self.KEYLEN)),
+                               ('value', (bytes, self.VALUELEN))])
         attrnames = sorted(a for a in vars(self) if not a.startswith('_'))
         lst = []
         for attr in attrnames:
@@ -117,17 +130,18 @@ class LiteralAttrs(object):
             if isinstance(value, dict):
                 for k, v in sorted(value.items()):
                     key = '%s.%s' % (attr, k)
-                    lst.append(check_len(key, v))
+                    lst.append(self._check_len(key, v))
             else:
-                lst.append(check_len(attr, value))
+                lst.append(self._check_len(attr, value))
         return numpy.array(lst, info_dt), {}
 
     def __fromh5__(self, array, attrs):
         dd = collections.defaultdict(dict)
         for (name, literal) in array:
+            name = name.decode('utf8')
             if '.' in name:
                 k1, k2 = name.split('.')
-                dd[k1][k2] = ast.literal_eval(literal)
+                dd[k1][k2] = ast.literal_eval(literal.decode('utf8'))
             else:
-                dd[name] = ast.literal_eval(literal)
+                dd[name] = ast.literal_eval(literal.decode('utf8'))
         vars(self).update(dd)
