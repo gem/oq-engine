@@ -21,6 +21,7 @@ import logging
 import collections
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import get_risk_files
 
@@ -37,7 +38,7 @@ RISK_CALCULATORS = [
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 
 
-class OqParam(valid.ParamSet):
+class OqParam(valid.ParamSet, hdf5.LiteralAttrs):
     siteparam = dict(
         vs30measured='reference_vs30_type',
         vs30='reference_vs30_value',
@@ -130,6 +131,22 @@ class OqParam(valid.ParamSet):
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
 
+    @property
+    def risk_files(self):
+        try:
+            return self._risk_files
+        except AttributeError:
+            self._file_type, self._risk_files = get_risk_files(self.inputs)
+            return self._risk_files
+
+    @property
+    def file_type(self):
+        try:
+            return self._file_type
+        except AttributeError:
+            self._file_type, self._risk_files = get_risk_files(self.inputs)
+            return self._file_type
+
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
         self.risk_investigation_time = (
@@ -144,7 +161,7 @@ class OqParam(valid.ParamSet):
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
-        self.file_type, self.risk_files = get_risk_files(self.inputs)
+        self._file_type, self._risk_files = get_risk_files(self.inputs)
         self.risk_imtls = {}  # to be overridden later by get_risk_models
 
         # check the IMTs vs the GSIMs

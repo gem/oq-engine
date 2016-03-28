@@ -39,8 +39,7 @@ def set_ancestors(dstore):
     Set the chain of ancestors of a datastore
     """
     if not dstore.parent:
-        hc_id = ast.literal_eval(
-            dstore.attrs.get('hazard_calculation_id', 'None'))
+        hc_id = dstore['oqparam'].hazard_calculation_id
         if hc_id:
             parent = datastore.read(hc_id)
             dstore.set_parent(parent)

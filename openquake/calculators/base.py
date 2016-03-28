@@ -85,6 +85,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     cost_types = datastore.persistent_attribute('cost_types')
     taxonomies = datastore.persistent_attribute('taxonomies')
     job_info = datastore.persistent_attribute('job_info')
+    oqparam = datastore.persistent_attribute('oqparam')
     performance = datastore.persistent_attribute('performance')
     csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
@@ -103,8 +104,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         Update the current calculation parameters and save oqlite_version
         """
         vars(self.oqparam).update(kw)
-        for name, val in self.oqparam.to_params():
-            self.datastore.attrs[name] = val
+        self.oqparam = self.oqparam
         self.datastore.attrs['oqlite_version'] = repr(__version__)
         self.datastore.hdf5.flush()
 
@@ -241,7 +241,7 @@ def check_time_event(dstore):
     time_event = dstore.attrs.get('time_event')
     time_events = dstore.get_attr('assetcol', 'time_events', ())
     if time_event and ast.literal_eval(time_event) not in time_events:
-        inputs = ast.literal_eval(dstore.attrs['inputs'])
+        inputs = dstore['oqparam'].inputs
         raise ValueError(
             'time_event is %s in %s, but the exposure contains %s' %
             (time_event, inputs['job_ini'], ', '.join(time_events)))

@@ -33,8 +33,7 @@ def export(datastore_key, export_dir='.', calc_id=-1, exports='csv'):
     """
     logging.basicConfig(level=logging.INFO)
     dstore = datastore.read(calc_id)
-    parent_id = ast.literal_eval(
-        dstore.attrs.get('hazard_calculation_id', 'None'))
+    parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
         dstore.set_parent(datastore.read(parent_id))
     dstore.export_dir = export_dir
