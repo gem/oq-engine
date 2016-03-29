@@ -97,7 +97,7 @@ class LiteralAttrs(object):
     >>> s.b['x']
     'xxx'
 
-    The implentation is not recursive, i.e. there will be at most
+    The implementation is not recursive, i.e. there will be at most
     one dot in the serialized names (in the example here `a`, `b.x`, `b.y`).
     """
     KEYLEN = 50
