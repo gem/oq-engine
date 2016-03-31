@@ -152,8 +152,7 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
 
 
 @parallel.litetask
-def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assetcol, taxonomies,
-                     cc, monitor):
+def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assetcol, monitor):
     """
     :param riskinputs:
         a list of :class:`openquake.risklib.riskinput.RiskInput` objects
@@ -186,7 +185,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assetcol, taxonomies,
         result['AVGLOSS'] = square(L, R, zeroN)
 
     agglosses_mon = monitor('aggregate losses', measuremem=False)
-    assets_by_site = assetcol.assets_by_site(taxonomies, cc)
+    assets_by_site = assetcol.assets_by_site()
     for output in riskmodel.gen_outputs(
             riskinputs, rlzs_assoc, monitor, assets_by_site):
         with agglosses_mon:
@@ -324,15 +323,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
-        cc = self.datastore['cost_calculator']
-        try:
-            taxonomies = self.taxonomies.value
-        except AttributeError:
-            taxonomies = self.taxonomies
         return apply_reduce(
             self.core_task.__func__,
             (self.riskinputs, self.riskmodel, self.rlzs_assoc,
-             self.assetcol, taxonomies, cc, self.monitor.new('task')),
+             self.assetcol, self.monitor.new('task')),
             concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg,
             weight=operator.attrgetter('weight'),
             key=operator.attrgetter('trt_id'),

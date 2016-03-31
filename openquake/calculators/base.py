@@ -451,22 +451,21 @@ class HazardCalculator(BaseCalculator):
 
         # save mesh and asset collection
         self.save_mesh()
+        try:
+            cc = self.datastore['cost_calculator']
+        except KeyError:
+            # the cost calculator can be missing: this happens when
+            # there are no cost types in damage calculations. Not saving
+            # the cost calculator is needed to work around yet another
+            # bug of HDF5 in Ubuntu 12.04 that makes it impossible to
+            # store numpy arrays of zero length
+            cc = rm.CostCalculator({}, {}, True, True)  # dummy
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.AssetCollection(
-                self.assets_by_site, oq.time_event,
+                self.assets_by_site, cc, oq.time_event,
                 time_events=sorted(self.exposure.time_events) or '')
         elif hasattr(self, 'assetcol'):
-            try:
-                cc = self.datastore['cost_calculator']
-            except KeyError:
-                # the cost calculator can be missing: this happens when
-                # there are no cost types in damage calculations. Not saving
-                # the cost calculator is needed to work around yet another
-                # bug of HDF5 in Ubuntu 12.04 that makes it impossible to
-                # store numpy arrays of zero length
-                cc = rm.CostCalculator({}, {}, True, True)  # dummy
-            self.assets_by_site = self.assetcol.assets_by_site(
-                self.taxonomies, cc)
+            self.assets_by_site = self.assetcol.assets_by_site()
 
     def save_mesh(self):
         """

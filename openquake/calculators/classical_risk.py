@@ -110,8 +110,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.save_params()
             self.read_exposure()  # define .assets_by_site
             self.load_riskmodel()
+            cc = self.datastore['cost_calculator']
             self.assetcol = riskinput.AssetCollection(
-                self.assets_by_site, self.oqparam.time_event)
+                self.assets_by_site, cc, self.oqparam.time_event)
             self.sitecol, self.assets_by_site = self.assoc_assets_sites(
                 haz_sitecol)
             curves_by_trt_gsim = {(0, 'FromFile'): haz_curves}

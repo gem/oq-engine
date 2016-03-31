@@ -58,8 +58,7 @@ idx:uint32,lon,lat,site_id:uint32,taxonomy:uint32:,number,area,occupants:float64
 0,8.12985001E+01,2.91098003E+01,0,1,3.00000000E+00,1.00000000E+01,1.00000000E+01,1.00000000E+02,2.50000000E+01,1.00000000E+02
 1,8.30822983E+01,2.79006004E+01,1,0,5.00000000E+02,1.00000000E+01,2.00000000E+01,4.00000000E-01,1.00000000E-01,2.00000000E-01
 ''')
-        assetcol = riskinput.AssetCollection(
-            self.assets_by_site, time_event=None)
+        assetcol = riskinput.AssetCollection(self.assets_by_site, None, None)
         numpy.testing.assert_equal(
             assetcol.array, writers.read_composite_array(expected))
 

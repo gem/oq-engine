@@ -38,12 +38,22 @@ by_taxonomy = operator.attrgetter('taxonomy')
 
 
 class AssetCollection(object):
-    def __init__(self, assets_by_site, time_event, time_events=''):
+    def __init__(self, assets_by_site, cost_calculator, time_event,
+                 time_events=''):
+        self.cc = cost_calculator
         self.time_event = time_event
         self.time_events = time_events
-        self.array = build_asset_collection(assets_by_site, time_event)
+        self.build_asset_collection(assets_by_site, time_event)
+        fields = self.array.dtype.names
+        self.loss_types = sorted(f for f in fields
+                                 if not f.startswith(FIELDS))
+        self.deduc = [n for n in fields if n.startswith('deductible~')]
+        self.i_lim = [n for n in fields if n.startswith('insurance_limit~')]
+        self.retro = [n for n in fields if n.startswith('retrofitted~')]
+        self.D, self.I, self.R = (len('deductible~'), len('insurance_limit~'),
+                                  len('retrofitted~'))
 
-    def assets_by_site(self, taxonomies, cc):
+    def assets_by_site(self):
         """
         :param assetcol: the asset collection as a composite array
         :param taxomies: an array of taxonomy strings
@@ -52,36 +62,30 @@ class AssetCollection(object):
         :returns: an array of lists with the assets by each site
         """
         assetcol = self.array
-        fields = assetcol.dtype.names
         site_ids = sorted(set(assetcol['site_id']))
-        loss_types = sorted(f for f in fields if not f.startswith(FIELDS))
-        deduc = [n for n in fields if n.startswith('deductible~')]
-        i_lim = [n for n in fields if n.startswith('insurance_limit~')]
-        retro = [n for n in fields if n.startswith('retrofitted~')]
-        D, I, R = (len('deductible~'), len('insurance_limit~'),
-                   len('retrofitted~'))
         assets_by_site = [[] for sid in site_ids]
         index = dict(zip(site_ids, range(len(site_ids))))
-        for i, a in enumerate(assetcol):
-            sid = a['site_id']
-            values = {lt: a[lt] for lt in loss_types}
-            if 'occupants' in fields:
-                values['occupants_' + str(self.time_event)] = a['occupants']
-            asset = riskmodels.Asset(
-                a['idx'],
-                taxonomies[a['taxonomy']],
-                number=a['number'],
-                location=(a['lon'], a['lat']),
-                values=values,
-                area=a['area'],
-                deductibles={lt[D:]: a[lt] for lt in deduc},
-                insurance_limits={lt[I:]: a[lt] for lt in i_lim},
-                retrofitteds={lt[R:]: a[lt] for lt in retro},
-                calc=cc, ordinal=i)
-            assets_by_site[index[sid]].append(asset)
+        for i, ass in enumerate(assetcol):
+            assets_by_site[index[ass['site_id']]].append(self[i])
         return numpy.array(assets_by_site)
 
     def __getitem__(self, indices):
+        if isinstance(indices, int):  # single asset
+            a = self.array[indices]
+            values = {lt: a[lt] for lt in self.loss_types}
+            if 'occupants' in self.array.dtype.names:
+                values['occupants_' + str(self.time_event)] = a['occupants']
+            return riskmodels.Asset(
+                    a['idx'],
+                    self.taxonomies[a['taxonomy']],
+                    number=a['number'],
+                    location=(a['lon'], a['lat']),
+                    values=values,
+                    area=a['area'],
+                    deductibles={lt[self.D:]: a[lt] for lt in self.deduc},
+                    insurance_limits={lt[self.I:]: a[lt] for lt in self.i_lim},
+                    retrofitteds={lt[self.R:]: a[lt] for lt in self.retro},
+                    calc=self.cc, ordinal=indices)
         new = object.__new__(self.__class__)
         new.time_event = self.time_event
         new.array = self.array[indices]
@@ -93,88 +97,94 @@ class AssetCollection(object):
     def __toh5__(self):
         attrs = {'time_event': self.time_event or 'None',
                  'time_events': self.time_events,
+                 'deduc': self.deduc, 'i_lim': self.i_lim, 'retro': self.retro,
+                 'D': self.D, 'I': self.I, 'R': self.R,
                  'nbytes': self.array.nbytes}
-        return self.array, attrs
+        return dict(assetcol=self.array, taxonomies=self.taxonomies,
+                    cc=self.cc), attrs
 
-    def __fromh5__(self, assetcol, attrs):
+    def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
+        self.array = dic['assetcol']
+        self.taxonomies = dic['taxonomies']
+        self.cc = dic['cc']
+
+    def build_asset_collection(self, assets_by_site, time_event=None):
+        """
+        :param assets_by_site: a list of lists of assets
+        :param time_event: a time event string (or None)
+
+        Set .assetcol and .taxonomies
+        """
+        for assets in assets_by_site:
+            if len(assets):
+                first_asset = assets[0]
+                break
+        else:  # no break
+            raise ValueError('There are no assets!')
+        candidate_loss_types = list(first_asset.values)
+        loss_types = []
+        the_occupants = 'occupants_%s' % time_event
+        for candidate in candidate_loss_types:
+            if candidate.startswith('occupants'):
+                if candidate == the_occupants:
+                    loss_types.append('occupants')
+                # discard occupants for different time periods
+            else:
+                loss_types.append(candidate)
+        deductible_d = first_asset.deductibles or {}
+        limit_d = first_asset.insurance_limits or {}
+        retrofitting_d = first_asset.retrofitteds or {}
+        deductibles = ['deductible~%s' % name for name in deductible_d]
+        limits = ['insurance_limit~%s' % name for name in limit_d]
+        retrofittings = ['retrofitted~%s' % n for n in retrofitting_d]
+        float_fields = loss_types + deductibles + limits + retrofittings
+        taxonomies = set()
+        for assets in assets_by_site:
+            for asset in assets:
+                taxonomies.add(asset.taxonomy)
+        sorted_taxonomies = sorted(taxonomies)
+        asset_dt = numpy.dtype(
+            [('idx', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
+             ('taxonomy', U32), ('number', F32), ('area', F32)] +
+            [(name, float) for name in float_fields])
+        num_assets = sum(len(assets) for assets in assets_by_site)
+        assetcol = numpy.zeros(num_assets, asset_dt)
+        asset_ordinal = 0
+        fields = set(asset_dt.fields)
+        for sid, assets_ in enumerate(assets_by_site):
+            for asset in sorted(assets_, key=operator.attrgetter('id')):
+                asset.ordinal = asset_ordinal
+                record = assetcol[asset_ordinal]
+                asset_ordinal += 1
+                for field in fields:
+                    if field == 'taxonomy':
+                        value = sorted_taxonomies.index(asset.taxonomy)
+                    elif field == 'number':
+                        value = asset.number
+                    elif field == 'area':
+                        value = asset.area
+                    elif field == 'idx':
+                        value = asset.id
+                    elif field == 'site_id':
+                        value = sid
+                    elif field == 'lon':
+                        value = asset.location[0]
+                    elif field == 'lat':
+                        value = asset.location[1]
+                    elif field == 'occupants':
+                        value = asset.values[the_occupants]
+                    else:
+                        try:
+                            name, lt = field.split('~')
+                        except ValueError:  # no ~ in field
+                            name, lt = 'value', field
+                        # the line below retrieve one of `deductibles`,
+                        # `insured_limits` or `retrofitteds` ("s" suffix)
+                        value = getattr(asset, name + 's')[lt]
+                    record[field] = value
         self.array = assetcol
-
-
-def build_asset_collection(assets_by_site, time_event=None):
-    """
-    :param assets_by_site: a list of lists of assets
-    :param time_event: a time event string (or None)
-    :returns: an array with composite dtype
-    """
-    for assets in assets_by_site:
-        if len(assets):
-            first_asset = assets[0]
-            break
-    else:  # no break
-        raise ValueError('There are no assets!')
-    candidate_loss_types = list(first_asset.values)
-    loss_types = []
-    the_occupants = 'occupants_%s' % time_event
-    for candidate in candidate_loss_types:
-        if candidate.startswith('occupants'):
-            if candidate == the_occupants:
-                loss_types.append('occupants')
-            # discard occupants for different time periods
-        else:
-            loss_types.append(candidate)
-    deductible_d = first_asset.deductibles or {}
-    limit_d = first_asset.insurance_limits or {}
-    retrofitting_d = first_asset.retrofitteds or {}
-    deductibles = ['deductible~%s' % name for name in deductible_d]
-    limits = ['insurance_limit~%s' % name for name in limit_d]
-    retrofittings = ['retrofitted~%s' % n for n in retrofitting_d]
-    float_fields = loss_types + deductibles + limits + retrofittings
-    taxonomies = set()
-    for assets in assets_by_site:
-        for asset in assets:
-            taxonomies.add(asset.taxonomy)
-    sorted_taxonomies = sorted(taxonomies)
-    asset_dt = numpy.dtype(
-        [('idx', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
-         ('taxonomy', U32), ('number', F32), ('area', F32)] +
-        [(name, float) for name in float_fields])
-    num_assets = sum(len(assets) for assets in assets_by_site)
-    assetcol = numpy.zeros(num_assets, asset_dt)
-    asset_ordinal = 0
-    fields = set(asset_dt.fields)
-    for sid, assets_ in enumerate(assets_by_site):
-        for asset in sorted(assets_, key=operator.attrgetter('id')):
-            asset.ordinal = asset_ordinal
-            record = assetcol[asset_ordinal]
-            asset_ordinal += 1
-            for field in fields:
-                if field == 'taxonomy':
-                    value = sorted_taxonomies.index(asset.taxonomy)
-                elif field == 'number':
-                    value = asset.number
-                elif field == 'area':
-                    value = asset.area
-                elif field == 'idx':
-                    value = asset.id
-                elif field == 'site_id':
-                    value = sid
-                elif field == 'lon':
-                    value = asset.location[0]
-                elif field == 'lat':
-                    value = asset.location[1]
-                elif field == 'occupants':
-                    value = asset.values[the_occupants]
-                else:
-                    try:
-                        name, lt = field.split('~')
-                    except ValueError:  # no ~ in field
-                        name, lt = 'value', field
-                    # the line below retrieve one of `deductibles`,
-                    # `insured_limits` or `retrofitteds` ("s" suffix)
-                    value = getattr(asset, name + 's')[lt]
-                record[field] = value
-    return assetcol
+        self.taxonomies = numpy.array(sorted_taxonomies, (bytes, 100))
 
 
 class CompositeRiskModel(collections.Mapping):
