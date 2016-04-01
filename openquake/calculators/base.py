@@ -362,7 +362,14 @@ class HazardCalculator(BaseCalculator):
             fname = self.oqparam.inputs['exposure']
             cc = readinput.get_exposure_lazy(fname, all_cost_types)[-1]
             if cc.cost_types:
-                self.datastore['cost_calculator'] = cc
+                self.cc = cc
+            else:
+                # the cost calculator can be missing: this happens when
+                # there are no cost types in damage calculations. Not saving
+                # the cost calculator is needed to work around yet another
+                # bug of HDF5 in Ubuntu 12.04 that makes it impossible to
+                # store numpy arrays of zero length
+                self.cc = rm.CostCalculator({}, {}, True, True)
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
             if len(self.exposure.cost_types):
@@ -450,18 +457,9 @@ class HazardCalculator(BaseCalculator):
 
         # save mesh and asset collection
         self.save_mesh()
-        try:
-            cc = self.datastore['cost_calculator']
-        except KeyError:
-            # the cost calculator can be missing: this happens when
-            # there are no cost types in damage calculations. Not saving
-            # the cost calculator is needed to work around yet another
-            # bug of HDF5 in Ubuntu 12.04 that makes it impossible to
-            # store numpy arrays of zero length
-            cc = rm.CostCalculator({}, {}, True, True)  # dummy
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.AssetCollection(
-                self.assets_by_site, cc, oq.time_event,
+                self.assets_by_site, self.cc, oq.time_event,
                 time_events=sorted(self.exposure.time_events) or '')
         elif hasattr(self, 'assetcol'):
             self.assets_by_site = self.assetcol.gen_assets_by_site()
