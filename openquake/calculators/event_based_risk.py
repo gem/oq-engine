@@ -185,9 +185,8 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assetcol, monitor):
         result['AVGLOSS'] = square(L, R, zeroN)
 
     agglosses_mon = monitor('aggregate losses', measuremem=False)
-    assets_by_site = assetcol.gen_assets_by_site()
     for output in riskmodel.gen_outputs(
-            riskinputs, rlzs_assoc, monitor, assets_by_site):
+            riskinputs, rlzs_assoc, monitor, assetcol):
         with agglosses_mon:
             _aggregate_output(output, riskmodel, agg, idx, result, monitor)
     for (l, r), lst in numpy.ndenumerate(result['AGGLOSS']):

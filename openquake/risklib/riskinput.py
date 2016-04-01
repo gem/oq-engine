@@ -46,6 +46,7 @@ class AssetCollection(object):
         self.time_event = time_event
         self.time_events = time_events
         self.build_asset_collection(assets_by_site, time_event)
+        # set self.array, self.taxonomies, self.sids
         fields = self.array.dtype.names
         self.loss_types = sorted(f for f in fields
                                  if not f.startswith(FIELDS))
@@ -53,13 +54,13 @@ class AssetCollection(object):
         self.i_lim = [n for n in fields if n.startswith('insurance_limit~')]
         self.retro = [n for n in fields if n.startswith('retrofitted~')]
 
-    def gen_assets_by_site(self):
+    def assets_by_site(self):
         """
         :param assetcol: the asset collection as a composite array
         :param taxomies: an array of taxonomy strings
         :param time_event: time event string (or None)
         :param cc: :class:`openquake.risklib.riskmodels.CostCalculator` object
-        :yields: lists with the assets by each site
+        :returns: numpy array of lists with the assets by each site
         """
         assetcol = self.array
         site_ids = sorted(set(assetcol['site_id']))
@@ -68,6 +69,13 @@ class AssetCollection(object):
         for i, ass in enumerate(assetcol):
             assets_by_site[index[ass['site_id']]].append(self[i])
         return numpy.array(assets_by_site)
+
+    def get_assets(self, site_id):
+        assets = []
+        for i, ass in enumerate(self.array):
+            if ass['site_id'] == site_id:
+                assets.append(self[i])
+        return assets
 
     def __getitem__(self, indices):
         if isinstance(indices, int):  # single asset
@@ -387,7 +395,7 @@ class CompositeRiskModel(collections.Mapping):
                 gsims, trunc_level, correl_model, eps[:, eids], eids)
 
     def gen_outputs(self, riskinputs, rlzs_assoc, monitor,
-                    assets_by_site=None):
+                    assetcol=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield the outputs generated as dictionaries
@@ -396,21 +404,23 @@ class CompositeRiskModel(collections.Mapping):
         :param riskinputs: a list of riskinputs with consistent IMT
         :param rlzs_assoc: a RlzsAssoc instance
         :param monitor: a monitor object used to measure the performance
-        :param assets_by_site: not None only for event based risk
+        :param assetcol: not None only for event based risk
         """
         mon_hazard = monitor('getting hazard')
         mon_risk = monitor('computing individual risk')
         for riskinput in riskinputs:
             eids = riskinput.eids
-            assets_by_site = getattr(riskinput, 'assets_by_site',
-                                     assets_by_site)
             with mon_hazard:
                 # get assets, epsilons, hazard
                 hazard_by_site = riskinput.get_hazard(
                     rlzs_assoc, mon_hazard(measuremem=False))
             with mon_risk:
                 # compute the outputs with the appropriate riskmodels
-                for the_assets, hazard in zip(assets_by_site, hazard_by_site):
+                for sid, hazard in enumerate(hazard_by_site):
+                    if assetcol is None:
+                        the_assets = riskinput.assets_by_site[sid]
+                    else:  # event based
+                        the_assets = assetcol.get_assets(sid)
                     asset_dict = groupby(the_assets, by_taxonomy)
                     for taxonomy, assets in asset_dict.items():
                         riskmodel = self[taxonomy]

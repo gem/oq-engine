@@ -462,7 +462,7 @@ class HazardCalculator(BaseCalculator):
                 self.assets_by_site, self.cc, oq.time_event,
                 time_events=sorted(self.exposure.time_events) or '')
         elif hasattr(self, 'assetcol'):
-            self.assets_by_site = self.assetcol.gen_assets_by_site()
+            self.assets_by_site = self.assetcol.assets_by_site()
 
     def save_mesh(self):
         """
