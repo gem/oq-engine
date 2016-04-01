@@ -18,11 +18,11 @@
 
 import os
 import re
-import pydoc
 from openquake.baselib.python3compat import pickle
 import collections
 
 import numpy
+import h5py
 
 from openquake.baselib.hdf5 import File, Hdf5Dataset
 from openquake.baselib.general import CallableDict
@@ -255,7 +255,7 @@ class DataStore(collections.MutableMapping):
         """
         if key is None:
             return os.path.getsize(self.hdf5path)
-        return ByteCounter.get_nbytes(self.hdf5[key])
+        return ByteCounter.get_nbytes(h5py.File.__getitem__(self.hdf5, key))
 
     def get(self, key, default):
         """
@@ -287,7 +287,7 @@ class DataStore(collections.MutableMapping):
         return val
 
     def __setitem__(self, key, value):
-        if isinstance(value, dict):
+        if isinstance(value, dict) or hasattr(value, '__toh5__'):
             val = value
         elif (not isinstance(value, numpy.ndarray) or
                 value.dtype is numpy.dtype(object)):

@@ -38,6 +38,8 @@ by_taxonomy = operator.attrgetter('taxonomy')
 
 
 class AssetCollection(object):
+    D, I, R = len('deductible~'), len('insurance_limit~'), len('retrofitted~')
+
     def __init__(self, assets_by_site, cost_calculator, time_event,
                  time_events=''):
         self.cc = cost_calculator
@@ -50,16 +52,14 @@ class AssetCollection(object):
         self.deduc = [n for n in fields if n.startswith('deductible~')]
         self.i_lim = [n for n in fields if n.startswith('insurance_limit~')]
         self.retro = [n for n in fields if n.startswith('retrofitted~')]
-        self.D, self.I, self.R = (len('deductible~'), len('insurance_limit~'),
-                                  len('retrofitted~'))
 
-    def assets_by_site(self):
+    def gen_assets_by_site(self):
         """
         :param assetcol: the asset collection as a composite array
         :param taxomies: an array of taxonomy strings
         :param time_event: time event string (or None)
         :param cc: :class:`openquake.risklib.riskmodels.CostCalculator` object
-        :returns: an array of lists with the assets by each site
+        :yields: lists with the assets by each site
         """
         assetcol = self.array
         site_ids = sorted(set(assetcol['site_id']))
@@ -97,17 +97,17 @@ class AssetCollection(object):
     def __toh5__(self):
         attrs = {'time_event': self.time_event or 'None',
                  'time_events': self.time_events,
+                 'loss_types': self.loss_types,
                  'deduc': self.deduc, 'i_lim': self.i_lim, 'retro': self.retro,
-                 'D': self.D, 'I': self.I, 'R': self.R,
                  'nbytes': self.array.nbytes}
-        return dict(assetcol=self.array, taxonomies=self.taxonomies,
-                    cc=self.cc), attrs
+        return dict(array=self.array, taxonomies=self.taxonomies,
+                    cost_calculator=self.cc), attrs
 
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
-        self.array = dic['assetcol']
+        self.array = dic['array']
         self.taxonomies = dic['taxonomies']
-        self.cc = dic['cc']
+        self.cc = dic['cost_calculator']
 
     def build_asset_collection(self, assets_by_site, time_event=None):
         """
@@ -405,15 +405,14 @@ class CompositeRiskModel(collections.Mapping):
             eids = riskinput.eids
             assets_by_site = getattr(riskinput, 'assets_by_site',
                                      assets_by_site)
-            asset_dicts = [groupby(assets, by_taxonomy)
-                           for assets in assets_by_site]
             with mon_hazard:
                 # get assets, epsilons, hazard
                 hazard_by_site = riskinput.get_hazard(
                     rlzs_assoc, mon_hazard(measuremem=False))
             with mon_risk:
                 # compute the outputs with the appropriate riskmodels
-                for asset_dict, hazard in zip(asset_dicts, hazard_by_site):
+                for the_assets, hazard in zip(assets_by_site, hazard_by_site):
+                    asset_dict = groupby(the_assets, by_taxonomy)
                     for taxonomy, assets in asset_dict.items():
                         riskmodel = self[taxonomy]
                         epsilons = [riskinput.eps[asset.ordinal]

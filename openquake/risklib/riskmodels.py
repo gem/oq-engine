@@ -91,10 +91,9 @@ class CostCalculator(object):
         return array, attrs
 
     def __fromh5__(self, array, attrs):
-        loss_types = attrs.pop('loss_types')
         vars(self).update(attrs)
-        self.cost_types = dict(zip(loss_types, array['cost_type']))
-        self.area_types = dict(zip(loss_types, array['area_type']))
+        self.cost_types = dict(zip(self.loss_types, array['cost_type']))
+        self.area_types = dict(zip(self.loss_types, array['area_type']))
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, vars(self))
