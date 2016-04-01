@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import mock
-import cPickle
+import pickle
 import unittest
 import numpy
 from openquake.baselib.general import writetmp
@@ -63,7 +63,7 @@ idx:uint32,lon,lat,site_id:uint32,taxonomy:uint32:,number,area,occupants:float64
             assetcol.array, writers.read_composite_array(expected))
 
         # pickleability
-        cPickle.loads(cPickle.dumps(assetcol))
+        pickle.loads(pickle.dumps(assetcol))
 
     def test_get_hazard(self):
         self.assertEqual(

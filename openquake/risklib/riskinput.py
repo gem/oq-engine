@@ -105,8 +105,8 @@ class AssetCollection(object):
 
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
-        self.array = dic['array']
-        self.taxonomies = dic['taxonomies']
+        self.array = dic['array'].value
+        self.taxonomies = dic['taxonomies'].value
         self.cc = dic['cost_calculator']
 
     def build_asset_collection(self, assets_by_site, time_event=None):
