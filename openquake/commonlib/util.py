@@ -122,11 +122,11 @@ def get_assets(dstore):
     :param dstore: a datastore with keys 'assetcol'
     :returns: an ordered array of records (asset_ref, taxonomy, lon, lat)
     """
-    assetcol = dstore['assetcol'].array
+    assetcol = dstore['assetcol']
     asset_refs = dstore['asset_refs'].value
-    taxo = dstore['taxonomies'].value
+    taxo = assetcol.taxonomies
     asset_data = [(asset_refs[a['idx']], taxo[a['taxonomy']],
-                   a['lon'], a['lat']) for a in assetcol]
+                   a['lon'], a['lat']) for a in assetcol.array]
     return numpy.array(asset_data, asset_dt)
 
 

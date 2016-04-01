@@ -83,12 +83,15 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     realizations = datastore.persistent_attribute('realizations')
     assetcol = datastore.persistent_attribute('assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
-    taxonomies = datastore.persistent_attribute('taxonomies')
     job_info = datastore.persistent_attribute('job_info')
     performance = datastore.persistent_attribute('performance')
     csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
+
+    @property
+    def taxonomies(self):
+        return self.datastore['assetcol/taxonomies'].value
 
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
         self.monitor = monitor
@@ -364,8 +367,6 @@ class HazardCalculator(BaseCalculator):
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
             if len(self.exposure.cost_types):
                 self.cost_types = self.exposure.cost_types
-            self.taxonomies = numpy.array(
-                sorted(self.exposure.taxonomies), '|S100')
 
     def load_riskmodel(self):
         """
@@ -463,7 +464,7 @@ class HazardCalculator(BaseCalculator):
                 self.assets_by_site, cc, oq.time_event,
                 time_events=sorted(self.exposure.time_events) or '')
         elif hasattr(self, 'assetcol'):
-            self.assets_by_site = list(self.assetcol.gen_assets_by_site())
+            self.assets_by_site = self.assetcol.gen_assets_by_site()
 
     def save_mesh(self):
         """
@@ -543,10 +544,6 @@ class RiskCalculator(HazardCalculator):
             a list of RiskInputs objects, sorted by IMT.
         """
         self.check_poes(hazards_by_key)
-
-        # add asset.ordinal as side effect
-        riskinput.build_asset_collection(
-            self.assets_by_site, self.oqparam.time_event)
         imtls = self.oqparam.imtls
         if not set(self.oqparam.risk_imtls) & set(imtls):
             rsk = ', '.join(self.oqparam.risk_imtls)

@@ -290,7 +290,7 @@ def export_damage_taxon(ekey, dstore):
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
     rlzs = dstore['rlzs_assoc'].realizations
     dmg_by_taxon = dstore['dmg_by_taxon']  # shape (T, L, R)
-    taxonomies = dstore['taxonomies']
+    taxonomies = dstore['assetcol/taxonomies']
     dmg_states = [DmgState(s, i) for i, s in enumerate(damage_states)]
     D = len(dmg_states)
     T, R = dmg_by_taxon.shape
@@ -363,7 +363,7 @@ def export_rlzs_by_asset_csv(ekey, dstore):
 
 @export.add(('csq_by_taxon', 'csv'))
 def export_csq_by_taxon_csv(ekey, dstore):
-    taxonomies = dstore['taxonomies'].value
+    taxonomies = dstore['assetcol/taxonomies'].value
     rlzs = dstore['rlzs_assoc'].realizations
     R = len(rlzs)
     value = dstore[ekey[0]].value  # matrix T x R
@@ -440,7 +440,7 @@ def export_dmg_by_asset_csv(ekey, dstore):
 @export.add(('dmg_by_taxon', 'csv'))
 def export_dmg_by_taxon_csv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
-    taxonomies = dstore['taxonomies'].value
+    taxonomies = dstore['assetcol/taxonomies'].value
     rlzs = dstore['rlzs_assoc'].realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
