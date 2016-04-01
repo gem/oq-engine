@@ -187,7 +187,7 @@ class File(h5py.File):
         h5obj = super(File, self).__getitem__(path)
         h5attrs = h5obj.attrs
         if '__pyclass__' in h5attrs:
-            cls = pydoc.locate(h5attrs.pop('__pyclass__'))
+            cls = pydoc.locate(h5attrs['__pyclass__'])
             obj = cls.__new__(cls)
             if not hasattr(h5obj, 'shape'):  # is group
                 h5obj = {k: self['%s/%s' % (path, k)]
