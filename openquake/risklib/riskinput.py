@@ -66,12 +66,9 @@ class AssetCollection(object):
             assets_by_site[index[ass['site_id']]].append(self[i])
         return numpy.array(assets_by_site)
 
-    def get_assets(self, site_id):
-        assets = []
-        for i, ass in enumerate(self.array):
-            if ass['site_id'] == site_id:
-                assets.append(self[i])
-        return assets
+    def __iter__(self):
+        for i in range(len(self)):
+            yield self[i]
 
     def __getitem__(self, indices):
         if isinstance(indices, int):  # single asset
@@ -405,33 +402,34 @@ class CompositeRiskModel(collections.Mapping):
         mon_hazard = monitor('getting hazard')
         mon_risk = monitor('computing individual risk')
         for riskinput in riskinputs:
-            eids = riskinput.eids
             with mon_hazard:
                 # get assets, epsilons, hazard
                 hazard_by_site = riskinput.get_hazard(
                     rlzs_assoc, mon_hazard(measuremem=False))
             with mon_risk:
                 # compute the outputs with the appropriate riskmodels
-                for sid, hazard in enumerate(hazard_by_site):
-                    if assetcol is None:
-                        the_assets = riskinput.assets_by_site[sid]
-                    else:  # event based
-                        the_assets = assetcol.get_assets(sid)
-                    asset_dict = groupby(the_assets, by_taxonomy)
-                    for taxonomy, assets in asset_dict.items():
-                        riskmodel = self[taxonomy]
-                        epsilons = [riskinput.eps[asset.ordinal]
-                                    for asset in assets]
-                        for imt, taxonomies in riskinput.imt_taxonomies:
-                            if taxonomy in taxonomies:
-                                if eids is None:
+                if assetcol is None:  # distribution by asset
+                    for assets, hazard in zip(
+                            riskinput.assets_by_site, hazard_by_site):
+                        the_assets = groupby(assets, by_taxonomy)
+                        for taxonomy, assets in the_assets.items():
+                            riskmodel = self[taxonomy]
+                            epsilons = [riskinput.eps[asset.ordinal]
+                                        for asset in assets]
+                            for imt, taxonomies in riskinput.imt_taxonomies:
+                                if taxonomy in taxonomies:
                                     yield riskmodel.out_by_lr(
                                         imt, assets, hazard[imt], epsilons)
-                                else:  # event based
-                                    for asset, eps in zip(assets, epsilons):
-                                        yield riskmodel.out_by_lr(
-                                            imt, [asset], hazard[imt], [eps],
-                                            eids)
+                else:  # event based, distribution by rupture
+                    for i, sid in enumerate(assetcol.array['site_id']):
+                        asset = assetcol[i]
+                        hazard = hazard_by_site[sid]
+                        for imt, taxonomies in riskinput.imt_taxonomies:
+                            if asset.taxonomy in taxonomies:
+                                yield self[asset.taxonomy].out_by_lr(
+                                    imt, [asset], hazard[imt],
+                                    [riskinput.eps[asset.ordinal]],
+                                    riskinput.eids)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
