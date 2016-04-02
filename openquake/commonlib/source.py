@@ -902,7 +902,7 @@ class SourceManager(object):
     """
     def __init__(self, csm, taskfunc, maximum_distance,
                  dstore, monitor, random_seed=None,
-                 filter_sources=True, num_tiles=1):
+                 filter_sources=True, num_tiles=1, reduce_weight=.25):
         self.tm = parallel.TaskManager(taskfunc)
         self.csm = csm
         self.maximum_distance = maximum_distance
@@ -911,6 +911,7 @@ class SourceManager(object):
         self.monitor = monitor
         self.filter_sources = filter_sources
         self.num_tiles = num_tiles
+        self.reduce_weight = reduce_weight
         self.split_map = {}  # trt_model_id, source_id -> split sources
         self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
@@ -924,8 +925,10 @@ class SourceManager(object):
                 nr = src.num_ruptures
                 self.src_serial[src.id] = rup_serial[start:start + nr]
                 start += nr
+        self.maxweight = self.csm.maxweight * self.num_tiles * (
+            self.reduce_weight if self.filter_sources else 1)
         logging.info('Instantiated SourceManager with maxweight=%.1f',
-                     self.csm.maxweight)
+                     self.maxweight)
 
     def get_sources(self, kind, sitecol):
         """
@@ -1004,11 +1007,6 @@ class SourceManager(object):
         Only the sources affecting the sitecol as considered. Also,
         set the .seed attribute of each source.
         """
-        if self.filter_sources and self.num_tiles > 1:
-            # reduce the maxweight by 4 to produce more tasks
-            maxweight = math.ceil(self.csm.maxweight * self.num_tiles / 4)
-        else:
-            maxweight = self.csm.maxweight
         rlzs_assoc = self.csm.info.get_rlzs_assoc()
         for kind in ('light', 'heavy'):
             sources = list(self.get_sources(kind, sitecol))
@@ -1020,7 +1018,7 @@ class SourceManager(object):
                 self.csm.filtered_weight += src.weight
             nblocks = 0
             for block in block_splitter(
-                    sources, maxweight,
+                    sources, self.maxweight,
                     operator.attrgetter('weight'),
                     operator.attrgetter('trt_model_id')):
                 sent = self.tm.submit(block, sitecol, siteidx,
