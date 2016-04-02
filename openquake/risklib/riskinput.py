@@ -45,8 +45,8 @@ class AssetCollection(object):
         self.cc = cost_calculator
         self.time_event = time_event
         self.time_events = time_events
-        self.build_asset_collection(assets_by_site, time_event)
-        # set self.array, self.taxonomies, self.sids
+        self.array, self.taxonomies = self.build_asset_collection(
+            assets_by_site, time_event)
         fields = self.array.dtype.names
         self.loss_types = sorted(f for f in fields
                                  if not f.startswith(FIELDS))
@@ -56,10 +56,6 @@ class AssetCollection(object):
 
     def assets_by_site(self):
         """
-        :param assetcol: the asset collection as a composite array
-        :param taxomies: an array of taxonomy strings
-        :param time_event: time event string (or None)
-        :param cc: :class:`openquake.risklib.riskmodels.CostCalculator` object
         :returns: numpy array of lists with the assets by each site
         """
         assetcol = self.array
@@ -97,6 +93,7 @@ class AssetCollection(object):
         new = object.__new__(self.__class__)
         new.time_event = self.time_event
         new.array = self.array[indices]
+        new.taxonomies = self.taxonomies
         return new
 
     def __len__(self):
@@ -117,12 +114,12 @@ class AssetCollection(object):
         self.taxonomies = dic['taxonomies'].value
         self.cc = dic['cost_calculator']
 
-    def build_asset_collection(self, assets_by_site, time_event=None):
+    @staticmethod
+    def build_asset_collection(assets_by_site, time_event=None):
         """
         :param assets_by_site: a list of lists of assets
         :param time_event: a time event string (or None)
-
-        Set .assetcol and .taxonomies
+        :returns: two arrays `assetcol` and `taxonomies`
         """
         for assets in assets_by_site:
             if len(assets):
@@ -191,8 +188,7 @@ class AssetCollection(object):
                         # `insured_limits` or `retrofitteds` ("s" suffix)
                         value = getattr(asset, name + 's')[lt]
                     record[field] = value
-        self.array = assetcol
-        self.taxonomies = numpy.array(sorted_taxonomies, (bytes, 100))
+        return assetcol, numpy.array(sorted_taxonomies, (bytes, 100))
 
 
 class CompositeRiskModel(collections.Mapping):
@@ -452,7 +448,6 @@ class RiskInput(object):
     :param hazard_by_site: array of hazards, one per site
     :param assets_by_site: array of assets, one per site
     :param eps_dict: dictionary of epsilons
-    :param cc: CostCalculator
     """
     def __init__(self, imt_taxonomies, hazard_by_site, assets_by_site,
                  eps_dict):
