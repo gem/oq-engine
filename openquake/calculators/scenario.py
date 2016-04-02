@@ -15,15 +15,12 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-import random
-
 import numpy
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput
-from openquake.calculators import base, calc
+from openquake.calculators import base
 
 
 @base.calculators.add('scenario')
@@ -58,23 +55,21 @@ class ScenarioCalculator(base.HazardCalculator):
         self.computer = GmfComputer(
             rupture, self.sitecol, self.oqparam.imtls, self.gsims,
             trunc_level, correl_model)
-        rnd = random.Random(self.oqparam.random_seed)
-        self.etag_seed_pairs = [(etag, rnd.randint(0, calc.MAX_INT))
-                               for etag in self.etags]
 
     def execute(self):
         """
         Compute the GMFs and return a dictionary gmf_by_etag
         """
         with self.monitor('computing gmfs', autoflush=True):
-            etags, seeds = zip(*self.etag_seed_pairs)
-            return self.computer.compute(seeds)
+            n_gmfs = self.oqparam.number_of_ground_motion_fields
+            return self.computer.calcgmfs(n_gmfs, self.oqparam.random_seed)
 
     def post_execute(self, gmfa):
         """
         :param gmfa: an array of shape (E, N)
         """
         with self.monitor('saving gmfs', autoflush=True):
+            # there is a single rupture in gmf_data/1
             self.datastore['gmf_data/1'] = gmfa
             self.datastore['gmf_data'].attrs['nbytes'] = gmfa.nbytes
             self.datastore['sid_data/1'] = self.sitecol.indices

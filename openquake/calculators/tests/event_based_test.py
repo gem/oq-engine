@@ -81,7 +81,6 @@ class EventBasedTestCase(CalculatorTestCase):
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = DataStore(self.calc.datastore.calc_id)
-            # read an array of shape 37672 ruptures x 2 sites
             gmfa = dstore['gmf_data/1']['BooreAtkinson2008']['PGA']
             dstore.close()
             gmvs_site_1 = gmfa[:, 0]

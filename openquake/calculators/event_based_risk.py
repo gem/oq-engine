@@ -262,9 +262,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
             self.sitecol.complete, all_ruptures,
-            self.rlzs_assoc.gsims_by_trt_id,
-            oq.truncation_level, correl_model, oq.random_seed, eps,
-            oq.concurrent_tasks or 1))
+            self.rlzs_assoc.gsims_by_trt_id, oq.truncation_level, correl_model,
+            eps, oq.concurrent_tasks or 1))
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
         # preparing empty datasets

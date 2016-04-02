@@ -112,7 +112,7 @@ def _export_ses_csv(dest, ses_coll):
     rows = []
     for ses in ses_coll:
         for rup in ses:
-            rows.append([rup.etag, rup.seed])
+            rows.append([rup.etag])
     write_csv(dest, sorted(rows, key=operator.itemgetter(0)))
 
 
@@ -594,8 +594,8 @@ def _get_gmfs(dstore, etag):
             for rlz in rlzs_assoc[trt_id, gsim]]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
     [gst] = event_based.make_gmfs(
-        [rup], sitecol, oq.imtls, gsims, oq.truncation_level,
-        correl_model, oq.random_seed).values()
+        [rup], sitecol, oq.imtls, gsims, oq.truncation_level, correl_model
+    ).values()
     for imt in oq.imtls:
         gmfa = numpy.zeros(N, gmf_dt)
         for gsim in map(str, gsims):
