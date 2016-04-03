@@ -902,7 +902,7 @@ class SourceManager(object):
     """
     def __init__(self, csm, taskfunc, maximum_distance,
                  dstore, monitor, random_seed=None,
-                 filter_sources=True, num_tiles=1, reduce_weight=.25):
+                 filter_sources=True, num_tiles=1, reduce_weight=.5):
         self.tm = parallel.TaskManager(taskfunc)
         self.csm = csm
         self.maximum_distance = maximum_distance

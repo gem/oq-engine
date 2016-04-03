@@ -314,6 +314,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         Run the event_based_risk calculator and aggregate the results
         """
+        parallel.TaskManager.restart()
         self.saved = collections.Counter()  # nbytes per HDF5 key
         self.ass_bytes = 0
         self.agg_bytes = 0
