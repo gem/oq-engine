@@ -292,9 +292,11 @@ def main():
 
     # hazard or hazard+risk
     hc_id = args.hazard_calculation_id
-    if hc_id and int(hc_id) < 0:
-        # make it possible commands like `oq-engine --run job_risk.ini --hc -1`
-        hc_id = dbcmd('get_hc_id', int(hc_id))
+    if hc_id:
+        hc_id = int(hc_id)
+        if hc_id < 0:
+            # make it possible to run `oq-engine --run job_risk.ini --hc -1`
+            hc_id = dbcmd('get_hc_id', hc_id)
     if args.run:
         job_inis = map(expanduser, args.run.split(','))
         if len(job_inis) not in (1, 2):
