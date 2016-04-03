@@ -405,7 +405,7 @@ def view_exposure_info(token, dstore):
     """
     Display info about the exposure model
     """
-    assetcol = dstore['assetcol'][:]
+    assetcol = dstore['assetcol/array'][:]
     taxonomies = dstore['assetcol/taxonomies'][:]
     counts = numpy.zeros(len(taxonomies), numpy.uint32)
     for ass in assetcol:
