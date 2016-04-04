@@ -151,10 +151,10 @@ a3        RM       8.574770E+01 2.790150E+01 2.281648E+02 0.000000E+00
         [f1, f2] = export(('gmfs:0', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/gmf-col=05'
-            '~ses=0001~src=AS_TRAS334~rup=612343-01-PGA.csv', f1)
+            '~ses=0001~src=AS_TRAS334~rup=612021-01-PGA.csv', f1)
         self.assertEqualFiles(
             'expected/gmf-col=05'
-            '~ses=0001~src=AS_TRAS334~rup=612343-01-SA(0.5).csv', f2)
+            '~ses=0001~src=AS_TRAS334~rup=612021-01-SA(0.5).csv', f2)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4a(self):
