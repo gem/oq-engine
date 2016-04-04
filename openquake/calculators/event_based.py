@@ -18,7 +18,6 @@
 
 import time
 import os.path
-import random
 import operator
 import logging
 import collections
@@ -37,7 +36,7 @@ from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.util import max_rel_diff_index, Rupture
 
 from openquake.calculators import base, views
-from openquake.calculators.calc import MAX_INT, gmvs_to_haz_curve
+from openquake.calculators.calc import gmvs_to_haz_curve
 from openquake.calculators.classical import ClassicalCalculator
 
 # ######################## rupture calculator ############################ #
@@ -161,12 +160,11 @@ class EBRupture(object):
     """
     An event based rupture. It is a wrapper over a hazardlib rupture
     object, containing an array of site indices affected by the rupture,
-    as well as the tags and the seeds of the corresponding seismic events.
+    as well as the tags of the corresponding seismic events.
     """
-    def __init__(self, rupture, indices, seeds, etags, trt_id, serial):
+    def __init__(self, rupture, indices, etags, trt_id, serial):
         self.rupture = rupture
         self.indices = indices
-        self.seeds = numpy.array(seeds)
         self.etags = numpy.array(etags)
         self.trt_id = trt_id
         self.serial = serial
@@ -176,7 +174,7 @@ class EBRupture(object):
         """
         How many times the underlying rupture occurs.
         """
-        return len(self.seeds)
+        return len(self.etags)
 
     def export(self, mesh):
         """
@@ -184,10 +182,9 @@ class EBRupture(object):
         attributes set, suitable for export in XML format.
         """
         rupture = self.rupture
-        for seed, etag in zip(self.seeds, self.etags):
+        for etag in self.etags:
             new = Rupture(etag, self.indices)
             new.mesh = mesh[self.indices]
-            new.seed = seed
             new.etag = etag
             new.rupture = new
             new.is_from_fault_source = iffs = isinstance(
@@ -341,19 +338,15 @@ def build_eb_ruptures(
 
         # creating EBRuptures
         serial = rup.seed - random_seed + 1
-        rnd = random.Random(rup.seed)
         etags = []
-        seeds = []
         for (col_idx, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
                 etag = 'col=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
                     col_idx, ses_idx, src.source_id, serial, occ_no)
-                seeds.append(rnd.randint(0, MAX_INT))
                 etags.append(etag)
         if etags:
-            yield EBRupture(
-                rup, indices, seeds, etags, src.trt_model_id, serial)
+            yield EBRupture(rup, indices, etags, src.trt_model_id, serial)
 
 
 @base.calculators.add('event_based_rupture')
@@ -418,28 +411,29 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         """
         logging.info('Generated %d EBRuptures',
                      sum(len(v) for v in result.values()))
-        nc = self.rlzs_assoc.csm_info.num_collections
-        sescollection = numpy.array([{} for trt_id in range(nc)])
-        etags = []
-        for trt_id in result:
-            for ebr in result[trt_id]:
-                sescollection[trt_id][ebr.serial] = ebr
-                etags.extend(ebr.etags)
-        etags.sort()
-        etag2eid = dict(zip(etags, range(len(etags))))
         with self.monitor('saving ruptures', autoflush=True):
+            nc = self.rlzs_assoc.csm_info.num_collections
+            sescollection = [[] for trt_id in range(nc)]
+            etags = []
+            for trt_id in result:
+                for ebr in result[trt_id]:
+                    sescollection[trt_id].append(ebr)
+                    etags.extend(ebr.etags)
+            etags.sort()
+            etag2eid = dict(zip(etags, range(len(etags))))
             self.etags = numpy.array(etags, (bytes, 100))
             self.datastore.set_attrs(
                 'etags',
                 num_ruptures=numpy.array([len(sc) for sc in sescollection]))
             for i, sescol in enumerate(sescollection):
-                for ebr in sescol.values():
+                for ebr in sescol:
                     ebr.eids = [etag2eid[etag] for etag in ebr.etags]
                 nr = len(sescol)
                 logging.info('Saving SES collection #%d with %d ruptures',
                              i, nr)
                 key = 'sescollection/trt=%02d' % i
-                self.datastore[key] = sescol
+                self.datastore[key] = sorted(
+                    sescol, key=operator.attrgetter('serial'))
                 self.datastore.set_attrs(key, num_ruptures=nr, trt_model_id=i)
         for dset in self.rup_data.values():
             numsites = dset.dset['numsites']
@@ -457,7 +451,7 @@ GmfaSidsEtags = collections.namedtuple('GmfaSidsEtags', 'gmfa sids etags')
 
 
 def make_gmfs(eb_ruptures, sitecol, imts, gsims,
-              trunc_level, correl_model, random_seed, monitor=Monitor()):
+              trunc_level, correl_model, monitor=Monitor()):
     """
     :param eb_ruptures: a list of EBRuptures
     :param sitecol: a SiteCollection instance
@@ -465,7 +459,6 @@ def make_gmfs(eb_ruptures, sitecol, imts, gsims,
     :param gsims: an order list of GSIM instance
     :param trunc_level: truncation level
     :param correl_model: correlation model instance
-    :param random_seed: random_seed parameter
     :param monitor: a monitor instance
     :returns: a dictionary serial -> GmfaSidsEtags
     """
@@ -480,7 +473,7 @@ def make_gmfs(eb_ruptures, sitecol, imts, gsims,
             computer = calc.gmf.GmfComputer(
                 ebr.rupture, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
-            gmfa = computer.compute(ebr.seeds)
+            gmfa = computer.calcgmfs(ebr.multiplicity, ebr.rupture.seed)
             dic[ebr.serial] = GmfaSidsEtags(gmfa, r_sites.indices, ebr.etags)
     return dic
 
@@ -509,8 +502,8 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, rlzs_assoc, monitor):
     correl_model = readinput.get_correl_model(oq)
     tot_sites = len(sitecol.complete)
     gmfa_sids_etags = make_gmfs(
-        eb_ruptures, sitecol, oq.imtls, gsims,
-        trunc_level, correl_model, oq.random_seed, monitor)
+        eb_ruptures, sitecol, oq.imtls, gsims, trunc_level, correl_model,
+        monitor)
     result = {trt_id: gmfa_sids_etags if oq.ground_motion_fields else None}
     if oq.hazard_curves_from_gmfs:
         with monitor('bulding hazard curves', measuremem=False):
@@ -574,9 +567,7 @@ class EventBasedCalculator(ClassicalCalculator):
         self.sesruptures = []
         for trt_id in range(self.rlzs_assoc.csm_info.num_collections):
             sescol = self.datastore['sescollection/trt=%02d' % trt_id]
-            for etag, sesrup in sorted(sescol.items()):
-                sesrup = sescol[etag]
-                self.sesruptures.append(sesrup)
+            self.sesruptures.extend(sescol)
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """

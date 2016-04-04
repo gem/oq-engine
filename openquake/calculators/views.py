@@ -310,6 +310,17 @@ def avglosses_data_transfer(token, dstore):
         '8 bytes x %d tasks = %s' % (N, R, L, I, ct, humansize(size_bytes)))
 
 
+@view.add('ebr_data_transfer')
+def ebr_data_transfer(token, dstore):
+    """
+    Display the data transferred in an event based risk calculation
+    """
+    attrs = dstore['agg_loss_table'].attrs
+    sent = humansize(attrs['sent'])
+    received = humansize(attrs['tot_received'])
+    return 'Event Based Risk: sent %s, received %s' % (sent, received)
+
+
 # for scenario_risk
 @view.add('totlosses')
 def view_totlosses(token, dstore):
@@ -358,8 +369,8 @@ def sum_table(records):
 @view.add('mean_avg_losses')
 def view_mean_avg_losses(token, dstore):
     try:
-        array = dstore['avg_losses-stats']  # shape (S, N)
-        data = array[0, :]
+        array = dstore['avg_losses-stats']  # shape (N, S)
+        data = array[:, 0]
     except KeyError:
         array = dstore['avg_losses-rlzs']  # shape (N, R)
         data = array[:, 0]
