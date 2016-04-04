@@ -411,16 +411,16 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         """
         logging.info('Generated %d EBRuptures',
                      sum(len(v) for v in result.values()))
-        nc = self.rlzs_assoc.csm_info.num_collections
-        sescollection = [[] for trt_id in range(nc)]
-        etags = []
-        for trt_id in result:
-            for ebr in result[trt_id]:
-                sescollection[trt_id].append(ebr)
-                etags.extend(ebr.etags)
-        etags.sort()
-        etag2eid = dict(zip(etags, range(len(etags))))
         with self.monitor('saving ruptures', autoflush=True):
+            nc = self.rlzs_assoc.csm_info.num_collections
+            sescollection = [[] for trt_id in range(nc)]
+            etags = []
+            for trt_id in result:
+                for ebr in result[trt_id]:
+                    sescollection[trt_id].append(ebr)
+                    etags.extend(ebr.etags)
+            etags.sort()
+            etag2eid = dict(zip(etags, range(len(etags))))
             self.etags = numpy.array(etags, (bytes, 100))
             self.datastore.set_attrs(
                 'etags',
@@ -432,7 +432,8 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                 logging.info('Saving SES collection #%d with %d ruptures',
                              i, nr)
                 key = 'sescollection/trt=%02d' % i
-                self.datastore[key] = sescol
+                self.datastore[key] = sorted(
+                    sescol, key=operator.attrgetter('serial'))
                 self.datastore.set_attrs(key, num_ruptures=nr, trt_model_id=i)
         for dset in self.rup_data.values():
             numsites = dset.dset['numsites']
