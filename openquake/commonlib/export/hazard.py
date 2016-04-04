@@ -576,6 +576,15 @@ def export_gmf_txt(key, dest, sitecol, ruptures, rlz, investigation_time):
     return {key: [dest]}
 
 
+def get_rup_idx(rupcol, etag):
+    # extract the rupture and the index of the given etag from a collection
+    for rup in rupcol:
+        for etag_idx, tag in enumerate(rup.etags):
+            if tag == etag:
+                return rup, etag_idx
+    raise ValueError('event tag %s not found in the rupture collection')
+
+
 def _get_gmfs(dstore, etag):
     oq = OqParam.from_(dstore.attrs)
     rlzs_assoc = dstore['rlzs_assoc']
@@ -584,10 +593,7 @@ def _get_gmfs(dstore, etag):
     col_id, serial = util.get_col_serial(etag)
     trt_id = rlzs_assoc.csm_info.get_trt_id(col_id)
     coll = dstore['sescollection/trt=%02d' % trt_id]
-    for rup in coll:
-        for etag_idx, tag in enumerate(rup.etags):
-            if tag == etag:
-                break
+    rup, idx = get_rup_idx(coll, etag)
     correl_model = readinput.get_correl_model(oq)
     gsims = rlzs_assoc.gsims_by_trt_id[rup.trt_id]
     rlzs = [rlz for gsim in map(str, gsims)
@@ -599,7 +605,7 @@ def _get_gmfs(dstore, etag):
     for imt in oq.imtls:
         gmfa = numpy.zeros(N, gmf_dt)
         for gsim in map(str, gsims):
-            data = gst.gmfa[gsim][imt][etag_idx]
+            data = gst.gmfa[gsim][imt][idx]
             for rlz in rlzs_assoc[trt_id, gsim]:
                 gmfa['%03d' % rlz.ordinal][rup.indices] = data
         yield gmfa, imt
