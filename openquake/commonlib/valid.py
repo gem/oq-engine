@@ -187,26 +187,31 @@ name_with_dashes = Regex(r'^[a-zA-Z_][\w\-]*$')
 
 class SimpleId(object):
     """
-    Check the source id; the only accepted chars are `a-zA-Z0-9_-`
+    Check if the given value is a valid ID.
+
+    :param length: maximum length of the ID
+    :param regex: accepted characters
     """
-    def __init__(self, length):
+    def __init__(self, length, regex=r'^[\w_\-]+$'):
         self.length = length
-        self.__name__ = 'SimpleId(%d)' % length
+        self.regex = regex
+        self.__name__ = 'SimpleId(%d, %s)' % (length, regex)
 
     def __call__(self, value):
         if len(value) > self.length:
             raise ValueError('The ID %r is longer than %d character' %
                              (value, self.length))
-        if re.match(r'^[\w_\-]+$', value):
+        if re.match(self.regex, value):
             return value
         raise ValueError(
             'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-' % value)
 
 MAX_ID_LENGTH = 100
-ASSET_ID_LENGTH = 20
+ASSET_ID_LENGTH = 100
 
 simple_id = SimpleId(MAX_ID_LENGTH)
 asset_id = SimpleId(ASSET_ID_LENGTH)
+source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\.\|\-_]+$')
 
 
 class FloatRange(object):
