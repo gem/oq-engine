@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Showing the `calc_id` in Monitor instances string representation
   * Added a LiteralAttrs class to serialize literal attributes on HDF5
   * Added to the Monitor the ability to send commands
 
