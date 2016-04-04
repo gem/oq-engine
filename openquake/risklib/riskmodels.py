@@ -80,13 +80,12 @@ class CostCalculator(object):
         raise RuntimeError('Unable to compute cost')
 
     def __toh5__(self):
+        loss_types = sorted(self.cost_types)
         dt = numpy.dtype([('cost_type', (bytes, 10)),
                           ('area_type', (bytes, 10))])
-        loss_types = sorted(self.cost_types)
         array = numpy.zeros(len(loss_types), dt)
-        # hack for Ubuntu 12.04 that cannot store empty lists
-        array['cost_type'] = [self.cost_types[lt] for lt in loss_types] or ''
-        array['area_type'] = [self.area_types[lt] for lt in loss_types] or ''
+        array['cost_type'] = [self.cost_types[lt] for lt in loss_types]
+        array['area_type'] = [self.area_types[lt] for lt in loss_types]
         attrs = dict(deduct_abs=self.deduct_abs, limit_abs=self.limit_abs,
                      loss_types=loss_types)
         return array, attrs
