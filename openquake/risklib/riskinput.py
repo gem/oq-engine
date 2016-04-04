@@ -50,9 +50,12 @@ class AssetCollection(object):
         fields = self.array.dtype.names
         self.loss_types = sorted(f for f in fields
                                  if not f.startswith(FIELDS))
-        self.deduc = [n for n in fields if n.startswith('deductible~')]
-        self.i_lim = [n for n in fields if n.startswith('insurance_limit~')]
-        self.retro = [n for n in fields if n.startswith('retrofitted~')]
+        # hack: in Ubuntu 12.04 we cannot store empty lists while empty
+        # strings are fine, so we do that
+        self.deduc = [n for n in fields if n.startswith('deductible~')] or ''
+        self.i_lim = [
+            n for n in fields if n.startswith('insurance_limit~')] or ''
+        self.retro = [n for n in fields if n.startswith('retrofitted~')] or ''
 
     def assets_by_site(self):
         """
