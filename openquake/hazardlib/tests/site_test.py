@@ -108,11 +108,9 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         fd, fpath = tempfile.mkstemp(suffix='.hdf5')
         os.close(fd)
         with hdf5.File(fpath, 'w') as f:
-            f['sitecol'] = cll
-            f['folder'] = dict(a=1, b=[2, 3])
-            newcll = f['sitecol']
+            f['folder'] = dict(sitecol=cll, b=[2, 3])
+            newcll = f['folder/sitecol']
             self.assertEqual(newcll, cll)
-            self.assertEqual(f['folder/a'].value, 1)
             self.assertEqual(list(f['folder/b']), [2, 3])
         os.remove(fpath)
 
