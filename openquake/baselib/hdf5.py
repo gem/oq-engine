@@ -152,8 +152,8 @@ class LiteralAttrs(object):
 class File(h5py.File):
     """
     Subclass of :class:`h5py.File` able to store and retrieve objects
-    conform to the HDF5 protocol used by the OpenQuake software.
-    It works recursively also for dictionaries name->obj.
+    conforming to the HDF5 protocol used by the OpenQuake software.
+    It works recursively also for dictionaries of the form name->obj.
 
     >>> f = File('/tmp/x.h5', 'w')
     >>> f['dic'] = dict(a=dict(x=1, y=2), b=3)
