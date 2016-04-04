@@ -25,7 +25,6 @@ import operator
 import traceback
 import collections
 
-import h5py
 import numpy
 
 from openquake.hazardlib.geo import geodetic
@@ -35,7 +34,7 @@ from openquake.commonlib import (
     readinput, riskmodels, datastore, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import apply_reduce, executor
-from openquake.risklib import riskinput, riskmodels as rm
+from openquake.risklib import riskinput
 from openquake.baselib.python3compat import with_metaclass
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -362,16 +361,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
             all_cost_types = set(self.oqparam.all_cost_types)
             fname = self.oqparam.inputs['exposure']
-            cc = readinput.get_exposure_lazy(fname, all_cost_types)[-1]
-            if cc.cost_types:
-                self.cc = cc
-            else:
-                # the cost calculator can be missing: this happens when
-                # there are no cost types in damage calculations. Not saving
-                # the cost calculator is needed to work around yet another
-                # bug of HDF5 in Ubuntu 12.04 that makes it impossible to
-                # store numpy arrays of zero length
-                self.cc = rm.CostCalculator({}, {}, True, True)
+            self.cc = readinput.get_exposure_lazy(fname, all_cost_types)[-1]
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
             if len(self.exposure.cost_types):

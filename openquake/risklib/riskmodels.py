@@ -84,8 +84,9 @@ class CostCalculator(object):
                           ('area_type', (bytes, 10))])
         loss_types = sorted(self.cost_types)
         array = numpy.zeros(len(loss_types), dt)
-        array['cost_type'] = [self.cost_types[lt] for lt in loss_types]
-        array['area_type'] = [self.area_types[lt] for lt in loss_types]
+        # hack for Ubuntu 12.04 that cannot store empty lists
+        array['cost_type'] = [self.cost_types[lt] for lt in loss_types] or ''
+        array['area_type'] = [self.area_types[lt] for lt in loss_types] or ''
         attrs = dict(deduct_abs=self.deduct_abs, limit_abs=self.limit_abs,
                      loss_types=loss_types)
         return array, attrs
