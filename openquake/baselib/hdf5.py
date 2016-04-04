@@ -17,8 +17,10 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import ast
+import pydoc
 import collections
 import numpy
+import h5py
 
 
 class Hdf5Dataset(object):
@@ -145,3 +147,59 @@ class LiteralAttrs(object):
             else:
                 dd[name] = ast.literal_eval(literal.decode('utf8'))
         vars(self).update(dd)
+
+
+class File(h5py.File):
+    """
+    Subclass of :class:`h5py.File` able to store and retrieve objects
+    conforming to the HDF5 protocol used by the OpenQuake software.
+    It works recursively also for dictionaries of the form name->obj.
+
+    >>> f = File('/tmp/x.h5', 'w')
+    >>> f['dic'] = dict(a=dict(x=1, y=2), b=3)
+    >>> dic = f['dic']
+    >>> dic['a']['x'].value
+    1
+    >>> dic['b'].value
+    3
+    >>> f.close()
+    """
+    def __setitem__(self, path, obj):
+        cls = obj.__class__
+        if hasattr(obj, '__toh5__'):
+            obj, attrs = obj.__toh5__()
+            pyclass = '%s.%s' % (cls.__module__, cls.__name__)
+        else:
+            pyclass = ''
+        if isinstance(obj, dict):
+            for k, v in sorted(obj.items()):
+                key = '%s/%s' % (path, k)
+                self[key] = v
+        else:
+            super(File, self).__setitem__(path, obj)
+        a = super(File, self).__getitem__(path).attrs
+        if pyclass:
+            a['__pyclass__'] = pyclass
+            for k, v in sorted(attrs.items()):
+                a[k] = v
+
+    def __getitem__(self, path):
+        h5obj = super(File, self).__getitem__(path)
+        h5attrs = h5obj.attrs
+        if '__pyclass__' in h5attrs:
+            cls = pydoc.locate(h5attrs['__pyclass__'])
+            obj = cls.__new__(cls)
+            if not hasattr(h5obj, 'shape'):  # is group
+                h5obj = {k: self['%s/%s' % (path, k)]
+                         for k, v in h5obj.items()}
+            obj.__fromh5__(h5obj, h5attrs)
+            return obj
+        else:
+            return h5obj
+
+    def __delitem__(self, key):
+        if (h5py.version.version <= '2.0.1' and not
+                hasattr(super(File, self).__getitem__(key), 'shape')):
+            # avoid bug when deleting groups that produces a segmentation fault
+            return
+        super(File, self).__delitem__(key)
