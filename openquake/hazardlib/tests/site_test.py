@@ -13,11 +13,14 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import os
 import pickle
 import unittest
+import tempfile
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.hazardlib.site import \
     Site, SiteCollection, FilteredSiteCollection
 from openquake.hazardlib.geo.point import Point
@@ -101,11 +104,17 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
             self.assertEqual(arr.dtype, bool)
         self.assertEqual(len(cll), 2)
 
-        # test __toh5__ and __fromh5__
-        array, attrs = cll.__toh5__()
-        newcll = cll.__new__(cll.__class__)
-        newcll.__fromh5__(array, attrs)
-        self.assertEqual(newcll, cll)
+        # test serialization to hdf5
+        fd, fpath = tempfile.mkstemp(suffix='.hdf5')
+        os.close(fd)
+        with hdf5.File(fpath, 'w') as f:
+            f['sitecol'] = cll
+            f['folder'] = dict(a=1, b=[2, 3])
+            newcll = f['sitecol']
+            self.assertEqual(newcll, cll)
+            self.assertEqual(f['folder/a'].value, 1)
+            self.assertEqual(list(f['folder/b']), [2, 3])
+        os.remove(fpath)
 
     def test_from_points(self):
         lons = [10, -1.2]
