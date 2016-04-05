@@ -86,10 +86,10 @@ def export_ses_xml(ekey, dstore):
         return []
     col_id = 0
     mesh = dstore['sitemesh'].value
+    ruptures = []
     for sm in csm_info.source_models:
         for trt_model in sm.trt_models:
             colkey = 'sescollection/trt=%02d' % trt_model.id
-            ruptures = []
             for sr in dstore[colkey]:
                 ruptures.extend(sr.export(mesh))
             col_id += 1
