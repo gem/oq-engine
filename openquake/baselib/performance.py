@@ -216,9 +216,12 @@ class Monitor(object):
         return new
 
     def __repr__(self):
+        calc_id = ' #%s ' % self.calc_id if self.calc_id else ' '
+        msg = '%s%s%s' % (self.__class__.__name__, calc_id, self.operation)
         if self.measuremem:
-            return '<%s %s, duration=%ss, memory=%s>' % (
-                self.__class__.__name__, self.operation, self.duration,
-                humansize(self.mem))
-        return '<%s %s, duration=%ss>' % (self.__class__.__name__,
-                                          self.operation, self.duration)
+            return '<%s, duration=%ss, memory=%s>' % (
+                msg, self.duration, humansize(self.mem))
+        elif self.duration:
+            return '<%s, duration=%ss>' % (msg, self.duration)
+        else:
+            return '<%s>' % msg
