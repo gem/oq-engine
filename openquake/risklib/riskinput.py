@@ -464,7 +464,7 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     eps = numpy.zeros((num_assets, num_samples), numpy.float32)
     for taxonomy, assets in assets_by_taxo.items():
         # the association with the epsilons is done in order
-        assets.sort(key=operator.attrgetter('id'))
+        assets.sort(key=operator.attrgetter('idx'))
         shape = (len(assets), num_samples)
         logging.info('Building %s epsilons for taxonomy %s', shape, taxonomy)
         zeros = numpy.zeros(shape)
