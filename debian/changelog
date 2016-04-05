@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a test on the ordering of the epsilons
   * Accepted `.` and `|` as valid characters for source IDs
   * Changed the GMF calculator to use a single seed per unique rupture
   * Change the SESCollection exporter: now a single file is exported, before
