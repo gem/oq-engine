@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a test on the ordering of the epsilons
   * Changed the GMF calculator to use a single seed per unique rupture
   * Change the SESCollection exporter: now a single file is exported, before
     we were exporting one file per source model path per tectonic region model
