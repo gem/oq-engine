@@ -153,13 +153,17 @@ hazard_map-smltp_SM1-gsimltp_CB2008_T2002.csv
 hazard_map-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
 hazard_map-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
 hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
-hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
+hazard_map-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv
+hazard_uhs-mean.csv
+hazard_uhs-smltp_SM1-gsimltp_BA2008_C2003.csv
+hazard_uhs-smltp_SM1-gsimltp_BA2008_T2002.csv
+hazard_uhs-smltp_SM1-gsimltp_CB2008_C2003.csv
+hazard_uhs-smltp_SM1-gsimltp_CB2008_T2002.csv
+hazard_uhs-smltp_SM2_a3b1-gsimltp_BA2008_@.csv
+hazard_uhs-smltp_SM2_a3b1-gsimltp_CB2008_@.csv
+hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_BA2008_@.csv
+hazard_uhs-smltp_SM2_a3pt2b0pt8-gsimltp_CB2008_@.csv'''.split(),
                               case_15.__file__)
-
-        # test UHS CSV export
-        [fname] = [f for f in export(('uhs', 'csv'), self.calc.datastore)
-                   if 'mean' in f]
-        self.assertEqualFiles('expected/hazard_uhs-mean.csv', fname)
 
         # test UHS XML export
         fnames = [f for f in export(('uhs', 'xml'), self.calc.datastore)
