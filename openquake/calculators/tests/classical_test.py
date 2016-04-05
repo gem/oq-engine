@@ -29,7 +29,8 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None):
         out = self.run_calc(test_dir, 'job.ini', exports='csv')
-        got = (out['hcurves', 'csv'] + out['hmaps', 'csv'] + out['uhs', 'csv'])
+        got = (out['hcurves', 'csv'] + out.get(('hmaps', 'csv'), []) +
+               out.get(('uhs', 'csv'), []))
         self.assertEqual(len(expected), len(got))
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual,
