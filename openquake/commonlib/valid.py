@@ -211,7 +211,7 @@ ASSET_ID_LENGTH = 100
 
 simple_id = SimpleId(MAX_ID_LENGTH)
 asset_id = SimpleId(ASSET_ID_LENGTH)
-source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\.\|\-_]+$')
+source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\.\-_]+$')
 
 
 class FloatRange(object):
