@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Change the asset<->epsilons association: before for a given taxonomy the
+    assets were ordered by `asset_ref`, now they are ordered by `id`. This
+    has a minor impact on the numbers sensitive to the epsilons, akin to a
+    change of seeds
   * Added a test on the ordering of the epsilons
   * Accepted `.` and `|` as valid characters for source IDs
   * Changed the GMF calculator to use a single seed per unique rupture
