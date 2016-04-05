@@ -161,11 +161,13 @@ class Pickled(object):
     """
     def __init__(self, obj):
         self.clsname = obj.__class__.__name__
+        self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
         self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
 
     def __repr__(self):
         """String representation of the pickled object"""
-        return '<Pickled %s %s>' % (self.clsname, humansize(len(self)))
+        return '<Pickled %s %s %s>' % (
+            self.clsname, self.calc_id, humansize(len(self)))
 
     def __len__(self):
         """Length of the pickled bytestring"""
