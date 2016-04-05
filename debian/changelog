@@ -1,5 +1,7 @@
   [Michele Simionato]
   * Showing the `calc_id` in Monitor instances string representation
+  * Added a h5py.File subclass to manage the serialization of objects
+    satisfying the HDF5 protocol used by the OpenQuake software
   * Added a LiteralAttrs class to serialize literal attributes on HDF5
   * Added to the Monitor the ability to send commands
 
