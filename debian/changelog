@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug in the SESCollection exporter
   * Changed the asset<->epsilons association: before for a given taxonomy the
     assets were ordered by `asset_ref`, now they are ordered by `id`. This
     has a minor impact on the numbers sensitive to the epsilons, akin to a
