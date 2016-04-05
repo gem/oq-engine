@@ -79,9 +79,11 @@ class EngineServerTestCase(unittest.TestCase):
 
     def postzip(self, archive):
         with open(os.path.join(self.datadir, archive)) as a:
-            resp = self.post('run', dict(database='platform'),
-                             files=dict(archive=a))
-        js = json.loads(resp.text)
+            resp = self.post('run', {}, files=dict(archive=a))
+        try:
+            js = json.loads(resp.text)
+        except:
+            raise ValueError('Invalid JSON response: %r' % resp.text)
         if resp.status_code == 200:  # ok case
             job_id = js['job_id']
             self.job_ids.append(job_id)
