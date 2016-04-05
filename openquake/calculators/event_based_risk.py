@@ -123,7 +123,7 @@ def _old_loss_curves(asset_values, rcurves, ratios):
 def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
     # update the result dictionary and the agg array with each output
     assets = output.assets
-    aid = assets[0].idx
+    aid = assets[0].ordinal
     eids = output.eids
     indices = numpy.array([idx[eid] for eid in eids])
     for (l, r), out in sorted(output.items()):
@@ -507,7 +507,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if 'rcurves-rlzs' not in self.datastore:
             return []
         all_data = []
-        assets = self.assetcol['asset_ref']
+        assets = self.datastore['asset_refs'].value[self.assetcol['idx']]
         rlzs = self.rlzs_assoc.realizations
         insured = self.oqparam.insured_losses
         if self.oqparam.avg_losses:

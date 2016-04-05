@@ -52,7 +52,7 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     for out_by_lr in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
         for (l, r), out in sorted(out_by_lr.items()):
             for i, asset in enumerate(out.assets):
-                aid = asset.idx
+                aid = asset.ordinal
                 avg = out.average_losses[i]
                 avg_ins = (out.average_insured_losses[i]
                            if ins else numpy.nan)
@@ -84,10 +84,10 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
                 stat_curves, stat_maps = statsbuilder.get_curves_maps(stats)
                 for i, asset in enumerate(out_by_lr.assets):
                     result['stat_curves'].append(
-                        (l, asset.idx, stat_curves[:, i]))
+                        (l, asset.ordinal, stat_curves[:, i]))
                     if len(stat_maps):
                         result['stat_maps'].append(
-                            (l, asset.idx, stat_maps[:, i]))
+                            (l, asset.ordinal, stat_maps[:, i]))
 
     return result
 

@@ -26,13 +26,12 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, split_in_blocks
 from openquake.hazardlib.gsim.base import gsim_imt_dt
-from openquake.commonlib import valid
 from openquake.risklib import scientific, riskmodels
 
 U32 = numpy.uint32
 F32 = numpy.float32
 
-FIELDS = ('site_id', 'lon', 'lat', 'asset_ref', 'taxonomy', 'area', 'number',
+FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy', 'area', 'number',
           'occupants', 'deductible~', 'insurance_limit~', 'retrofitted~')
 
 by_taxonomy = operator.attrgetter('taxonomy')
@@ -54,13 +53,13 @@ def build_assets_by_site(assetcol, taxonomies, time_event, cc):
     retro = [n for n in fields if n.startswith('retrofitted~')]
     assets_by_site = [[] for sid in site_ids]
     index = dict(zip(site_ids, range(len(site_ids))))
-    for idx, a in enumerate(assetcol):
+    for i, a in enumerate(assetcol):
         sid = a['site_id']
         values = {lt: a[lt] for lt in loss_types}
         if 'occupants' in fields:
             values['occupants_' + str(time_event)] = a['occupants']
         asset = riskmodels.Asset(
-            a['asset_ref'],
+            a['idx'],
             taxonomies[a['taxonomy']],
             number=a['number'],
             location=(a['lon'], a['lat']),
@@ -70,7 +69,7 @@ def build_assets_by_site(assetcol, taxonomies, time_event, cc):
             insurance_limits={lt: a[lt] for lt in i_lim},
             retrofitteds={lt: a[lt] for lt in retro},
             calc=cc,
-            idx=idx)
+            ordinal=i)
         assets_by_site[index[sid]].append(asset)
     return numpy.array(assets_by_site)
 
@@ -110,9 +109,8 @@ def build_asset_collection(assets_by_site, time_event=None):
             taxonomies.add(asset.taxonomy)
     sorted_taxonomies = sorted(taxonomies)
     asset_dt = numpy.dtype(
-        [('asset_ref', '|S100'),
-         ('lon', F32), ('lat', F32), ('site_id', numpy.uint32),
-         ('taxonomy', numpy.uint32), ('number', F32), ('area', F32)] +
+        [('idx', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
+         ('taxonomy', U32), ('number', F32), ('area', F32)] +
         [(name, float) for name in float_fields])
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
@@ -120,7 +118,7 @@ def build_asset_collection(assets_by_site, time_event=None):
     fields = set(asset_dt.fields)
     for sid, assets_ in enumerate(assets_by_site):
         for asset in sorted(assets_, key=operator.attrgetter('id')):
-            asset.idx = asset_ordinal
+            asset.ordinal = asset_ordinal
             record = assetcol[asset_ordinal]
             asset_ordinal += 1
             for field in fields:
@@ -130,7 +128,7 @@ def build_asset_collection(assets_by_site, time_event=None):
                     value = asset.number
                 elif field == 'area':
                     value = asset.area
-                elif field == 'asset_ref':
+                elif field == 'idx':
                     value = asset.id
                 elif field == 'site_id':
                     value = sid
@@ -379,7 +377,7 @@ class CompositeRiskModel(collections.Mapping):
                 for asset_dict, hazard in zip(asset_dicts, hazard_by_site):
                     for taxonomy, assets in asset_dict.items():
                         riskmodel = self[taxonomy]
-                        epsilons = [riskinput.eps[asset.idx]
+                        epsilons = [riskinput.eps[asset.ordinal]
                                     for asset in assets]
                         for imt, taxonomies in riskinput.imt_taxonomies:
                             if taxonomy in taxonomies:
@@ -471,7 +469,7 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
         zeros = numpy.zeros(shape)
         epsilons = scientific.make_epsilons(zeros, seed, correlation)
         for asset, epsrow in zip(assets, epsilons):
-            eps[asset.idx] = epsrow
+            eps[asset.ordinal] = epsrow
     return eps
 
 

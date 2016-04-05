@@ -25,6 +25,7 @@ import operator
 import traceback
 import collections
 
+import h5py
 import numpy
 
 from openquake.hazardlib.geo import geodetic
@@ -353,6 +354,9 @@ class HazardCalculator(BaseCalculator):
         logging.info('Reading the exposure')
         with self.monitor('reading exposure', autoflush=True):
             self.exposure = readinput.get_exposure(self.oqparam)
+            arefs = numpy.array(self.exposure.asset_refs)
+            self.datastore['asset_refs'] = arefs
+            self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
             all_cost_types = set(self.oqparam.all_cost_types)
             fname = self.oqparam.inputs['exposure']
             cc = readinput.get_exposure_lazy(fname, all_cost_types)[-1]
@@ -455,11 +459,6 @@ class HazardCalculator(BaseCalculator):
             if self.exposure.time_events:
                 self.datastore.set_attrs(
                     'assetcol', time_events=sorted(self.exposure.time_events))
-            spec = set(oq.specific_assets)
-            unknown = spec - set(self.assetcol['asset_ref'])
-            if unknown:
-                raise ValueError('The specific asset(s) %s are not in the '
-                                 'exposure' % ', '.join(unknown))
         elif hasattr(self, 'assetcol'):
             try:
                 cc = self.datastore['cost_calculator']
@@ -526,7 +525,6 @@ class RiskCalculator(HazardCalculator):
     attributes .riskmodel, .sitecol, .assets_by_site, .exposure
     .riskinputs in the pre_execute phase.
     """
-    specific_assets = datastore.persistent_attribute('specific_assets')
     extra_args = ()  # to be overridden in subclasses
 
     def check_poes(self, curves_by_trt_gsim):
@@ -553,7 +551,7 @@ class RiskCalculator(HazardCalculator):
         """
         self.check_poes(hazards_by_key)
 
-        # add asset.idx as side effect
+        # add asset.ordinal as side effect
         riskinput.build_asset_collection(
             self.assets_by_site, self.oqparam.time_event)
         imtls = self.oqparam.imtls
@@ -579,7 +577,7 @@ class RiskCalculator(HazardCalculator):
                 if len(eps):
                     for assets in reduced_assets:
                         for asset in assets:
-                            reduced_eps[asset.idx] = eps[asset.idx]
+                            reduced_eps[asset.ordinal] = eps[asset.ordinal]
 
                 # collect the hazards by key into hazards by imt
                 hdata = collections.defaultdict(lambda: [{} for _ in indices])

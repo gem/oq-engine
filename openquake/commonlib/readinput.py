@@ -706,7 +706,7 @@ def get_exposure_lazy(fname, ok_cost_types):
     exp = Exposure(
         exposure['id'], exposure['category'],
         ~description, numpy.array(cost_types, cost_type_dt), time_events,
-        ~inslimit, ~deductible, area.attrib, [], set())
+        ~inslimit, ~deductible, area.attrib, [], set(), [])
     cc = riskmodels.CostCalculator(
         {}, {}, exp.deductible_is_absolute, exp.insurance_limit_is_absolute)
     for ct in exp.cost_types:
@@ -743,7 +743,7 @@ def get_exposure(oqparam):
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
 
-    for asset in assets_node:
+    for idx, asset in enumerate(assets_node):
         values = {}
         deductibles = {}
         insurance_limits = {}
@@ -753,6 +753,7 @@ def get_exposure(oqparam):
             if asset_id in asset_refs:
                 raise DuplicatedID(asset_id)
             asset_refs.add(asset_id)
+            exposure.asset_refs.append(asset_id)
             taxonomy = asset['taxonomy']
             if 'damage' in oqparam.calculation_mode:
                 # calculators of 'damage' kind require the 'number'
@@ -818,7 +819,7 @@ def get_exposure(oqparam):
             values['occupants_None'] = tot_occupants / len(occupancies)
         area = float(asset.attrib.get('area', 1))
         ass = riskmodels.Asset(
-            asset_id, taxonomy, number, location, values, area,
+            idx, taxonomy, number, location, values, area,
             deductibles, insurance_limits, retrofitteds, cc)
         exposure.assets.append(ass)
         exposure.taxonomies.add(taxonomy)
@@ -840,22 +841,7 @@ def get_exposure(oqparam):
 Exposure = collections.namedtuple(
     'Exposure', ['id', 'category', 'description', 'cost_types', 'time_events',
                  'insurance_limit_is_absolute', 'deductible_is_absolute',
-                 'area', 'assets', 'taxonomies'])
-
-
-def get_specific_assets(oqparam):
-    """
-    Get the assets from the parameters specific_assets or specific_assets_csv
-
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    """
-    try:
-        return set(oqparam.specific_assets)
-    except AttributeError:
-        if 'specific_assets' not in oqparam.inputs:
-            return set()
-        return set(open(oqparam.inputs['specific_assets']).read().split())
+                 'area', 'assets', 'taxonomies', 'asset_refs'])
 
 
 def get_sitecol_assets(oqparam, exposure):
