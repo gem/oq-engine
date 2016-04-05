@@ -26,6 +26,7 @@ from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, split_in_blocks
 from openquake.hazardlib.gsim.base import gsim_imt_dt
+from openquake.commonlib import valid
 from openquake.risklib import scientific, riskmodels
 
 U32 = numpy.uint32

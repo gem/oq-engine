@@ -42,6 +42,9 @@ class ValidationTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             valid.simple_id('a' * 101)
 
+    def test_source_id(self):
+        valid.source_id('ab_2.3_-27.0')
+
     def test_name(self):
         self.assertEqual(valid.name('x'), 'x')
         with self.assertRaises(ValueError):
