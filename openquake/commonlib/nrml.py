@@ -533,7 +533,7 @@ def float_or_flag(value, isAbsolute=None):
 @nodefactory.add('exposureModel')
 class ExposureDataNode(LiteralNode):
     validators = dict(
-        id=valid.simple_id,
+        id=valid.asset_id,
         description=valid.utf8_not_empty,
         name=valid.cost_type,
         type=valid.name,
