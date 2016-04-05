@@ -79,8 +79,7 @@ class EngineServerTestCase(unittest.TestCase):
 
     def postzip(self, archive):
         with open(os.path.join(self.datadir, archive)) as a:
-            resp = self.post('run', dict(database='platform'),
-                             files=dict(archive=a))
+            resp = self.post('run', {}, files=dict(archive=a))
         try:
             js = json.loads(resp.text)
         except:
