@@ -75,7 +75,7 @@ def show(what, calc_id=-1):
                     os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id))
                 continue
             else:
-                rows.append((calc_id, cmode, descr))
+                rows.append((calc_id, cmode, descr.encode('utf-8')))
                 ds.close()
         for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
             print('#%d %s: %s' % row)
