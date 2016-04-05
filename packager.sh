@@ -519,6 +519,7 @@ _pkgtest_innervm_run () {
 
         echo 'Show all the oq-lite calculations'
         oq-lite show all
+        oq-lite show all > /tmp/all.txt  # stress encoding issues
         "
     fi
 
