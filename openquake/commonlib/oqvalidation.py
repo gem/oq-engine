@@ -241,7 +241,7 @@ class OqParam(valid.ParamSet):
                 imt = rf.imt
                 imls = list(rf.imls)
                 if imt in imtls and imtls[imt] != imls:
-                    logging.info(
+                    logging.debug(
                         'Different levels for IMT %s: got %s, expected %s',
                         imt, imls, imtls[imt])
                     imtls[imt] = sorted(set(imls + imtls[imt]))
