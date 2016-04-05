@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Change the asset<->epsilons association: before for a given taxonomy the
+  * Changed the asset<->epsilons association: before for a given taxonomy the
     assets were ordered by `asset_ref`, now they are ordered by `id`. This
     has a minor impact on the numbers sensitive to the epsilons, akin to a
     change of seeds
