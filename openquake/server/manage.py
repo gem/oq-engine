@@ -22,14 +22,19 @@ import sys
 from django.core.management import execute_from_command_line
 from openquake.server import executor
 from openquake.engine import logs
+from openquake.server.db import upgrade_manager, actions
+
+
+def direct_dbcmd(action, *args):
+    return getattr(actions, action)(*args)
 
 
 def use_tmp_db(tmpfile):
     from django.db import connection
     from openquake.server.settings import DATABASE
-    from openquake.server.db import upgrade_manager, actions
+
     # upgrade the temporary db used in the functional tests
-    logs.dbcmd = lambda action, *args: getattr(actions, action)(*args)
+    logs.dbcmd = direct_dbcmd
     DATABASE['NAME'] = tmpfile
     connection.cursor()  # connect to the db
     upgrade_manager.upgrade_db(connection.connection)
