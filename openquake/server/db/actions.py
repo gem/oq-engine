@@ -83,7 +83,7 @@ def create_job(calc_mode, description, user_name="openquake", hc_id=None):
     if hc_id:
         job.hazard_calculation = models.OqJob.objects.get(pk=hc_id)
     job.save()
-    return job
+    return job.id
 
 
 def delete_uncompleted_calculations():
@@ -101,11 +101,12 @@ def get_job_id(job_id, username):
     job_id = int(job_id)
     if job_id > 0:
         return job_id
-    my_jobs = models.OqJob.objects.filter(user_name=username)
-    if not my_jobs.count():
+    my_jobs = models.OqJob.objects.filter(user_name=username).order_by('id')
+    n = my_jobs.count()
+    if n == 0:  # no jobs
         return
-    else:
-        return my_jobs.latest('id').id + job_id
+    else:  # typically job_id is -1
+        return my_jobs[n + job_id].id
 
 
 def get_calc_id(job_id=None):
@@ -252,9 +253,9 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
         a pair (job_id, oqparam)
     """
     oq = readinput.get_oqparam(cfg_file)
-    job = create_job(oq.calculation_mode, oq.description,
-                     username, hazard_calculation_id)
-    return job.id, oq
+    job_id = create_job(oq.calculation_mode, oq.description,
+                        username, hazard_calculation_id)
+    return job_id, oq
 
 DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset_and_collapse_map')
 
