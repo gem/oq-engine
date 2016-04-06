@@ -108,7 +108,7 @@ class EngineServerTestCase(unittest.TestCase):
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload', '--nothreading', tmpdb],
-            env=env, stdout=subprocess.PIPE)
+            env=env, stderr=subprocess.PIPE)  # trap the useless server logs
         time.sleep(5)
 
     @classmethod
