@@ -23,7 +23,6 @@ Set up some system-wide loggers
 
 import os.path
 import logging
-import getpass
 from datetime import datetime
 from contextlib import contextmanager
 from multiprocessing.connection import Client
