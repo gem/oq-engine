@@ -58,6 +58,8 @@ class EngineServerTestCase(unittest.TestCase):
     def get(cls, path, **params):
         resp = requests.get('http://%s/v1/calc/%s' % (cls.hostport, path),
                             params=params)
+        if resp.status_code == 500:
+            sys.stderr.write(open(cls.errfname).read())
         assert resp.status_code == 200, resp
         return json.loads(resp.text)
 
@@ -105,10 +107,11 @@ class EngineServerTestCase(unittest.TestCase):
         fh, tmpfile = tempfile.mkstemp()
         os.close(fh)
         tmpdb = 'tmpdb=' + tmpfile
+        cls.fd, cls.errfname = tempfile.mkstemp()
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload', '--nothreading', tmpdb],
-            env=env, stderr=subprocess.PIPE)  # trap the useless server logs
+            env=env, stderr=cls.fd)  # redirect the server logs
         time.sleep(5)
 
     @classmethod
@@ -118,6 +121,7 @@ class EngineServerTestCase(unittest.TestCase):
         cls.proc.kill()
         if not UBUNTU12:
             assert len(data) > 0
+        os.close(cls.fd)
 
     # tests
 

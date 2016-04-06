@@ -397,6 +397,16 @@ def fetch(templ, *args):
     return [header] + curs.fetchall()
 
 
+def get_dbpath():
+    """
+    Returns the path to the database file
+    """
+    curs = db.connection.cursor()
+    curs.execute('PRAGMA database_list')
+    # return a row with fields (id, dbname, dbpath)
+    return curs.fetchall()[0][-1]
+
+
 # ########################## upgrade operations ########################## #
 
 def what_if_I_upgrade(extract_scripts):

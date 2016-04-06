@@ -53,7 +53,7 @@ METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
 JSON = 'application/json'
 
-DEFAULT_LOG_LEVEL = 'progress'
+DEFAULT_LOG_LEVEL = 'info'
 
 #: For exporting calculation outputs, the client can request a specific format
 #: (xml, geojson, csv, etc.). If the client does not specify give them (NRML)
