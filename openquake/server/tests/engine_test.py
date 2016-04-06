@@ -91,30 +91,19 @@ class CheckHazardRiskConsistencyTestCase(unittest.TestCase):
 class JobFromFileTestCase(unittest.TestCase):
 
     def test_create_job_default_user(self):
-        job = actions.create_job('classical', 'test_create_job_default_user')
-
+        jid = actions.create_job('classical', 'test_create_job_default_user')
+        job = models.OqJob.objects.get(pk=jid)
         self.assertEqual('openquake', job.user_name)
         self.assertEqual('executing', job.status)
 
-        # Check the make sure it's in the database.
-        try:
-            models.OqJob.objects.get(id=job.id)
-        except exceptions.ObjectDoesNotExist:
-            self.fail('Job was not found in the database')
-
     def test_create_job_specified_user(self):
         user_name = helpers.random_string()
-        job = actions.create_job(
+        jid = actions.create_job(
             'classical', 'test_create_job_specified_user',
             user_name=user_name)
-
+        job = models.OqJob.objects.get(pk=jid)
         self.assertEqual(user_name, job.user_name)
         self.assertEqual('executing', job.status)
-
-        try:
-            models.OqJob.objects.get(id=job.id)
-        except exceptions.ObjectDoesNotExist:
-            self.fail('Job was not found in the database')
 
 
 class OpenquakeCliTestCase(unittest.TestCase):
