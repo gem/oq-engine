@@ -236,13 +236,12 @@ def _set_nbytes(dkey, dstore):
     group.attrs['nbytes'] = group[key].attrs['nbytes'] * len(group)
 
 
-def check_time_event(dstore):
+def check_time_event(dstore, time_events):
     """
     Check the `time_event` parameter in the datastore, by comparing
     with the periods found in the exposure.
     """
     time_event = dstore.attrs.get('time_event')
-    time_events = dstore['assetcol'].time_events
     if time_event and ast.literal_eval(time_event) not in time_events:
         inputs = ast.literal_eval(dstore.attrs['inputs'])
         raise ValueError(
@@ -361,7 +360,8 @@ class HazardCalculator(BaseCalculator):
             self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
             all_cost_types = set(self.oqparam.all_cost_types)
             fname = self.oqparam.inputs['exposure']
-            self.cc = readinput.get_exposure_lazy(fname, all_cost_types)[-1]
+            self.cost_calculator = readinput.get_exposure_lazy(
+                fname, all_cost_types)[-1]
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
             if len(self.exposure.cost_types):
@@ -439,8 +439,9 @@ class HazardCalculator(BaseCalculator):
 
         if oq_hazard:
             parent = self.datastore.parent
-            if 'assetcol' in parent and any(parent['assetcol'].time_events):
-                check_time_event(self.datastore)
+            if 'assetcol' in parent:
+                check_time_event(
+                    self.datastore, parent['assetcol'].time_events)
             if oq_hazard.time_event != oq.time_event:
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
@@ -451,7 +452,7 @@ class HazardCalculator(BaseCalculator):
         self.save_mesh()
         if hasattr(self, 'assets_by_site'):
             self.assetcol = riskinput.AssetCollection(
-                self.assets_by_site, self.cc, oq.time_event,
+                self.assets_by_site, self.cost_calculator, oq.time_event,
                 time_events=sorted(self.exposure.time_events) or '')
         elif hasattr(self, 'assetcol'):
             self.assets_by_site = self.assetcol.assets_by_site()
