@@ -242,7 +242,7 @@ class RiskModel(object):
         The list of loss types in the underlying vulnerability functions,
         in lexicographic order
         """
-        return sorted(self.risk_functions)
+        return sorted(self.risk_functions)            
 
     def get_loss_types(self, imt):
         """

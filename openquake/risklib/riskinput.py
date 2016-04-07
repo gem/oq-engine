@@ -204,6 +204,13 @@ class CompositeRiskModel(collections.Mapping):
         self.covs = 0  # number of coefficients of variation
         self.taxonomies = []  # populated in get_risk_model
 
+    def get_min_iml(self):
+        iml = collections.defaultdict(list)
+        for taxo, rm in self._riskmodels.items():
+            for lt, rf in rm.risk_functions.items():
+                iml[rf.imt].append(rf.imls[0])
+        return {imt: min(iml[imt]) for imt in iml}
+
     def loss_type_dt(self, dtype=F32, insured=False):
         """
         Return a composite dtype based on the loss types

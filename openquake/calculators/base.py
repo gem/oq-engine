@@ -397,6 +397,7 @@ class HazardCalculator(BaseCalculator):
                         rmodel.retro_functions)
         attrs = self.datastore['composite_risk_model'].attrs
         attrs['loss_types'] = rm.loss_types
+        attrs['min_iml'] = sorted(rm.get_min_iml().items())
         if rm.damage_states:
             attrs['damage_states'] = rm.damage_states
         self.datastore['loss_ratios'] = rm.get_loss_ratios()
