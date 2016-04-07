@@ -22,22 +22,21 @@ import sys
 from django.core.management import execute_from_command_line
 from openquake.server import executor
 from openquake.engine import logs
-from openquake.server.db import upgrade_manager, actions
 
 
-def direct_dbcmd(action, *args):
-    return getattr(actions, action)(*args)
-
-
-def use_tmp_db(tmpfile):
+def use_tmp_db(tmpfile_port):
     from django.db import connection
+    from openquake.engine import config
     from openquake.server.settings import DATABASE
-
-    # upgrade the temporary db used in the functional tests
-    logs.dbcmd = direct_dbcmd
+    from openquake.server.db import upgrade_manager
+    tmpfile, port_str = tmpfile_port.rsplit(':', 1)
     DATABASE['NAME'] = tmpfile
+    DATABASE['PORT'] = port = int(port_str)
     connection.cursor()  # connect to the db
     upgrade_manager.upgrade_db(connection.connection)
+    connection.close()
+    # make sure we use the server on the temporary db
+    config.DBS_ADDRESS = ('localhost', port)
 
 
 def parse_args(argv):
@@ -56,9 +55,9 @@ def parse_args(argv):
 if __name__ == "__main__":
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
-    argv, dbname = parse_args(sys.argv)
-    if dbname:  # this is used in the functional tests
-        use_tmp_db(dbname)
+    argv, tmpfile_port = parse_args(sys.argv)
+    if tmpfile_port:  # this is used in the functional tests
+        use_tmp_db(tmpfile_port)
     else:
         # check the database version
         logs.dbcmd('check_outdated')

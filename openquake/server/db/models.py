@@ -36,6 +36,22 @@ from django.db import models as djm
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import connection
 
+
+# this is pickleable, ObjectDoesNotExist is not
+class NotFound(Exception):
+    """Raised when a Django object does not exist"""
+
+
+def get(djm, pkey):
+    """
+    Small wrapper around `djm.objects.get`
+    """
+    try:
+        return djm.objects.get(pk=pkey)
+    except ObjectDoesNotExist:
+        raise NotFound(pkey)
+
+
 #: Kind of supported curve statistics
 STAT_CHOICES = (
     (u'mean', u'Mean'),
