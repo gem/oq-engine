@@ -84,4 +84,8 @@ class DbServer(object):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    DbServer(config.DBS_ADDRESS, config.DBS_AUTHKEY).loop()
+    if sys.argv[1:]:  # assume the port is the first argument
+        addr = (config.DBS_ADDRESS[0], int(sys.argv[1]))
+    else:
+        addr = config.DBS_ADDRESS
+    DbServer(addr, config.DBS_AUTHKEY).loop()

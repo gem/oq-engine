@@ -25,7 +25,7 @@ from datetime import datetime
 from django.core import exceptions
 from django import db
 
-from openquake.commonlib import datastore, readinput
+from openquake.commonlib import datastore, readinput, valid
 from openquake.server.db import models
 from openquake.engine.export import core
 from openquake.server.db.schema.upgrades import upgrader
@@ -81,7 +81,7 @@ def create_job(calc_mode, description, user_name="openquake", hc_id=None):
         user_name=user_name,
         ds_calc_dir=os.path.join(datastore.DATADIR, 'calc_%s' % calc_id))
     if hc_id:
-        job.hazard_calculation = models.OqJob.objects.get(pk=hc_id)
+        job.hazard_calculation = models.get(models.OqJob, hc_id)
     job.save()
     return job.id
 
@@ -268,7 +268,7 @@ def create_outputs(job_id, dskeys):
     :param job_id: ID of the current job
     :param dskeys: a list of datastore keys
     """
-    job = models.OqJob.objects.get(pk=job_id)
+    job = models.get(models.OqJob, job_id)
     for key in dskeys:
         models.Output.objects.create_output(
             job, DISPLAY_NAME.get(key, key), ds_key=key)
@@ -304,7 +304,7 @@ def finish(job_id, status):
     """
     Set the job columns `is_running`, `status`, and `stop_time`
     """
-    job = models.OqJob.objects.get(pk=job_id)
+    job = models.get(models.OqJob, job_id)
     job.is_running = False
     job.status = status
     job.stop_time = datetime.utcnow()
@@ -371,7 +371,7 @@ def get_output(output_id):
     :param output_id: ID of an Output object
     :returns: (ds_key, calc_id, dirname)
     """
-    out = models.Output.objects.get(pk=output_id)
+    out = models.get(models.Output, output_id)
     return out.ds_key, out.oq_job.id, os.path.dirname(out.oq_job.ds_calc_dir)
 
 
@@ -423,3 +423,83 @@ def version_db():
 def upgrade_db():
     conn = db.connection.connection
     return upgrade_manager.upgrade_db(conn)
+
+
+# ################### used in Web UI ######################## #
+
+def calc_info(calc_id):
+    job = models.get(models.OqJob, calc_id)
+    response_data = {}
+    response_data['user_name'] = job.user_name
+    response_data['status'] = job.status
+    response_data['start_time'] = str(job.start_time)
+    response_data['stop_time'] = str(job.stop_time)
+    response_data['is_running'] = job.is_running
+    return response_data
+
+
+def get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
+    # helper to get job+calculation data from the oq-engine database
+    jobs = models.OqJob.objects.filter()
+    if not user_is_super:
+        jobs = jobs.filter(user_name=user_name)
+
+    if id is not None:
+        jobs = jobs.filter(id=id)
+
+    if 'job_type' in request_get_dict:
+        job_type = request_get_dict.get('job_type')
+        jobs = jobs.filter(hazard_calculation__isnull=job_type == 'hazard')
+
+    if 'is_running' in request_get_dict:
+        is_running = request_get_dict.get('is_running')
+        jobs = jobs.filter(is_running=valid.boolean(is_running))
+
+    if 'relevant' in request_get_dict:
+        relevant = request_get_dict.get('relevant')
+        jobs = jobs.filter(relevant=valid.boolean(relevant))
+
+    return [(job.id, job.user_name, job.status, job.job_type,
+             job.is_running, job.description) for job in jobs.order_by('-id')]
+
+
+def set_relevant(calc_id, flag):
+    job = models.get(models.OqJob, calc_id)
+    job.relevant = flag
+    job.save()
+
+
+def log_to_json(log):
+    """Convert a log record into a list of strings"""
+    return [log.timestamp.isoformat()[:22],
+            log.level, log.process, log.message]
+
+
+def get_log_slice(calc_id, start, stop):
+    """
+    Get a slice of the calculation log as a JSON list of rows
+    """
+    start = start or 0
+    stop = stop or None
+    rows = models.Log.objects.filter(job_id=calc_id)[start:stop]
+    return map(log_to_json, rows)
+
+
+def get_log_size(calc_id):
+    """
+    Get a slice of the calculation log as a JSON list of rows
+    """
+    return models.Log.objects.filter(job_id=calc_id).count()
+
+
+def get_traceback(calc_id):
+    # FIXME: why this is returning two records??
+    response_data = [rec for rec in models.Log.objects.filter(
+        job_id=calc_id, level='CRITICAL')][1].message.splitlines()
+    return response_data
+
+
+def get_result(result_id):
+    output = models.get(models.Output, result_id)
+    job = output.oq_job
+    return job.status, output.ds_key
