@@ -493,9 +493,8 @@ def get_log_size(calc_id):
 
 
 def get_traceback(calc_id):
-    # FIXME: why this is returning two records??
-    response_data = [rec for rec in models.Log.objects.filter(
-        job_id=calc_id, level='CRITICAL')][1].message.splitlines()
+    response_data = models.Log.objects.get(
+        job_id=calc_id, level='CRITICAL').message.splitlines()
     return response_data
 
 
