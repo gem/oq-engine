@@ -39,6 +39,7 @@ UBUNTU12 = platform.dist() == ('Ubuntu', '12.04', 'precise')
 
 class EngineServerTestCase(unittest.TestCase):
     hostport = 'localhost:8761'
+    dbserverport = '2000'
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
@@ -110,8 +111,11 @@ class EngineServerTestCase(unittest.TestCase):
         fh, cls.tmpdb = tempfile.mkstemp()
         sys.stderr.write('sqlite3 %s\n' % cls.tmpdb)
         os.close(fh)
-        tmpdb = 'tmpdb=' + cls.tmpdb
+        tmpdb = 'tmpdb=%s:%s' % (cls.tmpdb, cls.dbserverport)
         cls.fd, cls.errfname = tempfile.mkstemp()
+        cls.dbs = subprocess.Popen(
+            [sys.executable, '-m', 'openquake.server.dbserver',
+             cls.dbserverport])
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload', '--nothreading', tmpdb],
@@ -126,6 +130,7 @@ class EngineServerTestCase(unittest.TestCase):
         if not UBUNTU12:
             assert len(data) > 0
         os.close(cls.fd)
+        cls.dbs.kill()
 
     # tests
 
@@ -137,9 +142,6 @@ class EngineServerTestCase(unittest.TestCase):
     def test_ok(self):
         if UBUNTU12:
             # this test is broken for unknown reasons
-            raise unittest.SkipTest
-        else:
-            # here is broken for a known reason
             raise unittest.SkipTest
         job_id = self.postzip('archive_ok.zip')
         self.wait()
