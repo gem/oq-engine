@@ -75,6 +75,8 @@ class DbServer(object):
                     res, etype, _ = safely_call(func, args)
                     if etype:
                         logging.error(res)
+                    else:
+                        logging.info('Got %s', str(cmd))
                     # send back the result and the exception class
                     conn.send((res, etype))
                 finally:
