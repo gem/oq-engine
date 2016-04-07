@@ -20,14 +20,11 @@ import shutil
 import json
 import logging
 import os
-import traceback
 import tempfile
 import urlparse
 import re
 
 from xml.etree import ElementTree as etree
-
-from django.core.exceptions import ObjectDoesNotExist
 from django.http import (HttpResponse,
                          HttpResponseNotFound,
                          HttpResponseBadRequest,
@@ -38,16 +35,15 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 
 from openquake.baselib.general import groupby, writetmp
-from openquake.commonlib import nrml, readinput, valid
+from openquake.commonlib import nrml, readinput
 from openquake.commonlib.parallel import safely_call
 from openquake.commonlib.export import export
 from openquake.engine import __version__ as oqversion
-from openquake.server.db import models
 from openquake.engine.export import core
-from openquake.engine import engine
+from openquake.engine import engine, logs
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import executor, utils
-from openquake.server.db import actions
+from openquake.server.db import models, actions
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -226,17 +222,10 @@ def calc_info(request, calc_id):
     executing, complete, etc.).
     """
     try:
-        job = models.OqJob.objects.get(pk=calc_id)
-        response_data = {}
-        response_data['status'] = job.status
-        response_data['start_time'] = str(job.start_time)
-        response_data['stop_time'] = str(job.stop_time)
-        response_data['is_running'] = job.is_running
-
-    except ObjectDoesNotExist:
+        info = logs.dbcmd('calc_info', calc_id)
+    except models.NotFound:
         return HttpResponseNotFound()
-
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+    return HttpResponse(content=json.dumps(info), content_type=JSON)
 
 
 @require_http_methods(['GET'])
@@ -253,7 +242,8 @@ def calc(request, id=None):
 
     user = utils.get_user_data(request)
 
-    calc_data = _get_calcs(request.GET, user['name'], user['is_super'], id=id)
+    calc_data = logs.dbcmd('get_calcs', request.GET,
+                           user['name'], user['is_super'], id)
 
     response_data = []
     for hc_id, owner, status, job_type, is_running, desc in calc_data:
@@ -278,20 +268,11 @@ def calc_remove(request, calc_id):
     Remove the calculation id by setting the field oq_job.relevant to False.
     """
     try:
-        job = models.OqJob.objects.get(pk=calc_id)
-    except ObjectDoesNotExist:
+        logs.dbcmd('set_relevant', calc_id, False)
+    except models.NotFound:
         return HttpResponseNotFound()
-    try:
-        job.relevant = False
-        job.save()
-    except:
-        response_data = traceback.format_exc().splitlines()
-        status = 500
-    else:
-        response_data = []
-        status = 200
-    return HttpResponse(content=json.dumps(response_data),
-                        content_type=JSON, status=status)
+    return HttpResponse(content=json.dumps([]),
+                        content_type=JSON, status=200)
 
 
 def log_to_json(log):
@@ -309,9 +290,8 @@ def get_log_slice(request, calc_id, start, stop):
     start = start or 0
     stop = stop or None
     try:
-        rows = models.Log.objects.filter(job_id=calc_id)[start:stop]
-        response_data = map(log_to_json, rows)
-    except ObjectDoesNotExist:
+        response_data = logs.dbcmd('get_log_slice', calc_id, start, stop)
+    except models.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
@@ -323,8 +303,8 @@ def get_log_size(request, calc_id):
     Get the current number of lines in the log
     """
     try:
-        response_data = models.Log.objects.filter(job_id=calc_id).count()
-    except ObjectDoesNotExist:
+        response_data = logs.dbcmd('get_log_size', calc_id)
+    except models.NotFound:
         return HttpResponseNotFound()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
@@ -370,8 +350,7 @@ def run_calc(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        job = models.OqJob.objects.get(pk=job_id)
-        response_data = dict(job_id=job_id, status=job.status)
+        response_data = dict(job_id=job_id, status='executing')
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
@@ -388,31 +367,6 @@ def submit_job(job_ini, user_name, hazard_job_id=None,
     fut = executor.submit(engine.run_calc, job_id, oqparam, loglevel,
                           logfile, exports, hazard_job_id)
     return job_id, fut
-
-
-def _get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
-    # helper to get job+calculation data from the oq-engine database
-    jobs = models.OqJob.objects.filter()
-    if not user_is_super:
-        jobs = jobs.filter(user_name=user_name)
-
-    if id is not None:
-        jobs = jobs.filter(id=id)
-
-    if 'job_type' in request_get_dict:
-        job_type = request_get_dict.get('job_type')
-        jobs = jobs.filter(hazard_calculation__isnull=job_type == 'hazard')
-
-    if 'is_running' in request_get_dict:
-        is_running = request_get_dict.get('is_running')
-        jobs = jobs.filter(is_running=valid.boolean(is_running))
-
-    if 'relevant' in request_get_dict:
-        relevant = request_get_dict.get('relevant')
-        jobs = jobs.filter(relevant=valid.boolean(relevant))
-
-    return [(job.id, job.user_name, job.status, job.job_type,
-             job.is_running, job.description) for job in jobs.order_by('-id')]
 
 
 @require_http_methods(['GET'])
@@ -432,10 +386,10 @@ def calc_results(request, calc_id):
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
     try:
-        oqjob = models.OqJob.objects.get(id=calc_id)
-        if not user['is_super'] and oqjob.user_name != user['name']:
+        info = logs.dbcmd('calc_info', calc_id)
+        if not user['is_super'] and info['user_name'] != user['name']:
             return HttpResponseNotFound()
-    except ObjectDoesNotExist:
+    except models.NotFound:
         return HttpResponseNotFound()
     base_url = _get_base_url(request)
 
@@ -444,7 +398,7 @@ def calc_results(request, calc_id):
     # OrderedDict([('agg_loss_curve', ['xml', 'csv']), ...])
     output_types = groupby(export, lambda oe: oe[0],
                            lambda oes: [e for o, e in oes])
-    results = actions.get_outputs(calc_id)
+    results = logs.dbcmd('get_outputs', calc_id)
     if not results:
         return HttpResponseNotFound()
 
@@ -472,13 +426,9 @@ def get_traceback(request, calc_id):
     """
     # If the specified calculation doesn't exist throw back a 404.
     try:
-        models.OqJob.objects.get(id=calc_id)
-    except ObjectDoesNotExist:
+        response_data = logs.dbcmd('get_traceback', calc_id)
+    except models.NotFound:
         return HttpResponseNotFound()
-
-    # FIXME: why this is returning two records??
-    response_data = [rec for rec in models.Log.objects.filter(
-        job_id=calc_id, level='CRITICAL')][1].message.splitlines()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
@@ -509,11 +459,10 @@ def get_result(request, result_id):
     # the job which it is related too is not complete,
     # throw back a 404.
     try:
-        output = models.Output.objects.get(id=result_id)
-        job = output.oq_job
-        if not job.status == 'complete':
+        job_status, ds_key = logs.dbcmd('get_result', result_id)
+        if not job_status == 'complete':
             return HttpResponseNotFound()
-    except ObjectDoesNotExist:
+    except models.NotFound:
         return HttpResponseNotFound()
 
     etype = request.GET.get('export_type')
@@ -529,8 +478,7 @@ def get_result(request, result_id):
     if exported is None:
         # Throw back a 404 if the exact export parameters are not supported
         return HttpResponseNotFound(
-            'export_type=%s is not supported for %s' %
-            (export_type, output.ds_key))
+            'export_type=%s is not supported for %s' % (export_type, ds_key))
 
     content_type = EXPORT_CONTENT_TYPE_MAP.get(
         export_type, DEFAULT_CONTENT_TYPE)

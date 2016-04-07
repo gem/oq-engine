@@ -26,7 +26,7 @@ import logging
 from datetime import datetime
 from contextlib import contextmanager
 from multiprocessing.connection import Client
-from openquake.engine.config import DBS_ADDRESS, DBS_AUTHKEY
+from openquake.engine import config
 
 
 LEVELS = {'debug': logging.DEBUG,
@@ -48,7 +48,10 @@ def dbcmd(action, *args):
     :param action: database action to perform
     :param args: arguments
     """
-    client = Client(DBS_ADDRESS, authkey=DBS_AUTHKEY)
+    try:
+        client = Client(config.DBS_ADDRESS, authkey=config.DBS_AUTHKEY)
+    except:
+        raise RuntimeError('Cannot connect on %s:%s' % config.DBS_ADDRESS)
     try:
         client.send((action,) + args)
         res, etype = client.recv()
