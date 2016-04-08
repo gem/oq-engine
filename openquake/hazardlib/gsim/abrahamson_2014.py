@@ -97,7 +97,7 @@ class AbrahamsonEtAl2014(GMPE):
                 self._get_site_response_term(C, imt, sites.vs30, sa1180) +
                 self._get_hanging_wall_term(C, dists, rup) +
                 self._get_top_of_rupture_depth_term(C, imt, rup) +
-                self._get_soil_depth_term(C, sites.z1pt0, sites.vs30)
+                self._get_soil_depth_term(C, sites.z1pt0 / 1000., sites.vs30)
                 )
         mean += self._get_regional_term(C, imt, sites.vs30, dists.rrup)
         # get standard deviations
@@ -111,7 +111,7 @@ class AbrahamsonEtAl2014(GMPE):
         (vs30 = 1100 m/s)
         """
         # reference vs30 = 1180 m/s
-        vs30_1180 = np.ones_like(sites.vs30) * 1180
+        vs30_1180 = np.ones_like(sites.vs30) * 1180.
         # reference shaking intensity = 0
         ref_iml = np.zeros_like(sites.vs30)
         # fake Z1.0 - Since negative it will be replaced by the default Z1.0
@@ -296,8 +296,8 @@ class AbrahamsonEtAl2014(GMPE):
         This computes the reference depth to the 1.0 km/s interface using
         equation 18 at page 1042 of Abrahamson et al. (2014)
         """
-        return 1/1000 * np.exp(-7.67 / 4.*np.log((vs30**4 + 610.**4) /
-                                                 (1360.**4 + 610.**4)))
+        return (1. / 1000.) * np.exp((-7.67 / 4.)*np.log((vs30**4 + 610.**4) /
+                                                         (1360.**4 + 610.**4)))
 
     def _get_soil_depth_term(self, C, z1pt0, vs30):
         """
