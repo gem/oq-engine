@@ -70,6 +70,16 @@ class Hdf5Dataset(object):
         self.extend(numpy.array([tup], self.dtype))
 
 
+def extend(dset, array):
+    """
+    Extend an extensible dataset with an array of a compatible dtype
+    """
+    length = len(dset)
+    newlength = length + len(array)
+    dset.resize((newlength,))
+    dset[length:newlength] = array
+
+
 class LiteralAttrs(object):
     """
     A class to serialize attributes to HDF5. The goal is to store simple
