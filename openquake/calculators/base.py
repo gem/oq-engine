@@ -205,6 +205,12 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                 with self.monitor('export'):
                     exported[ekey] = exp(ekey, self.datastore)
                 logging.info('exported %s: %s', key, exported[ekey])
+            # special case for uhs which is a view
+            if (self.oqparam.uniform_hazard_spectra and
+                    'hmaps' in self.datastore):
+                ekey = ('uhs', fmt)
+                exported[ekey] = exp(ekey, self.datastore)
+                logging.info('exported %s: %s', key, exported[ekey])
         return exported
 
     def clean_up(self):
