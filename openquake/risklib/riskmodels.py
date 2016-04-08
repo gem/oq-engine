@@ -80,9 +80,9 @@ class CostCalculator(object):
         raise RuntimeError('Unable to compute cost')
 
     def __toh5__(self):
+        loss_types = sorted(self.cost_types)
         dt = numpy.dtype([('cost_type', (bytes, 10)),
                           ('area_type', (bytes, 10))])
-        loss_types = sorted(self.cost_types)
         array = numpy.zeros(len(loss_types), dt)
         array['cost_type'] = [self.cost_types[lt] for lt in loss_types]
         array['area_type'] = [self.area_types[lt] for lt in loss_types]
@@ -91,10 +91,9 @@ class CostCalculator(object):
         return array, attrs
 
     def __fromh5__(self, array, attrs):
-        loss_types = attrs.pop('loss_types')
         vars(self).update(attrs)
-        self.cost_types = dict(zip(loss_types, array['cost_type']))
-        self.area_types = dict(zip(loss_types, array['area_type']))
+        self.cost_types = dict(zip(self.loss_types, array['cost_type']))
+        self.area_types = dict(zip(self.loss_types, array['area_type']))
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, vars(self))
@@ -243,7 +242,7 @@ class RiskModel(object):
         The list of loss types in the underlying vulnerability functions,
         in lexicographic order
         """
-        return sorted(self.risk_functions)
+        return sorted(self.risk_functions)            
 
     def get_loss_types(self, imt):
         """

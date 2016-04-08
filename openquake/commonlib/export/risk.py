@@ -194,7 +194,7 @@ def export_avglosses_csv(ekey, dstore):
     """
     outs = extract_outputs(ekey[0], dstore, ext=ekey[1])
     sitemesh = dstore['sitemesh']
-    assetcol = dstore['assetcol']
+    assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
     header = ['lon', 'lat', 'asset_ref', 'asset_value', 'average_loss',
               'stddev_loss', 'loss_type']
@@ -246,7 +246,7 @@ def export_damage(ekey, dstore):
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
     rlzs = dstore['rlzs_assoc'].realizations
     dmg_by_asset = dstore['dmg_by_asset']  # shape (N, L, R)
-    assetcol = dstore['assetcol']
+    assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
     sitemesh = dstore['sitemesh']
     dmg_states = [DmgState(s, i) for i, s in enumerate(damage_states)]
@@ -290,7 +290,7 @@ def export_damage_taxon(ekey, dstore):
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
     rlzs = dstore['rlzs_assoc'].realizations
     dmg_by_taxon = dstore['dmg_by_taxon']  # shape (T, L, R)
-    taxonomies = dstore['taxonomies']
+    taxonomies = dstore['assetcol/taxonomies']
     dmg_states = [DmgState(s, i) for i, s in enumerate(damage_states)]
     D = len(dmg_states)
     T, R = dmg_by_taxon.shape
@@ -363,7 +363,7 @@ def export_rlzs_by_asset_csv(ekey, dstore):
 
 @export.add(('csq_by_taxon', 'csv'))
 def export_csq_by_taxon_csv(ekey, dstore):
-    taxonomies = dstore['taxonomies'].value
+    taxonomies = dstore['assetcol/taxonomies'].value
     rlzs = dstore['rlzs_assoc'].realizations
     R = len(rlzs)
     value = dstore[ekey[0]].value  # matrix T x R
@@ -440,7 +440,7 @@ def export_dmg_by_asset_csv(ekey, dstore):
 @export.add(('dmg_by_taxon', 'csv'))
 def export_dmg_by_taxon_csv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
-    taxonomies = dstore['taxonomies'].value
+    taxonomies = dstore['assetcol/taxonomies'].value
     rlzs = dstore['rlzs_assoc'].realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
@@ -513,7 +513,7 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
     unit_by_lt['occupants'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
     loss_maps = dstore[ekey[0]]
-    assetcol = dstore['assetcol']
+    assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
     R = len(rlzs)
     sitemesh = dstore['sitemesh']
@@ -560,7 +560,7 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
 def export_loss_maps_stats_xml_geojson(ekey, dstore):
     loss_maps = dstore[ekey[0]]
     N, S = loss_maps.shape
-    assetcol = dstore['assetcol']
+    assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
     sitemesh = dstore['sitemesh']
     fnames = []
@@ -594,7 +594,7 @@ def export_loss_map_xml_geojson(ekey, dstore):
     rlzs = dstore['rlzs_assoc'].realizations
     loss_map = dstore[ekey[0]]
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
-    assetcol = dstore['assetcol']
+    assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
     R = len(rlzs)
     sitemesh = dstore['sitemesh']
@@ -759,7 +759,7 @@ def export_agg_curve(ekey, dstore):
 @export.add(('loss_curves-stats', 'xml'),
             ('loss_curves-stats', 'geojson'))
 def export_loss_curves_stats(ekey, dstore):
-    assetcol = dstore['assetcol']
+    assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
     sitemesh = dstore['sitemesh']
     loss_curves = dstore[ekey[0]]
@@ -791,7 +791,7 @@ def export_loss_curves_stats(ekey, dstore):
 @export.add(('rcurves-rlzs', 'xml'),
             ('rcurves-rlzs', 'geojson'))
 def export_rcurves_rlzs(ekey, dstore):
-    assetcol = dstore['assetcol']
+    assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
     sitemesh = dstore['sitemesh']
     rcurves = dstore[ekey[0]]
@@ -822,7 +822,7 @@ def export_rcurves_rlzs(ekey, dstore):
 @export.add(('loss_curves-rlzs', 'xml'),
             ('loss_curves-rlzs', 'geojson'))
 def export_loss_curves_rlzs(ekey, dstore):
-    assetcol = dstore['assetcol']
+    assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
     sitemesh = dstore['sitemesh']
     loss_curves = dstore[ekey[0]]
@@ -856,7 +856,7 @@ BcrData = collections.namedtuple(
 # this is used by classical_bcr
 @export.add(('bcr-rlzs', 'xml'))
 def export_bcr_map_rlzs(ekey, dstore):
-    assetcol = dstore['assetcol']
+    assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
     sitemesh = dstore['sitemesh']
     bcr_data = dstore['bcr-rlzs']

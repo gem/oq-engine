@@ -25,7 +25,6 @@ import operator
 import traceback
 import collections
 
-import h5py
 import numpy
 
 from openquake.hazardlib.geo import geodetic
@@ -35,7 +34,7 @@ from openquake.commonlib import (
     readinput, riskmodels, datastore, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import apply_reduce, executor
-from openquake.risklib import riskinput, riskmodels as rm
+from openquake.risklib import riskinput
 from openquake.baselib.python3compat import with_metaclass
 
 get_taxonomy = operator.attrgetter('taxonomy')
@@ -84,12 +83,15 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     realizations = datastore.persistent_attribute('realizations')
     assetcol = datastore.persistent_attribute('assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
-    taxonomies = datastore.persistent_attribute('taxonomies')
     job_info = datastore.persistent_attribute('job_info')
     performance = datastore.persistent_attribute('performance')
     csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
     is_stochastic = False  # True for scenario and event based calculators
+
+    @property
+    def taxonomies(self):
+        return self.datastore['assetcol/taxonomies'].value
 
     def __init__(self, oqparam, monitor=Monitor(), calc_id=None):
         self.monitor = monitor
@@ -234,13 +236,12 @@ def _set_nbytes(dkey, dstore):
     group.attrs['nbytes'] = group[key].attrs['nbytes'] * len(group)
 
 
-def check_time_event(dstore):
+def check_time_event(dstore, time_events):
     """
     Check the `time_event` parameter in the datastore, by comparing
     with the periods found in the exposure.
     """
     time_event = dstore.attrs.get('time_event')
-    time_events = dstore.get_attr('assetcol', 'time_events', ())
     if time_event and ast.literal_eval(time_event) not in time_events:
         inputs = ast.literal_eval(dstore.attrs['inputs'])
         raise ValueError(
@@ -333,9 +334,9 @@ class HazardCalculator(BaseCalculator):
                     self.job_info = readinput.get_job_info(
                         self.oqparam, self.csm, self.sitecol)
                     logging.info('Expected output size=%s',
-                                 self.job_info['output_weight'])
+                                 self.job_info.hazard['output_weight'])
                     logging.info('Total weight of the sources=%s',
-                                 self.job_info['input_weight'])
+                                 self.job_info.hazard['input_weight'])
                 with self.monitor('managing sources', autoflush=True):
                     self.send_sources()
                 self.manager.store_source_info(
@@ -359,15 +360,12 @@ class HazardCalculator(BaseCalculator):
             self.datastore.set_attrs('asset_refs', nbytes=arefs.nbytes)
             all_cost_types = set(self.oqparam.all_cost_types)
             fname = self.oqparam.inputs['exposure']
-            cc = readinput.get_exposure_lazy(fname, all_cost_types)[-1]
-            if cc.cost_types:
-                self.datastore['cost_calculator'] = cc
+            self.cost_calculator = readinput.get_exposure_lazy(
+                fname, all_cost_types)[-1]
             self.sitecol, self.assets_by_site = (
                 readinput.get_sitecol_assets(self.oqparam, self.exposure))
             if len(self.exposure.cost_types):
                 self.cost_types = self.exposure.cost_types
-            self.taxonomies = numpy.array(
-                sorted(self.exposure.taxonomies), '|S100')
 
     def load_riskmodel(self):
         """
@@ -399,6 +397,7 @@ class HazardCalculator(BaseCalculator):
                         rmodel.retro_functions)
         attrs = self.datastore['composite_risk_model'].attrs
         attrs['loss_types'] = rm.loss_types
+        attrs['min_iml'] = sorted(rm.get_min_iml().items())
         if rm.damage_states:
             attrs['damage_states'] = rm.damage_states
         self.datastore['loss_ratios'] = rm.get_loss_ratios()
@@ -441,9 +440,9 @@ class HazardCalculator(BaseCalculator):
 
         if oq_hazard:
             parent = self.datastore.parent
-            if 'assetcol' in parent and any(
-                    parent.get_attr('assetcol', 'time_events', ())):
-                check_time_event(self.datastore)
+            if 'assetcol' in parent:
+                check_time_event(
+                    self.datastore, parent['assetcol'].time_events)
             if oq_hazard.time_event != oq.time_event:
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
@@ -453,24 +452,11 @@ class HazardCalculator(BaseCalculator):
         # save mesh and asset collection
         self.save_mesh()
         if hasattr(self, 'assets_by_site'):
-            self.assetcol = riskinput.build_asset_collection(
-                self.assets_by_site, oq.time_event)
-            self.datastore.set_attrs('assetcol', nbytes=self.assetcol.nbytes)
-            if self.exposure.time_events:
-                self.datastore.set_attrs(
-                    'assetcol', time_events=sorted(self.exposure.time_events))
+            self.assetcol = riskinput.AssetCollection(
+                self.assets_by_site, self.cost_calculator, oq.time_event,
+                time_events=sorted(self.exposure.time_events) or '')
         elif hasattr(self, 'assetcol'):
-            try:
-                cc = self.datastore['cost_calculator']
-            except KeyError:
-                # the cost calculator can be missing: this happens when
-                # there are no cost types in damage calculations. Not saving
-                # the cost calculator is needed to work around yet another
-                # bug of HDF5 in Ubuntu 12.04 that makes it impossible to
-                # store numpy arrays of zero length
-                cc = rm.CostCalculator({}, {}, True, True)  # dummy
-            self.assets_by_site = riskinput.build_assets_by_site(
-                self.assetcol, self.taxonomies, oq.time_event, cc)
+            self.assets_by_site = self.assetcol.assets_by_site()
 
     def save_mesh(self):
         """
@@ -550,10 +536,6 @@ class RiskCalculator(HazardCalculator):
             a list of RiskInputs objects, sorted by IMT.
         """
         self.check_poes(hazards_by_key)
-
-        # add asset.ordinal as side effect
-        riskinput.build_asset_collection(
-            self.assets_by_site, self.oqparam.time_event)
         imtls = self.oqparam.imtls
         if not set(self.oqparam.risk_imtls) & set(imtls):
             rsk = ', '.join(self.oqparam.risk_imtls)
@@ -609,8 +591,6 @@ class RiskCalculator(HazardCalculator):
         Require a `.core_task` to be defined with signature
         (riskinputs, riskmodel, rlzs_assoc, monitor).
         """
-        riskinput.build_asset_collection(
-            self.assets_by_site, self.oqparam.time_event)
         self.monitor.oqparam = self.oqparam
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:

@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import mock
+import pickle
 import unittest
 import numpy
 from openquake.baselib.general import writetmp
@@ -57,9 +58,12 @@ idx:uint32,lon,lat,site_id:uint32,taxonomy:uint32:,number,area,occupants:float64
 0,8.12985001E+01,2.91098003E+01,0,1,3.00000000E+00,1.00000000E+01,1.00000000E+01,1.00000000E+02,2.50000000E+01,1.00000000E+02
 1,8.30822983E+01,2.79006004E+01,1,0,5.00000000E+02,1.00000000E+01,2.00000000E+01,4.00000000E-01,1.00000000E-01,2.00000000E-01
 ''')
-        assetcol = riskinput.build_asset_collection(self.assets_by_site)
+        assetcol = riskinput.AssetCollection(self.assets_by_site, None, None)
         numpy.testing.assert_equal(
-            assetcol, writers.read_composite_array(expected))
+            assetcol.array, writers.read_composite_array(expected))
+
+        # pickleability
+        pickle.loads(pickle.dumps(assetcol))
 
     def test_get_hazard(self):
         self.assertEqual(
