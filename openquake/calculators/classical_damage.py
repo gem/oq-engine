@@ -44,8 +44,8 @@ def classical_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
         for out_by_lr in riskmodel.gen_outputs(
                 riskinputs, rlzs_assoc, monitor):
             for (l, r), out in sorted(out_by_lr.items()):
-                asset_ids = [a.idx for a in out.assets]
-                result[r] += dict(zip(asset_ids, out.damages))
+                ordinals = [a.ordinal for a in out.assets]
+                result[r] += dict(zip(ordinals, out.damages))
     return result
 
 

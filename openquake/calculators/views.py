@@ -405,8 +405,8 @@ def view_exposure_info(token, dstore):
     """
     Display info about the exposure model
     """
-    assetcol = dstore['assetcol'][:]
-    taxonomies = dstore['taxonomies'][:]
+    assetcol = dstore['assetcol/array'][:]
+    taxonomies = dstore['assetcol/taxonomies'][:]
     counts = numpy.zeros(len(taxonomies), numpy.uint32)
     for ass in assetcol:
         tax_idx = ass['taxonomy']
@@ -424,7 +424,7 @@ def view_assetcol(token, dstore):
     Display the exposure in CSV format
     """
     assetcol = dstore['assetcol'].value
-    taxonomies = dstore['taxonomies'].value
+    taxonomies = dstore['assetcol/taxonomies'].value
     header = list(assetcol.dtype.names)
     columns = [None] * len(header)
     for i, field in enumerate(header):

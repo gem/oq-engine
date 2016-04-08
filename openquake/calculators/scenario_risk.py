@@ -70,7 +70,7 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
             stats[:, 2] = out.insured_loss_matrix.mean(axis=1)
             stats[:, 3] = out.insured_loss_matrix.std(ddof=1, axis=1)
             for asset, stat in zip(out.assets, stats):
-                result['avg'].append((l, r, asset.idx, stat))
+                result['avg'].append((l, r, asset.ordinal, stat))
             result['agg'][:, l, r, 0] += out.aggregate_losses
             result['agg'][:, l, r, 1] += out.insured_losses
     return result

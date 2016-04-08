@@ -1,5 +1,14 @@
   [Michele Simionato]
   * Fixed a bug with the export of UHS curves with `--exports=xml`
+  * Reduced substantially the data transfer and the memory occupation
+    for event based calculations with a large number of assets: we
+    can run the California exposure with half million assets now
+  * Fixed a bug in the SESCollection exporter
+  * Changed the asset<->epsilons association: before for a given taxonomy the
+    assets were ordered by `asset_ref`, now they are ordered by `id`. This
+    has a minor impact on the numbers sensitive to the epsilons, akin to a
+    change of seeds
+  * Added a test on the ordering of the epsilons
   * Accepted `.` and `|` as valid characters for source IDs
   * Changed the GMF calculator to use a single seed per unique rupture
   * Change the SESCollection exporter: now a single file is exported, before
