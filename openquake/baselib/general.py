@@ -605,7 +605,8 @@ def groupby2(records, kfield, vfield):
         vgetter = operator.itemgetter(*vfield)
     else:
         vgetter = operator.itemgetter(vfield)
-    return groupby(records, kgetter, lambda rows: [vgetter(r) for r in rows])
+    dic = groupby(records, kgetter, lambda rows: [vgetter(r) for r in rows])
+    return dic.items()
 
 
 def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
