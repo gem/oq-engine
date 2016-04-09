@@ -358,6 +358,12 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
     etags = datastore.persistent_attribute('etags')
     is_stochastic = True
 
+    def init_datasets(self):
+        """
+        Set the random seed passed to the SourceManager
+        """
+        self.random_seed = self.oqparam.random_seed
+
     def count_eff_ruptures(self, ruptures_by_trt_id, trt_model):
         """
         Returns the number of ruptures sampled in the given trt_model.
@@ -387,23 +393,12 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         """
         Initial accumulator, a dictionary trt_model_id -> list of ruptures
         """
+        self.random_seed = self.oqparam.random_seed  # to the SourceManager
         smodels = self.rlzs_assoc.csm_info.source_models
         zd = AccumDict((tm.id, []) for smodel in smodels
                        for tm in smodel.trt_models)
         zd.calc_times = []
         return zd
-
-    def send_sources(self):
-        """
-        Filter, split and set the seed array for each source, then send it the
-        workers
-        """
-        oq = self.oqparam
-        self.manager = self.SourceManager(
-            self.csm, self.core_task.__func__,
-            oq.maximum_distance, self.datastore,
-            self.monitor.new(oqparam=oq), oq.random_seed, oq.filter_sources)
-        self.manager.submit_sources(self.sitecol)
 
     def post_execute(self, result):
         """
