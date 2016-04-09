@@ -257,11 +257,13 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     eb_ruptures = []
     rup_data = []
     calc_times = []
+    filter_mon = monitor('filtering ruptures', measuremem=False)
 
     # Compute and save stochastic event sets
     for src in sources:
         t0 = time.time()
-        s_sites = src.filter_sites_by_distance_to_source(max_dist, sitecol)
+        with filter_mon:
+            s_sites = src.filter_sites_by_distance_to_source(max_dist, sitecol)
         if s_sites is None:
             continue
 
