@@ -606,7 +606,7 @@ def groupby2(records, kfield, vfield):
     else:
         vgetter = operator.itemgetter(vfield)
     dic = groupby(records, kgetter, lambda rows: [vgetter(r) for r in rows])
-    return dic.items()
+    return list(dic.items())  # Python3 compatible
 
 
 def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
