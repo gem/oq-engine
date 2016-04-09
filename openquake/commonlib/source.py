@@ -21,7 +21,6 @@ import io
 import sys
 import ast
 import copy
-import math
 import logging
 import operator
 import collections

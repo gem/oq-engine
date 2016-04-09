@@ -1,27 +1,27 @@
 classical risk
 ==============
 
-num_sites = 7, sitecol = 960 B
+num_sites = 7, sitecol = 1015 B
 
 Parameters
 ----------
-============================ ==============
-calculation_mode             classical_risk
-number_of_logic_tree_samples 0             
-maximum_distance             200           
-investigation_time           50            
-ses_per_logic_tree_path      1             
-truncation_level             3.000         
-rupture_mesh_spacing         2.000         
-complex_fault_mesh_spacing   2.000         
-width_of_mfd_bin             0.100         
-area_source_discretization   10            
-random_seed                  24            
-master_seed                  0             
-concurrent_tasks             16            
-avg_losses                   False         
-sites_per_tile               1000          
-============================ ==============
+============================ ==================
+calculation_mode             'classical_risk'  
+number_of_logic_tree_samples 0                 
+maximum_distance             {'default': 200.0}
+investigation_time           50.0              
+ses_per_logic_tree_path      1                 
+truncation_level             3.0               
+rupture_mesh_spacing         2.0               
+complex_fault_mesh_spacing   2.0               
+width_of_mfd_bin             0.1               
+area_source_discretization   10.0              
+random_seed                  24                
+master_seed                  0                 
+concurrent_tasks             40                
+avg_losses                   False             
+sites_per_tile               1000              
+============================ ==================
 
 Input files
 -----------
@@ -95,10 +95,10 @@ filtered_weight 969
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
-Number of tasks to generate 22       
-Sent data                   287.07 KB
-Total received data         188.9 KB 
-Maximum received per task   8.61 KB  
+Number of tasks to generate 30       
+Sent data                   401.74 KB
+Total received data         276.45 KB
+Maximum received per task   9.23 KB  
 =========================== =========
 
 Exposure model
@@ -121,8 +121,33 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-2            1         SimpleFaultSource    482    15        0.002       0.058      6.148    
-0            1         SimpleFaultSource    482    15        0.004       0.070      5.743    
+0            1         SimpleFaultSource    482    15        0.002       0.042      5.219    
+2            1         SimpleFaultSource    482    15        0.002       0.039      4.937    
+3            2         CharacteristicFaultS 1.000  1         0.001       0.0        0.034    
 1            2         SimpleFaultSource    4.000  1         0.002       0.0        0.029    
-3            2         CharacteristicFaultS 1.000  1         0.002       0.0        0.026    
 ============ ========= ==================== ====== ========= =========== ========== =========
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+total classical                10        3.352     30    
+making contexts                6.193     0.0       969   
+computing poes                 3.522     0.0       1,938 
+total classical_risk           0.817     0.336     11    
+computing individual risk      0.808     0.0       11    
+managing sources               0.157     0.0       1     
+splitting sources              0.081     0.0       2     
+combine and save curves_by_rlz 0.036     0.0       1     
+reading composite source model 0.022     0.0       1     
+save curves_by_trt_gsim        0.020     0.0       1     
+compute and save statistics    0.019     0.0       1     
+filtering sources              0.007     0.0       4     
+aggregate curves               0.006     0.0       30    
+reading exposure               0.005     0.0       1     
+store source_info              0.005     0.0       1     
+getting hazard                 0.005     0.0       11    
+building riskinputs            0.002     0.0       1     
+reading site collection        5.960E-06 0.0       1     
+============================== ========= ========= ======

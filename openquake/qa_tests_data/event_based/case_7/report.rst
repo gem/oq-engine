@@ -1,25 +1,25 @@
 Event-based PSHA with logic tree sampling
 =========================================
 
-num_sites = 3, sitecol = 776 B
+num_sites = 3, sitecol = 831 B
 
 Parameters
 ----------
-============================ ===========
-calculation_mode             event_based
-number_of_logic_tree_samples 10         
-maximum_distance             200        
-investigation_time           50         
-ses_per_logic_tree_path      10         
-truncation_level             3.000      
-rupture_mesh_spacing         2.000      
-complex_fault_mesh_spacing   2.000      
-width_of_mfd_bin             0.200      
-area_source_discretization   20         
-random_seed                  23         
-master_seed                  0          
-concurrent_tasks             16         
-============================ ===========
+============================ ==================
+calculation_mode             'event_based'     
+number_of_logic_tree_samples 10                
+maximum_distance             {'default': 200.0}
+investigation_time           50.0              
+ses_per_logic_tree_path      10                
+truncation_level             3.0               
+rupture_mesh_spacing         2.0               
+complex_fault_mesh_spacing   2.0               
+width_of_mfd_bin             0.2               
+area_source_discretization   20.0              
+random_seed                  23                
+master_seed                  0                 
+concurrent_tasks             40                
+============================ ==================
 
 Input files
 -----------
@@ -63,46 +63,29 @@ Realizations per (TRT, GSIM)
   1,BooreAtkinson2008: ['<8,b12,BA,w=0.1>', '<9,b12,BA,w=0.1>']
   1,CampbellBozorgnia2008: ['<7,b12,CB,w=0.1>']>
 
-Non-empty rupture collections
------------------------------
-=== ========= ==================== ============
-col smlt_path TRT                  num_ruptures
-=== ========= ==================== ============
-0   b11       Active Shallow Crust 472         
-1   b11       Active Shallow Crust 495         
-2   b11       Active Shallow Crust 518         
-3   b11       Active Shallow Crust 473         
-4   b11       Active Shallow Crust 506         
-5   b11       Active Shallow Crust 480         
-6   b11       Active Shallow Crust 491         
-7   b12       Active Shallow Crust 59          
-8   b12       Active Shallow Crust 34          
-9   b12       Active Shallow Crust 43          
-=== ========= ==================== ============
+Number of ruptures per tectonic region type
+-------------------------------------------
+================= ====== ==================== =========== ============ ======
+source_model      trt_id trt                  num_sources eff_ruptures weight
+================= ====== ==================== =========== ============ ======
+source_model1.xml 0      Active Shallow Crust 1           1,405        61    
+source_model2.xml 1      Active Shallow Crust 1           133          61    
+================= ====== ==================== =========== ============ ======
 
-Collections <-> realizations
-----------------------------
-=========== ============
-Collections Realizations
-0           0           
-1           1           
-2           2           
-3           3           
-4           4           
-5           5           
-6           6           
-7           7           
-8           8           
-9           9           
-=========== ============
+=============== =====
+#TRT models     2    
+#sources        2    
+#eff_ruptures   1,538
+filtered_weight 122  
+=============== =====
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
-Number of tasks to generate 16       
-Sent data                   316.43 KB
-Total received data         1.37 MB  
-Maximum received per task   167.85 KB
+Number of tasks to generate 62       
+Sent data                   850.85 KB
+Total received data         1.64 MB  
+Maximum received per task   50.37 KB 
 =========================== =========
 
 Slowest sources
@@ -110,6 +93,27 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   61     307       0.002       0.072      3.059    
-1            1         AreaSource   61     307       0.002       0.073      2.074    
+0            1         AreaSource   61     307       0.002       0.092      5.775    
+1            1         AreaSource   61     307       0.002       0.092      3.323    
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+total compute_gmfs_and_curves  15        0.0       41    
+compute poes                   12        0.0       1,538 
+total compute_ruptures         9.154     0.0       62    
+make contexts                  3.030     0.0       1,538 
+managing sources               0.534     0.0       1     
+bulding hazard curves          0.286     0.0       41    
+reading composite source model 0.197     0.0       1     
+saving ruptures                0.196     0.0       1     
+splitting sources              0.184     0.0       2     
+aggregating hcurves            0.127     0.0       121   
+aggregate curves               0.036     0.0       183   
+store source_info              0.010     0.0       1     
+filtering sources              0.004     0.0       2     
+reading site collection        5.794E-05 0.0       1     
+============================== ========= ========= ======

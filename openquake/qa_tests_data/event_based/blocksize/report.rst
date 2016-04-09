@@ -1,25 +1,25 @@
 QA test for blocksize independence (hazard)
 ===========================================
 
-num_sites = 2, sitecol = 730 B
+num_sites = 2, sitecol = 785 B
 
 Parameters
 ----------
-============================ ===========
-calculation_mode             event_based
-number_of_logic_tree_samples 1          
-maximum_distance             400        
-investigation_time           5.000      
-ses_per_logic_tree_path      1          
-truncation_level             3.000      
-rupture_mesh_spacing         10         
-complex_fault_mesh_spacing   10         
-width_of_mfd_bin             0.500      
-area_source_discretization   10         
-random_seed                  1,024      
-master_seed                  0          
-concurrent_tasks             16         
-============================ ===========
+============================ ==================
+calculation_mode             'event_based'     
+number_of_logic_tree_samples 1                 
+maximum_distance             {'default': 400.0}
+investigation_time           5.0               
+ses_per_logic_tree_path      1                 
+truncation_level             3.0               
+rupture_mesh_spacing         10.0              
+complex_fault_mesh_spacing   10.0              
+width_of_mfd_bin             0.5               
+area_source_discretization   10.0              
+random_seed                  1024              
+master_seed                  0                 
+concurrent_tasks             40                
+============================ ==================
 
 Input files
 -----------
@@ -56,28 +56,21 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=1, rlzs=1)
   0,ChiouYoungs2008: ['<0,b1,b1,w=1.0>']>
 
-Non-empty rupture collections
------------------------------
-=== ========= ==================== ============
-col smlt_path TRT                  num_ruptures
-=== ========= ==================== ============
-0   b1        Active Shallow Crust 3           
-=== ========= ==================== ============
-
-Collections <-> realizations
-----------------------------
-=========== ============
-Collections Realizations
-0           0           
-=========== ============
+Number of ruptures per tectonic region type
+-------------------------------------------
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources eff_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust 3           3            277   
+================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
-Number of tasks to generate 8        
-Sent data                   532.77 KB
-Total received data         43.62 KB 
-Maximum received per task   7.78 KB  
+Number of tasks to generate 38       
+Sent data                   730.44 KB
+Total received data         144.23 KB
+Maximum received per task   5.24 KB  
 =========================== =========
 
 Slowest sources
@@ -85,7 +78,27 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   175    1,170     0.001       0.479      5.308    
-0            2         AreaSource   58     389       0.001       0.154      1.599    
-0            3         AreaSource   44     352       0.001       0.126      0.823    
+0            1         AreaSource   175    1,170     0.001       0.606      8.142    
+0            2         AreaSource   58     389       0.001       0.170      2.469    
+0            3         AreaSource   44     352       0.001       0.202      1.035    
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+total compute_ruptures         11        0.0       38    
+reading composite source model 3.419     0.0       1     
+managing sources               1.419     0.0       1     
+splitting sources              0.978     0.0       3     
+store source_info              0.040     0.0       1     
+filtering sources              0.025     0.0       9     
+saving ruptures                0.018     0.0       1     
+total compute_gmfs_and_curves  0.005     0.0       3     
+saving gmfs                    0.004     0.0       3     
+make contexts                  0.002     0.0       3     
+aggregate curves               0.002     0.0       38    
+compute poes                   0.002     0.0       3     
+reading site collection        5.794E-05 0.0       1     
+============================== ========= ========= ======

@@ -1,25 +1,25 @@
 QA test for disaggregation case_2
 =================================
 
-num_sites = 2, sitecol = 730 B
+num_sites = 2, sitecol = 785 B
 
 Parameters
 ----------
-============================ ==============
-calculation_mode             disaggregation
-number_of_logic_tree_samples 0             
-maximum_distance             200           
-investigation_time           1.000         
-ses_per_logic_tree_path      1             
-truncation_level             3.000         
-rupture_mesh_spacing         4.000         
-complex_fault_mesh_spacing   4.000         
-width_of_mfd_bin             0.100         
-area_source_discretization   10            
-random_seed                  23            
-master_seed                  0             
-concurrent_tasks             10            
-============================ ==============
+============================ ==================
+calculation_mode             'disaggregation'  
+number_of_logic_tree_samples 0                 
+maximum_distance             {'default': 200.0}
+investigation_time           1.0               
+ses_per_logic_tree_path      1                 
+truncation_level             3.0               
+rupture_mesh_spacing         4.0               
+complex_fault_mesh_spacing   4.0               
+width_of_mfd_bin             0.1               
+area_source_discretization   10.0              
+random_seed                  23                
+master_seed                  0                 
+concurrent_tasks             10                
+============================ ==================
 
 Input files
 -----------
@@ -38,8 +38,8 @@ Composite source model
 ============== ====== ========================================== =============== ================
 smlt_path      weight source_model_file                          gsim_logic_tree num_realizations
 ============== ====== ========================================== =============== ================
-source_model_1 0.50   `source_model_1.xml <source_model_1.xml>`_ simple(2,1)     2/2             
-source_model_2 0.50   `source_model_2.xml <source_model_2.xml>`_ simple(2,0)     2/2             
+source_model_1 0.500  `source_model_1.xml <source_model_1.xml>`_ simple(2,1)     2/2             
+source_model_2 0.500  `source_model_2.xml <source_model_2.xml>`_ simple(2,0)     2/2             
 ============== ====== ========================================== =============== ================
 
 Required parameters per tectonic region type
@@ -84,8 +84,8 @@ filtered_weight 1,556
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
-Number of tasks to generate 14       
-Sent data                   138.89 KB
+Number of tasks to generate 18       
+Sent data                   191.55 KB
 =========================== =========
 
 Slowest sources
@@ -93,8 +93,23 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-2            1         SimpleFaultSource 1,420  15        0.003       0.159      0.0      
-0            2         AreaSource        45     1         0.001       0.0        0.0      
-1            1         AreaSource        45     1         0.001       0.0        0.0      
+2            1         SimpleFaultSource 1,420  15        0.019       0.332      0.0      
+0            2         AreaSource        45     1         0.002       0.0        0.0      
 1            3         AreaSource        45     1         0.001       0.0        0.0      
+1            1         AreaSource        45     1         0.001       0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+managing sources               0.552     0.0       1     
+splitting sources              0.332     0.0       1     
+reading composite source model 0.114     0.0       1     
+filtering sources              0.024     0.0       4     
+total count_eff_ruptures       0.005     0.0       18    
+store source_info              3.581E-04 0.0       1     
+aggregate curves               3.552E-04 0.0       18    
+reading site collection        5.794E-05 0.0       1     
+============================== ========= ========= ======
