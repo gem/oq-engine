@@ -1,26 +1,26 @@
 Classical Tiling for Turkey reduced
 ===================================
 
-num_sites = 83, sitecol = 4.37 KB
+num_sites = 83, sitecol = 4.42 KB
 
 Parameters
 ----------
-============================ =========
-calculation_mode             classical
-number_of_logic_tree_samples 0        
-maximum_distance             100      
-investigation_time           10       
-ses_per_logic_tree_path      1        
-truncation_level             3.000    
-rupture_mesh_spacing         15       
-complex_fault_mesh_spacing   15       
-width_of_mfd_bin             0.100    
-area_source_discretization   25       
-random_seed                  323      
-master_seed                  0        
-concurrent_tasks             4        
-sites_per_tile               10       
-============================ =========
+============================ ==================
+calculation_mode             'classical'       
+number_of_logic_tree_samples 0                 
+maximum_distance             {'default': 100.0}
+investigation_time           10.0              
+ses_per_logic_tree_path      1                 
+truncation_level             3.0               
+rupture_mesh_spacing         15.0              
+complex_fault_mesh_spacing   15.0              
+width_of_mfd_bin             0.1               
+area_source_discretization   25.0              
+random_seed                  323               
+master_seed                  0                 
+concurrent_tasks             4                 
+sites_per_tile               10                
+============================ ==================
 
 Input files
 -----------
@@ -76,22 +76,22 @@ Number of ruptures per tectonic region type
 ========================= ====== ==================== =========== ============ ======
 source_model              trt_id trt                  num_sources eff_ruptures weight
 ========================= ====== ==================== =========== ============ ======
-models/src/as_model.xml   4      Active Shallow Crust 1           31,008       96    
-models/src/fsbg_model.xml 9      Active Shallow Crust 2           7,326        51    
+models/src/as_model.xml   4      Active Shallow Crust 1           3,876        96    
+models/src/fsbg_model.xml 9      Active Shallow Crust 2           915          51    
 ========================= ====== ==================== =========== ============ ======
 
-=============== ======
-#TRT models     2     
-#sources        3     
-#eff_ruptures   38,334
-filtered_weight 148   
-=============== ======
+=============== =====
+#TRT models     2    
+#sources        3    
+#eff_ruptures   4,791
+filtered_weight 148  
+=============== =====
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== =======
 Number of tasks to generate 13     
-Sent data                   2.72 MB
+Sent data                   2.75 MB
 =========================== =======
 
 Slowest sources
@@ -99,7 +99,21 @@ Slowest sources
 ============ ============ ============ ====== ========= =========== ========== =========
 trt_model_id source_id    source_class weight split_num filter_time split_time calc_time
 ============ ============ ============ ====== ========= =========== ========== =========
-4            AS_GEAS343   AreaSource   96     1         0.019       0.0        0.0      
-9            FSBG_TRBG103 AreaSource   43     1         0.006       0.0        0.0      
-9            FSBG_ARAS462 AreaSource   7.650  1         0.002       0.0        0.0      
+4            AS_GEAS343   AreaSource   96     1         0.020       0.0        0.0      
+9            FSBG_TRBG103 AreaSource   43     1         0.008       0.0        0.0      
+9            FSBG_ARAS462 AreaSource   7.650  1         0.001       0.0        0.0      
 ============ ============ ============ ====== ========= =========== ========== =========
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+managing sources               6.042     0.0       1     
+reading composite source model 2.188     0.0       1     
+filtering sources              0.502     0.0       248   
+reading site collection        0.018     0.0       1     
+total count_eff_ruptures       0.011     0.0       13    
+store source_info              4.821E-04 0.0       1     
+aggregate curves               2.742E-04 0.0       13    
+============================== ========= ========= ======

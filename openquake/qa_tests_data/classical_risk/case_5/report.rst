@@ -1,26 +1,26 @@
 Hazard Calculation for end-to-end hazard+risk
 =============================================
 
-num_sites = 1, sitecol = 684 B
+num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ =========
-calculation_mode             classical
-number_of_logic_tree_samples 0        
-maximum_distance             300      
-investigation_time           15       
-ses_per_logic_tree_path      1        
-truncation_level             4.000    
-rupture_mesh_spacing         20       
-complex_fault_mesh_spacing   20       
-width_of_mfd_bin             0.200    
-area_source_discretization   10       
-random_seed                  1,024    
-master_seed                  0        
-concurrent_tasks             16       
-sites_per_tile               1000     
-============================ =========
+============================ ==================
+calculation_mode             'classical'       
+number_of_logic_tree_samples 0                 
+maximum_distance             {'default': 300.0}
+investigation_time           15.0              
+ses_per_logic_tree_path      1                 
+truncation_level             4.0               
+rupture_mesh_spacing         20.0              
+complex_fault_mesh_spacing   20.0              
+width_of_mfd_bin             0.2               
+area_source_discretization   10.0              
+random_seed                  1024              
+master_seed                  0                 
+concurrent_tasks             40                
+sites_per_tile               1000              
+============================ ==================
 
 Input files
 -----------
@@ -38,7 +38,7 @@ Composite source model
 ========= ====== ====================================== =============== ================
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations
 ========= ====== ====================================== =============== ================
-b1        1.0    `source_model.xml <source_model.xml>`_ simple(1,4)     4/4             
+b1        1.000  `source_model.xml <source_model.xml>`_ simple(1,4)     4/4             
 ========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
@@ -82,7 +82,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 2       
-Sent data                   16.18 KB
+Sent data                   17.39 KB
 =========================== ========
 
 Slowest sources
@@ -90,6 +90,20 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            A         PointSource  0.575  1         1.850E-04   0.0        0.0      
-1            B         PointSource  0.575  1         1.190E-04   0.0        0.0      
+0            A         PointSource  0.575  1         1.380E-04   0.0        0.0      
+1            B         PointSource  0.575  1         1.042E-04   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+reading composite source model 0.006     0.0       1     
+managing sources               0.004     0.0       1     
+total count_eff_ruptures       6.399E-04 0.004     2     
+store source_info              2.580E-04 0.0       1     
+filtering sources              2.422E-04 0.0       2     
+aggregate curves               4.101E-05 0.0       2     
+reading site collection        3.600E-05 0.0       1     
+============================== ========= ========= ======

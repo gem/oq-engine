@@ -18,21 +18,13 @@
 
 import os
 import re
-import pydoc
 from openquake.baselib.python3compat import pickle
 import collections
 
 import numpy
-try:
-    import h5py
-except ImportError:
-    # there is no need of h5py in the workers
-    class mock_h5py(object):
-        def __getattr__(self, name):
-            raise ImportError('Could not import h5py.%s' % name)
-    h5py = mock_h5py()
+import h5py
 
-from openquake.baselib.hdf5 import Hdf5Dataset
+from openquake.baselib.hdf5 import File, Hdf5Dataset
 from openquake.baselib.general import CallableDict
 from openquake.commonlib.writers import write_csv
 
@@ -164,7 +156,7 @@ class DataStore(collections.MutableMapping):
         self.export_dir = export_dir
         self.hdf5path = self.calc_dir + '.hdf5'
         mode = mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
-        self.hdf5 = h5py.File(self.hdf5path, mode, libver='latest')
+        self.hdf5 = File(self.hdf5path, mode, libver='latest')
         self.attrs = self.hdf5.attrs
         for name, value in params:
             self.attrs[name] = value
@@ -263,7 +255,7 @@ class DataStore(collections.MutableMapping):
         """
         if key is None:
             return os.path.getsize(self.hdf5path)
-        return ByteCounter.get_nbytes(self.hdf5[key])
+        return ByteCounter.get_nbytes(h5py.File.__getitem__(self.hdf5, key))
 
     def get(self, key, default):
         """
@@ -290,21 +282,13 @@ class DataStore(collections.MutableMapping):
             shape = val.shape
         except AttributeError:  # val is a group
             return val
-        if '__pyclass__' in val.attrs:  # serialized object
-            value, attrs = val.value, dict(val.attrs)
-            cls = pydoc.locate(attrs.pop('__pyclass__'))
-            val = cls.__new__(cls)
-            val.__fromh5__(value, attrs)
         if not shape:
             val = pickle.loads(val.value)
         return val
 
     def __setitem__(self, key, value):
-        attrs = {}
-        if hasattr(value, '__toh5__'):
-            val, attrs = value.__toh5__()
-            attrs['__pyclass__'] = '.'.join([value.__class__.__module__,
-                                             value.__class__.__name__])
+        if isinstance(value, dict) or hasattr(value, '__toh5__'):
+            val = value
         elif (not isinstance(value, numpy.ndarray) or
                 value.dtype is numpy.dtype(object)):
             val = numpy.array(pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
@@ -320,15 +304,8 @@ class DataStore(collections.MutableMapping):
         except RuntimeError as exc:
             raise RuntimeError('Could not save %s: %s in %s' %
                                (key, exc, self.hdf5path))
-        # save attributes if any
-        for k, v in attrs.items():
-            self.hdf5[key].attrs[k] = v
 
     def __delitem__(self, key):
-        if (h5py.version.version <= '2.0.1' and not
-                hasattr(self.hdf5[key], 'shape')):
-            # avoid bug when deleting groups that produces a segmentation fault
-            return
         del self.hdf5[key]
 
     def __enter__(self):

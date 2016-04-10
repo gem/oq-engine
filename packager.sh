@@ -494,10 +494,6 @@ _pkgtest_innervm_run () {
 
         echo 'running ScenarioRisk...'
         oq-lite run ScenarioRisk/job.ini
-        oq-lite show agglosses-rlzs > /tmp/agglosses.csv
-        oq-lite show totlosses > /tmp/totlosses.txt
-        cmp /tmp/agglosses.csv ScenarioRisk/expected_agglosses.csv
-        cmp /tmp/totlosses.txt ScenarioRisk/expected_totlosses.txt
 
         echo 'running EventBasedRisk...'
         oq-lite run EventBasedRisk/job.ini
@@ -523,6 +519,7 @@ _pkgtest_innervm_run () {
 
         echo 'Show all the oq-lite calculations'
         oq-lite show all
+        oq-lite show all > /tmp/all.txt  # stress encoding issues
         "
     fi
 

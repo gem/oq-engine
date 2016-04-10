@@ -5,21 +5,21 @@ num_sites = 11, sitecol = 834 B
 
 Parameters
 ----------
-============================ ========
-calculation_mode             scenario
-number_of_logic_tree_samples 0       
-maximum_distance             200     
-investigation_time           None    
-ses_per_logic_tree_path      1       
-truncation_level             3.000   
-rupture_mesh_spacing         15      
-complex_fault_mesh_spacing   15      
-width_of_mfd_bin             None    
-area_source_discretization   None    
-random_seed                  3       
-master_seed                  0       
-concurrent_tasks             16      
-============================ ========
+============================ ================
+calculation_mode             'scenario'      
+number_of_logic_tree_samples 0               
+maximum_distance             {'default': 200}
+investigation_time           None            
+ses_per_logic_tree_path      1               
+truncation_level             3.0             
+rupture_mesh_spacing         15.0            
+complex_fault_mesh_spacing   15.0            
+width_of_mfd_bin             None            
+area_source_discretization   None            
+random_seed                  3               
+master_seed                  0               
+concurrent_tasks             40              
+============================ ================
 
 Input files
 -----------
@@ -54,3 +54,14 @@ DS       2
 UFB      2      
 W        2      
 ======== =======
+
+Slowest operations
+------------------
+======================= ========= ========= ======
+operation               time_sec  memory_mb counts
+======================= ========= ========= ======
+reading exposure        0.006     0.0       1     
+filtering sites         0.004     0.0       1     
+computing gmfs          4.399E-04 0.0       1     
+reading site collection 7.153E-06 0.0       1     
+======================= ========= ========= ======

@@ -1,25 +1,25 @@
 Event Based PSHA for Lisbon
 ===========================
 
-num_sites = 1, sitecol = 684 B
+num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ===========
-calculation_mode             event_based
-number_of_logic_tree_samples 0          
-maximum_distance             400        
-investigation_time           2.000      
-ses_per_logic_tree_path      1          
-truncation_level             5.000      
-rupture_mesh_spacing         2.000      
-complex_fault_mesh_spacing   2.000      
-width_of_mfd_bin             0.100      
-area_source_discretization   5.000      
-random_seed                  23         
-master_seed                  0          
-concurrent_tasks             16         
-============================ ===========
+============================ ==================
+calculation_mode             'event_based'     
+number_of_logic_tree_samples 0                 
+maximum_distance             {'default': 400.0}
+investigation_time           2.0               
+ses_per_logic_tree_path      1                 
+truncation_level             5.0               
+rupture_mesh_spacing         2.0               
+complex_fault_mesh_spacing   2.0               
+width_of_mfd_bin             0.1               
+area_source_discretization   5.0               
+random_seed                  23                
+master_seed                  0                 
+concurrent_tasks             16                
+============================ ==================
 
 Input files
 -----------
@@ -40,8 +40,8 @@ Composite source model
 ========= ====== ============================================ =============== ================
 smlt_path weight source_model_file                            gsim_logic_tree num_realizations
 ========= ====== ============================================ =============== ================
-b1        0.60   `SA_RA_CATAL1_00.xml <SA_RA_CATAL1_00.xml>`_ complex(2,2)    4/4             
-b2        0.40   `SA_RA_CATAL2_00.xml <SA_RA_CATAL2_00.xml>`_ simple(2,0)     2/2             
+b1        0.600  `SA_RA_CATAL1_00.xml <SA_RA_CATAL1_00.xml>`_ complex(2,2)    4/4             
+b2        0.400  `SA_RA_CATAL2_00.xml <SA_RA_CATAL2_00.xml>`_ simple(2,0)     2/2             
 ========= ====== ============================================ =============== ================
 
 Required parameters per tectonic region type
@@ -67,31 +67,30 @@ Realizations per (TRT, GSIM)
   2,AkkarBommer2010: ['<5,b2,b2_@,w=0.12>']
   2,AtkinsonBoore2006: ['<4,b2,b1_@,w=0.28>']>
 
-Non-empty rupture collections
------------------------------
-=== ========= ==================== ============
-col smlt_path TRT                  num_ruptures
-=== ========= ==================== ============
-0   b1        Active Shallow Crust 3           
-1   b1        Stable Shallow Crust 2           
-2   b2        Active Shallow Crust 2           
-=== ========= ==================== ============
+Number of ruptures per tectonic region type
+-------------------------------------------
+=================== ====== ==================== =========== ============ ======
+source_model        trt_id trt                  num_sources eff_ruptures weight
+=================== ====== ==================== =========== ============ ======
+SA_RA_CATAL1_00.xml 0      Active Shallow Crust 3           3            4,860 
+SA_RA_CATAL1_00.xml 1      Stable Shallow Crust 8           2            2,142 
+SA_RA_CATAL2_00.xml 2      Active Shallow Crust 3           2            4,860 
+=================== ====== ==================== =========== ============ ======
 
-Collections <-> realizations
-----------------------------
-=========== ============
-Collections Realizations
-0 1         0 1 2 3     
-2           4 5         
-=========== ============
+=============== ======
+#TRT models     3     
+#sources        14    
+#eff_ruptures   7     
+filtered_weight 11,862
+=============== ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== =========
-Number of tasks to generate 20       
-Sent data                   4.56 MB  
-Total received data         176.83 KB
-Maximum received per task   18.28 KB 
+Number of tasks to generate 36       
+Sent data                   4.79 MB  
+Total received data         258.45 KB
+Maximum received per task   12.07 KB 
 =========================== =========
 
 Exposure model
@@ -112,24 +111,45 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            0         AreaSource   2,446  2,174     0.002       1.729      82       
-2            0         AreaSource   2,446  2,174     0.002       1.424      82       
-0            2         AreaSource   1,992  2,748     0.002       1.799      26       
-2            2         AreaSource   1,992  2,748     0.002       1.437      24       
-1            10        AreaSource   448    1         0.001       0.0        10       
-0            1         AreaSource   422    1         0.001       0.0        10       
-3            6         AreaSource   422    1         9.968E-04   0.0        9.613    
-3            10        AreaSource   448    1         9.682E-04   0.0        9.521    
-3            3         AreaSource   340    1         9.878E-04   0.0        9.521    
-2            1         AreaSource   422    1         9.961E-04   0.0        8.764    
-1            6         AreaSource   422    1         0.001       0.0        8.625    
-1            3         AreaSource   340    1         9.959E-04   0.0        6.892    
-3            5         AreaSource   236    1         9.842E-04   0.0        6.874    
-3            9         AreaSource   255    1         9.649E-04   0.0        6.396    
-1            5         AreaSource   236    1         0.001       0.0        5.802    
-1            9         AreaSource   255    1         9.770E-04   0.0        5.332    
-3            8         AreaSource   144    1         9.630E-04   0.0        4.798    
-1            7         AreaSource   166    1         9.599E-04   0.0        4.160    
-1            4         AreaSource   128    1         9.940E-04   0.0        4.066    
-3            7         AreaSource   166    1         9.551E-04   0.0        3.709    
+0            0         AreaSource   2,446  2,174     0.002       1.065      50       
+2            0         AreaSource   2,446  2,174     9.260E-04   0.626      44       
+0            2         AreaSource   1,992  2,748     0.002       0.698      16       
+2            2         AreaSource   1,992  2,748     0.002       0.923      14       
+1            10        AreaSource   448    1         7.091E-04   0.0        7.452    
+3            10        AreaSource   448    1         7.081E-04   0.0        7.234    
+1            6         AreaSource   422    1         8.051E-04   0.0        6.605    
+0            1         AreaSource   422    1         8.080E-04   0.0        6.587    
+2            1         AreaSource   422    1         6.990E-04   0.0        6.123    
+3            6         AreaSource   422    1         7.229E-04   0.0        5.425    
+3            3         AreaSource   340    1         7.508E-04   0.0        5.100    
+3            9         AreaSource   255    1         6.790E-04   0.0        4.407    
+1            9         AreaSource   255    1         6.750E-04   0.0        4.402    
+1            3         AreaSource   340    1         7.050E-04   0.0        4.309    
+3            5         AreaSource   236    1         7.160E-04   0.0        4.257    
+1            5         AreaSource   236    1         6.981E-04   0.0        4.232    
+3            7         AreaSource   166    1         6.721E-04   0.0        2.953    
+1            4         AreaSource   128    1         7.050E-04   0.0        2.551    
+3            4         AreaSource   128    1         6.971E-04   0.0        2.498    
+3            8         AreaSource   144    1         7.601E-04   0.0        2.321    
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+total compute_ruptures         207       0.059     36    
+managing sources               3.980     0.0       1     
+reading composite source model 3.952     0.0       1     
+splitting sources              3.311     0.0       4     
+store source_info              0.089     0.0       1     
+total compute_gmfs_and_curves  0.023     0.062     7     
+filtering sources              0.019     0.0       22    
+compute poes                   0.013     0.0       7     
+saving gmfs                    0.010     0.0       7     
+make contexts                  0.007     0.0       7     
+saving ruptures                0.007     0.0       1     
+aggregate curves               0.004     0.0       36    
+reading exposure               0.003     0.0       1     
+reading site collection        6.914E-06 0.0       1     
+============================== ========= ========= ======

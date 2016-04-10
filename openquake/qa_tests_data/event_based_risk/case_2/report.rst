@@ -1,25 +1,25 @@
 PEB QA test 2
 =============
 
-num_sites = 3, sitecol = 776 B
+num_sites = 3, sitecol = 831 B
 
 Parameters
 ----------
-============================ ===========
-calculation_mode             event_based
-number_of_logic_tree_samples 0          
-maximum_distance             100        
-investigation_time           50         
-ses_per_logic_tree_path      20         
-truncation_level             3.000      
-rupture_mesh_spacing         5.000      
-complex_fault_mesh_spacing   5.000      
-width_of_mfd_bin             0.300      
-area_source_discretization   10         
-random_seed                  23         
-master_seed                  0          
-concurrent_tasks             16         
-============================ ===========
+============================ ==================
+calculation_mode             'event_based'     
+number_of_logic_tree_samples 0                 
+maximum_distance             {'default': 100.0}
+investigation_time           50.0              
+ses_per_logic_tree_path      20                
+truncation_level             3.0               
+rupture_mesh_spacing         5.0               
+complex_fault_mesh_spacing   5.0               
+width_of_mfd_bin             0.3               
+area_source_discretization   10.0              
+random_seed                  23                
+master_seed                  0                 
+concurrent_tasks             40                
+============================ ==================
 
 Input files
 -----------
@@ -38,7 +38,7 @@ Composite source model
 ========= ====== ====================================== =============== ================
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations
 ========= ====== ====================================== =============== ================
-b1        1.00   `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
 ========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
@@ -57,28 +57,21 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(size=1, rlzs=1)
   0,ChiouYoungs2008: ['<0,b1,b1,w=1.0>']>
 
-Non-empty rupture collections
------------------------------
-=== ========= ==================== ============
-col smlt_path TRT                  num_ruptures
-=== ========= ==================== ============
-0   b1        Active Shallow Crust 26          
-=== ========= ==================== ============
-
-Collections <-> realizations
-----------------------------
-=========== ============
-Collections Realizations
-0           0           
-=========== ============
+Number of ruptures per tectonic region type
+-------------------------------------------
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources eff_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust 3           8            0.450 
+================ ====== ==================== =========== ============ ======
 
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 1       
-Sent data                   7.63 KB 
-Total received data         10.51 KB
-Maximum received per task   10.51 KB
+Sent data                   7.91 KB 
+Total received data         11.08 KB
+Maximum received per task   11.08 KB
 =========================== ========
 
 Slowest sources
@@ -86,7 +79,26 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            3         PointSource  0.150  1         1.121E-04   0.0        0.005    
-0            2         PointSource  0.150  1         1.171E-04   0.0        0.004    
-0            1         PointSource  0.150  1         1.678E-04   0.0        0.004    
+0            2         PointSource  0.150  1         9.584E-05   0.0        0.007    
+0            1         PointSource  0.150  1         1.380E-04   0.0        0.006    
+0            3         PointSource  0.150  1         8.798E-05   0.0        0.006    
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+total compute_gmfs_and_curves  0.034     0.188     8     
+reading composite source model 0.033     0.0       1     
+total compute_ruptures         0.019     0.184     1     
+compute poes                   0.018     0.0       8     
+saving gmfs                    0.011     0.0       8     
+make contexts                  0.010     0.0       8     
+saving ruptures                0.003     0.0       1     
+store source_info              0.002     0.0       1     
+managing sources               0.002     0.0       1     
+aggregate curves               7.491E-04 0.0       1     
+filtering sources              3.219E-04 0.0       3     
+reading site collection        4.816E-05 0.0       1     
+============================== ========= ========= ======

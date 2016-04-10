@@ -1,25 +1,25 @@
 Scenario QA Test for occupants
 ==============================
 
-num_sites = 3, sitecol = 776 B
+num_sites = 3, sitecol = 831 B
 
 Parameters
 ----------
-============================ ========
-calculation_mode             scenario
-number_of_logic_tree_samples 0       
-maximum_distance             300     
-investigation_time           None    
-ses_per_logic_tree_path      1       
-truncation_level             3.000   
-rupture_mesh_spacing         10      
-complex_fault_mesh_spacing   10      
-width_of_mfd_bin             None    
-area_source_discretization   None    
-random_seed                  3       
-master_seed                  0       
-concurrent_tasks             16      
-============================ ========
+============================ ================
+calculation_mode             'scenario'      
+number_of_logic_tree_samples 0               
+maximum_distance             {'default': 300}
+investigation_time           None            
+ses_per_logic_tree_path      1               
+truncation_level             3.0             
+rupture_mesh_spacing         10.0            
+complex_fault_mesh_spacing   10.0            
+width_of_mfd_bin             None            
+area_source_discretization   None            
+random_seed                  3               
+master_seed                  0               
+concurrent_tasks             40              
+============================ ================
 
 Input files
 -----------
@@ -54,3 +54,14 @@ RC       1
 RM       1      
 W        1      
 ======== =======
+
+Slowest operations
+------------------
+======================= ========= ========= ======
+operation               time_sec  memory_mb counts
+======================= ========= ========= ======
+filtering sites         0.010     0.0       1     
+reading exposure        0.004     0.0       1     
+computing gmfs          0.002     0.0       1     
+reading site collection 1.192E-05 0.0       1     
+======================= ========= ========= ======

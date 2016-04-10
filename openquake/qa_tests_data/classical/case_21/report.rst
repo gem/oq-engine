@@ -1,26 +1,26 @@
 Classical Hazard QA Test, Case 21
 =================================
 
-num_sites = 1, sitecol = 684 B
+num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ =========
-calculation_mode             classical
-number_of_logic_tree_samples 0        
-maximum_distance             200      
-investigation_time           1.000    
-ses_per_logic_tree_path      1        
-truncation_level             3.000    
-rupture_mesh_spacing         2.000    
-complex_fault_mesh_spacing   2.000    
-width_of_mfd_bin             1.000    
-area_source_discretization   10       
-random_seed                  106      
-master_seed                  0        
-concurrent_tasks             16       
-sites_per_tile               1000     
-============================ =========
+============================ ==================
+calculation_mode             'classical'       
+number_of_logic_tree_samples 0                 
+maximum_distance             {'default': 200.0}
+investigation_time           1.0               
+ses_per_logic_tree_path      1                 
+truncation_level             3.0               
+rupture_mesh_spacing         2.0               
+complex_fault_mesh_spacing   2.0               
+width_of_mfd_bin             1.0               
+area_source_discretization   10.0              
+random_seed                  106               
+master_seed                  0                 
+concurrent_tasks             40                
+sites_per_tile               1000              
+============================ ==================
 
 Input files
 -----------
@@ -35,37 +35,37 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====================== ======== ====================================== =============== ================
-smlt_path              weight   source_model_file                      gsim_logic_tree num_realizations
-====================== ======== ====================================== =============== ================
-b1_mfd1_high_dip_dip30 0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_high_dip_dip45 0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_high_dip_dip60 0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_low_dip_dip30  0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_low_dip_dip45  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_low_dip_dip60  0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_mid_dip_dip30  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_mid_dip_dip45  0.118800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd1_mid_dip_dip60  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_high_dip_dip30 0.013600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_high_dip_dip45 0.040800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_high_dip_dip60 0.013600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_low_dip_dip30  0.013600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_low_dip_dip45  0.040800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_low_dip_dip60  0.013600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_mid_dip_dip30  0.040800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_mid_dip_dip45  0.122400 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd2_mid_dip_dip60  0.040800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_high_dip_dip30 0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_high_dip_dip45 0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_high_dip_dip60 0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_low_dip_dip30  0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_low_dip_dip45  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_low_dip_dip60  0.013200 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_mid_dip_dip30  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_mid_dip_dip45  0.118800 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-b1_mfd3_mid_dip_dip60  0.039600 `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
-====================== ======== ====================================== =============== ================
+====================== ====== ====================================== =============== ================
+smlt_path              weight source_model_file                      gsim_logic_tree num_realizations
+====================== ====== ====================================== =============== ================
+b1_mfd1_high_dip_dip30 0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_high_dip_dip45 0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_high_dip_dip60 0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_low_dip_dip30  0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_low_dip_dip45  0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_low_dip_dip60  0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_mid_dip_dip30  0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_mid_dip_dip45  0.119  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd1_mid_dip_dip60  0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_high_dip_dip30 0.014  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_high_dip_dip45 0.041  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_high_dip_dip60 0.014  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_low_dip_dip30  0.014  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_low_dip_dip45  0.041  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_low_dip_dip60  0.014  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_mid_dip_dip30  0.041  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_mid_dip_dip45  0.122  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd2_mid_dip_dip60  0.041  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_high_dip_dip30 0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_high_dip_dip45 0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_high_dip_dip60 0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_low_dip_dip30  0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_low_dip_dip45  0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_low_dip_dip60  0.013  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_mid_dip_dip30  0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_mid_dip_dip45  0.119  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1_mfd3_mid_dip_dip60  0.040  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+====================== ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -178,34 +178,49 @@ filtered_weight 8,175
 
 Expected data transfer for the sources
 --------------------------------------
-=========================== =======
-Number of tasks to generate 30     
-Sent data                   1.49 MB
-=========================== =======
+=========================== ========
+Number of tasks to generate 81      
+Sent data                   13.91 MB
+=========================== ========
 
 Slowest sources
 ---------------
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            SFLT1     SimpleFaultSource 60     1         0.002       0.0        0.0      
-8            SFLT1     SimpleFaultSource 90     1         0.002       0.0        0.0      
-17           SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
-3            SFLT2     SimpleFaultSource 384    1         0.002       0.0        0.0      
-1            SFLT2     SimpleFaultSource 148    1         0.002       0.0        0.0      
-18           SFLT1     SimpleFaultSource 99     1         0.002       0.0        0.0      
-1            SFLT1     SimpleFaultSource 60     1         0.002       0.0        0.0      
-6            SFLT1     SimpleFaultSource 90     1         0.002       0.0        0.0      
-12           SFLT2     SimpleFaultSource 384    1         0.002       0.0        0.0      
-13           SFLT1     SimpleFaultSource 81     1         0.002       0.0        0.0      
-18           SFLT2     SimpleFaultSource 384    1         0.002       0.0        0.0      
-23           SFLT1     SimpleFaultSource 198    1         0.002       0.0        0.0      
-19           SFLT2     SimpleFaultSource 148    1         0.002       0.0        0.0      
-21           SFLT2     SimpleFaultSource 384    1         0.002       0.0        0.0      
-25           SFLT1     SimpleFaultSource 132    1         0.002       0.0        0.0      
-4            SFLT1     SimpleFaultSource 150    1         0.002       0.0        0.0      
-5            SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
-23           SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
-25           SFLT2     SimpleFaultSource 148    1         0.002       0.0        0.0      
-26           SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
+0            SFLT2     SimpleFaultSource 384    384       0.003       0.057      0.0      
+9            SFLT2     SimpleFaultSource 384    384       0.001       0.056      0.0      
+3            SFLT2     SimpleFaultSource 384    384       0.001       0.056      0.0      
+6            SFLT2     SimpleFaultSource 384    384       0.001       0.056      0.0      
+12           SFLT2     SimpleFaultSource 384    384       0.001       0.055      0.0      
+15           SFLT2     SimpleFaultSource 384    384       0.001       0.053      0.0      
+24           SFLT2     SimpleFaultSource 384    384       0.001       0.052      0.0      
+21           SFLT2     SimpleFaultSource 384    384       0.001       0.052      0.0      
+18           SFLT2     SimpleFaultSource 384    384       0.001       0.051      0.0      
+0            SFLT1     SimpleFaultSource 60     1         0.001       0.0        0.0      
+7            SFLT2     SimpleFaultSource 148    1         0.001       0.0        0.0      
+8            SFLT1     SimpleFaultSource 90     1         0.001       0.0        0.0      
+6            SFLT1     SimpleFaultSource 90     1         0.001       0.0        0.0      
+7            SFLT1     SimpleFaultSource 90     1         0.001       0.0        0.0      
+10           SFLT2     SimpleFaultSource 148    1         0.001       0.0        0.0      
+13           SFLT2     SimpleFaultSource 148    1         0.001       0.0        0.0      
+10           SFLT1     SimpleFaultSource 25     1         0.001       0.0        0.0      
+1            SFLT1     SimpleFaultSource 60     1         0.001       0.0        0.0      
+21           SFLT1     SimpleFaultSource 198    1         0.001       0.0        0.0      
+26           SFLT2     SimpleFaultSource 89     1         0.001       0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+managing sources               1.033     0.0       1     
+reading composite source model 0.510     0.0       1     
+splitting sources              0.487     0.0       9     
+filtering sources              0.071     0.0       54    
+total count_eff_ruptures       0.030     0.0       81    
+aggregate curves               0.002     0.0       81    
+store source_info              3.071E-04 0.0       1     
+reading site collection        3.386E-05 0.0       1     
+============================== ========= ========= ======

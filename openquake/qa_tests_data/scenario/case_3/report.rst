@@ -1,25 +1,25 @@
 Scenario QA Test, Case 3
 ========================
 
-num_sites = 3, sitecol = 776 B
+num_sites = 3, sitecol = 831 B
 
 Parameters
 ----------
-============================ ========
-calculation_mode             scenario
-number_of_logic_tree_samples 0       
-maximum_distance             200     
-investigation_time           None    
-ses_per_logic_tree_path      1       
-truncation_level             1.000   
-rupture_mesh_spacing         1.000   
-complex_fault_mesh_spacing   1.000   
-width_of_mfd_bin             None    
-area_source_discretization   None    
-random_seed                  3       
-master_seed                  0       
-concurrent_tasks             16      
-============================ ========
+============================ ================
+calculation_mode             'scenario'      
+number_of_logic_tree_samples 0               
+maximum_distance             {'default': 200}
+investigation_time           None            
+ses_per_logic_tree_path      1               
+truncation_level             1.0             
+rupture_mesh_spacing         1.0             
+complex_fault_mesh_spacing   1.0             
+width_of_mfd_bin             None            
+area_source_discretization   None            
+random_seed                  3               
+master_seed                  0               
+concurrent_tasks             40              
+============================ ================
 
 Input files
 -----------
@@ -37,3 +37,13 @@ Realizations per (TRT, GSIM)
 
   <RlzsAssoc(1)
   0,BooreAtkinson2008: ['BooreAtkinson2008']>
+
+Slowest operations
+------------------
+======================= ========= ========= ======
+operation               time_sec  memory_mb counts
+======================= ========= ========= ======
+filtering sites         0.014     0.0       1     
+computing gmfs          0.001     0.0       1     
+reading site collection 3.099E-05 0.0       1     
+======================= ========= ========= ======
