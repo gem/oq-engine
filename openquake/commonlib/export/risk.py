@@ -158,8 +158,6 @@ def export_agg_losses(ekey, dstore):
         writer.save(data, dest)
     return writer.getsaved()
 
-agg_loss_dt = numpy.dtype([('rup_id', U32), ('loss', F32), ('loss_ins', F32)])
-
 
 # this is used by event_based_risk
 @export.add(('agg_loss_table', 'csv'))
@@ -170,6 +168,7 @@ def export_agg_losses_ebr(ekey, dstore):
     """
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     agg_losses = dstore[ekey[0]]
+    etags = dstore['etags'].value
     rlzs = dstore['rlzs_assoc'].realizations
     writer = writers.CsvWriter(fmt='%10.6E')
     for rlz in rlzs:
@@ -178,10 +177,15 @@ def export_agg_losses_ebr(ekey, dstore):
             data.sort(order='rup_id')
             dest = dstore.export_path(
                 'agg_losses-rlz%03d-%s.csv' % (rlz.ordinal, loss_type))
+            tags = etags[data['rup_id']]
             if data.dtype['loss'].shape == (2,):  # insured losses
-                writer.save(data.view(agg_loss_dt), dest)
+                losses = data['loss'][:, 0]
+                inslosses = data['loss'][:, 1]
+                edata = [('event_tag', 'loss', 'loss_ins')] + zip(
+                    tags, losses, inslosses)
             else:
-                writer.save(data, dest)
+                edata = [('event_tag', 'loss')] + zip(tags, data['loss'])
+            writer.save(edata, dest)
     return writer.getsaved()
 
 
