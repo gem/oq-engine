@@ -611,7 +611,7 @@ def _get_gmfs(dstore, etag):
         yield gmfa, imt
 
 
-@export.add(('gmfs', 'csv'))
+@export.add(('gmf_data', 'csv'))
 def export_gmf_scenario(ekey, dstore):
     if 'scenario' in dstore.attrs['calculation_mode']:
         fields = ['%03d' % i for i in range(len(dstore['etags']))]

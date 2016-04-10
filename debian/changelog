@@ -1,5 +1,7 @@
   [Michele Simionato]
-  * Changed the aggregate loss table exported to export the event tags, not the event IDs
+  * Changed the aggregate loss table exported to export the event tags,
+    not the event IDs
+  * Fixed a bug with the CSV export of the ground motion fields
   * Fixed a bug with the export of UHS curves with `--exports=xml`
   * Reduced substantially the data transfer and the memory occupation
     for event based calculations with a large number of assets: we
