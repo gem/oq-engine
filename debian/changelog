@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Fixes Z1.0 units bug in Abrahamson, Silva and Kamai (2014)
+
   [Michele Simionato]
   * Improved the validity check on the Intensity Measure Type
   * Showing the `calc_id` in Monitor instances string representation
