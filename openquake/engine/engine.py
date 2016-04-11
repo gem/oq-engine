@@ -124,7 +124,8 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             expose_outputs(calc.datastore)
             records = views.performance_view(calc.datastore)
             logs.dbcmd('save_performance', job_id, records)
-            logs.LOG.info('Calculation %d finished correctly', job_id)
+            logs.LOG.info('Calculation %d finished correctly in %s seconds',
+                          job_id, calc.monitor.duration)
         except:
             tb = traceback.format_exc()
             try:
