@@ -274,6 +274,9 @@ _builddoc_innervm_run () {
     # TODO: version check
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
+    ssh $lxc_ip "sudo apt-get -y install python-pip"
+    ssh $lxc_ip "sudo pip install sphinx==1.3.4"
+
     ssh $lxc_ip "cd ${GEM_GIT_PACKAGE} ; export PYTHONPATH=\$PWD ; cd doc ; make html"
     scp -r "$lxc_ip:${GEM_GIT_PACKAGE}/doc/build/html" "out_${BUILD_UBUVER}/"
 
