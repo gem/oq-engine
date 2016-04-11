@@ -162,7 +162,6 @@ class OqParam(valid.ParamSet, hdf5.LiteralAttrs):
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
         self._file_type, self._risk_files = get_risk_files(self.inputs)
-        self.risk_imtls = {}  # to be overridden later by get_risk_models
 
         # check the IMTs vs the GSIMs
         if 'gsim_logic_tree' in self.inputs:

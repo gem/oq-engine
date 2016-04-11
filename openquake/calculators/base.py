@@ -384,8 +384,7 @@ class HazardCalculator(BaseCalculator):
         if not rmdict:  # can happen only in a hazard calculation
             return
         self.oqparam.set_risk_imtls(rmdict)
-        # save risk_imtls in the datastore: this is crucial
-        self.datastore.hdf5.attrs['risk_imtls'] = repr(self.oqparam.risk_imtls)
+        self.save_params()  # re-save oqparam
         self.riskmodel = rm = readinput.get_risk_model(self.oqparam, rmdict)
         if 'taxonomies' in self.datastore:
             # check that we are covering all the taxonomies in the exposure
@@ -642,7 +641,7 @@ def get_gmfs(dstore):
         haz_sitecol = sitecol
     risk_indices = set(sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
-    imt_dt = numpy.dtype([(imt, F32) for imt in oq.imtls])
+    imt_dt = numpy.dtype([(bytes(imt), F32) for imt in oq.imtls])
     E = gmfa.shape[0]
     # build a matrix N x E for each GSIM realization
     gmfs = {(trt_id, gsim): numpy.zeros((N, E), imt_dt)
