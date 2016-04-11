@@ -152,7 +152,7 @@ class LiteralAttrs(object):
         for (name, literal) in array:
             name = name.decode('utf8')
             if '.' in name:
-                k1, k2 = name.split('.')
+                k1, k2 = name.split('.', 1)
                 dd[k1][k2] = ast.literal_eval(literal.decode('utf8'))
             else:
                 dd[name] = ast.literal_eval(literal.decode('utf8'))
