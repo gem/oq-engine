@@ -100,10 +100,7 @@ def run_job(cfg_file, log_level, log_file, exports='',
         'job_from_file', job_ini, getpass.getuser(), hazard_calculation_id)
     calc = engine.run_calc(job_id, oqparam, log_level, log_file, exports,
                            hazard_calculation_id=hazard_calculation_id)
-    duration = calc.monitor.duration  # set this before monitor.flush()
     calc.monitor.flush()
-    print('Calculation %d completed in %d seconds. Results:' % (
-        job_id, duration))
     for line in logs.dbcmd('list_outputs', job_id, False):
         print line
     return job_id
