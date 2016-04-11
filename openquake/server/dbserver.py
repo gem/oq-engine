@@ -46,7 +46,7 @@ class DbServer(object):
         self.authkey = authkey
 
     def loop(self):
-        listener = Listener(self.address, authkey=self.authkey)
+        listener = Listener(self.address, backlog=5, authkey=self.authkey)
         logging.info('DB server listening on %s:%d...' % self.address)
         try:
             connection.cursor()  # bind the db

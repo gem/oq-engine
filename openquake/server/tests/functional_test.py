@@ -46,6 +46,7 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def assert_ok(cls, resp):
+        assert resp.text, 'The response text is empty'
         if resp.status_code != 200:
             sys.stderr.write(open(cls.errfname).read())
 
@@ -143,8 +144,8 @@ class EngineServerTestCase(unittest.TestCase):
         if UBUNTU12:
             # this test is broken for unknown reasons
             raise unittest.SkipTest
-        else:
-            raise unittest.SkipTest
+        #else:
+        #    raise unittest.SkipTest
         job_id = self.postzip('archive_ok.zip')
         self.wait()
         log = self.get('%s/log/:' % job_id)
