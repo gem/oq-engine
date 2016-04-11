@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Fixes Z1.0 units bug in Abrahamson, Silva and Kamai (2014)
+
   [Michele Simionato]
   * Showing the `calc_id` in Monitor instances string representation
   * Added a h5py.File subclass to manage the serialization of objects
