@@ -22,6 +22,7 @@ from multiprocessing.connection import Listener
 
 from openquake.commonlib.parallel import safely_call
 from openquake.engine import config
+from openquake.server import executor
 from openquake.server.db import actions
 from django.db import connection
 
@@ -31,6 +32,25 @@ DEFAULT_LOG_LEVEL = 'progress'
 
 exit = sys.exit
 info = logging.info
+
+
+def manage_request(conn, cmd):
+    name = cmd[0]
+    args = cmd[1:]
+    func = getattr(actions, name)
+
+    def finalize(fut):
+        res, etype, _ = fut.result()
+        if etype:
+            logging.error(res)
+        else:
+            logging.info('Got %s', str(cmd))
+        # send back the result and the exception class
+        conn.send((res, etype))
+        conn.close()
+    # call the function by trapping any error
+    fut = executor.submit(safely_call, func, args)
+    fut.add_done_callback(finalize)
 
 
 class DbServer(object):
@@ -59,28 +79,14 @@ class DbServer(object):
                     # unauthenticated connection, for instance by a port
                     # scanner such as the one in manage.py
                     continue
-                try:
-                    cmd = conn.recv()  # a list [name, arg1, ... argN]
-                    name = cmd[0]
-                    if name == '@stop':
-                        # this is a somewaht special command, so I am using
-                        # the convention of prepending an `@` to its name
-                        # in the future I may add more special commands
-                        conn.send((None, None))
-                        break
-                    else:  # call the function named `name` in db.actions
-                        args = cmd[1:]
-                        func = getattr(actions, name)
-                    # call the function by trapping any error
-                    res, etype, _ = safely_call(func, args)
-                    if etype:
-                        logging.error(res)
-                    else:
-                        logging.info('Got %s', str(cmd))
-                    # send back the result and the exception class
-                    conn.send((res, etype))
-                finally:
-                    conn.close()
+                cmd = conn.recv()  # a list [name, arg1, ... argN]
+                if cmd == ['@stop']:
+                    # this is a somewaht special command, so I am using
+                    # the convention of prepending an `@` to its name
+                    # in the future I may add more special commands
+                    conn.send((None, None))
+                    break
+                manage_request(conn, cmd)
         finally:
             listener.close()
 

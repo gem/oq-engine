@@ -351,9 +351,9 @@ def log(job_id, timestamp, level, process, message):
     """
     Write a log record in the database
     """
-    models.Log.objects.create(
-        job_id=job_id, timestamp=timestamp,
-        level=level, process=process, message=message)
+    db.connection.cursor().execute(
+        'INSERT INTO log (job_id, timestamp, level, process, message) VALUES'
+        '(?, ?, ?, ?, ?)', (job_id, timestamp, level, process, message))
 
 
 def get_log(job_id):
