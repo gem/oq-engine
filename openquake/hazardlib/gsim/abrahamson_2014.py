@@ -33,6 +33,8 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+METRES_PER_KM = 1000.0
+
 
 class AbrahamsonEtAl2014(GMPE):
     """
@@ -97,7 +99,8 @@ class AbrahamsonEtAl2014(GMPE):
                 self._get_site_response_term(C, imt, sites.vs30, sa1180) +
                 self._get_hanging_wall_term(C, dists, rup) +
                 self._get_top_of_rupture_depth_term(C, imt, rup) +
-                self._get_soil_depth_term(C, sites.z1pt0 / 1000., sites.vs30)
+                self._get_soil_depth_term(C, sites.z1pt0 / METRES_PER_KM,
+                                          sites.vs30)
                 )
         mean += self._get_regional_term(C, imt, sites.vs30, dists.rrup)
         # get standard deviations
