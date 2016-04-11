@@ -30,11 +30,10 @@ from datetime import datetime
 from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import OqParam, RISK_CALCULATORS
 import django
-if hasattr(django, 'setup'):
-    django.setup()  # for Django >= 1.7
 from django.db import models as djm
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import connection
+if hasattr(django, 'setup'):
+    django.setup()  # for Django >= 1.7
 
 
 # this is pickleable, ObjectDoesNotExist is not
@@ -42,14 +41,14 @@ class NotFound(Exception):
     """Raised when a Django object does not exist"""
 
 
-def get(djm, pkey):
+def get(djm, **kw):
     """
     Small wrapper around `djm.objects.get`
     """
     try:
-        return djm.objects.get(pk=pkey)
+        return djm.objects.get(**kw)
     except ObjectDoesNotExist:
-        raise NotFound(pkey)
+        raise NotFound(kw)
 
 
 #: Kind of supported curve statistics
