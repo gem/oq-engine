@@ -1,4 +1,4 @@
-etag,loss
+event_tag,loss
 col=05~ses=0001~src=AS_TRAS334~rup=619044-01,2.674692E+05
 col=05~ses=0001~src=AS_TRAS334~rup=620781-01,2.570371E+05
 col=05~ses=0001~src=AS_TRAS360~rup=628979-01,1.071208E+06
