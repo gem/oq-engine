@@ -1,4 +1,4 @@
-etag,loss,loss_ins
+event_tag,loss,loss_ins
 col=00~ses=0001~src=1~rup=2-01,9.563875E+02,2.063875E+02
 col=00~ses=0001~src=2~rup=7-01,7.520026E+01,0.000000E+00
 col=00~ses=0002~src=1~rup=1-01,2.590301E+02,0.000000E+00
