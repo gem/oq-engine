@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a check on the IMTs coming from the risk models
   * Changed the aggregate loss table exporter to export the event tags,
     not the event IDs
   * Fixed a bug with the CSV export of the ground motion fields

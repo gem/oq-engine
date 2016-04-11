@@ -21,6 +21,7 @@ import logging
 import collections
 import numpy
 
+from openquake.hazardlib.imt import from_string
 from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import get_risk_files
 
@@ -239,6 +240,7 @@ class OqParam(valid.ParamSet):
         for taxonomy, risk_functions in risk_models.items():
             for loss_type, rf in risk_functions.items():
                 imt = rf.imt
+                from_string(imt)  # make sure it is a valid IMT
                 imls = list(rf.imls)
                 if imt in imtls and imtls[imt] != imls:
                     logging.debug(
