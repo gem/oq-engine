@@ -81,7 +81,7 @@ def create_job(calc_mode, description, user_name="openquake", hc_id=None):
         user_name=user_name,
         ds_calc_dir=os.path.join(datastore.DATADIR, 'calc_%s' % calc_id))
     if hc_id:
-        job.hazard_calculation = models.get(models.OqJob, hc_id)
+        job.hazard_calculation = models.get(models.OqJob, pk=hc_id)
     job.save()
     return job.id
 
@@ -268,7 +268,7 @@ def create_outputs(job_id, dskeys):
     :param job_id: ID of the current job
     :param dskeys: a list of datastore keys
     """
-    job = models.get(models.OqJob, job_id)
+    job = models.get(models.OqJob, pk=job_id)
     for key in dskeys:
         models.Output.objects.create_output(
             job, DISPLAY_NAME.get(key, key), ds_key=key)
@@ -304,7 +304,7 @@ def finish(job_id, status):
     """
     Set the job columns `is_running`, `status`, and `stop_time`
     """
-    job = models.get(models.OqJob, job_id)
+    job = models.get(models.OqJob, pk=job_id)
     job.is_running = False
     job.status = status
     job.stop_time = datetime.utcnow()
@@ -319,7 +319,7 @@ def del_calc(job_id):
         ID of a :class:`~openquake.server.db.models.OqJob`.
     """
     try:
-        job = models.OqJob.objects.get(id=job_id)
+        job = models.get(models.OqJob, pk=job_id)
     except exceptions.ObjectDoesNotExist:
         raise RuntimeError('Unable to delete hazard calculation: '
                            'ID=%s does not exist' % job_id)
@@ -371,7 +371,7 @@ def get_output(output_id):
     :param output_id: ID of an Output object
     :returns: (ds_key, calc_id, dirname)
     """
-    out = models.get(models.Output, output_id)
+    out = models.get(models.Output, pk=output_id)
     return out.ds_key, out.oq_job.id, os.path.dirname(out.oq_job.ds_calc_dir)
 
 
@@ -428,7 +428,7 @@ def upgrade_db():
 # ################### used in Web UI ######################## #
 
 def calc_info(calc_id):
-    job = models.get(models.OqJob, calc_id)
+    job = models.get(models.OqJob, pk=calc_id)
     response_data = {}
     response_data['user_name'] = job.user_name
     response_data['status'] = job.status
@@ -464,7 +464,7 @@ def get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
 
 
 def set_relevant(calc_id, flag):
-    job = models.get(models.OqJob, calc_id)
+    job = models.get(models.OqJob, pk=calc_id)
     job.relevant = flag
     job.save()
 
@@ -493,8 +493,9 @@ def get_log_size(calc_id):
 
 
 def get_traceback(calc_id):
-    response_data = models.Log.objects.get(
-        job_id=calc_id, level='CRITICAL').message.splitlines()
+    # strange: understand why the filter returns two lines
+    log = list(models.Log.objects.filter(job_id=calc_id, level='CRITICAL'))[-1]
+    response_data = log.message.splitlines()
     return response_data
 
 
