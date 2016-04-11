@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Improved the validity check on the Intensity Measure Type
   * Showing the `calc_id` in Monitor instances string representation
   * Added a h5py.File subclass to manage the serialization of objects
     satisfying the HDF5 protocol used by the OpenQuake software

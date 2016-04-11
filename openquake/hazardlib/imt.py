@@ -40,7 +40,7 @@ def from_string(imt):
     :param str imt:
         Intensity Measure Type.
     """
-    if 'SA' in imt:
+    if imt.startswith('SA'):
         match = re.match(r'^SA\(([^)]+?)\)$', imt)
         period = float(match.group(1))
         return SA(period, DEFAULT_SA_DAMPING)
