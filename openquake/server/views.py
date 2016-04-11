@@ -234,7 +234,7 @@ def calc(request, id=None):
     """
     Get a list of calculations and report their id, status, job_type,
     is_running, description, and a url where more detailed information
-    can be accessed.
+    can be accessed. This is called several times by the Javascript.
 
     Responses are in JSON.
     """
