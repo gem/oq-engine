@@ -22,7 +22,6 @@ Utilities to build a report writer generating a .rst report for a calculation
 """
 from __future__ import print_function
 import os
-import ast
 import sys
 import mock
 import logging
@@ -30,7 +29,6 @@ import logging
 
 from openquake.baselib.general import humansize
 from openquake.commonlib import readinput, datastore, source, parallel
-from openquake.commonlib.oqvalidation import OqParam
 from openquake.calculators import base
 
 
@@ -74,7 +72,7 @@ class ReportWriter(object):
     def __init__(self, dstore):
         set_ancestors(dstore)
         self.dstore = dstore
-        self.oq = oq = OqParam.from_(dstore.attrs)
+        self.oq = oq = dstore['oqparam']
         self.text = (oq.description.encode('utf8') + '\n' +
                      '=' * len(oq.description))
         # NB: in the future, the sitecol could be transferred as

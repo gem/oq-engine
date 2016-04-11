@@ -256,6 +256,7 @@ class OqParam(valid.ParamSet, hdf5.LiteralAttrs):
         for taxonomy, risk_functions in risk_models.items():
             for loss_type, rf in risk_functions.items():
                 imt = rf.imt
+                # imls = [round(iml, 3) for iml in rf.imls]
                 imls = list(rf.imls)
                 if imt in imtls and imtls[imt] != imls:
                     logging.debug(
