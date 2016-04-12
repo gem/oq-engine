@@ -34,7 +34,7 @@ def setup_module():
     global tmpfile
     fh, tmpfile = tempfile.mkstemp()
     os.close(fh)
-    sys.stderr('Using the database %s\n' % tmpfile)
+    sys.stderr.write('Using the database %s\n' % tmpfile)
     DATABASE['name'] = tmpfile
     connection.cursor()  # connect to the db
     upgrade_manager.upgrade_db(connection.connection)
