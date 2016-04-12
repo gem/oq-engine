@@ -38,7 +38,7 @@ UBUNTU12 = platform.dist() == ('Ubuntu', '12.04', 'precise')
 
 
 class EngineServerTestCase(unittest.TestCase):
-    hostport = 'localhost:8761'
+    hostport = 'localhost:8763'
     dbserverport = '2000'
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
