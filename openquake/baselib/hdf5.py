@@ -113,7 +113,7 @@ class LiteralAttrs(object):
     one dot in the serialized names (in the example here `a`, `b.x`, `b.y`).
     """
     KEYLEN = 50
-    VALUELEN = 200
+    VALUELEN = 1000
 
     def _check_len(self, key, value):
         """
