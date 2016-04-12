@@ -500,6 +500,6 @@ def get_traceback(calc_id):
 
 
 def get_result(result_id):
-    output = models.get(models.Output, result_id)
+    output = models.get(models.Output, pk=result_id)
     job = output.oq_job
     return job.status, output.ds_key

@@ -112,14 +112,14 @@ class EngineServerTestCase(unittest.TestCase):
         fh, cls.tmpdb = tempfile.mkstemp()
         sys.stderr.write('sqlite3 %s\n' % cls.tmpdb)
         os.close(fh)
-        tmpdb = 'tmpdb=%s:%s' % (cls.tmpdb, cls.dbserverport)
+        tmpdb = '%s:%s' % (cls.tmpdb, cls.dbserverport)
         cls.fd, cls.errfname = tempfile.mkstemp()
         cls.dbs = subprocess.Popen(
-            [sys.executable, '-m', 'openquake.server.dbserver',
-             cls.dbserverport], env=env, stderr=subprocess.PIPE)
+            [sys.executable, '-m', 'openquake.server.dbserver', tmpdb],
+            env=env)
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
-             cls.hostport, '--noreload', '--nothreading', tmpdb],
+             cls.hostport, '--noreload', '--nothreading', 'tmpdb=' + tmpdb],
             env=env, stderr=cls.fd)  # redirect the server logs
         time.sleep(5)
 
@@ -143,8 +143,6 @@ class EngineServerTestCase(unittest.TestCase):
     def test_ok(self):
         if UBUNTU12:
             # this test is broken for unknown reasons
-            raise unittest.SkipTest
-        else:
             raise unittest.SkipTest
         job_id = self.postzip('archive_ok.zip')
         self.wait()
