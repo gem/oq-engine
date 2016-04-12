@@ -97,7 +97,7 @@ class LiteralAttrs(object):
     >>> ser = Ser(1, dict(x='xxx', y='yyy'))
     >>> arr, attrs = ser.__toh5__()
     >>> for k, v in arr:
-    ...     print('%s=%s' % (k.decode('utf8'), v.decode('utf8')))
+    ...     print('%s=%s' % (k, v))
     a=1
     b.x='xxx'
     b.y='yyy'
@@ -128,12 +128,14 @@ class LiteralAttrs(object):
     def __fromh5__(self, array, attrs):
         dd = collections.defaultdict(dict)
         for (name, literal) in array:
-            name = name.decode('utf8')
+            if isinstance(literal, numpy.object_):
+                # needed for Python3 compatibility
+                literal = repr(literal)
             if '.' in name:
                 k1, k2 = name.split('.', 1)
-                dd[k1][k2] = ast.literal_eval(literal.decode('utf8'))
+                dd[k1][k2] = ast.literal_eval(literal)
             else:
-                dd[name] = ast.literal_eval(literal.decode('utf8'))
+                dd[name] = ast.literal_eval(literal)
         vars(self).update(dd)
 
 
