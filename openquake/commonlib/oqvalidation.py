@@ -21,7 +21,6 @@ import logging
 import collections
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
 from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import get_risk_files
@@ -39,7 +38,7 @@ RISK_CALCULATORS = [
 CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 
 
-class OqParam(valid.ParamSet, hdf5.LiteralAttrs):
+class OqParam(valid.ParamSet):
     siteparam = dict(
         vs30measured='reference_vs30_type',
         vs30='reference_vs30_value',
