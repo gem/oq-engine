@@ -219,6 +219,42 @@ class EBRupture(object):
                                         self.serial, self.trt_id)
 
 
+class RuptureFilter(object):
+    def __init__(self, sites, maximum_distance, imts, gsims, trunc_level,
+                 min_iml):
+        self.sites = sites
+        self.max_dist = maximum_distance
+        self.imts = imts
+        self.gsims = gsims
+        self.trunc_level = trunc_level
+        self.min_iml = min_iml
+
+    def __call__(self, rupture):
+        """
+        :returns: a FilteredSiteCollection
+        """
+        if self.min_iml:
+            computer = calc.gmf.GmfComputer(
+                rupture, self.sites, self.imts, self.gsims, self.trunc_level)
+            [gmf] = computer.calcgmfs(1, rupture.seed)
+            ok = numpy.zeros(len(self.sites), bool)
+            for gsim in self.gsims:
+                gmf_by_imt = gmf[str(gsim)]
+                for imt in self.imts:
+                    ok += gmf_by_imt[imt] >= getdefault(self.min_iml, imt)
+            return computer.sites.filter(ok)
+        else:  # maximum_distance filtering
+            return filter_sites_by_distance_to_rupture(
+                rupture, self.max_dist, self.sites)
+
+
+def getdefault(dic_with_default, key):
+    try:
+        return dic_with_default[key]
+    except KeyError:
+        return dic_with_default['default']
+
+
 @parallel.litetask
 def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     """
@@ -243,10 +279,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     trt_model_id = sources[0].trt_model_id
     oq = monitor.oqparam
     trt = sources[0].tectonic_region_type
-    try:
-        max_dist = oq.maximum_distance[trt]
-    except KeyError:
-        max_dist = oq.maximum_distance['default']
+    max_dist = getdefault(oq.maximum_distance, trt)
     totsites = len(sitecol)
     cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[trt_model_id])
     params = cmaker.REQUIRES_RUPTURE_PARAMETERS
@@ -265,14 +298,16 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         if s_sites is None:
             continue
 
+        rupture_filter = RuptureFilter(
+            s_sites, max_dist, oq.imtls, cmaker.gsims,
+            oq.truncation_level, oq.minimum_intensity)
         num_occ_by_rup = sample_ruptures(
             src, oq.ses_per_logic_tree_path, rlzs_assoc.csm_info)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for ebr in build_eb_ruptures(
-                src, num_occ_by_rup, s_sites, max_dist, sitecol,
-                oq.random_seed):
+                src, num_occ_by_rup, rupture_filter, oq.random_seed):
             nsites = totsites if ebr.indices is None else len(ebr.indices)
             rc = cmaker.make_rupture_context(ebr.rupture)
             ruptparams = tuple(getattr(rc, param) for param in params)
@@ -316,17 +351,15 @@ def sample_ruptures(src, num_ses, info):
     return num_occ_by_rup
 
 
-def build_eb_ruptures(
-        src, num_occ_by_rup, s_sites, maximum_distance, sitecol, random_seed):
+def build_eb_ruptures(src, num_occ_by_rup, rupture_filter, random_seed):
     """
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated EBRuptures>)
     """
-    totsites = len(sitecol)
+    totsites = len(rupture_filter.sites.complete)
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         # filtering ruptures
-        r_sites = filter_sites_by_distance_to_rupture(
-            rup, maximum_distance, s_sites)
+        r_sites = rupture_filter(rup)
         if r_sites is None:
             # ignore ruptures which are far away
             del num_occ_by_rup[rup]  # save memory
