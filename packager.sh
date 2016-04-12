@@ -548,7 +548,7 @@ celeryd_wait $GEM_MAXLOOP"
 
         sudo useradd -m openquake -g openquake
         sudo -u openquake python -m openquake.server.db.upgrade_manager /home/openquake/db.sqlite
-        sudo -u openquake python -m openquake.server.dbserver & sleep 1
+        sudo -u openquake python -m openquake.server.dbserver 2>/dev/null & sleep 1
 
         if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
             export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
