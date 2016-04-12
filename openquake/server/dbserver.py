@@ -18,11 +18,12 @@
 
 import sys
 import logging
+from Queue import Queue
+from threading import Thread
 from multiprocessing.connection import Listener
 
 from openquake.commonlib.parallel import safely_call
 from openquake.engine import config
-from openquake.server import executor
 from openquake.server.db import actions
 from django.db import connection
 
@@ -32,45 +33,58 @@ DEFAULT_LOG_LEVEL = 'progress'
 
 exit = sys.exit
 info = logging.info
+queue = Queue()
 
 
-def manage_request(conn, cmd):
-    name = cmd[0]
-    args = cmd[1:]
-    func = getattr(actions, name)
-
-    def finalize(fut):
-        res, etype, _ = fut.result()
-        if etype:
-            logging.error(res)
-        else:
-            logging.info('Got %s', str(cmd))
-        # send back the result and the exception class
-        conn.send((res, etype))
-        conn.close()
-    # call the function by trapping any error
-    fut = executor.submit(safely_call, func, args)
-    fut.add_done_callback(finalize)
-
-
-class DbServer(object):
+def manage_commands():
     """
-    A server receiving and executing commands. Errors are trapped and
-    we send back to the client pairs (result, exctype) for each command
+    Execute the received commands in a separated thread. Errors are trapped
+    and we send back to the client pairs (result, exctype) for each command
     received. `exctype` is None if there is no exception, otherwise it
     is an exception class and `result` is an error string containing the
     traceback.
     """
+    connection.cursor()  # bind the db
+    while True:
+        conn, cmd = queue.get()
+        if cmd == ('@stop',):
+            # this is a somewhat special command, so I am using
+            # the convention of prepending an `@` to its name
+            # in the future I may add more special commands
+            conn.send((None, None))
+            conn.close()
+            return
+
+        # execute the command by trapping any possible exception
+        func = getattr(actions, cmd[0])
+        res, etype, _ = safely_call(func, cmd[1:])
+
+        # logging
+        logging.info('Got %s', str(cmd))
+        if etype:
+            logging.error(res)
+
+        # send back the result and the exception class
+        conn.send((res, etype))
+        conn.close()
+
+
+class DbServer(object):
+    """
+    A server collecting the received commands into a queue
+    """
     def __init__(self, address, authkey):
         self.address = address
         self.authkey = authkey
+        self.thread = Thread(target=manage_commands)
 
     def loop(self):
         listener = Listener(self.address, backlog=5, authkey=self.authkey)
         logging.info('DB server listening on %s:%d...' % self.address)
+        self.thread.start()
+        cmd = [None]
         try:
-            connection.cursor()  # bind the db
-            while True:
+            while cmd[0] != '@stop':
                 try:
                     conn = listener.accept()
                 except KeyboardInterrupt:
@@ -79,16 +93,11 @@ class DbServer(object):
                     # unauthenticated connection, for instance by a port
                     # scanner such as the one in manage.py
                     continue
-                cmd = conn.recv()  # a list [name, arg1, ... argN]
-                if cmd == ['@stop']:
-                    # this is a somewaht special command, so I am using
-                    # the convention of prepending an `@` to its name
-                    # in the future I may add more special commands
-                    conn.send((None, None))
-                    break
-                manage_request(conn, cmd)
+                cmd = conn.recv()  # a tuple (name, arg1, ... argN)
+                queue.put((conn, cmd))
         finally:
             listener.close()
+            self.thread.join()
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)

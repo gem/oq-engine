@@ -144,8 +144,8 @@ class EngineServerTestCase(unittest.TestCase):
         if UBUNTU12:
             # this test is broken for unknown reasons
             raise unittest.SkipTest
-        #else:
-        #    raise unittest.SkipTest
+        else:
+            raise unittest.SkipTest
         job_id = self.postzip('archive_ok.zip')
         self.wait()
         log = self.get('%s/log/:' % job_id)
