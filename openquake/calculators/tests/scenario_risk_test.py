@@ -85,7 +85,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg_loss.csv', fname)
 
         # check wrong time_event
-        self.calc.datastore.attrs['time_event'] = "'Day'"
+        self.calc.save_params(time_event="'Day'")
         with self.assertRaises(ValueError) as ctx:
             self.calc.pre_execute()
         msg = str(ctx.exception)

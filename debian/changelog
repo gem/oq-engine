@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Stored the job.ini parameters into a table in the datastore
   * Added a check on the IMTs coming from the risk models
   * Changed the aggregate loss table exporter to export the event tags,
     not the event IDs
