@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
 import abc
-import ast
 import pdb
 import math
 import logging
