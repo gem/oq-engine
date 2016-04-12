@@ -24,7 +24,6 @@ import tempfile
 import mock
 
 from django.db import connection
-from django.core import exceptions
 from openquake.server.db import models, actions, upgrade_manager
 from openquake.server.settings import DATABASE
 from openquake.server.tests import helpers
@@ -157,7 +156,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         self.assertEqual(0, hazard_jobs.count())
 
     def test_del_calc_does_not_exist(self):
-        self.assertRaises(RuntimeError, actions.del_calc, -1)
+        self.assertRaises(models.NotFound, actions.del_calc, -1)
 
     def test_del_calc_no_access(self):
         # Test the case where we try to delete a hazard calculation which does
@@ -224,7 +223,7 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         self.assertEqual(0, risk_calcs.count())
 
     def test_del_calc_does_not_exist(self):
-        self.assertRaises(RuntimeError, actions.del_calc, -1)
+        self.assertRaises(models.NotFound, actions.del_calc, -1)
 
     def test_del_calc_no_access(self):
         # Test the case where we try to delete a risk calculation which does
