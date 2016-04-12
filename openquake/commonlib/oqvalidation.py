@@ -22,6 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
+from openquake.hazardlib.imt import from_string
 from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import get_risk_files
 
@@ -256,6 +257,7 @@ class OqParam(valid.ParamSet, hdf5.LiteralAttrs):
             for loss_type, rf in risk_functions.items():
                 imt = rf.imt
                 # imls = [round(iml, 3) for iml in rf.imls]
+                from_string(imt)  # make sure it is a valid IMT
                 imls = list(rf.imls)
                 if imt in imtls and imtls[imt] != imls:
                     logging.debug(
