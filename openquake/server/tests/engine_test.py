@@ -37,7 +37,8 @@ def setup_module():
     sys.stderr.write('Using the database %s\n' % tmpfile)
     DATABASE['name'] = tmpfile
     DATABASE['user'] = getpass.getuser()
-    connection.cursor()  # connect to the db
+    connection.close()  # if already open
+    connection.cursor()  # reconnect to the db
     upgrade_manager.upgrade_db(connection.connection)
 
 
