@@ -190,6 +190,8 @@ _devtest_innervm_run () {
     scp -r ${GEM_DEB_REPO}/${BUILD_UBUVER}/custom_dev_pkgs $lxc_ip:repo/custom_pkgs
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
 
+    ssh $lxc_ip "sleep 500000 || true"
+
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
 
