@@ -79,7 +79,7 @@ def expose_outputs(dstore):
     exportable = set(ekey[0] for ekey in export.export)
     # small hack: remove the sescollection outputs from scenario
     # calculators, as requested by Vitor
-    calcmode = dstore.get_attr('/', 'calculation_mode')
+    calcmode = dstore['oqparam'].calculation_mode
     if 'scenario' in calcmode and 'sescollection' in exportable:
         exportable.remove('sescollection')
     outkeys = []
