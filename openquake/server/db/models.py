@@ -28,7 +28,7 @@ import os
 from datetime import datetime
 
 from openquake.commonlib import datastore
-from openquake.commonlib.oqvalidation import OqParam, RISK_CALCULATORS
+from openquake.commonlib.oqvalidation import RISK_CALCULATORS
 import django
 if hasattr(django, 'setup'):
     django.setup()  # for Django >= 1.7
@@ -157,8 +157,7 @@ class OqJob(djm.Model):
         """
         datadir = os.path.dirname(self.ds_calc_dir)
         dstore = datastore.read(self.id, datadir=datadir)
-        oqparam = OqParam.from_(dstore.attrs)
-        return oqparam
+        return dstore['oqparam']
 
     def __repr__(self):
         return '<%s %d, %s>' % (self.__class__.__name__,
