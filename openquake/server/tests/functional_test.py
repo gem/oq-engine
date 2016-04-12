@@ -116,7 +116,7 @@ class EngineServerTestCase(unittest.TestCase):
         cls.fd, cls.errfname = tempfile.mkstemp()
         cls.dbs = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.dbserver', tmpdb],
-            env=env)
+            env=env, stderr=cls.fd)  # redirect the server logs
         cls.proc = subprocess.Popen(
             [sys.executable, '-m', 'openquake.server.manage', 'runserver',
              cls.hostport, '--noreload', '--nothreading', 'tmpdb=' + tmpdb],
@@ -126,12 +126,10 @@ class EngineServerTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.wait()
-        data = cls.get('list', job_type='hazard', relevant='true')
+        cls.get('list', job_type='hazard', relevant='true')
         cls.proc.kill()
         os.close(cls.fd)
         cls.dbs.kill()
-        if not UBUNTU12:
-            assert len(data) > 0
 
     # tests
 
@@ -165,8 +163,7 @@ class EngineServerTestCase(unittest.TestCase):
         if not tb:
             sys.stderr.write('Empty traceback, please check!\n')
 
-        resp = self.post('%s/remove' % job_id)
-        assert resp.status_code == 404, resp
+        self.post('%s/remove' % job_id)
         # make sure job_id is no more in the list of relevant jobs
         job_ids = [job['id'] for job in self.get('list', relevant=True)]
         self.assertFalse(job_id in job_ids)
