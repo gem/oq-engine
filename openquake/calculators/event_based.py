@@ -307,7 +307,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for ebr in build_eb_ruptures(
-                src, num_occ_by_rup, rupture_filter, oq.random_seed):
+                src, num_occ_by_rup, rupture_filter, oq.random_seed, monitor):
             nsites = totsites if ebr.indices is None else len(ebr.indices)
             rc = cmaker.make_rupture_context(ebr.rupture)
             ruptparams = tuple(getattr(rc, param) for param in params)
@@ -351,15 +351,17 @@ def sample_ruptures(src, num_ses, info):
     return num_occ_by_rup
 
 
-def build_eb_ruptures(src, num_occ_by_rup, rupture_filter, random_seed):
+def build_eb_ruptures(
+        src, num_occ_by_rup, rupture_filter, random_seed, monitor):
     """
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated EBRuptures>)
     """
     totsites = len(rupture_filter.sites.complete)
+    rup_mon = monitor('filtering ruptures')
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
-        # filtering ruptures
-        r_sites = rupture_filter(rup)
+        with rup_mon:
+            r_sites = rupture_filter(rup)
         if r_sites is None:
             # ignore ruptures which are far away
             del num_occ_by_rup[rup]  # save memory
