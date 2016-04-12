@@ -101,8 +101,12 @@ class DbServer(object):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    if sys.argv[1:]:  # assume the port is the first argument
-        addr = (config.DBS_ADDRESS[0], int(sys.argv[1]))
+    if sys.argv[1:]:  # assume sys.argv[1] has the form fname:port
+        from openquake.server.settings import DATABASE
+        fname, port = sys.argv[1].split(':')
+        addr = (DATABASE['HOST'], int(port))
+        DATABASE['NAME'] = fname
+        DATABASE['PORT'] = int(port)
     else:
         addr = config.DBS_ADDRESS
     DbServer(addr, config.DBS_AUTHKEY).loop()
