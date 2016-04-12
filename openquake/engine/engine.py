@@ -83,7 +83,7 @@ def expose_outputs(dstore):
     if 'scenario' in calcmode and 'sescollection' in exportable:
         exportable.remove('sescollection')
     outkeys = []
-    uhs = dstore.get_attr('/', 'uniform_hazard_spectra', False)
+    uhs = dstore['oqparam'].uniform_hazard_spectra
     if uhs and 'hmaps' in dstore:
         outkeys.append('uhs')
     for key in dstore:
