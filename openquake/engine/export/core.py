@@ -22,7 +22,6 @@ file formats."""
 
 
 import os
-import ast
 import zipfile
 import logging
 
@@ -61,7 +60,7 @@ def export_from_datastore(output_key, output, target):
     assert ds_key == output.ds_key, (ds_key, output.ds_key)
     datadir = os.path.dirname(output.oq_job.ds_calc_dir)
     dstore = datastore.read(output.oq_job.id, datadir=datadir)
-    parent_id = ast.literal_eval(dstore.attrs['hazard_calculation_id'])
+    parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
         dstore.set_parent(datastore.read(parent_id, datadir=datadir))
     dstore.export_dir = target
