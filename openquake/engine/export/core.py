@@ -22,7 +22,6 @@ file formats."""
 
 
 import os
-import ast
 import zipfile
 
 from openquake.commonlib.export import export as ds_export
@@ -56,7 +55,7 @@ def export_from_datastore(output_key, calc_id, datadir, target):
     """
     ds_key, fmt = output_key
     dstore = datastore.read(calc_id, datadir=datadir)
-    parent_id = ast.literal_eval(dstore.attrs['hazard_calculation_id'])
+    parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
         dstore.set_parent(datastore.read(parent_id, datadir=datadir))
     dstore.export_dir = target
