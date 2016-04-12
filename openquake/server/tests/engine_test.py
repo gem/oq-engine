@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
 import getpass
 import subprocess
 import unittest
@@ -34,11 +33,13 @@ def setup_module():
     global tmpfile
     fh, tmpfile = tempfile.mkstemp()
     os.close(fh)
-    sys.stderr.write('Using the database %s\n' % tmpfile)
-    DATABASE['name'] = tmpfile
-    DATABASE['user'] = getpass.getuser()
-    connection.close()  # if already open
-    connection.cursor()  # reconnect to the db
+    DATABASE['NAME'] = tmpfile
+    DATABASE['USER'] = getpass.getuser()
+    connection.cursor()  # connect to the db
+    # sanity check: make sure we are using the right db
+    fname = connection.connection.execute(
+        'PRAGMA database_list').fetchone()[-1]
+    assert fname == tmpfile, (fname, tmpfile)
     upgrade_manager.upgrade_db(connection.connection)
 
 
