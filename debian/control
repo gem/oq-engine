@@ -11,5 +11,5 @@ Homepage: http://github.com/gem/oq-hazardlib
 Package: python-oq-hazardlib
 Architecture: any
 Conflicts: python-nhlib
-Depends: ${shlibs:Depends}, ${misc:Depends}, python-numpy, python-scipy, python-shapely, python-psutil, python-h5py (>= 2.2.1), python-decorator
+Depends: ${shlibs:Depends}, ${misc:Depends}, python-numpy, python-scipy, python-shapely, python-psutil, python-h5py (= 2.2.1-1build3~precise01), python-decorator
 Description: hazardlib is a library for performing seismic hazard analysis
