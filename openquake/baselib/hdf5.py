@@ -85,10 +85,11 @@ def extend(dset, array):
 
 class LiteralAttrs(object):
     """
-    A class to serialize attributes to HDF5. The goal is to store simple
-    parameters as an HDF5 table in a readable way. The implementation treats
-    specially dictionary attributes, by storing them as `attrname.keyname`
-    byte arrays, see the example below:
+    A class to serialize a set of parameters to HDF5. The goal is to
+    store simple parameters as an HDF5 table in a readable way. Each
+    parameter can be retrieved as an attribute, given its name. The
+    implementation treats specially dictionary attributes, by storing
+    them as `attrname.keyname` strings, see the example below:
 
     >>> class Ser(LiteralAttrs):
     ...     def __init__(self, a, b):
@@ -110,9 +111,10 @@ class LiteralAttrs(object):
 
     The implementation is not recursive, i.e. there will be at most
     one dot in the serialized names (in the example here `a`, `b.x`, `b.y`).
+
     """
     def __toh5__(self):
-        info_dt = numpy.dtype([('key', vbytes), ('value', vbytes)])
+        info_dt = numpy.dtype([('par_name', vbytes), ('par_value', vbytes)])
         attrnames = sorted(a for a in vars(self) if not a.startswith('_'))
         lst = []
         for attr in attrnames:
