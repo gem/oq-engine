@@ -1,5 +1,7 @@
   [Graeme Weatherill]
   * Fixes Z1.0 units bug in Abrahamson, Silva and Kamai (2014)
+  * Added modifications to Zhao (2006) inslab GMPE and implements
+    Atkinson (2008') - needed for 2014 US NSHMP
 
   [Michele Simionato]
   * Improved the validity check on the Intensity Measure Type
