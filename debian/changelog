@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Replaced PostgreSQL with SQLite
   * Introduced a dbserver to mediate the interaction with the database
   * Fixed in a more robust way the duplicated log bug
   * Made more robust the killing of processes by patching concurrent.futures
