@@ -19,7 +19,8 @@
 from openquake.hazardlib.gsim.zhao_2006 import (ZhaoEtAl2006Asc,
                                                 ZhaoEtAl2006SInter,
                                                 ZhaoEtAl2006SSlab,
-                                                ZhaoEtAl2006SInterNSHMP2008)
+                                                ZhaoEtAl2006SInterNSHMP2008,
+                                                ZhaoEtAl2006SSlabNSHMP2014)
 from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
 from openquake.hazardlib.imt import PGA
@@ -142,4 +143,12 @@ class ZhaoEtAl2006SInterNSHMP2008TestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check('ZHAO06/Z06SInterNSHMP_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
+
+
+class ZhaoEtAl2006SSlabNSHMP2014TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ZhaoEtAl2006SSlabNSHMP2014
+
+    def test_mean(self):
+        self.check('ZHAO06/ZHAO_SSLAB_NSHMP2014_MEAN.csv',
+                   max_discrep_percentage=0.52)
 
