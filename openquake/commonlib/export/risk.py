@@ -26,7 +26,6 @@ from openquake.baselib.general import AccumDict
 from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers
-from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.util import get_assets, compose_arrays
 
 from openquake.commonlib.risk_writers import (
@@ -127,7 +126,7 @@ def export_avg_losses_stats(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     avg_losses = dstore[ekey[0]].value
     quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     assets = get_assets(dstore)
@@ -158,8 +157,6 @@ def export_agg_losses(ekey, dstore):
         writer.save(data, dest)
     return writer.getsaved()
 
-agg_loss_dt = numpy.dtype([('rup_id', U32), ('loss', F32), ('loss_ins', F32)])
-
 
 # this is used by event_based_risk
 @export.add(('agg_loss_table', 'csv'))
@@ -170,6 +167,7 @@ def export_agg_losses_ebr(ekey, dstore):
     """
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     agg_losses = dstore[ekey[0]]
+    etags = dstore['etags'].value
     rlzs = dstore['rlzs_assoc'].realizations
     writer = writers.CsvWriter(fmt='%10.6E')
     for rlz in rlzs:
@@ -178,10 +176,15 @@ def export_agg_losses_ebr(ekey, dstore):
             data.sort(order='rup_id')
             dest = dstore.export_path(
                 'agg_losses-rlz%03d-%s.csv' % (rlz.ordinal, loss_type))
+            tags = etags[data['rup_id']]
             if data.dtype['loss'].shape == (2,):  # insured losses
-                writer.save(data.view(agg_loss_dt), dest)
+                losses = data['loss'][:, 0]
+                inslosses = data['loss'][:, 1]
+                edata = [('event_tag', 'loss', 'loss_ins')] + zip(
+                    tags, losses, inslosses)
             else:
-                writer.save(data, dest)
+                edata = [('event_tag', 'loss')] + zip(tags, data['loss'])
+            writer.save(edata, dest)
     return writer.getsaved()
 
 
@@ -508,7 +511,7 @@ class Location(object):
 # used by event_based_risk and classical_risk
 @export.add(('loss_maps-rlzs', 'xml'), ('loss_maps-rlzs', 'geojson'))
 def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
     unit_by_lt['occupants'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
@@ -588,7 +591,7 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
 # this is used by scenario_risk
 @export.add(('losses_by_asset', 'xml'), ('losses_by_asset', 'geojson'))
 def export_loss_map_xml_geojson(ekey, dstore):
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
     unit_by_lt['occupants'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
@@ -698,7 +701,7 @@ def get_paths(rlz):
 
 def _gen_writers(dstore, writercls, root):
     # build XMLWriter instances
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     rlzs = dstore['rlzs_assoc'].realizations
     cost_types = dstore['cost_types']
     L, R = len(cost_types), len(rlzs)
@@ -861,7 +864,7 @@ def export_bcr_map_rlzs(ekey, dstore):
     sitemesh = dstore['sitemesh']
     bcr_data = dstore['bcr-rlzs']
     N, R = bcr_data.shape
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     realizations = dstore['rlzs_assoc'].realizations
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     writercls = risk_writers.BCRMapXMLWriter

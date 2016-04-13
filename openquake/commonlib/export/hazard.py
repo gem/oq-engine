@@ -28,7 +28,6 @@ from openquake.baselib.general import groupby, humansize
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.commonlib.export import export
-from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.writers import (
     scientificformat, floatformat, write_csv)
 from openquake.commonlib import writers, hazard_writers, util, readinput
@@ -79,7 +78,7 @@ def export_ses_xml(ekey, dstore):
     :param dstore: datastore object
     """
     fmt = ekey[-1]
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     try:
         csm_info = dstore['rlzs_assoc'].csm_info
     except AttributeError:  # for scenario calculators don't export
@@ -309,7 +308,7 @@ def export_hcurves_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     rlzs_assoc = dstore['rlzs_assoc']
     sitecol = dstore['sitecol']
     sitemesh = dstore['sitemesh']
@@ -355,7 +354,7 @@ def get_metadata(realizations, kind):
 
 @export.add(('uhs', 'xml'))
 def export_uhs_xml(ekey, dstore):
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     rlzs_assoc = dstore['rlzs_assoc']
     sitemesh = dstore['sitemesh'].value
     key, fmt = ekey
@@ -395,7 +394,7 @@ HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 def export_hcurves_xml_json(ekey, dstore):
     export_type = ekey[1]
     len_ext = len(export_type) + 1
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     sitemesh = dstore['sitemesh'].value
     rlzs_assoc = dstore['rlzs_assoc']
     hcurves = dstore[ekey[0]]
@@ -433,7 +432,7 @@ def export_hcurves_xml_json(ekey, dstore):
 @export.add(('hmaps', 'xml'), ('hmaps', 'geojson'))
 def export_hmaps_xml_json(ekey, dstore):
     export_type = ekey[1]
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     sitemesh = dstore['sitemesh'].value
     rlzs_assoc = dstore['rlzs_assoc']
     hmaps = dstore[ekey[0]]
@@ -475,7 +474,7 @@ def export_gmf(ekey, dstore):
     """
     sitecol = dstore['sitecol']
     rlzs_assoc = dstore['rlzs_assoc']
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     investigation_time = (None if oq.calculation_mode == 'scenario'
                           else oq.investigation_time)
     samples = oq.number_of_logic_tree_samples
@@ -504,11 +503,12 @@ def export_gmf_spec(ekey, dstore, spec):
     :param dstore: datastore object
     :param spec: a string specifying what to export exactly
     """
+    oq = dstore['oqparam']
     eids = numpy.array([int(rid) for rid in spec.split(',')])
     sitemesh = dstore['sitemesh']
     writer = writers.CsvWriter(fmt='%.5f')
     etags = dstore['etags']
-    if 'scenario' in dstore.attrs['calculation_mode']:
+    if 'scenario' in oq.calculation_mode:
         _, gmfs_by_trt_gsim = base.get_gmfs(dstore)
         gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
         imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
@@ -586,7 +586,7 @@ def get_rup_idx(rupcol, etag):
 
 
 def _get_gmfs(dstore, etag):
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     rlzs_assoc = dstore['rlzs_assoc']
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
@@ -611,9 +611,10 @@ def _get_gmfs(dstore, etag):
         yield gmfa, imt
 
 
-@export.add(('gmfs', 'csv'))
+@export.add(('gmf_data', 'csv'))
 def export_gmf_scenario(ekey, dstore):
-    if 'scenario' in dstore.attrs['calculation_mode']:
+    oq = dstore['oqparam']
+    if 'scenario' in oq.calculation_mode:
         fields = ['%03d' % i for i in range(len(dstore['etags']))]
         dt = numpy.dtype([(f, F32) for f in fields])
         etags, gmfs_by_trt_gsim = base.get_gmfs(dstore)
@@ -677,7 +678,7 @@ DisaggMatrix = collections.namedtuple(
 
 @export.add(('disagg', 'xml'))
 def export_disagg_xml(ekey, dstore):
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     rlzs = dstore['rlzs_assoc'].realizations
     group = dstore['disagg']
     fnames = []

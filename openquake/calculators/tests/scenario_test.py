@@ -144,7 +144,11 @@ class ScenarioHazardTestCase(CalculatorTestCase):
         self.assertEqualFiles('LinLee2008SSlab_gmf.xml', f1)
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.xml', f2)
 
-        out = self.run_calc(case_9.__file__, 'job.ini', exports='txt')
+        out = self.run_calc(case_9.__file__, 'job.ini', exports='txt,csv')
         f1, f2 = out['gmf_data', 'txt']
         self.assertEqualFiles('LinLee2008SSlab_gmf.txt', f1)
         self.assertEqualFiles('YoungsEtAl1997SSlab_gmf.txt', f2)
+
+        f1, f2 = out['gmf_data', 'csv']
+        self.assertEqualFiles('gmf-LinLee2008SSlab-PGA.csv', f1)
+        self.assertEqualFiles('gmf-YoungsEtAl1997SSlab-PGA.csv', f2)

@@ -1,4 +1,9 @@
   [Michele Simionato]
+  * Stored the job.ini parameters into a table in the datastore
+  * Added a check on the IMTs coming from the risk models
+  * Changed the aggregate loss table exporter to export the event tags,
+    not the event IDs
+  * Fixed a bug with the CSV export of the ground motion fields
   * Fixed a bug with the export of UHS curves with `--exports=xml`
   * Reduced substantially the data transfer and the memory occupation
     for event based calculations with a large number of assets: we

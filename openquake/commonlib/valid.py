@@ -30,6 +30,7 @@ from decimal import Decimal
 import numpy
 
 from openquake.baselib.python3compat import with_metaclass
+from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim
 from openquake.baselib.general import distinct
 
@@ -903,7 +904,7 @@ class MetaParamSet(type):
 
 
 # used in commonlib.oqvalidation
-class ParamSet(with_metaclass(MetaParamSet)):
+class ParamSet(with_metaclass(MetaParamSet, hdf5.LiteralAttrs)):
     """
     A set of valid interrelated parameters. Here is an example
     of usage:
