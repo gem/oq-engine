@@ -220,6 +220,30 @@ class EBRupture(object):
 
 
 class RuptureFilter(object):
+    """
+    Implement two filtering mechanism:
+
+    1. if min_iml is empty, use the usual filtering on the maximum distance
+    2. otherwise, filter on the ground motion minimum intensity.
+
+    In other words, if a ground motion is below the minimum intensity
+    for all hazard sites and for all intensity measure types, ignore
+    the rupture. When a RuptureFilter instance is called on a rupture,
+    returns None if the rupture has to be discarded, or a
+    FilteredSiteCollection with the sites having ground motion intensity
+    over the threshold.
+
+    :param sites:
+        sites to filter (usually already prefiltered)
+    :param maximum_distance:
+        the maximum distance to use in the distance filtering
+    :param imts:
+        a list of intensity measure types
+    :param trunc_level:
+        the truncation level used in the GMF calculation
+    :param min_iml:
+        a dictionary with the minimum intensity measure level for each IMT
+    """
     def __init__(self, sites, maximum_distance, imts, gsims, trunc_level,
                  min_iml):
         self.sites = sites
@@ -231,7 +255,7 @@ class RuptureFilter(object):
 
     def __call__(self, rupture):
         """
-        :returns: a FilteredSiteCollection
+        :returns: a FilteredSiteCollection or None
         """
         if self.min_iml:
             computer = calc.gmf.GmfComputer(
@@ -249,6 +273,11 @@ class RuptureFilter(object):
 
 
 def getdefault(dic_with_default, key):
+    """
+    :param dic_with_default: a dictionary with a 'default' key
+    :param key: a key that may be present in the dictionary or not
+    :returns: the value associated to the key, or to 'default'
+    """
     try:
         return dic_with_default[key]
     except KeyError:
@@ -290,6 +319,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     eb_ruptures = []
     rup_data = []
     calc_times = []
+    rup_mon = monitor('filtering ruptures')
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -307,7 +337,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for ebr in build_eb_ruptures(
-                src, num_occ_by_rup, rupture_filter, oq.random_seed, monitor):
+                src, num_occ_by_rup, rupture_filter, oq.random_seed, rup_mon):
             nsites = totsites if ebr.indices is None else len(ebr.indices)
             rc = cmaker.make_rupture_context(ebr.rupture)
             ruptparams = tuple(getattr(rc, param) for param in params)
@@ -352,13 +382,12 @@ def sample_ruptures(src, num_ses, info):
 
 
 def build_eb_ruptures(
-        src, num_occ_by_rup, rupture_filter, random_seed, monitor):
+        src, num_occ_by_rup, rupture_filter, random_seed, rup_mon):
     """
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated EBRuptures>)
     """
     totsites = len(rupture_filter.sites.complete)
-    rup_mon = monitor('filtering ruptures')
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         with rup_mon:
             r_sites = rupture_filter(rup)
