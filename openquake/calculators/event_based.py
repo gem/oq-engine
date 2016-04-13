@@ -46,27 +46,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def num_affected_sites(rupture, num_sites):
-    """
-    :param rupture: a EBRupture object
-    :param num_sites: the total number of sites
-    :returns: the number of sites affected by the rupture
-    """
-    return (len(rupture.indices) if rupture.indices is not None
-            else num_sites)
-
-
-def get_site_ids(rupture, num_sites):
-    """
-    :param rupture: a EBRupture object
-    :param num_sites: the total number of sites
-    :returns: the indices of the sites affected by the rupture
-    """
-    if rupture.indices is None:
-        return list(range(num_sites))
-    return rupture.indices
-
-
 @datastore.view.add('col_rlz_assocs')
 def view_col_rlz_assocs(name, dstore):
     """
@@ -338,7 +317,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         # to call sample_ruptures *before* the filtering
         for ebr in build_eb_ruptures(
                 src, num_occ_by_rup, rupture_filter, oq.random_seed, rup_mon):
-            nsites = totsites if ebr.indices is None else len(ebr.indices)
+            nsites = len(ebr.indices)
             rc = cmaker.make_rupture_context(ebr.rupture)
             ruptparams = tuple(getattr(rc, param) for param in params)
             rup_data.append((ebr.serial, len(ebr.etags), nsites) + ruptparams)
@@ -387,7 +366,6 @@ def build_eb_ruptures(
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated EBRuptures>)
     """
-    totsites = len(rupture_filter.sites.complete)
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
         with rup_mon:
             r_sites = rupture_filter(rup)
@@ -395,10 +373,6 @@ def build_eb_ruptures(
             # ignore ruptures which are far away
             del num_occ_by_rup[rup]  # save memory
             continue
-        if len(r_sites) < totsites:
-            indices = r_sites.indices
-        else:
-            indices = None  # None means that nothing was filtered
 
         # creating EBRuptures
         serial = rup.seed - random_seed + 1
@@ -410,7 +384,8 @@ def build_eb_ruptures(
                     col_idx, ses_idx, src.source_id, serial, occ_no)
                 etags.append(etag)
         if etags:
-            yield EBRupture(rup, indices, etags, src.trt_model_id, serial)
+            yield EBRupture(rup, r_sites.indices, etags,
+                            src.trt_model_id, serial)
 
 
 @base.calculators.add('event_based_rupture')
@@ -532,8 +507,7 @@ def make_gmfs(eb_ruptures, sitecol, imts, gsims,
     sites = sitecol.complete
     for ebr in eb_ruptures:
         with ctx_mon:
-            r_sites = (sitecol if ebr.indices is None else
-                       site.FilteredSiteCollection(ebr.indices, sites))
+            r_sites = site.FilteredSiteCollection(ebr.indices, sites)
             computer = calc.gmf.GmfComputer(
                 ebr.rupture, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
