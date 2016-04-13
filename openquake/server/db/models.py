@@ -26,7 +26,7 @@ Model representations of the OpenQuake DB tables.
 '''
 import os
 from datetime import datetime
-
+import openquake.engine.utils  # side effect setting OQ_DISTRIBUTE
 from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import RISK_CALCULATORS
 import django
