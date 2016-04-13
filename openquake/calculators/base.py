@@ -105,9 +105,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Update the current calculation parameters and save oqlite_version
         """
-        vars(self.oqparam).update(oqlite_version=repr(__version__), **kw)
-        self.oqparam = self.oqparam  # save the updated oqparam
-        self.datastore.hdf5.flush()
+        dic = dict(oqlite_version=__version__)
+        dic.update(kw)
+        self.datastore.save('oqparam', dic)
 
     def set_log_format(self):
         """Set the format of the root logger"""

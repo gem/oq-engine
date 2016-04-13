@@ -306,7 +306,7 @@ class TaskManager(object):
         self.task_func = getattr(oqtask, 'task_func', oqtask)
         self.name = name or oqtask.__name__
         self.results = []
-        self.sent = 0
+        self.sent = AccumDict()
         self.received = []
         self.no_distribute = no_distribute()
 
@@ -320,12 +320,11 @@ class TaskManager(object):
         check_mem_usage()
         # log a warning if too much memory is used
         if self.no_distribute:
-            sent = 0
+            sent = {}
             res = (self.task_func(*args), None, args[-1])
         else:
             piks = pickle_sequence(args)
-            sent = sum(len(p) for p in piks)
-            logging.debug('submitting %s', piks)
+            sent = {p.clsname: len(p) for p in piks}
             res = self._submit(piks)
         self.sent += sent
         self.results.append(res)
@@ -420,7 +419,7 @@ class TaskManager(object):
             agg_result = reduce(agg_and_percent, self.results, acc)
         else:
             self.progress('Sent %s of data in %d task(s)',
-                          humansize(self.sent), num_tasks)
+                          humansize(sum(self.sent.values())), num_tasks)
             agg_result = self.aggregate_result_set(agg_and_percent, acc)
             self.progress('Received %s of data, maximum per task %s',
                           humansize(sum(self.received)),

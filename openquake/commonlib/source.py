@@ -1022,7 +1022,8 @@ class SourceManager(object):
                     operator.attrgetter('trt_model_id')):
                 sent = self.tm.submit(block, sitecol, siteidx,
                                       rlzs_assoc, self.monitor.new())
-                self.source_chunks.append((len(block), block.weight, sent))
+                self.source_chunks.append(
+                    (len(block), block.weight, sum(sent.values())))
                 nblocks += 1
             logging.info('Sent %d sources in %d block(s)',
                          len(sources), nblocks)
@@ -1042,7 +1043,8 @@ class SourceManager(object):
             dstore['source_info'] = numpy.array(values, source_info_dt)
             attrs = dstore['source_info'].attrs
             attrs['maxweight'] = self.csm.maxweight
-            attrs['sent'] = self.tm.sent
+            sent = '%s_sent' % task_name
+            dstore.save('job_info', {sent: self.tm.sent})
             self.infos.clear()
         if self.source_chunks:
             dstore['source_chunks'] = sc = numpy.array(
