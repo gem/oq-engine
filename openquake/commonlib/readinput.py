@@ -1020,7 +1020,7 @@ def get_gmfs_from_txt(oqparam, fname):
         if not oqparam.imtls:
             oqparam.set_risk_imtls(get_risk_models(oqparam))
         imts = list(oqparam.imtls)
-        imt_dt = numpy.dtype([(imt, F32) for imt in imts])
+        imt_dt = numpy.dtype([(bytes(imt), F32) for imt in imts])
         num_gmfs = oqparam.number_of_ground_motion_fields
         gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
         etags = []
@@ -1078,7 +1078,7 @@ def get_scenario_from_nrml(oqparam, fname):
         oqparam.set_risk_imtls(get_risk_models(oqparam))
     imts = list(oqparam.imtls)
     num_imts = len(imts)
-    imt_dt = numpy.dtype([(imt, F32) for imt in imts])
+    imt_dt = numpy.dtype([(bytes(imt), F32) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet
     etags, sitecounts = _extract_etags_sitecounts(gmfset)
     oqparam.sites = sorted(sitecounts)

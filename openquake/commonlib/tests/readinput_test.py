@@ -33,6 +33,10 @@ TMP = tempfile.gettempdir()
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
 
+def getparams(oq):
+    return {k: v for k, v in vars(oq).items() if not k.startswith('_')}
+
+
 class ParseConfigTestCase(unittest.TestCase):
 
     def test_get_oqparam_with_files(self):
@@ -67,16 +71,13 @@ export_dir = %s
                 'inputs': {'job_ini': job_config,
                            'site_model': site_model_input},
                 'sites': [(0.0, 0.0)],
-                'file_type': None,
                 'hazard_imtls': {'PGA': None},
-                'risk_files': {},
-                'risk_imtls': {},
                 'investigation_time': 50.0,
                 'risk_investigation_time': 50.0,
             }
 
             with mock.patch('logging.warn') as warn:
-                params = vars(readinput.get_oqparam(job_config))
+                params = getparams(readinput.get_oqparam(job_config))
                 for key in expected_params:
                     self.assertEqual(expected_params[key], params[key])
                 items = sorted(params['inputs'].items())
@@ -121,7 +122,6 @@ export_dir = %s
                 'truncation_level': 3.0,
                 'random_seed': 5,
                 'maximum_distance': {'default': 1},
-                'file_type': None,
                 'inputs': {'job_ini': source,
                            'sites': sites_csv},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
@@ -129,13 +129,11 @@ export_dir = %s
                 'reference_vs30_type': 'measured',
                 'reference_vs30_value': 600.0,
                 'hazard_imtls': {'PGA': [0.1, 0.2]},
-                'risk_files': {},
-                'risk_imtls': {},
                 'investigation_time': 50.0,
                 'risk_investigation_time': 50.0,
             }
 
-            params = vars(readinput.get_oqparam(source))
+            params = getparams(readinput.get_oqparam(source))
             self.assertEqual(expected_params, params)
         finally:
             os.unlink(sites_csv)

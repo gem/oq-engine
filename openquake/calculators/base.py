@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
 import abc
-import ast
 import pdb
 import math
 import logging
@@ -84,6 +83,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     assetcol = datastore.persistent_attribute('assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
     job_info = datastore.persistent_attribute('job_info')
+    oqparam = datastore.persistent_attribute('oqparam')
     performance = datastore.persistent_attribute('performance')
     csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
@@ -105,10 +105,8 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Update the current calculation parameters and save oqlite_version
         """
-        vars(self.oqparam).update(kw)
-        for name, val in self.oqparam.to_params():
-            self.datastore.attrs[name] = val
-        self.datastore.attrs['oqlite_version'] = repr(__version__)
+        vars(self.oqparam).update(oqlite_version=repr(__version__), **kw)
+        self.oqparam = self.oqparam  # save the updated oqparam
         self.datastore.hdf5.flush()
 
     def set_log_format(self):
@@ -242,17 +240,16 @@ def _set_nbytes(dkey, dstore):
     group.attrs['nbytes'] = group[key].attrs['nbytes'] * len(group)
 
 
-def check_time_event(dstore, time_events):
+def check_time_event(oqparam, time_events):
     """
     Check the `time_event` parameter in the datastore, by comparing
     with the periods found in the exposure.
     """
-    time_event = dstore.attrs.get('time_event')
-    if time_event and ast.literal_eval(time_event) not in time_events:
-        inputs = ast.literal_eval(dstore.attrs['inputs'])
+    time_event = oqparam.time_event
+    if time_event and time_event not in time_events:
         raise ValueError(
             'time_event is %s in %s, but the exposure contains %s' %
-            (time_event, inputs['job_ini'], ', '.join(time_events)))
+            (time_event, oqparam.inputs['job_ini'], ', '.join(time_events)))
 
 
 class HazardCalculator(BaseCalculator):
@@ -321,8 +318,11 @@ class HazardCalculator(BaseCalculator):
             else:  # read previously computed data
                 parent = datastore.read(precalc_id)
                 self.datastore.set_parent(parent)
-                # update oqparam with the attributes saved in the datastore
-                self.oqparam = OqParam.from_(self.datastore.attrs)
+                # copy missing parameters from the parent
+                params = {name: value for name, value in
+                          vars(parent['oqparam']).items()
+                          if name not in vars(self.oqparam)}
+                self.save_params(**params)
                 self.read_risk_data()
 
         else:  # we are in a basic calculator
@@ -383,8 +383,7 @@ class HazardCalculator(BaseCalculator):
         if not rmdict:  # can happen only in a hazard calculation
             return
         self.oqparam.set_risk_imtls(rmdict)
-        # save risk_imtls in the datastore: this is crucial
-        self.datastore.hdf5.attrs['risk_imtls'] = repr(self.oqparam.risk_imtls)
+        self.save_params()  # re-save oqparam
         self.riskmodel = rm = readinput.get_risk_model(self.oqparam, rmdict)
         if 'taxonomies' in self.datastore:
             # check that we are covering all the taxonomies in the exposure
@@ -421,7 +420,7 @@ class HazardCalculator(BaseCalculator):
         with self.monitor('reading site collection', autoflush=True):
             haz_sitecol = readinput.get_site_collection(oq)
 
-        oq_hazard = (OqParam.from_(self.datastore.parent.attrs)
+        oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
         if 'exposure' in oq.inputs:
             self.read_exposure()
@@ -447,8 +446,7 @@ class HazardCalculator(BaseCalculator):
         if oq_hazard:
             parent = self.datastore.parent
             if 'assetcol' in parent:
-                check_time_event(
-                    self.datastore, parent['assetcol'].time_events)
+                check_time_event(oq, parent['assetcol'].time_events)
             if oq_hazard.time_event != oq.time_event:
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
@@ -617,7 +615,7 @@ def get_gmfs(dstore):
     :param dstore: a datastore
     :returns: a dictionary of gmfs
     """
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     if 'gmfs' in oq.inputs:  # from file
         logging.info('Reading gmfs from file')
         sitecol, etags, gmfs_by_imt = readinput.get_gmfs(oq)
@@ -642,7 +640,7 @@ def get_gmfs(dstore):
         haz_sitecol = sitecol
     risk_indices = set(sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
-    imt_dt = numpy.dtype([(imt, F32) for imt in oq.imtls])
+    imt_dt = numpy.dtype([(bytes(imt), F32) for imt in oq.imtls])
     E = gmfa.shape[0]
     # build a matrix N x E for each GSIM realization
     gmfs = {(trt_id, gsim): numpy.zeros((N, E), imt_dt)
