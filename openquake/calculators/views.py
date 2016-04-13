@@ -30,7 +30,6 @@ from openquake.baselib.general import humansize, groupby
 from openquake.baselib.performance import perf_dt
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source
-from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
@@ -142,7 +141,7 @@ def view_contents(token, dstore):
     """
     Returns the size of the contents of the datastore and its total size
     """
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     data = sorted((dstore.getsize(key), key) for key in dstore)
     rows = [(key, humansize(nbytes)) for nbytes, key in data]
     total = '\n%s : %s' % (
@@ -235,7 +234,7 @@ def view_short_source_info(token, dstore, maxrows=20):
 
 @view.add('params')
 def view_params(token, dstore):
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     params = ['calculation_mode', 'number_of_logic_tree_samples',
               'maximum_distance', 'investigation_time',
               'ses_per_logic_tree_path', 'truncation_level',
@@ -261,7 +260,7 @@ def build_links(items):
 
 @view.add('inputs')
 def view_inputs(token, dstore):
-    inputs = OqParam.from_(dstore.attrs).inputs.copy()
+    inputs = dstore['oqparam'].inputs.copy()
     try:
         source_models = [('source', fname) for fname in inputs['source']]
         del inputs['source']
@@ -298,11 +297,11 @@ def avglosses_data_transfer(token, dstore):
     Determine the amount of average losses transferred from the workers to the
     controller node in a risk calculation.
     """
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     N = len(dstore['assetcol'])
     R = len(dstore['rlzs_assoc'].realizations)
     L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
-    I = ast.literal_eval(dstore.attrs.get('insured_losses', 'False')) + 1
+    I = oq.insured_losses + 1
     ct = oq.concurrent_tasks
     size_bytes = N * R * L * I * 8 * ct  # 8 byte floats
     return (
@@ -330,7 +329,8 @@ def view_totlosses(token, dstore):
     all assets are indeed equal to the aggregate losses. This is a
     sanity check for the correctness of the implementation.
     """
-    if dstore.attrs['insured_losses'] == 'True':
+    oq = dstore['oqparam']
+    if oq.insured_losses:
         stats = ('mean', 'mean_ins')
     else:
         stats = ('mean',)
@@ -439,7 +439,7 @@ def get_max_gmf_size(dstore):
     """
     Extract info about the largest GMF
     """
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     n_sites = len(dstore['sitecol'].complete)
     rlzs_assoc = dstore['rlzs_assoc']
     num_ruptures = dstore.get_attr('etags', 'num_ruptures')

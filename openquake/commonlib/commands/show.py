@@ -23,7 +23,6 @@ import logging
 
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.commonlib import sap, datastore
-from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.reportwriter import set_ancestors
 from openquake.commonlib.util import rmsep
@@ -36,7 +35,7 @@ def get_hcurves_and_means(dstore):
 
     :returns: curves_by_rlz, mean_curves
     """
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     hcurves = dstore['hcurves']
     realizations = dstore['rlzs_assoc'].realizations
     weights = [rlz.weight for rlz in realizations]
@@ -65,14 +64,13 @@ def show(what, calc_id=-1):
         for calc_id in datastore.get_calc_ids(datastore.DATADIR):
             try:
                 ds = datastore.read(calc_id)
-                oq = OqParam.from_(ds.attrs)
+                oq = ds['oqparam']
                 cmode, descr = oq.calculation_mode, oq.description
             except:
                 # invalid datastore file, or missing calculation_mode
                 # and description attributes, perhaps due to a manual kill
-                logging.warn('Removed invalid calculation %d', calc_id)
-                os.remove(
-                    os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id))
+                f = os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id)
+                logging.warn('Unreadable datastore %s', f)
                 continue
             else:
                 rows.append((calc_id, cmode, descr.encode('utf-8')))

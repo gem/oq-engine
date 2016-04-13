@@ -26,7 +26,6 @@ from openquake.baselib.general import AccumDict
 from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers
-from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.util import get_assets, compose_arrays
 
 from openquake.commonlib.risk_writers import (
@@ -127,7 +126,7 @@ def export_avg_losses_stats(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     avg_losses = dstore[ekey[0]].value
     quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     assets = get_assets(dstore)
@@ -512,7 +511,7 @@ class Location(object):
 # used by event_based_risk and classical_risk
 @export.add(('loss_maps-rlzs', 'xml'), ('loss_maps-rlzs', 'geojson'))
 def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
     unit_by_lt['occupants'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
@@ -592,7 +591,7 @@ def export_loss_maps_stats_xml_geojson(ekey, dstore):
 # this is used by scenario_risk
 @export.add(('losses_by_asset', 'xml'), ('losses_by_asset', 'geojson'))
 def export_loss_map_xml_geojson(ekey, dstore):
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
     unit_by_lt['occupants'] = 'people'
     rlzs = dstore['rlzs_assoc'].realizations
@@ -702,7 +701,7 @@ def get_paths(rlz):
 
 def _gen_writers(dstore, writercls, root):
     # build XMLWriter instances
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     rlzs = dstore['rlzs_assoc'].realizations
     cost_types = dstore['cost_types']
     L, R = len(cost_types), len(rlzs)
@@ -865,7 +864,7 @@ def export_bcr_map_rlzs(ekey, dstore):
     sitemesh = dstore['sitemesh']
     bcr_data = dstore['bcr-rlzs']
     N, R = bcr_data.shape
-    oq = OqParam.from_(dstore.attrs)
+    oq = dstore['oqparam']
     realizations = dstore['rlzs_assoc'].realizations
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     writercls = risk_writers.BCRMapXMLWriter
