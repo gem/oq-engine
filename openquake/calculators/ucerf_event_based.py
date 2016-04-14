@@ -716,10 +716,13 @@ def compute_ruptures(branch_info, source, sitecol, oqparam, monitor):
         t0 = time.time()
         ses_ruptures = []
         source.update_background_site_filter(sitecol, integration_distance)
+        numpy.random.seed(oqparam.random_seed + trt_model_id)
+
         for ses_idx in range(1, oqparam.ses_per_logic_tree_path + 1):
             rups, n_occs = source.generate_event_set(branch_id, sitecol,
                                                      integration_distance)
             for i, rup in enumerate(rups):
+                rup.seed = oqparam.random_seed + trt_model_id  # to think
                 if sitecol:
                     rrup = rup.surface.get_min_distance(sitecol.mesh)
                     r_sites = sitecol.filter(rrup <= integration_distance)
@@ -756,12 +759,29 @@ class UCERFEventBasedRuptureCalculator(ClassicalCalculator):
         """
         parse the logic tree and source model input
         """
+        self.sitecol = readinput.get_site_collection(self.oqparam)
+        self.save_mesh()
         self.smlt = readinput.get_source_model_lt(self.oqparam)
         converter = UCERFSourceConverter(self.oqparam.investigation_time,
                                          self.oqparam.rupture_mesh_spacing)
         parser = source.SourceModelParser(converter)
         self.source = parser.parse_sources(
             self.oqparam.inputs["source_model"])[0]
+        self.gsim_lt = readinput.get_gsim_lt(self.oqparam, [DEFAULT_TRT])
+
+        branches = sorted(self.smlt.branches.items())
+        min_mag, max_mag = None, None
+        gsims = []
+        source_models = []
+        for ordinal, (name, branch) in enumerate(branches):
+            tm = source.TrtModel(DEFAULT_TRT, [], min_mag, max_mag, gsims,
+                                 ordinal)
+            sm = source.SourceModel(
+                name, branch.weight, [name], [tm], self.gsim_lt, ordinal, 1)
+            source_models.append(sm)
+        self.csm = source.CompositeSourceModel(
+            self.smlt, source_models, set_weight=False)
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
 
     def execute(self):
         """
@@ -771,7 +791,7 @@ class UCERFEventBasedRuptureCalculator(ClassicalCalculator):
                   self.smlt.branches[key].weight)
                   for key in self.smlt.branches]
         ruptures_by_branch_id = parallel.apply_reduce(
-            compute_ruptures, (id_set, self.source, None, self.oqparam,
+            compute_ruptures, (id_set, self.source, self.sitecol, self.oqparam,
                                self.monitor))
         return ruptures_by_branch_id
 
@@ -843,3 +863,13 @@ class UCERFEventBasedRuptureCalculator(ClassicalCalculator):
                 self.datastore[key] = sorted(
                     sescol, key=operator.attrgetter('serial'))
                 self.datastore.set_attrs(key, num_ruptures=nr, trt_model_id=i)
+
+
+@base.calculators.add('ucerf_event_based')
+class UCERFEventBasedCalculator(event_based.EventBasedCalculator):
+    """
+    Event based PSHA calculator generating the ground motion fields and
+    the hazard curves from the ruptures, depending on the configuration
+    parameters. Specialized for the UCERF model.
+    """
+    pre_calculator = 'ucerf_event_based_rupture'

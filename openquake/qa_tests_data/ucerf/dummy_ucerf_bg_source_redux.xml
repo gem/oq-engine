@@ -9,7 +9,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <UCERFSource
         filename="UCERF_REDUX_MODEL_v2.hdf5"
         id="001"
-        minMag="4.5"
+        minMag="5"
         tectonicRegion="Active Shallow Crust"
         >
             <pointGeometry>
