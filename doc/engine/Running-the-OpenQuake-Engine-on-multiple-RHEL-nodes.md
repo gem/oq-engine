@@ -47,7 +47,7 @@ Note: you have to **restart every celery node** after a PostgreSQL configuration
 
 ### Enable Celery
 
-In the master node, the following file should be modified to enable the Celery support:
+In all the nodes, the following file should be modified to enable the Celery support:
 
 `/etc/openquake/openquake.cfg:`
 
@@ -57,16 +57,15 @@ In the master node, the following file should be modified to enable the Celery s
 use_celery = false
 ```
 
-Please **NOTE**: the /etc/openquake/openquake.cfg file can be overridden by an openquake.cfg file in the current working directory.
+Please **NOTE**: the `/etc/openquake/openquake.cfg` file can be overridden by an openquake.cfg file in the current working directory.
 
 ## OpenQuake Engine 'worker' node configuration File
-On all worker nodes, the following file should be modified to refer to the Postres and Rabbit servers:
+On all worker nodes, the `/etc/openquake/openquake.cfg` file should be also modified to set the Postres and Rabbit deamons IP address:
 
-```/etc/openquake/openquake.cfg``` (see the ```/etc/openquake/openquake_workers.cfg``` as reference):
 ```
 [amqp]
 # Replace localhost with hostname for RabbitMQ
-host = localhost
+host = w.x.y.z
 port = 5672
 
 # See the RabbitMQ "Access Control" page for details of the vhost parameter
@@ -76,7 +75,7 @@ vhost = /
 [database]
 name = openquake
 # replace localhost with the hostname for the Postgres DB
-host = localhost
+host = w.x.y.z
 port = 5432
 ```
 
