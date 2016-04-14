@@ -13,7 +13,7 @@ xmlns:gml="http://www.opengis.net/gml"
             applyToTectonicRegionType="Active Shallow Crust"
             branchSetID="wus_asc"
             uncertaintyType="gmpeModel"
-            >
+            ><!--
                 <logicTreeBranch
                 branchID="ASK14"
                 >
@@ -23,7 +23,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     <uncertaintyWeight>
                         0.22
                     </uncertaintyWeight>
-                </logicTreeBranch>
+                </logicTreeBranch> -->
                 <logicTreeBranch
                 branchID="BSSA14"
                 >
@@ -31,9 +31,10 @@ xmlns:gml="http://www.opengis.net/gml"
                         BooreEtAl2014
                     </uncertaintyModel>
                     <uncertaintyWeight>
-                        0.22
+                        1.0
                     </uncertaintyWeight>
                 </logicTreeBranch>
+                <!--
                 <logicTreeBranch
                 branchID="CB14"
                 >
@@ -64,6 +65,7 @@ xmlns:gml="http://www.opengis.net/gml"
                         0.12
                     </uncertaintyWeight>
                 </logicTreeBranch>
+                 -->
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
     </logicTree>
