@@ -224,11 +224,11 @@ class RuptureFilter(object):
     :param min_iml:
         a dictionary with the minimum intensity measure level for each IMT
     """
-    def __init__(self, sites, maximum_distance, imts, gsims, trunc_level,
+    def __init__(self, sites, maximum_distance, gmv_dt, gsims, trunc_level,
                  min_iml):
         self.sites = sites
         self.max_dist = maximum_distance
-        self.imts = imts
+        self.gmv_dt = gmv_dt
         self.gsims = gsims
         self.trunc_level = trunc_level
         self.min_iml = min_iml
@@ -239,13 +239,12 @@ class RuptureFilter(object):
         """
         if self.min_iml:
             computer = calc.gmf.GmfComputer(
-                rupture, self.sites, self.imts, self.gsims, self.trunc_level)
-            [gmf] = computer.calcgmfs(1, rupture.seed)
+                rupture, self.sites, self.gmv_dt, self.gsims, self.trunc_level)
             ok = numpy.zeros(len(self.sites), bool)
             for gsim in self.gsims:
-                gmf_by_imt = gmf[str(gsim)]
-                for imt in self.imts:
-                    ok += gmf_by_imt[imt] >= getdefault(self.min_iml, imt)
+                gmf = computer.compute(rupture.seed, gsim, [0])['gmv']
+                for imt in gmf.dtype.names:
+                    ok += gmf[imt] >= getdefault(self.min_iml, imt)
             return computer.sites.filter(ok)
         else:  # maximum_distance filtering
             return filter_sites_by_distance_to_rupture(
@@ -294,7 +293,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     rup_data_dt = numpy.dtype(
         [('rupserial', U32), ('multiplicity', U16), ('numsites', U32)] + [
             (param, F32) for param in params])
-
+    gmv_dt = calc.gmf.gmv_dt(oq.imtls)
     eb_ruptures = []
     rup_data = []
     calc_times = []
@@ -308,7 +307,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
             continue
 
         rupture_filter = RuptureFilter(
-            s_sites, max_dist, oq.imtls, cmaker.gsims,
+            s_sites, max_dist, gmv_dt, cmaker.gsims,
             oq.truncation_level, oq.minimum_intensity)
         num_occ_by_rup = sample_ruptures(
             src, oq.ses_per_logic_tree_path, rlzs_assoc.csm_info)
