@@ -25,10 +25,26 @@ import collections
 import numpy
 import scipy.stats
 
+from openquake.baselib.python3compat import zip
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.gsim.base import gsim_imt_dt, ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
+
+U32 = numpy.uint32
+F32 = numpy.float32
+
+
+def gmv_dt(imts):
+    """
+    Build the numpy dtype for the ground motion values from the IMTs;
+    it has fields 'sid', 'eid' and 'gmv' where 'gmv' is a composite type
+    depending on the intensity measure types.
+
+    :param imts: an ordered list of IMT strings
+    """
+    imt_dt = numpy.dtype([(imt, F32) for imt in imts])
+    return numpy.dtype([('sid', U32), ('eid', U32), ('gmv', imt_dt)])
 
 
 class CorrelationButNoInterIntraStdDevs(Exception):
@@ -49,12 +65,7 @@ class GmfComputer(object):
     """
     Given an earthquake rupture, the ground motion field computer computes
     ground shaking over a set of sites, by randomly sampling a ground
-    shaking intensity model. The usage is::
-
-       gmfcomputer = GmfComputer(rupture, r_sites, imts, gsims,
-                                 truncation_level, correlation_model)
-       gmf1 = gmfcomputer.compute(seed1)
-       gmf2 = gmfcomputer.compute(seed2)
+    shaking intensity model.
 
     :param :class:`openquake.hazardlib.source.rupture.Rupture` rupture:
         Rupture to calculate ground motion fields radiated from.
@@ -62,13 +73,8 @@ class GmfComputer(object):
     :param :class:`openquake.hazardlib.site.SiteCollection` sites:
         Sites of interest to calculate GMFs.
 
-    :param imts:
-        Sorted list of intensity measure type strings
-
-    :param gsims:
-        Ground-shaking intensity models, instances of subclass of either
-        :class:`~openquake.hazardlib.gsim.base.GMPE` or
-        :class:`~openquake.hazardlib.gsim.base.IPE`, sorted lexicographically.
+    :param gmv_dt:
+        a nested numpy dtype with the form (sid, eid, gmv: (imt1, ...))
 
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
@@ -80,17 +86,17 @@ class GmfComputer(object):
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
     """
-    def __init__(self, rupture, sites, imts, gsims,
+    def __init__(self, rupture, sites, gmv_dt, gsims,
                  truncation_level=None, correlation_model=None):
-        assert sites and imts, (sites, imts)
+        assert sites, sites
         self.rupture = rupture
         self.sites = sites
-        self.imts = list(map(from_string, imts))
+        self.imts = [from_string(imt) for imt in gmv_dt['gmv'].names]
         self.gsims = gsims
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.ctx = ContextMaker(gsims).make_contexts(sites, rupture)
-        self.gmf_dt = gsim_imt_dt(gsims, imts)
+        self.gmv_dt = gmv_dt  # numpy dtype used in event based calculations
 
     def _compute(self, seed, gsim, realizations):
         # the method doing the real stuff; use compute instead
@@ -165,46 +171,37 @@ class GmfComputer(object):
 
         return result
 
-    def compute(self, seeds):
+    def compute(self, seed, gsim, eids):
         """
-        Compute the ground motion field for the given sites and seeds.
+        Compute a ground motion array for the given sites.
 
-        :param seeds:
-            S seeds for the numpy random number generator
-        :returns:
-            a numpy array of dtype gmf_dt and shape (num_seeds, num_sites)
-        """
-        gmfa = numpy.zeros((len(seeds), len(self.sites)), self.gmf_dt)
-        for i, seed in enumerate(seeds):
-            for gsim in self.gsims:
-                gs = str(gsim)
-                for imt, value in self._compute(
-                        seed, gsim, realizations=1).items():
-                    # 1 realization, get the 0-th colum of the v-array
-                    array = list(map(float, value[:, 0]))
-                    # NB: with correlation, the value is a numpy.matrix
-                    # not an array, flatten does not work and the only
-                    # way to extract the numbers is the map before!
-                    # something is wrong and must be fixed in the future
-                    for j, gmv in enumerate(array):
-                        gmfa[i, j][gs][imt] = gmv
-        return gmfa
-
-    def calcgmfs(self, multiplicity, seed):
-        """
-        Compute the ground motion field for the given sites and seeds.
-
-        :param multiplicity:
-            the number of GMFs to return
         :param seed:
             seed for the numpy random number generator
+        :param gsim:
+            a GSIM instance
+        :param:
+            event IDs, a list of integers
         :returns:
-            a numpy array of dtype gmf_dt and shape (multiplicity, num_sites)
+            a numpy array of dtype gmv_dt and size num_events * num_sites
         """
-        gmfa = numpy.zeros((multiplicity, len(self.sites)), self.gmf_dt)
-        for gsim in self.gsims:
-            for imt, gmv in self._compute(seed, gsim, multiplicity).items():
-                gmfa[str(gsim)][imt] = gmv.T
+        multiplicity = len(eids)
+        sids = self.sites.sids
+        gmfa = numpy.zeros(len(self.sites) * multiplicity, self.gmv_dt)
+        for imt, gmfarray in self._compute(seed, gsim, multiplicity).items():
+            i = 0
+            for sid, gmvs in zip(sids, gmfarray):
+                if gmvs.shape == (1, multiplicity):
+                    # NB: with correlation, the value is a numpy.matrix
+                    # something is wrong and must be fixed in the future
+                    gmvs = numpy.array([float(gmv) for gmv in gmvs.T], F32)
+                else:
+                    gmvs = F32(gmvs)
+                for eid, gmv in zip(eids, gmvs):
+                    rec = gmfa[i]
+                    rec['sid'] = sid
+                    rec['eid'] = eid
+                    rec['gmv'][imt] = gmv
+                    i += 1
         return gmfa
 
 
@@ -266,8 +263,9 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         return dict((imt, numpy.zeros((len(sites), realizations)))
                     for imt in imts)
     [(rupture, sites)] = ruptures_sites
-
-    gc = GmfComputer(rupture, sites, list(map(str, imts)), [gsim],
+    imt_dt = numpy.dtype([(str(imt), F32) for imt in imts])
+    gmv_dt = numpy.dtype([('sid', U32), ('eid', U32), ('gmv', imt_dt)])
+    gc = GmfComputer(rupture, sites, gmv_dt, [gsim],
                      truncation_level, correlation_model)
     result = gc._compute(seed, gsim, realizations)
     for imt, gmf in result.items():
