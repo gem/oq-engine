@@ -620,7 +620,7 @@ class EventBasedCalculator(ClassicalCalculator):
             if gmfa is not None:
                 with sav_mon:
                     hdf5.extend(self.datastore['gmf_data/%04d' % rlzi], gmfa)
-            elif curves is not None:  # aggregate hcurves
+            if curves is not None:  # aggregate hcurves
                 with agg_mon:
                     self.agg_dicts(acc, {rlzi: curves})
         sav_mon.flush()
@@ -662,8 +662,9 @@ class EventBasedCalculator(ClassicalCalculator):
         oq = self.oqparam
         if not oq.hazard_curves_from_gmfs and not oq.ground_motion_fields:
             return
-        if oq.hazard_curves_from_gmfs:
-            ClassicalCalculator.post_execute.__func__(self, result)
+        elif oq.hazard_curves_from_gmfs:
+            rlzs = self.rlzs_assoc.realizations
+            self.save_curves({rlzs[rlzi]: result[rlzi] for rlzi in result})
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):
@@ -675,7 +676,7 @@ class EventBasedCalculator(ClassicalCalculator):
             # TODO: perhaps it is possible to avoid reprocessing the source
             # model, however usually this is quite fast and do not dominate
             # the computation
-            result = self.cl.run()
+            self.cl.run()
             for imt in self.mean_curves.dtype.fields:
                 rdiff, index = max_rel_diff_index(
                     self.cl.mean_curves[imt], self.mean_curves[imt])
