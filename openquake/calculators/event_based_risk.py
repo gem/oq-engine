@@ -125,14 +125,13 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
     # update the result dictionary and the agg array with each output
     assets = output.assets
     aid = assets[0].ordinal
-    eids = output.eids
-    indices = numpy.array([idx[eid] for eid in eids])
     for (l, r), out in sorted(output.items()):
+        indices = numpy.array([idx[eid] for eid in out.eids])
 
         # asslosses
         if monitor.asset_loss_table:
-            data = [(eids[i], aid, loss)
-                    for i, loss in enumerate(out.losses)
+            data = [(eid, aid, loss)
+                    for eid, loss in zip(out.eids, out.losses)
                     if loss.sum() > 0]
             result['ASSLOSS'][l, r].append(
                 numpy.array(data, monitor.ela_dt))
@@ -260,9 +259,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             logging.info('Generated %s epsilons', eps.shape)
 
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
-            self.sitecol.complete, all_ruptures,
-            self.rlzs_assoc.gsims_by_trt_id, oq.truncation_level, correl_model,
-            eps, oq.concurrent_tasks or 1))
+            self.sitecol.complete, all_ruptures, oq.truncation_level,
+            correl_model, eps, oq.concurrent_tasks or 1))
         nbytes = AccumDict(total=0)
         for ri in self.riskinputs:
             total, sizes = parallel.get_pickled_sizes(ri)

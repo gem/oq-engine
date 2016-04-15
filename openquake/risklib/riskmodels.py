@@ -252,28 +252,30 @@ class RiskModel(object):
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
 
-    def out_by_lr(self, imt, assets, hazard, epsilons, eids=None):
+    def out_by_lr(self, imt, assets, hazard, eps_getter, eids_by_rlz=None):
         """
         :param imt: restrict the risk functions to this IMT
         :param assets: an array of assets of homogeneous taxonomy
         :param hazard: a dictionary rlz -> hazard
-        :param epsilons: an array of epsilons per each asset
-        :param eids: rupture indices (only for event based)
+        :param eps_getter: an callable returning epsilons for the given eids
+        :param eids_by_rlz: event IDs by realization ordinal or None
         :returns: a dictionary (l, r) -> output
         """
         out_by_lr = AccumDict()
         out_by_lr.assets = assets
-        out_by_lr.eids = eids
         loss_types = self.get_loss_types(imt)
         # extract the realizations from the first asset
         for rlz in sorted(hazard):
             r = rlz.ordinal
+            eids = eids_by_rlz[r] if eids_by_rlz else None
             for loss_type in loss_types:
-                out = self(loss_type, assets, hazard[rlz], epsilons, eids)
+                out = self(loss_type, assets, hazard[rlz],
+                           eps_getter(eids), eids)
                 if out:
                     l = self.compositemodel.lti[loss_type]
                     out.hid = r
                     out.weight = rlz.weight
+                    out.eids = eids
                     out_by_lr[l, r] = out
         return out_by_lr
 

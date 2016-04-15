@@ -24,7 +24,8 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import AccumDict
+from openquake.baselib import hdf5
+from openquake.baselib.general import AccumDict, groupby
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import \
@@ -288,7 +289,6 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     oq = monitor.oqparam
     trt = sources[0].tectonic_region_type
     max_dist = getdefault(oq.maximum_distance, trt)
-    totsites = len(sitecol)
     cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[trt_model_id])
     params = cmaker.REQUIRES_RUPTURE_PARAMETERS
     rup_data_dt = numpy.dtype(
@@ -386,6 +386,14 @@ def build_eb_ruptures(
         if etags:
             yield EBRupture(rup, r_sites.indices, etags,
                             src.trt_model_id, serial)
+
+
+def get_gmvs_by_sid(gmfa):
+    """
+    Returns a dictionary sid -> array of composite ground motion values
+    """
+    return groupby(gmfa, operator.itemgetter('sid'), lambda group:
+                   numpy.array([record['gmv'] for record in group]))
 
 
 @base.calculators.add('event_based_rupture')
@@ -486,22 +494,21 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
 
 # ######################## GMF calculator ############################ #
 
-GmfaSidsEtags = collections.namedtuple('GmfaSidsEtags', 'gmfa sids etags')
-
-
-def make_gmfs(eb_ruptures, sitecol, imts, gsims,
+def make_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
               trunc_level, correl_model, monitor=Monitor()):
     """
-    :param eb_ruptures: a list of EBRuptures
+    :param eb_ruptures: a list of EBRuptures with the same trt_model_id
     :param sitecol: a SiteCollection instance
-    :param imts: an ordered list of intensity measure type strings
-    :param gsims: an order list of GSIM instance
+    :param gmv_dt: a numpy dtype (sid, eid, gmv)
+    :param rlzs_assoc: a RlzsAssoc instance
     :param trunc_level: truncation level
     :param correl_model: correlation model instance
     :param monitor: a monitor instance
-    :returns: a dictionary serial -> GmfaSidsEtags
+    :returns: a dictionary rlzi -> gmv_dt array
     """
-    dic = {}  # serial -> GmfaSidsEtags
+    trt_id = eb_ruptures[0].trt_id
+    gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
+    dic = collections.defaultdict(list)  # rlzi -> [gmfa, ...]
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
@@ -509,79 +516,63 @@ def make_gmfs(eb_ruptures, sitecol, imts, gsims,
         with ctx_mon:
             r_sites = site.FilteredSiteCollection(ebr.indices, sites)
             computer = calc.gmf.GmfComputer(
-                ebr.rupture, r_sites, imts, gsims, trunc_level, correl_model)
+                ebr.rupture, r_sites, gmv_dt, gsims, trunc_level, correl_model)
         with gmf_mon:
-            gmfa = computer.calcgmfs(ebr.multiplicity, ebr.rupture.seed)
-            dic[ebr.serial] = GmfaSidsEtags(gmfa, r_sites.indices, ebr.etags)
-    return dic
+            for gsim in gsims:
+                for rlz in rlzs_assoc[trt_id, str(gsim)]:
+                    seed = ebr.rupture.seed + rlz.ordinal
+                    gmfa = computer.compute(seed, gsim, ebr.eids)
+                    dic[rlz.ordinal].append(gmfa)
+    res = {rlzi: numpy.concatenate(dic[rlzi]) for rlzi in dic}
+    return res
 
 
 @parallel.litetask
-def compute_gmfs_and_curves(eb_ruptures, sitecol, rlzs_assoc, monitor):
+def compute_gmfs_and_curves(eb_ruptures, sitecol, gmv_dt, rlzs_assoc, monitor):
     """
     :param eb_ruptures:
         a list of blocks of EBRuptures of the same SESCollection
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param gmv_dt:
+        numpy datatype for the ground motion values
     :param rlzs_assoc:
         a RlzsAssoc instance
     :param monitor:
         a Monitor instance
     :returns:
-        a dictionary (trt_model_id, gsim) -> haz_curves and/or
-        (trt_model_id, col_id) -> gmfs
+        a dictionary (rlzi, imt) -> [gmfarray, haz_curves]
    """
     oq = monitor.oqparam
     # NB: by construction each block is a non-empty list with
     # ruptures of the same col_id and therefore trt_model_id
-    trt_id = eb_ruptures[0].trt_id
-    gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
     tot_sites = len(sitecol.complete)
-    gmfa_sids_etags = make_gmfs(
-        eb_ruptures, sitecol, oq.imtls, gsims, trunc_level, correl_model,
+    gmfadict = make_gmfs(
+        eb_ruptures, sitecol, gmv_dt, rlzs_assoc, trunc_level, correl_model,
         monitor)
-    result = {trt_id: gmfa_sids_etags if oq.ground_motion_fields else None}
+    result = {rlzi: [gmfadict[rlzi], None]
+              if oq.ground_motion_fields else [None, None]
+              for rlzi in gmfadict}
     if oq.hazard_curves_from_gmfs:
         with monitor('bulding hazard curves', measuremem=False):
             duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
                 oq.number_of_logic_tree_samples or 1)
-
-            # collect the gmvs by site
-            gmvs_by_sid = collections.defaultdict(list)
-            for serial in gmfa_sids_etags:
-                gst = gmfa_sids_etags[serial]
-                for sid, gmvs in zip(gst.sids, gst.gmfa.T):
-                    gmvs_by_sid[sid].extend(gmvs)
-
-            # build the hazard curves for each GSIM
-            for gsim in gsims:
-                gs = str(gsim)
-                result[trt_id, gs] = to_haz_curves(
-                    tot_sites, gmvs_by_sid, gs, oq.imtls,
-                    oq.investigation_time, duration)
+            for rlzi in gmfadict:
+                gmvs_by_sid = get_gmvs_by_sid(gmfadict[rlzi])
+                curves = zero_curves(tot_sites, oq.imtls)
+                for imt in oq.imtls:
+                    imls = numpy.array(oq.imtls[imt])
+                    for sid in range(tot_sites):
+                        try:
+                            gmvs = gmvs_by_sid[sid]
+                        except KeyError:
+                            continue
+                        curves[imt] = gmvs_to_haz_curve(
+                            gmvs[imt], imls, oq.investigation_time, duration)
+                result[rlzi][1] = curves
     return result
-
-
-def to_haz_curves(num_sites, gmvs_by_sid, gs, imtls,
-                  investigation_time, duration):
-    """
-    :param num_sites: length of the full site collection
-    :param gmvs_by_sid: dictionary site_id -> gmvs
-    :param gs: GSIM string
-    :param imtls: ordered dictionary {IMT: intensity measure levels}
-    :param investigation_time: investigation time
-    :param duration: investigation_time * number of Stochastic Event Sets
-    """
-    curves = zero_curves(num_sites, imtls)
-    for imt in imtls:
-        curves[imt] = numpy.array([
-            gmvs_to_haz_curve(
-                [gmv[gs][imt] for gmv in gmvs_by_sid[sid]],
-                imtls[imt], investigation_time, duration)
-            for sid in range(num_sites)])
-    return curves
 
 
 @base.calculators.add('event_based')
@@ -606,6 +597,11 @@ class EventBasedCalculator(ClassicalCalculator):
         for trt_id in range(self.rlzs_assoc.csm_info.num_collections):
             sescol = self.datastore['sescollection/trt=%02d' % trt_id]
             self.sesruptures.extend(sescol)
+        self.gmv_dt = calc.gmf.gmv_dt(self.oqparam.imtls)
+        if self.oqparam.ground_motion_fields:
+            for rlz in self.rlzs_assoc.realizations:
+                self.datastore.create_dset(
+                    'gmf_data/%04d' % rlz.ordinal, self.gmv_dt)
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """
@@ -614,27 +610,19 @@ class EventBasedCalculator(ClassicalCalculator):
         different tasks in any order.
 
         :param acc: an accumulator for the hazard curves
-        :param res: a dictionary trt_id, gsim -> gmf_array or curves_by_imt
+        :param res: a dictionary rlzi, imt -> [gmf_array, curves_by_imt]
         :returns: a new accumulator
         """
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
-        save_gmfs = self.oqparam.ground_motion_fields
-        for trt_id in res:
-            if isinstance(trt_id, int) and save_gmfs:
+        for rlzi in res:
+            gmfa, curves = res[rlzi]
+            if gmfa is not None:
                 with sav_mon:
-                    gmfa_sids_etags = res[trt_id]
-                    for serial in sorted(gmfa_sids_etags):
-                        gst = gmfa_sids_etags[serial]
-                        self.datastore['gmf_data/%s' % serial] = gst.gmfa
-                        self.datastore['sid_data/%s' % serial] = gst.sids
-                        self.datastore.set_attrs('gmf_data/%s' % serial,
-                                                 trt_id=trt_id,
-                                                 etags=gst.etags)
-                    self.datastore.hdf5.flush()
-            elif isinstance(trt_id, tuple):  # aggregate hcurves
+                    hdf5.extend(self.datastore['gmf_data/%04d' % rlzi], gmfa)
+            elif curves is not None:  # aggregate hcurves
                 with agg_mon:
-                    self.agg_dicts(acc, {trt_id: res[trt_id]})
+                    self.agg_dicts(acc, {rlzi: curves})
         sav_mon.flush()
         agg_mon.flush()
         return acc
@@ -651,18 +639,19 @@ class EventBasedCalculator(ClassicalCalculator):
         monitor = self.monitor(self.core_task.__name__)
         monitor.oqparam = oq
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
-        zerodict = AccumDict((key, zc) for key in self.rlzs_assoc)
-        curves_by_trt_gsim = parallel.apply_reduce(
+        zerodict = AccumDict({rlz.ordinal: zc
+                              for rlz in self.rlzs_assoc.realizations})
+        acc = parallel.apply_reduce(
             self.core_task.__func__,
-            (self.sesruptures, self.sitecol, self.rlzs_assoc, monitor),
+            (self.sesruptures, self.sitecol, self.gmv_dt, self.rlzs_assoc,
+             monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             acc=zerodict, agg=self.combine_curves_and_save_gmfs,
             key=operator.attrgetter('trt_id'),
             weight=operator.attrgetter('multiplicity'))
         if oq.ground_motion_fields:
             self.datastore.set_nbytes('gmf_data')
-            self.datastore.set_nbytes('sid_data')
-        return curves_by_trt_gsim
+        return acc
 
     def post_execute(self, result):
         """
