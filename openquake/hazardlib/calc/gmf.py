@@ -204,6 +204,22 @@ class GmfComputer(object):
                     i += 1
         return gmfa
 
+    # this is much faster than .compute
+    def calcgmfs(self, multiplicity, seed):
+        """
+        Compute the ground motion fields for the given gsims, sites,
+        multiplicity and seed.
+
+        :param multiplicity:
+            the number of GMFs to return
+        :param seed:
+            seed for the numpy random number generator
+        :returns:
+            a dictionary gsim -> imt -> array(N, M)
+        """
+        return {str(gsim): self._compute(seed, gsim, multiplicity)
+                for gsim in self.gsims}
+
 
 # this is not used in the engine; it is still useful for usage in IPython
 # when demonstrating hazardlib capabilities
