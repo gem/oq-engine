@@ -518,8 +518,8 @@ def make_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
                 ebr.rupture, r_sites, gmv_dt, gsims, trunc_level, correl_model)
         with gmf_mon:
             for gsim in gsims:
-                for rlz in rlzs_assoc[trt_id, str(gsim)]:
-                    seed = ebr.rupture.seed + rlz.ordinal
+                for i, rlz in enumerate(rlzs_assoc[trt_id, str(gsim)]):
+                    seed = ebr.rupture.seed + i
                     gmfa = computer.compute(seed, gsim, ebr.eids)
                     dic[rlz.ordinal].append(gmfa)
     res = {rlzi: numpy.concatenate(dic[rlzi]) for rlzi in dic}
