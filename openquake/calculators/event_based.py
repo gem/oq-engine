@@ -24,6 +24,7 @@ import collections
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
@@ -429,12 +430,14 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                 for ebr in sescol:
                     ebr.eids = [etag2eid[etag] for etag in ebr.etags]
                 nr = len(sescol)
-                logging.info('Saving SES collection #%d with %d ruptures',
-                             i, nr)
-                key = 'sescollection/trt=%02d' % i
-                self.datastore[key] = sorted(
-                    sescol, key=operator.attrgetter('serial'))
-                self.datastore.set_attrs(key, num_ruptures=nr, trt_model_id=i)
+                if nr:
+                    logging.info('Saving SES collection #%d with %d ruptures',
+                                 i, nr)
+                    key = 'sescollection/trt=%02d' % i
+                    self.datastore[key] = hdf5.PickleableSequence(
+                        sorted(sescol, key=operator.attrgetter('serial')))
+                    self.datastore.set_attrs(key, num_ruptures=nr,
+                                             trt_model_id=i)
         for dset in self.rup_data.values():
             numsites = dset.dset['numsites']
             multiplicity = dset.dset['multiplicity']
@@ -566,7 +569,10 @@ class EventBasedCalculator(ClassicalCalculator):
         super(EventBasedCalculator, self).pre_execute()
         self.sesruptures = []
         for trt_id in range(self.rlzs_assoc.csm_info.num_collections):
-            sescol = self.datastore['sescollection/trt=%02d' % trt_id]
+            try:
+                sescol = self.datastore['sescollection/trt=%02d' % trt_id]
+            except KeyError:  # empty collections are missing
+                continue
             self.sesruptures.extend(sescol)
 
     def combine_curves_and_save_gmfs(self, acc, res):
