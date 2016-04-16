@@ -172,12 +172,15 @@ class DataStore(collections.MutableMapping):
             if name not in self.attrs:  # add missing parameter
                 self.attrs[name] = value
 
-    def set_nbytes(self, key):
+    def set_nbytes(self, key, nbytes=None):
         """
         Set the `nbytes` attribute on the HDF5 object identified by `key`.
         """
-        obj = self.hdf5[key]
-        obj.attrs['nbytes'] = nbytes = ByteCounter.get_nbytes(obj)
+        obj = h5py.File.__getitem__(self.hdf5, key)
+        if nbytes is not None:  # size set from outside
+            obj.attrs['nbytes'] = nbytes
+        else:  # recursively determine the size of the datagroup
+            obj.attrs['nbytes'] = nbytes = ByteCounter.get_nbytes(obj)
         return nbytes
 
     def set_attrs(self, key, **kw):
@@ -193,7 +196,7 @@ class DataStore(collections.MutableMapping):
         :param name: name of the attribute
         :param default: value to return if the attribute is missing
         """
-        obj = self[key]
+        obj = h5py.File.__getitem__(self.hdf5, key)
         try:
             return obj.attrs[name]
         except KeyError:

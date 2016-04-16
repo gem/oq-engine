@@ -426,6 +426,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
             self.datastore.set_attrs(
                 'etags',
                 num_ruptures=numpy.array([len(sc) for sc in sescollection]))
+            nbytes = 0
             for i, sescol in enumerate(sescollection):
                 for ebr in sescol:
                     ebr.eids = [etag2eid[etag] for etag in ebr.etags]
@@ -436,8 +437,9 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                     key = 'sescollection/trt=%02d' % i
                     self.datastore[key] = hdf5.PickleableSequence(
                         sorted(sescol, key=operator.attrgetter('serial')))
+                    nbytes += self.datastore.getsize(key)
                     self.datastore.set_attrs(key, trt_model_id=i)
-        self.datastore.set_nbytes('sescollection')
+            self.datastore.set_nbytes('sescollection', nbytes)
         for dset in self.rup_data.values():
             numsites = dset.dset['numsites']
             multiplicity = dset.dset['multiplicity']
