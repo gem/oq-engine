@@ -241,8 +241,8 @@ class RuptureFilter(object):
             computer = calc.gmf.GmfComputer(
                 rupture, self.sites, self.gmv_dt, self.gsims, self.trunc_level)
             ok = numpy.zeros(len(self.sites), bool)
-            gmf_by_gsim_imt = computer.calcgmfs(1, rupture.seed)
-            for gsim, gmf_by_imt in gmf_by_gsim_imt.items():
+            gmf_by_rlz_imt = computer.calcgmfs(1, rupture.seed)
+            for rlz, gmf_by_imt in gmf_by_rlz_imt.items():
                 for imt, gmf in gmf_by_imt.items():
                     # NB: gmf[:, 0] because the multiplicity is 1
                     ok += gmf[:, 0] >= getdefault(self.min_iml, imt)

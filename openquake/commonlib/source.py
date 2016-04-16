@@ -370,6 +370,13 @@ class RlzsAssoc(collections.Mapping):
                 if trt_model.id == trt_model_id:
                     return smodel.ordinal
 
+    def get_rlzs_by_gsim(self, trt_id):
+        """
+        Returns a dictionary gsim -> rlzs
+        """
+        return {gsim: self[trt_id, str(gsim)]
+                for gsim in self.gsims_by_trt_id[trt_id]}
+
     # this useful to extract the ruptures affecting a given realization
     def get_col_ids(self, rlz):
         """

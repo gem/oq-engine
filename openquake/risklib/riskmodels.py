@@ -252,13 +252,12 @@ class RiskModel(object):
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
 
-    def out_by_lr(self, imt, assets, hazard, eps_getter, eids_by_rlz=None):
+    def out_by_lr(self, imt, assets, hazard, eps_getter):
         """
         :param imt: restrict the risk functions to this IMT
         :param assets: an array of assets of homogeneous taxonomy
         :param hazard: a dictionary rlz -> hazard
         :param eps_getter: an callable returning epsilons for the given eids
-        :param eids_by_rlz: event IDs by realization ordinal or None
         :returns: a dictionary (l, r) -> output
         """
         out_by_lr = AccumDict()
@@ -267,10 +266,12 @@ class RiskModel(object):
         # extract the realizations from the first asset
         for rlz in sorted(hazard):
             r = rlz.ordinal
-            eids = eids_by_rlz[r] if eids_by_rlz else None
+            haz = hazard[rlz]
+            if len(haz) == 0:
+                continue
+            eids = getattr(haz, 'eids', None)
             for loss_type in loss_types:
-                out = self(loss_type, assets, hazard[rlz],
-                           eps_getter(eids), eids)
+                out = self(loss_type, assets, haz, eps_getter(eids))
                 if out:
                     l = self.compositemodel.lti[loss_type]
                     out.hid = r
@@ -395,8 +396,7 @@ class Classical(RiskModel):
             lt: vf.mean_loss_ratios_with_steps(lrem_steps_per_interval)
             for lt, vf in vulnerability_functions.items()}
 
-    def __call__(self, loss_type, assets, hazard_curve, _epsilons=None,
-                 _eids=None):
+    def __call__(self, loss_type, assets, hazard_curve, _epsilons=None):
         """
         :param str loss_type:
             the loss type considered
@@ -517,16 +517,15 @@ class ProbabilisticEventBased(RiskModel):
         self.insured_losses = insured_losses
         self.loss_ratios = loss_ratios
 
-    def __call__(self, loss_type, assets, ground_motion_values, epsilons,
-                 eids):
+    def __call__(self, loss_type, assets, gmvs, epsilons):
         """
         :param str loss_type: the loss type considered
 
         :param assets:
            a list with a single asset
 
-        :param ground_motion_values:
-           an array of E ground_motion_values
+        :param gmvs:
+           an instance of :class:`openquake.risklib.riskinput.Gmvs`
 
         :param epsilons:
            a list with a single array of E stochastic values
@@ -539,12 +538,12 @@ class ProbabilisticEventBased(RiskModel):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
-        E = len(eids)
+        E = len(gmvs.eids)
         I = self.insured_losses + 1
         loss_ratios = numpy.zeros((E, I), F32)
         asset = assets[0]  # the only one
         loss_ratios[:, 0] = ratios = self.risk_functions[loss_type].apply_to(
-            [ground_motion_values], epsilons)[0]  # shape E
+            [gmvs.gmvs], epsilons)[0]  # shape E
         cb = self.compositemodel.curve_builders[
             self.compositemodel.lti[loss_type]]
         if self.insured_losses and loss_type != 'occupants':
@@ -566,7 +565,7 @@ class ProbabilisticEventBased(RiskModel):
             average_loss=loss_ratios.sum(axis=0) * self.ses_ratio,
             counts_matrix=cb.build_counts(loss_ratios),
             insured_counts_matrix=icounts,
-            eids=eids)
+            eids=gmvs.eids)
 
 
 @registry.add('classical_bcr')
@@ -642,8 +641,7 @@ class Scenario(RiskModel):
         self.insured_losses = insured_losses
         self.time_event = time_event
 
-    def __call__(self, loss_type, assets, ground_motion_values, epsilons,
-                 _eids=None):
+    def __call__(self, loss_type, assets, ground_motion_values, epsilons):
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():

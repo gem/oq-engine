@@ -25,7 +25,8 @@ import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, split_in_blocks, AccumDict
-from openquake.hazardlib.calc.gmf import gmv_dt
+from openquake.hazardlib.calc.gmf import gmv_dt, GmfComputer
+from openquake.hazardlib import site
 from openquake.risklib import scientific, riskmodels
 
 U32 = numpy.uint32
@@ -428,14 +429,12 @@ class CompositeRiskModel(collections.Mapping):
                     for i, sid in enumerate(assetcol.array['site_id']):
                         asset = assetcol[i]
                         hazard = hazard_by_site[sid]
-                        if hasattr(hazard, 'eids'):  # non-zero gmvs
-                            epsgetter = riskinput.epsilon_getter(
-                                [asset.ordinal])
-                            for imt, taxonomies in riskinput.imt_taxonomies:
-                                if asset.taxonomy in taxonomies:
-                                    yield self[asset.taxonomy].out_by_lr(
-                                        imt, [asset], hazard[imt],
-                                        epsgetter, hazard.eids)
+                        epsgetter = riskinput.epsilon_getter(
+                            [asset.ordinal])
+                        for imt, taxonomies in riskinput.imt_taxonomies:
+                            if asset.taxonomy in taxonomies:
+                                yield self[asset.taxonomy].out_by_lr(
+                                    imt, [asset], hazard[imt], epsgetter)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -527,6 +526,62 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     return eps
 
 
+# this is fast
+def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
+              trunc_level, correl_model, monitor=Monitor()):
+    """
+    :param eb_ruptures: a list of EBRuptures with the same trt_model_id
+    :param sitecol: a SiteCollection instance
+    :param gmv_dt: a numpy dtype (sid, eid, gmv)
+    :param rlzs_assoc: a RlzsAssoc instance
+    :param trunc_level: truncation level
+    :param correl_model: correlation model instance
+    :param monitor: a monitor instance
+    :returns: a dictionary rlzi -> gmv_dt array
+    """
+    trt_id = eb_ruptures[0].trt_id
+    gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(trt_id)
+    rlzs = set(sum(rlzs_by_gsim.values(), []))
+    ctx_mon = monitor('make contexts')
+    gmf_mon = monitor('compute poes')
+    sites = sitecol.complete
+    sids = sitecol.sids
+    # sid -> imt -> rlzi -> Gmvs
+    data_by_sid = {sid: {imt: {rlz: Gmvs() for rlz in rlzs}
+                         for imt in gmv_dt['gmv'].names}
+                   for sid in sids}
+    for ebr in eb_ruptures:
+        with ctx_mon:
+            r_sites = site.FilteredSiteCollection(ebr.indices, sites)
+            computer = GmfComputer(
+                ebr.rupture, r_sites, gmv_dt, gsims, trunc_level, correl_model)
+        with gmf_mon:
+            ddic = computer.calcgmfs(
+                ebr.multiplicity, ebr.rupture.seed, rlzs_by_gsim)
+            for rlz, gmf_by_imt in ddic.items():
+                for imt, gmf in gmf_by_imt.items():
+                    for sid, gmvs in zip(sids, gmf):
+                        data_by_sid[sid][imt][rlz].append(ebr.eids, gmvs)
+    return data_by_sid
+
+
+class Gmvs(object):
+    def __init__(self):
+        self.eids = []
+        self.gmvs = []
+
+    def __iter__(self):
+        return numpy.array(self.gmvs, F32)
+
+    def __len__(self):
+        return len(self.gmvs)
+
+    def append(self, eids, gmvs):
+        self.eids.extend(eids)
+        self.gmvs.extend(gmvs)
+
+
 class RiskInputFromRuptures(object):
     """
     Contains all the assets associated to the given IMT and a subsets of
@@ -573,30 +628,10 @@ class RiskInputFromRuptures(object):
         :returns:
             lists of N hazard dictionaries imt -> rlz -> haz
         """
-        # FIXME: ugly dependency
-        from openquake.calculators.event_based import make_gmfs
-        sids = self.sitecol.sids
-        gmfa_by_rlz = make_gmfs(
+        data_by_sid = calc_gmfs(
             self.ses_ruptures, self.sitecol, self.gmv_dt, rlzs_assoc,
-            self.trunc_level, self.correl_model, monitor)  # rlzi -> gmfa
-        hazs = [AccumDict({imt: collections.defaultdict(dict)
-                           for imt in self.imts}) for _ in sids]
-        for rlzi in gmfa_by_rlz:
-            rlz = rlzs_assoc.realizations[rlzi]
-            gmvs_by_sid = groupby(
-                gmfa_by_rlz[rlzi], operator.itemgetter('sid'),
-                lambda records: numpy.array(list(records)))
-            for sid, haz in zip(sids, hazs):
-                try:
-                    gmvs = gmvs_by_sid[sid]
-                except KeyError:
-                    continue
-                if not hasattr(haz, 'eids'):
-                    haz.eids = {}
-                haz.eids[rlz.ordinal] = gmvs['eid']
-                for imt in self.imts:
-                    haz[imt][rlz] = gmvs['gmv'][imt]
-        return hazs
+            self.trunc_level, self.correl_model, monitor)
+        return [data_by_sid[sid] for sid in self.sitecol.sids]
 
     def __repr__(self):
         return '<%s IMT_taxonomies=%s, weight=%d>' % (
