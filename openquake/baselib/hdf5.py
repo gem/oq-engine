@@ -140,17 +140,25 @@ class LiteralAttrs(object):
                 dd[name] = ast.literal_eval(literal)
         vars(self).update(dd)
 
+    def __repr__(self):
+        names = sorted(n for n in vars(self) if not n.startswith('_'))
+        nameval = ', '.join('%s=%r' % (n, getattr(self, n)) for n in names)
+        return '<%s %s>' % (self.__class__.__name__, nameval)
+
 
 class PickleableSequence(collections.Sequence):
     """
     An immutable sequence of pickleable objects that can be serialized
-    into HDF5 format as an array of variable-length bytes.
+    into HDF5 format as an array of variable-length bytes. Here is an
+    example, using the LiteralAttrs class defined in this module, but
+    any class would do:
 
+    >>> seq = PickleableSequence([LiteralAttrs(), LiteralAttrs()])
     >>> with File('/tmp/x.h5', 'w') as f:
-    ...     f['data'] = PickleableSequence([dict, list])
+    ...     f['data'] = seq
     >>> with File('/tmp/x.h5') as f:
     ...     f['data']
-    (<type 'dict'>, <type 'list'>)
+    (<LiteralAttrs >, <LiteralAttrs >)
     """
     def __init__(self, objects):
         self._objects = tuple(objects)
