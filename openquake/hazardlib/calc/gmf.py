@@ -134,32 +134,32 @@ class GmfComputer(object):
                         self.correlation_model, gsim)
 
                 mean, [stddev_total] = gsim.get_mean_and_stddevs(
-                    sctx, rctx, dctx, imt, [StdDev.TOTAL]
-                )
+                    sctx, rctx, dctx, imt, [StdDev.TOTAL])
                 stddev_total = stddev_total.reshape(stddev_total.shape + (1, ))
                 mean = mean.reshape(mean.shape + (1, ))
 
                 total_residual = stddev_total * distribution.rvs(
-                    size=(len(self.sites), realizations)
-                )
+                    size=(len(self.sites), realizations))
                 gmf = gsim.to_imt_unit_values(mean + total_residual)
             else:
                 mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
                     sctx, rctx, dctx, imt,
-                    [StdDev.INTER_EVENT, StdDev.INTRA_EVENT]
-                )
+                    [StdDev.INTER_EVENT, StdDev.INTRA_EVENT])
                 stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
                 stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
                 mean = mean.reshape(mean.shape + (1, ))
 
                 intra_residual = stddev_intra * distribution.rvs(
-                    size=(len(self.sites), realizations)
-                )
+                    size=(len(self.sites), realizations))
 
                 if self.correlation_model is not None:
-                    intra_residual = self.correlation_model.apply_correlation(
-                        self.sites, imt, intra_residual
-                    )
+                    ir = self.correlation_model.apply_correlation(
+                        self.sites, imt, intra_residual)
+                    # this fixes a mysterious bug: ir[row] is actually
+                    # a matrix of shape (E, 1) and not a vector of size E
+                    intra_residual = numpy.zeros(ir.shape)
+                    for i, val in numpy.ndenumerate(ir):
+                        intra_residual[i] = val
 
                 inter_residual = stddev_inter * distribution.rvs(
                     size=realizations)
@@ -190,13 +190,7 @@ class GmfComputer(object):
         for imt, gmfarray in self._compute(seed, gsim, multiplicity).items():
             i = 0
             for sid, gmvs in zip(sids, gmfarray):
-                if gmvs.shape == (1, multiplicity):
-                    # NB: with correlation, the value is a numpy.matrix
-                    # something is wrong and must be fixed in the future
-                    gmvs = numpy.array([float(gmv) for gmv in gmvs.T], F32)
-                else:
-                    gmvs = F32(gmvs)
-                for eid, gmv in zip(eids, gmvs):
+                for eid, gmv in zip(eids, F32(gmvs)):
                     rec = gmfa[i]
                     rec['sid'] = sid
                     rec['eid'] = eid
