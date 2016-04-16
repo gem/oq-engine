@@ -1,26 +1,27 @@
 Classical PSHA with non-trivial logic tree (1 source model + relative uncertainties on G-R b value and maximum magnitude and 2 GMPEs per tectonic region type)
 ==============================================================================================================================================================
 
-num_sites = 1, sitecol = 684 B
+num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ =========
-calculation_mode             classical
-number_of_logic_tree_samples 0        
-maximum_distance             200      
-investigation_time           50       
-ses_per_logic_tree_path      1        
-truncation_level             3.000    
-rupture_mesh_spacing         2.000    
-complex_fault_mesh_spacing   2.000    
-width_of_mfd_bin             0.100    
-area_source_discretization   5.000    
-random_seed                  23       
-master_seed                  0        
-concurrent_tasks             16       
-sites_per_tile               1000     
-============================ =========
+============================ ===================
+calculation_mode             'classical'        
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           50.0               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         2.0                
+complex_fault_mesh_spacing   2.0                
+width_of_mfd_bin             0.1                
+area_source_discretization   5.0                
+random_seed                  23                 
+master_seed                  0                  
+concurrent_tasks             40                 
+sites_per_tile               1000               
+oqlite_version               '0.13.0-gite77b1a1'
+============================ ===================
 
 Input files
 -----------
@@ -35,19 +36,19 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-=========== ========== ====================================== =============== ================
-smlt_path   weight     source_model_file                      gsim_logic_tree num_realizations
-=========== ========== ====================================== =============== ================
-b11_b21_b31 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b32 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b33 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b31 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b32 0.11088900 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b33 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b31 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b32 0.11122200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b33 0.11155600 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-=========== ========== ====================================== =============== ================
+=========== ====== ====================================== =============== ================
+smlt_path   weight source_model_file                      gsim_logic_tree num_realizations
+=========== ====== ====================================== =============== ================
+b11_b21_b31 0.111  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32 0.111  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33 0.111  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31 0.111  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32 0.111  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33 0.111  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31 0.111  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32 0.111  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33 0.112  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+=========== ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -152,8 +153,8 @@ filtered_weight 13,204
 Expected data transfer for the sources
 --------------------------------------
 =========================== ========
-Number of tasks to generate 27      
-Sent data                   47.79 MB
+Number of tasks to generate 90      
+Sent data                   50.05 MB
 =========================== ========
 
 Slowest sources
@@ -161,22 +162,37 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-10           2         SimpleFaultSource 1,344  1,344     0.002       0.533      0.0      
-4            2         SimpleFaultSource 1,344  1,344     0.002       0.523      0.0      
-16           2         SimpleFaultSource 1,344  1,344     0.002       0.487      0.0      
-14           2         SimpleFaultSource 1,339  1,339     0.002       0.468      0.0      
-8            2         SimpleFaultSource 1,339  1,339     0.002       0.409      0.0      
-2            2         SimpleFaultSource 1,339  1,339     0.002       0.409      0.0      
-0            2         SimpleFaultSource 1,334  1,334     0.005       0.336      0.0      
-12           2         SimpleFaultSource 1,334  1,334     0.002       0.333      0.0      
-6            2         SimpleFaultSource 1,334  1,334     0.002       0.332      0.0      
-1            1         AreaSource        102    1         0.001       0.0        0.0      
+16           2         SimpleFaultSource 1,344  1,344     0.003       0.825      0.0      
+10           2         SimpleFaultSource 1,344  1,344     0.003       0.758      0.0      
+4            2         SimpleFaultSource 1,344  1,344     0.003       0.758      0.0      
+2            2         SimpleFaultSource 1,339  1,339     0.003       0.583      0.0      
+14           2         SimpleFaultSource 1,339  1,339     0.003       0.582      0.0      
+8            2         SimpleFaultSource 1,339  1,339     0.003       0.576      0.0      
+0            2         SimpleFaultSource 1,334  1,334     0.003       0.521      0.0      
+12           2         SimpleFaultSource 1,334  1,334     0.003       0.496      0.0      
+6            2         SimpleFaultSource 1,334  1,334     0.003       0.476      0.0      
+1            1         AreaSource        102    1         0.002       0.0        0.0      
+9            1         AreaSource        128    1         0.001       0.0        0.0      
+3            1         AreaSource        128    1         0.001       0.0        0.0      
 17           1         AreaSource        153    1         0.001       0.0        0.0      
-11           1         AreaSource        153    1         9.940E-04   0.0        0.0      
-9            1         AreaSource        128    1         9.918E-04   0.0        0.0      
-3            1         AreaSource        128    1         9.811E-04   0.0        0.0      
-5            1         AreaSource        153    1         9.730E-04   0.0        0.0      
-13           1         AreaSource        102    1         9.592E-04   0.0        0.0      
-15           1         AreaSource        128    1         9.570E-04   0.0        0.0      
-7            1         AreaSource        102    1         9.530E-04   0.0        0.0      
+11           1         AreaSource        153    1         0.001       0.0        0.0      
+5            1         AreaSource        153    1         0.001       0.0        0.0      
+13           1         AreaSource        102    1         0.001       0.0        0.0      
+7            1         AreaSource        102    1         0.001       0.0        0.0      
+15           1         AreaSource        128    1         0.001       0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+managing sources               8.496     0.0       1     
+splitting sources              5.575     0.0       9     
+reading composite source model 1.037     0.0       1     
+filtering sources              0.039     0.0       18    
+total count_eff_ruptures       0.039     0.0       90    
+aggregate curves               0.002     0.0       90    
+store source_info              4.001E-04 0.0       1     
+reading site collection        6.199E-05 0.0       1     
+============================== ========= ========= ======

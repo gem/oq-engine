@@ -15,7 +15,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <gml:Point>
                 <gml:pos>
-                    -78.18 15.613
+                    -78.168 15.5933
                 </gml:pos>
             </gml:Point>
             <poEs>
@@ -36,7 +36,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <gml:Point>
                 <gml:pos>
-                    -78.18 15.613
+                    -78.1681 15.5933
                 </gml:pos>
             </gml:Point>
             <poEs>
