@@ -205,7 +205,7 @@ class GmfComputer(object):
         return gmfa
 
     # this is much faster than .compute
-    def calcgmfs(self, multiplicity, seed):
+    def calcgmfs(self, multiplicity, seed, rlzs_by_gsim=None):
         """
         Compute the ground motion fields for the given gsims, sites,
         multiplicity and seed.
@@ -214,11 +214,17 @@ class GmfComputer(object):
             the number of GMFs to return
         :param seed:
             seed for the numpy random number generator
+        :param rlzs_by_gsim:
+            a dictionary {gsim instance: realization indices}
         :returns:
-            a dictionary gsim -> imt -> array(N, M)
+            a dictionary rlz -> imt -> array(N, M)
         """
-        return {str(gsim): self._compute(seed, gsim, multiplicity)
-                for gsim in self.gsims}
+        ddic = {}  # rlz -> imt -> array(N, M)
+        for i, gsim in enumerate(self.gsims):
+            rlz_ids = [i] if rlzs_by_gsim is None else rlzs_by_gsim[gsim]
+            for r, rlz in enumerate(rlz_ids):
+                ddic[rlz] = self._compute(seed + r, gsim, multiplicity)
+        return ddic
 
 
 # this is not used in the engine; it is still useful for usage in IPython
