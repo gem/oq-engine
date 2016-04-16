@@ -546,11 +546,10 @@ def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
-    sids = sitecol.sids
-    # sid -> imt -> rlzi -> Gmvs
-    data_by_sid = {sid: {imt: {rlz: Gmvs() for rlz in rlzs}
-                         for imt in gmv_dt['gmv'].names}
-                   for sid in sids}
+    # [imt -> rlz -> Gmvs]
+    data_by_sid = [{imt: {rlz: Gmvs() for rlz in rlzs}
+                    for imt in gmv_dt['gmv'].names}
+                   for sid in sites.sids]
     for ebr in eb_ruptures:
         with ctx_mon:
             r_sites = site.FilteredSiteCollection(ebr.indices, sites)
@@ -561,7 +560,7 @@ def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
                 ebr.multiplicity, ebr.rupture.seed, rlzs_by_gsim)
             for rlz, gmf_by_imt in ddic.items():
                 for imt, gmf in gmf_by_imt.items():
-                    for sid, gmvs in zip(sids, gmf):
+                    for sid, gmvs in zip(r_sites.sids, gmf):
                         data_by_sid[sid][imt][rlz].append(ebr.eids, gmvs)
     return data_by_sid
 
@@ -570,9 +569,6 @@ class Gmvs(object):
     def __init__(self):
         self.eids = []
         self.gmvs = []
-
-    def __iter__(self):
-        return numpy.array(self.gmvs, F32)
 
     def __len__(self):
         return len(self.gmvs)
@@ -631,7 +627,7 @@ class RiskInputFromRuptures(object):
         data_by_sid = calc_gmfs(
             self.ses_ruptures, self.sitecol, self.gmv_dt, rlzs_assoc,
             self.trunc_level, self.correl_model, monitor)
-        return [data_by_sid[sid] for sid in self.sitecol.sids]
+        return data_by_sid
 
     def __repr__(self):
         return '<%s IMT_taxonomies=%s, weight=%d>' % (
