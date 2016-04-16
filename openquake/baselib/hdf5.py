@@ -21,7 +21,7 @@ import pydoc
 import collections
 import numpy
 import h5py
-
+from openquake.baselib.python3compat import pickle
 
 vbytes = h5py.special_dtype(vlen=bytes)
 
@@ -139,6 +139,39 @@ class LiteralAttrs(object):
             else:
                 dd[name] = ast.literal_eval(literal)
         vars(self).update(dd)
+
+
+class PickleableSequence(collections.Sequence):
+    """
+    An immutable sequence of pickleable objects that can be serialized
+    into HDF5 format as an array of variable-length bytes.
+
+    >>> with File('/tmp/x.h5', 'w') as f:
+    ...     f['data'] = PickleableSequence([dict, list])
+    >>> with File('/tmp/x.h5') as f:
+    ...     f['data']
+    (<type 'dict'>, <type 'list'>)
+    """
+    def __init__(self, objects):
+        self._objects = objects
+
+    def __getitem__(self, i):
+        return self._objects[i]
+
+    def __len__(self):
+        return len(self._objects)
+
+    def __repr__(self):
+        return repr(tuple(self._objects))
+
+    def __toh5__(self):
+        array = numpy.zeros(len(self._objects), vbytes)
+        for i, obj in enumerate(self._objects):
+            array[i] = pickle.dumps(obj)
+        return array, {}
+
+    def __fromh5__(self, array, attrs):
+        self._objects = map(pickle.loads, array)
 
 
 class File(h5py.File):
