@@ -621,7 +621,7 @@ class RiskInputFromRuptures(object):
         :param asset_ordina: ordinal of the asset
         :returns: a closure returning an array of epsilons from the event IDs
         """
-        [eps] = self.eps[asset_ordinals]  # assume there is only one ordinal
+        eps = self.eps[asset_ordinals[0]]  # assume there is only one ordinal
         eid2eps = dict(zip(self.eids, eps))
         return lambda eids: [numpy.array([eid2eps[eid] for eid in eids])]
 
