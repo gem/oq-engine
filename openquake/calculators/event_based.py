@@ -241,10 +241,11 @@ class RuptureFilter(object):
             computer = calc.gmf.GmfComputer(
                 rupture, self.sites, self.gmv_dt, self.gsims, self.trunc_level)
             ok = numpy.zeros(len(self.sites), bool)
-            for gsim in self.gsims:
-                gmf = computer.compute(rupture.seed, gsim, [0])['gmv']
-                for imt in gmf.dtype.names:
-                    ok += gmf[imt] >= getdefault(self.min_iml, imt)
+            gmf_by_gsim_imt = computer.calcgmfs(1, rupture.seed)
+            for gsim, gmf_by_imt in gmf_by_gsim_imt.items():
+                for imt, gmf in gmf_by_imt.items():
+                    # NB: gmf[:, 0] because the multiplicity is 1
+                    ok += gmf[:, 0] >= getdefault(self.min_iml, imt)
             return computer.sites.filter(ok)
         else:  # maximum_distance filtering
             return filter_sites_by_distance_to_rupture(
