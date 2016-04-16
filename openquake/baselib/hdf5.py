@@ -153,7 +153,7 @@ class PickleableSequence(collections.Sequence):
     (<type 'dict'>, <type 'list'>)
     """
     def __init__(self, objects):
-        self._objects = objects
+        self._objects = tuple(objects)
 
     def __getitem__(self, i):
         return self._objects[i]
@@ -162,16 +162,15 @@ class PickleableSequence(collections.Sequence):
         return len(self._objects)
 
     def __repr__(self):
-        return repr(tuple(self._objects))
+        return repr(self._objects)
 
     def __toh5__(self):
-        array = numpy.zeros(len(self._objects), vbytes)
-        for i, obj in enumerate(self._objects):
-            array[i] = pickle.dumps(obj)
-        return array, {}
+        dic = {i: numpy.array(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+               for i, obj in enumerate(self._objects)}
+        return dic, {}
 
-    def __fromh5__(self, array, attrs):
-        self._objects = map(pickle.loads, array)
+    def __fromh5__(self, dic, attrs):
+        self._objects = tuple(pickle.loads(dic[k].value) for k in sorted(dic))
 
 
 class File(h5py.File):
