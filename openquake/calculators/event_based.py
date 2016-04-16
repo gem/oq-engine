@@ -436,8 +436,8 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                     key = 'sescollection/trt=%02d' % i
                     self.datastore[key] = hdf5.PickleableSequence(
                         sorted(sescol, key=operator.attrgetter('serial')))
-                    self.datastore.set_attrs(key, num_ruptures=nr,
-                                             trt_model_id=i)
+                    self.datastore.set_attrs(
+                        key, num_ruptures=nr, trt_model_id=i)
         for dset in self.rup_data.values():
             numsites = dset.dset['numsites']
             multiplicity = dset.dset['multiplicity']
