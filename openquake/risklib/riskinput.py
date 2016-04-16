@@ -566,16 +566,26 @@ def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
 
 
 class Gmvs(object):
+    """
+    An accumulator for ground motion values and seismic event ids, used in
+    event based calculation.
+    """
     def __init__(self):
         self.eids = []
         self.gmvs = []
 
+    def get_gmvs_eids(self):
+        """
+        :returns: two numpy arrays of the same length
+        """
+        return numpy.concatenate(self.gmvs), numpy.concatenate(self.eids)
+
     def __len__(self):
-        return len(self.gmvs)
+        return sum(len(gmvs) for gmvs in self.gmvs)
 
     def append(self, eids, gmvs):
-        self.eids.extend(eids)
-        self.gmvs.extend(gmvs)
+        self.eids.append(eids)
+        self.gmvs.append(gmvs)
 
 
 class RiskInputFromRuptures(object):
@@ -611,9 +621,9 @@ class RiskInputFromRuptures(object):
         :param asset_ordina: ordinal of the asset
         :returns: a closure returning an array of epsilons from the event IDs
         """
-        dicts = [dict(zip(self.eids, self.eps[aid])) for aid in asset_ordinals]
-        return lambda eids: [numpy.array([eid2eps[eid] for eid in eids])
-                             for eid2eps in dicts]
+        [eps] = self.eps[asset_ordinals]  # assume there is only one ordinal
+        eid2eps = dict(zip(self.eids, eps))
+        return lambda eids: [numpy.array([eid2eps[eid] for eid in eids])]
 
     def get_hazard(self, rlzs_assoc, monitor=Monitor()):
         """

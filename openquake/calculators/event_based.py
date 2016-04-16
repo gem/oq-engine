@@ -474,7 +474,8 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                 num_ruptures=numpy.array([len(sc) for sc in sescollection]))
             for i, sescol in enumerate(sescollection):
                 for ebr in sescol:
-                    ebr.eids = [etag2eid[etag] for etag in ebr.etags]
+                    ebr.eids = numpy.array(
+                        [etag2eid[etag] for etag in ebr.etags], U32)
                 nr = len(sescol)
                 logging.info('Saving SES collection #%d with %d ruptures',
                              i, nr)

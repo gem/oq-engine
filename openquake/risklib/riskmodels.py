@@ -269,9 +269,12 @@ class RiskModel(object):
             haz = hazard[rlz]
             if len(haz) == 0:
                 continue
-            eids = getattr(haz, 'eids', None)
+            if hasattr(haz, 'get_gmvs_eids'):
+                haz, eids = haz.get_gmvs_eids()
+            else:
+                eids = None
             for loss_type in loss_types:
-                out = self(loss_type, assets, haz, eps_getter(eids))
+                out = self(loss_type, assets, haz, eps_getter(eids), eids)
                 if out:
                     l = self.compositemodel.lti[loss_type]
                     out.hid = r
@@ -517,33 +520,27 @@ class ProbabilisticEventBased(RiskModel):
         self.insured_losses = insured_losses
         self.loss_ratios = loss_ratios
 
-    def __call__(self, loss_type, assets, gmvs, epsilons):
+    def __call__(self, loss_type, assets, gmvs, epsilons, eids):
         """
-        :param str loss_type: the loss type considered
-
+        :param str loss_type:
+            the loss type considered
         :param assets:
            a list with a single asset
-
         :param gmvs:
            an instance of :class:`openquake.risklib.riskinput.Gmvs`
-
         :param epsilons:
            a list with a single array of E stochastic values
-
-        :param eids:
-           a numpy array of E rupture IDs
-
         :returns:
             a :class:
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
-        E = len(gmvs.eids)
+        E = len(eids)
         I = self.insured_losses + 1
         loss_ratios = numpy.zeros((E, I), F32)
         asset = assets[0]  # the only one
         loss_ratios[:, 0] = ratios = self.risk_functions[loss_type].apply_to(
-            [gmvs.gmvs], epsilons)[0]  # shape E
+            [gmvs], epsilons)[0]  # shape E
         cb = self.compositemodel.curve_builders[
             self.compositemodel.lti[loss_type]]
         if self.insured_losses and loss_type != 'occupants':
@@ -565,7 +562,7 @@ class ProbabilisticEventBased(RiskModel):
             average_loss=loss_ratios.sum(axis=0) * self.ses_ratio,
             counts_matrix=cb.build_counts(loss_ratios),
             insured_counts_matrix=icounts,
-            eids=gmvs.eids)
+            eids=eids)
 
 
 @registry.add('classical_bcr')
