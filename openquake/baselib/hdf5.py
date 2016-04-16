@@ -165,8 +165,9 @@ class PickleableSequence(collections.Sequence):
         return repr(self._objects)
 
     def __toh5__(self):
-        dic = {i: numpy.array(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
-               for i, obj in enumerate(self._objects)}
+        dic = {
+            '%06d' % i: numpy.array(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+            for i, obj in enumerate(self._objects)}
         return dic, {}
 
     def __fromh5__(self, dic, attrs):
