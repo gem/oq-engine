@@ -351,12 +351,12 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('compute and save statistics', autoflush=True):
             weights = (None if oq.number_of_logic_tree_samples
                        else [rlz.weight for rlz in rlzs])
-            mean = oq.mean_hazard_curves
-            if mean:
-                self.mean_curves = numpy.array(zc)
-                for imt in oq.imtls:
-                    self.mean_curves[imt] = scientific.mean_curve(
-                        [curves_by_rlz[rlz][imt] for rlz in rlzs], weights)
+
+            # mean curves are always computed but stored only on request
+            self.mean_curves = numpy.array(zc)
+            for imt in oq.imtls:
+                self.mean_curves[imt] = scientific.mean_curve(
+                    [curves_by_rlz[rlz][imt] for rlz in rlzs], weights)
 
             self.quantile = {}
             for q in oq.quantile_hazard_curves:
@@ -366,7 +366,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     qc[imt] = scientific.quantile_curve(
                         curves, q, weights).reshape((nsites, -1))
 
-            if mean:
+            if oq.mean_hazard_curves:
                 self.store_curves('mean', self.mean_curves)
             for q in self.quantile:
                 self.store_curves('quantile-%s' % q, self.quantile[q])
