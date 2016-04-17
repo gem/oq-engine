@@ -244,7 +244,7 @@ class RuptureFilter(object):
             for gsim in self.gsims:
                 gmf_by_imt = gmf[str(gsim)]
                 for imt in self.imts:
-                    ok += gmf_by_imt[imt] >= getdefault(self.min_iml, imt)
+                    ok += gmf_by_imt[imt] >= self.min_iml[imt]
             return computer.sites.filter(ok)
         else:  # maximum_distance filtering
             return filter_sites_by_distance_to_rupture(
@@ -287,8 +287,10 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     trt_model_id = sources[0].trt_model_id
     oq = monitor.oqparam
     trt = sources[0].tectonic_region_type
-    max_dist = getdefault(oq.maximum_distance, trt)
-    totsites = len(sitecol)
+    try:
+        max_dist = oq.maximum_distance[trt]
+    except KeyError:
+        max_dist = oq.maximum_distance['default']
     cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[trt_model_id])
     params = cmaker.REQUIRES_RUPTURE_PARAMETERS
     rup_data_dt = numpy.dtype(
@@ -430,6 +432,17 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         zd = AccumDict((tm.id, []) for smodel in smodels
                        for tm in smodel.trt_models)
         zd.calc_times = []
+
+        # set minimum_intensity
+        min_iml = self.oqparam.minimum_intensity
+        if min_iml:
+            for imt in self.oqparam.imtls:
+                try:
+                    min_iml[imt] = getdefault(min_iml, imt)
+                except KeyError:
+                    raise ValueError(
+                        'The parameter `minimum_intensity` in the job.ini '
+                        'file is missing the IMT %r' % imt)
         return zd
 
     def send_sources(self):

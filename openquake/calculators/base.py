@@ -217,9 +217,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         then close the datastore.
         """
         if 'hcurves' in self.datastore:
-            _set_nbytes('hcurves', self.datastore)
+            self.datastore.set_nbytes('hcurves')
         if 'hmaps' in self.datastore:
-            _set_nbytes('hmaps', self.datastore)
+            self.datastore.set_nbytes('hmaps')
         if 'rlzs_assoc' in self.datastore:
             rlzs = self.rlzs_assoc.realizations
             self.realizations = numpy.array(
@@ -227,17 +227,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore.flush()
         # NB: the datastore must not be closed, otherwise some tests
         # will break; it will be closed automatically anyway
-
-
-def _set_nbytes(dkey, dstore):
-    # set the number of bytes assuming the dkey correspond to a flat group
-    # with all elements having the same 'nbytes' attribute
-    # NB: this is a workaround for a bug in HDF5 affecting Ubuntu 12.04;
-    # in newer version just use dstore.set_nbytes
-    # the problem was discovered in demos/hazard/LogicTreeCase1ClassicalPSHA
-    group = dstore[dkey]
-    key = group.keys()[0]
-    group.attrs['nbytes'] = group[key].attrs['nbytes'] * len(group)
 
 
 def check_time_event(oqparam, time_events):
@@ -351,7 +340,7 @@ class HazardCalculator(BaseCalculator):
                 attrs['weight'] = self.csm.weight
                 attrs['filtered_weight'] = self.csm.filtered_weight
                 attrs['maxweight'] = self.csm.maxweight
-        self.datastore.hdf5.flush()
+        self.datastore.flush()
 
     def read_exposure(self):
         """
