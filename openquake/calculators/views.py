@@ -358,7 +358,7 @@ def view_portfolio_loss(token, dstore):
     for rlz, dset in dstore['agg_loss_table'].items():
         rlzi = int(rlz.split('-')[1])  # rlz-000 -> 0 etc
         for loss_type, losses in dset.items():
-            loss = losses['loss']
+            loss = losses['loss'].sum(axis=0)
             if loss.shape == (2,):
                 data[rlzi][loss_type] = loss[0]
                 data[rlzi][loss_type + '_ins'] = loss[1]
