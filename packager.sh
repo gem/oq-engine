@@ -184,8 +184,6 @@ _devtest_innervm_run () {
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
     # install package to manage repository properly
     ssh $lxc_ip "sudo apt-get install -y python-software-properties"
-    # FIXME just for test
-    ssh $lxc_ip "sudo apt-get install -y libnetcdf6"
 
     # add custom packages
     ssh $lxc_ip mkdir -p "repo"
@@ -229,8 +227,6 @@ _pkgtest_innervm_run () {
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
     # install package to manage repository properly
     ssh $lxc_ip "sudo apt-get install -y python-software-properties"
-    # FIXME just for test
-    ssh $lxc_ip "sudo apt-get install -y libnetcdf6"
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh $lxc_ip mkdir -p repo/${GEM_DEB_PACKAGE}
