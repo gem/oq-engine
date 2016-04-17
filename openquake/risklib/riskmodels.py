@@ -252,12 +252,12 @@ class RiskModel(object):
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
 
-    def out_by_lr(self, imt, assets, hazard, eps_getter):
+    def out_by_lr(self, imt, assets, hazard, epsgetter):
         """
         :param imt: restrict the risk functions to this IMT
         :param assets: an array of assets of homogeneous taxonomy
         :param hazard: a dictionary rlz -> hazard
-        :param eps_getter: an callable returning epsilons for the given eids
+        :param epsgetter: an callable returning epsilons for the given eids
         :returns: a dictionary (l, r) -> output
         """
         out_by_lr = AccumDict()
@@ -269,17 +269,12 @@ class RiskModel(object):
             haz = hazard[rlz]
             if len(haz) == 0:
                 continue
-            if hasattr(haz, 'get_gmvs_eids'):
-                haz, eids = haz.get_gmvs_eids()
-            else:
-                eids = None
             for loss_type in loss_types:
-                out = self(loss_type, assets, haz, eps_getter(eids), eids)
+                out = self(loss_type, assets, haz, epsgetter)
                 if out:
                     l = self.compositemodel.lti[loss_type]
                     out.hid = r
                     out.weight = rlz.weight
-                    out.eids = eids
                     out_by_lr[l, r] = out
         return out_by_lr
 
@@ -399,7 +394,7 @@ class Classical(RiskModel):
             lt: vf.mean_loss_ratios_with_steps(lrem_steps_per_interval)
             for lt, vf in vulnerability_functions.items()}
 
-    def __call__(self, loss_type, assets, hazard_curve, _epsilons=None):
+    def __call__(self, loss_type, assets, hazard_curve, _eps=None):
         """
         :param str loss_type:
             the loss type considered
@@ -408,7 +403,7 @@ class Classical(RiskModel):
             :class:`openquake.risklib.scientific.Asset` instances
         :param hazard_curve:
             an array of poes
-        :param _epsilons:
+        :param _eps:
             ignored, here only for API compatibility with other calculators
         :returns:
             a :class:`openquake.risklib.scientific.Classical.Output` instance.
@@ -520,7 +515,7 @@ class ProbabilisticEventBased(RiskModel):
         self.insured_losses = insured_losses
         self.loss_ratios = loss_ratios
 
-    def __call__(self, loss_type, assets, gmvs, epsilons, eids):
+    def __call__(self, loss_type, assets, gmvs, epsgetter):
         """
         :param str loss_type:
             the loss type considered
@@ -528,13 +523,15 @@ class ProbabilisticEventBased(RiskModel):
            a list with a single asset
         :param gmvs:
            an instance of :class:`openquake.risklib.riskinput.Gmvs`
-        :param epsilons:
-           a list with a single array of E stochastic values
+        :param epsgetter:
+           a callable returning the correct epsilons for the given gmvs
         :returns:
             a :class:
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
+        gmvs, eids = gmvs.get_gmvs_eids()
+        epsilons = epsgetter(eids)
         E = len(eids)
         I = self.insured_losses + 1
         loss_ratios = numpy.zeros((E, I), F32)
@@ -638,7 +635,8 @@ class Scenario(RiskModel):
         self.insured_losses = insured_losses
         self.time_event = time_event
 
-    def __call__(self, loss_type, assets, ground_motion_values, epsilons):
+    def __call__(self, loss_type, assets, ground_motion_values, epsgetter):
+        epsilons = epsgetter(None)
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():
@@ -690,13 +688,12 @@ class Damage(RiskModel):
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
 
-    def __call__(self, loss_type, assets, gmvs, _epsilons=None, _eids=None):
+    def __call__(self, loss_type, assets, gmvs, _eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
         :param gmvs: an array of E elements
-        :param _epsilons: dummy parameter, unused
-        :param _eids: dummy parameter, unused
+        :param _eps: dummy parameter, unused
         :returns: an array of N assets and an array of N x E x D elements
 
         where N is the number of points, E the number of events
@@ -725,8 +722,7 @@ class ClassicalDamage(Damage):
         self.investigation_time = investigation_time
         self.risk_investigation_time = risk_investigation_time
 
-    def __call__(self, loss_type, assets, hazard_curve, _epsilons=None,
-                 _eids=None):
+    def __call__(self, loss_type, assets, hazard_curve, _eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy

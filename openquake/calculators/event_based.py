@@ -36,7 +36,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.util import max_rel_diff_index, Rupture
 
-from openquake.calculators import base, views
+from openquake.calculators import base
 from openquake.calculators.calc import gmvs_to_haz_curve
 from openquake.calculators.classical import ClassicalCalculator
 
@@ -132,6 +132,15 @@ class EBRupture(object):
         How many times the underlying rupture occurs.
         """
         return len(self.etags)
+
+    def get_eids(self, col_ids):
+        eids = []
+        for col_id in col_ids:
+            col = 'col=%02d~' % col_id
+            for eid, etag in zip(self.eids, self.etags):
+                if etag.startswith(col):
+                    eids.append(eid)
+        return eids
 
     def export(self, mesh):
         """
@@ -480,16 +489,6 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
 
 # ######################## GMF calculator ############################ #
 
-def get_eids(ebr, col_ids):
-    eids = []
-    for col_id in col_ids:
-        col = 'col=%02d~' % col_id
-        for eid, etag in zip(ebr.eids, ebr.etags):
-            if etag.startswith(col):
-                eids.append(eid)
-    return eids
-
-
 def make_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
               trunc_level, correl_model, monitor=Monitor()):
     """
@@ -518,7 +517,7 @@ def make_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
             for gsim in gsims:
                 for i, rlz in enumerate(rlzs_assoc[trt_id, str(gsim)]):
                     if sampling:
-                        eids = get_eids(ebr, rlzs_assoc.get_col_ids(rlz))
+                        eids = ebr.get_eids(rlzs_assoc.get_col_ids(rlz))
                     else:
                         eids = ebr.eids
                     seed = ebr.rupture.seed + i

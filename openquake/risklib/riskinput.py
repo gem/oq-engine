@@ -24,7 +24,7 @@ import numpy
 
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
-from openquake.baselib.general import groupby, split_in_blocks, AccumDict
+from openquake.baselib.general import groupby, split_in_blocks
 from openquake.hazardlib.calc.gmf import gmv_dt, GmfComputer
 from openquake.hazardlib import site
 from openquake.risklib import scientific, riskmodels
@@ -561,10 +561,15 @@ def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
             ddic = computer.calcgmfs(
                 ebr.multiplicity, ebr.rupture.seed, rlzs_by_gsim)
             for rlz, gmf_by_imt in ddic.items():
+                # TODO: manage sampling here
                 for imt, gmf in gmf_by_imt.items():
                     for sid, gmvs in zip(r_sites.sids, gmf):
-                        ok = gmvs >= min_iml[imt]
-                        hazards[sid][imt][rlz].append(ebr.eids[ok], gmvs[ok])
+                        if min_iml:
+                            ok = gmvs >= min_iml[imt]
+                            eids, gmvs = ebr.eids[ok], gmvs[ok]
+                        else:
+                            eids = ebr.eids
+                        hazards[sid][imt][rlz].append(eids, gmvs)
     return hazards
 
 
