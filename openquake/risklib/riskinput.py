@@ -548,9 +548,9 @@ def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
+    imts = gmv_dt['gmv'].names
     # [imt -> rlz -> Gmvs]
-    hazards = [{imt: collections.defaultdict(Gmvs)
-                for imt in gmv_dt['gmv'].names}
+    hazards = [{imt: collections.defaultdict(Gmvs) for imt in imts}
                for sid in sites.sids]
     for ebr in eb_ruptures:
         with ctx_mon:
