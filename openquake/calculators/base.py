@@ -217,9 +217,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         then close the datastore.
         """
         if 'hcurves' in self.datastore:
-            _set_nbytes('hcurves', self.datastore)
+            self.datastore.set_nbytes('hcurves')
         if 'hmaps' in self.datastore:
-            _set_nbytes('hmaps', self.datastore)
+            self.datastore.set_nbytes('hmaps')
         if 'rlzs_assoc' in self.datastore:
             rlzs = self.rlzs_assoc.realizations
             self.realizations = numpy.array(
@@ -227,17 +227,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         self.datastore.flush()
         # NB: the datastore must not be closed, otherwise some tests
         # will break; it will be closed automatically anyway
-
-
-def _set_nbytes(dkey, dstore):
-    # set the number of bytes assuming the dkey correspond to a flat group
-    # with all elements having the same 'nbytes' attribute
-    # NB: this is a workaround for a bug in HDF5 affecting Ubuntu 12.04;
-    # in newer version just use dstore.set_nbytes
-    # the problem was discovered in demos/hazard/LogicTreeCase1ClassicalPSHA
-    group = dstore[dkey]
-    key = group.keys()[0]
-    group.attrs['nbytes'] = group[key].attrs['nbytes'] * len(group)
 
 
 def check_time_event(oqparam, time_events):
@@ -343,6 +332,7 @@ class HazardCalculator(BaseCalculator):
                                  self.job_info.hazard['output_weight'])
                     logging.info('Total weight of the sources=%s',
                                  self.job_info.hazard['input_weight'])
+                self.init()
                 with self.monitor('managing sources', autoflush=True):
                     self.send_sources()
                 self.manager.store_source_info(
@@ -352,6 +342,12 @@ class HazardCalculator(BaseCalculator):
                 attrs['filtered_weight'] = self.csm.filtered_weight
                 attrs['maxweight'] = self.csm.maxweight
         self.datastore.flush()
+
+    def init(self):
+        """
+        To be overridden to initialize the datasets needed by the calculation
+        """
+        self.random_seed = None
 
     def read_exposure(self):
         """
@@ -497,7 +493,7 @@ class HazardCalculator(BaseCalculator):
             self.csm, self.core_task.__func__,
             oq.maximum_distance, self.datastore,
             self.monitor.new(oqparam=oq),
-            filter_sources=oq.filter_sources, num_tiles=num_tiles)
+            self.random_seed, oq.filter_sources, num_tiles=num_tiles)
         siteidx = 0
         for i, tile in enumerate(tiles, 1):
             if num_tiles > 1:

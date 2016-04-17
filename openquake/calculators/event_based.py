@@ -245,7 +245,7 @@ class RuptureFilter(object):
             for rlz, gmf_by_imt in gmf_by_rlz_imt.items():
                 for imt, gmf in gmf_by_imt.items():
                     # NB: gmf[:, 0] because the multiplicity is 1
-                    ok += gmf[:, 0] >= getdefault(self.min_iml, imt)
+                    ok += gmf[:, 0] >= self.min_iml[imt]
             return computer.sites.filter(ok)
         else:  # maximum_distance filtering
             return filter_sites_by_distance_to_rupture(
@@ -288,7 +288,10 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     trt_model_id = sources[0].trt_model_id
     oq = monitor.oqparam
     trt = sources[0].tectonic_region_type
-    max_dist = getdefault(oq.maximum_distance, trt)
+    try:
+        max_dist = oq.maximum_distance[trt]
+    except KeyError:
+        max_dist = oq.maximum_distance['default']
     cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[trt_model_id])
     params = cmaker.REQUIRES_RUPTURE_PARAMETERS
     rup_data_dt = numpy.dtype(
@@ -298,7 +301,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     eb_ruptures = []
     rup_data = []
     calc_times = []
-    rup_mon = monitor('filtering ruptures')
+    rup_mon = monitor('filtering ruptures', measuremem=False)
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -405,6 +408,22 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
     etags = datastore.persistent_attribute('etags')
     is_stochastic = True
 
+    def init(self):
+        """
+        Set the random seed passed to the SourceManager and the
+        minimum_intensity dictionary.
+        """
+        self.random_seed = self.oqparam.random_seed
+        min_iml = self.oqparam.minimum_intensity
+        if min_iml:
+            for imt in self.oqparam.imtls:
+                try:
+                    min_iml[imt] = getdefault(min_iml, imt)
+                except KeyError:
+                    raise ValueError(
+                        'The parameter `minimum_intensity` in the job.ini '
+                        'file is missing the IMT %r' % imt)
+
     def count_eff_ruptures(self, ruptures_by_trt_id, trt_model):
         """
         Returns the number of ruptures sampled in the given trt_model.
@@ -439,18 +458,6 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                        for tm in smodel.trt_models)
         zd.calc_times = []
         return zd
-
-    def send_sources(self):
-        """
-        Filter, split and set the seed array for each source, then send it the
-        workers
-        """
-        oq = self.oqparam
-        self.manager = self.SourceManager(
-            self.csm, self.core_task.__func__,
-            oq.maximum_distance, self.datastore,
-            self.monitor.new(oqparam=oq), oq.random_seed, oq.filter_sources)
-        self.manager.submit_sources(self.sitecol)
 
     def post_execute(self, result):
         """
