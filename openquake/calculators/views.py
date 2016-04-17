@@ -367,6 +367,28 @@ def view_totlosses(token, dstore):
     return rst_table(zero, fmt='%.6E')
 
 
+# for event based risk
+@view.add('portfolio_loss')
+def view_portfolio_loss(token, dstore):
+    """
+    The loss for the full portfolio, for each realization and loss type,
+    extracted from the event loss table.
+    """
+    oq = dstore['oqparam']
+    agg_loss_table = dstore['agg_loss_table']
+    data = numpy.zeros(len(agg_loss_table), oq.loss_dt())
+    for rlz, dset in dstore['agg_loss_table'].items():
+        rlzi = int(rlz.split('-')[1])  # rlz-000 -> 0 etc
+        for loss_type, losses in dset.items():
+            loss = losses['loss']
+            if loss.shape == (2,):
+                data[rlzi][loss_type] = loss[0]
+                data[rlzi][loss_type + '_ins'] = loss[1]
+            else:
+                data[rlzi][loss_type] = loss
+    return rst_table(data, fmt='%.6E')
+
+
 def sum_table(records):
     """
     Used to compute summaries. The records are assumed to have numeric

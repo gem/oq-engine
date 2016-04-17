@@ -270,6 +270,17 @@ class OqParam(valid.ParamSet):
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
 
+    def loss_dt(self, dtype=numpy.float32):
+        """
+        Return a composite dtype based on the loss types, including occupants
+        """
+        loss_types = self.all_cost_types
+        dts = [(lt, dtype) for lt in loss_types]
+        if self.insured_losses:
+            for lt in loss_types:
+                dts.append((lt + '_ins', dtype))
+        return numpy.dtype(dts)
+
     def no_imls(self):
         """
         Return True if there are no intensity measure levels
