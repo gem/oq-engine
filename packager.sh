@@ -193,7 +193,7 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
 
-    pkgs_list="$(deps_list debian/control)"
+    pkgs_list="$(deps_list all debian)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
     # TODO: version check
@@ -268,7 +268,7 @@ _builddoc_innervm_run () {
     # install package to manage repository properly
     # ssh $lxc_ip "sudo apt-get install -y python-software-properties"
 
-    pkgs_list="$(deps_list debian/control)"
+    pkgs_list="$(deps_list all debian)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
     # TODO: version check
@@ -285,7 +285,7 @@ _builddoc_innervm_run () {
     return
 }
 
-deps_list() {
+deps_list_old() {
     local oldifs out_list i filename="$1" build_only="$2"
 
     oldifs="$IFS"
@@ -316,6 +316,64 @@ deps_list() {
 
     return 0
 }
+
+#
+#  deps_list <listtype> <filename> - retrieve dependencies list from debian/control and debian/rules
+#                                    to be able to install them without the package
+#      listtype    inform deps_list which control lines use to get dependencies
+#      filename    control file used for input
+#
+deps_list() {
+    local old_ifs out_list skip i d listtype="$1" control_file="$2"/control rules_file="$2"/rules
+
+    rules_dep=$(grep "^${BUILD_UBUVER^^}_DEP *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+    rules_rec=$(grep "^${BUILD_UBUVER^^}_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+
+    out_list=""
+    if [ "$listtype" = "all" ]; then
+        in_list="$((cat "$control_file" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' ; echo ", $rules_dep, $rules_rec") | tr '\n' ','| sed 's/,\+/,/g')"
+    elif [  "$listtype" = "deprec" ]; then
+        in_list="$((cat "$control_file" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' ; echo ", $rules_dep, $rules_rec") | tr '\n' ','| sed 's/,\+/,/g')"
+    elif [  "$listtype" = "build" ]; then
+        in_list="$((cat "$control_file" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' ; echo ", $rules_dep") | tr '\n' ','| sed 's/,\+/,/g')"
+    else
+        in_list="$((cat "$control_file" | egrep "^Depends:" | sed 's/^Depends: //g'; echo ", $rules_dep") | tr '\n' ','| sed 's/,\+/,/g')"
+    fi
+
+    old_ifs="$IFS"
+    IFS=','
+    for i in $in_list ; do
+        item="$(echo "$i" |  sed 's/^ \+//g;s/ \+$//g')"
+        pkg_name="$(echo "${item} " | cut -d ' ' -f 1)"
+        pkg_vers="$(echo "${item} " | cut -d ' ' -f 2)"
+        echo "[$pkg_name][$pkg_vers]" >&2
+        if echo "$pkg_name" | grep -q "^\${" ; then
+            continue
+        fi
+        skip=0
+        for d in $(echo "$GEM_GIT_DEPS" | sed 's/ /,/g'); do
+            if [ "$pkg_name" = "python-${d}" ]; then
+                skip=1
+                break
+            fi
+        done
+        if [ $skip -eq 1 ]; then
+            continue
+        fi
+
+        if [ "$out_list" = "" ]; then
+            out_list="$pkg_name"
+        else
+            out_list="$out_list $pkg_name"
+        fi
+    done
+    IFS="$old_ifs"
+
+    echo "$out_list"
+
+    return 0
+}
+
 
 _lxc_name_and_ip_get()
 {
