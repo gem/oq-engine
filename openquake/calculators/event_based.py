@@ -47,29 +47,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-@datastore.view.add('col_rlz_assocs')
-def view_col_rlz_assocs(name, dstore):
-    """
-    :returns: an array with the association array col_ids -> rlz_ids
-    """
-    rlzs_assoc = dstore['rlzs_assoc']
-    num_ruptures = dstore.get_attr('etags', 'num_ruptures')
-    num_rlzs = len(rlzs_assoc.realizations)
-    col_ids_list = [[] for _ in range(num_rlzs)]
-    for rlz in rlzs_assoc.realizations:
-        for col_id in sorted(rlzs_assoc.get_col_ids(rlz)):
-            if num_ruptures[col_id]:
-                col_ids_list[rlz.ordinal].append(col_id)
-    assocs = collections.defaultdict(list)
-    for i, col_ids in enumerate(col_ids_list):
-        assocs[tuple(col_ids)].append(i)
-    tbl = [['Collections', 'Realizations']] + sorted(assocs.items())
-    return views.rst_table(tbl)
-
-
-# #################################################################### #
-
-
 def get_geom(surface, is_from_fault_source, is_multi_surface):
     """
     The following fields can be interpreted different ways,
@@ -345,6 +322,7 @@ def sample_ruptures(src, num_ses, info):
               {(col_id, ses_id): num_occurrences}
     """
     col_ids = info.col_ids_by_trt_id[src.trt_model_id]
+    # col_ids = [src.trt_model_id]
     # the dictionary `num_occ_by_rup` contains a dictionary
     # (col_id, ses_id) -> num_occurrences
     # for each occurring rupture
@@ -502,6 +480,16 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
 
 # ######################## GMF calculator ############################ #
 
+def get_eids(ebr, col_ids):
+    eids = []
+    for col_id in col_ids:
+        col = 'col=%02d~' % col_id
+        for eid, etag in zip(ebr.eids, ebr.etags):
+            if etag.startswith(col):
+                eids.append(eid)
+    return eids
+
+
 def make_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
               trunc_level, correl_model, monitor=Monitor()):
     """
@@ -520,6 +508,7 @@ def make_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
+    sampling = rlzs_assoc.csm_info.num_samples
     for ebr in eb_ruptures:
         with ctx_mon:
             r_sites = site.FilteredSiteCollection(ebr.indices, sites)
@@ -528,8 +517,12 @@ def make_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
         with gmf_mon:
             for gsim in gsims:
                 for i, rlz in enumerate(rlzs_assoc[trt_id, str(gsim)]):
+                    if sampling:
+                        eids = get_eids(ebr, rlzs_assoc.get_col_ids(rlz))
+                    else:
+                        eids = ebr.eids
                     seed = ebr.rupture.seed + i
-                    gmfa = computer.compute(seed, gsim, ebr.eids)
+                    gmfa = computer.compute(seed, gsim, eids)
                     dic[rlz.ordinal].append(gmfa)
     res = {rlzi: numpy.concatenate(dic[rlzi]) for rlzi in dic}
     return res
@@ -565,8 +558,7 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, gmv_dt, rlzs_assoc, monitor):
               for rlzi in gmfadict}
     if oq.hazard_curves_from_gmfs:
         with monitor('bulding hazard curves', measuremem=False):
-            duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
-                oq.number_of_logic_tree_samples or 1)
+            duration = oq.investigation_time * oq.ses_per_logic_tree_path
             for rlzi in gmfadict:
                 gmvs_by_sid = get_gmvs_by_sid(gmfadict[rlzi])
                 curves = zero_curves(tot_sites, oq.imtls)
@@ -577,7 +569,7 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, gmv_dt, rlzs_assoc, monitor):
                             gmvs = gmvs_by_sid[sid]
                         except KeyError:
                             continue
-                        curves[imt] = gmvs_to_haz_curve(
+                        curves[imt][sid] = gmvs_to_haz_curve(
                             gmvs[imt], imls, oq.investigation_time, duration)
                 result[rlzi][1] = curves
     return result

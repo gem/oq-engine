@@ -24,6 +24,7 @@ import operator
 import decimal
 import functools
 import itertools
+import collections
 import numpy
 
 from openquake.baselib.general import humansize, groupby
@@ -181,6 +182,26 @@ def view_rupture_collections(token, dstore):
                     rows.append((col_id, '_'.join(sm.path), tm.trt, nr))
                 col_id += 1
     return rst_table(rows, ['col', 'smlt_path', 'TRT', 'num_ruptures'])
+
+
+@view.add('col_rlz_assocs')
+def view_col_rlz_assocs(name, dstore):
+    """
+    :returns: an array with the association array col_ids -> rlz_ids
+    """
+    rlzs_assoc = dstore['rlzs_assoc']
+    num_ruptures = dstore.get_attr('etags', 'num_ruptures')
+    num_rlzs = len(rlzs_assoc.realizations)
+    col_ids_list = [[] for _ in range(num_rlzs)]
+    for rlz in rlzs_assoc.realizations:
+        for col_id in sorted(rlzs_assoc.get_col_ids(rlz)):
+            if num_ruptures[col_id]:
+                col_ids_list[rlz.ordinal].append(col_id)
+    assocs = collections.defaultdict(list)
+    for i, col_ids in enumerate(col_ids_list):
+        assocs[tuple(col_ids)].append(i)
+    tbl = [['Collections', 'Realizations']] + sorted(assocs.items())
+    return rst_table(tbl)
 
 
 @view.add('ruptures_per_trt')

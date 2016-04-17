@@ -360,7 +360,7 @@ class ClassicalCalculator(base.HazardCalculator):
                        else [rlz.weight for rlz in rlzs])
 
             # mean curves are always computed but stored only on request
-                zc = zero_curves(nsites, oq.imtls)
+            zc = zero_curves(nsites, oq.imtls)
             self.mean_curves = numpy.array(zc)
             for imt in oq.imtls:
                 self.mean_curves[imt] = scientific.mean_curve(
