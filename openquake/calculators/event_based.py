@@ -300,7 +300,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     eb_ruptures = []
     rup_data = []
     calc_times = []
-    rup_mon = monitor('filtering ruptures')
+    rup_mon = monitor('filtering ruptures', measuremem=False)
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -399,6 +399,22 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
     etags = datastore.persistent_attribute('etags')
     is_stochastic = True
 
+    def init(self):
+        """
+        Set the random seed passed to the SourceManager and the
+        minimum_intensity dictionary.
+        """
+        self.random_seed = self.oqparam.random_seed
+        min_iml = self.oqparam.minimum_intensity
+        if min_iml:
+            for imt in self.oqparam.imtls:
+                try:
+                    min_iml[imt] = getdefault(min_iml, imt)
+                except KeyError:
+                    raise ValueError(
+                        'The parameter `minimum_intensity` in the job.ini '
+                        'file is missing the IMT %r' % imt)
+
     def count_eff_ruptures(self, ruptures_by_trt_id, trt_model):
         """
         Returns the number of ruptures sampled in the given trt_model.
@@ -432,30 +448,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         zd = AccumDict((tm.id, []) for smodel in smodels
                        for tm in smodel.trt_models)
         zd.calc_times = []
-
-        # set minimum_intensity
-        min_iml = self.oqparam.minimum_intensity
-        if min_iml:
-            for imt in self.oqparam.imtls:
-                try:
-                    min_iml[imt] = getdefault(min_iml, imt)
-                except KeyError:
-                    raise ValueError(
-                        'The parameter `minimum_intensity` in the job.ini '
-                        'file is missing the IMT %r' % imt)
         return zd
-
-    def send_sources(self):
-        """
-        Filter, split and set the seed array for each source, then send it the
-        workers
-        """
-        oq = self.oqparam
-        self.manager = self.SourceManager(
-            self.csm, self.core_task.__func__,
-            oq.maximum_distance, self.datastore,
-            self.monitor.new(oqparam=oq), oq.random_seed, oq.filter_sources)
-        self.manager.submit_sources(self.sitecol)
 
     def post_execute(self, result):
         """

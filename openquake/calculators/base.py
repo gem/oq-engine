@@ -332,6 +332,7 @@ class HazardCalculator(BaseCalculator):
                                  self.job_info.hazard['output_weight'])
                     logging.info('Total weight of the sources=%s',
                                  self.job_info.hazard['input_weight'])
+                self.init()
                 with self.monitor('managing sources', autoflush=True):
                     self.send_sources()
                 self.manager.store_source_info(
@@ -341,6 +342,12 @@ class HazardCalculator(BaseCalculator):
                 attrs['filtered_weight'] = self.csm.filtered_weight
                 attrs['maxweight'] = self.csm.maxweight
         self.datastore.flush()
+
+    def init(self):
+        """
+        To be overridden to initialize the datasets needed by the calculation
+        """
+        self.random_seed = None
 
     def read_exposure(self):
         """
@@ -486,7 +493,7 @@ class HazardCalculator(BaseCalculator):
             self.csm, self.core_task.__func__,
             oq.maximum_distance, self.datastore,
             self.monitor.new(oqparam=oq),
-            filter_sources=oq.filter_sources, num_tiles=num_tiles)
+            self.random_seed, oq.filter_sources, num_tiles=num_tiles)
         siteidx = 0
         for i, tile in enumerate(tiles, 1):
             if num_tiles > 1:
