@@ -84,7 +84,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-mean-structural.xml',
                               fname)
 
-    # this is a test with 1 hazard site and 2 risk sites
+    # test with 1 hazard site and 2 risk sites using assoc_assets_sites
     @attr('qa', 'risk', 'classical_risk')
     def test_case_5(self):
         # test with different curve resolution for different taxonomies

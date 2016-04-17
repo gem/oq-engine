@@ -1,5 +1,7 @@
   [Michele Simionato]
   * Introduced filtering on the minimum intensity of the GMF
+  * The loss maps and curves XML exporters now export the coordinates
+    of the assets, not the coordinates of the closest hazard site
   * Stored the job.ini parameters into a table in the datastore
   * Added a check on the IMTs coming from the risk models
   * Changed the aggregate loss table exporter to export the event tags,

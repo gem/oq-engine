@@ -69,9 +69,8 @@ def show(what, calc_id=-1):
             except:
                 # invalid datastore file, or missing calculation_mode
                 # and description attributes, perhaps due to a manual kill
-                logging.warn('Removed invalid calculation %d', calc_id)
-                os.remove(
-                    os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id))
+                f = os.path.join(datastore.DATADIR, 'calc_%s.hdf5' % calc_id)
+                logging.warn('Unreadable datastore %s', f)
                 continue
             else:
                 rows.append((calc_id, cmode, descr.encode('utf-8')))
