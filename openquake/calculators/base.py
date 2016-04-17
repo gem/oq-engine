@@ -351,7 +351,7 @@ class HazardCalculator(BaseCalculator):
                 attrs['weight'] = self.csm.weight
                 attrs['filtered_weight'] = self.csm.filtered_weight
                 attrs['maxweight'] = self.csm.maxweight
-        self.datastore.hdf5.flush()
+        self.datastore.flush()
 
     def read_exposure(self):
         """

@@ -370,12 +370,14 @@ class CompositeRiskModel(collections.Mapping):
                          hazards_by_site, assetcol, eps_dict)
 
     def build_inputs_from_ruptures(
-            self, sitecol, all_ruptures, trunc_level, correl_model, eps, hint):
+            self, sitecol, all_ruptures, trunc_level, correl_model,
+            min_iml, eps, hint):
         """
         :param sitecol: a SiteCollection instance
         :param all_ruptures: the complete list of EBRupture instances
         :param trunc_level: the truncation level (or None)
         :param correl_model: the correlation model (or None)
+        :param min_iml: dictionary of minimum IMLs
         :param eps: a matrix of epsilons of shape (N, E)
         :param hint: hint for how many blocks to generate
 
@@ -390,7 +392,7 @@ class CompositeRiskModel(collections.Mapping):
                 eids.extend(sr.eids)
             yield RiskInputFromRuptures(
                 imt_taxonomies, sitecol, ses_ruptures,
-                trunc_level, correl_model, eps[:, eids], eids)
+                trunc_level, correl_model, min_iml, eps[:, eids], eids)
 
     def gen_outputs(self, riskinputs, rlzs_assoc, monitor,
                     assetcol=None):
@@ -528,7 +530,7 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
 
 # this is fast
 def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
-              trunc_level, correl_model, monitor=Monitor()):
+              trunc_level, correl_model, min_iml, monitor=Monitor()):
     """
     :param eb_ruptures: a list of EBRuptures with the same trt_model_id
     :param sitecol: a SiteCollection instance
@@ -536,20 +538,20 @@ def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
     :param rlzs_assoc: a RlzsAssoc instance
     :param trunc_level: truncation level
     :param correl_model: correlation model instance
+    :param min_iml: a dictionary of minimum intensity measure levels
     :param monitor: a monitor instance
     :returns: a dictionary rlzi -> gmv_dt array
     """
     trt_id = eb_ruptures[0].trt_id
     gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
     rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(trt_id)
-    rlzs = set(sum(rlzs_by_gsim.values(), []))
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
     # [imt -> rlz -> Gmvs]
-    data_by_sid = [{imt: {rlz: Gmvs() for rlz in rlzs}
-                    for imt in gmv_dt['gmv'].names}
-                   for sid in sites.sids]
+    hazards = [{imt: collections.defaultdict(Gmvs)
+                for imt in gmv_dt['gmv'].names}
+               for sid in sites.sids]
     for ebr in eb_ruptures:
         with ctx_mon:
             r_sites = site.FilteredSiteCollection(ebr.indices, sites)
@@ -561,8 +563,9 @@ def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
             for rlz, gmf_by_imt in ddic.items():
                 for imt, gmf in gmf_by_imt.items():
                     for sid, gmvs in zip(r_sites.sids, gmf):
-                        data_by_sid[sid][imt][rlz].append(ebr.eids, gmvs)
-    return data_by_sid
+                        ok = gmvs >= min_iml[imt]
+                        hazards[sid][imt][rlz].append(ebr.eids[ok], gmvs[ok])
+    return hazards
 
 
 class Gmvs(object):
@@ -603,13 +606,14 @@ class RiskInputFromRuptures(object):
     :params eps: a matrix of epsilons
     """
     def __init__(self, imt_taxonomies, sitecol, ses_ruptures,
-                 trunc_level, correl_model, epsilons, eids):
+                 trunc_level, correl_model, min_iml, epsilons, eids):
         self.imt_taxonomies = imt_taxonomies
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
         self.trt_id = ses_ruptures[0].trt_id
         self.trunc_level = trunc_level
         self.correl_model = correl_model
+        self.min_iml = min_iml
         self.weight = sum(sr.multiplicity for sr in ses_ruptures)
         self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
         self.gmv_dt = gmv_dt(self.imts)
@@ -632,12 +636,12 @@ class RiskInputFromRuptures(object):
         :param monitor:
             a :class:`openquake.baselib.performance.Monitor` instance
         :returns:
-            lists of N hazard dictionaries imt -> rlz -> haz
+            lists of N hazard dictionaries imt -> rlz -> Gmvs
         """
-        data_by_sid = calc_gmfs(
+        hazards = calc_gmfs(
             self.ses_ruptures, self.sitecol, self.gmv_dt, rlzs_assoc,
-            self.trunc_level, self.correl_model, monitor)
-        return data_by_sid
+            self.trunc_level, self.correl_model, self.min_iml, monitor)
+        return hazards
 
     def __repr__(self):
         return '<%s IMT_taxonomies=%s, weight=%d>' % (

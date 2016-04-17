@@ -260,7 +260,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
             self.sitecol.complete, all_ruptures, oq.truncation_level,
-            correl_model, eps, oq.concurrent_tasks or 1))
+            correl_model, oq.minimum_intensity, eps, oq.concurrent_tasks or 1))
         nbytes = AccumDict(total=0)
         for ri in self.riskinputs:
             total, sizes = parallel.get_pickled_sizes(ri)
