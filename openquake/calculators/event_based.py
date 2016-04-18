@@ -47,27 +47,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def num_affected_sites(rupture, num_sites):
-    """
-    :param rupture: a EBRupture object
-    :param num_sites: the total number of sites
-    :returns: the number of sites affected by the rupture
-    """
-    return (len(rupture.indices) if rupture.indices is not None
-            else num_sites)
-
-
-def get_site_ids(rupture, num_sites):
-    """
-    :param rupture: a EBRupture object
-    :param num_sites: the total number of sites
-    :returns: the indices of the sites affected by the rupture
-    """
-    if rupture.indices is None:
-        return list(range(num_sites))
-    return rupture.indices
-
-
 @datastore.view.add('col_rlz_assocs')
 def view_col_rlz_assocs(name, dstore):
     """
@@ -220,6 +199,71 @@ class EBRupture(object):
                                         self.serial, self.trt_id)
 
 
+class RuptureFilter(object):
+    """
+    Implement two filtering mechanism:
+
+    1. if min_iml is empty, use the usual filtering on the maximum distance
+    2. otherwise, filter on the ground motion minimum intensity.
+
+    In other words, if a ground motion is below the minimum intensity
+    for all hazard sites and for all intensity measure types, ignore
+    the rupture. When a RuptureFilter instance is called on a rupture,
+    returns None if the rupture has to be discarded, or a
+    FilteredSiteCollection with the sites having ground motion intensity
+    over the threshold.
+
+    :param sites:
+        sites to filter (usually already prefiltered)
+    :param maximum_distance:
+        the maximum distance to use in the distance filtering
+    :param imts:
+        a list of intensity measure types
+    :param trunc_level:
+        the truncation level used in the GMF calculation
+    :param min_iml:
+        a dictionary with the minimum intensity measure level for each IMT
+    """
+    def __init__(self, sites, maximum_distance, imts, gsims, trunc_level,
+                 min_iml):
+        self.sites = sites
+        self.max_dist = maximum_distance
+        self.imts = imts
+        self.gsims = gsims
+        self.trunc_level = trunc_level
+        self.min_iml = min_iml
+
+    def __call__(self, rupture):
+        """
+        :returns: a FilteredSiteCollection or None
+        """
+        if self.min_iml:
+            computer = calc.gmf.GmfComputer(
+                rupture, self.sites, self.imts, self.gsims, self.trunc_level)
+            [gmf] = computer.calcgmfs(1, rupture.seed)
+            ok = numpy.zeros(len(self.sites), bool)
+            for gsim in self.gsims:
+                gmf_by_imt = gmf[str(gsim)]
+                for imt in self.imts:
+                    ok += gmf_by_imt[imt] >= self.min_iml[imt]
+            return computer.sites.filter(ok)
+        else:  # maximum_distance filtering
+            return filter_sites_by_distance_to_rupture(
+                rupture, self.max_dist, self.sites)
+
+
+def getdefault(dic_with_default, key):
+    """
+    :param dic_with_default: a dictionary with a 'default' key
+    :param key: a key that may be present in the dictionary or not
+    :returns: the value associated to the key, or to 'default'
+    """
+    try:
+        return dic_with_default[key]
+    except KeyError:
+        return dic_with_default['default']
+
+
 @parallel.litetask
 def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     """
@@ -248,7 +292,6 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         max_dist = oq.maximum_distance[trt]
     except KeyError:
         max_dist = oq.maximum_distance['default']
-    totsites = len(sitecol)
     cmaker = ContextMaker(rlzs_assoc.gsims_by_trt_id[trt_model_id])
     params = cmaker.REQUIRES_RUPTURE_PARAMETERS
     rup_data_dt = numpy.dtype(
@@ -258,6 +301,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     eb_ruptures = []
     rup_data = []
     calc_times = []
+    rup_mon = monitor('filtering ruptures', measuremem=False)
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -266,15 +310,17 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         if s_sites is None:
             continue
 
+        rupture_filter = RuptureFilter(
+            s_sites, max_dist, oq.imtls, cmaker.gsims,
+            oq.truncation_level, oq.minimum_intensity)
         num_occ_by_rup = sample_ruptures(
             src, oq.ses_per_logic_tree_path, rlzs_assoc.csm_info)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
         for ebr in build_eb_ruptures(
-                src, num_occ_by_rup, s_sites, max_dist, sitecol,
-                oq.random_seed):
-            nsites = totsites if ebr.indices is None else len(ebr.indices)
+                src, num_occ_by_rup, rupture_filter, oq.random_seed, rup_mon):
+            nsites = len(ebr.indices)
             rc = cmaker.make_rupture_context(ebr.rupture)
             ruptparams = tuple(getattr(rc, param) for param in params)
             rup_data.append((ebr.serial, len(ebr.etags), nsites) + ruptparams)
@@ -318,24 +364,18 @@ def sample_ruptures(src, num_ses, info):
 
 
 def build_eb_ruptures(
-        src, num_occ_by_rup, s_sites, maximum_distance, sitecol, random_seed):
+        src, num_occ_by_rup, rupture_filter, random_seed, rup_mon):
     """
     Filter the ruptures stored in the dictionary num_occ_by_rup and
     yield pairs (rupture, <list of associated EBRuptures>)
     """
-    totsites = len(sitecol)
     for rup in sorted(num_occ_by_rup, key=operator.attrgetter('rup_no')):
-        # filtering ruptures
-        r_sites = filter_sites_by_distance_to_rupture(
-            rup, maximum_distance, s_sites)
+        with rup_mon:
+            r_sites = rupture_filter(rup)
         if r_sites is None:
             # ignore ruptures which are far away
             del num_occ_by_rup[rup]  # save memory
             continue
-        if len(r_sites) < totsites:
-            indices = r_sites.indices
-        else:
-            indices = None  # None means that nothing was filtered
 
         # creating EBRuptures
         serial = rup.seed - random_seed + 1
@@ -347,7 +387,8 @@ def build_eb_ruptures(
                     col_idx, ses_idx, src.source_id, serial, occ_no)
                 etags.append(etag)
         if etags:
-            yield EBRupture(rup, indices, etags, src.trt_model_id, serial)
+            yield EBRupture(rup, r_sites.indices, etags,
+                            src.trt_model_id, serial)
 
 
 @base.calculators.add('event_based_rupture')
@@ -358,6 +399,22 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
     core_task = compute_ruptures
     etags = datastore.persistent_attribute('etags')
     is_stochastic = True
+
+    def init(self):
+        """
+        Set the random seed passed to the SourceManager and the
+        minimum_intensity dictionary.
+        """
+        self.random_seed = self.oqparam.random_seed
+        min_iml = self.oqparam.minimum_intensity
+        if min_iml:
+            for imt in self.oqparam.imtls:
+                try:
+                    min_iml[imt] = getdefault(min_iml, imt)
+                except KeyError:
+                    raise ValueError(
+                        'The parameter `minimum_intensity` in the job.ini '
+                        'file is missing the IMT %r' % imt)
 
     def count_eff_ruptures(self, ruptures_by_trt_id, trt_model):
         """
@@ -393,18 +450,6 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                        for tm in smodel.trt_models)
         zd.calc_times = []
         return zd
-
-    def send_sources(self):
-        """
-        Filter, split and set the seed array for each source, then send it the
-        workers
-        """
-        oq = self.oqparam
-        self.manager = self.SourceManager(
-            self.csm, self.core_task.__func__,
-            oq.maximum_distance, self.datastore,
-            self.monitor.new(oqparam=oq), oq.random_seed, oq.filter_sources)
-        self.manager.submit_sources(self.sitecol)
 
     def post_execute(self, result):
         """
@@ -473,8 +518,7 @@ def make_gmfs(eb_ruptures, sitecol, imts, gsims,
     sites = sitecol.complete
     for ebr in eb_ruptures:
         with ctx_mon:
-            r_sites = (sitecol if ebr.indices is None else
-                       site.FilteredSiteCollection(ebr.indices, sites))
+            r_sites = site.FilteredSiteCollection(ebr.indices, sites)
             computer = calc.gmf.GmfComputer(
                 ebr.rupture, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:

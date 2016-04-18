@@ -124,6 +124,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
         self.assert_stats_ok(case_master, 'job.ini')
+        fname = writetmp(view('portfolio_loss', self.calc.datastore))
+        self.assertEqualFiles('expected/portfolio_loss.txt', fname)
 
     # now a couple of hazard tests
 
