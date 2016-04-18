@@ -129,6 +129,15 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
 
     @attr('qa', 'hazard', 'event_based')
+    def test_minimum_intensity(self):
+        out = self.run_calc(case_2.__file__, 'job.ini', exports='txt',
+                            minimum_intensity='0.4')
+
+        [fname] = out['gmf_data', 'txt']
+        self.assertEqualFiles(
+            'expected/minimum-intensity-SadighEtAl1997.txt', fname, sorted)
+
+    @attr('qa', 'hazard', 'event_based')
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='txt,csv')
         [fname] = out['gmf_data', 'txt']

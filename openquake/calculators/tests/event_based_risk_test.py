@@ -20,6 +20,7 @@ import os
 import re
 from nose.plugins.attrib import attr
 
+from openquake.baselib.general import writetmp
 from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.export import export
@@ -79,16 +80,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_2(self):
         self.assert_stats_ok(case_2, 'job_haz.ini,job_risk.ini',
                              individual_curves='true')
-        text = view('mean_avg_losses', self.calc.datastore)
-        self.assertEqual(text, '''\
-========= ======== ============ ============ ============ ==============
-asset_ref taxonomy lon          lat          structural   structural_ins
-========= ======== ============ ============ ============ ==============
-a0        RM       8.129850E+01 2.910980E+01 3.368651E+02 9.858012E+01  
-a1        RC       8.308230E+01 2.790060E+01 7.165132E+01 0.000000E+00  
-a2        W        8.574770E+01 2.790150E+01 1.719736E+02 1.036929E+02  
-a3        RM       8.574770E+01 2.790150E+01 2.281648E+02 0.000000E+00  
-========= ======== ============ ============ ============ ==============''')
+        fname = writetmp(view('mean_avg_losses', self.calc.datastore))
+        self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2bis(self):
@@ -131,6 +124,8 @@ a3        RM       8.574770E+01 2.790150E+01 2.281648E+02 0.000000E+00
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
         self.assert_stats_ok(case_master, 'job.ini')
+        fname = writetmp(view('portfolio_loss', self.calc.datastore))
+        self.assertEqualFiles('expected/portfolio_loss.txt', fname)
 
     # now a couple of hazard tests
 

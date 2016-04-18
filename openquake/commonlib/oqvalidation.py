@@ -95,6 +95,7 @@ class OqParam(valid.ParamSet):
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
     maximum_tile_weight = valid.Param(valid.positivefloat)
     mean_hazard_curves = valid.Param(valid.boolean, False)
+    minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint)
@@ -268,6 +269,17 @@ class OqParam(valid.ParamSet):
 
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
+
+    def loss_dt(self, dtype=numpy.float32):
+        """
+        Return a composite dtype based on the loss types, including occupants
+        """
+        loss_types = self.all_cost_types
+        dts = [(lt, dtype) for lt in loss_types]
+        if self.insured_losses:
+            for lt in loss_types:
+                dts.append((lt + '_ins', dtype))
+        return numpy.dtype(dts)
 
     def no_imls(self):
         """
