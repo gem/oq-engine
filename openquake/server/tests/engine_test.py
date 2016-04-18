@@ -24,9 +24,18 @@ import tempfile
 import mock
 
 from django.db import connection
+from openquake.commonlib import readinput
 from openquake.server.db import models, actions, upgrade_manager
 from openquake.server.settings import DATABASE
 from openquake.server.tests import helpers
+
+
+# twin to engine.job_from_file
+def job_from_file(cfg_file, username, hazard_calculation_id=None):
+    oq = readinput.get_oqparam(cfg_file)
+    job_id = actions.create_job(oq.calculation_mode, oq.description,
+                                username, hazard_calculation_id)
+    return job_id, oq
 
 
 def setup_module():
@@ -48,7 +57,7 @@ def teardown_module():
 
 
 def get_job(cfg, username, hazard_calculation_id=None):
-    job_id, oq = actions.job_from_file(cfg, username, hazard_calculation_id)
+    job_id, oq = job_from_file(cfg, username, hazard_calculation_id)
     return models.OqJob.objects.get(pk=job_id)
 
 

@@ -96,8 +96,8 @@ def run_job(cfg_file, log_level, log_file, exports='',
     # if the master dies, automatically kill the workers
     concurrent_futures_process_monkeypatch()
     job_ini = os.path.abspath(cfg_file)
-    job_id, oqparam = logs.dbcmd(
-        'job_from_file', job_ini, getpass.getuser(), hazard_calculation_id)
+    job_id, oqparam = engine.job_from_file(
+        job_ini, getpass.getuser(), hazard_calculation_id)
     calc = engine.run_calc(job_id, oqparam, log_level, log_file, exports,
                            hazard_calculation_id=hazard_calculation_id)
     calc.monitor.flush()
