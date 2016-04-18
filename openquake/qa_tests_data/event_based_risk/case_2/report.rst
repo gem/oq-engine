@@ -65,23 +65,33 @@ source_model     trt_id trt                  num_sources eff_ruptures weight
 source_model.xml 0      Active Shallow Crust 3           8            0.450 
 ================ ====== ==================== =========== ============ ======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== ========
-Number of tasks to generate 1       
-Sent data                   7.91 KB 
-Total received data         11.08 KB
-Maximum received per task   11.08 KB
-=========================== ========
+Informational data
+------------------
+====================================== ===================
+compute_ruptures_max_received_per_task 11591              
+compute_ruptures_sent.Monitor          2565               
+compute_ruptures_sent.RlzsAssoc        2877               
+compute_ruptures_sent.SiteCollection   485                
+compute_ruptures_sent.WeightedSequence 2206               
+compute_ruptures_sent.int              5                  
+compute_ruptures_tot_received          11591              
+hazard.input_weight                    0.45000000000000007
+hazard.n_imts                          3                  
+hazard.n_levels                        5.0                
+hazard.n_realizations                  1                  
+hazard.n_sites                         3                  
+hazard.n_sources                       0                  
+hazard.output_weight                   90.0               
+====================================== ===================
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            2         PointSource  0.150  1         9.584E-05   0.0        0.007    
-0            1         PointSource  0.150  1         1.380E-04   0.0        0.006    
-0            3         PointSource  0.150  1         8.798E-05   0.0        0.006    
+0            1         PointSource  0.150  1         1.309E-04   0.0        0.007    
+0            2         PointSource  0.150  1         9.608E-05   0.0        0.007    
+0            3         PointSource  0.150  1         8.607E-05   0.0        0.006    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -89,16 +99,17 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_gmfs_and_curves  0.034     0.188     8     
-reading composite source model 0.033     0.0       1     
-total compute_ruptures         0.019     0.184     1     
-compute poes                   0.018     0.0       8     
-saving gmfs                    0.011     0.0       8     
+total compute_gmfs_and_curves  0.031     0.145     8     
+total compute_ruptures         0.020     0.184     1     
+compute poes                   0.017     0.0       8     
+saving gmfs                    0.014     0.0       8     
 make contexts                  0.010     0.0       8     
-saving ruptures                0.003     0.0       1     
-store source_info              0.002     0.0       1     
+reading composite source model 0.006     0.0       1     
+store source_info              0.006     0.0       1     
+filtering ruptures             0.004     0.0       8     
+saving ruptures                0.004     0.0       1     
 managing sources               0.002     0.0       1     
-aggregate curves               7.491E-04 0.0       1     
-filtering sources              3.219E-04 0.0       3     
-reading site collection        4.816E-05 0.0       1     
+aggregate curves               7.570E-04 0.0       1     
+filtering sources              3.130E-04 0.0       3     
+reading site collection        4.005E-05 0.0       1     
 ============================== ========= ========= ======

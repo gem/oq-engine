@@ -5,22 +5,23 @@ num_sites = 3, sitecol = 831 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'classical'       
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 400.0}
-investigation_time           1.0               
-ses_per_logic_tree_path      1                 
-truncation_level             3.0               
-rupture_mesh_spacing         5.0               
-complex_fault_mesh_spacing   5.0               
-width_of_mfd_bin             0.1               
-area_source_discretization   50.0              
-random_seed                  23                
-master_seed                  0                 
-concurrent_tasks             40                
-sites_per_tile               1000              
-============================ ==================
+============================ ===================
+calculation_mode             'classical'        
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 400.0} 
+investigation_time           1.0                
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         5.0                
+complex_fault_mesh_spacing   5.0                
+width_of_mfd_bin             0.1                
+area_source_discretization   50.0               
+random_seed                  23                 
+master_seed                  0                  
+concurrent_tasks             40                 
+sites_per_tile               1000               
+oqlite_version               '0.13.0-gitcefd831'
+============================ ===================
 
 Input files
 -----------
@@ -66,19 +67,31 @@ source_model              trt_id trt                  num_sources eff_ruptures w
 vancouver_area_source.xml 0      Active Shallow Crust 1           2,430        60    
 ========================= ====== ==================== =========== ============ ======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =======
-Number of tasks to generate 30     
-Sent data                   9.38 MB
-=========================== =======
+Informational data
+------------------
+======================================== =======
+count_eff_ruptures_max_received_per_task 162925 
+count_eff_ruptures_sent.Monitor          4880532
+count_eff_ruptures_sent.RlzsAssoc        4899985
+count_eff_ruptures_sent.SiteCollection   14550  
+count_eff_ruptures_sent.WeightedSequence 40480  
+count_eff_ruptures_sent.int              150    
+count_eff_ruptures_tot_received          4887750
+hazard.input_weight                      60.75  
+hazard.n_imts                            3      
+hazard.n_levels                          12.0   
+hazard.n_realizations                    3      
+hazard.n_sites                           3      
+hazard.n_sources                         0      
+hazard.output_weight                     324.0  
+======================================== =======
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            VICM      AreaSource   60     30        9.520E-04   0.008      0.0      
+0            VICM      AreaSource   60     30        0.001       0.009      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -86,12 +99,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.085     0.0       1     
-reading composite source model 0.021     0.0       1     
+managing sources               0.079     0.0       1     
+reading composite source model 0.024     0.0       1     
 total count_eff_ruptures       0.010     0.0       30    
-splitting sources              0.008     0.0       1     
-filtering sources              9.520E-04 0.0       1     
-aggregate curves               7.372E-04 0.0       30    
-store source_info              3.819E-04 0.0       1     
-reading site collection        8.988E-05 0.0       1     
+splitting sources              0.009     0.0       1     
+store source_info              0.005     0.0       1     
+filtering sources              0.001     0.0       1     
+aggregate curves               6.680E-04 0.0       30    
+reading site collection        9.918E-05 0.0       1     
 ============================== ========= ========= ======

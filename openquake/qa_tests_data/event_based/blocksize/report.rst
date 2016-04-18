@@ -64,23 +64,33 @@ source_model     trt_id trt                  num_sources eff_ruptures weight
 source_model.xml 0      Active Shallow Crust 3           3            277   
 ================ ====== ==================== =========== ============ ======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =========
-Number of tasks to generate 38       
-Sent data                   730.44 KB
-Total received data         144.23 KB
-Maximum received per task   5.24 KB  
-=========================== =========
+Informational data
+------------------
+====================================== ======
+compute_ruptures_max_received_per_task 5563  
+compute_ruptures_sent.Monitor          95380 
+compute_ruptures_sent.RlzsAssoc        108756
+compute_ruptures_sent.SiteCollection   17518 
+compute_ruptures_sent.WeightedSequence 527040
+compute_ruptures_sent.int              190   
+compute_ruptures_tot_received          153512
+hazard.input_weight                    560.15
+hazard.n_imts                          1     
+hazard.n_levels                        4.0   
+hazard.n_realizations                  1     
+hazard.n_sites                         2     
+hazard.n_sources                       0     
+hazard.output_weight                   0.1   
+====================================== ======
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   175    1,170     0.001       0.606      8.142    
-0            2         AreaSource   58     389       0.001       0.170      2.469    
-0            3         AreaSource   44     352       0.001       0.202      1.035    
+0            1         AreaSource   175    1,170     8.430E-04   0.308      4.649    
+0            2         AreaSource   58     389       7.811E-04   0.099      1.240    
+0            3         AreaSource   44     352       7.310E-04   0.080      0.508    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -88,17 +98,18 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         11        0.0       38    
-reading composite source model 3.419     0.0       1     
-managing sources               1.419     0.0       1     
-splitting sources              0.978     0.0       3     
-store source_info              0.040     0.0       1     
-filtering sources              0.025     0.0       9     
-saving ruptures                0.018     0.0       1     
-total compute_gmfs_and_curves  0.005     0.0       3     
-saving gmfs                    0.004     0.0       3     
-make contexts                  0.002     0.0       3     
-aggregate curves               0.002     0.0       38    
+total compute_ruptures         6.440     0.0       38    
+reading composite source model 1.716     0.0       1     
+managing sources               0.638     0.0       1     
+splitting sources              0.487     0.0       3     
+store source_info              0.018     0.0       1     
+filtering sources              0.007     0.0       9     
+total compute_gmfs_and_curves  0.006     0.0       3     
+make contexts                  0.003     0.0       3     
+saving gmfs                    0.003     0.0       3     
+saving ruptures                0.002     0.0       1     
 compute poes                   0.002     0.0       3     
-reading site collection        5.794E-05 0.0       1     
+aggregate curves               0.002     0.0       38    
+filtering ruptures             0.001     0.0       3     
+reading site collection        3.195E-05 0.0       1     
 ============================== ========= ========= ======

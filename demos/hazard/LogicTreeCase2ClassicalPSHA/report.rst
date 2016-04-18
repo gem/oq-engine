@@ -20,7 +20,7 @@ random_seed                  23
 master_seed                  0                  
 concurrent_tasks             40                 
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gite77b1a1'
+oqlite_version               '0.13.0-gitcefd831'
 ============================ ===================
 
 Input files
@@ -798,38 +798,50 @@ source_model.xml 161    Stable Continental Crust 1           5,330        133
 filtered_weight 117,818
 =============== =======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== ========
-Number of tasks to generate 162     
-Sent data                   49.96 MB
-=========================== ========
+Informational data
+------------------
+======================================== ==========
+count_eff_ruptures_max_received_per_task 2705      
+count_eff_ruptures_sent.Monitor          403218    
+count_eff_ruptures_sent.RlzsAssoc        51661476  
+count_eff_ruptures_sent.SiteCollection   70794     
+count_eff_ruptures_sent.WeightedSequence 248103    
+count_eff_ruptures_sent.int              810       
+count_eff_ruptures_tot_received          438186    
+hazard.input_weight                      117817.875
+hazard.n_imts                            1         
+hazard.n_levels                          19.0      
+hazard.n_realizations                    324       
+hazard.n_sites                           1         
+hazard.n_sources                         0         
+hazard.output_weight                     6156.0    
+======================================== ==========
 
 Slowest sources
 ---------------
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            2         SimpleFaultSource 1,334  1         0.003       0.0        0.0      
-86           2         SimpleFaultSource 1,337  1         0.003       0.0        0.0      
-88           2         SimpleFaultSource 1,339  1         0.003       0.0        0.0      
-2            2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
-22           2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
-16           2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
-138          2         SimpleFaultSource 1,334  1         0.002       0.0        0.0      
-150          2         SimpleFaultSource 1,334  1         0.002       0.0        0.0      
-58           2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
-14           2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
-64           2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
-4            2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
-136          2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
-66           2         SimpleFaultSource 1,334  1         0.002       0.0        0.0      
-76           2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
-160          2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
-134          2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
-50           2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
-56           2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
-70           2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
+38           2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
+0            2         SimpleFaultSource 1,334  1         0.001       0.0        0.0      
+96           2         SimpleFaultSource 1,334  1         0.001       0.0        0.0      
+70           2         SimpleFaultSource 1,339  1         0.001       0.0        0.0      
+98           2         SimpleFaultSource 1,337  1         0.001       0.0        0.0      
+82           2         SimpleFaultSource 1,339  1         0.001       0.0        0.0      
+72           2         SimpleFaultSource 1,334  1         0.001       0.0        0.0      
+100          2         SimpleFaultSource 1,339  1         0.001       0.0        0.0      
+110          2         SimpleFaultSource 1,337  1         0.001       0.0        0.0      
+106          2         SimpleFaultSource 1,339  1         0.001       0.0        0.0      
+102          2         SimpleFaultSource 1,334  1         0.001       0.0        0.0      
+26           2         SimpleFaultSource 1,337  1         0.001       0.0        0.0      
+118          2         SimpleFaultSource 1,339  1         0.001       0.0        0.0      
+44           2         SimpleFaultSource 1,337  1         0.001       0.0        0.0      
+156          2         SimpleFaultSource 1,334  1         0.001       0.0        0.0      
+42           2         SimpleFaultSource 1,334  1         0.001       0.0        0.0      
+50           2         SimpleFaultSource 1,337  1         0.001       0.0        0.0      
+62           2         SimpleFaultSource 1,337  1         0.001       0.0        0.0      
+94           2         SimpleFaultSource 1,339  1         0.001       0.0        0.0      
+24           2         SimpleFaultSource 1,334  1         0.001       0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
 
 Slowest operations
@@ -837,11 +849,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               15        0.0       1     
-reading composite source model 9.320     0.0       1     
-filtering sources              0.312     0.0       162   
-total count_eff_ruptures       0.215     0.012     162   
-aggregate curves               0.004     0.0       162   
-store source_info              3.850E-04 0.0       1     
-reading site collection        5.293E-05 0.0       1     
+managing sources               5.240     0.0       1     
+reading composite source model 4.303     0.0       1     
+filtering sources              0.157     0.0       162   
+total count_eff_ruptures       0.059     0.008     162   
+store source_info              0.004     0.0       1     
+aggregate curves               0.003     0.0       162   
+reading site collection        3.600E-05 0.0       1     
 ============================== ========= ========= ======

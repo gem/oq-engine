@@ -5,22 +5,23 @@ num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'classical'       
-number_of_logic_tree_samples 10                
-maximum_distance             {'default': 200.0}
-investigation_time           50.0              
-ses_per_logic_tree_path      1                 
-truncation_level             3.0               
-rupture_mesh_spacing         2.0               
-complex_fault_mesh_spacing   2.0               
-width_of_mfd_bin             0.1               
-area_source_discretization   10.0              
-random_seed                  23                
-master_seed                  0                 
-concurrent_tasks             16                
-sites_per_tile               1000              
-============================ ==================
+============================ ===================
+calculation_mode             'classical'        
+number_of_logic_tree_samples 10                 
+maximum_distance             {'default': 200.0} 
+investigation_time           50.0               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         2.0                
+complex_fault_mesh_spacing   2.0                
+width_of_mfd_bin             0.1                
+area_source_discretization   10.0               
+random_seed                  23                 
+master_seed                  0                  
+concurrent_tasks             16                 
+sites_per_tile               1000               
+oqlite_version               '0.13.0-gitcefd831'
+============================ ===================
 
 Input files
 -----------
@@ -108,38 +109,50 @@ source_model.xml 9      Active Shallow Crust 5           2,025        50
 filtered_weight 506   
 =============== ======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =======
-Number of tasks to generate 50     
-Sent data                   1.07 MB
-=========================== =======
+Informational data
+------------------
+======================================== ======
+count_eff_ruptures_max_received_per_task 2792  
+count_eff_ruptures_sent.Monitor          127438
+count_eff_ruptures_sent.RlzsAssoc        877400
+count_eff_ruptures_sent.SiteCollection   21850 
+count_eff_ruptures_sent.WeightedSequence 95900 
+count_eff_ruptures_sent.int              250   
+count_eff_ruptures_tot_received          139600
+hazard.input_weight                      506.5 
+hazard.n_imts                            1     
+hazard.n_levels                          3.0   
+hazard.n_realizations                    10    
+hazard.n_sites                           1     
+hazard.n_sources                         0     
+hazard.output_weight                     30.0  
+======================================== ======
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-1            5         AreaSource   9.375  1         7.982E-04   0.0        0.0      
-8            4         AreaSource   10     1         7.911E-04   0.0        0.0      
-0            1         AreaSource   8.125  1         7.899E-04   0.0        0.0      
-4            1         AreaSource   9.375  1         7.689E-04   0.0        0.0      
-6            2         AreaSource   11     1         7.410E-04   0.0        0.0      
-6            3         AreaSource   11     1         7.391E-04   0.0        0.0      
-9            4         AreaSource   8.125  1         7.300E-04   0.0        0.0      
-5            2         AreaSource   12     1         7.288E-04   0.0        0.0      
-0            4         AreaSource   8.125  1         7.281E-04   0.0        0.0      
-3            1         AreaSource   8.125  1         7.269E-04   0.0        0.0      
-7            3         AreaSource   12     1         7.269E-04   0.0        0.0      
-2            5         AreaSource   10     1         7.119E-04   0.0        0.0      
-4            2         AreaSource   9.750  1         7.050E-04   0.0        0.0      
-9            5         AreaSource   9.375  1         6.971E-04   0.0        0.0      
-0            2         AreaSource   11     1         6.959E-04   0.0        0.0      
-7            2         AreaSource   11     1         6.931E-04   0.0        0.0      
+0            1         AreaSource   8.125  1         9.100E-04   0.0        0.0      
+0            2         AreaSource   11     1         8.440E-04   0.0        0.0      
+2            1         AreaSource   9.375  1         7.570E-04   0.0        0.0      
 0            5         AreaSource   9.375  1         6.900E-04   0.0        0.0      
-9            2         AreaSource   11     1         6.890E-04   0.0        0.0      
-7            4         AreaSource   10     1         6.890E-04   0.0        0.0      
-5            5         AreaSource   9.375  1         6.890E-04   0.0        0.0      
+5            3         AreaSource   11     1         6.888E-04   0.0        0.0      
+3            1         AreaSource   8.125  1         6.859E-04   0.0        0.0      
+7            4         AreaSource   10     1         6.859E-04   0.0        0.0      
+4            2         AreaSource   9.750  1         6.850E-04   0.0        0.0      
+8            5         AreaSource   8.125  1         6.850E-04   0.0        0.0      
+6            4         AreaSource   9.375  1         6.850E-04   0.0        0.0      
+2            5         AreaSource   10     1         6.790E-04   0.0        0.0      
+0            3         AreaSource   11     1         6.790E-04   0.0        0.0      
+1            5         AreaSource   9.375  1         6.790E-04   0.0        0.0      
+6            5         AreaSource   9.375  1         6.781E-04   0.0        0.0      
+7            5         AreaSource   10     1         6.778E-04   0.0        0.0      
+8            4         AreaSource   10     1         6.778E-04   0.0        0.0      
+5            5         AreaSource   9.375  1         6.778E-04   0.0        0.0      
+7            3         AreaSource   12     1         6.771E-04   0.0        0.0      
+1            1         AreaSource   9.375  1         6.759E-04   0.0        0.0      
+2            2         AreaSource   11     1         6.759E-04   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -147,11 +160,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.245     0.0       1     
-managing sources               0.138     0.0       1     
-filtering sources              0.035     0.0       50    
+reading composite source model 0.233     0.0       1     
+managing sources               0.134     0.0       1     
+filtering sources              0.034     0.0       50    
 total count_eff_ruptures       0.017     0.0       50    
-aggregate curves               6.952E-04 0.0       50    
-store source_info              2.511E-04 0.0       1     
-reading site collection        3.195E-05 0.0       1     
+store source_info              0.003     0.0       1     
+aggregate curves               7.648E-04 0.0       50    
+reading site collection        4.196E-05 0.0       1     
 ============================== ========= ========= ======

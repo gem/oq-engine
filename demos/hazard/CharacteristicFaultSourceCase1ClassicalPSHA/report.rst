@@ -20,7 +20,7 @@ random_seed                  23
 master_seed                  0                  
 concurrent_tasks             40                 
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gite77b1a1'
+oqlite_version               '0.13.0-gitcefd831'
 ============================ ===================
 
 Input files
@@ -66,19 +66,31 @@ source_model     trt_id trt                  num_sources eff_ruptures weight
 source_model.xml 0      Active Shallow Crust 1           1            1.000 
 ================ ====== ==================== =========== ============ ======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =========
-Number of tasks to generate 9        
-Sent data                   297.44 KB
-=========================== =========
+Informational data
+------------------
+======================================== =================
+count_eff_ruptures_max_received_per_task 3917             
+count_eff_ruptures_sent.Monitor          33489            
+count_eff_ruptures_sent.RlzsAssoc        26100            
+count_eff_ruptures_sent.SiteCollection   224946           
+count_eff_ruptures_sent.WeightedSequence 19998            
+count_eff_ruptures_sent.int              53               
+count_eff_ruptures_tot_received          35253            
+hazard.input_weight                      1.0              
+hazard.n_imts                            9                
+hazard.n_levels                          21.88888888888889
+hazard.n_realizations                    1                
+hazard.n_sites                           9213             
+hazard.n_sources                         0                
+hazard.output_weight                     1814961.0        
+======================================== =================
 
 Slowest sources
 ---------------
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            1         CharacteristicFaultS 1.000  1         0.131       0.0        0.0      
+0            1         CharacteristicFaultS 1.000  1         0.026       0.0        0.0      
 ============ ========= ==================== ====== ========= =========== ========== =========
 
 Slowest operations
@@ -86,11 +98,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading site collection        2.050     0.0       1     
-managing sources               0.211     0.0       1     
-filtering sources              0.131     0.0       9     
-reading composite source model 0.009     0.0       1     
+reading site collection        1.175     0.0       1     
+managing sources               0.054     0.0       1     
+filtering sources              0.026     0.0       9     
+reading composite source model 0.005     0.0       1     
+store source_info              0.003     0.0       1     
 total count_eff_ruptures       0.003     0.0       9     
-store source_info              3.710E-04 0.0       1     
-aggregate curves               2.089E-04 0.0       9     
+aggregate curves               1.283E-04 0.0       9     
 ============================== ========= ========= ======

@@ -5,23 +5,24 @@ num_sites = 7, sitecol = 1015 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'classical_risk'  
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 200.0}
-investigation_time           50.0              
-ses_per_logic_tree_path      1                 
-truncation_level             3.0               
-rupture_mesh_spacing         2.0               
-complex_fault_mesh_spacing   2.0               
-width_of_mfd_bin             0.1               
-area_source_discretization   10.0              
-random_seed                  24                
-master_seed                  0                 
-concurrent_tasks             40                
-avg_losses                   False             
-sites_per_tile               1000              
-============================ ==================
+============================ ===================
+calculation_mode             'classical_risk'   
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           50.0               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         2.0                
+complex_fault_mesh_spacing   2.0                
+width_of_mfd_bin             0.1                
+area_source_discretization   10.0               
+random_seed                  24                 
+master_seed                  0                  
+concurrent_tasks             40                 
+avg_losses                   False              
+sites_per_tile               1000               
+oqlite_version               '0.13.0-gitcefd831'
+============================ ===================
 
 Input files
 -----------
@@ -92,14 +93,24 @@ source_model_2.xml 3      Stable Shallow Crust 1           1            1.000
 filtered_weight 969
 =============== ===
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =========
-Number of tasks to generate 30       
-Sent data                   401.74 KB
-Total received data         276.45 KB
-Maximum received per task   9.23 KB  
-=========================== =========
+Informational data
+------------------
+=============================== ======
+classical_max_received_per_task 9488  
+classical_sent.Monitor          123090
+classical_sent.RlzsAssoc        229180
+classical_sent.SiteCollection   17430 
+classical_sent.WeightedSequence 42706 
+classical_sent.int              150   
+classical_tot_received          284196
+hazard.input_weight             969.0 
+hazard.n_imts                   4     
+hazard.n_levels                 10.0  
+hazard.n_realizations           8     
+hazard.n_sites                  7     
+hazard.n_sources                0     
+hazard.output_weight            2240.0
+=============================== ======
 
 Exposure model
 --------------
@@ -121,10 +132,10 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            1         SimpleFaultSource    482    15        0.002       0.042      5.219    
-2            1         SimpleFaultSource    482    15        0.002       0.039      4.937    
-3            2         CharacteristicFaultS 1.000  1         0.001       0.0        0.034    
-1            2         SimpleFaultSource    4.000  1         0.002       0.0        0.029    
+0            1         SimpleFaultSource    482    15        0.002       0.040      5.009    
+2            1         SimpleFaultSource    482    15        0.001       0.040      4.730    
+3            2         CharacteristicFaultS 1.000  1         0.001       0.0        0.019    
+1            2         SimpleFaultSource    4.000  1         0.002       0.0        0.016    
 ============ ========= ==================== ====== ========= =========== ========== =========
 
 Slowest operations
@@ -132,22 +143,22 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total classical                10        3.352     30    
-making contexts                6.193     0.0       969   
-computing poes                 3.522     0.0       1,938 
-total classical_risk           0.817     0.336     11    
-computing individual risk      0.808     0.0       11    
-managing sources               0.157     0.0       1     
-splitting sources              0.081     0.0       2     
-combine and save curves_by_rlz 0.036     0.0       1     
+total classical                9.932     3.352     30    
+making contexts                5.976     0.0       969   
+computing poes                 3.349     0.0       1,938 
+total classical_risk           0.764     0.418     11    
+computing individual risk      0.753     0.0       11    
+managing sources               0.133     0.0       1     
+splitting sources              0.080     0.0       2     
+combine and save curves_by_rlz 0.030     0.0       1     
+compute and save statistics    0.024     0.0       1     
 reading composite source model 0.022     0.0       1     
-save curves_by_trt_gsim        0.020     0.0       1     
-compute and save statistics    0.019     0.0       1     
-filtering sources              0.007     0.0       4     
+save curves_by_trt_gsim        0.015     0.0       1     
+store source_info              0.011     0.0       1     
+filtering sources              0.006     0.0       4     
+getting hazard                 0.006     0.0       11    
 aggregate curves               0.006     0.0       30    
 reading exposure               0.005     0.0       1     
-store source_info              0.005     0.0       1     
-getting hazard                 0.005     0.0       11    
 building riskinputs            0.002     0.0       1     
-reading site collection        5.960E-06 0.0       1     
+reading site collection        7.868E-06 0.0       1     
 ============================== ========= ========= ======

@@ -59,13 +59,13 @@ Slowest operations
 ========================= ========= ========= ======
 operation                 time_sec  memory_mb counts
 ========================= ========= ========= ======
-computing individual risk 0.024     0.0       1     
+computing individual risk 0.025     0.0       1     
 filtering sites           0.009     0.0       1     
 reading exposure          0.003     0.0       1     
-computing gmfs            8.140E-04 0.0       1     
-saving gmfs               6.931E-04 0.0       1     
-assoc_assets_sites        5.341E-04 0.0       1     
+computing gmfs            8.209E-04 0.0       1     
+saving gmfs               7.050E-04 0.0       1     
+assoc_assets_sites        5.510E-04 0.0       1     
 reading site collection   1.080E-04 0.0       1     
-building riskinputs       9.394E-05 0.0       1     
-getting hazard            2.193E-05 0.0       1     
+building riskinputs       9.608E-05 0.0       1     
+getting hazard            1.597E-05 0.0       1     
 ========================= ========= ========= ======

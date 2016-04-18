@@ -59,6 +59,6 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.009     0.0       1     
 reading exposure        0.003     0.0       1     
-computing gmfs          6.089E-04 0.0       1     
-reading site collection 5.960E-06 0.0       1     
+computing gmfs          6.509E-04 0.0       1     
+reading site collection 6.914E-06 0.0       1     
 ======================= ========= ========= ======

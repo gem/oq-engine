@@ -74,20 +74,32 @@ source_model.xml 1      Stable Continental Crust 1           4,100        102
 filtered_weight 1,437
 =============== =====
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =======
-Number of tasks to generate 81     
-Sent data                   5.66 MB
-=========================== =======
+Informational data
+------------------
+======================================== =======
+count_eff_ruptures_max_received_per_task 2471   
+count_eff_ruptures_sent.Monitor          182574 
+count_eff_ruptures_sent.RlzsAssoc        273375 
+count_eff_ruptures_sent.SiteCollection   35397  
+count_eff_ruptures_sent.WeightedSequence 5439173
+count_eff_ruptures_sent.int              405    
+count_eff_ruptures_tot_received          200076 
+hazard.input_weight                      1436.5 
+hazard.n_imts                            1      
+hazard.n_levels                          19.0   
+hazard.n_realizations                    1      
+hazard.n_sites                           1      
+hazard.n_sources                         0      
+hazard.output_weight                     19.0   
+======================================== =======
 
 Slowest sources
 ---------------
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            2         SimpleFaultSource 1,334  1,334     0.003       0.476      0.0      
-1            1         AreaSource        102    205       0.002       0.099      0.0      
+0            2         SimpleFaultSource 1,334  1,334     0.001       0.211      0.0      
+1            1         AreaSource        102    205       7.410E-04   0.049      0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
 
 Slowest operations
@@ -95,12 +107,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.892     0.0       1     
-splitting sources              0.575     0.0       2     
-reading composite source model 0.120     0.0       1     
-total count_eff_ruptures       0.023     0.0       81    
-filtering sources              0.004     0.0       2     
-aggregate curves               0.002     0.0       81    
-store source_info              4.010E-04 0.0       1     
-reading site collection        5.102E-05 0.0       1     
+managing sources               0.414     0.0       1     
+splitting sources              0.260     0.0       2     
+reading composite source model 0.063     0.0       1     
+total count_eff_ruptures       0.029     0.0       81    
+store source_info              0.003     0.0       1     
+filtering sources              0.002     0.0       2     
+aggregate curves               9.005E-04 0.0       81    
+reading site collection        3.481E-05 0.0       1     
 ============================== ========= ========= ======

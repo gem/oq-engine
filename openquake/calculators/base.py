@@ -105,9 +105,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Update the current calculation parameters and save oqlite_version
         """
-        dic = dict(oqlite_version=__version__)
-        dic.update(kw)
-        self.datastore.save('oqparam', dic)
+        vars(self.oqparam).update(oqlite_version=__version__, **kw)
+        self.oqparam = self.oqparam  # save the updated oqparam
+        self.datastore.flush()
 
     def set_log_format(self):
         """Set the format of the root logger"""
@@ -335,8 +335,7 @@ class HazardCalculator(BaseCalculator):
                 self.init()
                 with self.monitor('managing sources', autoflush=True):
                     self.send_sources()
-                self.manager.store_source_info(
-                    self.datastore, self.core_task.__func__.__name__)
+                self.manager.store_source_info(self.datastore)
                 attrs = self.datastore.hdf5['composite_source_model'].attrs
                 attrs['weight'] = self.csm.weight
                 attrs['filtered_weight'] = self.csm.filtered_weight

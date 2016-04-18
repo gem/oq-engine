@@ -1,26 +1,27 @@
 Classical PSHA with Complex Fault Source
 ========================================
 
-num_sites = 1452, sitecol = 65.88 KB
+num_sites = 1452, sitecol = 65.93 KB
 
 Parameters
 ----------
-============================ =========
-calculation_mode             classical
-number_of_logic_tree_samples 0        
-maximum_distance             200      
-investigation_time           50       
-ses_per_logic_tree_path      1        
-truncation_level             3.000    
-rupture_mesh_spacing         5.000    
-complex_fault_mesh_spacing   5.000    
-width_of_mfd_bin             0.100    
-area_source_discretization   5.000    
-random_seed                  23       
-master_seed                  0        
-concurrent_tasks             16       
-sites_per_tile               1000     
-============================ =========
+============================ ===================
+calculation_mode             'classical'        
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           50.0               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         5.0                
+complex_fault_mesh_spacing   5.0                
+width_of_mfd_bin             0.1                
+area_source_discretization   5.0                
+random_seed                  23                 
+master_seed                  0                  
+concurrent_tasks             40                 
+sites_per_tile               1000               
+oqlite_version               '0.13.0-gitcefd831'
+============================ ===================
 
 Input files
 -----------
@@ -38,7 +39,7 @@ Composite source model
 ========= ====== ====================================== =============== ================
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations
 ========= ====== ====================================== =============== ================
-b1        1.00   `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
 ========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
@@ -65,17 +66,44 @@ source_model     trt_id trt                  num_sources eff_ruptures weight
 source_model.xml 0      Active Shallow Crust 1           924          924   
 ================ ====== ==================== =========== ============ ======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =======
-Number of tasks to generate 16     
-Sent data                   1.96 MB
-=========================== =======
+Informational data
+------------------
+======================================== =================
+count_eff_ruptures_max_received_per_task 3805             
+count_eff_ruptures_sent.Monitor          276507           
+count_eff_ruptures_sent.RlzsAssoc        220836           
+count_eff_ruptures_sent.SiteCollection   2716098          
+count_eff_ruptures_sent.WeightedSequence 1405151          
+count_eff_ruptures_sent.int              385              
+count_eff_ruptures_tot_received          292985           
+hazard.input_weight                      924.0            
+hazard.n_imts                            9                
+hazard.n_levels                          21.88888888888889
+hazard.n_realizations                    1                
+hazard.n_sites                           1452             
+hazard.n_sources                         0                
+hazard.output_weight                     286044.0         
+======================================== =================
 
 Slowest sources
 ---------------
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            1         ComplexFaultSource 924    924       0.004       11         0.0      
+0            1         ComplexFaultSource 924    924       0.003       4.065      0.0      
 ============ ========= ================== ====== ========= =========== ========== =========
+
+Slowest operations
+------------------
+============================== ======== ========= ======
+operation                      time_sec memory_mb counts
+============================== ======== ========= ======
+managing sources               4.259    0.0       1     
+splitting sources              4.065    0.0       1     
+reading site collection        0.203    0.0       1     
+reading composite source model 0.075    0.0       1     
+total count_eff_ruptures       0.027    0.0       77    
+store source_info              0.004    0.0       1     
+filtering sources              0.003    0.0       1     
+aggregate curves               0.002    0.0       77    
+============================== ======== ========= ======

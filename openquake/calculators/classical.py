@@ -286,10 +286,10 @@ class ClassicalCalculator(base.HazardCalculator):
         # store the information about received data
         received = self.manager.tm.received
         if received:
-            attrs = self.datastore['source_chunks'].attrs
-            attrs['max_received'] = max(received)
-            attrs['tot_received'] = sum(received)
-
+            tname = self.manager.tm.name
+            self.datastore.save('job_info', {
+                tname + '_max_received_per_task': max(received),
+                tname + '_tot_received': sum(received)})
         # then save the calculation times per each source
         calc_times = getattr(curves_by_trt_gsim, 'calc_times', [])
         if calc_times:

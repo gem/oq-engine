@@ -61,7 +61,7 @@ class ReportWriter(object):
         col_rlz_assocs='Collections <-> realizations',
         ruptures_per_trt='Number of ruptures per tectonic region type',
         rlzs_assoc='Realizations per (TRT, GSIM)',
-        source_data_transfer='Expected data transfer for the sources',
+        job_info='Informational data',
         biggest_ebr_gmf='Maximum memory allocated for the GMFs',
         avglosses_data_transfer='Estimated data transfer for the avglosses',
         exposure_info='Exposure model',
@@ -108,7 +108,7 @@ class ReportWriter(object):
         elif 'composite_source_model' in ds:
             self.add('ruptures_per_trt')
         if 'scenario' not in oq.calculation_mode:
-            self.add('source_data_transfer')
+            self.add('job_info')
         if oq.calculation_mode in ('event_based_risk',):
             self.add('biggest_ebr_gmf')
             self.add('avglosses_data_transfer')

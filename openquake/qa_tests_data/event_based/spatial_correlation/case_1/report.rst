@@ -64,21 +64,31 @@ source_model     trt_id trt                  num_sources eff_ruptures weight
 source_model.xml 0      Active Shallow Crust 1           1            0.025 
 ================ ====== ==================== =========== ============ ======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =========
-Number of tasks to generate 1        
-Sent data                   7.11 KB  
-Total received data         572.96 KB
-Maximum received per task   572.96 KB
-=========================== =========
+Informational data
+------------------
+====================================== ======
+compute_ruptures_max_received_per_task 586913
+compute_ruptures_sent.Monitor          2657  
+compute_ruptures_sent.RlzsAssoc        2912  
+compute_ruptures_sent.SiteCollection   461   
+compute_ruptures_sent.WeightedSequence 1293  
+compute_ruptures_sent.int              5     
+compute_ruptures_tot_received          586913
+hazard.input_weight                    0.025 
+hazard.n_imts                          1     
+hazard.n_levels                        0     
+hazard.n_realizations                  1     
+hazard.n_sites                         2     
+hazard.n_sources                       0     
+hazard.output_weight                   125.0 
+====================================== ======
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  0.025  1         1.380E-04   0.0        0.176    
+0            1         PointSource  0.025  1         1.099E-04   0.0        0.091    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -86,15 +96,16 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.176     0.320     1     
-saving ruptures                0.038     0.0       1     
-compute poes                   0.006     0.0       1     
+total compute_ruptures         0.092     0.391     1     
+saving ruptures                0.028     0.0       1     
+store source_info              0.010     0.0       1     
+compute poes                   0.008     0.0       1     
 reading composite source model 0.006     0.0       1     
-managing sources               0.003     0.0       1     
-saving gmfs                    0.002     0.0       1     
-store source_info              0.002     0.0       1     
+saving gmfs                    0.003     0.0       1     
+managing sources               0.002     0.0       1     
 aggregate curves               0.001     0.0       1     
-make contexts                  4.141E-04 0.0       1     
-filtering sources              1.380E-04 0.0       1     
-reading site collection        5.388E-05 0.0       1     
+filtering ruptures             5.560E-04 0.0       1     
+make contexts                  5.441E-04 0.0       1     
+filtering sources              1.099E-04 0.0       1     
+reading site collection        3.886E-05 0.0       1     
 ============================== ========= ========= ======

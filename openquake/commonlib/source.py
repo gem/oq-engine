@@ -1028,12 +1028,11 @@ class SourceManager(object):
             logging.info('Sent %d sources in %d block(s)',
                          len(sources), nblocks)
 
-    def store_source_info(self, dstore, task_name):
+    def store_source_info(self, dstore):
         """
         Save the `source_info` array and its attributes in the datastore.
 
         :param dstore: the datastore
-        :param task_name: the name of the task who is receiving the sources
         """
         if self.infos:
             values = self.infos.values()
@@ -1043,8 +1042,8 @@ class SourceManager(object):
             dstore['source_info'] = numpy.array(values, source_info_dt)
             attrs = dstore['source_info'].attrs
             attrs['maxweight'] = self.csm.maxweight
-            sent = '%s_sent' % task_name
-            dstore.save('job_info', {sent: self.tm.sent})
+            tname = self.tm.name
+            dstore.save('job_info', {tname + '_sent': self.tm.sent})
             self.infos.clear()
         if self.source_chunks:
             dstore['source_chunks'] = sc = numpy.array(
@@ -1052,7 +1051,7 @@ class SourceManager(object):
             attrs = dstore['source_chunks'].attrs
             attrs['nbytes'] = sc.nbytes
             attrs['sent'] = sc['sent'].sum()
-            attrs['task_name'] = task_name
+            attrs['task_name'] = tname
             del self.source_chunks
 
 

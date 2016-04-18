@@ -60,8 +60,8 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.006     0.0       1     
+filtering sites         0.007     0.0       1     
 reading exposure        0.003     0.0       1     
 computing gmfs          0.001     0.0       1     
-reading site collection 5.960E-06 0.0       1     
+reading site collection 6.914E-06 0.0       1     
 ======================= ========= ========= ======

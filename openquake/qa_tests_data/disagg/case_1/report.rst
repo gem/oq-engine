@@ -64,22 +64,34 @@ source_model     trt_id trt                  num_sources eff_ruptures weight
 source_model.xml 0      Active Shallow Crust 4           2,236        817   
 ================ ====== ==================== =========== ============ ======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =========
-Number of tasks to generate 30       
-Sent data                   313.48 KB
-=========================== =========
+Informational data
+------------------
+======================================== =======
+count_eff_ruptures_max_received_per_task 3079   
+count_eff_ruptures_sent.Monitor          85054  
+count_eff_ruptures_sent.RlzsAssoc        85730  
+count_eff_ruptures_sent.SiteCollection   13830  
+count_eff_ruptures_sent.WeightedSequence 135788 
+count_eff_ruptures_sent.int              150    
+count_eff_ruptures_tot_received          92343  
+hazard.input_weight                      817.375
+hazard.n_imts                            2      
+hazard.n_levels                          19.0   
+hazard.n_realizations                    1      
+hazard.n_sites                           2      
+hazard.n_sources                         0      
+hazard.output_weight                     76.0   
+======================================== =======
 
 Slowest sources
 ---------------
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            4         ComplexFaultSource 164    29        0.003       0.325      0.0      
-0            3         SimpleFaultSource  617    83        0.003       0.107      0.0      
-0            2         AreaSource         36     96        0.002       0.044      0.0      
-0            1         PointSource        0.375  1         1.962E-04   0.0        0.0      
+0            4         ComplexFaultSource 164    29        0.001       0.147      0.0      
+0            3         SimpleFaultSource  617    83        0.002       0.047      0.0      
+0            2         AreaSource         36     96        0.001       0.014      0.0      
+0            1         PointSource        0.375  1         1.080E-04   0.0        0.0      
 ============ ========= ================== ====== ========= =========== ========== =========
 
 Slowest operations
@@ -87,12 +99,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.835     0.0       1     
-splitting sources              0.476     0.0       3     
-reading composite source model 0.081     0.0       1     
-total count_eff_ruptures       0.008     0.0       30    
-filtering sources              0.007     0.0       4     
-aggregate curves               5.136E-04 0.0       30    
-store source_info              4.179E-04 0.0       1     
-reading site collection        6.008E-05 0.0       1     
+managing sources               0.249     0.0       1     
+splitting sources              0.208     0.0       3     
+reading composite source model 0.040     0.0       1     
+total count_eff_ruptures       0.010     0.0       30    
+filtering sources              0.004     0.0       4     
+store source_info              0.003     0.0       1     
+aggregate curves               3.676E-04 0.0       30    
+reading site collection        3.195E-05 0.0       1     
 ============================== ========= ========= ======

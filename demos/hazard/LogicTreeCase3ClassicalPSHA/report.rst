@@ -20,7 +20,7 @@ random_seed                  23
 master_seed                  0                  
 concurrent_tasks             40                 
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gite77b1a1'
+oqlite_version               '0.13.0-gitcefd831'
 ============================ ===================
 
 Input files
@@ -150,36 +150,48 @@ source_model.xml 17     Stable Continental Crust 1           6,150        153
 filtered_weight 13,204
 =============== ======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== ========
-Number of tasks to generate 90      
-Sent data                   50.05 MB
-=========================== ========
+Informational data
+------------------
+======================================== =========
+count_eff_ruptures_max_received_per_task 2648     
+count_eff_ruptures_sent.Monitor          218970   
+count_eff_ruptures_sent.RlzsAssoc        3072690  
+count_eff_ruptures_sent.SiteCollection   39330    
+count_eff_ruptures_sent.WeightedSequence 49148640 
+count_eff_ruptures_sent.int              450      
+count_eff_ruptures_tot_received          238241   
+hazard.input_weight                      13204.125
+hazard.n_imts                            1        
+hazard.n_levels                          19.0     
+hazard.n_realizations                    36       
+hazard.n_sites                           1        
+hazard.n_sources                         0        
+hazard.output_weight                     684.0    
+======================================== =========
 
 Slowest sources
 ---------------
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-16           2         SimpleFaultSource 1,344  1,344     0.003       0.825      0.0      
-10           2         SimpleFaultSource 1,344  1,344     0.003       0.758      0.0      
-4            2         SimpleFaultSource 1,344  1,344     0.003       0.758      0.0      
-2            2         SimpleFaultSource 1,339  1,339     0.003       0.583      0.0      
-14           2         SimpleFaultSource 1,339  1,339     0.003       0.582      0.0      
-8            2         SimpleFaultSource 1,339  1,339     0.003       0.576      0.0      
-0            2         SimpleFaultSource 1,334  1,334     0.003       0.521      0.0      
-12           2         SimpleFaultSource 1,334  1,334     0.003       0.496      0.0      
-6            2         SimpleFaultSource 1,334  1,334     0.003       0.476      0.0      
-1            1         AreaSource        102    1         0.002       0.0        0.0      
-9            1         AreaSource        128    1         0.001       0.0        0.0      
-3            1         AreaSource        128    1         0.001       0.0        0.0      
-17           1         AreaSource        153    1         0.001       0.0        0.0      
-11           1         AreaSource        153    1         0.001       0.0        0.0      
-5            1         AreaSource        153    1         0.001       0.0        0.0      
-13           1         AreaSource        102    1         0.001       0.0        0.0      
-7            1         AreaSource        102    1         0.001       0.0        0.0      
-15           1         AreaSource        128    1         0.001       0.0        0.0      
+16           2         SimpleFaultSource 1,344  1,344     0.001       0.360      0.0      
+10           2         SimpleFaultSource 1,344  1,344     0.001       0.354      0.0      
+4            2         SimpleFaultSource 1,344  1,344     0.001       0.333      0.0      
+14           2         SimpleFaultSource 1,339  1,339     0.001       0.258      0.0      
+8            2         SimpleFaultSource 1,339  1,339     0.001       0.258      0.0      
+2            2         SimpleFaultSource 1,339  1,339     0.001       0.257      0.0      
+0            2         SimpleFaultSource 1,334  1,334     0.002       0.231      0.0      
+12           2         SimpleFaultSource 1,334  1,334     0.001       0.210      0.0      
+6            2         SimpleFaultSource 1,334  1,334     0.001       0.209      0.0      
+1            1         AreaSource        102    1         8.039E-04   0.0        0.0      
+3            1         AreaSource        128    1         7.732E-04   0.0        0.0      
+9            1         AreaSource        128    1         6.979E-04   0.0        0.0      
+5            1         AreaSource        153    1         6.969E-04   0.0        0.0      
+15           1         AreaSource        128    1         6.959E-04   0.0        0.0      
+17           1         AreaSource        153    1         6.950E-04   0.0        0.0      
+11           1         AreaSource        153    1         6.940E-04   0.0        0.0      
+13           1         AreaSource        102    1         6.928E-04   0.0        0.0      
+7            1         AreaSource        102    1         6.800E-04   0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
 
 Slowest operations
@@ -187,12 +199,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               8.496     0.0       1     
-splitting sources              5.575     0.0       9     
-reading composite source model 1.037     0.0       1     
-filtering sources              0.039     0.0       18    
-total count_eff_ruptures       0.039     0.0       90    
-aggregate curves               0.002     0.0       90    
-store source_info              4.001E-04 0.0       1     
-reading site collection        6.199E-05 0.0       1     
+managing sources               3.527     0.0       1     
+splitting sources              2.469     0.0       9     
+reading composite source model 0.550     0.0       1     
+total count_eff_ruptures       0.038     0.004     90    
+filtering sources              0.019     0.0       18    
+store source_info              0.003     0.0       1     
+aggregate curves               0.001     0.0       90    
+reading site collection        4.387E-05 0.0       1     
 ============================== ========= ========= ======

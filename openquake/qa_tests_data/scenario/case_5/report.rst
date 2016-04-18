@@ -45,5 +45,5 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 computing gmfs          0.024     0.0       1     
 filtering sites         0.009     0.0       1     
-reading site collection 3.099E-05 0.0       1     
+reading site collection 4.196E-05 0.0       1     
 ======================= ========= ========= ======

@@ -5,22 +5,23 @@ num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'classical'       
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 200.0}
-investigation_time           1.0               
-ses_per_logic_tree_path      1                 
-truncation_level             0.0               
-rupture_mesh_spacing         0.01              
-complex_fault_mesh_spacing   0.01              
-width_of_mfd_bin             0.001             
-area_source_discretization   10.0              
-random_seed                  1066              
-master_seed                  0                 
-concurrent_tasks             40                
-sites_per_tile               1000              
-============================ ==================
+============================ ===================
+calculation_mode             'classical'        
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           1.0                
+ses_per_logic_tree_path      1                  
+truncation_level             0.0                
+rupture_mesh_spacing         0.01               
+complex_fault_mesh_spacing   0.01               
+width_of_mfd_bin             0.001              
+area_source_discretization   10.0               
+random_seed                  1066               
+master_seed                  0                  
+concurrent_tasks             40                 
+sites_per_tile               1000               
+oqlite_version               '0.13.0-gitcefd831'
+============================ ===================
 
 Input files
 -----------
@@ -80,21 +81,33 @@ source_model.xml 2      Active Shallow Crust 1           2,500        62
 filtered_weight 225  
 =============== =====
 
-Expected data transfer for the sources
---------------------------------------
-=========================== ========
-Number of tasks to generate 3       
-Sent data                   28.39 KB
-=========================== ========
+Informational data
+------------------
+======================================== =====
+count_eff_ruptures_max_received_per_task 2637 
+count_eff_ruptures_sent.Monitor          7179 
+count_eff_ruptures_sent.RlzsAssoc        17007
+count_eff_ruptures_sent.SiteCollection   1311 
+count_eff_ruptures_sent.WeightedSequence 3519 
+count_eff_ruptures_sent.int              15   
+count_eff_ruptures_tot_received          7911 
+hazard.input_weight                      225.0
+hazard.n_imts                            1    
+hazard.n_levels                          4.0  
+hazard.n_realizations                    3    
+hazard.n_sites                           1    
+hazard.n_sources                         0    
+hazard.output_weight                     12.0 
+======================================== =====
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  87     1         0.005       2.193E-05  0.0      
-1            1         PointSource  75     1         0.004       1.717E-05  0.0      
-2            1         PointSource  62     1         0.003       1.502E-05  0.0      
+0            1         PointSource  87     1         0.004       1.907E-05  0.0      
+1            1         PointSource  75     1         0.004       1.502E-05  0.0      
+2            1         PointSource  62     1         0.003       1.478E-05  0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -102,12 +115,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.023     0.0       1     
-managing sources               0.019     0.0       1     
-filtering sources              0.013     0.0       3     
-total count_eff_ruptures       7.613E-04 0.0       3     
-store source_info              4.799E-04 0.0       1     
-aggregate curves               1.142E-04 0.0       3     
-splitting sources              5.412E-05 0.0       3     
-reading site collection        4.411E-05 0.0       1     
+reading composite source model 0.019     0.0       1     
+managing sources               0.017     0.0       1     
+filtering sources              0.011     0.0       3     
+store source_info              0.004     0.0       1     
+total count_eff_ruptures       0.001     0.0       3     
+aggregate curves               6.700E-05 0.0       3     
+splitting sources              4.888E-05 0.0       3     
+reading site collection        3.409E-05 0.0       1     
 ============================== ========= ========= ======

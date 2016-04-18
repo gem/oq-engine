@@ -334,11 +334,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Save information about the data transfer in the risk calculation
         as attributes of agg_loss_table
         """
-        self.datastore.set_attrs(
-            'agg_loss_table',
-            sent=taskmanager.sent,
-            max_received=max(taskmanager.received),
-            tot_received=sum(taskmanager.received))
+        tname = taskmanager.name
+        self.datastore.save('job_info', {
+            tname + '_sent': taskmanager.sent,
+            tname + '_max_received_per_task': max(taskmanager.received),
+            tname + '_tot_received': sum(taskmanager.received)})
 
     def agg(self, acc, result):
         """

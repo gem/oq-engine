@@ -87,14 +87,24 @@ models/src/fsbg_model.xml 9      Active Shallow Crust 26          11           6
 filtered_weight 8,687
 =============== =====
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =========
-Number of tasks to generate 18       
-Sent data                   20.16 MB 
-Total received data         180.89 KB
-Maximum received per task   24.47 KB 
-=========================== =========
+Informational data
+------------------
+====================================== ========
+compute_ruptures_max_received_per_task 25290   
+compute_ruptures_sent.Monitor          101952  
+compute_ruptures_sent.RlzsAssoc        3807216 
+compute_ruptures_sent.SiteCollection   22572   
+compute_ruptures_sent.WeightedSequence 17203491
+compute_ruptures_sent.int              90      
+compute_ruptures_tot_received          189091  
+hazard.input_weight                    67809.2 
+hazard.n_imts                          2       
+hazard.n_levels                        45.5    
+hazard.n_realizations                  684     
+hazard.n_sites                         14      
+hazard.n_sources                       0       
+hazard.output_weight                   1915.2  
+====================================== ========
 
 Exposure model
 --------------
@@ -122,26 +132,26 @@ Slowest sources
 ============ ============ ================= ====== ========= =========== ========== =========
 trt_model_id source_id    source_class      weight split_num filter_time split_time calc_time
 ============ ============ ================= ====== ========= =========== ========== =========
-5            AS_GEAS343   AreaSource        625    1         0.001       0.0        5.750    
-9            FSBG_TRBG103 AreaSource        282    1         0.001       0.0        2.891    
-5            AS_TRAS334   AreaSource        244    1         0.001       0.0        2.256    
-5            AS_TRAS360   AreaSource        182    1         7.479E-04   0.0        1.866    
-5            AS_AMAS453   AreaSource        175    1         0.001       0.0        1.809    
-5            AS_TRAS346   AreaSource        154    1         8.910E-04   0.0        1.405    
-5            AS_TRAS395   AreaSource        122    1         7.451E-04   0.0        1.146    
-5            AS_TRAS458   AreaSource        121    1         7.360E-04   0.0        1.113    
-5            AS_GEAS479   AreaSource        72     1         0.001       0.0        0.811    
-5            AS_TRAS410   AreaSource        81     1         7.269E-04   0.0        0.746    
-9            FSBG_TRBG989 AreaSource        33     1         7.579E-04   0.0        0.323    
-9            FSBG_TRCS439 SimpleFaultSource 392    1         0.002       0.0        0.177    
-9            FSBG_TRCS114 SimpleFaultSource 958    1         0.002       0.0        0.145    
-9            FSBG_TRCS003 SimpleFaultSource 2,026  1,854     0.007       0.834      0.139    
-9            FSBG_TRCS113 SimpleFaultSource 413    1         0.002       0.0        0.111    
-9            FSBG_TRCS082 SimpleFaultSource 412    1         0.002       0.0        0.105    
-9            FSBG_TRCS322 SimpleFaultSource 374    1         0.002       0.0        0.081    
-9            FSBG_TRCS437 SimpleFaultSource 390    1         0.002       0.0        0.065    
-9            FSBG_TRCS373 SimpleFaultSource 130    1         0.002       0.0        0.063    
-9            FSBG_TRCS141 SimpleFaultSource 248    1         0.002       0.0        0.061    
+5            AS_GEAS343   AreaSource        625    1         0.002       0.0        5.954    
+9            FSBG_TRBG103 AreaSource        282    1         0.001       0.0        2.800    
+5            AS_TRAS334   AreaSource        244    1         0.001       0.0        2.291    
+5            AS_AMAS453   AreaSource        175    1         0.001       0.0        1.885    
+5            AS_TRAS360   AreaSource        182    1         7.150E-04   0.0        1.758    
+5            AS_TRAS346   AreaSource        154    1         8.411E-04   0.0        1.358    
+5            AS_TRAS395   AreaSource        122    1         7.401E-04   0.0        1.090    
+5            AS_TRAS458   AreaSource        121    1         7.241E-04   0.0        1.064    
+5            AS_GEAS479   AreaSource        72     1         0.001       0.0        0.854    
+5            AS_TRAS410   AreaSource        81     1         7.460E-04   0.0        0.713    
+9            FSBG_TRBG989 AreaSource        33     1         7.498E-04   0.0        0.311    
+9            FSBG_TRCS114 SimpleFaultSource 958    1         0.002       0.0        0.212    
+9            FSBG_TRCS003 SimpleFaultSource 2,026  1,854     0.004       0.814      0.152    
+9            FSBG_TRCS113 SimpleFaultSource 413    1         0.002       0.0        0.143    
+9            FSBG_TRCS439 SimpleFaultSource 392    1         0.002       0.0        0.128    
+9            FSBG_TRCS082 SimpleFaultSource 412    1         0.002       0.0        0.093    
+9            FSBG_TRCS437 SimpleFaultSource 390    1         0.002       0.0        0.089    
+9            FSBG_TRCS141 SimpleFaultSource 248    1         0.002       0.0        0.072    
+9            FSBG_TRCS322 SimpleFaultSource 374    1         0.002       0.0        0.065    
+9            FSBG_TRCS068 SimpleFaultSource 308    1         0.002       0.0        0.056    
 ============ ============ ================= ====== ========= =========== ========== =========
 
 Slowest operations
@@ -149,20 +159,21 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         21        0.359     18    
-reading composite source model 9.071     0.0       1     
-managing sources               1.846     0.0       1     
-splitting sources              0.834     0.0       1     
-total compute_gmfs_and_curves  0.386     0.062     36    
-filtering sources              0.239     0.0       155   
-bulding hazard curves          0.193     0.0       36    
-compute poes                   0.132     0.0       36    
-aggregating hcurves            0.074     0.0       144   
+total compute_ruptures         21        0.367     18    
+reading composite source model 8.885     0.0       1     
+managing sources               1.763     0.0       1     
+splitting sources              0.814     0.0       1     
+total compute_gmfs_and_curves  0.418     0.004     36    
+filtering sources              0.224     0.0       155   
+bulding hazard curves          0.210     0.0       36    
+compute poes                   0.145     0.0       36    
+aggregating hcurves            0.076     0.0       144   
+store source_info              0.045     0.0       1     
 make contexts                  0.044     0.0       36    
-store source_info              0.039     0.0       1     
-saving gmfs                    0.033     0.0       36    
-aggregate curves               0.013     0.0       162   
+saving gmfs                    0.034     0.0       36    
+saving ruptures                0.014     0.0       1     
+aggregate curves               0.012     0.0       162   
+filtering ruptures             0.012     0.0       53    
 reading exposure               0.009     0.0       1     
-saving ruptures                0.009     0.0       1     
-reading site collection        6.914E-06 0.0       1     
+reading site collection        9.060E-06 0.0       1     
 ============================== ========= ========= ======
