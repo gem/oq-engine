@@ -61,5 +61,7 @@ if __name__ == "__main__":
     else:
         # check the database version
         logs.dbcmd('check_outdated')
+        # reset is_running
+        logs.dbcmd('reset_is_running')
     with executor:
         execute_from_command_line(argv)
