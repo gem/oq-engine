@@ -362,8 +362,7 @@ def submit_job(job_ini, user_name, hazard_job_id=None,
     Create a job object from the given job.ini file in the job directory
     and submit it to the job queue. Returns the job ID.
     """
-    job_id, oqparam = actions.job_from_file(
-        job_ini, user_name, hazard_job_id)
+    job_id, oqparam = engine.job_from_file(job_ini, user_name, hazard_job_id)
     fut = executor.submit(engine.run_calc, job_id, oqparam, loglevel,
                           logfile, exports, hazard_job_id)
     return job_id, fut

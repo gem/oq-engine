@@ -103,7 +103,7 @@ def run_job(cfg, exports='xml,csv', hazard_calculation_id=None, **params):
 
     :returns: a calculator object
     """
-    job_id, oqparam = actions.job_from_file(
+    job_id, oqparam = engine.job_from_file(
         cfg, 'openquake', 'error', [], hazard_calculation_id, **params)
     logfile = os.path.join(tempfile.gettempdir(), 'qatest.log')
     return engine.run_calc(job_id, oqparam, 'error', logfile, exports)
