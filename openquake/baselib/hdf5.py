@@ -85,7 +85,7 @@ def extend(dset, array):
 
 class LiteralAttrs(object):
     """
-    A class to serialize a set of parameters to HDF5. The goal is to
+    A class to serialize a set of parameters in HDF5 format. The goal is to
     store simple parameters as an HDF5 table in a readable way. Each
     parameter can be retrieved as an attribute, given its name. The
     implementation treats specially dictionary attributes, by storing
@@ -149,9 +149,8 @@ class LiteralAttrs(object):
 class PickleableSequence(collections.Sequence):
     """
     An immutable sequence of pickleable objects that can be serialized
-    into HDF5 format as an array of variable-length bytes. Here is an
-    example, using the LiteralAttrs class defined in this module, but
-    any class would do:
+    in HDF5 format. Here is an example, using the LiteralAttrs class defined
+    in this module, but any pickleable class would do:
 
     >>> seq = PickleableSequence([LiteralAttrs(), LiteralAttrs()])
     >>> with File('/tmp/x.h5', 'w') as f:
