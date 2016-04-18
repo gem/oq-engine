@@ -1,3 +1,6 @@
+  [Matteo Nastasi]
+  * Backport of libhdf5 and h5py for ubuntu 'precise' serie
+
   [Michele Simionato]
   * Introduced filtering on the minimum intensity of the GMF
   * Solved the issue of serializing large SES collections, over the HDF5 limit
