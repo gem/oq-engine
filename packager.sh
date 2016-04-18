@@ -285,38 +285,6 @@ _builddoc_innervm_run () {
     return
 }
 
-deps_list_old() {
-    local oldifs out_list i filename="$1" build_only="$2"
-
-    oldifs="$IFS"
-    IFS=','
-    out_list=""
-    if [ "$build_only" = "y" ]; then
-        i_all="$(cat "$filename" | grep "^Build-Depends:" | sed 's/^Build-Depends: //g')"
-    else
-        i_all="$(cat "$filename" | grep "^\(Build-\)\?Depends:" | sed 's/^\(Build-\)\?Depends: //g')"
-    fi
-    for i in $i_all ; do
-        item="$(echo "$i" |  sed 's/^ \+//g;s/ \+$//g')"
-        pkg_name="$(echo "${item} " | cut -d ' ' -f 1)"
-        pkg_vers="$(echo "${item} " | cut -d ' ' -f 2)"
-        echo "[$pkg_name][$pkg_vers]" >&2
-        if echo "$pkg_name" | grep -q "^\${" ; then
-            continue
-        fi
-        if [ "$out_list" == "" ]; then
-            out_list="$pkg_name"
-        else
-            out_list="$out_list $pkg_name"
-        fi
-    done
-    IFS="$oldifs"
-
-    echo "$out_list"
-
-    return 0
-}
-
 #
 #  deps_list <listtype> <filename> - retrieve dependencies list from debian/control and debian/rules
 #                                    to be able to install them without the package
