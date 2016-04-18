@@ -21,7 +21,7 @@ import pydoc
 import collections
 import numpy
 import h5py
-
+from openquake.baselib.python3compat import pickle
 
 vbytes = h5py.special_dtype(vlen=bytes)
 
@@ -85,7 +85,7 @@ def extend(dset, array):
 
 class LiteralAttrs(object):
     """
-    A class to serialize a set of parameters to HDF5. The goal is to
+    A class to serialize a set of parameters in HDF5 format. The goal is to
     store simple parameters as an HDF5 table in a readable way. Each
     parameter can be retrieved as an attribute, given its name. The
     implementation treats specially dictionary attributes, by storing
@@ -139,6 +139,55 @@ class LiteralAttrs(object):
             else:
                 dd[name] = ast.literal_eval(literal)
         vars(self).update(dd)
+
+    def __repr__(self):
+        names = sorted(n for n in vars(self) if not n.startswith('_'))
+        nameval = ', '.join('%s=%r' % (n, getattr(self, n)) for n in names)
+        return '<%s %s>' % (self.__class__.__name__, nameval)
+
+
+# the implementation below stores a dataset per each object; it would be nicer
+# to store an array, however I am not able to do that with the current version
+# of h5py; the best I could do is to store an array of variable length ASCII
+# strings, but then I would have to use the ASCII format of pickle, which is
+# the least efficient. The current solution looks like a decent compromise.
+class PickleableSequence(collections.Sequence):
+    """
+    An immutable sequence of pickleable objects that can be serialized
+    in HDF5 format. Here is an example, using the LiteralAttrs class defined
+    in this module, but any pickleable class would do:
+
+    >>> seq = PickleableSequence([LiteralAttrs(), LiteralAttrs()])
+    >>> with File('/tmp/x.h5', 'w') as f:
+    ...     f['data'] = seq
+    >>> with File('/tmp/x.h5') as f:
+    ...     f['data']
+    (<LiteralAttrs >, <LiteralAttrs >)
+    """
+    def __init__(self, objects):
+        self._objects = tuple(objects)
+
+    def __getitem__(self, i):
+        return self._objects[i]
+
+    def __len__(self):
+        return len(self._objects)
+
+    def __repr__(self):
+        return repr(self._objects)
+
+    def __toh5__(self):
+        dic = {}
+        nbytes = 0
+        for i, obj in enumerate(self._objects):
+            pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+            dic['%06d' % i] = numpy.array(pik)
+            nbytes += len(pik)
+        return dic, dict(nbytes=nbytes)
+
+    def __fromh5__(self, dic, attrs):
+        self._objects = tuple(pickle.loads(dic[k].value) for k in sorted(dic))
+        vars(self).update(attrs)
 
 
 class File(h5py.File):
