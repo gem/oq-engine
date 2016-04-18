@@ -237,26 +237,6 @@ def get_outputs(job_id):
     """
     return models.Output.objects.filter(oq_job=job_id)
 
-
-@db.transaction.atomic
-def job_from_file(cfg_file, username, hazard_calculation_id=None):
-    """
-    Create a full job profile from a job config file.
-
-    :param str cfg_file:
-        Path to a job.ini file.
-    :param str username:
-        The user who will own this job profile and all results.
-    :param hazard_calculation_id:
-        ID of a previous calculation or None
-    :returns:
-        a pair (job_id, oqparam)
-    """
-    oq = readinput.get_oqparam(cfg_file)
-    job_id = create_job(oq.calculation_mode, oq.description,
-                        username, hazard_calculation_id)
-    return job_id, oq
-
 DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset_and_collapse_map')
 
 

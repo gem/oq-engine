@@ -23,7 +23,7 @@ import sys
 import traceback
 
 from openquake.baselib.performance import Monitor
-from openquake.commonlib import valid, parallel
+from openquake.commonlib import valid, parallel, readinput
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import export
 from openquake.calculators import base, views
@@ -92,6 +92,25 @@ def expose_outputs(dstore):
                 continue  # do not export a single realization
             outkeys.append(key)
     logs.dbcmd('create_outputs', dstore.calc_id, outkeys)
+
+
+def job_from_file(cfg_file, username, hazard_calculation_id=None):
+    """
+    Create a full job profile from a job config file.
+
+    :param str cfg_file:
+        Path to a job.ini file.
+    :param str username:
+        The user who will own this job profile and all results.
+    :param hazard_calculation_id:
+        ID of a previous calculation or None
+    :returns:
+        a pair (job_id, oqparam)
+    """
+    oq = readinput.get_oqparam(cfg_file)
+    job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
+                        username, hazard_calculation_id)
+    return job_id, oq
 
 
 def run_calc(job_id, oqparam, log_level, log_file, exports,
