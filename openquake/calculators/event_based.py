@@ -466,17 +466,21 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
             self.datastore.set_attrs(
                 'etags',
                 num_ruptures=numpy.array([len(sc) for sc in sescollection]))
+            nbytes = 0
             for i, sescol in enumerate(sescollection):
                 for ebr in sescol:
                     ebr.eids = numpy.array(
                         [etag2eid[etag] for etag in ebr.etags], U32)
                 nr = len(sescol)
-                logging.info('Saving SES collection #%d with %d ruptures',
-                             i, nr)
-                key = 'sescollection/trt=%02d' % i
-                self.datastore[key] = sorted(
-                    sescol, key=operator.attrgetter('serial'))
-                self.datastore.set_attrs(key, num_ruptures=nr, trt_model_id=i)
+                if nr:
+                    logging.info('Saving SES collection #%d with %d ruptures',
+                                 i, nr)
+                    key = 'sescollection/trt=%02d' % i
+                    self.datastore[key] = hdf5.PickleableSequence(
+                        sorted(sescol, key=operator.attrgetter('serial')))
+                    nbytes += self.datastore.getsize(key)
+                    self.datastore.set_attrs(key, trt_model_id=i)
+            self.datastore.set_nbytes('sescollection', nbytes)
         for dset in self.rup_data.values():
             numsites = dset.dset['numsites']
             multiplicity = dset.dset['multiplicity']
@@ -594,7 +598,10 @@ class EventBasedCalculator(ClassicalCalculator):
         super(EventBasedCalculator, self).pre_execute()
         self.sesruptures = []
         for trt_id in range(self.rlzs_assoc.csm_info.num_collections):
-            sescol = self.datastore['sescollection/trt=%02d' % trt_id]
+            try:
+                sescol = self.datastore['sescollection/trt=%02d' % trt_id]
+            except KeyError:  # empty collections are missing
+                continue
             self.sesruptures.extend(sescol)
         self.gmv_dt = calc.gmf.gmv_dt(self.oqparam.imtls)
         if self.oqparam.ground_motion_fields:

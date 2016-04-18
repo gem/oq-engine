@@ -92,15 +92,14 @@ def export_ses_xml(ekey, dstore):
         csm_info = dstore['rlzs_assoc'].csm_info
     except AttributeError:  # for scenario calculators don't export
         return []
-    col_id = 0
     mesh = dstore['sitemesh'].value
     ruptures = []
     for sm in csm_info.source_models:
         for trt_model in sm.trt_models:
             colkey = 'sescollection/trt=%02d' % trt_model.id
-            for sr in dstore[colkey]:
-                ruptures.extend(sr.export(mesh))
-            col_id += 1
+            if colkey in dstore:
+                for sr in dstore[colkey]:
+                    ruptures.extend(sr.export(mesh))
     ses_coll = SESCollection(
         groupby(ruptures, operator.attrgetter('ses_idx')),
         oq.investigation_time)
