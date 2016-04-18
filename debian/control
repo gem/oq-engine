@@ -10,7 +10,7 @@ Homepage: http://github.com/gem/oq-risklib
 
 Package: python-oq-risklib
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, python-scipy, python-numpy, python-psutil, python-concurrent.futures, python-oq-hazardlib (>= 0.20.0-0~), python-h5py (>= 2.2.1), python-mock, python-setuptools, python-nose, python-decorator, python-prctl
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${dist:Depends}, python-scipy, python-numpy, python-psutil, python-concurrent.futures, python-oq-hazardlib (>= 0.20.0-0~), python-mock, python-setuptools, python-nose, python-decorator, python-prctl
 Provides: python-oq-commonlib
 Conflicts: python-oq-commonlib
 Replaces: python-oq-commonlib

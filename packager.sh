@@ -272,7 +272,7 @@ _devtest_innervm_run () {
     IFS=" "
     for dep in $GEM_GIT_DEPS; do
         # extract dependencies for source dependencies
-        pkgs_list="$(deps_list "deprec" _jenkins_deps/$dep/debian/control)"
+        pkgs_list="$(deps_list "deprec" _jenkins_deps/$dep/debian)"
         ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
         # install source dependencies
@@ -283,7 +283,7 @@ _devtest_innervm_run () {
     IFS="$old_ifs"
 
     # extract dependencies for this package
-    pkgs_list="$(deps_list "all" debian/control)"
+    pkgs_list="$(deps_list "all" debian)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
     # build oq-hazardlib speedups and put in the right place
@@ -344,7 +344,7 @@ _builddoc_innervm_run () {
     IFS=" "
     for dep in $GEM_GIT_DEPS; do
         # extract dependencies for source dependencies
-        pkgs_list="$(deps_list "build" _jenkins_deps/$dep/debian/control)"
+        pkgs_list="$(deps_list "build" _jenkins_deps/$dep/debian)"
         ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
         # install source dependencies
@@ -355,7 +355,7 @@ _builddoc_innervm_run () {
     IFS="$old_ifs"
 
     # extract dependencies for this package
-    pkgs_list="$(deps_list "all" debian/control)"
+    pkgs_list="$(deps_list "all" debian)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
     # build oq-hazardlib speedups and put in the right place
@@ -532,23 +532,26 @@ _pkgtest_innervm_run () {
 }
 
 #
-#  deps_list <listtype> <filename> - retrieve dependencies list from debian/control
+#  deps_list <listtype> <filename> - retrieve dependencies list from debian/control and debian/rules
 #                                    to be able to install them without the package
 #      listtype    inform deps_list which control lines use to get dependencies
 #      filename    control file used for input
 #
 deps_list() {
-    local old_ifs out_list skip i d listtype="$1" filename="$2"
+    local old_ifs out_list skip i d listtype="$1" control_file="$2"/control rules_file="$2"/rules
+
+    rules_dep=$(grep "^${BUILD_UBUVER^^}_DEP *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+    rules_rec=$(grep "^${BUILD_UBUVER^^}_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
 
     out_list=""
     if [ "$listtype" = "all" ]; then
-        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' | tr '\n' ',')"
+        in_list="$((cat "$control_file" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' ; echo ", $rules_dep, $rules_rec") | tr '\n' ','| sed 's/,\+/,/g')"
     elif [  "$listtype" = "deprec" ]; then
-        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' | tr '\n' ',')"
+        in_list="$((cat "$control_file" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' ; echo ", $rules_dep, $rules_rec") | tr '\n' ','| sed 's/,\+/,/g')"
     elif [  "$listtype" = "build" ]; then
-        in_list="$(cat "$filename" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' | tr '\n' ',')"
+        in_list="$((cat "$control_file" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' ; echo ", $rules_dep") | tr '\n' ','| sed 's/,\+/,/g')"
     else
-        in_list="$(cat "$filename" | egrep "^Depends:" | sed 's/^Depends: //g')"
+        in_list="$((cat "$control_file" | egrep "^Depends:" | sed 's/^Depends: //g'; echo ", $rules_dep") | tr '\n' ','| sed 's/,\+/,/g')"
     fi
 
     old_ifs="$IFS"
