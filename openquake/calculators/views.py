@@ -356,8 +356,10 @@ def view_portfolio_loss(token, dstore):
     oq = dstore['oqparam']
     agg_loss_table = dstore['agg_loss_table']
     data = numpy.zeros(len(agg_loss_table), oq.loss_dt())
+    rlzids = []
     for rlz, dset in dstore['agg_loss_table'].items():
         rlzi = int(rlz.split('-')[1])  # rlz-000 -> 0 etc
+        rlzids.append(rlzi)
         for loss_type, losses in dset.items():
             loss = losses['loss'].sum(axis=0)
             if loss.shape == (2,):
@@ -365,7 +367,9 @@ def view_portfolio_loss(token, dstore):
                 data[rlzi][loss_type + '_ins'] = loss[1]
             else:
                 data[rlzi][loss_type] = loss
-    return rst_table(data, fmt='%.6E')
+    array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
+    # this is very sensitive to rounding errors, so I a using a low precision
+    return rst_table(array, fmt='%.5E')
 
 
 def sum_table(records):
