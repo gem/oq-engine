@@ -365,7 +365,8 @@ def view_portfolio_loss(token, dstore):
                 data[rlzi][loss_type + '_ins'] = loss[1]
             else:
                 data[rlzi][loss_type] = loss
-    return rst_table(data, fmt='%.6E')
+    # this is very sensitive to rounding errors, so I a using a low precision
+    return rst_table(data, fmt='%.5E')
 
 
 def sum_table(records):
