@@ -1,26 +1,27 @@
 Classical PSHA with non-trivial logic tree (1 source model + absolute uncertainties on G-R a and b values and maximum magnitude and 2 GMPEs per tectonic region type)
 =====================================================================================================================================================================
 
-num_sites = 1, sitecol = 684 B
+num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ =========
-calculation_mode             classical
-number_of_logic_tree_samples 0        
-maximum_distance             200      
-investigation_time           50       
-ses_per_logic_tree_path      1        
-truncation_level             3.000    
-rupture_mesh_spacing         2.000    
-complex_fault_mesh_spacing   2.000    
-width_of_mfd_bin             0.100    
-area_source_discretization   5.000    
-random_seed                  23       
-master_seed                  0        
-concurrent_tasks             16       
-sites_per_tile               1000     
-============================ =========
+============================ ===================
+calculation_mode             'classical'        
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           50.0               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         2.0                
+complex_fault_mesh_spacing   2.0                
+width_of_mfd_bin             0.1                
+area_source_discretization   5.0                
+random_seed                  23                 
+master_seed                  0                  
+concurrent_tasks             40                 
+sites_per_tile               1000               
+oqlite_version               '0.13.0-gite77b1a1'
+============================ ===================
 
 Input files
 -----------
@@ -35,91 +36,91 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-=================== ================ ====================================== =============== ================
-smlt_path           weight           source_model_file                      gsim_logic_tree num_realizations
-=================== ================ ====================================== =============== ================
-b11_b21_b31_b41_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b31_b41_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b31_b41_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b31_b42_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b31_b42_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b31_b42_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b31_b43_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b31_b43_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b31_b43_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b32_b41_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b32_b41_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b32_b41_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b32_b42_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b32_b42_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b32_b42_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b32_b43_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b32_b43_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b32_b43_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b33_b41_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b33_b41_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b33_b41_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b33_b42_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b33_b42_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b33_b42_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b33_b43_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b33_b43_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b21_b33_b43_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b31_b41_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b31_b41_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b31_b41_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b31_b42_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b31_b42_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b31_b42_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b31_b43_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b31_b43_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b31_b43_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b32_b41_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b32_b41_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b32_b41_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b32_b42_b51 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b32_b42_b52 0.01229637032100 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b32_b42_b53 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b32_b43_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b32_b43_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b32_b43_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b33_b41_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b33_b41_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b33_b41_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b33_b42_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b33_b42_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b33_b42_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b33_b43_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b33_b43_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b22_b33_b43_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b31_b41_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b31_b41_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b31_b41_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b31_b42_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b31_b42_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b31_b42_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b31_b43_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b31_b43_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b31_b43_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b32_b41_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b32_b41_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b32_b41_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b32_b42_b51 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b32_b42_b52 0.01233329635800 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b32_b42_b53 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b32_b43_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b32_b43_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b32_b43_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b33_b41_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b33_b41_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b33_b41_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b33_b42_b51 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b33_b42_b52 0.01237033328400 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b33_b42_b53 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b33_b43_b51 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b33_b43_b52 0.01240748143200 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-b11_b23_b33_b43_b53 0.01244474113600 `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
-=================== ================ ====================================== =============== ================
+=================== ====== ====================================== =============== ================
+smlt_path           weight source_model_file                      gsim_logic_tree num_realizations
+=================== ====== ====================================== =============== ================
+b11_b21_b31_b41_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b41_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b41_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b42_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b42_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b42_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b43_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b43_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b31_b43_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b41_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b41_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b41_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b42_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b42_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b42_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b43_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b43_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b32_b43_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b41_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b41_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b41_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b42_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b42_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b42_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b43_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b43_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b21_b33_b43_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b41_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b41_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b41_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b42_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b42_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b42_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b43_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b43_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b31_b43_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b41_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b41_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b41_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b42_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b42_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b42_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b43_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b43_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b32_b43_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b41_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b41_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b41_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b42_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b42_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b42_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b43_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b43_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b22_b33_b43_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b41_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b41_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b41_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b42_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b42_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b42_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b43_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b43_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b31_b43_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b41_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b41_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b41_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b42_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b42_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b42_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b43_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b43_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b32_b43_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b41_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b41_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b41_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b42_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b42_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b42_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b43_b51 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b43_b52 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+b11_b23_b33_b43_b53 0.012  `source_model.xml <source_model.xml>`_ complex(2,2)    4/4             
+=================== ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -801,7 +802,7 @@ Expected data transfer for the sources
 --------------------------------------
 =========================== ========
 Number of tasks to generate 162     
-Sent data                   49.87 MB
+Sent data                   49.96 MB
 =========================== ========
 
 Slowest sources
@@ -809,24 +810,38 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            2         SimpleFaultSource 1,334  1         0.002       0.0        0.0      
-144          2         SimpleFaultSource 1,334  1         0.002       0.0        0.0      
-100          2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
+0            2         SimpleFaultSource 1,334  1         0.003       0.0        0.0      
+86           2         SimpleFaultSource 1,337  1         0.003       0.0        0.0      
+88           2         SimpleFaultSource 1,339  1         0.003       0.0        0.0      
 2            2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
-26           2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
-98           2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
-102          2         SimpleFaultSource 1,334  1         0.002       0.0        0.0      
-92           2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
-90           2         SimpleFaultSource 1,334  1         0.002       0.0        0.0      
-146          2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
-132          2         SimpleFaultSource 1,334  1         0.002       0.0        0.0      
-160          2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
-96           2         SimpleFaultSource 1,334  1         0.002       0.0        0.0      
-104          2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
+22           2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
+16           2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
+138          2         SimpleFaultSource 1,334  1         0.002       0.0        0.0      
+150          2         SimpleFaultSource 1,334  1         0.002       0.0        0.0      
+58           2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
+14           2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
+64           2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
 4            2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
-78           2         SimpleFaultSource 1,334  1         0.002       0.0        0.0      
-112          2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
-114          2         SimpleFaultSource 1,334  1         0.002       0.0        0.0      
-20           2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
-82           2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
+136          2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
+66           2         SimpleFaultSource 1,334  1         0.002       0.0        0.0      
+76           2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
+160          2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
+134          2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
+50           2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
+56           2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
+70           2         SimpleFaultSource 1,339  1         0.002       0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+managing sources               15        0.0       1     
+reading composite source model 9.320     0.0       1     
+filtering sources              0.312     0.0       162   
+total count_eff_ruptures       0.215     0.012     162   
+aggregate curves               0.004     0.0       162   
+store source_info              3.850E-04 0.0       1     
+reading site collection        5.293E-05 0.0       1     
+============================== ========= ========= ======

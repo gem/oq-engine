@@ -105,7 +105,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Update the current calculation parameters and save oqlite_version
         """
-        vars(self.oqparam).update(oqlite_version=repr(__version__), **kw)
+        vars(self.oqparam).update(oqlite_version=__version__, **kw)
         self.oqparam = self.oqparam  # save the updated oqparam
         self.datastore.hdf5.flush()
 

@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-from openquake.commonlib import sap, datastore, oqvalidation
+from openquake.commonlib import sap, datastore
 from openquake.commonlib.commands.show import get_hcurves_and_means
 
 
@@ -63,7 +63,7 @@ def plot(calc_id, other_id=None, sites='0'):
     # read the hazard data
     haz = datastore.DataStore(calc_id)
     other = datastore.DataStore(other_id) if other_id else None
-    oq = oqvalidation.OqParam.from_(haz.attrs)
+    oq = haz['oqparam']
     indices = list(map(int, sites.split(',')))
     n_sites = len(haz['sitemesh'])
     if not set(indices) <= set(range(n_sites)):
