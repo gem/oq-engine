@@ -1,6 +1,12 @@
   [Michele Simionato]
   * Major change to the GmfCalculator API
 
+  [Matteo Nastasi]
+  * Backport of libhdf5 and h5py for ubuntu 'precise' serie
+
+  [Michele Simionato]
+  * Added a PickleableSequence class to serialize Python objects on HDF5
+
   [Graeme Weatherill]
   * Fixes Z1.0 units bug in Abrahamson, Silva and Kamai (2014)
 
