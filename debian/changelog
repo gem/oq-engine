@@ -1,3 +1,6 @@
+  [Matteo Nastasi]
+  * Backport of libhdf5 and h5py for ubuntu 'precise' serie
+
   [Michele Simionato]
   * The loss maps and curves XML exporters now export the coordinates
     of the assets, not the coordinates of the closest hazard site
