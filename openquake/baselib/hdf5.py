@@ -146,6 +146,11 @@ class LiteralAttrs(object):
         return '<%s %s>' % (self.__class__.__name__, nameval)
 
 
+# the implementation below stores a dataset per each object; it would be nicer
+# to store an array, however I am not able to do that with the current version
+# of h5py; the best I could do is to store an array of variable length ASCII
+# strings, but then I would have to use the ASCII format of pickle, which is
+# the least efficient. The current solution looks like a decent compromise.
 class PickleableSequence(collections.Sequence):
     """
     An immutable sequence of pickleable objects that can be serialized
