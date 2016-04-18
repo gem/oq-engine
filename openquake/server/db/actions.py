@@ -25,7 +25,7 @@ from datetime import datetime
 from django.core import exceptions
 from django import db
 
-from openquake.commonlib import datastore, readinput, valid
+from openquake.commonlib import datastore, valid
 from openquake.server.db import models
 from openquake.engine.export import core
 from openquake.server.db.schema.upgrades import upgrader
@@ -52,9 +52,17 @@ def check_outdated():
     """
     Check if the db is outdated, called before starting anything
     """
+    return upgrader.check_versions(db.connection)
+
+
+def reset_is_running():
+    """
+    Reset the flag job.is_running to False. This is called when the
+    Web UI is re-started: the idea is that it is restarted only when
+    all computations are completed.
+    """
     db.connection.cursor().execute(  # reset the flag job.is_running
         'UPDATE job SET is_running=0 WHERE is_running=1')
-    return upgrader.check_versions(db.connection)
 
 
 def create_job(calc_mode, description, user_name="openquake", hc_id=None):
