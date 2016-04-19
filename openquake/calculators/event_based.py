@@ -383,7 +383,7 @@ def build_eb_ruptures(
                     ses_idx, src.source_id, serial, occ_no)
                 etags.append(etag)
         if etags:
-            yield EBRupture(rup, r_sites.indices, etags,
+            yield EBRupture(rup, r_sites.indices, sorted(etags),
                             src.trt_model_id, serial)
 
 
@@ -461,12 +461,16 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                     sescollection.append(ebr)
             sescollection.sort(key=operator.attrgetter('serial'))
             etags = numpy.concatenate([ebr.etags for ebr in sescollection])
-            etag2eid = dict(zip(etags, range(len(etags))))
             self.etags = numpy.array(etags, (bytes, 100))
             nr = len(sescollection)
             logging.info('Saving SES collection with %d ruptures', nr)
-            for i, ebr in enumerate(sescollection):
-                ebr.eids = [etag2eid[etag] for etag in ebr.etags]
+            eid = 0
+            for ebr in sescollection:
+                eids = []
+                for etag in ebr.etags:
+                    eids.append(eid)
+                    eid += 1
+                ebr.eids = numpy.array(eids, U32)
                 self.datastore['sescollection/%s' % ebr.serial] = ebr
             self.datastore.set_nbytes('sescollection')
         for dset in self.rup_data.values():
