@@ -627,7 +627,7 @@ class RiskCalculator(HazardCalculator):
 def get_gmfs(dstore):
     """
     :param dstore: a datastore
-    :returns: a dictionary of gmfs
+    :returns: a dictionary trt_id, gsid -> gmfa
     """
     oq = dstore['oqparam']
     if 'gmfs' in oq.inputs:  # from file
@@ -641,9 +641,9 @@ def get_gmfs(dstore):
         logging.info('Preparing the risk input')
         return etags, {(0, 'FromFile'): gmfs_by_imt}
 
-    # else from rupture
+    # else from datastore
+    rlzs = dstore['rlzs_assoc'].realizations
     sitecol = dstore['sitecol']
-    gmfa = dstore['gmf_data/1'].value
     # NB: if the hazard site collection has N sites, the hazard
     # filtered site collection for the nonzero GMFs has N' <= N sites
     # whereas the risk site collection associated to the assets
@@ -655,15 +655,14 @@ def get_gmfs(dstore):
     risk_indices = set(sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
     imt_dt = numpy.dtype([(bytes(imt), F32) for imt in oq.imtls])
-    E = gmfa.shape[0]
+    E = oq.number_of_ground_motion_fields
     # build a matrix N x E for each GSIM realization
     gmfs = {(trt_id, gsim): numpy.zeros((N, E), imt_dt)
             for trt_id, gsim in dstore['rlzs_assoc']}
-    for eid, gmf in enumerate(gmfa):
-        assert len(haz_sitecol.indices) == len(gmf), (
-            len(haz_sitecol.indices), len(gmf))
-        for sid, gmv in zip(haz_sitecol.indices, gmf):
+    for i, rlz in enumerate(rlzs):
+        for rec in dstore['gmf_data/%04d' % i]:
+            sid = rec['sid']
             if sid in risk_indices:
                 for trt_id, gsim in gmfs:
-                    gmfs[trt_id, gsim][sid, eid] = gmv[gsim]
+                    gmfs[trt_id, str(rlz)][sid, rec['eid']] = rec['gmv']
     return dstore['etags'].value, gmfs

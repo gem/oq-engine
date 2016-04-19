@@ -25,7 +25,8 @@ import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, split_in_blocks
-from openquake.hazardlib.gsim.base import gsim_imt_dt
+from openquake.hazardlib.calc.gmf import gmv_dt, GmfComputer
+from openquake.hazardlib import site
 from openquake.risklib import scientific, riskmodels
 
 U32 = numpy.uint32
@@ -368,15 +369,15 @@ class CompositeRiskModel(collections.Mapping):
         return RiskInput(self.get_imt_taxonomies(imt),
                          hazards_by_site, assetcol, eps_dict)
 
-    def build_inputs_from_ruptures(self, sitecol, all_ruptures,
-                                   gsims_by_trt_id, trunc_level, correl_model,
-                                   eps, hint):
+    def build_inputs_from_ruptures(
+            self, sitecol, all_ruptures, trunc_level, correl_model,
+            min_iml, eps, hint):
         """
         :param sitecol: a SiteCollection instance
         :param all_ruptures: the complete list of EBRupture instances
-        :param gsims_by_trt_id: a dictionary of GSIM instances
         :param trunc_level: the truncation level (or None)
         :param correl_model: the correlation model (or None)
+        :param min_iml: dictionary of minimum IMLs
         :param eps: a matrix of epsilons of shape (N, E)
         :param hint: hint for how many blocks to generate
 
@@ -389,10 +390,9 @@ class CompositeRiskModel(collections.Mapping):
             eids = []
             for sr in ses_ruptures:
                 eids.extend(sr.eids)
-            gsims = gsims_by_trt_id[ses_ruptures[0].trt_id]
             yield RiskInputFromRuptures(
                 imt_taxonomies, sitecol, ses_ruptures,
-                gsims, trunc_level, correl_model, eps[:, eids], eids)
+                trunc_level, correl_model, min_iml, eps[:, eids], eids)
 
     def gen_outputs(self, riskinputs, rlzs_assoc, monitor,
                     assetcol=None):
@@ -421,22 +421,22 @@ class CompositeRiskModel(collections.Mapping):
                         the_assets = groupby(assets, by_taxonomy)
                         for taxonomy, assets in the_assets.items():
                             riskmodel = self[taxonomy]
-                            epsilons = [riskinput.eps[asset.ordinal]
-                                        for asset in assets]
+                            epsgetter = riskinput.epsilon_getter(
+                                [asset.ordinal for asset in assets])
                             for imt, taxonomies in riskinput.imt_taxonomies:
                                 if taxonomy in taxonomies:
                                     yield riskmodel.out_by_lr(
-                                        imt, assets, hazard[imt], epsilons)
+                                        imt, assets, hazard[imt], epsgetter)
                 else:  # event based, distribution by rupture
                     for i, sid in enumerate(assetcol.array['site_id']):
                         asset = assetcol[i]
                         hazard = hazard_by_site[sid]
+                        epsgetter = riskinput.epsilon_getter(
+                            [asset.ordinal])
                         for imt, taxonomies in riskinput.imt_taxonomies:
                             if asset.taxonomy in taxonomies:
                                 yield self[asset.taxonomy].out_by_lr(
-                                    imt, [asset], hazard[imt],
-                                    [riskinput.eps[asset.ordinal]],
-                                    riskinput.eids)
+                                    imt, [asset], hazard[imt], epsgetter)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -478,6 +478,13 @@ class RiskInput(object):
     def imt_taxonomies(self):
         """Return a list of pairs (imt, taxonomies) with a single element"""
         return [(self.imt, self.taxonomies)]
+
+    def epsilon_getter(self, asset_ordinals):
+        """
+        :param asset_ordina: ordinal of the asset
+        :returns: a closure returning an array of epsilons from the event IDs
+        """
+        return lambda _: [self.eps[aid] for aid in asset_ordinals]
 
     def get_hazard(self, rlzs_assoc, monitor=Monitor()):
         """
@@ -521,6 +528,74 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     return eps
 
 
+# this is fast
+def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
+              trunc_level, correl_model, min_iml, monitor=Monitor()):
+    """
+    :param eb_ruptures: a list of EBRuptures with the same trt_model_id
+    :param sitecol: a SiteCollection instance
+    :param gmv_dt: a numpy dtype (sid, eid, gmv)
+    :param rlzs_assoc: a RlzsAssoc instance
+    :param trunc_level: truncation level
+    :param correl_model: correlation model instance
+    :param min_iml: a dictionary of minimum intensity measure levels
+    :param monitor: a monitor instance
+    :returns: a dictionary rlzi -> gmv_dt array
+    """
+    trt_id = eb_ruptures[0].trt_id
+    gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(trt_id)
+    ctx_mon = monitor('make contexts')
+    gmf_mon = monitor('compute poes')
+    sites = sitecol.complete
+    imts = gmv_dt['gmv'].names
+    # [imt -> rlz -> Gmvs]
+    hazards = [{imt: collections.defaultdict(Gmvs) for imt in imts}
+               for sid in sites.sids]
+    for ebr in eb_ruptures:
+        with ctx_mon:
+            r_sites = site.FilteredSiteCollection(ebr.indices, sites)
+            computer = GmfComputer(
+                ebr.rupture, r_sites, gmv_dt, gsims, trunc_level, correl_model)
+        with gmf_mon:
+            ddic = computer.calcgmfs(
+                ebr.multiplicity, ebr.rupture.seed, rlzs_by_gsim)
+            for rlz, gmf_by_imt in ddic.items():
+                # TODO: manage sampling here
+                for imt, gmf in gmf_by_imt.items():
+                    for sid, gmvs in zip(r_sites.sids, gmf):
+                        if min_iml:
+                            ok = gmvs >= min_iml[imt]
+                            eids, gmvs = ebr.eids[ok], gmvs[ok]
+                        else:
+                            eids = ebr.eids
+                        hazards[sid][imt][rlz].append(eids, gmvs)
+    return hazards
+
+
+class Gmvs(object):
+    """
+    An accumulator for ground motion values and seismic event ids, used in
+    event based calculation.
+    """
+    def __init__(self):
+        self.eids = []
+        self.gmvs = []
+
+    def get_gmvs_eids(self):
+        """
+        :returns: two numpy arrays of the same length
+        """
+        return numpy.concatenate(self.gmvs), numpy.concatenate(self.eids)
+
+    def __len__(self):
+        return sum(len(gmvs) for gmvs in self.gmvs)
+
+    def append(self, eids, gmvs):
+        self.eids.append(eids)
+        self.gmvs.append(gmvs)
+
+
 class RiskInputFromRuptures(object):
     """
     Contains all the assets associated to the given IMT and a subsets of
@@ -536,45 +611,28 @@ class RiskInputFromRuptures(object):
     :params eps: a matrix of epsilons
     """
     def __init__(self, imt_taxonomies, sitecol, ses_ruptures,
-                 gsims, trunc_level, correl_model, epsilons, eids):
+                 trunc_level, correl_model, min_iml, epsilons, eids):
         self.imt_taxonomies = imt_taxonomies
         self.sitecol = sitecol
         self.ses_ruptures = numpy.array(ses_ruptures)
         self.trt_id = ses_ruptures[0].trt_id
-        self.gsims = gsims
         self.trunc_level = trunc_level
         self.correl_model = correl_model
+        self.min_iml = min_iml
         self.weight = sum(sr.multiplicity for sr in ses_ruptures)
         self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
+        self.gmv_dt = gmv_dt(self.imts)
         self.eids = eids  # E events
         self.eps = epsilons  # matrix N x E, events in this block
 
-    def compute_expand_gmfa(self, monitor):
+    def epsilon_getter(self, asset_ordinals):
         """
-        :returns:
-            an array R x N where N is the number of sites and
-            R is the number of ruptures.
+        :param asset_ordina: ordinal of the asset
+        :returns: a closure returning an array of epsilons from the event IDs
         """
-        from openquake.calculators.event_based import make_gmfs
-        gst = make_gmfs(
-            self.ses_ruptures, self.sitecol, self.imts,
-            self.gsims, self.trunc_level, self.correl_model, monitor)
-        gmf_dt = gsim_imt_dt(self.gsims, self.imts)
-        N = len(self.sitecol.complete)
-        E = len(self.eids)
-        gmfa = numpy.zeros((E, N), gmf_dt)
-        start = 0
-        for sesrup in self.ses_ruptures:
-            array = gst[sesrup.serial].gmfa
-            n = len(array)  # number of seeds
-            if sesrup.indices is not None:
-                expanded_array = numpy.zeros((n, N), array.dtype)
-                expanded_array[:, sesrup.indices] = array
-                gmfa[start: start + n] = expanded_array
-            else:
-                gmfa[start: start + n] = array
-            start += n
-        return gmfa  # array E x N
+        eps = self.eps[asset_ordinals[0]]  # assume there is only one ordinal
+        eid2eps = dict(zip(self.eids, eps))
+        return lambda eids: [numpy.array([eid2eps[eid] for eid in eids])]
 
     def get_hazard(self, rlzs_assoc, monitor=Monitor()):
         """
@@ -583,19 +641,12 @@ class RiskInputFromRuptures(object):
         :param monitor:
             a :class:`openquake.baselib.performance.Monitor` instance
         :returns:
-            lists of N hazard dictionaries imt -> rlz -> haz
+            lists of N hazard dictionaries imt -> rlz -> Gmvs
         """
-        gmfa = self.compute_expand_gmfa(monitor)
-        gsims = list(map(str, self.gsims))
-        hazs = []
-        for gmvs in gmfa.T:  # shape (N, E)
-            haz_by_imt_rlz = {imt: {} for imt in self.imts}
-            for gsim in gsims:
-                for imt in self.imts:
-                    for rlz in rlzs_assoc[self.trt_id, gsim]:
-                        haz_by_imt_rlz[imt][rlz] = gmvs[gsim][imt]
-            hazs.append(haz_by_imt_rlz)
-        return hazs
+        hazards = calc_gmfs(
+            self.ses_ruptures, self.sitecol, self.gmv_dt, rlzs_assoc,
+            self.trunc_level, self.correl_model, self.min_iml, monitor)
+        return hazards
 
     def __repr__(self):
         return '<%s IMT_taxonomies=%s, weight=%d>' % (

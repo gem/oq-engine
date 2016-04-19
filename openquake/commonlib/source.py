@@ -32,8 +32,7 @@ import numpy
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.commonlib.node import read_nodes
-from openquake.commonlib import (
-    logictree, sourceconverter, parallel, valid, util)
+from openquake.commonlib import logictree, sourceconverter, parallel, valid
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
 MAX_INT = 2 ** 31 - 1
@@ -371,6 +370,13 @@ class RlzsAssoc(collections.Mapping):
                 if trt_model.id == trt_model_id:
                     return smodel.ordinal
 
+    def get_rlzs_by_gsim(self, trt_id):
+        """
+        Returns a dictionary gsim -> rlzs
+        """
+        return {gsim: self[trt_id, str(gsim)]
+                for gsim in self.gsims_by_trt_id[trt_id]}
+
     # this useful to extract the ruptures affecting a given realization
     def get_col_ids(self, rlz):
         """
@@ -437,29 +443,6 @@ class RlzsAssoc(collections.Mapping):
             for rlz in self.rlzs_assoc[key]:
                 ad[rlz] = agg(ad[rlz], value)
         return ad
-
-    def combine_gmfs(self, gmf_data, sid_data):
-        """
-        :param gmf_data: dataset gmf_data
-        :param sid_data: dataset sid_data
-        :returns: a list of R dictionaries etag -> rupture
-        """
-        dicts = [AccumDict() for rlz in self.realizations]
-        for serial in gmf_data:
-            gmf = gmf_data[serial]
-            indices = sid_data[serial].value
-            etags = gmf.attrs['etags']
-            trt_id = gmf.attrs['trt_id']
-            for gsim in self.gsims_by_trt_id[trt_id]:
-                gs = str(gsim)
-                for rlz in self.rlzs_assoc[trt_id, gs]:
-                    dic = dicts[rlz.ordinal]
-                    dic.indices = indices
-                    for i, etag in enumerate(etags):
-                        ebrup = util.Rupture(etag, indices)
-                        ebrup.gmf = gmf[i][gs]
-                        dic[etag] = ebrup
-        return dicts
 
     def combine(self, results, agg=agg_prob):
         """

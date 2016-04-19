@@ -1,11 +1,11 @@
   [Michele Simionato]
   * Improved the .rst reports with data transfer information
+  * Introduced filtering on the minimum intensity of the ground shaking
 
   [Matteo Nastasi]
   * Backport of libhdf5 and h5py for ubuntu 'precise' serie
 
   [Michele Simionato]
-  * Introduced filtering on the minimum intensity of the GMF
   * Solved the issue of serializing large SES collections, over the HDF5 limit
   * The loss maps and curves XML exporters now export the coordinates
     of the assets, not the coordinates of the closest hazard site
