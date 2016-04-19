@@ -61,8 +61,8 @@ def plot(calc_id, other_id=None, sites='0'):
     :param sites: comma-separated string with the site indices
     """
     # read the hazard data
-    haz = datastore.DataStore(calc_id)
-    other = datastore.DataStore(other_id) if other_id else None
+    haz = datastore.read(calc_id)
+    other = datastore.read(other_id) if other_id else None
     oq = haz['oqparam']
     indices = list(map(int, sites.split(',')))
     n_sites = len(haz['sitemesh'])

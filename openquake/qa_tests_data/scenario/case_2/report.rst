@@ -1,25 +1,27 @@
 Scenario QA Test, Case 2
 ========================
 
+Datastore /home/michele/ssd/calc_10493.hdf5 last updated Tue Apr 19 05:56:36 2016 on gem-tstation
+
 num_sites = 3, sitecol = 831 B
 
 Parameters
 ----------
-============================ ================
-calculation_mode             'scenario'      
-number_of_logic_tree_samples 0               
-maximum_distance             {'default': 200}
-investigation_time           None            
-ses_per_logic_tree_path      1               
-truncation_level             1.0             
-rupture_mesh_spacing         1.0             
-complex_fault_mesh_spacing   1.0             
-width_of_mfd_bin             None            
-area_source_discretization   None            
-random_seed                  3               
-master_seed                  0               
-concurrent_tasks             40              
-============================ ================
+============================ ===================
+calculation_mode             'scenario'         
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200}   
+investigation_time           None               
+ses_per_logic_tree_path      1                  
+truncation_level             1.0                
+rupture_mesh_spacing         1.0                
+complex_fault_mesh_spacing   1.0                
+width_of_mfd_bin             None               
+area_source_discretization   None               
+random_seed                  3                  
+master_seed                  0                  
+oqlite_version               '0.13.0-git7c9cf8e'
+============================ ===================
 
 Input files
 -----------
@@ -43,7 +45,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.012     0.0       1     
-computing gmfs          4.010E-04 0.0       1     
-reading site collection 3.505E-05 0.0       1     
+filtering sites         0.013     0.0       1     
+computing gmfs          5.190E-04 0.0       1     
+reading site collection 4.482E-05 0.0       1     
 ======================= ========= ========= ======

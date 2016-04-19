@@ -1,26 +1,28 @@
 Classical Hazard QA Test, Case 17
 =================================
 
+Datastore /home/michele/ssd/calc_10538.hdf5 last updated Tue Apr 19 05:57:19 2016 on gem-tstation
+
 num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'classical'       
-number_of_logic_tree_samples 5                 
-maximum_distance             {'default': 200.0}
-investigation_time           1000.0            
-ses_per_logic_tree_path      1                 
-truncation_level             2.0               
-rupture_mesh_spacing         1.0               
-complex_fault_mesh_spacing   1.0               
-width_of_mfd_bin             1.0               
-area_source_discretization   10.0              
-random_seed                  106               
-master_seed                  0                 
-concurrent_tasks             40                
-sites_per_tile               1000              
-============================ ==================
+============================ ===================
+calculation_mode             'classical'        
+number_of_logic_tree_samples 5                  
+maximum_distance             {'default': 200.0} 
+investigation_time           1000.0             
+ses_per_logic_tree_path      1                  
+truncation_level             2.0                
+rupture_mesh_spacing         1.0                
+complex_fault_mesh_spacing   1.0                
+width_of_mfd_bin             1.0                
+area_source_discretization   10.0               
+random_seed                  106                
+master_seed                  0                  
+sites_per_tile               1000               
+oqlite_version               '0.13.0-git7c9cf8e'
+============================ ===================
 
 Input files
 -----------
@@ -77,20 +79,34 @@ source_model_2.xml 1      Active Shallow Crust 1           7            0.175
 filtered_weight 1.150
 =============== =====
 
-Expected data transfer for the sources
---------------------------------------
-=========================== ========
-Number of tasks to generate 2       
-Sent data                   17.34 KB
-=========================== ========
+Informational data
+------------------
+======================================== ==================
+count_eff_ruptures_max_received_per_task 2596              
+count_eff_ruptures_num_tasks             2                 
+count_eff_ruptures_sent.monitor          4710              
+count_eff_ruptures_sent.rlzs_assoc       9216              
+count_eff_ruptures_sent.sitecol          874               
+count_eff_ruptures_sent.siteidx          10                
+count_eff_ruptures_sent.sources          2599              
+count_eff_ruptures_tot_received          5192              
+hazard.input_weight                      1.6750000000000003
+hazard.n_imts                            1                 
+hazard.n_levels                          3.0               
+hazard.n_realizations                    5                 
+hazard.n_sites                           1                 
+hazard.n_sources                         0                 
+hazard.output_weight                     15.0              
+hostname                                 'gem-tstation'    
+======================================== ==================
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  0.975  1         1.121E-04   0.0        0.0      
-1            2         PointSource  0.175  1         7.200E-05   0.0        0.0      
+0            1         PointSource  0.975  1         1.051E-04   0.0        0.0      
+1            2         PointSource  0.175  1         6.795E-05   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -98,11 +114,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.007     0.0       1     
+reading composite source model 0.006     0.0       1     
+store source_info              0.004     0.0       1     
 managing sources               0.003     0.0       1     
-total count_eff_ruptures       5.679E-04 0.0       2     
-store source_info              2.561E-04 0.0       1     
-filtering sources              1.841E-04 0.0       2     
-aggregate curves               3.815E-05 0.0       2     
-reading site collection        3.409E-05 0.0       1     
+total count_eff_ruptures       6.142E-04 0.0       2     
+filtering sources              1.731E-04 0.0       2     
+aggregate curves               3.672E-05 0.0       2     
+reading site collection        3.099E-05 0.0       1     
 ============================== ========= ========= ======

@@ -1,25 +1,27 @@
 Germany_SHARE Combined Model event_based
 ========================================
 
+Datastore /home/michele/ssd/calc_10571.hdf5 last updated Tue Apr 19 05:59:17 2016 on gem-tstation
+
 num_sites = 100, sitecol = 5.19 KB
 
 Parameters
 ----------
-============================ =================
-calculation_mode             'event_based'    
-number_of_logic_tree_samples 0                
-maximum_distance             {'default': 80.0}
-investigation_time           30.0             
-ses_per_logic_tree_path      1                
-truncation_level             3.0              
-rupture_mesh_spacing         5.0              
-complex_fault_mesh_spacing   5.0              
-width_of_mfd_bin             0.1              
-area_source_discretization   10.0             
-random_seed                  23               
-master_seed                  0                
-concurrent_tasks             16               
-============================ =================
+============================ ===================
+calculation_mode             'event_based'      
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 80.0}  
+investigation_time           30.0               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         5.0                
+complex_fault_mesh_spacing   5.0                
+width_of_mfd_bin             0.1                
+area_source_discretization   10.0               
+random_seed                  23                 
+master_seed                  0                  
+oqlite_version               '0.13.0-git7c9cf8e'
+============================ ===================
 
 Input files
 -----------
@@ -83,40 +85,37 @@ source_models/fs_bg_source_model.xml 4      Stable Shallow Crust 39          3  
 filtered_weight 7,898
 =============== =====
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =========
-Number of tasks to generate 21       
-Sent data                   5.44 MB  
-Total received data         225.77 KB
-Maximum received per task   20.67 KB 
-=========================== =========
+Informational data
+------------------
+======== ==============
+hostname 'gem-tstation'
+======== ==============
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-4            327       AreaSource   1,544  5,145     0.005       4.941      26       
-4            328       AreaSource   1,544  5,145     0.005       3.579      25       
-4            329       AreaSource   1,544  5,145     0.005       3.402      24       
-4            316       AreaSource   449    1         0.003       0.0        10       
-4            318       AreaSource   449    1         0.003       0.0        10       
-4            317       AreaSource   449    1         0.003       0.0        9.896    
-4            323       AreaSource   307    1         0.002       0.0        8.409    
-4            322       AreaSource   307    1         0.002       0.0        8.201    
-4            265       AreaSource   85     1         0.002       0.0        2.384    
-4            263       AreaSource   85     1         0.002       0.0        1.899    
-4            264       AreaSource   85     1         0.002       0.0        1.624    
-4            331       AreaSource   56     1         0.002       0.0        1.269    
-4            248       AreaSource   30     1         0.002       0.0        1.105    
-4            330       AreaSource   56     1         0.002       0.0        1.103    
-4            266       AreaSource   56     1         0.002       0.0        1.095    
-4            332       AreaSource   56     1         0.002       0.0        1.041    
-4            333       AreaSource   39     1         0.002       0.0        0.913    
-4            249       AreaSource   30     1         0.002       0.0        0.896    
-4            267       AreaSource   56     1         0.002       0.0        0.892    
-4            334       AreaSource   39     1         0.002       0.0        0.822    
+4            328       AreaSource   1,544  5,145     0.003       1.847      12       
+4            327       AreaSource   1,544  5,145     0.006       2.026      10       
+4            329       AreaSource   1,544  5,145     0.003       1.726      10       
+4            317       AreaSource   449    1         0.002       0.0        4.578    
+4            318       AreaSource   449    1         0.002       0.0        4.519    
+4            316       AreaSource   449    1         0.002       0.0        4.452    
+4            322       AreaSource   307    1         0.001       0.0        3.292    
+4            323       AreaSource   307    1         9.940E-04   0.0        3.223    
+4            264       AreaSource   85     1         9.840E-04   0.0        0.841    
+4            263       AreaSource   85     1         9.511E-04   0.0        0.839    
+4            265       AreaSource   85     1         9.220E-04   0.0        0.838    
+4            331       AreaSource   56     1         9.451E-04   0.0        0.584    
+4            330       AreaSource   56     1         9.770E-04   0.0        0.583    
+4            332       AreaSource   56     1         9.410E-04   0.0        0.581    
+4            266       AreaSource   56     1         8.450E-04   0.0        0.559    
+4            267       AreaSource   56     1         8.180E-04   0.0        0.559    
+4            248       AreaSource   30     1         9.241E-04   0.0        0.443    
+4            333       AreaSource   39     1         9.530E-04   0.0        0.407    
+4            334       AreaSource   39     1         9.291E-04   0.0        0.400    
+4            249       AreaSource   30     1         0.001       0.0        0.318    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -124,17 +123,18 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         148       0.004     21    
-reading composite source model 21        0.0       1     
-managing sources               14        0.0       1     
-splitting sources              11        0.0       3     
-filtering sources              0.350     0.0       142   
-store source_info              0.184     0.0       1     
-total compute_gmfs_and_curves  0.013     0.023     5     
-saving ruptures                0.007     0.0       1     
-compute poes                   0.007     0.0       5     
-saving gmfs                    0.006     0.0       5     
-make contexts                  0.004     0.0       5     
-aggregate curves               0.003     0.0       21    
-reading site collection        7.050E-04 0.0       1     
+total compute_ruptures         64        0.035     21    
+reading composite source model 11        0.0       1     
+managing sources               6.306     0.0       1     
+splitting sources              5.599     0.0       3     
+filtering sources              0.153     0.0       142   
+store source_info              0.123     0.0       1     
+total compute_gmfs_and_curves  0.017     0.0       5     
+compute poes                   0.009     0.0       5     
+make contexts                  0.006     0.0       5     
+saving gmfs                    0.005     0.0       5     
+saving ruptures                0.004     0.0       1     
+filtering ruptures             0.003     0.0       8     
+aggregate curves               0.002     0.0       21    
+reading site collection        4.189E-04 0.0       1     
 ============================== ========= ========= ======

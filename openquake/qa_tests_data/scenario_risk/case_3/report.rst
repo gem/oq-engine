@@ -1,26 +1,28 @@
 Scenario QA Test 3
 ==================
 
+Datastore /home/michele/ssd/calc_10578.hdf5 last updated Tue Apr 19 05:59:18 2016 on gem-tstation
+
 num_sites = 4, sitecol = 877 B
 
 Parameters
 ----------
-============================ ================
-calculation_mode             'scenario_risk' 
-number_of_logic_tree_samples 0               
-maximum_distance             {'default': 300}
-investigation_time           None            
-ses_per_logic_tree_path      1               
-truncation_level             3.0             
-rupture_mesh_spacing         10.0            
-complex_fault_mesh_spacing   10.0            
-width_of_mfd_bin             None            
-area_source_discretization   None            
-random_seed                  3               
-master_seed                  0               
-concurrent_tasks             40              
-avg_losses                   False           
-============================ ================
+============================ ===================
+calculation_mode             'scenario_risk'    
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 300}   
+investigation_time           None               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         10.0               
+complex_fault_mesh_spacing   10.0               
+width_of_mfd_bin             None               
+area_source_discretization   None               
+random_seed                  3                  
+master_seed                  0                  
+avg_losses                   False              
+oqlite_version               '0.13.0-git7c9cf8e'
+============================ ===================
 
 Input files
 -----------
@@ -61,14 +63,14 @@ Slowest operations
 ========================= ========= ========= ======
 operation                 time_sec  memory_mb counts
 ========================= ========= ========= ======
-total scenario_risk       0.033     0.004     4     
-computing individual risk 0.032     0.0       4     
-filtering sites           0.010     0.0       1     
-computing gmfs            0.006     0.0       1     
-reading exposure          0.005     0.0       1     
-building riskinputs       0.001     0.0       1     
-saving gmfs               0.001     0.0       1     
-building epsilons         8.411E-04 0.0       1     
-getting hazard            1.340E-04 0.0       4     
-reading site collection   1.192E-05 0.0       1     
+total scenario_risk       0.010     0.008     4     
+computing individual risk 0.008     0.0       4     
+filtering sites           0.007     0.0       1     
+computing gmfs            0.004     0.0       1     
+reading exposure          0.004     0.0       1     
+saving gmfs               8.340E-04 0.0       1     
+building riskinputs       6.480E-04 0.0       1     
+building epsilons         6.230E-04 0.0       1     
+getting hazard            1.469E-04 0.0       4     
+reading site collection   7.153E-06 0.0       1     
 ========================= ========= ========= ======

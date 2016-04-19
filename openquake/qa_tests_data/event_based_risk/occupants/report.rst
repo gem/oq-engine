@@ -1,25 +1,27 @@
 event based hazard
 ==================
 
+Datastore /home/michele/ssd/calc_10519.hdf5 last updated Tue Apr 19 05:56:40 2016 on gem-tstation
+
 num_sites = 7, sitecol = 1015 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'event_based'     
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 200.0}
-investigation_time           10000.0           
-ses_per_logic_tree_path      1                 
-truncation_level             3.0               
-rupture_mesh_spacing         2.0               
-complex_fault_mesh_spacing   2.0               
-width_of_mfd_bin             0.1               
-area_source_discretization   None              
-random_seed                  24                
-master_seed                  0                 
-concurrent_tasks             40                
-============================ ==================
+============================ ===================
+calculation_mode             'event_based'      
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           10000.0            
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         2.0                
+complex_fault_mesh_spacing   2.0                
+width_of_mfd_bin             0.1                
+area_source_discretization   None               
+random_seed                  24                 
+master_seed                  0                  
+oqlite_version               '0.13.0-git7c9cf8e'
+============================ ===================
 
 Input files
 -----------
@@ -65,14 +67,11 @@ source_model     trt_id trt                  num_sources eff_ruptures weight
 source_model.xml 0      Active Shallow Crust 1           265          482   
 ================ ====== ==================== =========== ============ ======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =========
-Number of tasks to generate 15       
-Sent data                   101.84 KB
-Total received data         291.44 KB
-Maximum received per task   33.35 KB 
-=========================== =========
+Informational data
+------------------
+======== ==============
+hostname 'gem-tstation'
+======== ==============
 
 Exposure model
 --------------
@@ -92,7 +91,7 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 482    15        0.002       0.047      1.247    
+0            1         SimpleFaultSource 482    15        0.002       0.038      1.297    
 ============ ========= ================= ====== ========= =========== ========== =========
 
 Slowest operations
@@ -100,14 +99,15 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         1.253     0.523     15    
-managing sources               0.081     0.0       1     
-splitting sources              0.047     0.0       1     
-saving ruptures                0.017     0.0       1     
-reading composite source model 0.009     0.0       1     
-reading exposure               0.006     0.0       1     
-aggregate curves               0.005     0.0       15    
+total compute_ruptures         1.306     0.625     15    
+filtering ruptures             0.912     0.0       265   
+saving ruptures                0.066     0.0       1     
+managing sources               0.058     0.0       1     
+splitting sources              0.038     0.0       1     
+reading composite source model 0.006     0.0       1     
+store source_info              0.005     0.0       1     
+reading exposure               0.004     0.0       1     
+aggregate curves               0.004     0.0       15    
 filtering sources              0.002     0.0       1     
-store source_info              0.001     0.0       1     
-reading site collection        7.868E-06 0.0       1     
+reading site collection        7.153E-06 0.0       1     
 ============================== ========= ========= ======

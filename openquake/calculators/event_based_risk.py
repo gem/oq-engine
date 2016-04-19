@@ -329,17 +329,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             key=operator.attrgetter('trt_id'),
             posthook=self.save_data_transfer)
 
-    def save_data_transfer(self, taskmanager):
-        """
-        Save information about the data transfer in the risk calculation
-        as attributes of agg_loss_table
-        """
-        self.datastore.set_attrs(
-            'agg_loss_table',
-            sent=taskmanager.sent,
-            max_received=max(taskmanager.received),
-            tot_received=sum(taskmanager.received))
-
     def agg(self, acc, result):
         """
         Aggregate losses and store them in the datastore.

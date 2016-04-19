@@ -19,6 +19,7 @@ import sys
 import abc
 import pdb
 import math
+import socket
 import logging
 import operator
 import traceback
@@ -27,7 +28,7 @@ import collections
 import numpy
 
 from openquake.hazardlib.geo import geodetic
-from openquake.baselib import general
+from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import (
     readinput, riskmodels, datastore, source, __version__)
@@ -107,7 +108,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         vars(self.oqparam).update(oqlite_version=__version__, **kw)
         self.oqparam = self.oqparam  # save the updated oqparam
-        self.datastore.hdf5.flush()
+        self.datastore.flush()
 
     def set_log_format(self):
         """Set the format of the root logger"""
@@ -288,6 +289,7 @@ class HazardCalculator(BaseCalculator):
         If yes, read the inputs by invoking the precalculator or by retrieving
         the previous calculation; if not, read the inputs directly.
         """
+        job_info = hdf5.LiteralAttrs()
         if self.pre_calculator is not None:
             # the parameter hazard_calculation_id is only meaningful if
             # there is a precalculator
@@ -326,21 +328,23 @@ class HazardCalculator(BaseCalculator):
                     self.rup_data = {}
 
                     # we could manage limits here
-                    self.job_info = readinput.get_job_info(
-                        self.oqparam, self.csm, self.sitecol)
+                    vars(job_info).update(readinput.get_job_info(
+                        self.oqparam, self.csm, self.sitecol))
                     logging.info('Expected output size=%s',
-                                 self.job_info.hazard['output_weight'])
+                                 job_info.hazard['output_weight'])
                     logging.info('Total weight of the sources=%s',
-                                 self.job_info.hazard['input_weight'])
+                                 job_info.hazard['input_weight'])
                 self.init()
                 with self.monitor('managing sources', autoflush=True):
                     self.send_sources()
-                self.manager.store_source_info(
-                    self.datastore, self.core_task.__func__.__name__)
+                self.manager.store_source_info(self.datastore)
                 attrs = self.datastore.hdf5['composite_source_model'].attrs
                 attrs['weight'] = self.csm.weight
                 attrs['filtered_weight'] = self.csm.filtered_weight
                 attrs['maxweight'] = self.csm.maxweight
+
+        job_info.hostname = socket.gethostname()
+        self.job_info = job_info
         self.datastore.flush()
 
     def init(self):
@@ -501,6 +505,18 @@ class HazardCalculator(BaseCalculator):
             self.manager.submit_sources(tile, siteidx)
             siteidx += len(tile)
 
+    def save_data_transfer(self, taskmanager):
+        """
+        Save information about the data transfer in the risk calculation
+        as attributes of agg_loss_table
+        """
+        tname = taskmanager.name
+        self.datastore.save('job_info', {
+            tname + '_sent': taskmanager.sent,
+            tname + '_max_received_per_task': max(taskmanager.received),
+            tname + '_tot_received': sum(taskmanager.received),
+            tname + '_num_tasks': len(taskmanager.received)})
+
     def post_process(self):
         """For compatibility with the engine"""
 
@@ -600,7 +616,8 @@ class RiskCalculator(HazardCalculator):
         res = apply_reduce(
             self.core_task.__func__, all_args,
             concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=get_weight, key=self.riskinput_key)
+            weight=get_weight, key=self.riskinput_key,
+            posthook=self.save_data_transfer)
         return res
 
 

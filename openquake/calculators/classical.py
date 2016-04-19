@@ -274,7 +274,7 @@ class ClassicalCalculator(base.HazardCalculator):
         monitor = self.monitor.new(self.core_task.__name__)
         monitor.oqparam = self.oqparam
         curves_by_trt_gsim = self.manager.tm.reduce(
-            self.agg_dicts, self.zerodict())
+            self.agg_dicts, self.zerodict(), posthook=self.save_data_transfer)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(curves_by_trt_gsim)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
@@ -286,10 +286,11 @@ class ClassicalCalculator(base.HazardCalculator):
         # store the information about received data
         received = self.manager.tm.received
         if received:
-            attrs = self.datastore['source_chunks'].attrs
-            attrs['max_received'] = max(received)
-            attrs['tot_received'] = sum(received)
-
+            tname = self.manager.tm.name
+            self.datastore.save('job_info', {
+                tname + '_max_received_per_task': max(received),
+                tname + '_tot_received': sum(received),
+                tname + '_num_tasks': len(received)})
         # then save the calculation times per each source
         calc_times = getattr(curves_by_trt_gsim, 'calc_times', [])
         if calc_times:

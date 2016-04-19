@@ -696,11 +696,10 @@ class EventBasedCalculator(ClassicalCalculator):
             oq.export_dir = export_dir
             # use a different datastore
             self.cl = ClassicalCalculator(oq, self.monitor)
-            self.cl.datastore.parent = self.datastore
             # TODO: perhaps it is possible to avoid reprocessing the source
             # model, however usually this is quite fast and do not dominate
             # the computation
-            result = self.cl.run()
+            self.cl.run(hazard_calculation_id=self.datastore.calc_id)
             for imt in self.mean_curves.dtype.fields:
                 rdiff, index = max_rel_diff_index(
                     self.cl.mean_curves[imt], self.mean_curves[imt])

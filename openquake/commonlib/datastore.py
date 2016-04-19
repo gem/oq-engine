@@ -24,7 +24,7 @@ import collections
 import numpy
 import h5py
 
-from openquake.baselib.hdf5 import File, Hdf5Dataset
+from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict
 from openquake.commonlib.writers import write_csv
 
@@ -110,7 +110,12 @@ def read(calc_id, mode='r', datadir=DATADIR):
         calc_id = get_calc_ids(datadir)[calc_id]
     fname = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
     open(fname).close()  # check if the file exists and is accessible
-    return DataStore(calc_id, datadir, mode=mode)
+    dstore = DataStore(calc_id, datadir, mode=mode)
+    if not dstore.parent:
+        hc_id = dstore['oqparam'].hazard_calculation_id
+        if hc_id:
+            dstore.set_parent(read(hc_id))
+    return dstore
 
 
 class DataStore(collections.MutableMapping):
@@ -156,7 +161,7 @@ class DataStore(collections.MutableMapping):
         self.export_dir = export_dir
         self.hdf5path = self.calc_dir + '.hdf5'
         mode = mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
-        self.hdf5 = File(self.hdf5path, mode, libver='latest')
+        self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
         self.attrs = self.hdf5.attrs
         for name, value in params:
             self.attrs[name] = value
@@ -212,7 +217,18 @@ class DataStore(collections.MutableMapping):
         :param dtype: dtype of the dataset (usually composite)
         :param size: size of the dataset (if None, the dataset is extendable)
         """
-        return Hdf5Dataset.create(self.hdf5, key, dtype, size, compression)
+        return hdf5.Hdf5Dataset.create(
+            self.hdf5, key, dtype, size, compression)
+
+    def save(self, key, kw):
+        """
+        Update the object associated to `key` with the `kw` dictionary;
+        works for LiteralAttrs objects and automatically flushes.
+        """
+        obj = self[key]
+        vars(obj).update(kw)
+        self[key] = obj
+        self.flush()
 
     def export_path(self, relname, export_dir=None):
         """

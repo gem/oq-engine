@@ -1,26 +1,28 @@
 Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
+Datastore /home/michele/ssd/calc_10539.hdf5 last updated Tue Apr 19 05:57:19 2016 on gem-tstation
+
 num_sites = 3, sitecol = 831 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'classical'       
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 200.0}
-investigation_time           50.0              
-ses_per_logic_tree_path      1                 
-truncation_level             3.0               
-rupture_mesh_spacing         1.0               
-complex_fault_mesh_spacing   1.0               
-width_of_mfd_bin             0.1               
-area_source_discretization   10.0              
-random_seed                  23                
-master_seed                  0                 
-concurrent_tasks             40                
-sites_per_tile               1000              
-============================ ==================
+============================ ===================
+calculation_mode             'classical'        
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           50.0               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         1.0                
+complex_fault_mesh_spacing   1.0                
+width_of_mfd_bin             0.1                
+area_source_discretization   10.0               
+random_seed                  23                 
+master_seed                  0                  
+sites_per_tile               1000               
+oqlite_version               '0.13.0-git7c9cf8e'
+============================ ===================
 
 Input files
 -----------
@@ -88,12 +90,26 @@ source_model_2.xml 3      Active Shallow Crust     1           240          6.00
 filtered_weight 12 
 =============== ===
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =========
-Number of tasks to generate 34       
-Sent data                   490.09 KB
-=========================== =========
+Informational data
+------------------
+======================================== ==============
+count_eff_ruptures_max_received_per_task 3213          
+count_eff_ruptures_num_tasks             34            
+count_eff_ruptures_sent.monitor          100980        
+count_eff_ruptures_sent.rlzs_assoc       338912        
+count_eff_ruptures_sent.sitecol          16490         
+count_eff_ruptures_sent.siteidx          170           
+count_eff_ruptures_sent.sources          42774         
+count_eff_ruptures_tot_received          109242        
+hazard.input_weight                      12.75         
+hazard.n_imts                            2             
+hazard.n_levels                          8.5           
+hazard.n_realizations                    8             
+hazard.n_sites                           3             
+hazard.n_sources                         0             
+hazard.output_weight                     408.0         
+hostname                                 'gem-tstation'
+======================================== ==============
 
 Slowest sources
 ---------------
@@ -101,9 +117,9 @@ Slowest sources
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
 2            1         AreaSource   6.000  16        0.001       0.003      0.0      
-3            1         AreaSource   6.000  16        8.519E-04   0.003      0.0      
-0            1         PointSource  0.375  1         1.228E-04   0.0        0.0      
-1            2         PointSource  0.375  1         9.584E-05   0.0        0.0      
+3            1         AreaSource   6.000  16        7.679E-04   0.003      0.0      
+0            1         PointSource  0.375  1         1.252E-04   0.0        0.0      
+1            2         PointSource  0.375  1         8.702E-05   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -111,12 +127,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.069     0.0       1     
-reading composite source model 0.017     0.0       1     
-total count_eff_ruptures       0.010     0.0       34    
+managing sources               0.070     0.0       1     
+reading composite source model 0.015     0.0       1     
+total count_eff_ruptures       0.011     0.0       34    
 splitting sources              0.006     0.0       2     
+store source_info              0.004     0.0       1     
 filtering sources              0.002     0.0       4     
-aggregate curves               5.269E-04 0.0       34    
-store source_info              2.968E-04 0.0       1     
-reading site collection        3.481E-05 0.0       1     
+aggregate curves               5.045E-04 0.0       34    
+reading site collection        3.314E-05 0.0       1     
 ============================== ========= ========= ======

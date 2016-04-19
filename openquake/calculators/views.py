@@ -24,7 +24,9 @@ import operator
 import decimal
 import functools
 import itertools
+
 import numpy
+import h5py
 
 from openquake.baselib.general import humansize, groupby
 from openquake.baselib.performance import perf_dt
@@ -240,12 +242,12 @@ def view_params(token, dstore):
               'ses_per_logic_tree_path', 'truncation_level',
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
-              'random_seed', 'master_seed', 'concurrent_tasks']
+              'random_seed', 'master_seed']
     if 'risk' in oq.calculation_mode:
         params.append('avg_losses')
     if 'classical' in oq.calculation_mode:
         params.append('sites_per_tile')
-	params.append('oqlite_version')
+    params.append('oqlite_version')
     return rst_table([(param, repr(getattr(oq, param, None)))
                       for param in params])
 
@@ -272,24 +274,14 @@ def view_inputs(token, dstore):
         header=['Name', 'File'])
 
 
-@view.add('source_data_transfer')
-def source_data_transfer(token, dstore):
+@view.add('job_info')
+def view_job_info(token, dstore):
     """
     Determine the amount of data transferred from the controller node
     to the workers and back in a classical calculation.
     """
-    sc = dstore['source_chunks']
-    tbl = [
-        ('Number of tasks to generate', len(sc)),
-        ('Sent data', humansize(sc.attrs['sent']))]
-    # NB: when called from `oq-lite info --report` the task name is
-    # count_eff_ruptures; then tot_received and max_received are bogus
-    if sc.attrs['task_name'] != 'count_eff_ruptures':
-        tbl.extend([
-            ('Total received data', humansize(sc.attrs['tot_received'])),
-            ('Maximum received per task', humansize(sc.attrs['max_received'])),
-        ])
-    return rst_table(tbl)
+    job_info = list(h5py.File.__getitem__(dstore.hdf5, 'job_info'))
+    return rst_table(job_info)
 
 
 @view.add('avglosses_data_transfer')

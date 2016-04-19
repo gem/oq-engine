@@ -1,25 +1,27 @@
 Scenario Calculation with Simple Fault Rupture
 ==============================================
 
+Datastore /home/michele/ssd/calc_10580.hdf5 last updated Tue Apr 19 05:59:20 2016 on gem-tstation
+
 num_sites = 7, sitecol = 1015 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'scenario'        
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 200.0}
-investigation_time           None              
-ses_per_logic_tree_path      1                 
-truncation_level             3.0               
-rupture_mesh_spacing         2.0               
-complex_fault_mesh_spacing   2.0               
-width_of_mfd_bin             None              
-area_source_discretization   None              
-random_seed                  42                
-master_seed                  0                 
-concurrent_tasks             40                
-============================ ==================
+============================ ===================
+calculation_mode             'scenario'         
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           None               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         2.0                
+complex_fault_mesh_spacing   2.0                
+width_of_mfd_bin             None               
+area_source_discretization   None               
+random_seed                  42                 
+master_seed                  0                  
+oqlite_version               '0.13.0-git7c9cf8e'
+============================ ===================
 
 Input files
 -----------
@@ -44,7 +46,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.031     0.0       1     
-computing gmfs          0.003     0.0       1     
-reading site collection 1.740E-04 0.0       1     
+filtering sites         0.010     0.0       1     
+computing gmfs          0.002     0.0       1     
+reading site collection 1.211E-04 0.0       1     
 ======================= ========= ========= ======
