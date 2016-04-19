@@ -173,7 +173,7 @@ def export_agg_losses_ebr(ekey, dstore):
     for rlz in rlzs:
         for loss_type in loss_types:
             data = agg_losses['rlz-%03d/%s' % (rlz.ordinal, loss_type)].value
-            data.sort(order='rup_id')
+            data.sort(order='loss')
             dest = dstore.export_path(
                 'agg_losses-rlz%03d-%s.csv' % (rlz.ordinal, loss_type))
             tags = etags[data['rup_id']]
