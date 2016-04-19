@@ -47,6 +47,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
+# this will be removed in the future
 @datastore.view.add('col_rlz_assocs')
 def view_col_rlz_assocs(name, dstore):
     """
@@ -344,21 +345,17 @@ def sample_ruptures(src, num_ses, info):
     :returns: a dictionary of dictionaries rupture ->
               {(col_id, ses_id): num_occurrences}
     """
-    col_ids = info.col_ids_by_trt_id[src.trt_model_id]
     # the dictionary `num_occ_by_rup` contains a dictionary
-    # (col_id, ses_id) -> num_occurrences
-    # for each occurring rupture
+    # ses_id -> num_occurrences for each occurring rupture
     num_occ_by_rup = collections.defaultdict(AccumDict)
     # generating ruptures for the given source
     for rup_no, rup in enumerate(src.iter_ruptures()):
         rup.seed = seed = src.serial[rup_no] + info.seed
         numpy.random.seed(seed)
-        for col_id in col_ids:
-            for ses_idx in range(1, num_ses + 1):
-                num_occurrences = rup.sample_number_of_occurrences()
-                if num_occurrences:
-                    num_occ_by_rup[rup] += {
-                        (col_id, ses_idx): num_occurrences}
+        for ses_idx in range(1, num_ses + 1):
+            num_occurrences = rup.sample_number_of_occurrences()
+            if num_occurrences:
+                num_occ_by_rup[rup] += {ses_idx: num_occurrences}
         rup.rup_no = rup_no + 1
     return num_occ_by_rup
 
@@ -380,11 +377,11 @@ def build_eb_ruptures(
         # creating EBRuptures
         serial = rup.seed - random_seed + 1
         etags = []
-        for (col_idx, ses_idx), num_occ in sorted(
+        for ses_idx, num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
-                etag = 'col=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-                    col_idx, ses_idx, src.source_id, serial, occ_no)
+                etag = 'ses=%04d~src=%s~rup=%d-%02d' % (
+                    ses_idx, src.source_id, serial, occ_no)
                 etags.append(etag)
         if etags:
             yield EBRupture(rup, r_sites.indices, etags,
@@ -556,8 +553,7 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, rlzs_assoc, monitor):
     result = {trt_id: gmfa_sids_etags if oq.ground_motion_fields else None}
     if oq.hazard_curves_from_gmfs:
         with monitor('bulding hazard curves', measuremem=False):
-            duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
-                oq.number_of_logic_tree_samples or 1)
+            duration = oq.investigation_time * oq.ses_per_logic_tree_path
 
             # collect the gmvs by site
             gmvs_by_sid = collections.defaultdict(list)
