@@ -24,7 +24,6 @@ import collections
 
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
@@ -455,33 +454,21 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         logging.info('Generated %d EBRuptures',
                      sum(len(v) for v in result.values()))
         with self.monitor('saving ruptures', autoflush=True):
-            nc = self.rlzs_assoc.csm_info.num_collections
-            sescollection = [[] for trt_id in range(nc)]
-            etags = []
+            # ordering ruptures
+            sescollection = []
             for trt_id in result:
                 for ebr in result[trt_id]:
-                    sescollection[trt_id].append(ebr)
-                    etags.extend(ebr.etags)
-            etags.sort()
+                    sescollection.append(ebr)
+            sescollection.sort(key=operator.attrgetter('serial'))
+            etags = numpy.concatenate([ebr.etags for ebr in sescollection])
             etag2eid = dict(zip(etags, range(len(etags))))
             self.etags = numpy.array(etags, (bytes, 100))
-            self.datastore.set_attrs(
-                'etags',
-                num_ruptures=numpy.array([len(sc) for sc in sescollection]))
-            nbytes = 0
-            for i, sescol in enumerate(sescollection):
-                for ebr in sescol:
-                    ebr.eids = [etag2eid[etag] for etag in ebr.etags]
-                nr = len(sescol)
-                if nr:
-                    logging.info('Saving SES collection #%d with %d ruptures',
-                                 i, nr)
-                    key = 'sescollection/trt=%02d' % i
-                    self.datastore[key] = hdf5.PickleableSequence(
-                        sorted(sescol, key=operator.attrgetter('serial')))
-                    nbytes += self.datastore.getsize(key)
-                    self.datastore.set_attrs(key, trt_model_id=i)
-            self.datastore.set_nbytes('sescollection', nbytes)
+            nr = len(sescollection)
+            logging.info('Saving SES collection with %d ruptures', nr)
+            for i, ebr in enumerate(sescollection):
+                ebr.eids = [etag2eid[etag] for etag in ebr.etags]
+                self.datastore['sescollection/%s' % ebr.serial] = ebr
+            self.datastore.set_nbytes('sescollection')
         for dset in self.rup_data.values():
             numsites = dset.dset['numsites']
             multiplicity = dset.dset['multiplicity']
@@ -610,12 +597,8 @@ class EventBasedCalculator(ClassicalCalculator):
         """
         super(EventBasedCalculator, self).pre_execute()
         self.sesruptures = []
-        for trt_id in range(self.rlzs_assoc.csm_info.num_collections):
-            try:
-                sescol = self.datastore['sescollection/trt=%02d' % trt_id]
-            except KeyError:  # empty collections are missing
-                continue
-            self.sesruptures.extend(sescol)
+        for serial in self.datastore['sescollection']:
+            self.sesruptures.append(self.datastore['sescollection/' + serial])
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """
