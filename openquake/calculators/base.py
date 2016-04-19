@@ -510,12 +510,13 @@ class HazardCalculator(BaseCalculator):
         Save information about the data transfer in the risk calculation
         as attributes of agg_loss_table
         """
-        tname = taskmanager.name
-        self.datastore.save('job_info', {
-            tname + '_sent': taskmanager.sent,
-            tname + '_max_received_per_task': max(taskmanager.received),
-            tname + '_tot_received': sum(taskmanager.received),
-            tname + '_num_tasks': len(taskmanager.received)})
+        if taskmanager.received:  # nothing is received when OQ_DISTRIBUTE=no
+            tname = taskmanager.name
+            self.datastore.save('job_info', {
+                tname + '_sent': taskmanager.sent,
+                tname + '_max_received_per_task': max(taskmanager.received),
+                tname + '_tot_received': sum(taskmanager.received),
+                tname + '_num_tasks': len(taskmanager.received)})
 
     def post_process(self):
         """For compatibility with the engine"""
