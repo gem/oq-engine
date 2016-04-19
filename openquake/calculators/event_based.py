@@ -356,6 +356,7 @@ def sample_ruptures(src, num_ses, info):
             if num_occurrences:
                 num_occ_by_rup[rup] += {ses_idx: num_occurrences}
         rup.rup_no = rup_no + 1
+    #import pdb; pdb.set_trace()
     return num_occ_by_rup
 
 
