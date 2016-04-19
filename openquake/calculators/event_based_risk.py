@@ -250,6 +250,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         all_ruptures = []
         for serial in self.datastore['sescollection']:
             all_ruptures.append(self.datastore['sescollection/' + serial])
+        all_ruptures.sort(key=operator.attrgetter('serial'))
         if not self.riskmodel.covs:
             # do not generate epsilons
             eps = FakeMatrix(self.N, self.E)
