@@ -33,18 +33,6 @@ from openquake.commonlib import readinput, datastore, source, parallel
 from openquake.calculators import base
 
 
-def set_ancestors(dstore):
-    """
-    Set the chain of ancestors of a datastore
-    """
-    if not dstore.parent:
-        hc_id = dstore['oqparam'].hazard_calculation_id
-        if hc_id:
-            parent = datastore.read(hc_id)
-            dstore.set_parent(parent)
-            set_ancestors(parent)
-
-
 def indent(text):
     return '  ' + '\n  '.join(text.splitlines())
 
@@ -71,7 +59,6 @@ class ReportWriter(object):
     )
 
     def __init__(self, dstore):
-        set_ancestors(dstore)
         self.dstore = dstore
         self.oq = oq = dstore['oqparam']
         self.text = (oq.description.encode('utf8') + '\n' +

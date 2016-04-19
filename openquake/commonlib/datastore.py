@@ -110,7 +110,12 @@ def read(calc_id, mode='r', datadir=DATADIR):
         calc_id = get_calc_ids(datadir)[calc_id]
     fname = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
     open(fname).close()  # check if the file exists and is accessible
-    return DataStore(calc_id, datadir, mode=mode)
+    dstore = DataStore(calc_id, datadir, mode=mode)
+    if not dstore.parent:
+        hc_id = dstore['oqparam'].hazard_calculation_id
+        if hc_id:
+            dstore.set_parent(read(hc_id))
+    return dstore
 
 
 class DataStore(collections.MutableMapping):
