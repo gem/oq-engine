@@ -140,7 +140,7 @@ def get_ses_idx(etag):
 
 def get_serial(etag):
     """
-    >>> get_col_serial("ses=0007~src=1-3~rup=018-01")
+    >>> get_serial("ses=0007~src=1-3~rup=018-01")
     '018'
     """
     ses, src, rup = etag.split('~')
