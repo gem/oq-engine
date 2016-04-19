@@ -1,6 +1,8 @@
 Classical Hazard QA Test, Case 6
 ================================
 
+Datastore /home/michele/ssd/calc_10541.hdf5 last updated Tue Apr 19 05:57:36 2016 on gem-tstation
+
 num_sites = 1, sitecol = 739 B
 
 Parameters
@@ -18,9 +20,8 @@ width_of_mfd_bin             1.0
 area_source_discretization   10.0               
 random_seed                  1066               
 master_seed                  0                  
-concurrent_tasks             40                 
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcefd831'
+oqlite_version               '0.13.0-git7c9cf8e'
 ============================ ===================
 
 Input files
@@ -68,30 +69,32 @@ source_model.xml 0      Active Shallow Crust 2           1,386        1,386
 
 Informational data
 ------------------
-======================================== ======
-count_eff_ruptures_max_received_per_task 2600  
-count_eff_ruptures_sent.Monitor          4712  
-count_eff_ruptures_sent.RlzsAssoc        5704  
-count_eff_ruptures_sent.SiteCollection   874   
-count_eff_ruptures_sent.WeightedSequence 2256  
-count_eff_ruptures_sent.int              10    
-count_eff_ruptures_tot_received          5200  
-hazard.input_weight                      1386.0
-hazard.n_imts                            1     
-hazard.n_levels                          3.0   
-hazard.n_realizations                    1     
-hazard.n_sites                           1     
-hazard.n_sources                         0     
-hazard.output_weight                     3.0   
-======================================== ======
+======================================== ==============
+count_eff_ruptures_max_received_per_task 2565          
+count_eff_ruptures_num_tasks             2             
+count_eff_ruptures_sent.monitor          4642          
+count_eff_ruptures_sent.rlzs_assoc       5690          
+count_eff_ruptures_sent.sitecol          874           
+count_eff_ruptures_sent.siteidx          10            
+count_eff_ruptures_sent.sources          2256          
+count_eff_ruptures_tot_received          5130          
+hazard.input_weight                      1386.0        
+hazard.n_imts                            1             
+hazard.n_levels                          3.0           
+hazard.n_realizations                    1             
+hazard.n_sites                           1             
+hazard.n_sources                         0             
+hazard.output_weight                     3.0           
+hostname                                 'gem-tstation'
+======================================== ==============
 
 Slowest sources
 ---------------
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            2         ComplexFaultSource 485    1         0.001       7.738      0.0      
-0            1         SimpleFaultSource  901    1         0.001       0.498      0.0      
+0            2         ComplexFaultSource 485    1         0.001       8.015      0.0      
+0            1         SimpleFaultSource  901    1         0.002       0.540      0.0      
 ============ ========= ================== ====== ========= =========== ========== =========
 
 Slowest operations
@@ -99,12 +102,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 8.385     0.0       1     
-managing sources               8.242     0.0       1     
-splitting sources              8.236     0.0       2     
-store source_info              0.003     0.0       1     
+reading composite source model 8.653     0.0       1     
+managing sources               8.561     0.0       1     
+splitting sources              8.555     0.0       2     
+store source_info              0.004     0.0       1     
 filtering sources              0.003     0.0       2     
-total count_eff_ruptures       6.948E-04 0.0       2     
+total count_eff_ruptures       5.391E-04 0.0       2     
 aggregate curves               3.386E-05 0.0       2     
-reading site collection        3.195E-05 0.0       1     
+reading site collection        2.694E-05 0.0       1     
 ============================== ========= ========= ======

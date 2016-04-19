@@ -1,6 +1,8 @@
 Classical PSHA with Simple Fault Source
 =======================================
 
+Datastore /home/michele/ssd/calc_10531.hdf5 last updated Tue Apr 19 05:57:13 2016 on gem-tstation
+
 num_sites = 1369, sitecol = 62.21 KB
 
 Parameters
@@ -18,9 +20,8 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0                
 random_seed                  23                 
 master_seed                  0                  
-concurrent_tasks             40                 
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcefd831'
+oqlite_version               '0.13.0-git7c9cf8e'
 ============================ ===================
 
 Input files
@@ -70,11 +71,12 @@ Informational data
 ------------------
 ======================================== =================
 count_eff_ruptures_max_received_per_task 3783             
-count_eff_ruptures_sent.Monitor          281951           
-count_eff_ruptures_sent.RlzsAssoc        226493           
-count_eff_ruptures_sent.SiteCollection   2629278          
-count_eff_ruptures_sent.WeightedSequence 1820426          
-count_eff_ruptures_sent.int              395              
+count_eff_ruptures_num_tasks             79               
+count_eff_ruptures_sent.monitor          281951           
+count_eff_ruptures_sent.rlzs_assoc       226493           
+count_eff_ruptures_sent.sitecol          2629278          
+count_eff_ruptures_sent.siteidx          395              
+count_eff_ruptures_sent.sources          1820426          
 count_eff_ruptures_tot_received          298857           
 hazard.input_weight                      548.0            
 hazard.n_imts                            9                
@@ -83,6 +85,7 @@ hazard.n_realizations                    1
 hazard.n_sites                           1369             
 hazard.n_sources                         0                
 hazard.output_weight                     269693.0         
+hostname                                 'gem-tstation'   
 ======================================== =================
 
 Slowest sources
@@ -90,7 +93,7 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            3         SimpleFaultSource 548    548       0.003       0.083      0.0      
+0            3         SimpleFaultSource 548    548       0.003       0.111      0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
 
 Slowest operations
@@ -98,12 +101,12 @@ Slowest operations
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-managing sources               0.230    0.0       1     
-reading site collection        0.166    0.0       1     
-splitting sources              0.083    0.0       1     
-total count_eff_ruptures       0.027    0.0       79    
-reading composite source model 0.012    0.0       1     
+managing sources               0.235    0.0       1     
+reading site collection        0.163    0.0       1     
+splitting sources              0.111    0.0       1     
+total count_eff_ruptures       0.025    0.0       79    
+reading composite source model 0.013    0.0       1     
 store source_info              0.004    0.0       1     
 filtering sources              0.003    0.0       1     
-aggregate curves               0.002    0.0       79    
+aggregate curves               0.001    0.0       79    
 ============================== ======== ========= ======

@@ -1,6 +1,8 @@
 Classical PSHA with Characteristic Fault Source defined as sequence of planar fault segments
 ============================================================================================
 
+Datastore /home/michele/ssd/calc_10527.hdf5 last updated Tue Apr 19 05:57:08 2016 on gem-tstation
+
 num_sites = 9213, sitecol = 414.57 KB
 
 Parameters
@@ -18,9 +20,8 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0                
 random_seed                  23                 
 master_seed                  0                  
-concurrent_tasks             40                 
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcefd831'
+oqlite_version               '0.13.0-git7c9cf8e'
 ============================ ===================
 
 Input files
@@ -70,11 +71,12 @@ Informational data
 ------------------
 ======================================== =================
 count_eff_ruptures_max_received_per_task 3917             
-count_eff_ruptures_sent.Monitor          33489            
-count_eff_ruptures_sent.RlzsAssoc        26100            
-count_eff_ruptures_sent.SiteCollection   224946           
-count_eff_ruptures_sent.WeightedSequence 19998            
-count_eff_ruptures_sent.int              53               
+count_eff_ruptures_num_tasks             9                
+count_eff_ruptures_sent.monitor          33489            
+count_eff_ruptures_sent.rlzs_assoc       26100            
+count_eff_ruptures_sent.sitecol          224946           
+count_eff_ruptures_sent.siteidx          53               
+count_eff_ruptures_sent.sources          19998            
 count_eff_ruptures_tot_received          35253            
 hazard.input_weight                      1.0              
 hazard.n_imts                            9                
@@ -83,6 +85,7 @@ hazard.n_realizations                    1
 hazard.n_sites                           9213             
 hazard.n_sources                         0                
 hazard.output_weight                     1814961.0        
+hostname                                 'gem-tstation'   
 ======================================== =================
 
 Slowest sources
@@ -98,11 +101,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading site collection        1.175     0.0       1     
-managing sources               0.054     0.0       1     
+reading site collection        1.132     0.0       1     
+managing sources               0.056     0.0       1     
 filtering sources              0.026     0.0       9     
 reading composite source model 0.005     0.0       1     
-store source_info              0.003     0.0       1     
+store source_info              0.004     0.0       1     
 total count_eff_ruptures       0.003     0.0       9     
-aggregate curves               1.283E-04 0.0       9     
+aggregate curves               1.318E-04 0.0       9     
 ============================== ========= ========= ======

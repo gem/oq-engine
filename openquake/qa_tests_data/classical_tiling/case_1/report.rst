@@ -1,6 +1,8 @@
 Classical PSHA using Area Source
 ================================
 
+Datastore /home/michele/ssd/calc_10584.hdf5 last updated Tue Apr 19 05:59:24 2016 on gem-tstation
+
 num_sites = 6, sitecol = 969 B
 
 Parameters
@@ -18,9 +20,8 @@ width_of_mfd_bin             0.2
 area_source_discretization   5.0                
 random_seed                  23                 
 master_seed                  0                  
-concurrent_tasks             4                  
 sites_per_tile               1                  
-oqlite_version               '0.13.0-gitcefd831'
+oqlite_version               '0.13.0-git7c9cf8e'
 ============================ ===================
 
 Input files
@@ -69,29 +70,31 @@ source_model.xml 0      Active Shallow Crust 1           1,640        41
 
 Informational data
 ------------------
-======================================== ======
-count_eff_ruptures_max_received_per_task 3503  
-count_eff_ruptures_sent.Monitor          39108 
-count_eff_ruptures_sent.RlzsAssoc        38748 
-count_eff_ruptures_sent.SiteCollection   5244  
-count_eff_ruptures_sent.WeightedSequence 258192
-count_eff_ruptures_sent.int              60    
-count_eff_ruptures_tot_received          42036 
-hazard.input_weight                      41.0  
-hazard.n_imts                            3     
-hazard.n_levels                          19.0  
-hazard.n_realizations                    2     
-hazard.n_sites                           6     
-hazard.n_sources                         0     
-hazard.output_weight                     684.0 
-======================================== ======
+======================================== ==============
+count_eff_ruptures_max_received_per_task 3468          
+count_eff_ruptures_num_tasks             12            
+count_eff_ruptures_sent.monitor          38688         
+count_eff_ruptures_sent.rlzs_assoc       38664         
+count_eff_ruptures_sent.sitecol          5244          
+count_eff_ruptures_sent.siteidx          60            
+count_eff_ruptures_sent.sources          258192        
+count_eff_ruptures_tot_received          41616         
+hazard.input_weight                      41.0          
+hazard.n_imts                            3             
+hazard.n_levels                          19.0          
+hazard.n_realizations                    2             
+hazard.n_sites                           6             
+hazard.n_sources                         0             
+hazard.output_weight                     684.0         
+hostname                                 'gem-tstation'
+======================================== ==============
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   41     205       0.006       0.047      0.0      
+0            1         AreaSource   41     205       0.007       0.058      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -99,12 +102,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.091     0.0       1     
-reading composite source model 0.049     0.0       1     
-splitting sources              0.047     0.0       1     
-filtering sources              0.006     0.0       6     
-total count_eff_ruptures       0.006     0.0       12    
-store source_info              0.003     0.0       1     
+managing sources               0.107     0.0       1     
+reading composite source model 0.060     0.0       1     
+splitting sources              0.058     0.0       1     
+filtering sources              0.007     0.0       6     
+total count_eff_ruptures       0.005     0.0       12    
+store source_info              0.005     0.0       1     
 reading site collection        0.003     0.0       1     
-aggregate curves               1.669E-04 0.0       12    
+aggregate curves               1.872E-04 0.0       12    
 ============================== ========= ========= ======

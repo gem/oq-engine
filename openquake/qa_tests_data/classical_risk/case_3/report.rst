@@ -1,6 +1,8 @@
 Classical PSHA - Loss fractions QA test
 =======================================
 
+Datastore /home/michele/ssd/calc_10482.hdf5 last updated Tue Apr 19 05:56:31 2016 on gem-tstation
+
 num_sites = 13, sitecol = 1.26 KB
 
 Parameters
@@ -18,10 +20,9 @@ width_of_mfd_bin             0.2
 area_source_discretization   10.0               
 random_seed                  23                 
 master_seed                  0                  
-concurrent_tasks             16                 
 avg_losses                   False              
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcefd831'
+oqlite_version               '0.13.0-git7c9cf8e'
 ============================ ===================
 
 Input files
@@ -71,22 +72,16 @@ source_model.xml 0      Active Shallow Crust 2           1,613        53
 
 Informational data
 ------------------
-=============================== =================
-classical_max_received_per_task 7563             
-classical_sent.Monitor          6244             
-classical_sent.RlzsAssoc        5720             
-classical_sent.SiteCollection   1450             
-classical_sent.WeightedSequence 3828             
-classical_sent.int              10               
-classical_tot_received          14291            
-hazard.input_weight             845.7750000000001
-hazard.n_imts                   1                
-hazard.n_levels                 19.0             
-hazard.n_realizations           1                
-hazard.n_sites                  13               
-hazard.n_sources                0                
-hazard.output_weight            247.0            
-=============================== =================
+==================================== ==============
+classical_risk_max_received_per_task 7388          
+classical_risk_num_tasks             13            
+classical_risk_sent.monitor          53924         
+classical_risk_sent.riskinputs       14193         
+classical_risk_sent.riskmodel        166556        
+classical_risk_sent.rlzs_assoc       37011         
+classical_risk_tot_received          96044         
+hostname                             'gem-tstation'
+==================================== ==============
 
 Exposure model
 --------------
@@ -109,8 +104,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            232       AreaSource   40     1         6.909E-04   0.0        2.271    
-0            225       AreaSource   13     1         7.501E-04   0.0        0.328    
+0            232       AreaSource   40     1         6.940E-04   0.0        2.323    
+0            225       AreaSource   13     1         7.110E-04   0.0        0.522    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -118,20 +113,20 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total classical_risk           6.346     1.277     13    
-computing individual risk      6.325     0.0       13    
-total classical                2.605     2.504     2     
-making contexts                1.482     0.0       2,132 
-reading composite source model 1.041     0.0       1     
-computing poes                 0.487     0.0       1,613 
-managing sources               0.040     0.0       1     
+total classical_risk           8.503     1.199     13    
+computing individual risk      8.481     0.0       13    
+total classical                2.856     2.637     2     
+making contexts                1.583     0.0       2,132 
+reading composite source model 1.078     0.0       1     
+computing poes                 0.492     0.0       1,613 
+managing sources               0.041     0.0       1     
 filtering sources              0.012     0.0       15    
-store source_info              0.009     0.0       1     
+store source_info              0.011     0.0       1     
 reading exposure               0.006     0.0       1     
-save curves_by_trt_gsim        0.003     0.0       1     
+save curves_by_trt_gsim        0.002     0.0       1     
 getting hazard                 0.002     0.0       13    
 combine and save curves_by_rlz 0.001     0.0       1     
 building riskinputs            0.001     0.0       1     
-aggregate curves               8.578E-04 0.0       2     
-reading site collection        7.153E-06 0.0       1     
+aggregate curves               9.508E-04 0.0       2     
+reading site collection        7.868E-06 0.0       1     
 ============================== ========= ========= ======

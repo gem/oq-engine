@@ -1,6 +1,8 @@
 Classical PSHA with non-trivial logic tree (2 source models and 2 GMPEs per tectonic region type)
 =================================================================================================
 
+Datastore /home/michele/ssd/calc_10529.hdf5 last updated Tue Apr 19 05:57:12 2016 on gem-tstation
+
 num_sites = 1, sitecol = 739 B
 
 Parameters
@@ -18,9 +20,8 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0                
 random_seed                  23                 
 master_seed                  0                  
-concurrent_tasks             40                 
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcefd831'
+oqlite_version               '0.13.0-git7c9cf8e'
 ============================ ===================
 
 Input files
@@ -90,32 +91,34 @@ filtered_weight 2,882
 
 Informational data
 ------------------
-======================================== ========
-count_eff_ruptures_max_received_per_task 2702    
-count_eff_ruptures_sent.Monitor          206421  
-count_eff_ruptures_sent.RlzsAssoc        633539  
-count_eff_ruptures_sent.SiteCollection   36271   
-count_eff_ruptures_sent.WeightedSequence 10708250
-count_eff_ruptures_sent.int              415     
-count_eff_ruptures_tot_received          224190  
-hazard.input_weight                      2881.5  
-hazard.n_imts                            1       
-hazard.n_levels                          19.0    
-hazard.n_realizations                    8       
-hazard.n_sites                           1       
-hazard.n_sources                         0       
-hazard.output_weight                     152.0   
-======================================== ========
+======================================== ==============
+count_eff_ruptures_max_received_per_task 2702          
+count_eff_ruptures_num_tasks             83            
+count_eff_ruptures_sent.monitor          206421        
+count_eff_ruptures_sent.rlzs_assoc       633539        
+count_eff_ruptures_sent.sitecol          36271         
+count_eff_ruptures_sent.siteidx          415           
+count_eff_ruptures_sent.sources          10708250      
+count_eff_ruptures_tot_received          224190        
+hazard.input_weight                      2881.5        
+hazard.n_imts                            1             
+hazard.n_levels                          19.0          
+hazard.n_realizations                    8             
+hazard.n_sites                           1             
+hazard.n_sources                         0             
+hazard.output_weight                     152.0         
+hostname                                 'gem-tstation'
+======================================== ==============
 
 Slowest sources
 ---------------
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-2            2         SimpleFaultSource 1,297  1,297     0.001       0.225      0.0      
-0            2         SimpleFaultSource 1,334  1,334     0.001       0.206      0.0      
-3            1         AreaSource        148    296       8.070E-04   0.062      0.0      
-1            1         AreaSource        102    205       7.329E-04   0.048      0.0      
+0            2         SimpleFaultSource 1,334  1,334     0.003       0.296      0.0      
+2            2         SimpleFaultSource 1,297  1,297     0.002       0.231      0.0      
+3            1         AreaSource        148    296       8.860E-04   0.068      0.0      
+1            1         AreaSource        102    205       8.950E-04   0.052      0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
 
 Slowest operations
@@ -123,12 +126,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.822     0.0       1     
-splitting sources              0.541     0.0       4     
-reading composite source model 0.128     0.0       1     
-total count_eff_ruptures       0.032     0.0       83    
-filtering sources              0.004     0.0       4     
+managing sources               1.038     0.0       1     
+splitting sources              0.646     0.0       4     
+reading composite source model 0.140     0.0       1     
+total count_eff_ruptures       0.023     0.0       83    
+filtering sources              0.006     0.0       4     
 store source_info              0.004     0.0       1     
-aggregate curves               0.002     0.0       83    
-reading site collection        2.885E-05 0.0       1     
+aggregate curves               0.001     0.0       83    
+reading site collection        3.600E-05 0.0       1     
 ============================== ========= ========= ======

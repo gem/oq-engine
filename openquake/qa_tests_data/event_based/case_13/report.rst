@@ -1,25 +1,27 @@
 Event Based QA Test, Case 13
 ============================
 
+Datastore /home/michele/ssd/calc_10563.hdf5 last updated Tue Apr 19 05:58:45 2016 on gem-tstation
+
 num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'event_based'     
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 200.0}
-investigation_time           1.0               
-ses_per_logic_tree_path      5000              
-truncation_level             2.0               
-rupture_mesh_spacing         1.0               
-complex_fault_mesh_spacing   1.0               
-width_of_mfd_bin             1.0               
-area_source_discretization   10.0              
-random_seed                  1066              
-master_seed                  0                 
-concurrent_tasks             40                
-============================ ==================
+============================ ===================
+calculation_mode             'event_based'      
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           1.0                
+ses_per_logic_tree_path      5000               
+truncation_level             2.0                
+rupture_mesh_spacing         1.0                
+complex_fault_mesh_spacing   1.0                
+width_of_mfd_bin             1.0                
+area_source_discretization   10.0               
+random_seed                  1066               
+master_seed                  0                  
+oqlite_version               '0.13.0-git7c9cf8e'
+============================ ===================
 
 Input files
 -----------
@@ -66,29 +68,16 @@ source_model.xml 0      Active Shallow Crust 1           1            0.025
 
 Informational data
 ------------------
-====================================== ======
-compute_ruptures_max_received_per_task 155792
-compute_ruptures_sent.Monitor          2577  
-compute_ruptures_sent.RlzsAssoc        2889  
-compute_ruptures_sent.SiteCollection   437   
-compute_ruptures_sent.WeightedSequence 1299  
-compute_ruptures_sent.int              5     
-compute_ruptures_tot_received          155792
-hazard.input_weight                    0.025 
-hazard.n_imts                          1     
-hazard.n_levels                        3.0   
-hazard.n_realizations                  1     
-hazard.n_sites                         1     
-hazard.n_sources                       0     
-hazard.output_weight                   50.0  
-====================================== ======
+======== ==============
+hostname 'gem-tstation'
+======== ==============
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  0.025  1         9.108E-05   0.0        0.028    
+0            1         PointSource  0.025  1         1.099E-04   0.0        0.054    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -96,18 +85,18 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.028     0.098     1     
-bulding hazard curves          0.008     0.0       1     
-saving ruptures                0.007     0.0       1     
-store source_info              0.006     0.0       1     
+total compute_ruptures         0.054     0.0       1     
+store source_info              0.011     0.0       1     
+bulding hazard curves          0.010     0.0       1     
+saving ruptures                0.009     0.0       1     
 reading composite source model 0.004     0.0       1     
+compute poes                   0.002     0.0       1     
 managing sources               0.002     0.0       1     
-saving gmfs                    0.001     0.0       1     
-compute poes                   0.001     0.0       1     
-aggregating hcurves            8.490E-04 0.0       1     
-aggregate curves               6.101E-04 0.0       2     
-make contexts                  4.730E-04 0.0       1     
-filtering ruptures             3.080E-04 0.0       1     
-filtering sources              9.108E-05 0.0       1     
-reading site collection        3.195E-05 0.0       1     
+saving gmfs                    0.002     0.0       1     
+aggregating hcurves            0.001     0.0       1     
+aggregate curves               8.340E-04 0.0       2     
+make contexts                  5.929E-04 0.0       1     
+filtering ruptures             5.851E-04 0.0       1     
+filtering sources              1.099E-04 0.0       1     
+reading site collection        3.791E-05 0.0       1     
 ============================== ========= ========= ======

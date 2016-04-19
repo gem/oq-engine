@@ -1042,8 +1042,6 @@ class SourceManager(object):
             dstore['source_info'] = numpy.array(values, source_info_dt)
             attrs = dstore['source_info'].attrs
             attrs['maxweight'] = self.csm.maxweight
-            tname = self.tm.name
-            dstore.save('job_info', {tname + '_sent': self.tm.sent})
             self.infos.clear()
         if self.source_chunks:
             dstore['source_chunks'] = sc = numpy.array(
@@ -1051,7 +1049,7 @@ class SourceManager(object):
             attrs = dstore['source_chunks'].attrs
             attrs['nbytes'] = sc.nbytes
             attrs['sent'] = sc['sent'].sum()
-            attrs['task_name'] = tname
+            attrs['task_name'] = self.tm.name
             del self.source_chunks
 
 

@@ -1,26 +1,28 @@
 event based risk
 ================
 
+Datastore /home/michele/ssd/calc_10534.hdf5 last updated Tue Apr 19 05:57:18 2016 on gem-tstation
+
 num_sites = 7, sitecol = 1015 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'event_based_risk'
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 200.0}
-investigation_time           50.0              
-ses_per_logic_tree_path      2                 
-truncation_level             3.0               
-rupture_mesh_spacing         2.0               
-complex_fault_mesh_spacing   2.0               
-width_of_mfd_bin             0.1               
-area_source_discretization   10.0              
-random_seed                  24                
-master_seed                  0                 
-concurrent_tasks             40                
-avg_losses                   True              
-============================ ==================
+============================ ===================
+calculation_mode             'event_based_risk' 
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           50.0               
+ses_per_logic_tree_path      2                  
+truncation_level             3.0                
+rupture_mesh_spacing         2.0                
+complex_fault_mesh_spacing   2.0                
+width_of_mfd_bin             0.1                
+area_source_discretization   10.0               
+random_seed                  24                 
+master_seed                  0                  
+avg_losses                   True               
+oqlite_version               '0.13.0-git7c9cf8e'
+============================ ===================
 
 Input files
 -----------
@@ -89,41 +91,29 @@ filtered_weight 968
 
 Informational data
 ------------------
-======================================== ======
-compute_ruptures_max_received_per_task   13134 
-compute_ruptures_sent.Monitor            168930
-compute_ruptures_sent.RlzsAssoc          229270
-compute_ruptures_sent.SiteCollection     17430 
-compute_ruptures_sent.WeightedSequence   50656 
-compute_ruptures_sent.int                150   
-compute_ruptures_tot_received            205015
-event_based_risk_max_received_per_task   114486
-event_based_risk_sent.AssetCollection    30919 
-event_based_risk_sent.CompositeRiskModel 75236 
-event_based_risk_sent.Monitor            18725 
-event_based_risk_sent.RlzsAssoc          50589 
-event_based_risk_sent.WeightedSequence   32009 
-event_based_risk_tot_received            563225
-hazard.input_weight                      969.0 
-hazard.n_imts                            4     
-hazard.n_levels                          11.5  
-hazard.n_realizations                    8     
-hazard.n_sites                           7     
-hazard.n_sources                         0     
-hazard.output_weight                     2576.0
-riskinputs.correl_model                  810   
-riskinputs.eids                          279   
-riskinputs.eps                           4159  
-riskinputs.gsims                         1496  
-riskinputs.imt_taxonomies                1332  
-riskinputs.imts                          432   
-riskinputs.ses_ruptures                  19308 
-riskinputs.sitecol                       9135  
-riskinputs.total                         36024 
-riskinputs.trt_id                        45    
-riskinputs.trunc_level                   108   
-riskinputs.weight                        45    
-======================================== ======
+====================================== ==============
+event_based_risk_max_received_per_task 114444        
+event_based_risk_num_tasks             7             
+event_based_risk_sent.assetcol         30919         
+event_based_risk_sent.monitor          18431         
+event_based_risk_sent.riskinputs       32009         
+event_based_risk_sent.riskmodel        75236         
+event_based_risk_sent.rlzs_assoc       50540         
+event_based_risk_tot_received          562931        
+hostname                               'gem-tstation'
+riskinputs.correl_model                810           
+riskinputs.eids                        279           
+riskinputs.eps                         4159          
+riskinputs.gsims                       1496          
+riskinputs.imt_taxonomies              1332          
+riskinputs.imts                        432           
+riskinputs.ses_ruptures                19308         
+riskinputs.sitecol                     9135          
+riskinputs.total                       36024         
+riskinputs.trt_id                      45            
+riskinputs.trunc_level                 108           
+riskinputs.weight                      45            
+====================================== ==============
 
 Maximum memory allocated for the GMFs
 -------------------------------------
@@ -154,10 +144,10 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            1         SimpleFaultSource    482    15        0.003       0.043      0.304    
-2            1         SimpleFaultSource    482    15        0.001       0.040      0.220    
-1            2         SimpleFaultSource    4.000  1         0.002       0.0        0.022    
-3            2         CharacteristicFaultS 1.000  1         0.001       0.0        0.003    
+0            1         SimpleFaultSource    482    15        0.002       0.047      0.260    
+2            1         SimpleFaultSource    482    15        0.002       0.046      0.219    
+1            2         SimpleFaultSource    4.000  1         0.002       0.0        0.010    
+3            2         CharacteristicFaultS 1.000  1         0.001       0.0        0.004    
 ============ ========= ==================== ====== ========= =========== ========== =========
 
 Slowest operations
@@ -165,29 +155,29 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total event_based_risk         1.087     0.758     7     
-computing individual risk      0.946     0.0       9     
-total compute_ruptures         0.562     0.012     30    
-saving event loss tables       0.196     0.0       7     
+total event_based_risk         1.166     0.906     7     
+computing individual risk      1.032     0.0       9     
+total compute_ruptures         0.506     0.012     30    
+compute poes                   0.171     0.0       18    
 managing sources               0.170     0.0       1     
-compute poes                   0.167     0.0       18    
-aggregate losses               0.157     0.0       99    
-total compute_gmfs_and_curves  0.148     0.723     7     
-make contexts                  0.109     0.0       18    
-getting hazard                 0.102     0.0       9     
-splitting sources              0.082     0.0       2     
-bulding hazard curves          0.033     0.0       7     
-filtering ruptures             0.024     0.0       9     
-reading composite source model 0.021     0.0       1     
-compute and save statistics    0.017     0.0       1     
+saving event loss tables       0.163     0.0       7     
+total compute_gmfs_and_curves  0.156     0.723     7     
+aggregate losses               0.156     0.0       99    
+make contexts                  0.106     0.0       18    
+getting hazard                 0.101     0.0       9     
+splitting sources              0.094     0.0       2     
+bulding hazard curves          0.037     0.0       7     
+reading composite source model 0.026     0.0       1     
+filtering ruptures             0.022     0.0       9     
+compute and save statistics    0.016     0.0       1     
 combine and save curves_by_rlz 0.014     0.0       1     
 saving gmfs                    0.009     0.0       7     
 aggregating hcurves            0.009     0.0       14    
-save curves_by_trt_gsim        0.007     0.0       1     
 filtering sources              0.007     0.0       4     
-store source_info              0.005     0.0       1     
-reading exposure               0.005     0.0       1     
+save curves_by_trt_gsim        0.007     0.0       1     
+reading exposure               0.007     0.0       1     
+store source_info              0.006     0.0       1     
 saving ruptures                0.005     0.0       1     
 aggregate curves               0.004     0.0       44    
-reading site collection        6.914E-06 0.0       1     
+reading site collection        8.106E-06 0.0       1     
 ============================== ========= ========= ======

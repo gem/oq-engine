@@ -1,6 +1,8 @@
 Classical PSHA using a Point Source
 ===================================
 
+Datastore /home/michele/ssd/calc_10532.hdf5 last updated Tue Apr 19 05:57:13 2016 on gem-tstation
+
 num_sites = 1936, sitecol = 87.68 KB
 
 Parameters
@@ -18,9 +20,8 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0                
 random_seed                  23                 
 master_seed                  0                  
-concurrent_tasks             40                 
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcefd831'
+oqlite_version               '0.13.0-git7c9cf8e'
 ============================ ===================
 
 Input files
@@ -70,11 +71,12 @@ Informational data
 ------------------
 ======================================== =================
 count_eff_ruptures_max_received_per_task 3765             
-count_eff_ruptures_sent.Monitor          3569             
-count_eff_ruptures_sent.RlzsAssoc        2881             
-count_eff_ruptures_sent.SiteCollection   46890            
-count_eff_ruptures_sent.WeightedSequence 1251             
-count_eff_ruptures_sent.int              5                
+count_eff_ruptures_num_tasks             1                
+count_eff_ruptures_sent.monitor          3569             
+count_eff_ruptures_sent.rlzs_assoc       2881             
+count_eff_ruptures_sent.sitecol          46890            
+count_eff_ruptures_sent.siteidx          5                
+count_eff_ruptures_sent.sources          1251             
 count_eff_ruptures_tot_received          3765             
 hazard.input_weight                      2.0              
 hazard.n_imts                            9                
@@ -83,6 +85,7 @@ hazard.n_realizations                    1
 hazard.n_sites                           1936             
 hazard.n_sources                         0                
 hazard.output_weight                     381392.0         
+hostname                                 'gem-tstation'   
 ======================================== =================
 
 Slowest sources
@@ -90,7 +93,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            2         PointSource  2.000  1         2.930E-04   5.698E-05  0.0      
+0            2         PointSource  2.000  1         2.639E-04   5.007E-05  0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -98,12 +101,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading site collection        0.274     0.0       1     
+reading site collection        0.271     0.0       1     
 managing sources               0.006     0.0       1     
-reading composite source model 0.005     0.0       1     
 store source_info              0.004     0.0       1     
-filtering sources              2.930E-04 0.0       1     
-total count_eff_ruptures       2.141E-04 0.0       1     
-splitting sources              5.698E-05 0.0       1     
-aggregate curves               2.193E-05 0.0       1     
+reading composite source model 0.004     0.0       1     
+total count_eff_ruptures       2.770E-04 0.0       1     
+filtering sources              2.639E-04 0.0       1     
+splitting sources              5.007E-05 0.0       1     
+aggregate curves               2.003E-05 0.0       1     
 ============================== ========= ========= ======

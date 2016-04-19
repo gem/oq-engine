@@ -1,25 +1,27 @@
 event based hazard
 ==================
 
+Datastore /home/michele/ssd/calc_10519.hdf5 last updated Tue Apr 19 05:56:40 2016 on gem-tstation
+
 num_sites = 7, sitecol = 1015 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'event_based'     
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 200.0}
-investigation_time           10000.0           
-ses_per_logic_tree_path      1                 
-truncation_level             3.0               
-rupture_mesh_spacing         2.0               
-complex_fault_mesh_spacing   2.0               
-width_of_mfd_bin             0.1               
-area_source_discretization   None              
-random_seed                  24                
-master_seed                  0                 
-concurrent_tasks             40                
-============================ ==================
+============================ ===================
+calculation_mode             'event_based'      
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           10000.0            
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         2.0                
+complex_fault_mesh_spacing   2.0                
+width_of_mfd_bin             0.1                
+area_source_discretization   None               
+random_seed                  24                 
+master_seed                  0                  
+oqlite_version               '0.13.0-git7c9cf8e'
+============================ ===================
 
 Input files
 -----------
@@ -67,22 +69,9 @@ source_model.xml 0      Active Shallow Crust 1           265          482
 
 Informational data
 ------------------
-====================================== ======
-compute_ruptures_max_received_per_task 37940 
-compute_ruptures_sent.Monitor          32100 
-compute_ruptures_sent.RlzsAssoc        43410 
-compute_ruptures_sent.SiteCollection   8715  
-compute_ruptures_sent.WeightedSequence 20368 
-compute_ruptures_sent.int              75    
-compute_ruptures_tot_received          323891
-hazard.input_weight                    482.0 
-hazard.n_imts                          1     
-hazard.n_levels                        0     
-hazard.n_realizations                  1     
-hazard.n_sites                         7     
-hazard.n_sources                       0     
-hazard.output_weight                   700.0 
-====================================== ======
+======== ==============
+hostname 'gem-tstation'
+======== ==============
 
 Exposure model
 --------------
@@ -102,7 +91,7 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 482    15        0.002       0.046      1.273    
+0            1         SimpleFaultSource 482    15        0.002       0.038      1.297    
 ============ ========= ================= ====== ========= =========== ========== =========
 
 Slowest operations
@@ -110,15 +99,15 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         1.281     0.531     15    
-filtering ruptures             0.883     0.0       265   
-saving ruptures                0.086     0.0       1     
-managing sources               0.067     0.0       1     
-splitting sources              0.046     0.0       1     
-reading composite source model 0.009     0.0       1     
-aggregate curves               0.007     0.0       15    
-reading exposure               0.006     0.0       1     
+total compute_ruptures         1.306     0.625     15    
+filtering ruptures             0.912     0.0       265   
+saving ruptures                0.066     0.0       1     
+managing sources               0.058     0.0       1     
+splitting sources              0.038     0.0       1     
+reading composite source model 0.006     0.0       1     
 store source_info              0.005     0.0       1     
+reading exposure               0.004     0.0       1     
+aggregate curves               0.004     0.0       15    
 filtering sources              0.002     0.0       1     
-reading site collection        9.775E-06 0.0       1     
+reading site collection        7.153E-06 0.0       1     
 ============================== ========= ========= ======

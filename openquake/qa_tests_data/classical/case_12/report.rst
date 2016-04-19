@@ -1,6 +1,8 @@
 Classical Hazard QA Test, Case 12
 =================================
 
+Datastore /home/michele/ssd/calc_10557.hdf5 last updated Tue Apr 19 05:58:33 2016 on gem-tstation
+
 num_sites = 1, sitecol = 739 B
 
 Parameters
@@ -18,9 +20,8 @@ width_of_mfd_bin             1.0
 area_source_discretization   10.0               
 random_seed                  1066               
 master_seed                  0                  
-concurrent_tasks             40                 
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcefd831'
+oqlite_version               '0.13.0-git7c9cf8e'
 ============================ ===================
 
 Input files
@@ -78,30 +79,32 @@ filtered_weight 0.050
 
 Informational data
 ------------------
-======================================== ====
-count_eff_ruptures_max_received_per_task 2710
-count_eff_ruptures_sent.Monitor          4938
-count_eff_ruptures_sent.RlzsAssoc        6808
-count_eff_ruptures_sent.SiteCollection   874 
-count_eff_ruptures_sent.WeightedSequence 2318
-count_eff_ruptures_sent.int              10  
-count_eff_ruptures_tot_received          5420
-hazard.input_weight                      0.05
-hazard.n_imts                            1   
-hazard.n_levels                          3.0 
-hazard.n_realizations                    1   
-hazard.n_sites                           1   
-hazard.n_sources                         0   
-hazard.output_weight                     3.0 
-======================================== ====
+======================================== ==============
+count_eff_ruptures_max_received_per_task 2675          
+count_eff_ruptures_num_tasks             2             
+count_eff_ruptures_sent.monitor          4868          
+count_eff_ruptures_sent.rlzs_assoc       6794          
+count_eff_ruptures_sent.sitecol          874           
+count_eff_ruptures_sent.siteidx          10            
+count_eff_ruptures_sent.sources          2318          
+count_eff_ruptures_tot_received          5350          
+hazard.input_weight                      0.05          
+hazard.n_imts                            1             
+hazard.n_levels                          3.0           
+hazard.n_realizations                    1             
+hazard.n_sites                           1             
+hazard.n_sources                         0             
+hazard.output_weight                     3.0           
+hostname                                 'gem-tstation'
+======================================== ==============
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  0.025  1         8.678E-05   0.0        0.0      
-1            2         PointSource  0.025  1         5.698E-05   0.0        0.0      
+0            1         PointSource  0.025  1         8.607E-05   0.0        0.0      
+1            2         PointSource  0.025  1         5.889E-05   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -109,11 +112,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.005     0.0       1     
-store source_info              0.003     0.0       1     
+reading composite source model 0.004     0.0       1     
+store source_info              0.004     0.0       1     
 managing sources               0.002     0.0       1     
-total count_eff_ruptures       0.001     0.0       2     
-filtering sources              1.438E-04 0.0       2     
+total count_eff_ruptures       6.950E-04 0.0       2     
+filtering sources              1.450E-04 0.0       2     
 aggregate curves               3.600E-05 0.0       2     
-reading site collection        3.004E-05 0.0       1     
+reading site collection        2.909E-05 0.0       1     
 ============================== ========= ========= ======

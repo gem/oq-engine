@@ -1,25 +1,27 @@
 Scenario Damage QA Test 4
 =========================
 
+Datastore /home/michele/ssd/calc_10489.hdf5 last updated Tue Apr 19 05:56:35 2016 on gem-tstation
+
 num_sites = 3, sitecol = 831 B
 
 Parameters
 ----------
-============================ =================
-calculation_mode             'scenario_damage'
-number_of_logic_tree_samples 0                
-maximum_distance             {'default': 300} 
-investigation_time           None             
-ses_per_logic_tree_path      1                
-truncation_level             3.0              
-rupture_mesh_spacing         10.0             
-complex_fault_mesh_spacing   10.0             
-width_of_mfd_bin             None             
-area_source_discretization   None             
-random_seed                  3                
-master_seed                  0                
-concurrent_tasks             40               
-============================ =================
+============================ ===================
+calculation_mode             'scenario_damage'  
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 300}   
+investigation_time           None               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         10.0               
+complex_fault_mesh_spacing   10.0               
+width_of_mfd_bin             None               
+area_source_discretization   None               
+random_seed                  3                  
+master_seed                  0                  
+oqlite_version               '0.13.0-git7c9cf8e'
+============================ ===================
 
 Input files
 -----------
@@ -63,5 +65,5 @@ operation               time_sec  memory_mb counts
 filtering sites         0.007     0.0       1     
 reading exposure        0.003     0.0       1     
 computing gmfs          0.001     0.0       1     
-reading site collection 6.914E-06 0.0       1     
+reading site collection 9.060E-06 0.0       1     
 ======================= ========= ========= ======

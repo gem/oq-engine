@@ -24,6 +24,7 @@ from __future__ import print_function
 import os
 import sys
 import mock
+import time
 import logging
 
 
@@ -75,6 +76,11 @@ class ReportWriter(object):
         self.oq = oq = dstore['oqparam']
         self.text = (oq.description.encode('utf8') + '\n' +
                      '=' * len(oq.description))
+        info = dstore['job_info']
+        dpath = dstore.hdf5path
+        mtime = os.path.getmtime(dpath)
+        self.text += '\n\nDatastore %s last updated %s on %s' % (
+            dpath, time.ctime(mtime), info.hostname)
         # NB: in the future, the sitecol could be transferred as
         # an array by leveraging the HDF5 serialization protocol in
         # litetask decorator; for the moment however the size of the

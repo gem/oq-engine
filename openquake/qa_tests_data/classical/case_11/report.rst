@@ -1,6 +1,8 @@
 Classical Hazard QA Test, Case 11
 =================================
 
+Datastore /home/michele/ssd/calc_10552.hdf5 last updated Tue Apr 19 05:57:58 2016 on gem-tstation
+
 num_sites = 1, sitecol = 739 B
 
 Parameters
@@ -18,9 +20,8 @@ width_of_mfd_bin             0.001
 area_source_discretization   10.0               
 random_seed                  1066               
 master_seed                  0                  
-concurrent_tasks             40                 
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcefd831'
+oqlite_version               '0.13.0-git7c9cf8e'
 ============================ ===================
 
 Input files
@@ -83,31 +84,33 @@ filtered_weight 225
 
 Informational data
 ------------------
-======================================== =====
-count_eff_ruptures_max_received_per_task 2637 
-count_eff_ruptures_sent.Monitor          7179 
-count_eff_ruptures_sent.RlzsAssoc        17007
-count_eff_ruptures_sent.SiteCollection   1311 
-count_eff_ruptures_sent.WeightedSequence 3519 
-count_eff_ruptures_sent.int              15   
-count_eff_ruptures_tot_received          7911 
-hazard.input_weight                      225.0
-hazard.n_imts                            1    
-hazard.n_levels                          4.0  
-hazard.n_realizations                    3    
-hazard.n_sites                           1    
-hazard.n_sources                         0    
-hazard.output_weight                     12.0 
-======================================== =====
+======================================== ==============
+count_eff_ruptures_max_received_per_task 2602          
+count_eff_ruptures_num_tasks             3             
+count_eff_ruptures_sent.monitor          7074          
+count_eff_ruptures_sent.rlzs_assoc       16986         
+count_eff_ruptures_sent.sitecol          1311          
+count_eff_ruptures_sent.siteidx          15            
+count_eff_ruptures_sent.sources          3519          
+count_eff_ruptures_tot_received          7806          
+hazard.input_weight                      225.0         
+hazard.n_imts                            1             
+hazard.n_levels                          4.0           
+hazard.n_realizations                    3             
+hazard.n_sites                           1             
+hazard.n_sources                         0             
+hazard.output_weight                     12.0          
+hostname                                 'gem-tstation'
+======================================== ==============
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  87     1         0.004       1.907E-05  0.0      
+0            1         PointSource  87     1         0.004       1.812E-05  0.0      
 1            1         PointSource  75     1         0.004       1.502E-05  0.0      
-2            1         PointSource  62     1         0.003       1.478E-05  0.0      
+2            1         PointSource  62     1         0.003       1.407E-05  0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -118,9 +121,9 @@ operation                      time_sec  memory_mb counts
 reading composite source model 0.019     0.0       1     
 managing sources               0.017     0.0       1     
 filtering sources              0.011     0.0       3     
-store source_info              0.004     0.0       1     
+store source_info              0.005     0.0       1     
 total count_eff_ruptures       0.001     0.0       3     
-aggregate curves               6.700E-05 0.0       3     
-splitting sources              4.888E-05 0.0       3     
-reading site collection        3.409E-05 0.0       1     
+aggregate curves               6.819E-05 0.0       3     
+splitting sources              4.721E-05 0.0       3     
+reading site collection        3.600E-05 0.0       1     
 ============================== ========= ========= ======

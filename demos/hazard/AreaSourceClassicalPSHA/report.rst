@@ -1,6 +1,8 @@
 Classical PSHA — Area Source
 ============================
 
+Datastore /home/michele/ssd/calc_10526.hdf5 last updated Tue Apr 19 05:57:07 2016 on gem-tstation
+
 num_sites = 2112, sitecol = 95.58 KB
 
 Parameters
@@ -18,9 +20,8 @@ width_of_mfd_bin             0.2
 area_source_discretization   5.0                
 random_seed                  23                 
 master_seed                  0                  
-concurrent_tasks             4                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcefd831'
+oqlite_version               '0.13.0-git7c9cf8e'
 ============================ ===================
 
 Input files
@@ -70,11 +71,12 @@ Informational data
 ------------------
 ======================================== =================
 count_eff_ruptures_max_received_per_task 3778             
-count_eff_ruptures_sent.Monitor          28504            
-count_eff_ruptures_sent.RlzsAssoc        22880            
-count_eff_ruptures_sent.SiteCollection   206160           
-count_eff_ruptures_sent.WeightedSequence 88108            
-count_eff_ruptures_sent.int              44               
+count_eff_ruptures_num_tasks             8                
+count_eff_ruptures_sent.monitor          28504            
+count_eff_ruptures_sent.rlzs_assoc       22880            
+count_eff_ruptures_sent.sitecol          206160           
+count_eff_ruptures_sent.siteidx          44               
+count_eff_ruptures_sent.sources          88108            
 count_eff_ruptures_tot_received          30224            
 hazard.input_weight                      41.0             
 hazard.n_imts                            9                
@@ -83,6 +85,7 @@ hazard.n_realizations                    1
 hazard.n_sites                           2112             
 hazard.n_sources                         0                
 hazard.output_weight                     416064.0         
+hostname                                 'gem-tstation'   
 ======================================== =================
 
 Slowest sources
@@ -90,7 +93,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   41     205       0.007       0.046      0.0      
+0            1         AreaSource   41     205       0.005       0.054      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -98,12 +101,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading site collection        0.234     0.0       1     
-managing sources               0.078     0.0       1     
-reading composite source model 0.047     0.0       1     
-splitting sources              0.046     0.0       1     
-filtering sources              0.007     0.0       2     
-store source_info              0.005     0.0       1     
+reading site collection        0.275     0.0       1     
+managing sources               0.080     0.0       1     
+reading composite source model 0.055     0.0       1     
+splitting sources              0.054     0.0       1     
+store source_info              0.008     0.0       1     
+filtering sources              0.005     0.0       2     
 total count_eff_ruptures       0.003     0.0       8     
-aggregate curves               2.067E-04 0.0       8     
+aggregate curves               5.491E-04 0.0       8     
 ============================== ========= ========= ======

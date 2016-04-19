@@ -309,6 +309,7 @@ class TaskManager(object):
         self.sent = AccumDict()
         self.received = []
         self.no_distribute = no_distribute()
+        self.argnames = inspect.getargspec(self.task_func).args
 
     def submit(self, *args):
         """
@@ -324,7 +325,7 @@ class TaskManager(object):
             res = (self.task_func(*args), None, args[-1])
         else:
             piks = pickle_sequence(args)
-            sent = {p.clsname: len(p) for p in piks}
+            sent = {arg: len(p) for arg, p in zip(self.argnames, piks)}
             res = self._submit(piks)
         self.sent += sent
         self.results.append(res)

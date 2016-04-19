@@ -1,25 +1,27 @@
 Germany_SHARE Combined Model event_based
 ========================================
 
+Datastore /home/michele/ssd/calc_10571.hdf5 last updated Tue Apr 19 05:59:17 2016 on gem-tstation
+
 num_sites = 100, sitecol = 5.19 KB
 
 Parameters
 ----------
-============================ =================
-calculation_mode             'event_based'    
-number_of_logic_tree_samples 0                
-maximum_distance             {'default': 80.0}
-investigation_time           30.0             
-ses_per_logic_tree_path      1                
-truncation_level             3.0              
-rupture_mesh_spacing         5.0              
-complex_fault_mesh_spacing   5.0              
-width_of_mfd_bin             0.1              
-area_source_discretization   10.0             
-random_seed                  23               
-master_seed                  0                
-concurrent_tasks             16               
-============================ =================
+============================ ===================
+calculation_mode             'event_based'      
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 80.0}  
+investigation_time           30.0               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         5.0                
+complex_fault_mesh_spacing   5.0                
+width_of_mfd_bin             0.1                
+area_source_discretization   10.0               
+random_seed                  23                 
+master_seed                  0                  
+oqlite_version               '0.13.0-git7c9cf8e'
+============================ ===================
 
 Input files
 -----------
@@ -85,48 +87,35 @@ filtered_weight 7,898
 
 Informational data
 ------------------
-====================================== ==================
-compute_ruptures_max_received_per_task 21416             
-compute_ruptures_sent.Monitor          69678             
-compute_ruptures_sent.RlzsAssoc        562800            
-compute_ruptures_sent.SiteCollection   59262             
-compute_ruptures_sent.WeightedSequence 5011328           
-compute_ruptures_sent.int              105               
-compute_ruptures_tot_received          235352            
-hazard.input_weight                    15686.624999999989
-hazard.n_imts                          1                 
-hazard.n_levels                        0                 
-hazard.n_realizations                  36                
-hazard.n_sites                         100               
-hazard.n_sources                       0                 
-hazard.output_weight                   1080.0            
-====================================== ==================
+======== ==============
+hostname 'gem-tstation'
+======== ==============
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-4            328       AreaSource   1,544  5,145     0.003       1.883      12       
-4            327       AreaSource   1,544  5,145     0.003       1.843      11       
-4            329       AreaSource   1,544  5,145     0.003       1.743      10       
-4            317       AreaSource   449    1         0.002       0.0        4.889    
-4            318       AreaSource   449    1         0.002       0.0        4.475    
-4            316       AreaSource   449    1         0.002       0.0        4.346    
-4            322       AreaSource   307    1         0.001       0.0        3.447    
-4            323       AreaSource   307    1         9.890E-04   0.0        3.338    
-4            263       AreaSource   85     1         9.470E-04   0.0        0.817    
-4            264       AreaSource   85     1         9.191E-04   0.0        0.816    
-4            265       AreaSource   85     1         9.170E-04   0.0        0.816    
-4            333       AreaSource   39     1         9.620E-04   0.0        0.766    
-4            331       AreaSource   56     1         9.601E-04   0.0        0.568    
-4            330       AreaSource   56     1         9.749E-04   0.0        0.568    
-4            332       AreaSource   56     1         9.530E-04   0.0        0.564    
-4            266       AreaSource   56     1         8.678E-04   0.0        0.547    
-4            267       AreaSource   56     1         8.271E-04   0.0        0.546    
-4            334       AreaSource   39     1         9.341E-04   0.0        0.424    
-4            248       AreaSource   30     1         9.201E-04   0.0        0.413    
-4            249       AreaSource   30     1         0.001       0.0        0.341    
+4            328       AreaSource   1,544  5,145     0.003       1.847      12       
+4            327       AreaSource   1,544  5,145     0.006       2.026      10       
+4            329       AreaSource   1,544  5,145     0.003       1.726      10       
+4            317       AreaSource   449    1         0.002       0.0        4.578    
+4            318       AreaSource   449    1         0.002       0.0        4.519    
+4            316       AreaSource   449    1         0.002       0.0        4.452    
+4            322       AreaSource   307    1         0.001       0.0        3.292    
+4            323       AreaSource   307    1         9.940E-04   0.0        3.223    
+4            264       AreaSource   85     1         9.840E-04   0.0        0.841    
+4            263       AreaSource   85     1         9.511E-04   0.0        0.839    
+4            265       AreaSource   85     1         9.220E-04   0.0        0.838    
+4            331       AreaSource   56     1         9.451E-04   0.0        0.584    
+4            330       AreaSource   56     1         9.770E-04   0.0        0.583    
+4            332       AreaSource   56     1         9.410E-04   0.0        0.581    
+4            266       AreaSource   56     1         8.450E-04   0.0        0.559    
+4            267       AreaSource   56     1         8.180E-04   0.0        0.559    
+4            248       AreaSource   30     1         9.241E-04   0.0        0.443    
+4            333       AreaSource   39     1         9.530E-04   0.0        0.407    
+4            334       AreaSource   39     1         9.291E-04   0.0        0.400    
+4            249       AreaSource   30     1         0.001       0.0        0.318    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -134,18 +123,18 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         66        0.035     21    
+total compute_ruptures         64        0.035     21    
 reading composite source model 11        0.0       1     
-managing sources               6.058     0.0       1     
-splitting sources              5.470     0.0       3     
-filtering sources              0.150     0.0       142   
-store source_info              0.120     0.0       1     
-total compute_gmfs_and_curves  0.015     0.0       5     
-compute poes                   0.008     0.0       5     
+managing sources               6.306     0.0       1     
+splitting sources              5.599     0.0       3     
+filtering sources              0.153     0.0       142   
+store source_info              0.123     0.0       1     
+total compute_gmfs_and_curves  0.017     0.0       5     
+compute poes                   0.009     0.0       5     
+make contexts                  0.006     0.0       5     
 saving gmfs                    0.005     0.0       5     
-make contexts                  0.005     0.0       5     
 saving ruptures                0.004     0.0       1     
 filtering ruptures             0.003     0.0       8     
 aggregate curves               0.002     0.0       21    
-reading site collection        4.220E-04 0.0       1     
+reading site collection        4.189E-04 0.0       1     
 ============================== ========= ========= ======

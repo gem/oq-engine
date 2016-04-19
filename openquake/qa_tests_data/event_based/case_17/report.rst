@@ -1,25 +1,27 @@
 Event Based Hazard QA Test, Case 17
 ===================================
 
+Datastore /home/michele/ssd/calc_10561.hdf5 last updated Tue Apr 19 05:58:41 2016 on gem-tstation
+
 num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'event_based'     
-number_of_logic_tree_samples 5                 
-maximum_distance             {'default': 200.0}
-investigation_time           1.0               
-ses_per_logic_tree_path      3                 
-truncation_level             2.0               
-rupture_mesh_spacing         1.0               
-complex_fault_mesh_spacing   1.0               
-width_of_mfd_bin             1.0               
-area_source_discretization   10.0              
-random_seed                  106               
-master_seed                  0                 
-concurrent_tasks             40                
-============================ ==================
+============================ ===================
+calculation_mode             'event_based'      
+number_of_logic_tree_samples 5                  
+maximum_distance             {'default': 200.0} 
+investigation_time           1.0                
+ses_per_logic_tree_path      3                  
+truncation_level             2.0                
+rupture_mesh_spacing         1.0                
+complex_fault_mesh_spacing   1.0                
+width_of_mfd_bin             1.0                
+area_source_discretization   10.0               
+random_seed                  106                
+master_seed                  0                  
+oqlite_version               '0.13.0-git7c9cf8e'
+============================ ===================
 
 Input files
 -----------
@@ -68,30 +70,17 @@ source_model_2.xml 1      Active Shallow Crust 1           3            0.175
 
 Informational data
 ------------------
-====================================== ==================
-compute_ruptures_max_received_per_task 7113              
-compute_ruptures_sent.Monitor          5068              
-compute_ruptures_sent.RlzsAssoc        9458              
-compute_ruptures_sent.SiteCollection   874               
-compute_ruptures_sent.WeightedSequence 3055              
-compute_ruptures_sent.int              10                
-compute_ruptures_tot_received          10380             
-hazard.input_weight                    1.6750000000000003
-hazard.n_imts                          1                 
-hazard.n_levels                        3.0               
-hazard.n_realizations                  5                 
-hazard.n_sites                         1                 
-hazard.n_sources                       0                 
-hazard.output_weight                   0.15              
-====================================== ==================
+======== ==============
+hostname 'gem-tstation'
+======== ==============
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  0.975  1         9.584E-05   0.0        0.023    
-1            2         PointSource  0.175  1         6.008E-05   0.0        0.006    
+0            1         PointSource  0.975  1         1.330E-04   0.0        0.034    
+1            2         PointSource  0.175  1         8.607E-05   0.0        0.013    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -99,19 +88,19 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.030     0.0       2     
-total compute_gmfs_and_curves  0.006     0.0       3     
-reading composite source model 0.006     0.0       1     
-store source_info              0.005     0.0       1     
-managing sources               0.003     0.0       1     
-make contexts                  0.003     0.0       3     
-saving gmfs                    0.002     0.0       3     
-saving ruptures                0.002     0.0       1     
-aggregating hcurves            0.002     0.0       3     
-compute poes                   0.001     0.0       3     
-filtering ruptures             0.001     0.0       3     
-aggregate curves               0.001     0.0       5     
-bulding hazard curves          6.118E-04 0.0       3     
-filtering sources              1.559E-04 0.0       2     
-reading site collection        3.886E-05 0.0       1     
+total compute_ruptures         0.048     0.0       2     
+store source_info              0.011     0.0       1     
+total compute_gmfs_and_curves  0.008     0.0       3     
+reading composite source model 0.007     0.0       1     
+saving gmfs                    0.005     0.0       3     
+managing sources               0.004     0.0       1     
+saving ruptures                0.004     0.0       1     
+make contexts                  0.004     0.0       3     
+aggregating hcurves            0.003     0.0       3     
+filtering ruptures             0.003     0.0       3     
+compute poes                   0.002     0.0       3     
+aggregate curves               9.809E-04 0.0       5     
+bulding hazard curves          7.861E-04 0.0       3     
+filtering sources              2.191E-04 0.0       2     
+reading site collection        4.196E-05 0.0       1     
 ============================== ========= ========= ======

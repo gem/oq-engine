@@ -1,6 +1,8 @@
 Classical Tiling for Turkey reduced
 ===================================
 
+Datastore /home/michele/ssd/calc_10583.hdf5 last updated Tue Apr 19 05:59:24 2016 on gem-tstation
+
 num_sites = 83, sitecol = 4.42 KB
 
 Parameters
@@ -18,9 +20,8 @@ width_of_mfd_bin             0.1
 area_source_discretization   25.0               
 random_seed                  323                
 master_seed                  0                  
-concurrent_tasks             4                  
 sites_per_tile               10                 
-oqlite_version               '0.13.0-gitcefd831'
+oqlite_version               '0.13.0-git7c9cf8e'
 ============================ ===================
 
 Input files
@@ -91,13 +92,14 @@ filtered_weight 148
 Informational data
 ------------------
 ======================================== ==================
-count_eff_ruptures_max_received_per_task 6090              
-count_eff_ruptures_sent.Monitor          75764             
-count_eff_ruptures_sent.RlzsAssoc        2749656           
-count_eff_ruptures_sent.SiteCollection   13852             
-count_eff_ruptures_sent.WeightedSequence 41008             
-count_eff_ruptures_sent.int              65                
-count_eff_ruptures_tot_received          79170             
+count_eff_ruptures_max_received_per_task 6027              
+count_eff_ruptures_num_tasks             13                
+count_eff_ruptures_sent.monitor          74945             
+count_eff_ruptures_sent.rlzs_assoc       2749565           
+count_eff_ruptures_sent.sitecol          13852             
+count_eff_ruptures_sent.siteidx          65                
+count_eff_ruptures_sent.sources          41008             
+count_eff_ruptures_tot_received          78351             
 hazard.input_weight                      3359.8500000000004
 hazard.n_imts                            2                 
 hazard.n_levels                          45.0              
@@ -105,6 +107,7 @@ hazard.n_realizations                    684
 hazard.n_sites                           83                
 hazard.n_sources                         0                 
 hazard.output_weight                     5109480.0         
+hostname                                 'gem-tstation'    
 ======================================== ==================
 
 Slowest sources
@@ -114,7 +117,7 @@ trt_model_id source_id    source_class weight split_num filter_time split_time c
 ============ ============ ============ ====== ========= =========== ========== =========
 4            AS_GEAS343   AreaSource   96     1         0.010       0.0        0.0      
 9            FSBG_TRBG103 AreaSource   43     1         0.004       0.0        0.0      
-9            FSBG_ARAS462 AreaSource   7.650  1         7.782E-04   0.0        0.0      
+9            FSBG_ARAS462 AreaSource   7.650  1         7.961E-04   0.0        0.0      
 ============ ============ ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -122,11 +125,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               2.360     0.0       1     
-reading composite source model 1.005     0.0       1     
+managing sources               2.280     0.0       1     
+reading composite source model 1.009     0.0       1     
 filtering sources              0.214     0.0       248   
-reading site collection        0.008     0.0       1     
+reading site collection        0.009     0.0       1     
+store source_info              0.007     0.0       1     
 total count_eff_ruptures       0.004     0.0       13    
-store source_info              0.003     0.0       1     
-aggregate curves               1.876E-04 0.0       13    
+aggregate curves               2.058E-04 0.0       13    
 ============================== ========= ========= ======

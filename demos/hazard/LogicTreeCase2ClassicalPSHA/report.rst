@@ -1,6 +1,8 @@
 Classical PSHA with non-trivial logic tree (1 source model + absolute uncertainties on G-R a and b values and maximum magnitude and 2 GMPEs per tectonic region type)
 =====================================================================================================================================================================
 
+Datastore /home/michele/ssd/calc_10521.hdf5 last updated Tue Apr 19 05:57:01 2016 on gem-tstation
+
 num_sites = 1, sitecol = 739 B
 
 Parameters
@@ -18,9 +20,8 @@ width_of_mfd_bin             0.1
 area_source_discretization   5.0                
 random_seed                  23                 
 master_seed                  0                  
-concurrent_tasks             40                 
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcefd831'
+oqlite_version               '0.13.0-git7c9cf8e'
 ============================ ===================
 
 Input files
@@ -800,48 +801,50 @@ filtered_weight 117,818
 
 Informational data
 ------------------
-======================================== ==========
-count_eff_ruptures_max_received_per_task 2705      
-count_eff_ruptures_sent.Monitor          403218    
-count_eff_ruptures_sent.RlzsAssoc        51661476  
-count_eff_ruptures_sent.SiteCollection   70794     
-count_eff_ruptures_sent.WeightedSequence 248103    
-count_eff_ruptures_sent.int              810       
-count_eff_ruptures_tot_received          438186    
-hazard.input_weight                      117817.875
-hazard.n_imts                            1         
-hazard.n_levels                          19.0      
-hazard.n_realizations                    324       
-hazard.n_sites                           1         
-hazard.n_sources                         0         
-hazard.output_weight                     6156.0    
-======================================== ==========
+======================================== ==============
+count_eff_ruptures_max_received_per_task 2705          
+count_eff_ruptures_num_tasks             162           
+count_eff_ruptures_sent.monitor          403218        
+count_eff_ruptures_sent.rlzs_assoc       51661476      
+count_eff_ruptures_sent.sitecol          70794         
+count_eff_ruptures_sent.siteidx          810           
+count_eff_ruptures_sent.sources          248103        
+count_eff_ruptures_tot_received          438066        
+hazard.input_weight                      117817.875    
+hazard.n_imts                            1             
+hazard.n_levels                          19.0          
+hazard.n_realizations                    324           
+hazard.n_sites                           1             
+hazard.n_sources                         0             
+hazard.output_weight                     6156.0        
+hostname                                 'gem-tstation'
+======================================== ==============
 
 Slowest sources
 ---------------
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-38           2         SimpleFaultSource 1,337  1         0.002       0.0        0.0      
-0            2         SimpleFaultSource 1,334  1         0.001       0.0        0.0      
-96           2         SimpleFaultSource 1,334  1         0.001       0.0        0.0      
-70           2         SimpleFaultSource 1,339  1         0.001       0.0        0.0      
-98           2         SimpleFaultSource 1,337  1         0.001       0.0        0.0      
-82           2         SimpleFaultSource 1,339  1         0.001       0.0        0.0      
-72           2         SimpleFaultSource 1,334  1         0.001       0.0        0.0      
-100          2         SimpleFaultSource 1,339  1         0.001       0.0        0.0      
-110          2         SimpleFaultSource 1,337  1         0.001       0.0        0.0      
-106          2         SimpleFaultSource 1,339  1         0.001       0.0        0.0      
-102          2         SimpleFaultSource 1,334  1         0.001       0.0        0.0      
-26           2         SimpleFaultSource 1,337  1         0.001       0.0        0.0      
-118          2         SimpleFaultSource 1,339  1         0.001       0.0        0.0      
-44           2         SimpleFaultSource 1,337  1         0.001       0.0        0.0      
-156          2         SimpleFaultSource 1,334  1         0.001       0.0        0.0      
-42           2         SimpleFaultSource 1,334  1         0.001       0.0        0.0      
-50           2         SimpleFaultSource 1,337  1         0.001       0.0        0.0      
-62           2         SimpleFaultSource 1,337  1         0.001       0.0        0.0      
-94           2         SimpleFaultSource 1,339  1         0.001       0.0        0.0      
-24           2         SimpleFaultSource 1,334  1         0.001       0.0        0.0      
+122          2         SimpleFaultSource 1,337  1         0.004       0.0        0.0      
+18           2         SimpleFaultSource 1,334  1         0.003       0.0        0.0      
+80           2         SimpleFaultSource 1,337  1         0.003       0.0        0.0      
+60           2         SimpleFaultSource 1,334  1         0.003       0.0        0.0      
+38           2         SimpleFaultSource 1,337  1         0.003       0.0        0.0      
+142          2         SimpleFaultSource 1,339  1         0.003       0.0        0.0      
+86           2         SimpleFaultSource 1,337  1         0.003       0.0        0.0      
+136          2         SimpleFaultSource 1,339  1         0.003       0.0        0.0      
+0            2         SimpleFaultSource 1,334  1         0.003       0.0        0.0      
+70           2         SimpleFaultSource 1,339  1         0.003       0.0        0.0      
+72           2         SimpleFaultSource 1,334  1         0.003       0.0        0.0      
+84           2         SimpleFaultSource 1,334  1         0.003       0.0        0.0      
+4            2         SimpleFaultSource 1,339  1         0.003       0.0        0.0      
+34           2         SimpleFaultSource 1,339  1         0.003       0.0        0.0      
+124          2         SimpleFaultSource 1,339  1         0.003       0.0        0.0      
+6            2         SimpleFaultSource 1,334  1         0.003       0.0        0.0      
+82           2         SimpleFaultSource 1,339  1         0.003       0.0        0.0      
+94           2         SimpleFaultSource 1,339  1         0.003       0.0        0.0      
+118          2         SimpleFaultSource 1,339  1         0.003       0.0        0.0      
+100          2         SimpleFaultSource 1,339  1         0.003       0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
 
 Slowest operations
@@ -849,11 +852,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               5.240     0.0       1     
-reading composite source model 4.303     0.0       1     
-filtering sources              0.157     0.0       162   
-total count_eff_ruptures       0.059     0.008     162   
-store source_info              0.004     0.0       1     
+managing sources               8.593     0.0       1     
+reading composite source model 8.167     0.0       1     
+filtering sources              0.325     0.0       162   
+total count_eff_ruptures       0.063     0.012     162   
+store source_info              0.005     0.0       1     
 aggregate curves               0.003     0.0       162   
-reading site collection        3.600E-05 0.0       1     
+reading site collection        4.387E-05 0.0       1     
 ============================== ========= ========= ======
