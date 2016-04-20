@@ -166,7 +166,7 @@ class EBRupture(object):
         """
         How many times the underlying rupture occurs.
         """
-        return len(self.etags)
+        return len(self.events)
 
     def export(self, mesh):
         """
