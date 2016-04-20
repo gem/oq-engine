@@ -361,7 +361,7 @@ def view_portfolio_loss(token, dstore):
                 data[rlzi][loss_type] = loss
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
     # this is very sensitive to rounding errors, so I a using a low precision
-    return rst_table(array, fmt='%.5E')
+    return rst_table(array, fmt='%.4E')
 
 
 def sum_table(records):

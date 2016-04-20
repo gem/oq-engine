@@ -1,7 +1,7 @@
 Scenario QA Test 3
 ==================
 
-Datastore /home/michele/ssd/calc_10578.hdf5 last updated Tue Apr 19 05:59:18 2016 on gem-tstation
+Datastore /home/michele/ssd/calc_11462.hdf5 last updated Wed Apr 20 09:39:28 2016 on gem-tstation
 
 num_sites = 4, sitecol = 877 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  3                  
 master_seed                  0                  
 avg_losses                   False              
-oqlite_version               '0.13.0-git7c9cf8e'
+oqlite_version               '0.13.0-git361357f'
 ============================ ===================
 
 Input files
@@ -63,14 +63,14 @@ Slowest operations
 ========================= ========= ========= ======
 operation                 time_sec  memory_mb counts
 ========================= ========= ========= ======
-total scenario_risk       0.010     0.008     4     
-computing individual risk 0.008     0.0       4     
-filtering sites           0.007     0.0       1     
-computing gmfs            0.004     0.0       1     
-reading exposure          0.004     0.0       1     
-saving gmfs               8.340E-04 0.0       1     
-building riskinputs       6.480E-04 0.0       1     
-building epsilons         6.230E-04 0.0       1     
-getting hazard            1.469E-04 0.0       4     
-reading site collection   7.153E-06 0.0       1     
+total scenario_risk       0.008     0.0       4     
+computing individual risk 0.006     0.0       4     
+filtering sites           0.006     0.0       1     
+computing gmfs            0.003     0.0       1     
+reading exposure          0.003     0.0       1     
+saving gmfs               7.470E-04 0.0       1     
+building riskinputs       5.159E-04 0.0       1     
+building epsilons         4.520E-04 0.0       1     
+getting hazard            9.394E-05 0.0       4     
+reading site collection   5.960E-06 0.0       1     
 ========================= ========= ========= ======

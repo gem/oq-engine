@@ -1,7 +1,7 @@
 PEB QA test 1
 =============
 
-Datastore /home/michele/ssd/calc_10536.hdf5 last updated Tue Apr 19 05:57:19 2016 on gem-tstation
+Datastore /home/michele/ssd/calc_11422.hdf5 last updated Wed Apr 20 09:37:27 2016 on gem-tstation
 
 num_sites = 3, sitecol = 831 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.3
 area_source_discretization   10.0               
 random_seed                  23                 
 master_seed                  0                  
-oqlite_version               '0.13.0-git7c9cf8e'
+oqlite_version               '0.13.0-git361357f'
 ============================ ===================
 
 Input files
@@ -72,18 +72,19 @@ source_model.xml 0      Active Shallow Crust 3           8            0.450
 
 Informational data
 ------------------
-======== ==============
-hostname 'gem-tstation'
-======== ==============
+================ ==============
+hostname         'gem-tstation'
+require_epsilons True          
+================ ==============
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            2         PointSource  0.150  1         8.106E-05   0.0        0.007    
-0            3         PointSource  0.150  1         7.486E-05   0.0        0.006    
-0            1         PointSource  0.150  1         1.149E-04   0.0        0.006    
+0            2         PointSource  0.150  1         7.391E-05   0.0        0.007    
+0            1         PointSource  0.150  1         1.030E-04   0.0        0.006    
+0            3         PointSource  0.150  1         6.795E-05   0.0        0.006    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -91,17 +92,17 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_gmfs_and_curves  0.079     0.0       8     
-compute poes                   0.064     0.0       8     
-total compute_ruptures         0.019     0.0       1     
-make contexts                  0.011     0.0       8     
+total compute_gmfs_and_curves  0.083     0.0       8     
+compute poes                   0.069     0.0       8     
+total compute_ruptures         0.020     0.0       1     
+make contexts                  0.010     0.0       8     
 saving gmfs                    0.008     0.0       8     
-store source_info              0.005     0.0       1     
 reading composite source model 0.005     0.0       1     
+store source_info              0.005     0.0       1     
 filtering ruptures             0.004     0.0       8     
 saving ruptures                0.003     0.0       1     
 managing sources               0.002     0.0       1     
-aggregate curves               6.311E-04 0.0       1     
-filtering sources              2.708E-04 0.0       3     
-reading site collection        3.600E-05 0.0       1     
+aggregate curves               5.691E-04 0.0       1     
+filtering sources              2.449E-04 0.0       3     
+reading site collection        3.195E-05 0.0       1     
 ============================== ========= ========= ======

@@ -1,7 +1,7 @@
 Scenario QA Test for occupants
 ==============================
 
-Datastore /home/michele/ssd/calc_10576.hdf5 last updated Tue Apr 19 05:59:18 2016 on gem-tstation
+Datastore /home/michele/ssd/calc_11460.hdf5 last updated Wed Apr 20 09:39:28 2016 on gem-tstation
 
 num_sites = 3, sitecol = 831 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  3                  
 master_seed                  0                  
-oqlite_version               '0.13.0-git7c9cf8e'
+oqlite_version               '0.13.0-git361357f'
 ============================ ===================
 
 Input files
@@ -65,5 +65,5 @@ operation               time_sec  memory_mb counts
 filtering sites         0.007     0.0       1     
 reading exposure        0.003     0.0       1     
 computing gmfs          0.001     0.0       1     
-reading site collection 8.106E-06 0.0       1     
+reading site collection 9.060E-06 0.0       1     
 ======================= ========= ========= ======
