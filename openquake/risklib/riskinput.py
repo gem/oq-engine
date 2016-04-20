@@ -558,7 +558,6 @@ def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
             computer = GmfComputer(
                 ebr.rupture, r_sites, gmv_dt, gsims, trunc_level, correl_model)
         with gmf_mon:
-            eids = ebr.events['eid']
             ddic = computer.calcgmfs(
                 ebr.multiplicity, ebr.rupture.seed, rlzs_by_gsim)
             for rlz, gmf_by_imt in ddic.items():
@@ -567,7 +566,9 @@ def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
                     for sid, gmvs in zip(r_sites.sids, gmf):
                         if min_iml:
                             ok = gmvs >= min_iml[imt]
-                            eids, gmvs = eids[ok], gmvs[ok]
+                            eids, gmvs = ebr.events['eid'][ok], gmvs[ok]
+                        else:
+                            eids = ebr.events['eid']
                         hazards[sid][imt][rlz].append(eids, gmvs)
     return hazards
 
