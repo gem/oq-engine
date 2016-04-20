@@ -16,10 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import sys
-import time
-import signal
 import getpass
 import subprocess
 import tempfile
@@ -106,15 +103,6 @@ class JobFromFileTestCase(unittest.TestCase):
             self.fail('Job was not found in the database')
 
 
-# used in test_kill
-def sleeping_calculation(logfile):
-    cfg = helpers.get_data_path('event_based_hazard/job.ini')
-    job_id, oq = actions.job_from_file(cfg, 'test_user')
-    with mock.patch('openquake.engine.engine._do_run_calc',
-                    lambda *args: time.sleep(1000)):
-        engine.run_calc(job_id, oq, 'info', logfile)
-
-
 class RunCalcTestCase(unittest.TestCase):
     """
     Test engine.run_calc in case of errors
@@ -129,19 +117,6 @@ class RunCalcTestCase(unittest.TestCase):
             logged = open(temp.name).read()
             # make sure the real error has been logged
             self.assertIn('integer division or modulo by zero', logged)
-
-    def test_kill(self):
-        fd, fname = tempfile.mkstemp()
-        os.close(fd)
-        code = ('from openquake.engine.tests.engine_test import '
-                'sleeping_calculation; sleeping_calculation(%r)' % fname)
-        proc = subprocess.Popen([sys.executable, '-c', code])
-        time.sleep(.3)
-        os.kill(proc.pid, signal.SIGTERM)
-        time.sleep(.2)
-        logged = open(fname).read()
-        raise unittest.SkipTest   # FIXME: this test does not work :-(
-        self.assertIn('MasterKilled', logged)
 
 
 class OpenquakeCliTestCase(unittest.TestCase):
