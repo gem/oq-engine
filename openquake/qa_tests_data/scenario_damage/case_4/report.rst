@@ -1,7 +1,7 @@
 Scenario Damage QA Test 4
 =========================
 
-Datastore /home/michele/ssd/calc_10489.hdf5 last updated Tue Apr 19 05:56:35 2016 on gem-tstation
+Datastore /home/michele/ssd/calc_11387.hdf5 last updated Wed Apr 20 09:36:46 2016 on gem-tstation
 
 num_sites = 3, sitecol = 831 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  3                  
 master_seed                  0                  
-oqlite_version               '0.13.0-git7c9cf8e'
+oqlite_version               '0.13.0-git361357f'
 ============================ ===================
 
 Input files
@@ -62,8 +62,8 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.007     0.0       1     
+filtering sites         0.006     0.0       1     
 reading exposure        0.003     0.0       1     
-computing gmfs          0.001     0.0       1     
-reading site collection 9.060E-06 0.0       1     
+computing gmfs          9.520E-04 0.0       1     
+reading site collection 5.960E-06 0.0       1     
 ======================= ========= ========= ======
