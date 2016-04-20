@@ -176,7 +176,7 @@ def make_report(isodate='today'):
         page = report['html_title']
 
         job_stats = dbcmd('fetch', JOB_STATS, job_id)
-        page += job_stats
+        page += html(job_stats)
 
         page += report['fragment']
 
