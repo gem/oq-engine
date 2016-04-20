@@ -615,6 +615,7 @@ class EventBasedCalculator(ClassicalCalculator):
         self.sesruptures = []
         for serial in self.datastore['sescollection']:
             self.sesruptures.append(self.datastore['sescollection/' + serial])
+        self.sesruptures.sort(key=operator.attrgetter('serial'))
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """
