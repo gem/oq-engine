@@ -16,23 +16,18 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
 import logging
 from Queue import Queue
 from threading import Thread
 from multiprocessing.connection import Listener
 
+from openquake.commonlib import sap
 from openquake.commonlib.parallel import safely_call
 from openquake.engine import config
 from openquake.server.db import actions
+from openquake.server.settings import DATABASE
 from django.db import connection
 
-DEFAULT_LOG_LEVEL = 'progress'
-
-# global commands
-
-exit = sys.exit
-info = logging.info
 queue = Queue()
 
 
@@ -80,7 +75,7 @@ class DbServer(object):
 
     def loop(self):
         listener = Listener(self.address, backlog=5, authkey=self.authkey)
-        logging.info('DB server listening on %s:%d...' % self.address)
+        logging.warn('DB server listening on %s:%d...' % self.address)
         self.thread.start()
         cmd = [None]
         try:
@@ -99,14 +94,21 @@ class DbServer(object):
             listener.close()
             self.thread.join()
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-    if sys.argv[1:]:  # assume sys.argv[1] has the form fname:port
-        from openquake.server.settings import DATABASE
-        fname, port = sys.argv[1].split(':')
+
+def runserver(hostport=None, loglevel='WARN'):
+    logging.basicConfig(level=getattr(logging, loglevel))
+    if hostport:  # assume a string of the form "hostname:port"
+        fname, port = hostport.split(':')
         addr = (DATABASE['HOST'], int(port))
         DATABASE['NAME'] = fname
         DATABASE['PORT'] = int(port)
     else:
         addr = config.DBS_ADDRESS
     DbServer(addr, config.DBS_AUTHKEY).loop()
+
+parser = sap.Parser(runserver)
+parser.arg('hostport', 'hostname:port')
+parser.opt('loglevel', 'WARN or INFO')
+
+if __name__ == '__main__':
+    parser.callfunc()
