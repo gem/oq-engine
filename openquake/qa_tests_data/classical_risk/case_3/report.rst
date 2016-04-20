@@ -1,7 +1,7 @@
 Classical PSHA - Loss fractions QA test
 =======================================
 
-Datastore /home/michele/ssd/calc_10482.hdf5 last updated Tue Apr 19 05:56:31 2016 on gem-tstation
+Datastore /home/michele/ssd/calc_11380.hdf5 last updated Wed Apr 20 09:36:42 2016 on gem-tstation
 
 num_sites = 13, sitecol = 1.26 KB
 
@@ -22,7 +22,7 @@ random_seed                  23
 master_seed                  0                  
 avg_losses                   False              
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git7c9cf8e'
+oqlite_version               '0.13.0-git361357f'
 ============================ ===================
 
 Input files
@@ -73,14 +73,15 @@ source_model.xml 0      Active Shallow Crust 2           1,613        53
 Informational data
 ------------------
 ==================================== ==============
-classical_risk_max_received_per_task 7388          
+classical_risk_max_received_per_task 7437          
 classical_risk_num_tasks             13            
-classical_risk_sent.monitor          53924         
+classical_risk_sent.monitor          54561         
 classical_risk_sent.riskinputs       14193         
 classical_risk_sent.riskmodel        166556        
-classical_risk_sent.rlzs_assoc       37011         
-classical_risk_tot_received          96044         
+classical_risk_sent.rlzs_assoc       37102         
+classical_risk_tot_received          96681         
 hostname                             'gem-tstation'
+require_epsilons                     True          
 ==================================== ==============
 
 Exposure model
@@ -104,8 +105,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            232       AreaSource   40     1         6.940E-04   0.0        2.323    
-0            225       AreaSource   13     1         7.110E-04   0.0        0.522    
+0            232       AreaSource   40     1         6.859E-04   0.0        2.189    
+0            225       AreaSource   13     1         7.079E-04   0.0        0.330    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -113,20 +114,20 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total classical_risk           8.503     1.199     13    
-computing individual risk      8.481     0.0       13    
-total classical                2.856     2.637     2     
-making contexts                1.583     0.0       2,132 
-reading composite source model 1.078     0.0       1     
-computing poes                 0.492     0.0       1,613 
-managing sources               0.041     0.0       1     
+total classical_risk           8.068     1.215     13    
+computing individual risk      8.046     0.0       13    
+total classical                2.528     2.891     2     
+making contexts                1.420     0.0       2,132 
+reading composite source model 1.047     0.0       1     
+computing poes                 0.469     0.0       1,613 
+managing sources               0.040     0.0       1     
 filtering sources              0.012     0.0       15    
 store source_info              0.011     0.0       1     
 reading exposure               0.006     0.0       1     
+getting hazard                 0.003     0.0       13    
 save curves_by_trt_gsim        0.002     0.0       1     
-getting hazard                 0.002     0.0       13    
 combine and save curves_by_rlz 0.001     0.0       1     
 building riskinputs            0.001     0.0       1     
-aggregate curves               9.508E-04 0.0       2     
-reading site collection        7.868E-06 0.0       1     
+aggregate curves               9.298E-04 0.0       2     
+reading site collection        1.001E-05 0.0       1     
 ============================== ========= ========= ======

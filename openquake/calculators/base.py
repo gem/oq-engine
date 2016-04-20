@@ -344,6 +344,8 @@ class HazardCalculator(BaseCalculator):
                 attrs['maxweight'] = self.csm.maxweight
 
         job_info.hostname = socket.gethostname()
+        if hasattr(self, 'riskmodel'):
+            job_info.require_epsilons = bool(self.riskmodel.covs)
         self.job_info = job_info
         self.datastore.flush()
 

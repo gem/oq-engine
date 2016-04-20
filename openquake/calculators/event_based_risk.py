@@ -247,8 +247,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.E = len(self.etags)
         logging.info('Populating the risk inputs')
         all_ruptures = []
-        for colkey in self.datastore['sescollection']:
-            all_ruptures.extend(self.datastore['sescollection/' + colkey])
+        for serial in self.datastore['sescollection']:
+            all_ruptures.append(self.datastore['sescollection/' + serial])
+        all_ruptures.sort(key=operator.attrgetter('serial'))
         if not self.riskmodel.covs:
             # do not generate epsilons
             eps = FakeMatrix(self.N, self.E)
@@ -261,17 +262,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
             self.sitecol.complete, all_ruptures, oq.truncation_level,
             correl_model, oq.minimum_intensity, eps, oq.concurrent_tasks or 1))
-        nbytes = AccumDict(total=0)
-        for ri in self.riskinputs:
-            total, sizes = parallel.get_pickled_sizes(ri)
-            nbytes += dict(sizes)
-            nbytes['total'] += total
-        if 'job_info' not in self.datastore:
-            job_info = hdf5.LiteralAttrs()
-        else:
-            job_info = self.datastore['job_info']
-        job_info.riskinputs = nbytes
-        self.datastore['job_info'] = job_info
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
         # preparing empty datasets

@@ -209,7 +209,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_7(self):
-        # 2 models x 3 GMPEs, 100 samples * 10 SES
+        # 2 models x 3 GMPEs, 10 samples * 200 SES
         expected = [
             'hazard_curve-mean.csv',
             'quantile_curve-0.1.csv',
@@ -224,7 +224,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         for imt in mean_cl.dtype.fields:
             reldiff, _index = max_rel_diff_index(
                 mean_cl[imt], mean_eb[imt], min_value=0.1)
-            self.assertLess(reldiff, 0.41)
+            self.assertLess(reldiff, 0.20)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):

@@ -389,7 +389,7 @@ class CompositeRiskModel(collections.Mapping):
                 all_ruptures, hint or 1, key=by_trt_id):
             eids = []
             for sr in ses_ruptures:
-                eids.extend(sr.eids)
+                eids.extend(sr.events['eid'])
             yield RiskInputFromRuptures(
                 imt_taxonomies, sitecol, ses_ruptures,
                 trunc_level, correl_model, min_iml, eps[:, eids], eids)
@@ -558,6 +558,7 @@ def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
             computer = GmfComputer(
                 ebr.rupture, r_sites, gmv_dt, gsims, trunc_level, correl_model)
         with gmf_mon:
+            eids = ebr.events['eid']
             ddic = computer.calcgmfs(
                 ebr.multiplicity, ebr.rupture.seed, rlzs_by_gsim)
             for rlz, gmf_by_imt in ddic.items():
@@ -566,9 +567,7 @@ def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
                     for sid, gmvs in zip(r_sites.sids, gmf):
                         if min_iml:
                             ok = gmvs >= min_iml[imt]
-                            eids, gmvs = ebr.eids[ok], gmvs[ok]
-                        else:
-                            eids = ebr.eids
+                            eids, gmvs = eids[ok], gmvs[ok]
                         hazards[sid][imt][rlz].append(eids, gmvs)
     return hazards
 

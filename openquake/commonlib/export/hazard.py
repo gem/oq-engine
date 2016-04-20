@@ -88,18 +88,11 @@ def export_ses_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
-    try:
-        csm_info = dstore['rlzs_assoc'].csm_info
-    except AttributeError:  # for scenario calculators don't export
-        return []
     mesh = dstore['sitemesh'].value
     ruptures = []
-    for sm in csm_info.source_models:
-        for trt_model in sm.trt_models:
-            colkey = 'sescollection/trt=%02d' % trt_model.id
-            if colkey in dstore:
-                for sr in dstore[colkey]:
-                    ruptures.extend(sr.export(mesh))
+    for serial in dstore['sescollection']:
+        sr = dstore['sescollection/' + serial]
+        ruptures.extend(sr.export(mesh))
     ses_coll = SESCollection(
         groupby(ruptures, operator.attrgetter('ses_idx')),
         oq.investigation_time)
@@ -589,12 +582,11 @@ def export_gmf_txt(key, dest, sitecol, ruptures, rlz, investigation_time):
     return {key: [dest]}
 
 
-def get_rup_idx(rupcol, etag):
+def get_rup_idx(ebrup, etag):
     # extract the rupture and the index of the given etag from a collection
-    for rup in rupcol:
-        for etag_idx, tag in enumerate(rup.etags):
-            if tag == etag:
-                return rup, etag_idx
+    for etag_idx, tag in enumerate(ebrup.etags):
+        if tag == etag:
+            return etag_idx
     raise ValueError('event tag %s not found in the rupture collection')
 
 
@@ -603,14 +595,13 @@ def _get_gmfs(dstore, etag):
     rlzs_assoc = dstore['rlzs_assoc']
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
-    col_id, serial = util.get_col_serial(etag)
-    trt_id = rlzs_assoc.csm_info.get_trt_id(col_id)
-    coll = dstore['sescollection/trt=%02d' % trt_id]
-    rup, idx = get_rup_idx(coll, etag)
+    serial = util.get_serial(etag)
+    rup = dstore['sescollection/' + serial]
+    rup_idx = get_rup_idx(rup, etag)
     correl_model = readinput.get_correl_model(oq)
     gsims = rlzs_assoc.gsims_by_trt_id[rup.trt_id]
     rlzs = [rlz for gsim in map(str, gsims)
-            for rlz in rlzs_assoc[trt_id, gsim]]
+            for rlz in rlzs_assoc[rup.trt_id, gsim]]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
     gmfa_by_rlz = event_based.make_gmfs(
         [rup], sitecol, gmf.gmv_dt(oq.imtls), rlzs_assoc,
@@ -618,7 +609,7 @@ def _get_gmfs(dstore, etag):
     for imt in oq.imtls:
         gmfa = numpy.zeros(N, gmf_dt)
         for rlz in rlzs:
-            data = gmfa_by_rlz[rlz.ordinal]['gmv'][imt][idx]
+            data = gmfa_by_rlz[rlz.ordinal]['gmv'][imt][rup_idx]
             gmfa['%03d' % rlz.ordinal][rup.indices] = data
         yield gmfa, imt
 
