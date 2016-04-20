@@ -263,17 +263,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.sitecol.complete, all_ruptures,
             self.rlzs_assoc.gsims_by_trt_id, oq.truncation_level, correl_model,
             eps, oq.concurrent_tasks or 1))
-        nbytes = AccumDict(total=0)
-        for ri in self.riskinputs:
-            total, sizes = parallel.get_pickled_sizes(ri)
-            nbytes += dict(sizes)
-            nbytes['total'] += total
-        if 'job_info' not in self.datastore:
-            job_info = hdf5.LiteralAttrs()
-        else:
-            job_info = self.datastore['job_info']
-        job_info.riskinputs = nbytes
-        self.datastore['job_info'] = job_info
         logging.info('Built %d risk inputs', len(self.riskinputs))
 
         # preparing empty datasets

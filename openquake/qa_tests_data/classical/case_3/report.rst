@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 3
 ================================
 
-Datastore /home/michele/ssd/calc_10547.hdf5 last updated Tue Apr 19 05:57:52 2016 on gem-tstation
+Datastore /home/michele/ssd/calc_11431.hdf5 last updated Wed Apr 20 09:38:01 2016 on gem-tstation
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   0.05
 random_seed                  1066               
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git7c9cf8e'
+oqlite_version               '0.13.0-git361357f'
 ============================ ===================
 
 Input files
@@ -70,14 +70,14 @@ source_model.xml 0      Active Shallow Crust 1           31,353       783
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 2565          
+count_eff_ruptures_max_received_per_task 2600          
 count_eff_ruptures_num_tasks             79            
-count_eff_ruptures_sent.monitor          183359        
-count_eff_ruptures_sent.rlzs_assoc       224755        
+count_eff_ruptures_sent.monitor          186124        
+count_eff_ruptures_sent.rlzs_assoc       225308        
 count_eff_ruptures_sent.sitecol          34523         
 count_eff_ruptures_sent.siteidx          395           
 count_eff_ruptures_sent.sources          6601094       
-count_eff_ruptures_tot_received          202634        
+count_eff_ruptures_tot_received          205399        
 hazard.input_weight                      783.825       
 hazard.n_imts                            1             
 hazard.n_levels                          3.0           
@@ -93,7 +93,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   783    31,353    0.001       4.734      0.0      
+0            1         AreaSource   783    31,353    0.001       5.299      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -101,12 +101,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               5.383     0.0       1     
-splitting sources              4.734     0.0       1     
-reading composite source model 4.603     0.0       1     
+managing sources               5.956     0.0       1     
+splitting sources              5.299     0.0       1     
+reading composite source model 4.733     0.0       1     
 total count_eff_ruptures       0.052     0.0       79    
-store source_info              0.005     0.0       1     
-aggregate curves               0.001     0.0       79    
+store source_info              0.004     0.0       1     
 filtering sources              0.001     0.0       1     
+aggregate curves               0.001     0.0       79    
 reading site collection        3.695E-05 0.0       1     
 ============================== ========= ========= ======

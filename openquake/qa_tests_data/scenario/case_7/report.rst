@@ -1,7 +1,7 @@
 Scenario QA Test with No Spatial Correlation
 ============================================
 
-Datastore /home/michele/ssd/calc_10499.hdf5 last updated Tue Apr 19 05:56:36 2016 on gem-tstation
+Datastore /home/michele/ssd/calc_11397.hdf5 last updated Wed Apr 20 09:36:47 2016 on gem-tstation
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  3                  
 master_seed                  0                  
-oqlite_version               '0.13.0-git7c9cf8e'
+oqlite_version               '0.13.0-git361357f'
 ============================ ===================
 
 Input files
@@ -45,7 +45,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-computing gmfs          0.020     0.0       1     
-filtering sites         0.011     0.0       1     
-reading site collection 4.792E-05 0.0       1     
+computing gmfs          0.021     0.0       1     
+filtering sites         0.009     0.0       1     
+reading site collection 2.813E-05 0.0       1     
 ======================= ========= ========= ======
