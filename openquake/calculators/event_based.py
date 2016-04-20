@@ -45,6 +45,8 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 
+event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32)])
+
 
 # this will be removed in the future
 @datastore.view.add('col_rlz_assocs')
@@ -142,12 +144,22 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the tags of the corresponding seismic events.
     """
-    def __init__(self, rupture, indices, etags, trt_id, serial):
+    def __init__(self, rupture, indices, events, source_id, trt_id, serial):
         self.rupture = rupture
         self.indices = indices
-        self.etags = numpy.array(etags)
+        self.events = events
+        self.source_id = source_id
         self.trt_id = trt_id
         self.serial = serial
+
+    @property
+    def etags(self):
+        tags = []
+        for (eid, ses, occ) in self.events:
+            tag = 'trt=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
+                self.trt_id, ses, self.source_id, self.serial, occ)
+            tags.append(tag)
+        return numpy.array(tags)
 
     @property
     def multiplicity(self):
@@ -376,16 +388,15 @@ def build_eb_ruptures(
 
         # creating EBRuptures
         serial = rup.seed - random_seed + 1
-        etags = []
+        events = []
         for ses_idx, num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
-                etag = 'ses=%04d~src=%s~rup=%d-%02d' % (
-                    ses_idx, src.source_id, serial, occ_no)
-                etags.append(etag)
-        if etags:
-            yield EBRupture(rup, r_sites.indices, sorted(etags),
-                            src.trt_model_id, serial)
+                events.append((0, ses_idx, occ_no))
+        if events:
+            yield EBRupture(rup, r_sites.indices,
+                            numpy.array(events, event_dt),
+                            src.source_id, src.trt_model_id, serial)
 
 
 @base.calculators.add('event_based_rupture')
@@ -468,10 +479,10 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
             eid = 0
             for ebr in sescollection:
                 eids = []
-                for etag in ebr.etags:
+                for event in ebr.events:
+                    event['eid'] = eid
                     eids.append(eid)
                     eid += 1
-                ebr.eids = numpy.array(eids, U32)
                 self.datastore['sescollection/%s' % ebr.serial] = ebr
             self.datastore.set_nbytes('sescollection')
         for dset in self.rup_data.values():
