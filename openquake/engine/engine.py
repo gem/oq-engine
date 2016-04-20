@@ -91,7 +91,7 @@ signal.signal(signal.SIGTERM, raiseMasterKilled)
 
 
 # used by bin/openquake and openquake.server.views
-def run_calc(job_id, oqparam, log_level, log_file, exports,
+def run_calc(job_id, oqparam, log_level='info', log_file=None, exports='',
              hazard_calculation_id=None):
     """
     Run a calculation.
