@@ -20,6 +20,7 @@
 calculations."""
 
 import sys
+import signal
 import traceback
 
 from openquake.baselib.performance import Monitor
@@ -93,6 +94,26 @@ def expose_outputs(dstore):
             outkeys.append(key)
     logs.dbcmd('create_outputs', dstore.calc_id, outkeys)
 
+
+class MasterKilled(KeyboardInterrupt):
+    "Exception raised when a job is killed manually"
+
+
+def raiseMasterKilled(signum, _stack):
+    """
+    When a SIGTERM is received, raise the MasterKilled
+    exception with an appropriate error message.
+
+    :param int signum: the number of the received signal
+    :param _stack: the current frame object, ignored
+    """
+    if signum == signal.SIGTERM:
+        msg = 'The openquake master process was killed manually'
+    else:
+        msg = 'Received a signal %d' % signum
+    raise MasterKilled(msg)
+
+signal.signal(signal.SIGTERM, raiseMasterKilled)
 
 def job_from_file(cfg_file, username, hazard_calculation_id=None):
     """
