@@ -248,8 +248,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.E = len(self.etags)
         logging.info('Populating the risk inputs')
         all_ruptures = []
-        for colkey in self.datastore['sescollection']:
-            all_ruptures.extend(self.datastore['sescollection/' + colkey])
+        for serial in self.datastore['sescollection']:
+            all_ruptures.append(self.datastore['sescollection/' + serial])
+        all_ruptures.sort(key=operator.attrgetter('serial'))
         if not self.riskmodel.covs:
             # do not generate epsilons
             eps = FakeMatrix(self.N, self.E)

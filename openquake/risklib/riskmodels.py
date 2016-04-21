@@ -211,9 +211,6 @@ class Asset(object):
     def __repr__(self):
         return '<Asset %s>' % self.id
 
-    def __str__(self):
-        return self.id
-
 
 def get_values(loss_type, assets, time_event=None):
     """
@@ -503,8 +500,7 @@ class ProbabilisticEventBased(RiskModel):
         """
         time_span = risk_investigation_time or investigation_time
         self.ses_ratio = time_span / (
-            investigation_time * ses_per_logic_tree_path *
-            (number_of_logic_tree_samples or 1))
+            investigation_time * ses_per_logic_tree_path)
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.loss_curve_resolution = loss_curve_resolution

@@ -388,7 +388,7 @@ class CompositeRiskModel(collections.Mapping):
                 all_ruptures, hint or 1, key=by_trt_id):
             eids = []
             for sr in ses_ruptures:
-                eids.extend(sr.eids)
+                eids.extend(sr.events['eid'])
             gsims = gsims_by_trt_id[ses_ruptures[0].trt_id]
             yield RiskInputFromRuptures(
                 imt_taxonomies, sitecol, ses_ruptures,

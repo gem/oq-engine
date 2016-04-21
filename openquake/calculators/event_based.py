@@ -24,7 +24,6 @@ import collections
 
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
@@ -46,7 +45,10 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 
+event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32)])
 
+
+# this will be removed in the future
 @datastore.view.add('col_rlz_assocs')
 def view_col_rlz_assocs(name, dstore):
     """
@@ -142,19 +144,29 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the tags of the corresponding seismic events.
     """
-    def __init__(self, rupture, indices, etags, trt_id, serial):
+    def __init__(self, rupture, indices, events, source_id, trt_id, serial):
         self.rupture = rupture
         self.indices = indices
-        self.etags = numpy.array(etags)
+        self.events = events
+        self.source_id = source_id
         self.trt_id = trt_id
         self.serial = serial
+
+    @property
+    def etags(self):
+        tags = []
+        for (eid, ses, occ) in self.events:
+            tag = 'trt=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
+                self.trt_id, ses, self.source_id, self.serial, occ)
+            tags.append(tag)
+        return numpy.array(tags)
 
     @property
     def multiplicity(self):
         """
         How many times the underlying rupture occurs.
         """
-        return len(self.etags)
+        return len(self.events)
 
     def export(self, mesh):
         """
@@ -344,21 +356,17 @@ def sample_ruptures(src, num_ses, info):
     :returns: a dictionary of dictionaries rupture ->
               {(col_id, ses_id): num_occurrences}
     """
-    col_ids = info.col_ids_by_trt_id[src.trt_model_id]
     # the dictionary `num_occ_by_rup` contains a dictionary
-    # (col_id, ses_id) -> num_occurrences
-    # for each occurring rupture
+    # ses_id -> num_occurrences for each occurring rupture
     num_occ_by_rup = collections.defaultdict(AccumDict)
     # generating ruptures for the given source
     for rup_no, rup in enumerate(src.iter_ruptures()):
         rup.seed = seed = src.serial[rup_no] + info.seed
         numpy.random.seed(seed)
-        for col_id in col_ids:
-            for ses_idx in range(1, num_ses + 1):
-                num_occurrences = rup.sample_number_of_occurrences()
-                if num_occurrences:
-                    num_occ_by_rup[rup] += {
-                        (col_id, ses_idx): num_occurrences}
+        for ses_idx in range(1, num_ses + 1):
+            num_occurrences = rup.sample_number_of_occurrences()
+            if num_occurrences:
+                num_occ_by_rup[rup] += {ses_idx: num_occurrences}
         rup.rup_no = rup_no + 1
     #import pdb; pdb.set_trace()
     return num_occ_by_rup
@@ -380,16 +388,17 @@ def build_eb_ruptures(
 
         # creating EBRuptures
         serial = rup.seed - random_seed + 1
-        etags = []
-        for (col_idx, ses_idx), num_occ in sorted(
+        events = []
+        for ses_idx, num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
-                etag = 'col=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
-                    col_idx, ses_idx, src.source_id, serial, occ_no)
-                etags.append(etag)
-        if etags:
-            yield EBRupture(rup, r_sites.indices, etags,
-                            src.trt_model_id, serial)
+                # NB: the 0 below is a placeholder; the right eid will be
+                # set later, in EventBasedRuptureCalculator.post_execute
+                events.append((0, ses_idx, occ_no))
+        if events:
+            yield EBRupture(rup, r_sites.indices,
+                            numpy.array(events, event_dt),
+                            src.source_id, src.trt_model_id, serial)
 
 
 @base.calculators.add('event_based_rupture')
@@ -459,33 +468,25 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         logging.info('Generated %d EBRuptures',
                      sum(len(v) for v in result.values()))
         with self.monitor('saving ruptures', autoflush=True):
-            nc = self.rlzs_assoc.csm_info.num_collections
-            sescollection = [[] for trt_id in range(nc)]
-            etags = []
+            # ordering ruptures
+            sescollection = []
             for trt_id in result:
                 for ebr in result[trt_id]:
-                    sescollection[trt_id].append(ebr)
-                    etags.extend(ebr.etags)
-            etags.sort()
-            etag2eid = dict(zip(etags, range(len(etags))))
+                    sescollection.append(ebr)
+            sescollection.sort(key=operator.attrgetter('serial'))
+            etags = numpy.concatenate([ebr.etags for ebr in sescollection])
             self.etags = numpy.array(etags, (bytes, 100))
-            self.datastore.set_attrs(
-                'etags',
-                num_ruptures=numpy.array([len(sc) for sc in sescollection]))
-            nbytes = 0
-            for i, sescol in enumerate(sescollection):
-                for ebr in sescol:
-                    ebr.eids = [etag2eid[etag] for etag in ebr.etags]
-                nr = len(sescol)
-                if nr:
-                    logging.info('Saving SES collection #%d with %d ruptures',
-                                 i, nr)
-                    key = 'sescollection/trt=%02d' % i
-                    self.datastore[key] = hdf5.PickleableSequence(
-                        sorted(sescol, key=operator.attrgetter('serial')))
-                    nbytes += self.datastore.getsize(key)
-                    self.datastore.set_attrs(key, trt_model_id=i)
-            self.datastore.set_nbytes('sescollection', nbytes)
+            nr = len(sescollection)
+            logging.info('Saving SES collection with %d ruptures', nr)
+            eid = 0
+            for ebr in sescollection:
+                eids = []
+                for event in ebr.events:
+                    event['eid'] = eid
+                    eids.append(eid)
+                    eid += 1
+                self.datastore['sescollection/%s' % ebr.serial] = ebr
+            self.datastore.set_nbytes('sescollection')
         for dset in self.rup_data.values():
             numsites = dset.dset['numsites']
             multiplicity = dset.dset['multiplicity']
@@ -557,8 +558,7 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, rlzs_assoc, monitor):
     result = {trt_id: gmfa_sids_etags if oq.ground_motion_fields else None}
     if oq.hazard_curves_from_gmfs:
         with monitor('bulding hazard curves', measuremem=False):
-            duration = oq.investigation_time * oq.ses_per_logic_tree_path * (
-                oq.number_of_logic_tree_samples or 1)
+            duration = oq.investigation_time * oq.ses_per_logic_tree_path
 
             # collect the gmvs by site
             gmvs_by_sid = collections.defaultdict(list)
@@ -615,12 +615,9 @@ class EventBasedCalculator(ClassicalCalculator):
         """
         super(EventBasedCalculator, self).pre_execute()
         self.sesruptures = []
-        for trt_id in range(self.rlzs_assoc.csm_info.num_collections):
-            try:
-                sescol = self.datastore['sescollection/trt=%02d' % trt_id]
-            except KeyError:  # empty collections are missing
-                continue
-            self.sesruptures.extend(sescol)
+        for serial in self.datastore['sescollection']:
+            self.sesruptures.append(self.datastore['sescollection/' + serial])
+        self.sesruptures.sort(key=operator.attrgetter('serial'))
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """

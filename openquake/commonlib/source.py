@@ -386,6 +386,16 @@ class RlzsAssoc(collections.Mapping):
         return set(tm.id for sm in self.csm_info.source_models
                    for tm in sm.trt_models if sm.path == rlz.sm_lt_path)
 
+    def get_rlzs_by_trt_id(self):
+        """
+        Returns a dictionary trt_id > [sorted rlzs]
+        """
+        rlzs_by_trt_id = collections.defaultdict(set)
+        for (trt_id, gsim), rlzs in self.rlzs_assoc.items():
+            rlzs_by_trt_id[trt_id].update(rlzs)
+        return {trt_id: sorted(rlzs)
+                for trt_id, rlzs in rlzs_by_trt_id.items()}
+
     def _add_realizations(self, idx, lt_model, realizations):
         gsim_lt = lt_model.gsim_lt
         trts = gsim_lt.tectonic_region_types
