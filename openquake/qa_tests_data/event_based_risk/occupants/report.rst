@@ -1,14 +1,14 @@
-event based hazard
-==================
+event based risk
+================
 
-Datastore /home/michele/ssd/calc_11417.hdf5 last updated Wed Apr 20 09:36:52 2016 on gem-tstation
+Datastore /home/michele/ssd/calc_11549.hdf5 last updated Thu Apr 21 05:56:00 2016 on gem-tstation
 
 num_sites = 7, sitecol = 1015 B
 
 Parameters
 ----------
 ============================ ===================
-calculation_mode             'event_based'      
+calculation_mode             'event_based_risk' 
 number_of_logic_tree_samples 0                  
 maximum_distance             {'default': 200.0} 
 investigation_time           10000.0            
@@ -19,8 +19,9 @@ complex_fault_mesh_spacing   2.0
 width_of_mfd_bin             0.1                
 area_source_discretization   None               
 random_seed                  24                 
-master_seed                  0                  
-oqlite_version               '0.13.0-git361357f'
+master_seed                  42                 
+avg_losses                   False              
+oqlite_version               '0.13.0-gitfa36687'
 ============================ ===================
 
 Input files
@@ -30,7 +31,8 @@ Name                    File
 ======================= ============================================================
 exposure                `exposure_model.xml <exposure_model.xml>`_                  
 gsim_logic_tree         `gsim_logic_tree.xml <gsim_logic_tree.xml>`_                
-job_ini                 `job_h.ini <job_h.ini>`_                                    
+job_ini                 `job.ini <job.ini>`_                                        
+occupants_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_        
 source                  `source_model.xml <source_model.xml>`_                      
 source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xml>`_
 ======================= ============================================================
@@ -69,9 +71,27 @@ source_model.xml 0      Active Shallow Crust 1           265          482
 
 Informational data
 ------------------
-======== ==============
-hostname 'gem-tstation'
-======== ==============
+====================================== ==============
+event_based_risk_max_received_per_task 4730          
+event_based_risk_num_tasks             38            
+event_based_risk_sent.assetcol         67906         
+event_based_risk_sent.monitor          22420         
+event_based_risk_sent.riskinputs       410442        
+event_based_risk_sent.riskmodel        69958         
+event_based_risk_sent.rlzs_assoc       108984        
+event_based_risk_tot_received          177976        
+hostname                               'gem-tstation'
+require_epsilons                       True          
+====================================== ==============
+
+Maximum memory allocated for the GMFs
+-------------------------------------
+The largest GMF block is for trt_model_id=0, contains 1 IMT(s), 1 realization(s)
+and has a size of 10.72 KB / num_tasks
+
+Estimated data transfer for the avglosses
+-----------------------------------------
+7 asset(s) x 1 realization(s) x 1 loss type(s) x 1 losses x 8 bytes x 40 tasks = 2.19 KB
 
 Exposure model
 --------------
@@ -91,7 +111,7 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 482    15        0.002       0.046      1.292    
+0            1         SimpleFaultSource 482    15        0.002       0.045      1.242    
 ============ ========= ================= ====== ========= =========== ========== =========
 
 Slowest operations
@@ -99,15 +119,22 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         1.300     0.621     15    
-filtering ruptures             0.908     0.0       265   
-saving ruptures                0.094     0.0       1     
-managing sources               0.067     0.0       1     
-splitting sources              0.046     0.0       1     
-reading composite source model 0.007     0.0       1     
-store source_info              0.007     0.0       1     
-aggregate curves               0.006     0.0       15    
-reading exposure               0.005     0.0       1     
+total event_based_risk         1.607     3.430     38    
+total compute_ruptures         1.266     3.352     15    
+getting hazard                 1.265     0.0       38    
+make contexts                  0.933     0.0       265   
+filtering ruptures             0.858     0.0       265   
+compute poes                   0.317     0.0       265   
+computing individual risk      0.303     0.0       38    
+saving ruptures                0.179     0.0       1     
+managing sources               0.104     0.0       1     
+splitting sources              0.045     0.0       1     
+aggregate losses               0.019     0.0       266   
+store source_info              0.012     0.0       1     
+saving event loss tables       0.010     0.0       38    
+reading composite source model 0.008     0.0       1     
+reading exposure               0.006     0.0       1     
+aggregate curves               0.005     0.0       15    
 filtering sources              0.002     0.0       1     
-reading site collection        6.914E-06 0.0       1     
+reading site collection        8.106E-06 0.0       1     
 ============================== ========= ========= ======
