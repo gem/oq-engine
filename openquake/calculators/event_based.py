@@ -143,7 +143,7 @@ class EBRupture(object):
         """
         How many times the underlying rupture occurs.
         """
-        return len(self.etags)
+        return len(self.events)
 
     def export(self, mesh):
         """
@@ -370,6 +370,8 @@ def build_eb_ruptures(
         for ses_idx, num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
+                # NB: the 0 below is a placeholder; the right eid will be
+                # set later, in EventBasedRuptureCalculator.post_execute
                 events.append((0, ses_idx, occ_no))
         if events:
             yield EBRupture(rup, r_sites.indices,
