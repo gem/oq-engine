@@ -20,6 +20,7 @@
 calculations."""
 
 import sys
+import signal
 import traceback
 
 from openquake.baselib.performance import Monitor
@@ -68,8 +69,29 @@ if USE_CELERY:
             logs.LOG.debug('Revoked task %s', tid)
 
 
+class MasterKilled(KeyboardInterrupt):
+    "Exception raised when a job is killed manually"
+
+
+def raiseMasterKilled(signum, _stack):
+    """
+    When a SIGTERM is received, raise the MasterKilled
+    exception with an appropriate error message.
+
+    :param int signum: the number of the received signal
+    :param _stack: the current frame object, ignored
+    """
+    if signum == signal.SIGTERM:
+        msg = 'The openquake master process was killed manually'
+    else:
+        msg = 'Received a signal %d' % signum
+    raise MasterKilled(msg)
+
+signal.signal(signal.SIGTERM, raiseMasterKilled)
+
+
 # used by bin/openquake and openquake.server.views
-def run_calc(job_id, oqparam, log_level, log_file, exports,
+def run_calc(job_id, oqparam, log_level='info', log_file=None, exports='',
              hazard_calculation_id=None):
     """
     Run a calculation.
