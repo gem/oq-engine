@@ -115,7 +115,6 @@ class RunCalcTestCase(unittest.TestCase):
                     'openquake.engine.engine._do_run_calc', lambda *args: 1/0):
                 engine.run_calc(job_id, oq, 'info', temp.name, exports=[])
             logged = open(temp.name).read()
-
             # make sure the real error has been logged
             self.assertIn('integer division or modulo by zero', logged)
 
