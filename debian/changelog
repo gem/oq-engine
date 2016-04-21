@@ -1,6 +1,8 @@
   [Michele Simionato]
   * Replaced PostgreSQL with SQLite
   * Introduced a dbserver to mediate the interaction with the database
+  * Restored the signal handler to manage properly `kill` signals so that
+    the workers are revoked when a process is killed manually
   * Fixed in a more robust way the duplicated log bug
   * Made more robust the killing of processes by patching concurrent.futures
   * Fixed a critical bug with celery not being used even when `use_celery`
