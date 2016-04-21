@@ -96,7 +96,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         # this is a test with statistics and without conditional_loss_poes
-        out = self.run_calc(case_3.__file__, 'job_haz.ini,job_risk.ini',
+        out = self.run_calc(case_3.__file__, 'job.ini',
                             exports='xml', individual_curves='false',
                             concurrent_tasks='4')
         [fname] = out['agg_curve-stats', 'xml']
