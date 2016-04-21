@@ -47,7 +47,6 @@ class ReportWriter(object):
         csm_info='Composite source model',
         required_params_per_trt='Required parameters per tectonic region type',
         rupture_collections='Non-empty rupture collections',
-        col_rlz_assocs='Collections <-> realizations',
         ruptures_per_trt='Number of ruptures per tectonic region type',
         rlzs_assoc='Realizations per (TRT, GSIM)',
         job_info='Informational data',
@@ -95,10 +94,7 @@ class ReportWriter(object):
             self.add('csm_info')
             self.add('required_params_per_trt')
         self.add('rlzs_assoc', ds['rlzs_assoc'])
-        if 'num_ruptures' in ds:
-            self.add('rupture_collections')
-            self.add('col_rlz_assocs')
-        elif 'composite_source_model' in ds:
+        if 'composite_source_model' in ds:
             self.add('ruptures_per_trt')
         if 'scenario' not in oq.calculation_mode:
             self.add('job_info')
