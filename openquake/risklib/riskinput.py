@@ -554,10 +554,12 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     return eps
 
 
-gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U32)])
-
-
-class GmfCollector(object):
+# this not used; it could be used in the future, if we find computations
+# that run out of memory. For now it is not used for two reasons:
+# 1) it is slower than keeping everything in memory
+# 2) it requires having disk space on the workers, which apparently is
+# not the case for some sponsors
+class _GmfCollector(object):
     """
     An object storing the GMFs into a temporary HDF5 file to save memory.
     """
@@ -601,8 +603,10 @@ class GmfCollector(object):
                                for rlzi, ds in items}
         return hazard
 
+gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U32)])
 
-class MemoryCollector(object):
+
+class GmfCollector(object):
     """
     An object storing the GMFs in memory.
     """
@@ -638,7 +642,6 @@ class MemoryCollector(object):
         return hazard
 
 
-# this is fast
 def calc_gmfs(eb_ruptures, sitecol, imts, rlzs_assoc,
               trunc_level, correl_model, min_iml, monitor=Monitor()):
     """
@@ -659,7 +662,7 @@ def calc_gmfs(eb_ruptures, sitecol, imts, rlzs_assoc,
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
-    gmfcoll = MemoryCollector(imts, rlzs)
+    gmfcoll = GmfCollector(imts, rlzs)
     for ebr in eb_ruptures:
         with ctx_mon:
             r_sites = site.FilteredSiteCollection(ebr.indices, sites)
@@ -680,29 +683,6 @@ def calc_gmfs(eb_ruptures, sitecol, imts, rlzs_assoc,
                         if len(eids):
                             gmfcoll.save(sid, imt, rlz, gmvs, eids)
     return gmfcoll
-
-
-class Gmvs(object):
-    """
-    An accumulator for ground motion values and seismic event ids, used in
-    event based calculation.
-    """
-    def __init__(self):
-        self.eids = []
-        self.gmvs = []
-
-    def get_gmvs_eids(self):
-        """
-        :returns: two numpy arrays of the same length
-        """
-        return numpy.concatenate(self.gmvs), numpy.concatenate(self.eids)
-
-    def __len__(self):
-        return sum(len(gmvs) for gmvs in self.gmvs)
-
-    def append(self, eids, gmvs):
-        self.eids.append(eids)
-        self.gmvs.append(gmvs)
 
 
 class RiskInputFromRuptures(object):
