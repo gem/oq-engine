@@ -620,13 +620,6 @@ class CompositionInfo(object):
         self.init()
         self.eff_ruptures = array['eff_ruptures']
 
-    @property
-    def num_collections(self):
-        """
-        Return the number of underlying collections
-        """
-        return sum(len(sm.trt_models) for sm in self.source_models)
-
     def get_num_rlzs(self, source_model=None):
         """
         :param source_model: a SourceModel instance (or None)

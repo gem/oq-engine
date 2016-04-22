@@ -253,6 +253,8 @@ class TaskManager(object):
         self = cls(task, name)
         for i, a in enumerate(task_args, 1):
             cls.progress('Submitting task %s #%d', self.name, i)
+            if isinstance(a[-1], Monitor):  # add incremental task number
+                a[-1].task_no = i
             self.submit(*a)
         return self
 

@@ -64,8 +64,8 @@ class ReportWriter(object):
         info = dstore['job_info']
         dpath = dstore.hdf5path
         mtime = os.path.getmtime(dpath)
-        self.text += '\n\n%s updated "%s" on %s' % (
-            dpath, time.ctime(mtime), info.hostname)
+        self.text += '\n\n%s:%s updated %s' % (
+            info.hostname, dpath, time.ctime(mtime))
         # NB: in the future, the sitecol could be transferred as
         # an array by leveraging the HDF5 serialization protocol in
         # litetask decorator; for the moment however the size of the
