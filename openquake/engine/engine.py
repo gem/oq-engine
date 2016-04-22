@@ -87,7 +87,15 @@ def raiseMasterKilled(signum, _stack):
         msg = 'Received a signal %d' % signum
     raise MasterKilled(msg)
 
-signal.signal(signal.SIGTERM, raiseMasterKilled)
+
+# register the raiseMasterKilled callback for SIGTERM
+# when using the Django development server this module is imported by a thread,
+# so one gets a `ValueError: signal only works in main thread` that
+# can be safely ignored
+try:
+    signal.signal(signal.SIGTERM, raiseMasterKilled)
+except ValueError:
+    pass
 
 
 # used by bin/openquake and openquake.server.views
