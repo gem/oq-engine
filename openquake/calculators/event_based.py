@@ -221,11 +221,11 @@ class RuptureFilter(object):
     :param min_iml:
         a dictionary with the minimum intensity measure level for each IMT
     """
-    def __init__(self, sites, maximum_distance, gmv_dt, gsims, trunc_level,
+    def __init__(self, sites, maximum_distance, imts, gsims, trunc_level,
                  min_iml):
         self.sites = sites
         self.max_dist = maximum_distance
-        self.gmv_dt = gmv_dt
+        self.imts = imts
         self.gsims = gsims
         self.trunc_level = trunc_level
         self.min_iml = min_iml
@@ -236,7 +236,7 @@ class RuptureFilter(object):
         """
         if self.min_iml:
             computer = calc.gmf.GmfComputer(
-                rupture, self.sites, self.gmv_dt, self.gsims, self.trunc_level)
+                rupture, self.sites, self.imts, self.gsims, self.trunc_level)
             ok = numpy.zeros(len(self.sites), bool)
             gmf_by_rlz_imt = computer.calcgmfs(1, rupture.seed)
             for rlz, gmf_by_imt in gmf_by_rlz_imt.items():
@@ -294,7 +294,6 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     rup_data_dt = numpy.dtype(
         [('rupserial', U32), ('multiplicity', U16), ('numsites', U32)] + [
             (param, F32) for param in params])
-    gmv_dt = calc.gmf.gmv_dt(oq.imtls)
     eb_ruptures = []
     rup_data = []
     calc_times = []
@@ -308,7 +307,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
             continue
 
         rupture_filter = RuptureFilter(
-            s_sites, max_dist, gmv_dt, cmaker.gsims,
+            s_sites, max_dist, oq.imtls, cmaker.gsims,
             oq.truncation_level, oq.minimum_intensity)
         num_occ_by_rup = sample_ruptures(
             src, oq.ses_per_logic_tree_path, rlzs_assoc.csm_info)
@@ -502,12 +501,12 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
 
 # ######################## GMF calculator ############################ #
 
-def make_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
+def make_gmfs(eb_ruptures, sitecol, imts, rlzs_assoc,
               trunc_level, correl_model, monitor=Monitor()):
     """
     :param eb_ruptures: a list of EBRuptures with the same trt_model_id
     :param sitecol: a SiteCollection instance
-    :param gmv_dt: a numpy dtype (sid, eid, gmv)
+    :param imts: a list of Intensity Measur e Types
     :param rlzs_assoc: a RlzsAssoc instance
     :param trunc_level: truncation level
     :param correl_model: correlation model instance
@@ -524,7 +523,7 @@ def make_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
         with ctx_mon:
             r_sites = site.FilteredSiteCollection(ebr.indices, sites)
             computer = calc.gmf.GmfComputer(
-                ebr.rupture, r_sites, gmv_dt, gsims, trunc_level, correl_model)
+                ebr.rupture, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
             for gsim in gsims:
                 for i, rlz in enumerate(rlzs_assoc[trt_id, str(gsim)]):
@@ -536,14 +535,14 @@ def make_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
 
 
 @parallel.litetask
-def compute_gmfs_and_curves(eb_ruptures, sitecol, gmv_dt, rlzs_assoc, monitor):
+def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc, monitor):
     """
     :param eb_ruptures:
         a list of blocks of EBRuptures of the same SESCollection
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param gmv_dt:
-        numpy datatype for the ground motion values
+    :param imts:
+        a list of IMT string
     :param rlzs_assoc:
         a RlzsAssoc instance
     :param monitor:
@@ -558,7 +557,7 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, gmv_dt, rlzs_assoc, monitor):
     correl_model = readinput.get_correl_model(oq)
     tot_sites = len(sitecol.complete)
     gmfadict = make_gmfs(
-        eb_ruptures, sitecol, gmv_dt, rlzs_assoc, trunc_level, correl_model,
+        eb_ruptures, sitecol, imts, rlzs_assoc, trunc_level, correl_model,
         monitor)
     result = {rlzi: [gmfadict[rlzi], None]
               if oq.ground_motion_fields else [None, None]
@@ -604,11 +603,11 @@ class EventBasedCalculator(ClassicalCalculator):
         for serial in self.datastore['sescollection']:
             self.sesruptures.append(self.datastore['sescollection/' + serial])
         self.sesruptures.sort(key=operator.attrgetter('serial'))
-        self.gmv_dt = calc.gmf.gmv_dt(self.oqparam.imtls)
+        gmv_dt = calc.gmf.gmv_dt(self.oqparam.imtls)
         if self.oqparam.ground_motion_fields:
             for rlz in self.rlzs_assoc.realizations:
                 self.datastore.create_dset(
-                    'gmf_data/%04d' % rlz.ordinal, self.gmv_dt)
+                    'gmf_data/%04d' % rlz.ordinal, gmv_dt)
 
     def combine_curves_and_save_gmfs(self, acc, res):
         """
@@ -650,7 +649,7 @@ class EventBasedCalculator(ClassicalCalculator):
                               for rlz in self.rlzs_assoc.realizations})
         acc = parallel.apply_reduce(
             self.core_task.__func__,
-            (self.sesruptures, self.sitecol, self.gmv_dt, self.rlzs_assoc,
+            (self.sesruptures, self.sitecol, oq.imtls, self.rlzs_assoc,
              monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             acc=zerodict, agg=self.combine_curves_and_save_gmfs,

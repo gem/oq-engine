@@ -604,7 +604,7 @@ def _get_gmfs(dstore, etag):
             for rlz in rlzs_assoc[rup.trt_id, gsim]]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
     gmfa_by_rlz = event_based.make_gmfs(
-        [rup], sitecol, gmf.gmv_dt(oq.imtls), rlzs_assoc,
+        [rup], sitecol, oq.imtls, rlzs_assoc,
         oq.truncation_level, correl_model).values()
     for imt in oq.imtls:
         gmfa = numpy.zeros(N, gmf_dt)

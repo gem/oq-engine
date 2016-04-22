@@ -29,7 +29,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, split_in_blocks
-from openquake.hazardlib.calc.gmf import gmv_dt, GmfComputer
+from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib import site
 from openquake.risklib import scientific, riskmodels
 
@@ -606,9 +606,7 @@ class MemoryCollector(object):
     """
     An object storing the GMFs in memory.
     """
-    def __init__(self, calc_id, task_no, imts, rlzs):
-        self.calc_id = calc_id
-        self.task_no = task_no
+    def __init__(self, imts, rlzs):
         self.imts = imts
         self.rlzs = rlzs
         self.dic = collections.defaultdict(list)
@@ -641,12 +639,12 @@ class MemoryCollector(object):
 
 
 # this is fast
-def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
+def calc_gmfs(eb_ruptures, sitecol, imts, rlzs_assoc,
               trunc_level, correl_model, min_iml, monitor=Monitor()):
     """
     :param eb_ruptures: a list of EBRuptures with the same trt_model_id
     :param sitecol: a SiteCollection instance
-    :param gmv_dt: a numpy dtype (sid, eid, gmv)
+    :param imts: list of IMT strings
     :param rlzs_assoc: a RlzsAssoc instance
     :param trunc_level: truncation level
     :param correl_model: correlation model instance
@@ -661,13 +659,12 @@ def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
-    imts = gmv_dt['gmv'].names
-    gmfcoll = MemoryCollector(monitor.calc_id, monitor.task_no, imts, rlzs)
+    gmfcoll = MemoryCollector(imts, rlzs)
     for ebr in eb_ruptures:
         with ctx_mon:
             r_sites = site.FilteredSiteCollection(ebr.indices, sites)
             computer = GmfComputer(
-                ebr.rupture, r_sites, gmv_dt, gsims,
+                ebr.rupture, r_sites, imts, gsims,
                 trunc_level, correl_model)
         with gmf_mon:
             ddic = computer.calcgmfs(
@@ -733,7 +730,6 @@ class RiskInputFromRuptures(object):
         self.min_iml = min_iml
         self.weight = sum(sr.multiplicity for sr in ses_ruptures)
         self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
-        self.gmv_dt = gmv_dt(self.imts)
         self.eids = eids  # E events
         self.eps = epsilons  # matrix N x E, events in this block
 
@@ -756,7 +752,7 @@ class RiskInputFromRuptures(object):
             lists of N hazard dictionaries imt -> rlz -> Gmvs
         """
         hazards = calc_gmfs(
-            self.ses_ruptures, self.sitecol, self.gmv_dt, rlzs_assoc,
+            self.ses_ruptures, self.sitecol, self.imts, rlzs_assoc,
             self.trunc_level, self.correl_model, self.min_iml, monitor)
         return hazards
 

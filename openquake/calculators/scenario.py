@@ -18,7 +18,7 @@
 import numpy
 
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.calc.gmf import GmfComputer, gmv_dt
+from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput
 from openquake.calculators import base
 
@@ -53,7 +53,7 @@ class ScenarioCalculator(base.HazardCalculator):
             sorted(['scenario-%010d~ses=1' % i for i in range(n_gmfs)]),
             (bytes, 100))
         self.computer = GmfComputer(
-            rupture, self.sitecol, gmv_dt(self.oqparam.imtls), self.gsims,
+            rupture, self.sitecol, self.oqparam.imtls, self.gsims,
             trunc_level, correl_model)
 
     def execute(self):
