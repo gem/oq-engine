@@ -46,7 +46,6 @@ class ReportWriter(object):
         inputs='Input files',
         csm_info='Composite source model',
         required_params_per_trt='Required parameters per tectonic region type',
-        rupture_collections='Non-empty rupture collections',
         ruptures_per_trt='Number of ruptures per tectonic region type',
         rlzs_assoc='Realizations per (TRT, GSIM)',
         job_info='Informational data',
@@ -65,8 +64,8 @@ class ReportWriter(object):
         info = dstore['job_info']
         dpath = dstore.hdf5path
         mtime = os.path.getmtime(dpath)
-        self.text += '\n\nDatastore %s last updated %s on %s' % (
-            dpath, time.ctime(mtime), info.hostname)
+        self.text += '\n\n%s:%s updated %s' % (
+            info.hostname, dpath, time.ctime(mtime))
         # NB: in the future, the sitecol could be transferred as
         # an array by leveraging the HDF5 serialization protocol in
         # litetask decorator; for the moment however the size of the

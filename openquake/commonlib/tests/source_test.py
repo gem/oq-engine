@@ -804,12 +804,6 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
             [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
             list(map(len, csm.trt_models)))
 
-        # test the method get_col_ids
-        col_ids_first = rlzs_assoc.get_col_ids(rlzs[0])
-        self.assertEqual(col_ids_first, set([0, 1]))
-        col_ids_last = rlzs_assoc.get_col_ids(rlzs[-1])
-        self.assertEqual(col_ids_last, set([16, 17]))
-
         # test the method extract
         assoc = rlzs_assoc.extract([1, 5])
         self.assertEqual(str(assoc), """\
@@ -856,15 +850,8 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
             "0,SadighEtAl1997: ['<0,b1,b1,w=0.2>']\n"
             "1,SadighEtAl1997: ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']>")
 
-        # test the method get_col_ids
-        col_ids_first = assoc.get_col_ids(assoc.realizations[0])
-        self.assertEqual(col_ids_first, set([0]))
-        col_ids_last = assoc.get_col_ids(assoc.realizations[-1])
-        self.assertEqual(col_ids_last, set([4]))
-
         # check CompositionInfo serialization
         array, attrs = assoc.csm_info.__toh5__()
         new = object.__new__(CompositionInfo)
         new.__fromh5__(array, attrs)
         self.assertEqual(repr(new), repr(assoc.csm_info))
-        assert_equal(new.cols, assoc.csm_info.cols)

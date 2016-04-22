@@ -47,8 +47,6 @@ F32 = numpy.float32
 
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32)])
 
-
-# this will be removed in the future
 def get_geom(surface, is_from_fault_source, is_multi_surface):
     """
     The following fields can be interpreted different ways,
@@ -330,8 +328,7 @@ def sample_ruptures(src, num_ses, info):
     :param src: a hazardlib source object
     :param num_ses: the number of Stochastic Event Sets to generate
     :param info: a :class:`openquake.commonlib.source.CompositionInfo` instance
-    :returns: a dictionary of dictionaries rupture ->
-              {(col_id, ses_id): num_occurrences}
+    :returns: a dictionary of dictionaries rupture -> {ses_id: num_occurrences}
     """
     # col_ids = [src.trt_model_id]
     # the dictionary `num_occ_by_rup` contains a dictionary
@@ -346,7 +343,6 @@ def sample_ruptures(src, num_ses, info):
             if num_occurrences:
                 num_occ_by_rup[rup] += {ses_idx: num_occurrences}
         rup.rup_no = rup_no + 1
-    #import pdb; pdb.set_trace()
     return num_occ_by_rup
 
 
@@ -536,7 +532,7 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, gmv_dt, rlzs_assoc, monitor):
    """
     oq = monitor.oqparam
     # NB: by construction each block is a non-empty list with
-    # ruptures of the same col_id and therefore trt_model_id
+    # ruptures of the same trt_model_id
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
     tot_sites = len(sitecol.complete)

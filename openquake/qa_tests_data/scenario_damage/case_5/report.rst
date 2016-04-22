@@ -1,7 +1,7 @@
 Calculation of the ground motion fields for a scenario
 ======================================================
 
-Datastore /home/michele/ssd/calc_11389.hdf5 last updated Wed Apr 20 09:36:46 2016 on gem-tstation
+gem-tstation:/home/michele/ssd/calc_11987.hdf5 updated Fri Apr 22 04:09:33 2016
 
 num_sites = 11, sitecol = 834 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  3                  
 master_seed                  0                  
-oqlite_version               '0.13.0-git361357f'
+oqlite_version               '0.13.0-gitd746861'
 ============================ ===================
 
 Input files
@@ -64,6 +64,6 @@ operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 reading exposure        0.005     0.0       1     
 filtering sites         0.004     0.0       1     
-computing gmfs          3.781E-04 0.0       1     
-reading site collection 5.960E-06 0.0       1     
+computing gmfs          4.079E-04 0.0       1     
+reading site collection 8.106E-06 0.0       1     
 ======================= ========= ========= ======
