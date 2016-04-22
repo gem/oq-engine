@@ -279,9 +279,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         return dict((imt, numpy.zeros((len(sites), realizations)))
                     for imt in imts)
     [(rupture, sites)] = ruptures_sites
-    imt_dt = numpy.dtype([(str(imt), F32) for imt in imts])
-    gmv_dt = numpy.dtype([('sid', U32), ('eid', U32), ('gmv', imt_dt)])
-    gc = GmfComputer(rupture, sites, gmv_dt, [gsim],
+    gc = GmfComputer(rupture, sites, gmv_dt(map(str, imts)), [gsim],
                      truncation_level, correlation_model)
     result = gc._compute(seed, gsim, realizations)
     for imt, gmf in result.items():
