@@ -432,17 +432,18 @@ class CompositeRiskModel(collections.Mapping):
                                     yield riskmodel.out_by_lr(
                                         imt, assets, hazard[imt], epsgetter)
                 else:  # event based, distribution by rupture
-                    for i, sid in enumerate(assetcol.array['site_id']):
-                        asset = assetcol[i]
+                    for sid, assets in enumerate(assetcol.assets_by_site()):
                         hazard = hazard_by_site[sid]
                         if not hazard:
                             continue
-                        epsgetter = riskinput.epsilon_getter(
-                            [asset.ordinal])
-                        for imt, taxonomies in riskinput.imt_taxonomies:
-                            if asset.taxonomy in taxonomies:
-                                yield self[asset.taxonomy].out_by_lr(
-                                    imt, [asset], hazard[imt], epsgetter)
+                        for asset in assets:
+                            epsgetter = riskinput.epsilon_getter(
+                                [asset.ordinal])
+                            for imt, taxonomies in riskinput.imt_taxonomies:
+                                if asset.taxonomy in taxonomies:
+                                    yield self[asset.taxonomy].out_by_lr(
+                                        imt, [asset], hazard[imt], epsgetter)
+                    hazard_by_site.close()
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -541,15 +542,16 @@ class GmfCollector(object):
     """
     An object storing the GMFs into a temporary HDF5 file to save memory.
     """
-    def __init__(self, calc_id, task_no):
+    def __init__(self, calc_id, task_no, imts, rlzs):
+        self.calc_id = calc_id
+        self.task_no = task_no
+        self.imts = imts
+        self.rlzs = rlzs
         self.fname = os.path.join(
             tempfile.gettempdir(), '%d-%d.hdf5' % (calc_id, task_no))
-
-    def __enter__(self):
         self.hdf5 = h5py.File(self.fname, 'w')
-        return self
 
-    def __exit__(self, etype, exc, tb):
+    def close(self):
         self.hdf5.close()
         os.remove(self.fname)
 
@@ -562,23 +564,21 @@ class GmfCollector(object):
                 key, (0,), gmv_eid_dt, chunks=True, maxshape=(None,))
         hdf5.extend(dset, numpy.array(list(zip(gmvs, eids)), gmv_eid_dt))
 
-    def gmf_by_site(self, sids, imts, rlzs):
-        hazards = [{} for sid in sids]
-        for hazard, sid in zip(hazards, sids):
+    def __getitem__(self, sid):
+        hazard = {}
+        try:
+            dset = self.hdf5[str(sid)]
+        except KeyError:
+            return hazard
+        for imt in self.imts:
             try:
-                dset = self.hdf5[str(sid)]
+                items = dset[imt].items()
             except KeyError:
-                continue
+                hazard[imt] = {}
             else:
-                for imt in imts:
-                    try:
-                        haz_by_rlz = dset[imt]
-                    except KeyError:
-                        hazard[imt] = {}
-                    else:
-                        hazard[imt] = {rlzs[int(rlzi)]: ds.value
-                                       for rlzi, ds in haz_by_rlz.items()}
-        return hazards
+                hazard[imt] = {self.rlzs[int(rlzi)]: ds.value
+                               for rlzi, ds in items}
+        return hazard
 
 
 # this is fast
@@ -603,26 +603,26 @@ def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
     imts = gmv_dt['gmv'].names
-    with GmfCollector(monitor.calc_id, monitor.task_no) as collector:
-        for ebr in eb_ruptures:
-            with ctx_mon:
-                r_sites = site.FilteredSiteCollection(ebr.indices, sites)
-                computer = GmfComputer(
-                    ebr.rupture, r_sites, gmv_dt, gsims,
-                    trunc_level, correl_model)
-            with gmf_mon:
-                ddic = computer.calcgmfs(
-                    ebr.multiplicity, ebr.rupture.seed, rlzs_by_gsim)
-                for rlz, gmf_by_imt in ddic.items():
-                    for imt, gmf in gmf_by_imt.items():
-                        for sid, gmvs in zip(r_sites.sids, gmf):
-                            if min_iml:
-                                ok = gmvs >= min_iml[imt]
-                                gmvs, eids = gmvs[ok], ebr.eids[ok]
-                            else:
-                                eids = ebr.eids
-                            collector.save(sid, imt, rlz, gmvs, eids)
-        return collector.gmf_by_site(sites.sids, imts, rlzs)
+    gmfcoll = GmfCollector(monitor.calc_id, monitor.task_no, imts, rlzs)
+    for ebr in eb_ruptures:
+        with ctx_mon:
+            r_sites = site.FilteredSiteCollection(ebr.indices, sites)
+            computer = GmfComputer(
+                ebr.rupture, r_sites, gmv_dt, gsims,
+                trunc_level, correl_model)
+        with gmf_mon:
+            ddic = computer.calcgmfs(
+                ebr.multiplicity, ebr.rupture.seed, rlzs_by_gsim)
+            for rlz, gmf_by_imt in ddic.items():
+                for imt, gmf in gmf_by_imt.items():
+                    for sid, gmvs in zip(r_sites.sids, gmf):
+                        if min_iml:
+                            ok = gmvs >= min_iml[imt]
+                            gmvs, eids = gmvs[ok], ebr.eids[ok]
+                        else:
+                            eids = ebr.eids
+                        gmfcoll.save(sid, imt, rlz, gmvs, eids)
+    return gmfcoll
 
 
 class Gmvs(object):
