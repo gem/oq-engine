@@ -197,6 +197,8 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assetcol, monitor):
     for (l, r), lst in numpy.ndenumerate(result['IC']):
         result['IC'][l, r] = sum(lst, AccumDict())
 
+    # store the size of the GMFs
+    result['gmfbytes'] = monitor.gmfbytes
     return result
 
 
@@ -305,6 +307,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.saved = collections.Counter()  # nbytes per HDF5 key
         self.ass_bytes = 0
         self.agg_bytes = 0
+        self.gmfbytes = 0
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
@@ -324,6 +327,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param acc: accumulator dictionary
         :param result: dictionary coming from event_based_risk
         """
+        self.gmfbytes += result.pop('gmfbytes')
         with self.monitor('saving event loss tables', autoflush=True):
             if self.oqparam.asset_loss_table:
                 for (l, r), arrays in numpy.ndenumerate(result.pop('ASSLOSS')):
@@ -344,6 +348,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param result:
             the dictionary returned by the .execute method
         """
+        logging.info('Generated %s of GMFs', humansize(self.gmfbytes))
+        self.datastore.save('job_info', {'gmfbytes': self.gmfbytes})
+
         if self.oqparam.asset_loss_table:
             asslt = self.datastore['ass_loss_table']
             asslt.attrs['nbytes'] = self.ass_bytes

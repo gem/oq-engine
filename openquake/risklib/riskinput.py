@@ -412,6 +412,7 @@ class CompositeRiskModel(collections.Mapping):
         """
         mon_hazard = monitor('getting hazard')
         mon_risk = monitor('computing individual risk')
+        monitor.gmfbytes = 0
         for riskinput in riskinputs:
             with mon_hazard:
                 # get assets, epsilons, hazard
@@ -432,18 +433,33 @@ class CompositeRiskModel(collections.Mapping):
                                     yield riskmodel.out_by_lr(
                                         imt, assets, hazard[imt], epsgetter)
                 else:  # event based, distribution by rupture
-                    for sid, assets in enumerate(assetcol.assets_by_site()):
-                        hazard = hazard_by_site[sid]
-                        if not hazard:
-                            continue
-                        for asset in assets:
-                            epsgetter = riskinput.epsilon_getter(
-                                [asset.ordinal])
-                            for imt, taxonomies in riskinput.imt_taxonomies:
-                                if asset.taxonomy in taxonomies:
-                                    yield self[asset.taxonomy].out_by_lr(
-                                        imt, [asset], hazard[imt], epsgetter)
-                    hazard_by_site.close()
+                    try:
+                        for out_by_lr in self.gen_out_by_lr(
+                                riskinput,
+                                assetcol.assets_by_site(),
+                                hazard_by_site):
+                            yield out_by_lr
+                    finally:
+                        # store the size of the temporary file and remove it
+                        monitor.gmfbytes += os.path.getsize(
+                            hazard_by_site.fname)
+                        hazard_by_site.close()
+
+    def gen_out_by_lr(self, riskinput, assets_by_site, hazard_by_site):
+        """
+        Yield the outputs by loss type and realization for each site id,
+        asset and intensity measure type.
+        """
+        for sid, assets in enumerate(assets_by_site):
+            hazard = hazard_by_site[sid]
+            if not hazard:
+                continue
+            for asset in assets:
+                epsgetter = riskinput.epsilon_getter([asset.ordinal])
+                for imt, taxonomies in riskinput.imt_taxonomies:
+                    if asset.taxonomy in taxonomies:
+                        yield self[asset.taxonomy].out_by_lr(
+                            imt, [asset], hazard[imt], epsgetter)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
