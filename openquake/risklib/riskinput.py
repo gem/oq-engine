@@ -413,6 +413,8 @@ class CompositeRiskModel(collections.Mapping):
         mon_hazard = monitor('getting hazard')
         mon_risk = monitor('computing individual risk')
         monitor.gmfbytes = 0
+        assets_by_site = (None if assetcol is None
+                          else assetcol.assets_by_site())
         for riskinput in riskinputs:
             with mon_hazard:
                 # get assets, epsilons, hazard
@@ -420,7 +422,7 @@ class CompositeRiskModel(collections.Mapping):
                     rlzs_assoc, mon_hazard(measuremem=False))
             with mon_risk:
                 # compute the outputs with the appropriate riskmodels
-                if assetcol is None:  # distribution by asset
+                if assets_by_site is None:  # distribution by asset
                     for assets, hazard in zip(
                             riskinput.assets_by_site, hazard_by_site):
                         the_assets = groupby(assets, by_taxonomy)
@@ -435,9 +437,7 @@ class CompositeRiskModel(collections.Mapping):
                 else:  # event based, distribution by rupture
                     try:
                         for out_by_lr in self.gen_out_by_lr(
-                                riskinput,
-                                assetcol.assets_by_site(),
-                                hazard_by_site):
+                                riskinput, assets_by_site, hazard_by_site):
                             yield out_by_lr
                     finally:
                         # store the size of the temporary file and remove it
