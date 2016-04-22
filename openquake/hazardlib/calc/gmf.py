@@ -73,8 +73,8 @@ class GmfComputer(object):
     :param :class:`openquake.hazardlib.site.SiteCollection` sites:
         Sites of interest to calculate GMFs.
 
-    :param gmv_dt:
-        a nested numpy dtype with the form (sid, eid, gmv: (imt1, ...))
+    :param imts:
+        a sorted list of Intensity Measure Type string
 
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
@@ -86,17 +86,17 @@ class GmfComputer(object):
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
     """
-    def __init__(self, rupture, sites, gmv_dt, gsims,
+    def __init__(self, rupture, sites, imts, gsims,
                  truncation_level=None, correlation_model=None):
         assert sites, sites
         self.rupture = rupture
         self.sites = sites
-        self.imts = [from_string(imt) for imt in gmv_dt['gmv'].names]
+        self.imts = [from_string(imt) for imt in imts]
         self.gsims = gsims
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.ctx = ContextMaker(gsims).make_contexts(sites, rupture)
-        self.gmv_dt = gmv_dt  # numpy dtype used in event based calculations
+        self.gmv_dt = gmv_dt(imts)
 
     def _compute(self, seed, gsim, realizations):
         # the method doing the real stuff; use compute instead
@@ -279,7 +279,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         return dict((imt, numpy.zeros((len(sites), realizations)))
                     for imt in imts)
     [(rupture, sites)] = ruptures_sites
-    gc = GmfComputer(rupture, sites, gmv_dt(map(str, imts)), [gsim],
+    gc = GmfComputer(rupture, sites, [str(imt) for imt in imts], [gsim],
                      truncation_level, correlation_model)
     result = gc._compute(seed, gsim, realizations)
     for imt, gmf in result.items():
