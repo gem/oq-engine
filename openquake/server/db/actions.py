@@ -81,13 +81,14 @@ def create_job(calc_mode, description, user_name="openquake", hc_id=None):
     :returns:
         :class:`openquake.server.db.models.OqJob` instance.
     """
-    calc_id = get_calc_id() + 1
+    calc_id = get_calc_id(user_name) + 1
     job = models.OqJob.objects.create(
         id=calc_id,
         calculation_mode=calc_mode,
         description=description,
         user_name=user_name,
-        ds_calc_dir=os.path.join(datastore.DATADIR, 'calc_%s' % calc_id))
+        # NB: ignores the OQ_DATADIR variable
+        ds_calc_dir=os.path.join('/home/%s/calc_%s' % (user_name, calc_id)))
     if hc_id:
         job.hazard_calculation = models.get(models.OqJob, pk=hc_id)
     job.save()
@@ -117,12 +118,13 @@ def get_job_id(job_id, username):
         return my_jobs[n + job_id].id
 
 
-def get_calc_id(job_id=None):
+def get_calc_id(username, job_id=None):
     """
     Return the latest calc_id by looking both at the datastore
     and the database.
     """
-    calcs = datastore.get_calc_ids(datastore.DATADIR)
+    # NB: ignores the OQ_DATADIR variable
+    calcs = datastore.get_calc_ids('/home/' + username)
     calc_id = 0 if not calcs else calcs[-1]
     if job_id is None:
         try:
