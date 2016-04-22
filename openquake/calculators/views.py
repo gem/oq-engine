@@ -169,23 +169,6 @@ def view_csm_info(token, dstore):
     return rst_table(rows, header)
 
 
-@view.add('rupture_collections')
-def view_rupture_collections(token, dstore):
-    rlzs_assoc = dstore['rlzs_assoc']
-    num_ruptures = dstore['num_ruptures']
-    csm_info = rlzs_assoc.csm_info
-    rows = []
-    col_id = 0
-    for sm in csm_info.source_models:
-        for tm in sm.trt_models:
-            for idx in range(sm.samples):
-                nr = num_ruptures[col_id]
-                if nr:
-                    rows.append((col_id, '_'.join(sm.path), tm.trt, nr))
-                col_id += 1
-    return rst_table(rows, ['col', 'smlt_path', 'TRT', 'num_ruptures'])
-
-
 @view.add('ruptures_per_trt')
 def view_ruptures_per_trt(token, dstore):
     tbl = []
