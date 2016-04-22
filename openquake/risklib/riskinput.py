@@ -410,8 +410,8 @@ class CompositeRiskModel(collections.Mapping):
         :param monitor: a monitor object used to measure the performance
         :param assetcol: not None only for event based risk
         """
-        mon_hazard = monitor('getting hazard')
-        mon_risk = monitor('computing individual risk')
+        mon_hazard = monitor('building hazard')
+        mon_risk = monitor('computing risk')
         monitor.gmfbytes = 0
         assets_by_site = (None if assetcol is None
                           else assetcol.assets_by_site())
@@ -420,9 +420,9 @@ class CompositeRiskModel(collections.Mapping):
                 # get assets, epsilons, hazard
                 hazard_by_site = riskinput.get_hazard(
                     rlzs_assoc, mon_hazard(measuremem=False))
-            with mon_risk:
-                # compute the outputs with the appropriate riskmodels
-                if assets_by_site is None:  # distribution by asset
+            # compute the outputs with the appropriate riskmodels
+            if assets_by_site is None:  # distribution by asset
+                with mon_risk:
                     for assets, hazard in zip(
                             riskinput.assets_by_site, hazard_by_site):
                         the_assets = groupby(assets, by_taxonomy)
@@ -434,32 +434,35 @@ class CompositeRiskModel(collections.Mapping):
                                 if taxonomy in taxonomies:
                                     yield riskmodel.out_by_lr(
                                         imt, assets, hazard[imt], epsgetter)
-                else:  # event based, distribution by rupture
-                    try:
-                        for out_by_lr in self.gen_out_by_lr(
-                                riskinput, assets_by_site, hazard_by_site):
-                            yield out_by_lr
-                    finally:
-                        # store the size of the temporary file and remove it
-                        monitor.gmfbytes += os.path.getsize(
-                            hazard_by_site.fname)
-                        hazard_by_site.close()
+            else:  # event based, distribution by rupture
+                try:
+                    for out_by_lr in self.gen_out_by_lr(
+                            riskinput, assets_by_site,
+                            hazard_by_site, mon_risk):
+                        yield out_by_lr
+                finally:
+                    # store the size of the temporary file and remove it
+                    monitor.gmfbytes += hazard_by_site.close()
 
-    def gen_out_by_lr(self, riskinput, assets_by_site, hazard_by_site):
+    def gen_out_by_lr(self, riskinput, assets_by_site, hazard_by_site,
+                      mon_risk):
         """
         Yield the outputs by loss type and realization for each site id,
         asset and intensity measure type.
         """
+        mon_hazard = mon_risk('getting hazard', measuremem=False)
         for sid, assets in enumerate(assets_by_site):
-            hazard = hazard_by_site[sid]
+            with mon_hazard:
+                hazard = hazard_by_site[sid]
             if not hazard:
                 continue
-            for asset in assets:
-                epsgetter = riskinput.epsilon_getter([asset.ordinal])
-                for imt, taxonomies in riskinput.imt_taxonomies:
-                    if asset.taxonomy in taxonomies:
-                        yield self[asset.taxonomy].out_by_lr(
-                            imt, [asset], hazard[imt], epsgetter)
+            with mon_risk:
+                for asset in assets:
+                    epsgetter = riskinput.epsilon_getter([asset.ordinal])
+                    for imt, taxonomies in riskinput.imt_taxonomies:
+                        if asset.taxonomy in taxonomies:
+                            yield self[asset.taxonomy].out_by_lr(
+                                imt, [asset], hazard[imt], epsgetter)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -569,7 +572,9 @@ class GmfCollector(object):
 
     def close(self):
         self.hdf5.close()
+        nbytes = os.path.getsize(self.fname)
         os.remove(self.fname)
+        return nbytes
 
     def save(self, sid, imt, rlz, gmvs, eids):
         key = '%s/%s/%s' % (sid, imt, rlz.ordinal)
@@ -597,6 +602,44 @@ class GmfCollector(object):
         return hazard
 
 
+class MemoryCollector(object):
+    """
+    An object storing the GMFs in memory.
+    """
+    def __init__(self, calc_id, task_no, imts, rlzs):
+        self.calc_id = calc_id
+        self.task_no = task_no
+        self.imts = imts
+        self.rlzs = rlzs
+        self.dic = collections.defaultdict(list)
+        self.nbytes = 0
+
+    def close(self):
+        self.dic.clear()
+        return self.nbytes
+
+    def save(self, sid, imt, rlz, gmvs, eids):
+        key = '%s/%s/%s' % (sid, imt, rlz.ordinal)
+        array = numpy.array(list(zip(gmvs, eids)), gmv_eid_dt)
+        self.dic[key].append(array)
+        self.nbytes += array.nbytes
+
+    def __getitem__(self, sid):
+        hazard = {}
+        for imt in self.imts:
+            hazard[imt] = {}
+            for rlz in self.rlzs:
+                key = '%s/%s/%s' % (sid, imt, rlz.ordinal)
+                try:
+                    data = self.dic[key]
+                except KeyError:
+                    pass
+                else:
+                    if data:
+                        hazard[imt][rlz] = numpy.concatenate(data)
+        return hazard
+
+
 # this is fast
 def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
               trunc_level, correl_model, min_iml, monitor=Monitor()):
@@ -619,7 +662,7 @@ def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
     imts = gmv_dt['gmv'].names
-    gmfcoll = GmfCollector(monitor.calc_id, monitor.task_no, imts, rlzs)
+    gmfcoll = MemoryCollector(monitor.calc_id, monitor.task_no, imts, rlzs)
     for ebr in eb_ruptures:
         with ctx_mon:
             r_sites = site.FilteredSiteCollection(ebr.indices, sites)
@@ -637,7 +680,8 @@ def calc_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
                             gmvs, eids = gmvs[ok], ebr.eids[ok]
                         else:
                             eids = ebr.eids
-                        gmfcoll.save(sid, imt, rlz, gmvs, eids)
+                        if len(eids):
+                            gmfcoll.save(sid, imt, rlz, gmvs, eids)
     return gmfcoll
 
 
