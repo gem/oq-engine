@@ -123,6 +123,7 @@ try:
 except ValueError:
     pass
 
+
 def job_from_file(cfg_file, username, hazard_calculation_id=None):
     """
     Create a full job profile from a job config file.
