@@ -79,7 +79,7 @@ def get_calc_ids(datadir=DATADIR):
     if not os.path.exists(datadir):
         return []
     calc_ids = []
-    for f in os.listdir(DATADIR):
+    for f in os.listdir(datadir):
         mo = re.match(r'calc_(\d+)\.hdf5', f)
         if mo:
             calc_ids.append(int(mo.group(1)))
