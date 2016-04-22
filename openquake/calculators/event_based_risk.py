@@ -24,10 +24,9 @@ import collections
 
 import numpy
 
-from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.general import AccumDict, humansize
-from openquake.calculators import base
+from openquake.calculators import base, event_based
 from openquake.commonlib import readinput, parallel
 from openquake.risklib import riskinput, scientific
 from openquake.commonlib.parallel import apply_reduce
@@ -259,6 +258,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 oq.asset_correlation)
             logging.info('Generated %s epsilons', eps.shape)
 
+        event_based.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
         self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
             self.sitecol.complete, all_ruptures, oq.truncation_level,
             correl_model, oq.minimum_intensity, eps, oq.concurrent_tasks or 1))

@@ -393,6 +393,24 @@ def get_gmvs_by_sid(gmfa):
                    numpy.array([record['gmv'] for record in group]))
 
 
+def fix_minimum_intensity(min_iml, imts):
+    """
+    Make sure the dictionary minimum_intensity (provided by the user in the
+    job.ini file) is filled for all intensity measure types and has no key
+    named 'default'.
+    """
+    if min_iml:
+        for imt in imts:
+            try:
+                min_iml[imt] = getdefault(min_iml, imt)
+            except KeyError:
+                raise ValueError(
+                    'The parameter `minimum_intensity` in the job.ini '
+                    'file is missing the IMT %r' % imt)
+    if 'default' in min_iml:
+        del min_iml['default']
+
+
 @base.calculators.add('event_based_rupture')
 class EventBasedRuptureCalculator(ClassicalCalculator):
     """
@@ -407,16 +425,9 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         Set the random seed passed to the SourceManager and the
         minimum_intensity dictionary.
         """
-        self.random_seed = self.oqparam.random_seed
-        min_iml = self.oqparam.minimum_intensity
-        if min_iml:
-            for imt in self.oqparam.imtls:
-                try:
-                    min_iml[imt] = getdefault(min_iml, imt)
-                except KeyError:
-                    raise ValueError(
-                        'The parameter `minimum_intensity` in the job.ini '
-                        'file is missing the IMT %r' % imt)
+        oq = self.oqparam
+        self.random_seed = oq.random_seed
+        fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
 
     def count_eff_ruptures(self, ruptures_by_trt_id, trt_model):
         """
