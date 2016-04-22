@@ -129,12 +129,22 @@ class EBRupture(object):
 
     @property
     def etags(self):
+        """
+        An array of tags for the underlying seismi events
+        """
         tags = []
         for (eid, ses, occ) in self.events:
             tag = 'trt=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
                 self.trt_id, ses, self.source_id, self.serial, occ)
             tags.append(tag)
         return numpy.array(tags)
+
+    @property
+    def eids(self):
+        """
+        An array with the underlying event IDs
+        """
+        return self.events['eid']
 
     @property
     def multiplicity(self):
@@ -508,7 +518,7 @@ def make_gmfs(eb_ruptures, sitecol, gmv_dt, rlzs_assoc,
             for gsim in gsims:
                 for i, rlz in enumerate(rlzs_assoc[trt_id, str(gsim)]):
                     seed = ebr.rupture.seed + i
-                    gmfa = computer.compute(seed, gsim, ebr.events['eid'])
+                    gmfa = computer.compute(seed, gsim, ebr.eids)
                     dic[rlz.ordinal].append(gmfa)
     res = {rlzi: numpy.concatenate(dic[rlzi]) for rlzi in dic}
     return res

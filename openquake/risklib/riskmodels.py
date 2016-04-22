@@ -526,14 +526,13 @@ class ProbabilisticEventBased(RiskModel):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
-        gmvs, eids = gmvs.get_gmvs_eids()
-        epsilons = epsgetter(eids)
-        E = len(eids)
+        eids = gmvs['eid']
+        E = len(gmvs)
         I = self.insured_losses + 1
         loss_ratios = numpy.zeros((E, I), F32)
         asset = assets[0]  # the only one
         loss_ratios[:, 0] = ratios = self.risk_functions[loss_type].apply_to(
-            [gmvs], epsilons)[0]  # shape E
+            [gmvs['gmv']], epsgetter(eids))[0]  # shape E
         cb = self.compositemodel.curve_builders[
             self.compositemodel.lti[loss_type]]
         if self.insured_losses and loss_type != 'occupants':

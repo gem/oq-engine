@@ -294,10 +294,10 @@ class TaskManager(object):
         cls.apply_reduce.__func__._chunks = chunks
         if not concurrent_tasks or no_distribute() or len(chunks) == 1:
             # apply the function in the master process
-            for chunk in chunks:
+            for i, chunk in enumerate(chunks):
+                if args and hasattr(args[-1], 'flush'):  # is monitor
+                    args[-1].task_no = i
                 acc = agg(acc, task_func(chunk, *args))
-                if args and hasattr(args[-1], 'flush'):
-                    args[-1].flush()
             return acc
         logging.info('Starting %d tasks', len(chunks))
         self = cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
