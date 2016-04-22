@@ -24,17 +24,17 @@ import tempfile
 import mock
 
 from django.db import connection
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, datastore
 from openquake.server.db import models, actions, upgrade_manager
 from openquake.server.settings import DATABASE
 from openquake.server.tests import helpers
 
 
 # twin to engine.job_from_file
-def job_from_file(cfg_file, username, hazard_calculation_id=None):
+def job_from_file(cfg_file, username, datadir, hazard_calculation_id=None):
     oq = readinput.get_oqparam(cfg_file)
     job_id = actions.create_job(oq.calculation_mode, oq.description,
-                                username, hazard_calculation_id)
+                                username, datadir, hazard_calculation_id)
     return job_id, oq
 
 
@@ -57,7 +57,8 @@ def teardown_module():
 
 
 def get_job(cfg, username, hazard_calculation_id=None):
-    job_id, oq = job_from_file(cfg, username, hazard_calculation_id)
+    job_id, oq = job_from_file(cfg, username, datastore.DATADIR,
+                               hazard_calculation_id)
     return models.OqJob.objects.get(pk=job_id)
 
 
@@ -98,24 +99,6 @@ class CheckHazardRiskConsistencyTestCase(unittest.TestCase):
             "'classical_risk', you need to provide a "
             "calculation of kind ['classical', 'classical_risk'], "
             "but you provided a 'scenario' instead")
-
-
-class JobFromFileTestCase(unittest.TestCase):
-
-    def test_create_job_default_user(self):
-        jid = actions.create_job('classical', 'test_create_job_default_user')
-        job = models.OqJob.objects.get(pk=jid)
-        self.assertEqual('openquake', job.user_name)
-        self.assertEqual('executing', job.status)
-
-    def test_create_job_specified_user(self):
-        user_name = helpers.random_string()
-        jid = actions.create_job(
-            'classical', 'test_create_job_specified_user',
-            user_name=user_name)
-        job = models.OqJob.objects.get(pk=jid)
-        self.assertEqual(user_name, job.user_name)
-        self.assertEqual('executing', job.status)
 
 
 class OpenquakeCliTestCase(unittest.TestCase):

@@ -65,15 +65,16 @@ def reset_is_running():
         'UPDATE job SET is_running=0 WHERE is_running=1')
 
 
-def create_job(calc_mode, description, user_name="openquake", hc_id=None):
+def create_job(calc_mode, description, user_name, datadir, hc_id=None):
     """
     Create job for the given user, return it.
 
     :param str calc_mode:
         Calculation mode, such as classical, event_based, etc
-    :param username:
-        Username of the user who owns/started this job. If the username
-        doesn't exist, a user record for this name will be created.
+    :param user_name:
+        User who owns/started this job.
+    :param datadir:
+        Data directory of the user who owns/started this job.
     :param description:
          Description of the calculation
     :param hc_id:
@@ -81,14 +82,14 @@ def create_job(calc_mode, description, user_name="openquake", hc_id=None):
     :returns:
         :class:`openquake.server.db.models.OqJob` instance.
     """
-    calc_id = get_calc_id(user_name) + 1
+    calc_id = get_calc_id(datadir) + 1
     job = models.OqJob.objects.create(
         id=calc_id,
         calculation_mode=calc_mode,
         description=description,
         user_name=user_name,
         # NB: ignores the OQ_DATADIR variable
-        ds_calc_dir=os.path.join('/home/%s/calc_%s' % (user_name, calc_id)))
+        ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     if hc_id:
         job.hazard_calculation = models.get(models.OqJob, pk=hc_id)
     job.save()
@@ -118,13 +119,13 @@ def get_job_id(job_id, username):
         return my_jobs[n + job_id].id
 
 
-def get_calc_id(username, job_id=None):
+def get_calc_id(datadir, job_id=None):
     """
     Return the latest calc_id by looking both at the datastore
     and the database.
     """
     # NB: ignores the OQ_DATADIR variable
-    calcs = datastore.get_calc_ids('/home/' + username)
+    calcs = datastore.get_calc_ids(datadir)
     calc_id = 0 if not calcs else calcs[-1]
     if job_id is None:
         try:
