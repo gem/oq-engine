@@ -31,12 +31,12 @@ F32 = numpy.float32
 
 
 @parallel.litetask
-def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
+def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
     """
     Compute and return the average losses for each asset.
 
-    :param riskinputs:
-        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
+    :param riskinput:
+        a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param rlzs_assoc:
@@ -49,7 +49,7 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     R = len(rlzs_assoc.realizations)
     result = dict(
         loss_curves=[], loss_maps=[], stat_curves=[], stat_maps=[])
-    for out_by_lr in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
+    for out_by_lr in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
         for (l, r), out in sorted(out_by_lr.items()):
             for i, asset in enumerate(out.assets):
                 aid = asset.ordinal
