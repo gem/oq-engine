@@ -35,7 +35,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.util import max_rel_diff_index, Rupture
 
-from openquake.calculators import base, views
+from openquake.calculators import base
 from openquake.calculators.calc import gmvs_to_haz_curve
 from openquake.calculators.classical import ClassicalCalculator
 
@@ -46,28 +46,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32)])
-
-
-# this will be removed in the future
-@datastore.view.add('col_rlz_assocs')
-def view_col_rlz_assocs(name, dstore):
-    """
-    :returns: an array with the association array col_ids -> rlz_ids
-    """
-    rlzs_assoc = dstore['rlzs_assoc']
-    num_ruptures = dstore.get_attr('etags', 'num_ruptures')
-    num_rlzs = len(rlzs_assoc.realizations)
-    col_ids_list = [[] for _ in range(num_rlzs)]
-    for rlz in rlzs_assoc.realizations:
-        for col_id in sorted(rlzs_assoc.get_col_ids(rlz)):
-            if num_ruptures[col_id]:
-                col_ids_list[rlz.ordinal].append(col_id)
-    assocs = collections.defaultdict(list)
-    for i, col_ids in enumerate(col_ids_list):
-        assocs[tuple(col_ids)].append(i)
-    tbl = [['Collections', 'Realizations']] + sorted(assocs.items())
-    return views.rst_table(tbl)
-
 
 # #################################################################### #
 
@@ -353,8 +331,7 @@ def sample_ruptures(src, num_ses, info):
     :param src: a hazardlib source object
     :param num_ses: the number of Stochastic Event Sets to generate
     :param info: a :class:`openquake.commonlib.source.CompositionInfo` instance
-    :returns: a dictionary of dictionaries rupture ->
-              {(col_id, ses_id): num_occurrences}
+    :returns: a dictionary of dictionaries rupture -> {ses_id: num_occurrences}
     """
     # the dictionary `num_occ_by_rup` contains a dictionary
     # ses_id -> num_occurrences for each occurring rupture
@@ -368,7 +345,6 @@ def sample_ruptures(src, num_ses, info):
             if num_occurrences:
                 num_occ_by_rup[rup] += {ses_idx: num_occurrences}
         rup.rup_no = rup_no + 1
-    #import pdb; pdb.set_trace()
     return num_occ_by_rup
 
 
@@ -542,11 +518,11 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, rlzs_assoc, monitor):
         a Monitor instance
     :returns:
         a dictionary (trt_model_id, gsim) -> haz_curves and/or
-        (trt_model_id, col_id) -> gmfs
+        trt_model_id -> gmfs
    """
     oq = monitor.oqparam
     # NB: by construction each block is a non-empty list with
-    # ruptures of the same col_id and therefore trt_model_id
+    # ruptures of the same trt_model_id
     trt_id = eb_ruptures[0].trt_id
     gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
     trunc_level = oq.truncation_level
