@@ -470,6 +470,14 @@ def view_biggest_ebr_gmf(token, dstore):
     return msg % get_max_gmf_size(dstore)
 
 
+@view.add('ruptures_events')
+def view_ruptures_events(token, dstore):
+    num_ruptures = len(dstore['sescollection'])
+    num_events = len(dstore['etags'])
+    return 'Total number of ruptures: %d\nTotal number of events: %d' % (
+        num_ruptures, num_events)
+
+
 @view.add('fullreport')
 def view_fullreport(token, dstore):
     """

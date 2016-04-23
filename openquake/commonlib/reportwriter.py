@@ -47,6 +47,7 @@ class ReportWriter(object):
         csm_info='Composite source model',
         required_params_per_trt='Required parameters per tectonic region type',
         ruptures_per_trt='Number of ruptures per tectonic region type',
+        ruptures_events='Specific information for event based',
         rlzs_assoc='Realizations per (TRT, GSIM)',
         job_info='Informational data',
         biggest_ebr_gmf='Maximum memory allocated for the GMFs',
@@ -97,6 +98,9 @@ class ReportWriter(object):
             self.add('ruptures_per_trt')
         if 'scenario' not in oq.calculation_mode:
             self.add('job_info')
+        if oq.calculation_mode in ('event_based_rupture', 'event_based',
+                                   'event_based_risk'):
+            self.add('ruptures_events')
         if oq.calculation_mode in ('event_based_risk',):
             self.add('biggest_ebr_gmf')
             self.add('avglosses_data_transfer')
