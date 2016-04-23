@@ -81,7 +81,7 @@ class Parser(object):
     composed together, by dispatching on a given name (if not given,
     the function name is used).
     """
-    def __init__(self, func, name=None, parentparser=None, help=True):
+    def __init__(self, func, name=None, parentparser=None, help=False):
         self.func = func
         self.name = name or func.__name__
         args, self.varargs, varkw, defaults = inspect.getargspec(func)
@@ -176,7 +176,8 @@ class Parser(object):
         return self.parentparser.format_help()
 
 
-def compose(parsers, name='main', description=None, help=True, prog=None):
+def compose(parsers, name='main', description=None, prog=None,
+            version=None):
     """
     Collects together different arguments parsers and builds a single
     Parser dispatching on the subparsers depending on
@@ -185,15 +186,27 @@ def compose(parsers, name='main', description=None, help=True, prog=None):
     :param parsers: a list of Parser instances
     :param name: the name of the composed parser
     :param description: description of the composed parser
-    :param help: help flag
     :param prog: name of the script printed in the usage message
+    :param version: version of the script printed with --version
     """
     assert len(parsers) >= 1, parsers
     parentparser = argparse.ArgumentParser(
-        description=description, add_help=help)
+        description=description, version=version, add_help=False)
     subparsers = parentparser.add_subparsers(
-        help='available subcommands (see sub help)', prog=prog)
-    for p in parsers:
+        help='available subcommands (see help sub)', prog=prog)
+
+    def gethelp(cmd=None):
+        if cmd is None:
+            print(parentparser.format_help())
+            return
+        subp = subparsers._name_parser_map.get(cmd)
+        if subp is None:
+            print('No help for unknown command %r' % cmd)
+            return
+        print(subp.format_help())
+    help_parser = Parser(gethelp, 'help')
+    help_parser.arg('cmd', 'subcommand')
+    for p in parsers + [help_parser]:
         subp = subparsers.add_parser(p.name)
         for args, kw in p.all_arguments:
             subp.add_argument(*args, **kw)

@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added an automatic help for the subcommands of oq-lite and managed
+    --version correctly
   * Improved the .rst reports with data transfer information
 
   [Matteo Nastasi]
