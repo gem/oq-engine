@@ -91,7 +91,8 @@ class Parser(object):
         alldefaults = (NODEFAULT,) * nodefaults + defaults
         self.argdict = OrderedDict(zip(args, alldefaults))
         self.parentparser = get_parentparser(
-            parentparser, description=func.__doc__, help=help)
+            parentparser, help=help)
+        self.description = func.__doc__ if func.__doc__ else None
         self.names = set()
         self.all_arguments = []
         self._group = self.parentparser
@@ -208,7 +209,7 @@ def compose(parsers, name='main', description=None, prog=None,
     help_parser = Parser(gethelp, 'help')
     help_parser.arg('cmd', 'subcommand')
     for p in parsers + [help_parser]:
-        subp = subparsers.add_parser(p.name)
+        subp = subparsers.add_parser(p.name, description=p.description)
         for args, kw in p.all_arguments:
             subp.add_argument(*args, **kw)
         subp.set_defaults(_func=p.func)
