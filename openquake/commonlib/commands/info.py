@@ -17,10 +17,9 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-import textwrap
 import logging
 from openquake.baselib.performance import Monitor
-from openquake.commonlib import sap, nrml, readinput, reportwriter
+from openquake.commonlib import sap, nrml, readinput, reportwriter, datastore
 from openquake.calculators import base
 from openquake.hazardlib import gsim
 
@@ -40,20 +39,24 @@ def print_csm_info(fname):
 
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
-def info(name, report=False):
+def info(calculators, gsims, views, report, input_file=''):
     """
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
     """
     logging.basicConfig(level=logging.INFO)
-    if name in base.calculators:
-        print(textwrap.dedent(base.calculators[name].__doc__.strip()))
-    elif name == 'gsims':
+    if calculators:
+        for calc in sorted(base.calculators):
+            print(calc)
+    if gsims:
         for gs in gsim.get_available_gsims():
             print(gs)
-    elif name.endswith('.xml'):
+    if views:
+        for name in sorted(datastore.view):
+            print(name)
+    if input_file.endswith('.xml'):
         print(nrml.read(name).to_str())
-    elif name.endswith(('.ini', '.zip')):
+    elif input_file.endswith(('.ini', '.zip')):
         with Monitor('info', measuremem=True) as mon:
             if report:
                 print('Generated', reportwriter.build_report(name))
@@ -61,9 +64,12 @@ def info(name, report=False):
                 print_csm_info(name)
         if mon.duration > 1:
             print(mon)
-    else:
-        print("No info for '%s'" % name)
+    elif input_file:
+        print("No info for '%s'" % input_file)
 
 parser = sap.Parser(info)
-parser.arg('name', 'calculator name, job.ini file or zip archive')
+parser.flg('calculators', 'list available calculators')
+parser.flg('gsims', 'list available GSIMs')
+parser.flg('views', 'list available views')
 parser.flg('report', 'build a report in rst format')
+parser.arg('input_file', 'job.ini file or zip archive')

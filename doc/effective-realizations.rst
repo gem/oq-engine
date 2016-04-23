@@ -158,14 +158,17 @@ How to analyze the logic tree of a calculation without running the calculation
 computation without running it. The command you need is the *info* command::
 
    $ oq-lite info -h
-   usage: oq-lite info [-h] [-r] name
+   usage: oq-lite info [-h] [-c] [-g] [-v] [-r] [input_file]
    
    positional arguments:
-     name                 calculator name, job.ini file or zip archive
+     input_file         job.ini file or zip archive [default: ]
    
    optional arguments:
-     -h, --help           show this help message and exit
-     -r, --report         build a report in rst format
+     -h, --help         show this help message and exit
+     -c, --calculators  list available calculators
+     -g, --gsims        list available GSIMs
+     -v, --views        list available views
+     -r, --report       build a report in rst format
    
 Let's assume that you have a zip archive called `SHARE.zip` containing the
 SHARE source model, the SHARE source model logic tree file and the SHARE

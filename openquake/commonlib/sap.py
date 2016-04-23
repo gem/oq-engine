@@ -193,7 +193,8 @@ def compose(parsers, name='main', description=None, prog=None,
     parentparser = argparse.ArgumentParser(
         description=description, version=version, add_help=False)
     subparsers = parentparser.add_subparsers(
-        help='available subcommands (see help sub)', prog=prog)
+        help='available subcommands; use %s help <cmd>' % prog,
+        prog=prog)
 
     def gethelp(cmd=None):
         if cmd is None:
