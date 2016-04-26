@@ -114,7 +114,7 @@ def delete_calculation(job_id, confirmed=False):
             'Are you sure you want to delete this calculation and all '
             'associated outputs?\nThis action cannot be undone. (y/n): '):
         try:
-            logs.dbcmd('del_calc', job_id)
+            logs.dbcmd('del_calc', job_id, getpass.getuser())
         except RuntimeError as err:
             print(err)
 
@@ -343,7 +343,8 @@ def main():
                 args.exports, hazard_calculation_id=hc_id)
     # hazard
     elif args.list_hazard_calculations:
-        for line in logs.dbcmd('list_calculations', 'hazard'):
+        for line in logs.dbcmd(
+                'list_calculations', 'hazard', getpass.getuser()):
             print line
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
@@ -351,10 +352,11 @@ def main():
         run_job(expanduser(args.run_hazard), args.log_level,
                 log_file, args.exports)
     elif args.delete_calculation is not None:
-        logs.dbcmd('delete_calculation', args.delete_calculation, args.yes)
+        logs.dbcmd('delete_calculation', args.delete_calculation, args.yes,
+                   getpass.getuser())
     # risk
     elif args.list_risk_calculations:
-        for line in logs.dbcmd('list_calculations', 'risk'):
+        for line in logs.dbcmd('list_calculations', 'risk', getpass.getuser()):
             print line
     elif args.run_risk is not None:
         if args.hazard_calculation_id is None:
@@ -397,7 +399,7 @@ def main():
             print line
 
     elif args.delete_uncompleted_calculations:
-        logs.dbcmd('delete_uncompleted_calculations')
+        logs.dbcmd('delete_uncompleted_calculations', getpass.getuser())
     else:
         arg_parser.print_usage()
 
