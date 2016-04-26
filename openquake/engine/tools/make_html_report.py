@@ -95,8 +95,7 @@ stop_time - start_time AS duration FROM job WHERE id=?;
 
 ALL_JOBS = '''
 SELECT id, user_name, status, ds_calc_dir FROM job
-WHERE stop_time = ? OR stop_time IS NULL AND start_time >= ?
-ORDER BY stop_time
+WHERE start_time >= ? ORDER BY stop_time
 '''
 
 PAGE_TEMPLATE = '''\
@@ -153,7 +152,7 @@ def make_report(isodate='today'):
     tag_status = []
     tag_contents = []
 
-    jobs = dbcmd('fetch', ALL_JOBS, isodate, isodate)[1:]
+    jobs = dbcmd('fetch', ALL_JOBS, isodate)[1:]
     page = '<h2>%d job(s) finished before midnight of %s</h2>' % (
         len(jobs), isodate)
     for job_id, user, status, ds_calc in jobs:
