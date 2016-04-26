@@ -79,18 +79,6 @@ def export_from_datastore(output_key, calc_id, datadir, target):
     else:  # single file
         return exported[0]
 
-
-def export(dskey, calc_id, datadir, target, export_type='xml,geojson,csv'):
-    """
-    Export the given calculation `output_id` from the database to the
-    specified `target` directory in the specified `export_type`.
-    """
-    if isinstance(target, basestring):  # create target directory
-        makedirs(target)
-    for exptype in export_type.split(','):
-        outkey = (dskey, exptype)
-        export_from_datastore(outkey, calc_id, datadir, target)
-
 #: Used to separate node labels in a logic tree path
 LT_PATH_JOIN_TOKEN = '_'
 
