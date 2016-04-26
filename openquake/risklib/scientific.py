@@ -225,8 +225,7 @@ class VulnerabilityFunction(object):
         # apply uncertainty
         covs = self._cov_for(imls_curve)
         self.set_distribution(epsilons)
-        ret[idxs] = self.distribution.sample(
-            means, covs, covs * imls_curve, idxs)
+        ret[idxs] = self.distribution.sample(means, covs, None, idxs)
         return ret
 
     def strictly_increasing(self):
@@ -794,64 +793,6 @@ class DegenerateDistribution(Distribution):
     def survival(self, loss_ratio, mean, _stddev):
         return numpy.piecewise(
             loss_ratio, [loss_ratio > mean or not mean], [0, 1])
-
-
-class EpsilonProvider(object):
-    """
-    A provider of epsilons. If the correlation coefficient is nonzero,
-    it builds at instantiation time an NxN correlation matrix for the N
-    assets. The `.sample` method returns an array of NxS elements,
-    where S is the number of seeds passed.
-
-    Here is an example without correlation:
-
-    >>> ep = EpsilonProvider(num_assets=3, correlation=0)
-    >>> ep.sample(seeds=[42, 43])
-    array([[ 0.49671415,  0.25739993],
-           [-0.1382643 , -0.90848143],
-           [ 0.64768854, -0.37850311]])
-
-    Here is an example with full correlation, i.e. all the assets get the same
-    epsilon for a given seed:
-
-    >>> ep = EpsilonProvider(num_assets=3, correlation=1)
-    >>> ep.sample(seeds=[42, 43])
-    array([[-0.49671415, -0.25739993],
-           [-0.49671415, -0.25739993],
-           [-0.49671415, -0.25739993]])
-    """
-    def __init__(self, num_assets, correlation):
-        """
-        :param int num_assets: the number of assets
-        :param float correlation: coefficient in the range [0, 1]
-        """
-        assert num_assets > 0, num_assets
-        assert 0 <= correlation <= 1, correlation
-        self.num_assets = num_assets
-        self.correlation = correlation
-        if self.correlation:
-            self.means_vector = numpy.zeros(num_assets)
-            self.covariance_matrix = (
-                numpy.ones((num_assets, num_assets)) * correlation +
-                numpy.diag(numpy.ones(num_assets)) * (1 - correlation))
-
-    def sample_one(self, seed):
-        """
-        :param int seed: the random seed used to generate the epsilons
-        :returns: an array with `num_assets` epsilons
-        """
-        numpy.random.seed(seed)
-        if not self.correlation:
-            return numpy.random.normal(size=self.num_assets)
-        return numpy.random.multivariate_normal(
-            self.means_vector, self.covariance_matrix, 1).reshape(-1)
-
-    def sample(self, seeds):
-        """
-        :param seeds: a sequence of stochastic seeds
-        :returns: an array with shape `(num_assets, num_seeds)`
-        """
-        return numpy.array([self.sample_one(seed) for seed in seeds]).T
 
 
 def make_epsilons(matrix, seed, correlation):
