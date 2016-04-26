@@ -132,7 +132,7 @@ class VulnerabilityFunction(object):
         A wrapper around a probabilistic distribution function
         (currently only the log normal distribution is supported).
         It is meant to be pickeable to allow distributed computation.
-        The only important method is `.apply_to`, which applies
+        The only important method is `.__call__`, which applies
         the vulnerability function to a given set of ground motion
         fields and epsilons and return a loss matrix with N x R
         elements.
@@ -192,7 +192,7 @@ class VulnerabilityFunction(object):
         self.distribution.epsilons = (numpy.array(epsilons)
                                       if epsilons is not None else None)
 
-    def apply_to(self, imls, epsilons):
+    def __call__(self, imls, epsilons):
         """
         Apply the vulnerability function to a ground motion vector, by using
         an epsilon vectors of the sample length.
@@ -431,7 +431,7 @@ class VulnerabilityFunctionWithPMF(object):
         assert probs.shape[0] == len(loss_ratios)
         assert probs.shape[1] == len(imls)
 
-    def apply_to(self, imls, epsilons):
+    def __call__(self, imls, epsilons):
         """
         Given IML values, interpolate the corresponding loss ratio
         value(s) on the curve.

@@ -531,7 +531,7 @@ class ProbabilisticEventBased(RiskModel):
         I = self.insured_losses + 1
         loss_ratios = numpy.zeros((E, I), F32)
         asset = assets[0]  # the only one
-        loss_ratios[:, 0] = ratios = self.risk_functions[loss_type].apply_to(
+        loss_ratios[:, 0] = ratios = self.risk_functions[loss_type].__call__(
             gmvs['gmv'], epsgetter(eids))  # shape E
         cb = self.compositemodel.curve_builders[
             self.compositemodel.lti[loss_type]]
@@ -646,7 +646,7 @@ class Scenario(RiskModel):
         # a matrix of N x E elements
         loss_ratio_matrix = numpy.zeros((len(assets), len(epsilons[0])))
         for i, eps in enumerate(epsilons):
-            loss_ratio_matrix[i] = self.risk_functions[loss_type].apply_to(
+            loss_ratio_matrix[i] = self.risk_functions[loss_type].__call__(
                 ground_motion_values, eps)
         # another matrix of N x E elements
         loss_matrix = (loss_ratio_matrix.T * values).T

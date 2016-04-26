@@ -164,7 +164,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         expected_lrs = numpy.array([0.0161928, 0.05880167, 0.12242504])
         test_input = [0.005, 0.006, 0.0269]
         numpy.testing.assert_allclose(
-            expected_lrs, self.test_func.apply_to(test_input, epsilons))
+            expected_lrs, self.test_func.__call__(test_input, epsilons))
 
     def test_loss_ratio_interp_many_values_clipped(self):
         # Given a list of IML values (abscissae), test for proper interpolation
@@ -174,7 +174,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         expected_lrs = numpy.array([0., 0.05880167, 0.12242504])
         test_input = [0.00049, 0.006, 2.7]
         numpy.testing.assert_allclose(
-            expected_lrs, self.test_func.apply_to(test_input, epsilons))
+            expected_lrs, self.test_func.__call__(test_input, epsilons))
 
     def test_cov_interp_many_values(self):
         expected_covs = numpy.array([0.3, 0.2, 10])
@@ -299,7 +299,7 @@ class VulnerabilityFunctionBlockSizeTestCase(unittest.TestCase):
                -0.46341769, 0.24196227, -1.72491783, -1.01283112, -0.90802408,
                1.46564877, 0.0675282, -0.54438272, -1.15099358, -0.60063869,
                -0.60170661, -0.01349722, 0.82254491, 0.2088636, -1.32818605]
-        singleblock = list(self.vf.apply_to(gmvs, eps).reshape(-1))
+        singleblock = list(self.vf.__call__(gmvs, eps).reshape(-1))
 
         # multiblock
         gmvs_, eps_ = [None] * 7, [None] * 7
@@ -319,7 +319,7 @@ class VulnerabilityFunctionBlockSizeTestCase(unittest.TestCase):
         eps_[6] = [0.2088636, -1.32818605]
         multiblock = []
         for gmvs, eps in zip(gmvs_, eps_):
-            multiblock.extend(self.vf.apply_to(gmvs, eps).reshape(-1))
+            multiblock.extend(self.vf.__call__(gmvs, eps).reshape(-1))
 
         # this test has been broken forever, finally fixed in OpenQuake 1.5
         self.assertEqual(singleblock, multiblock)
@@ -336,21 +336,21 @@ class MeanLossTestCase(unittest.TestCase):
                     -0.82757864, 0.53465707, 1.22838619]
         imls = [0.280357, 0.443609, 0.241845, 0.506982, 0.459758,
                 0.456199, 0.38077]
-        mean = vf.apply_to(imls, epsilons).mean()
+        mean = vf.__call__(imls, epsilons).mean()
         aaae(mean, 0.2318058254)
 
         # if you don't reorder the epsilons, the mean loss depends on
         # the order of the imls!
         reordered_imls = [0.443609, 0.280357, 0.241845, 0.506982, 0.459758,
                           0.456199, 0.38077]
-        mean2 = vf.apply_to(reordered_imls, epsilons).mean()
+        mean2 = vf.__call__(reordered_imls, epsilons).mean()
         aaae(mean2, 0.238145174018)
         self.assertGreater(abs(mean2 - mean), 0.005)
 
         # by reordering the epsilons the problem is solved
         reordered_epsilons = [0.2776809, 0.98982371, -0.44858935, 0.96196624,
                               -0.82757864, 0.53465707, 1.22838619]
-        mean3 = vf.apply_to(reordered_imls, reordered_epsilons).mean()
+        mean3 = vf.__call__(reordered_imls, reordered_epsilons).mean()
         aaae(mean3, mean)
 
 

@@ -342,7 +342,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.message, "branchset weights don't sum up to 1.0",
                          "wrong exception message: %s" % exc.message)
 
-    def test_apply_to_nonexistent_branch(self):
+    def test___call___nonexistent_branch(self):
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
@@ -373,7 +373,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.message, "branch 'mssng' is not yet defined",
                          "wrong exception message: %s" % exc.message)
 
-    def test_apply_to_occupied_branch(self):
+    def test___call___occupied_branch(self):
         lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
@@ -1274,7 +1274,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                 ('b3', '0.1', (-1.23, +0.1))])
               )])
 
-    def test_apply_to_branches(self):
+    def test___call___branches(self):
         source_model_logic_tree = _make_nrml("""\
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
