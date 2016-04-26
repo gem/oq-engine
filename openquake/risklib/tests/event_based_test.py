@@ -140,7 +140,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.1109), "TSES": 200, "TimeSpan": 50}
 
     def test_an_empty_gmf_produces_an_empty_set(self):
-        self.assertEqual(0, self.vulnerability_function1._apply([]).size)
+        self.assertEqual(0, self.vulnerability_function1.apply_to([], []).size)
 
     def test_sampling_lr_gmf_inside_range_vulnimls(self):
         """
@@ -163,8 +163,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.0395, 0.1145, 0.2883, 0.4734, 0.4885,
         ])
 
-        vf.set_distribution(EPSILONS)
-        ratios = vf._apply(gmf)
+        ratios = vf.apply_to(gmf, EPSILONS)
         numpy.testing.assert_allclose(expected_loss_ratios,
                                       ratios, atol=0.0, rtol=0.01)
 
@@ -180,15 +179,13 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
             [0.30, 0.30, 0.20, 0.20], "LN")
 
-        vuln_function.set_distribution(EPSILONS)
-
         gmfs = (0.08, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 0.05, 0.9595)
 
         numpy.testing.assert_allclose(
             numpy.array([0., 0.4105595, 0.18002423, 0.17102685, 0.25077079,
                          0.03945861, 0.11454372, 0.28828653, 0., 0.48847448]),
-            vuln_function._apply(gmfs), atol=0.0, rtol=0.01)
+            vuln_function.apply_to(gmfs, EPSILONS), atol=0.0, rtol=0.01)
 
     def test_sampling_lr_gmfs_greater_than_last_vulnimls(self):
         """
@@ -205,12 +202,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         gmfs = (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 1.05, 0.9595)
-        vuln_function.set_distribution(EPSILONS)
 
         numpy.testing.assert_allclose(
             numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,
                          0.0394, 0.1145, 0.2883, 0.5975, 0.4885]),
-            vuln_function._apply(gmfs), atol=0.0, rtol=0.01)
+            vuln_function.apply_to(gmfs, EPSILONS), atol=0.0, rtol=0.01)
 
     def test_loss_ratios_boundaries(self):
         """Loss ratios generation given a GMFs and a vulnerability function.
@@ -229,12 +225,14 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         # min IML in this case is 0.01
         numpy.testing.assert_allclose(
             numpy.array([0.0, 0.0, 0.0]),
-            self.vulnerability_function1._apply([0.0001, 0.0002, 0.0003]))
+            self.vulnerability_function1.apply_to(
+                [0.0001, 0.0002, 0.0003], EPSILONS[:3]))
 
         # max IML in this case is 0.52
         numpy.testing.assert_allclose(
             numpy.array([0.700, 0.700]),
-            self.vulnerability_function1._apply([0.525, 0.530]))
+            self.vulnerability_function1.apply_to(
+                [0.525, 0.530], EPSILONS[:2]))
 
     def test_loss_ratios_computation_using_gmfs(self):
         """Loss ratios generation given a GMFs and a vulnerability function.
@@ -252,78 +250,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.270366933333333, 0.0,
             0.0252480000000000, 0.0795669333333333,
             0.0529024000000000, 0.0,
-            0.0154928000000000, 0.00222080000000000,
-            0.0109232000000000, 0.0,
-            0.0, 0.0, 0.0175088000000000, 0.0230517333333333,
-            0.00300480000000000,
-            0.0, 0.0475973333333333, 0.0, 0.00794400000000000,
-            0.00213120000000000, 0.0, 0.0172848000000000,
-            0.00908640000000000,
-            0.0365850666666667, 0.0, 0.0, 0.0238096000000000,
-            0.0, 0.0, 0.0,
-            0.0, 0.00782080000000000, 0.0115952000000000,
-            0.0, 0.0, 0.0,
-            0.0, 0.0619504000000000, 0.0, 0.0118976000000000,
-            0.0329968000000000,
-            0.0, 0.00245600000000000, 0.0, 0.0, 0.0,
-            0.0, 0.0114608000000000,
-            0.00217600000000000, 0.0131856000000000,
-            0.0, 0.0, 0.186080000000000,
-            0.0, 0.00413600000000000, 0.0196480000000000,
-            0.104992000000000, 0.0,
-            0.0, 0.00498720000000000, 0.0, 0.0, 0.0,
-            0.00612960000000000, 0.0,
-            0.0450453333333333, 0.0143728000000000,
-            0.0, 0.00546880000000000,
-            0.0, 0.0, 0.0, 0.00838080000000000,
-            0.0, 0.00201920000000000, 0.0,
-            0.0112816000000000, 0.0110128000000000,
-            0.106928000000000, 0.0,
-            0.0, 0.0113376000000000, 0.0, 0.0118080000000000, 0.0,
-            0.427215466666667, 0.00366560000000000,
-            0.0, 0.161776000000000,
-            0.0212384000000000, 0.0107216000000000,
-            0.0, 0.00392320000000000,
-            0.0, 0.0697610666666667, 0.0, 0.00906400000000000, 0.0, 0.0,
-            0.0455712000000000, 0.0,
-            0.00508800000000000, 0.00278080000000000,
-            0.0136896000000000, 0.0, 0.0, 0.0118752000000000, 0.0,
-            0.0925280000000000, 0.0458960000000000, 0.00676800000000000,
-            0.0, 0.0, 0.00438240000000000, 0.0, 0.0232218666666667, 0.0,
-            0.00530080000000000, 0.0, 0.0, 0.0, 0.0, 0.00953440000000000,
-            0.0, 0.0, 0.0268101333333333, 0.0369098666666667, 0.0,
-            0.00125760000000000, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.290899733333333, 0.0, 0.0, 0.0, 0.0, 0.0348064000000000,
-            0.0279392000000000, 0.00296000000000000, 0.0171504000000000,
-            0.0147760000000000, 0.0,
-            0.00870560000000000, 0.00627520000000000,
-            0.0, 0.00522240000000000, 0.00293760000000000, 0.0, 0.0, 0.0,
-            0.0259749333333333, 0.0101504000000000,
-            0.00326240000000000, 0.0,
-            0.00804480000000000, 0.0, 0.0216528000000000, 0.0, 0.0, 0.0,
-            0.0578208000000000, 0.0939840000000000,
-            0.0, 0.0345898666666667,
-            0.0106544000000000, 0.00313920000000000,
-            0.0, 0.0, 0.00164960000000000,
-            0.0238405333333333, 0.0,
-            0.0238714666666667, 0.0189648000000000,
-            0.0162320000000000, 0.0, 0.0,
-            0.0293466666666667, 0.0142608000000000,
-            0.0, 0.00179520000000000,
-            0.0119984000000000, 0.0, 0.0, 0.0, 0.0,
-            0.0501648000000000, 0.00209760000000000, 0.00503200000000000,
-            0.00150400000000000, 0.0, 0.146192000000000,
-            0.0, 0.00325120000000000,
-            0.0, 0.0, 0.0344970666666667, 0.0, 0.0, 0.00879520000000000,
-            0.0146976000000000, 0.00306080000000000,
-            0.0, 0.0, 0.00158240000000000,
-            0.0810400000000000, 0.0,
-            0.00307200000000000, 0.0199728000000000])
+        ])
 
         # the length of the result is the length of the gmf
         numpy.testing.assert_allclose(
             expected_loss_ratios,
-            self.vulnerability_function1._apply(GMF))
+            self.vulnerability_function1.apply_to(GMF[:10], EPSILONS))
 
     def test_zero_curve(self):
         expected = [0.] * 100

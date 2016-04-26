@@ -192,25 +192,42 @@ class VulnerabilityFunction(object):
         self.distribution.epsilons = (numpy.array(epsilons)
                                       if epsilons is not None else None)
 
-    def apply_to(self, ground_motion_values, epsilons):
+    def apply_to(self, imls, epsilons):
         """
-        Apply a copy of the vulnerability function to a set of N
-        ground motion vectors, by using N epsilon vectors of length R,
-        where N is the number of assets and R the number of realizations.
+        Apply the vulnerability function to a ground motion vector, by using
+        an epsilon vectors of the sample length.
 
-        :param ground_motion_values:
-           matrix of floats N x R
+        :param imls:
+           array of E floats
         :param epsilons:
-           matrix of floats N x R
+           array of E floats
         """
         # NB: changing the order of the ground motion values for a given
         # asset without changing the order of the corresponding epsilon
         # values gives inconsistent results, see the MeanLossTestCase
-        assert len(epsilons) == len(ground_motion_values), (
-            len(epsilons), len(ground_motion_values))
-        vulnerability_function = copy.copy(self)
-        vulnerability_function.set_distribution(epsilons)
-        return vulnerability_function._apply(ground_motion_values)
+        assert len(epsilons) == len(imls), (len(epsilons), len(imls))
+
+        # for imls < min(iml) we return a loss of 0 (default)
+        ret = numpy.zeros(len(imls))
+
+        # imls are clipped to max(iml)
+        imls_curve = numpy.piecewise(
+            imls,
+            [imls > self.imls[-1]],
+            [self.imls[-1], lambda x: x])
+
+        # for imls such that iml > min(iml) we get a mean loss ratio
+        # by interpolation and sample the distribution
+        idxs, = numpy.where(imls_curve >= self.imls[0])
+        imls_curve = numpy.array(imls_curve)[idxs]
+        means = self._mlr_i1d(imls_curve)
+
+        # apply uncertainty
+        covs = self._cov_for(imls_curve)
+        self.set_distribution(epsilons)
+        ret[idxs] = self.distribution.sample(
+            means, covs, covs * imls_curve, idxs)
+        return ret
 
     def strictly_increasing(self):
         """
@@ -296,40 +313,6 @@ class VulnerabilityFunction(object):
         assert all(x >= 0.0 for x in loss_ratios)
         assert covs is None or all(x >= 0.0 for x in covs)
         assert distribution in ["LN", "BT"]
-
-    def _apply(self, imls):
-        """
-        Given IML values, interpolate the corresponding loss ratio
-        value(s) on the curve.
-
-        Input IML value(s) is/are clipped to IML range defined for this
-        vulnerability function.
-
-        :param float array iml: IML value
-
-        :returns: :py:class:`numpy.ndarray` containing a number of interpolated
-            values equal to the size of the input (1 or many)
-        """
-        # for imls < min(iml) we return a loss of 0 (default)
-        ret = numpy.zeros(len(imls))
-
-        # imls are clipped to max(iml)
-        imls_curve = numpy.piecewise(
-            imls,
-            [imls > self.imls[-1]],
-            [self.imls[-1], lambda x: x])
-
-        # for imls such that iml > min(iml) we get a mean loss ratio
-        # by interpolation and sample the distribution
-        idxs, = numpy.where(imls_curve >= self.imls[0])
-        imls_curve = numpy.array(imls_curve)[idxs]
-        means = self._mlr_i1d(imls_curve)
-
-        # apply uncertainty
-        covs = self._cov_for(imls_curve)
-        ret[idxs] = self.distribution.sample(
-            means, covs, covs * imls_curve, idxs)
-        return ret
 
     @utils.memoized
     def loss_ratio_exceedance_matrix(self, steps):
@@ -427,19 +410,6 @@ class VulnerabilityFunctionWithPMF(object):
         self.distribution.epsilons = epsilons
         self.distribution.seed = self.seed
 
-    def apply_to(self, ground_motion_values, epsilons=None):
-        """
-        :param ground_motion_values:
-           array of M floats
-        :param epsilons:
-           not used
-        :returns: array of M losses
-        """
-        vulnerability_function = copy.copy(self)
-        vulnerability_function.set_distribution(epsilons)
-        mat = vulnerability_function._apply(ground_motion_values)
-        return mat
-
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.loss_ratios,
                 self.probs, self.distribution_name, self.seed)
@@ -461,7 +431,7 @@ class VulnerabilityFunctionWithPMF(object):
         assert probs.shape[0] == len(loss_ratios)
         assert probs.shape[1] == len(imls)
 
-    def _apply(self, imls):
+    def apply_to(self, imls, epsilons):
         """
         Given IML values, interpolate the corresponding loss ratio
         value(s) on the curve.
@@ -490,6 +460,7 @@ class VulnerabilityFunctionWithPMF(object):
         probs = self._probs_i1d(imls_curve)
 
         # apply uncertainty
+        self.set_distribution(epsilons)
         ret[idxs] = self.distribution.sample(self.loss_ratios, probs)
         return ret
 
@@ -910,9 +881,8 @@ class LogNormalDistribution(Distribution):
     Model a distribution of a random variable whoose logarithm are
     normally distributed.
 
-    :attr epsilons: A matrix of random numbers generated with
-                    :func:`numpy.random.multivariate_normal` with dimensions
-                    assets_num x samples_num.
+    :attr epsilons: An array of random numbers generated with
+                    :func:`numpy.random.multivariate_normal` with size E
     :attr asset_idx: a counter used in sampling to iterate over the
                      attribute `epsilons`
     """

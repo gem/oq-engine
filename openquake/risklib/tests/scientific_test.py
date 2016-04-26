@@ -65,6 +65,10 @@ class TestMemoize(unittest.TestCase):
         self.assertEqual(1, m.call_count)
 
 
+epsilons = scientific.make_epsilons(
+    numpy.zeros((1, 3)), seed=3, correlation=0)[0]
+
+
 class VulnerabilityFunctionTestCase(unittest.TestCase):
     """
     Test for
@@ -92,10 +96,6 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         self.test_func = scientific.VulnerabilityFunction(
             self.ID, self.IMT, self.IMLS_GOOD, self.LOSS_RATIOS_GOOD,
             self.COVS_GOOD)
-
-        epsilons = scientific.make_epsilons(
-            numpy.zeros((1, 3)), seed=3, correlation=0)[0]
-        self.test_func.set_distribution(epsilons)
 
     def test_vuln_func_constructor_raises_on_bad_imls(self):
         # This test attempts to invoke AssertionErrors by passing 3 different
@@ -164,7 +164,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         expected_lrs = numpy.array([0.0161928, 0.05880167, 0.12242504])
         test_input = [0.005, 0.006, 0.0269]
         numpy.testing.assert_allclose(
-            expected_lrs, self.test_func._apply(test_input))
+            expected_lrs, self.test_func.apply_to(test_input, epsilons))
 
     def test_loss_ratio_interp_many_values_clipped(self):
         # Given a list of IML values (abscissae), test for proper interpolation
@@ -174,7 +174,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         expected_lrs = numpy.array([0., 0.05880167, 0.12242504])
         test_input = [0.00049, 0.006, 2.7]
         numpy.testing.assert_allclose(
-            expected_lrs, self.test_func._apply(test_input))
+            expected_lrs, self.test_func.apply_to(test_input, epsilons))
 
     def test_cov_interp_many_values(self):
         expected_covs = numpy.array([0.3, 0.2, 10])
