@@ -195,7 +195,8 @@ def export_output(output_id, target_dir, export_type):
         yield("Exporting output produced by a job which did not run "
               "successfully. Results might be uncomplete")
 
-    the_file = core.export(output_id, target_dir, export_type)
+    dskey, calc_id, datadir = get_output(output_id)
+    the_file = core.export(dskey, calc_id, datadir, target_dir, export_type)
     if the_file.endswith('.zip'):
         dname = os.path.dirname(the_file)
         fnames = zipfile.ZipFile(the_file).namelist()

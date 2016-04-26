@@ -26,7 +26,6 @@ import zipfile
 
 from openquake.commonlib.export import export as ds_export
 from openquake.commonlib import datastore
-from openquake.engine import logs
 
 
 class DataStoreExportError(Exception):
@@ -81,12 +80,11 @@ def export_from_datastore(output_key, calc_id, datadir, target):
         return exported[0]
 
 
-def export(output_id, target, export_type='xml,geojson,csv'):
+def export(dskey, calc_id, datadir, target, export_type='xml,geojson,csv'):
     """
     Export the given calculation `output_id` from the database to the
     specified `target` directory in the specified `export_type`.
     """
-    dskey, calc_id, datadir = logs.dbcmd('get_output', output_id)
     if isinstance(target, basestring):  # create target directory
         makedirs(target)
     for exptype in export_type.split(','):
