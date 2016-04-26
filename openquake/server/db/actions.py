@@ -16,7 +16,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
-import sys
 import zipfile
 import operator
 from datetime import datetime
@@ -196,15 +195,17 @@ def export_output(output_id, target_dir, export_type):
               "successfully. Results might be uncomplete")
 
     dskey, calc_id, datadir = get_output(output_id)
-    the_file = core.export(dskey, calc_id, datadir, target_dir, export_type)
-    if the_file.endswith('.zip'):
-        dname = os.path.dirname(the_file)
-        fnames = zipfile.ZipFile(the_file).namelist()
-        yield('Files exported:')
-        for fname in fnames:
-            yield(os.path.join(dname, fname))
-    else:
-        yield('File exported: %s' % the_file)
+    for exptype in export_type.split(','):
+        the_file = core.export_from_datastore(
+            (dskey, exptype), calc_id, datadir, target_dir)
+        if the_file.endswith('.zip'):
+            dname = os.path.dirname(the_file)
+            fnames = zipfile.ZipFile(the_file).namelist()
+            yield('Files exported:')
+            for fname in fnames:
+                yield(os.path.join(dname, fname))
+        else:
+            yield('File exported: %s' % the_file)
 
 
 def list_outputs(job_id, full=True):
