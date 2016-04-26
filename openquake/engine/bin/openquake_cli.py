@@ -387,14 +387,14 @@ def main():
 
     elif args.export_output is not None:
         output_id, target_dir = args.export_output
-        for line in logs.dbcmd('export_output', int(output_id),
+        for line in logs.dbcmd('@export_output', int(output_id),
                                expanduser(target_dir), exports):
             print line
 
     elif args.export_outputs is not None:
         job_id, target_dir = args.export_outputs
         hc_id = get_job_id(job_id)
-        for line in logs.dbcmd('export_outputs', hc_id,
+        for line in logs.dbcmd('@export_outputs', hc_id,
                                expanduser(target_dir), exports):
             print line
 
