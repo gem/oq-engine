@@ -24,7 +24,7 @@ file formats."""
 import os
 import zipfile
 
-from openquake.commonlib.export import export as ds_export
+from openquake.commonlib.export import export
 from openquake.commonlib import datastore
 
 
@@ -56,7 +56,7 @@ def export_from_datastore(output_key, calc_id, datadir, target):
     dstore = datastore.read(calc_id, datadir=datadir)
     dstore.export_dir = target
     try:
-        exported = ds_export(output_key, dstore)
+        exported = export(output_key, dstore)
     except KeyError:
         raise DataStoreExportError(
             'Could not export %s in %s' % output_key)
