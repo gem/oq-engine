@@ -1183,10 +1183,10 @@ class SourceModelLogicTree(BaseLogicTree):
         Checks that branchset tries to be applied only to branches on previous
         branching level which do not have a child branchset yet.
         """
-        __call___branches = branchset_node.get('applyToBranches')
-        if __call___branches:
-            __call___branches = __call___branches.split()
-            for branch_id in __call___branches:
+        apply_to_branches = branchset_node.get('applyToBranches')
+        if apply_to_branches:
+            apply_to_branches = apply_to_branches.split()
+            for branch_id in apply_to_branches:
                 if branch_id not in self.branches:
                     raise ValidationError(
                         branchset_node, self.filename,

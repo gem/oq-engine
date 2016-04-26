@@ -1274,7 +1274,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                 ('b3', '0.1', (-1.23, +0.1))])
               )])
 
-    def test___call___branches(self):
+    def test_apply_to_branches(self):
         source_model_logic_tree = _make_nrml("""\
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
