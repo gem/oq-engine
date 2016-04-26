@@ -174,7 +174,8 @@ def export_outputs(job_id, target_dir, export_type):
     for output in outputs:
         yield('Exporting %s...' % output)
         try:
-            export_output(output.id, target_dir, export_type)
+            for line in export_output(output.id, target_dir, export_type):
+                yield line
         except Exception as exc:
             yield(exc)
 
