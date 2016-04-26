@@ -96,9 +96,11 @@ class DbServer(object):
                 cmd, args = cmd_[0], cmd_[1:]
                 if cmd.startswith('@'):  # slow command, run in process
                     cmd = cmd[1:]  # strip @
-                    Process(
-                        target=run_command, name=cmd, args=(cmd, args, conn)
-                    ).start()
+                    proc = Process(
+                        target=run_command, name=cmd, args=(cmd, args, conn))
+                    proc.start()
+                    logging.warn('Started %s%s in process %d',
+                                 cmd, args, proc.pid)
                 else:
                     queue.put((conn, cmd, args))
         finally:
