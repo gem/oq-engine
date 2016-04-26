@@ -18,4 +18,4 @@
 from openquake.engine.logs import dbcmd
 
 if __name__ == '__main__':
-    dbcmd('@stop')
+    dbcmd('stop')

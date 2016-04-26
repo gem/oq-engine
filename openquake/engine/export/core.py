@@ -54,9 +54,6 @@ def export_from_datastore(output_key, calc_id, datadir, target):
     """
     ds_key, fmt = output_key
     dstore = datastore.read(calc_id, datadir=datadir)
-    parent_id = dstore['oqparam'].hazard_calculation_id
-    if parent_id:
-        dstore.set_parent(datastore.read(parent_id, datadir=datadir))
     dstore.export_dir = target
     try:
         exported = ds_export(output_key, dstore)
