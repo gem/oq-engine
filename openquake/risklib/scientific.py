@@ -210,8 +210,7 @@ class VulnerabilityFunction(object):
             len(epsilons), len(ground_motion_values))
         vulnerability_function = copy.copy(self)
         vulnerability_function.set_distribution(epsilons)
-        return utils.numpy_map(
-            vulnerability_function._apply, ground_motion_values)
+        return vulnerability_function._apply(ground_motion_values)
 
     def strictly_increasing(self):
         """
@@ -431,15 +430,14 @@ class VulnerabilityFunctionWithPMF(object):
     def apply_to(self, ground_motion_values, epsilons=None):
         """
         :param ground_motion_values:
-           matrix of floats N x M
+           array of M floats
         :param epsilons:
            not used
-        :returns: a N x M loss matrix
+        :returns: array of M losses
         """
         vulnerability_function = copy.copy(self)
         vulnerability_function.set_distribution(epsilons)
-        mat = utils.numpy_map(
-            vulnerability_function._apply, ground_motion_values)
+        mat = vulnerability_function._apply(ground_motion_values)
         return mat
 
     def __getstate__(self):
@@ -920,14 +918,12 @@ class LogNormalDistribution(Distribution):
     """
     def __init__(self, epsilons=None):
         self.epsilons = epsilons
-        self.asset_idx = 0
 
     def sample(self, means, covs, _stddevs, idxs):
         if self.epsilons is None:
             raise ValueError("A LogNormalDistribution must be initialized "
                              "before you can use it")
-        eps = self.epsilons[self.asset_idx, idxs]
-        self.asset_idx += 1
+        eps = self.epsilons[idxs]
         sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
         probs = means / numpy.sqrt(1 + covs ** 2) * numpy.exp(eps * sigma)
         return probs

@@ -720,7 +720,7 @@ class RiskInputFromRuptures(object):
         """
         eps = self.eps[asset_ordinals[0]]  # assume there is only one ordinal
         eid2eps = dict(zip(self.eids, eps))
-        return lambda eids: [numpy.array([eid2eps[eid] for eid in eids])]
+        return lambda eids: numpy.array([eid2eps[eid] for eid in eids])
 
     def get_hazard(self, rlzs_assoc, monitor=Monitor()):
         """

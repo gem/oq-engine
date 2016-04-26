@@ -18,15 +18,12 @@
 
 import numpy
 import unittest
-import itertools
 
 from openquake.risklib import scientific
 
 
-EPSILONS = list(itertools.repeat(
-    [0.5377, 1.8339,
-     -2.2588, 0.8622, 0.3188, -1.3077,
-     -0.4336, 0.3426, 3.5784, 2.7694], 10))
+EPSILONS = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
+            -0.4336, 0.3426, 3.5784, 2.7694]
 
 
 GMF = (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
