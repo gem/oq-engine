@@ -90,9 +90,8 @@ class Parser(object):
         nodefaults = len(args) - len(defaults)
         alldefaults = (NODEFAULT,) * nodefaults + defaults
         self.argdict = OrderedDict(zip(args, alldefaults))
-        self.parentparser = get_parentparser(
-            parentparser, help=help)
-        self.description = func.__doc__ if func.__doc__ else None
+        self.description = descr = func.__doc__ if func.__doc__ else None
+        self.parentparser = get_parentparser(parentparser, descr, help)
         self.names = set()
         self.all_arguments = []
         self._group = self.parentparser
