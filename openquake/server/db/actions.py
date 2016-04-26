@@ -24,6 +24,7 @@ from django.core import exceptions
 from django import db
 
 from openquake.commonlib import datastore, valid
+from openquake.commonlib.export import export
 from openquake.server.db import models
 from openquake.engine.export import core
 from openquake.server.db.schema.upgrades import upgrader
@@ -182,8 +183,8 @@ def export_outputs(job_id, target_dir, export_type):
 def export_output(output_id, target_dir, export_type):
     """
     Simple UI wrapper around
-    :func:`openquake.engine.export.core.export` which yields a summary
-    of files exported, if any.
+    :func:`openquake.engine.export.core.export_from_datastore` yielding
+    a summary of files exported, if any.
     """
     queryset = models.Output.objects.filter(pk=output_id)
     if not queryset.exists():
@@ -196,8 +197,11 @@ def export_output(output_id, target_dir, export_type):
 
     dskey, calc_id, datadir = get_output(output_id)
     for exptype in export_type.split(','):
+        outkey = (dskey, exptype)
+        if outkey not in export:  # missing exporter for exptype
+            continue
         the_file = core.export_from_datastore(
-            (dskey, exptype), calc_id, datadir, target_dir)
+            outkey, calc_id, datadir, target_dir)
         if the_file.endswith('.zip'):
             dname = os.path.dirname(the_file)
             fnames = zipfile.ZipFile(the_file).namelist()
