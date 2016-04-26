@@ -170,7 +170,7 @@ def export_outputs(job_id, target_dir, export_type):
     # make it possible commands like `oq-engine --eos -1 /tmp`
     outputs = models.Output.objects.filter(oq_job=job_id)
     if not outputs:
-        sys.exit('Found nothing to export for job %s' % job_id)
+        yield('Found nothing to export for job %s' % job_id)
     for output in outputs:
         yield('Exporting %s...' % output)
         try:
@@ -187,12 +187,12 @@ def export_output(output_id, target_dir, export_type):
     """
     queryset = models.Output.objects.filter(pk=output_id)
     if not queryset.exists():
-        yield 'No output found for OUTPUT_ID %s' % output_id
+        yield('No output found for OUTPUT_ID %s' % output_id)
         return
 
     if queryset.all()[0].oq_job.status != "complete":
-        yield ("Exporting output produced by a job which did not run "
-               "successfully. Results might be uncomplete")
+        yield("Exporting output produced by a job which did not run "
+              "successfully. Results might be uncomplete")
 
     the_file = core.export(output_id, target_dir, export_type)
     if the_file.endswith('.zip'):
