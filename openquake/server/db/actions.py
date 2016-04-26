@@ -18,7 +18,6 @@
 import os
 import sys
 import zipfile
-import getpass
 import operator
 from datetime import datetime
 
@@ -96,11 +95,11 @@ def create_job(calc_mode, description, user_name, datadir, hc_id=None):
     return job.id
 
 
-def delete_uncompleted_calculations():
+def delete_uncompleted_calculations(user):
     for job in models.OqJob.objects.filter(
-            oqjob__user_name=getpass.getuser()).exclude(
+            oqjob__user_name=user).exclude(
             oqjob__status="successful"):
-        del_calc(job.id, True)
+        del_calc(job.id, user)
 
 
 def get_job_id(job_id, username):
@@ -135,14 +134,14 @@ def get_calc_id(datadir, job_id=None):
     return max(calc_id, job_id)
 
 
-def list_calculations(job_type):
+def list_calculations(job_type, user_name):
     """
     Yield a summary of past calculations.
 
     :param job_type: 'hazard' or 'risk'
     """
     jobs = [job for job in models.OqJob.objects.filter(
-        user_name=getpass.getuser()).order_by('start_time')
+        user_name=user_name).order_by('start_time')
             if job.job_type == job_type]
 
     if len(jobs) == 0:
@@ -302,7 +301,7 @@ def finish(job_id, status):
     job.save()
 
 
-def del_calc(job_id):
+def del_calc(job_id, user):
     """
     Delete a calculation and all associated outputs.
 
@@ -314,7 +313,6 @@ def del_calc(job_id):
     except exceptions.ObjectDoesNotExist:
         raise RuntimeError('Unable to delete hazard calculation: '
                            'ID=%s does not exist' % job_id)
-    user = getpass.getuser()
     if job.user_name == user:
         # we are allowed to delete this
 
