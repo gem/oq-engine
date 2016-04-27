@@ -49,7 +49,7 @@ Copyright (C) 2010-2016, GEM Foundation.
 %pre
 getent group %{oquser} >/dev/null || groupadd -r %{oquser}
 getent passwd %{oquser} >/dev/null || \
-    useradd -r -g %{oquser} -m -d /var/lib/%{oquser} -s /sbin/nologin \
+    useradd -r -g %{oquser} -m -d /var/lib/%{oquser} -s /bin/bash \
     -c "The OpenQuake user" %{oquser}
 exit 0
 
