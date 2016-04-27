@@ -16,9 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
-import sys
 import zipfile
-import getpass
 import operator
 from datetime import datetime
 
@@ -26,6 +24,7 @@ from django.core import exceptions
 from django import db
 
 from openquake.commonlib import datastore, valid
+from openquake.commonlib.export import export
 from openquake.server.db import models
 from openquake.engine.export import core
 from openquake.server.db.schema.upgrades import upgrader
@@ -65,15 +64,16 @@ def reset_is_running():
         'UPDATE job SET is_running=0 WHERE is_running=1')
 
 
-def create_job(calc_mode, description, user_name="openquake", hc_id=None):
+def create_job(calc_mode, description, user_name, datadir, hc_id=None):
     """
     Create job for the given user, return it.
 
     :param str calc_mode:
         Calculation mode, such as classical, event_based, etc
-    :param username:
-        Username of the user who owns/started this job. If the username
-        doesn't exist, a user record for this name will be created.
+    :param user_name:
+        User who owns/started this job.
+    :param datadir:
+        Data directory of the user who owns/started this job.
     :param description:
          Description of the calculation
     :param hc_id:
@@ -81,24 +81,25 @@ def create_job(calc_mode, description, user_name="openquake", hc_id=None):
     :returns:
         :class:`openquake.server.db.models.OqJob` instance.
     """
-    calc_id = get_calc_id() + 1
+    calc_id = get_calc_id(datadir) + 1
     job = models.OqJob.objects.create(
         id=calc_id,
         calculation_mode=calc_mode,
         description=description,
         user_name=user_name,
-        ds_calc_dir=os.path.join(datastore.DATADIR, 'calc_%s' % calc_id))
+        # NB: ignores the OQ_DATADIR variable
+        ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     if hc_id:
         job.hazard_calculation = models.get(models.OqJob, pk=hc_id)
     job.save()
     return job.id
 
 
-def delete_uncompleted_calculations():
+def delete_uncompleted_calculations(user):
     for job in models.OqJob.objects.filter(
-            oqjob__user_name=getpass.getuser()).exclude(
+            oqjob__user_name=user).exclude(
             oqjob__status="successful"):
-        del_calc(job.id, True)
+        del_calc(job.id, user)
 
 
 def get_job_id(job_id, username):
@@ -117,12 +118,13 @@ def get_job_id(job_id, username):
         return my_jobs[n + job_id].id
 
 
-def get_calc_id(job_id=None):
+def get_calc_id(datadir, job_id=None):
     """
     Return the latest calc_id by looking both at the datastore
     and the database.
     """
-    calcs = datastore.get_calc_ids(datastore.DATADIR)
+    # NB: ignores the OQ_DATADIR variable
+    calcs = datastore.get_calc_ids(datadir)
     calc_id = 0 if not calcs else calcs[-1]
     if job_id is None:
         try:
@@ -132,14 +134,14 @@ def get_calc_id(job_id=None):
     return max(calc_id, job_id)
 
 
-def list_calculations(job_type):
+def list_calculations(job_type, user_name):
     """
     Yield a summary of past calculations.
 
     :param job_type: 'hazard' or 'risk'
     """
     jobs = [job for job in models.OqJob.objects.filter(
-        user_name=getpass.getuser()).order_by('start_time')
+        user_name=user_name).order_by('start_time')
             if job.job_type == job_type]
 
     if len(jobs) == 0:
@@ -168,11 +170,12 @@ def export_outputs(job_id, target_dir, export_type):
     # make it possible commands like `oq-engine --eos -1 /tmp`
     outputs = models.Output.objects.filter(oq_job=job_id)
     if not outputs:
-        sys.exit('Found nothing to export for job %s' % job_id)
+        yield('Found nothing to export for job %s' % job_id)
     for output in outputs:
         yield('Exporting %s...' % output)
         try:
-            export_output(output.id, target_dir, export_type)
+            for line in export_output(output.id, target_dir, export_type):
+                yield line
         except Exception as exc:
             yield(exc)
 
@@ -180,27 +183,33 @@ def export_outputs(job_id, target_dir, export_type):
 def export_output(output_id, target_dir, export_type):
     """
     Simple UI wrapper around
-    :func:`openquake.engine.export.core.export` which yields a summary
-    of files exported, if any.
+    :func:`openquake.engine.export.core.export_from_datastore` yielding
+    a summary of files exported, if any.
     """
     queryset = models.Output.objects.filter(pk=output_id)
     if not queryset.exists():
-        yield 'No output found for OUTPUT_ID %s' % output_id
+        yield('No output found for OUTPUT_ID %s' % output_id)
         return
 
     if queryset.all()[0].oq_job.status != "complete":
-        yield ("Exporting output produced by a job which did not run "
-               "successfully. Results might be uncomplete")
+        yield("Exporting output produced by a job which did not run "
+              "successfully. Results might be uncomplete")
 
-    the_file = core.export(output_id, target_dir, export_type)
-    if the_file.endswith('.zip'):
-        dname = os.path.dirname(the_file)
-        fnames = zipfile.ZipFile(the_file).namelist()
-        yield('Files exported:')
-        for fname in fnames:
-            yield(os.path.join(dname, fname))
-    else:
-        yield('File exported: %s' % the_file)
+    dskey, calc_id, datadir = get_output(output_id)
+    for exptype in export_type.split(','):
+        outkey = (dskey, exptype)
+        if outkey not in export:  # missing exporter for exptype
+            continue
+        the_file = core.export_from_datastore(
+            outkey, calc_id, datadir, target_dir)
+        if the_file.endswith('.zip'):
+            dname = os.path.dirname(the_file)
+            fnames = zipfile.ZipFile(the_file).namelist()
+            yield('Files exported:')
+            for fname in fnames:
+                yield(os.path.join(dname, fname))
+        else:
+            yield('File exported: %s' % the_file)
 
 
 def list_outputs(job_id, full=True):
@@ -299,7 +308,7 @@ def finish(job_id, status):
     job.save()
 
 
-def del_calc(job_id):
+def del_calc(job_id, user):
     """
     Delete a calculation and all associated outputs.
 
@@ -311,7 +320,6 @@ def del_calc(job_id):
     except exceptions.ObjectDoesNotExist:
         raise RuntimeError('Unable to delete hazard calculation: '
                            'ID=%s does not exist' % job_id)
-    user = getpass.getuser()
     if job.user_name == user:
         # we are allowed to delete this
 

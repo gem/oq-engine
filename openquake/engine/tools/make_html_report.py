@@ -18,7 +18,8 @@
 
 import os
 import cgi
-import datetime
+import time
+from datetime import date, datetime, timedelta
 import itertools
 from docutils.examples import html_parts
 
@@ -95,8 +96,7 @@ stop_time - start_time AS duration FROM job WHERE id=?;
 
 ALL_JOBS = '''
 SELECT id, user_name, status, ds_calc_dir FROM job
-WHERE stop_time = ? OR stop_time IS NULL AND start_time >= ?
-ORDER BY stop_time
+WHERE start_time >= ? AND start_time < ? ORDER BY stop_time
 '''
 
 PAGE_TEMPLATE = '''\
@@ -148,12 +148,17 @@ def make_report(isodate='today'):
     Return the name of the report, which is saved in the current directory.
     """
     if isodate == 'today':
-        isodate = datetime.date.today().isoformat()
+        isodate = date.today()
+    else:
+        isodate = date(*time.strptime(isodate, '%Y-%m-%d')[:3])
+    isodate1 = isodate + timedelta(1)  # +1 day
+
     tag_ids = []
     tag_status = []
     tag_contents = []
 
-    jobs = dbcmd('fetch', ALL_JOBS, isodate, isodate)[1:]
+    jobs = dbcmd(
+        'fetch', ALL_JOBS, isodate.isoformat(), isodate1.isoformat())[1:]
     page = '<h2>%d job(s) finished before midnight of %s</h2>' % (
         len(jobs), isodate)
     for job_id, user, status, ds_calc in jobs:
@@ -183,7 +188,7 @@ def make_report(isodate='today'):
         tag_contents.append(page)
 
     page = make_tabs(tag_ids, tag_status, tag_contents) + (
-        'Report last updated: %s' % datetime.datetime.now())
+        'Report last updated: %s' % datetime.now())
     fname = 'jobs-%s.html' % isodate
     with open(fname, 'w') as f:
         f.write(PAGE_TEMPLATE % page.encode('utf-8'))
