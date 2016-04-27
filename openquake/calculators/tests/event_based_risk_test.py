@@ -57,7 +57,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        self.assert_stats_ok(case_1, 'job_haz.ini,job_risk.ini')
+        self.assert_stats_ok(case_1, 'job.ini')
 
         # make sure the XML and JSON exporters run
         ekeys = [
