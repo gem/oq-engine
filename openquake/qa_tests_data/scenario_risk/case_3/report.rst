@@ -1,7 +1,7 @@
 Scenario QA Test 3
 ==================
 
-gem-tstation:/home/michele/ssd/calc_12060.hdf5 updated Fri Apr 22 04:12:17 2016
+gem-tstation:/home/michele/ssd/calc_120.hdf5 updated Wed Apr 27 10:57:14 2016
 
 num_sites = 4, sitecol = 877 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  3                  
 master_seed                  0                  
 avg_losses                   False              
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -60,17 +60,17 @@ W        2
 
 Slowest operations
 ------------------
-========================= ========= ========= ======
-operation                 time_sec  memory_mb counts
-========================= ========= ========= ======
-total scenario_risk       0.009     0.008     4     
-computing individual risk 0.008     0.0       4     
-filtering sites           0.007     0.0       1     
-computing gmfs            0.004     0.0       1     
-reading exposure          0.003     0.0       1     
-saving gmfs               7.641E-04 0.0       1     
-building riskinputs       6.211E-04 0.0       1     
-building epsilons         5.720E-04 0.0       1     
-getting hazard            1.464E-04 0.0       4     
-reading site collection   6.914E-06 0.0       1     
-========================= ========= ========= ======
+======================= ========= ========= ======
+operation               time_sec  memory_mb counts
+======================= ========= ========= ======
+computing gmfs          0.061     0.0       1     
+total scenario_risk     0.008     0.004     4     
+filtering sites         0.006     0.0       1     
+computing risk          0.006     0.0       4     
+reading exposure        0.003     0.0       1     
+saving gmfs             0.001     0.0       1     
+building epsilons       5.672E-04 0.0       1     
+building riskinputs     5.090E-04 0.0       1     
+building hazard         9.418E-05 0.0       4     
+reading site collection 6.914E-06 0.0       1     
+======================= ========= ========= ======

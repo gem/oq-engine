@@ -1,7 +1,7 @@
 Classical PSHA - Loss fractions QA test
 =======================================
 
-gem-tstation:/home/michele/ssd/calc_11978.hdf5 updated Fri Apr 22 04:09:28 2016
+gem-tstation:/home/michele/ssd/calc_38.hdf5 updated Wed Apr 27 10:54:17 2016
 
 num_sites = 13, sitecol = 1.26 KB
 
@@ -22,7 +22,7 @@ random_seed                  23
 master_seed                  0                  
 avg_losses                   False              
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -73,13 +73,13 @@ source_model.xml 0      Active Shallow Crust 2           1,613        53
 Informational data
 ------------------
 ==================================== ==============
-classical_risk_max_received_per_task 7466          
+classical_risk_max_received_per_task 7530          
 classical_risk_num_tasks             13            
-classical_risk_sent.monitor          54730         
+classical_risk_sent.monitor          55588         
 classical_risk_sent.riskinputs       14193         
 classical_risk_sent.riskmodel        166556        
 classical_risk_sent.rlzs_assoc       34138         
-classical_risk_tot_received          97058         
+classical_risk_tot_received          97890         
 hostname                             'gem-tstation'
 require_epsilons                     True          
 ==================================== ==============
@@ -105,8 +105,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            232       AreaSource   40     1         7.181E-04   0.0        2.189    
-0            225       AreaSource   13     1         7.360E-04   0.0        0.329    
+0            232       AreaSource   40     1         7.188E-04   0.0        2.229    
+0            225       AreaSource   13     1         7.930E-04   0.0        0.260    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -114,20 +114,21 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total classical_risk           6.976     1.172     13    
-computing individual risk      6.956     0.0       13    
-total classical                2.526     2.754     2     
-making contexts                1.431     0.0       2,132 
-reading composite source model 1.078     0.0       1     
-computing poes                 0.471     0.0       1,613 
+total classical_risk           7.647     1.215     13    
+computing risk                 7.626     0.0       13    
+total classical                2.496     2.988     2     
+making contexts                1.422     0.0       2,132 
+reading composite source model 1.188     0.0       1     
+computing poes                 0.472     0.0       1,613 
 managing sources               0.047     0.0       1     
 filtering sources              0.012     0.0       15    
 store source_info              0.011     0.0       1     
-reading exposure               0.006     0.0       1     
+reading exposure               0.011     0.0       1     
 save curves_by_trt_gsim        0.002     0.0       1     
-getting hazard                 0.002     0.0       13    
-combine and save curves_by_rlz 0.001     0.0       1     
-building riskinputs            0.001     0.0       1     
-aggregate curves               7.210E-04 0.0       2     
-reading site collection        7.868E-06 0.0       1     
+building hazard                0.002     0.0       13    
+save curves_by_rlz             0.001     0.0       1     
+building riskinputs            9.871E-04 0.0       1     
+aggregate curves               9.851E-04 0.0       2     
+combine curves_by_rlz          1.981E-04 0.0       1     
+reading site collection        1.788E-05 0.0       1     
 ============================== ========= ========= ======

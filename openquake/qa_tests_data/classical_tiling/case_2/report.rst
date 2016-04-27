@@ -1,7 +1,7 @@
 Classical Tiling for Turkey reduced
 ===================================
 
-gem-tstation:/home/michele/ssd/calc_12065.hdf5 updated Fri Apr 22 04:12:23 2016
+gem-tstation:/home/michele/ssd/calc_125.hdf5 updated Wed Apr 27 10:57:21 2016
 
 num_sites = 83, sitecol = 4.42 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   25.0
 random_seed                  323                
 master_seed                  0                  
 sites_per_tile               10                 
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -92,14 +92,14 @@ filtered_weight 148
 Informational data
 ------------------
 ======================================== ==================
-count_eff_ruptures_max_received_per_task 6113              
+count_eff_ruptures_max_received_per_task 6036              
 count_eff_ruptures_num_tasks             13                
-count_eff_ruptures_sent.monitor          75972             
-count_eff_ruptures_sent.rlzs_assoc       2810700           
+count_eff_ruptures_sent.monitor          75049             
+count_eff_ruptures_sent.rlzs_assoc       2810470           
 count_eff_ruptures_sent.sitecol          13852             
 count_eff_ruptures_sent.siteidx          65                
 count_eff_ruptures_sent.sources          41008             
-count_eff_ruptures_tot_received          79469             
+count_eff_ruptures_tot_received          78468             
 hazard.input_weight                      3359.8500000000004
 hazard.n_imts                            2                 
 hazard.n_levels                          45.0              
@@ -118,7 +118,7 @@ trt_model_id source_id    source_class weight split_num filter_time split_time c
 ============ ============ ============ ====== ========= =========== ========== =========
 4            AS_GEAS343   AreaSource   96     1         0.010       0.0        0.0      
 9            FSBG_TRBG103 AreaSource   43     1         0.004       0.0        0.0      
-9            FSBG_ARAS462 AreaSource   7.650  1         7.830E-04   0.0        0.0      
+9            FSBG_ARAS462 AreaSource   7.650  1         8.161E-04   0.0        0.0      
 ============ ============ ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -126,11 +126,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               2.276     0.0       1     
-reading composite source model 1.125     0.0       1     
-filtering sources              0.214     0.0       248   
-reading site collection        0.010     0.0       1     
-store source_info              0.004     0.0       1     
+managing sources               2.354     0.0       1     
+reading composite source model 1.289     0.0       1     
+filtering sources              0.215     0.0       248   
+reading site collection        0.018     0.0       1     
 total count_eff_ruptures       0.004     0.0       13    
-aggregate curves               2.010E-04 0.0       13    
+store source_info              0.004     0.0       1     
+aggregate curves               2.031E-04 0.0       13    
 ============================== ========= ========= ======

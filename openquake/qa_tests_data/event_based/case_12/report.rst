@@ -1,7 +1,7 @@
 Event Based QA Test, Case 12
 ============================
 
-gem-tstation:/home/michele/ssd/calc_12054.hdf5 updated Fri Apr 22 04:12:16 2016
+gem-tstation:/home/michele/ssd/calc_114.hdf5 updated Wed Apr 27 10:57:12 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   10.0               
 random_seed                  1066               
 master_seed                  0                  
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -82,13 +82,18 @@ Informational data
 hostname 'gem-tstation'
 ======== ==============
 
+Specific information for event based
+------------------------------------
+Total number of ruptures: 2
+Total number of events: 6906
+
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-1            2         PointSource  0.025  1         6.199E-05   0.0        0.050    
-0            1         PointSource  0.025  1         9.012E-05   0.0        0.025    
+1            2         PointSource  0.025  1         1.359E-04   0.0        0.050    
+0            1         PointSource  0.025  1         1.869E-04   0.0        0.048    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -96,19 +101,19 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.076     0.117     2     
-saving ruptures                0.064     0.0       1     
-total compute_gmfs_and_curves  0.064     0.0       2     
-compute poes                   0.051     0.0       2     
-bulding hazard curves          0.011     0.0       2     
+total compute_ruptures         0.099     0.0       2     
+saving ruptures                0.062     0.0       1     
+total compute_gmfs_and_curves  0.061     0.0       2     
+compute poes                   0.033     0.0       2     
+bulding hazard curves          0.026     0.0       2     
 store source_info              0.010     0.0       1     
-reading composite source model 0.004     0.0       1     
-managing sources               0.003     0.0       1     
+reading composite source model 0.009     0.0       1     
+managing sources               0.005     0.0       1     
 aggregate curves               0.003     0.0       4     
-saving gmfs                    0.003     0.0       2     
-aggregating hcurves            0.001     0.0       2     
-make contexts                  0.001     0.0       2     
-filtering ruptures             8.192E-04 0.0       2     
-filtering sources              1.521E-04 0.0       2     
-reading site collection        3.505E-05 0.0       1     
+aggregating hcurves            0.002     0.0       2     
+make contexts                  0.002     0.0       2     
+saving gmfs                    0.001     0.0       2     
+filtering ruptures             0.001     0.0       2     
+filtering sources              3.228E-04 0.0       2     
+reading site collection        6.819E-05 0.0       1     
 ============================== ========= ========= ======

@@ -1,7 +1,7 @@
 QA test for blocksize independence (hazard)
 ===========================================
 
-gem-tstation:/home/michele/ssd/calc_12052.hdf5 updated Fri Apr 22 04:11:54 2016
+gem-tstation:/home/michele/ssd/calc_112.hdf5 updated Wed Apr 27 10:56:48 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.5
 area_source_discretization   10.0               
 random_seed                  1024               
 master_seed                  0                  
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -72,14 +72,19 @@ Informational data
 hostname 'gem-tstation'
 ======== ==============
 
+Specific information for event based
+------------------------------------
+Total number of ruptures: 3
+Total number of events: 3
+
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   175    1,170     8.621E-04   0.309      4.582    
-0            2         AreaSource   58     389       8.321E-04   0.102      1.353    
-0            3         AreaSource   44     352       7.269E-04   0.080      0.645    
+0            1         AreaSource   175    1,170     8.030E-04   0.305      4.718    
+0            2         AreaSource   58     389       7.730E-04   0.097      1.250    
+0            3         AreaSource   44     352       7.319E-04   0.080      0.510    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -87,18 +92,18 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         6.627     0.0       38    
-reading composite source model 1.721     0.0       1     
-managing sources               0.613     0.0       1     
-splitting sources              0.491     0.0       3     
+total compute_ruptures         6.522     0.0       38    
+reading composite source model 1.736     0.0       1     
+managing sources               0.611     0.0       1     
+splitting sources              0.482     0.0       3     
 store source_info              0.016     0.0       1     
 filtering sources              0.007     0.0       9     
 total compute_gmfs_and_curves  0.006     0.0       3     
-saving gmfs                    0.003     0.0       3     
-make contexts                  0.003     0.0       3     
+make contexts                  0.002     0.0       3     
 compute poes                   0.002     0.0       3     
 saving ruptures                0.002     0.0       1     
 aggregate curves               0.002     0.0       38    
+saving gmfs                    0.001     0.0       3     
 filtering ruptures             0.001     0.0       3     
-reading site collection        4.005E-05 0.0       1     
+reading site collection        3.386E-05 0.0       1     
 ============================== ========= ========= ======

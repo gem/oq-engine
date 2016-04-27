@@ -1,7 +1,7 @@
 scenario hazard
 ===============
 
-gem-tstation:/home/michele/ssd/calc_11986.hdf5 updated Fri Apr 22 04:09:32 2016
+gem-tstation:/home/michele/ssd/calc_46.hdf5 updated Wed Apr 27 10:54:21 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  42                 
 master_seed                  0                  
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -59,8 +59,8 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.008     0.0       1     
+filtering sites         0.007     0.0       1     
 reading exposure        0.002     0.0       1     
-computing gmfs          5.360E-04 0.0       1     
-reading site collection 7.153E-06 0.0       1     
+computing gmfs          8.330E-04 0.0       1     
+reading site collection 5.007E-06 0.0       1     
 ======================= ========= ========= ======
