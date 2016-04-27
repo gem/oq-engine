@@ -548,7 +548,7 @@ celeryd_wait $GEM_MAXLOOP"
         if [ \$(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
             sudo adduser --system --home /var/lib/openquake --group --shell /bin/bash openquake
         fi
-        sudo -u openquake python -m openquake.server.db.upgrade_manager \$HOME/db.sqlite
+        sudo -u openquake python -m openquake.server.db.upgrade_manager ~openquake/db.sqlite3
         sudo -u openquake python -m openquake.server.dbserver 2>/dev/null & sleep 1
 
         if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
