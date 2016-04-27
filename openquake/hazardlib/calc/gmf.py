@@ -74,7 +74,7 @@ class GmfComputer(object):
         Sites of interest to calculate GMFs.
 
     :param imts:
-        a sorted list of Intensity Measure Type string
+        a sorted list of Intensity Measure Type strings
 
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
@@ -179,7 +179,7 @@ class GmfComputer(object):
             seed for the numpy random number generator
         :param gsim:
             a GSIM instance
-        :param:
+        :param eids:
             event IDs, a list of integers
         :returns:
             a numpy array of dtype gmv_dt and size num_events * num_sites
@@ -209,7 +209,7 @@ class GmfComputer(object):
         :param seed:
             seed for the numpy random number generator
         :param rlzs_by_gsim:
-            a dictionary {gsim instance: realization indices}
+            a dictionary {gsim instance: realizations}
         :returns:
             a dictionary rlz -> imt -> array(N, M)
         """
