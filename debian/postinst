@@ -39,6 +39,12 @@ if [ -f /usr/sbin/rabbitmqctl ]; then
 fi
 
 USER=openquake
+if [ $(cat /etc/group | grep ^openquake: | wc -l) -eq 0 ]; then
+    addgroup --system $USER
+fi
+if [ $(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
+    adduser --system --home /var/lib/$USER --group $USER $USER
+fi
 
 HDIR=/usr/share/openquake/engine
 IDIR=/usr/lib/python2.7/dist-packages/openquake/engine
@@ -46,16 +52,7 @@ mkdir -p $HDIR
 
 rm -f $HDIR/celeryconfig.py.new_in_this_release
 cp $IDIR/celeryconfig.py $HDIR
-
 chown -R $USER.$USER $SDIR
-
-
-if [ $(cat /etc/group | grep ^openquake: | wc -l) -eq 0 ]; then
-    addgroup --system $USER
-fi
-if [ $(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
-    adduser --system --home /var/lib/$USER --group $USER $USER
-fi
 
 SDIR=/etc/openquake
 for cfg in openquake.cfg
