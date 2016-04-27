@@ -78,8 +78,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
-        self.assert_stats_ok(case_2, 'job_haz.ini,job_risk.ini',
-                             individual_curves='true')
+        self.assert_stats_ok(case_2, 'job.ini', individual_curves='true')
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
 
