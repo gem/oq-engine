@@ -24,9 +24,8 @@ file formats."""
 import os
 import zipfile
 
-from openquake.commonlib.export import export as ds_export
+from openquake.commonlib.export import export
 from openquake.commonlib import datastore
-from openquake.engine import logs
 
 
 class DataStoreExportError(Exception):
@@ -55,12 +54,9 @@ def export_from_datastore(output_key, calc_id, datadir, target):
     """
     ds_key, fmt = output_key
     dstore = datastore.read(calc_id, datadir=datadir)
-    parent_id = dstore['oqparam'].hazard_calculation_id
-    if parent_id:
-        dstore.set_parent(datastore.read(parent_id, datadir=datadir))
     dstore.export_dir = target
     try:
-        exported = ds_export(output_key, dstore)
+        exported = export(output_key, dstore)
     except KeyError:
         raise DataStoreExportError(
             'Could not export %s in %s' % output_key)
@@ -79,19 +75,6 @@ def export_from_datastore(output_key, calc_id, datadir, target):
         return os.path.join(target, archname)
     else:  # single file
         return exported[0]
-
-
-def export(output_id, target, export_type='xml,geojson,csv'):
-    """
-    Export the given calculation `output_id` from the database to the
-    specified `target` directory in the specified `export_type`.
-    """
-    dskey, calc_id, datadir = logs.dbcmd('get_output', output_id)
-    if isinstance(target, basestring):  # create target directory
-        makedirs(target)
-    for exptype in export_type.split(','):
-        outkey = (dskey, exptype)
-        export_from_datastore(outkey, calc_id, datadir, target)
 
 #: Used to separate node labels in a logic tree path
 LT_PATH_JOIN_TOKEN = '_'
