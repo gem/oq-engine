@@ -96,7 +96,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         # this is a test with statistics and without conditional_loss_poes
-        out = self.run_calc(case_3.__file__, 'job_haz.ini,job_risk.ini',
+        out = self.run_calc(case_3.__file__, 'job.ini',
                             exports='xml', individual_curves='false',
                             concurrent_tasks='4')
         [fname] = out['agg_curve-stats', 'xml']
@@ -114,7 +114,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
-        out = self.run_calc(occupants.__file__, 'job_h.ini,job_r.ini',
+        out = self.run_calc(occupants.__file__, 'job.ini',
                             exports='xml', individual_curves='true')
         fnames = out['loss_maps-rlzs', 'xml'] + out['agg_curve-rlzs', 'xml']
         self.assertEqual(len(fnames), 3)  # 2 loss_maps + 1 agg_curve
@@ -145,10 +145,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # export a single rupture
         [f1, f2] = export(('gmfs:0', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
-            'expected/gmf-col=05'
+            'expected/gmf-trt=05'
             '~ses=0001~src=AS_TRAS334~rup=612021-01-PGA.csv', f1)
         self.assertEqualFiles(
-            'expected/gmf-col=05'
+            'expected/gmf-trt=05'
             '~ses=0001~src=AS_TRAS334~rup=612021-01-SA(0.5).csv', f2)
 
     @attr('qa', 'hazard', 'event_based')

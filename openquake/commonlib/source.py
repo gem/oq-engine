@@ -32,8 +32,7 @@ import numpy
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.commonlib.node import read_nodes
-from openquake.commonlib import (
-    logictree, sourceconverter, parallel, valid, util)
+from openquake.commonlib import logictree, sourceconverter, parallel, valid
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
 MAX_INT = 2 ** 31 - 1
@@ -325,7 +324,6 @@ class RlzsAssoc(collections.Mapping):
         self.gsim_by_trt = []  # rlz.ordinal -> {trt: gsim}
         self.rlzs_by_smodel = [[] for _ in range(len(csm_info.source_models))]
         self.gsims_by_trt_id = {}
-        self.col_ids_by_rlz = collections.defaultdict(set)
 
     def _init(self):
         """
@@ -371,20 +369,22 @@ class RlzsAssoc(collections.Mapping):
                 if trt_model.id == trt_model_id:
                     return smodel.ordinal
 
-    # this useful to extract the ruptures affecting a given realization
-    def get_col_ids(self, rlz):
+    def get_rlzs_by_gsim(self, trt_id):
         """
-        :param rlz: a realization
-        :returns: a set of ses collection indices relevant for the realization
+        Returns a dictionary gsim -> rlzs
         """
-        # first consider the oversampling case, when the col_ids are known
-        col_ids = self.col_ids_by_rlz[rlz]
-        if col_ids:
-            return col_ids
-        # else consider the source model to which the realization belongs
-        # and extract the trt_model_ids, which are the same as the col_ids
-        return set(tm.id for sm in self.csm_info.source_models
-                   for tm in sm.trt_models if sm.path == rlz.sm_lt_path)
+        return {gsim: self[trt_id, str(gsim)]
+                for gsim in self.gsims_by_trt_id[trt_id]}
+
+    def get_rlzs_by_trt_id(self):
+        """
+        Returns a dictionary trt_id > [sorted rlzs]
+        """
+        rlzs_by_trt_id = collections.defaultdict(set)
+        for (trt_id, gsim), rlzs in self.rlzs_assoc.items():
+            rlzs_by_trt_id[trt_id].update(rlzs)
+        return {trt_id: sorted(rlzs)
+                for trt_id, rlzs in rlzs_by_trt_id.items()}
 
     def _add_realizations(self, idx, lt_model, realizations):
         gsim_lt = lt_model.gsim_lt
@@ -400,9 +400,6 @@ class RlzsAssoc(collections.Mapping):
                     # ignore the associations to discarded TRTs
                     gs = gsim_lt.get_gsim_by_trt(gsim_rlz, trt_model.trt)
                     self.rlzs_assoc[trt_model.id, gs].append(rlz)
-                if lt_model.samples > 1:  # oversampling
-                    col_id = self.csm_info.col_ids_by_trt_id[trt_model.id][i]
-                    self.col_ids_by_rlz[rlz].add(col_id)
             rlzs.append(rlz)
         self.rlzs_by_smodel[lt_model.ordinal] = rlzs
 
@@ -437,29 +434,6 @@ class RlzsAssoc(collections.Mapping):
             for rlz in self.rlzs_assoc[key]:
                 ad[rlz] = agg(ad[rlz], value)
         return ad
-
-    def combine_gmfs(self, gmf_data, sid_data):
-        """
-        :param gmf_data: dataset gmf_data
-        :param sid_data: dataset sid_data
-        :returns: a list of R dictionaries etag -> rupture
-        """
-        dicts = [AccumDict() for rlz in self.realizations]
-        for serial in gmf_data:
-            gmf = gmf_data[serial]
-            indices = sid_data[serial].value
-            etags = gmf.attrs['etags']
-            trt_id = gmf.attrs['trt_id']
-            for gsim in self.gsims_by_trt_id[trt_id]:
-                gs = str(gsim)
-                for rlz in self.rlzs_assoc[trt_id, gs]:
-                    dic = dicts[rlz.ordinal]
-                    dic.indices = indices
-                    for i, etag in enumerate(etags):
-                        ebrup = util.Rupture(etag, indices)
-                        ebrup.gmf = gmf[i][gs]
-                        dic[etag] = ebrup
-        return dicts
 
     def combine(self, results, agg=agg_prob):
         """
@@ -583,11 +557,8 @@ class CompositionInfo(object):
 
     def init(self):
         """Fully initialize the CompositionInfo object"""
-        cols = []
-        col_id = 0
         self.eff_ruptures = numpy.zeros(len(self.source_models),
                                         (bytes, LENGTH))
-        self.col_ids_by_trt_id = collections.defaultdict(list)
         self.tmdict = {}  # trt_id -> trt_model
         self.gsimdict = {}  # (trt_id, gsim_no) -> gsim instance
         for sm in self.source_models:
@@ -595,13 +566,8 @@ class CompositionInfo(object):
                 trt_model.source_model = sm
                 trt_id = trt_model.id
                 self.tmdict[trt_id] = trt_model
-                for idx in range(sm.samples):
-                    cols.append((trt_id, idx))
-                    self.col_ids_by_trt_id[trt_id].append(col_id)
-                    col_id += 1
                 for i, gsim in enumerate(trt_model.gsims):
                     self.gsimdict[trt_model.id, str(i)] = gsim
-        self.cols = numpy.array(cols, col_dt)
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
@@ -637,13 +603,6 @@ class CompositionInfo(object):
         self.init()
         self.eff_ruptures = array['eff_ruptures']
 
-    @property
-    def num_collections(self):
-        """
-        Return the number of underlying collections
-        """
-        return sum(len(sm.trt_models) for sm in self.source_models)
-
     def get_num_rlzs(self, source_model=None):
         """
         :param source_model: a SourceModel instance (or None)
@@ -654,37 +613,6 @@ class CompositionInfo(object):
         if self.num_samples:
             return source_model.samples
         return source_model.gsim_lt.get_num_paths()
-
-    def get_max_samples(self):
-        """
-        Return the maximum number of samples of the source model
-        """
-        return max(len(col_ids) for col_ids in self.col_ids_by_trt_id.values())
-
-    def get_num_samples(self, trt_id):
-        """
-        :param trt_id: tectonic region type object ID
-        :returns: how many times the sources of that TRT are to be sampled
-        """
-        return len(self.col_ids_by_trt_id[trt_id])
-
-    def get_trt_id(self, col_id):
-        """
-        :param col_id: the ordinal of a SESCollection
-        :returns: the ID of the associated TrtModel
-        """
-        for cid, col in enumerate(self.cols):
-            if cid == col_id:
-                return col['trt_id']
-        raise KeyError('There is no TrtModel associated to the collection %d!'
-                       % col_id)
-
-    def get_triples(self):
-        """
-        Yield triples (trt_id, idx, col_id) in order
-        """
-        for col_id, col in enumerate(self.cols):
-            yield col['trt_id'], col['sample'], col_id
 
     def get_rlzs_assoc(self, count_ruptures=lambda tm: -1):
         """

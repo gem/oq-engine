@@ -25,6 +25,7 @@ import numpy.testing
 from openquake.commonlib.datastore import DataStore
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.commonlib.export import export
+from openquake.calculators.event_based import get_gmvs_by_sid
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_4, case_5, case_6, case_7, case_12,
@@ -81,10 +82,10 @@ class EventBasedTestCase(CalculatorTestCase):
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = DataStore(self.calc.datastore.calc_id)
-            gmfa = dstore['gmf_data/1']['BooreAtkinson2008']['PGA']
+            gmvs_by_sid = get_gmvs_by_sid(dstore['gmf_data/0000'])
             dstore.close()
-            gmvs_site_1 = gmfa[:, 0]
-            gmvs_site_2 = gmfa[:, 1]
+            gmvs_site_1 = gmvs_by_sid[0]['PGA']
+            gmvs_site_2 = gmvs_by_sid[1]['PGA']
             joint_prob_0_5 = joint_prob_of_occurrence(
                 gmvs_site_1, gmvs_site_2, 0.5, oq.investigation_time,
                 oq.ses_per_logic_tree_path)
@@ -208,7 +209,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_7(self):
-        # 2 models x 3 GMPEs, 100 samples * 10 SES
+        # 2 models x 3 GMPEs, 10 samples * 200 SES
         expected = [
             'hazard_curve-mean.csv',
             'quantile_curve-0.1.csv',
@@ -223,7 +224,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         for imt in mean_cl.dtype.fields:
             reldiff, _index = max_rel_diff_index(
                 mean_cl[imt], mean_eb[imt], min_value=0.1)
-            self.assertLess(reldiff, 0.41)
+            self.assertLess(reldiff, 0.20)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):

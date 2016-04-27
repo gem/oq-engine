@@ -24,7 +24,7 @@ import operator
 import decimal
 import functools
 import itertools
-
+import collections
 import numpy
 import h5py
 
@@ -166,23 +166,6 @@ def view_csm_info(token, dstore):
                classify_gsim_lt(sm.gsim_lt), '%d/%d' % (num_rlzs, num_paths))
         rows.append(row)
     return rst_table(rows, header)
-
-
-@view.add('rupture_collections')
-def view_rupture_collections(token, dstore):
-    rlzs_assoc = dstore['rlzs_assoc']
-    num_ruptures = dstore['num_ruptures']
-    csm_info = rlzs_assoc.csm_info
-    rows = []
-    col_id = 0
-    for sm in csm_info.source_models:
-        for tm in sm.trt_models:
-            for idx in range(sm.samples):
-                nr = num_ruptures[col_id]
-                if nr:
-                    rows.append((col_id, '_'.join(sm.path), tm.trt, nr))
-                col_id += 1
-    return rst_table(rows, ['col', 'smlt_path', 'TRT', 'num_ruptures'])
 
 
 @view.add('ruptures_per_trt')
@@ -456,22 +439,24 @@ def view_assetcol(token, dstore):
 
 def get_max_gmf_size(dstore):
     """
-    Extract info about the largest GMF
+    Upper limit for the size of the GMFs
     """
     oq = dstore['oqparam']
-    n_sites = len(dstore['sitecol'].complete)
-    rlzs_assoc = dstore['rlzs_assoc']
-    num_ruptures = dstore.get_attr('etags', 'num_ruptures')
-    col = num_ruptures.argmax()
-    n_ruptures = num_ruptures[col]
-    trt_id = rlzs_assoc.csm_info.get_trt_id(col)
-    gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
     n_imts = len(oq.imtls)
-    n_rlzs = max(len(rlzs_assoc[trt_id, gsim]) for gsim in gsims)
-    size = n_sites * n_rlzs * n_ruptures * n_imts * 4  # 4 bytes per float
-    return dict(n_rlzs=n_rlzs, n_imts=n_imts, n_sites=n_sites, size=size,
-                n_ruptures=n_ruptures, humansize=humansize(size), col=col,
-                trt=rlzs_assoc.csm_info.tmdict[trt_id].trt)
+    rlzs_by_trt_id = dstore['rlzs_assoc'].get_rlzs_by_trt_id()
+    n_ruptures = collections.Counter()
+    size = collections.Counter()  # by trt_id
+    for serial in dstore['sescollection']:
+        ebr = dstore['sescollection/' + serial]
+        trt_id = ebr.trt_id
+        n_ruptures[trt_id] += 1
+        # there are 4 bytes per float
+        size[trt_id] += (len(ebr.indices) * ebr.multiplicity *
+                         len(rlzs_by_trt_id[trt_id]) * n_imts) * 4
+    [(trt_id, maxsize)] = size.most_common(1)
+    return dict(n_imts=n_imts, size=maxsize, n_ruptures=n_ruptures[trt_id],
+                n_rlzs=len(rlzs_by_trt_id[trt_id]),
+                trt_id=trt_id, humansize=humansize(maxsize))
 
 
 @view.add('biggest_ebr_gmf')
@@ -479,10 +464,18 @@ def view_biggest_ebr_gmf(token, dstore):
     """
     Returns the size of the biggest GMF in an event based risk calculation
     """
-    msg = ('The largest GMF block is for collection #%(col)d of type %(trt)r,'
-           '\ncontains %(n_imts)d IMT(s), %(n_sites)d site(s), %(n_rlzs)d '
-           'realization(s), and has a size of %(humansize)s / num_tasks')
+    msg = ('The largest GMF block is for trt_model_id=%(trt_id)d, '
+           'contains %(n_imts)d IMT(s), %(n_rlzs)d '
+           'realization(s)\nand has a size of %(humansize)s / num_tasks')
     return msg % get_max_gmf_size(dstore)
+
+
+@view.add('ruptures_events')
+def view_ruptures_events(token, dstore):
+    num_ruptures = len(dstore['sescollection'])
+    num_events = len(dstore['etags'])
+    return 'Total number of ruptures: %d\nTotal number of events: %d' % (
+        num_ruptures, num_events)
 
 
 @view.add('fullreport')

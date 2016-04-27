@@ -26,7 +26,7 @@ import numpy
 
 from openquake.baselib.general import groupby, humansize
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.calc import disagg, gmf
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import (
     scientificformat, floatformat, write_csv)
@@ -39,6 +39,15 @@ GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 GMF_WARNING = '''\
 There are a lot of ground motion fields; the export will be slow.
 Consider canceling the operation and accessing directly %s.'''
+
+
+def get_gmfa_by_eid(gmfa):
+    """
+    Returns a dictionary sid -> array of composite ground motion values,
+    ordered by sid by construction.
+    """
+    return groupby(gmfa, operator.itemgetter('eid'), lambda records:
+                   numpy.array(list(records)))
 
 
 class SES(object):
@@ -79,18 +88,11 @@ def export_ses_xml(ekey, dstore):
     """
     fmt = ekey[-1]
     oq = dstore['oqparam']
-    try:
-        csm_info = dstore['rlzs_assoc'].csm_info
-    except AttributeError:  # for scenario calculators don't export
-        return []
     mesh = dstore['sitemesh'].value
     ruptures = []
-    for sm in csm_info.source_models:
-        for trt_model in sm.trt_models:
-            colkey = 'sescollection/trt=%02d' % trt_model.id
-            if colkey in dstore:
-                for sr in dstore[colkey]:
-                    ruptures.extend(sr.export(mesh))
+    for serial in dstore['sescollection']:
+        sr = dstore['sescollection/' + serial]
+        ruptures.extend(sr.export(mesh))
     ses_coll = SESCollection(
         groupby(ruptures, operator.attrgetter('ses_idx')),
         oq.investigation_time)
@@ -478,16 +480,21 @@ def export_gmf(ekey, dstore):
                           else oq.investigation_time)
     samples = oq.number_of_logic_tree_samples
     fmt = ekey[-1]
-    sid_data = dstore['sid_data']
+    etags = dstore['etags'].value
     gmf_data = dstore['gmf_data']
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    for rlz, rup_by_etag in zip(rlzs_assoc.realizations,
-                                rlzs_assoc.combine_gmfs(gmf_data, sid_data)):
-        ruptures = [rup_by_etag[etag] for etag in sorted(rup_by_etag)]
+    for rlz in rlzs_assoc.realizations:
+        gmfa = gmf_data['%04d' % rlz.ordinal].value
+        ruptures = []
+        for eid, gmfa in get_gmfa_by_eid(gmfa).items():
+            rup = util.Rupture(etags[eid], gmfa['sid'])
+            rup.gmf = gmfa['gmv']
+            ruptures.append(rup)
+        ruptures.sort(key=operator.attrgetter('etag'))
         fname = build_name(dstore, rlz, 'gmf', fmt, samples)
         fnames.append(fname)
         globals()['export_gmf_%s' % fmt](
@@ -524,7 +531,7 @@ def export_gmf_spec(ekey, dstore, spec):
     else:  # event based
         for eid in eids:
             etag = etags[eid]
-            for gmfa, imt in _get_gmfs(dstore, etag):
+            for gmfa, imt in _get_gmfs(dstore, util.get_serial(etag), eid):
                 dest = dstore.export_path('gmf-%s-%s.csv' % (etag, imt))
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
@@ -575,38 +582,34 @@ def export_gmf_txt(key, dest, sitecol, ruptures, rlz, investigation_time):
     return {key: [dest]}
 
 
-def get_rup_idx(rupcol, etag):
+def get_rup_idx(ebrup, etag):
     # extract the rupture and the index of the given etag from a collection
-    for rup in rupcol:
-        for etag_idx, tag in enumerate(rup.etags):
-            if tag == etag:
-                return rup, etag_idx
+    for etag_idx, tag in enumerate(ebrup.etags):
+        if tag == etag:
+            return etag_idx
     raise ValueError('event tag %s not found in the rupture collection')
 
 
-def _get_gmfs(dstore, etag):
+def _get_gmfs(dstore, serial, eid):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['rlzs_assoc']
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
-    col_id, serial = util.get_col_serial(etag)
-    trt_id = rlzs_assoc.csm_info.get_trt_id(col_id)
-    coll = dstore['sescollection/trt=%02d' % trt_id]
-    rup, idx = get_rup_idx(coll, etag)
+    rup = dstore['sescollection/' + serial]
     correl_model = readinput.get_correl_model(oq)
     gsims = rlzs_assoc.gsims_by_trt_id[rup.trt_id]
     rlzs = [rlz for gsim in map(str, gsims)
-            for rlz in rlzs_assoc[trt_id, gsim]]
+            for rlz in rlzs_assoc[rup.trt_id, gsim]]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
-    [gst] = event_based.make_gmfs(
-        [rup], sitecol, oq.imtls, gsims, oq.truncation_level, correl_model
-    ).values()
+    gmf_list = event_based.make_gmfs(
+        [rup], sitecol, oq.imtls, rlzs_assoc,
+        oq.truncation_level, correl_model).values()
     for imt in oq.imtls:
         gmfa = numpy.zeros(N, gmf_dt)
-        for gsim in map(str, gsims):
-            data = gst.gmfa[gsim][imt][idx]
-            for rlz in rlzs_assoc[trt_id, gsim]:
-                gmfa['%03d' % rlz.ordinal][rup.indices] = data
+        for rlz in rlzs:
+            data = gmf_list[rlz.ordinal]
+            ok = data[data['eid'] == eid]
+            gmfa['%03d' % rlz.ordinal][rup.indices] = ok['gmv'][imt]
         yield gmfa, imt
 
 
@@ -622,7 +625,7 @@ def export_gmf_scenario(ekey, dstore):
         for (trt, gsim), gmfs_ in gmfs_by_trt_gsim.items():
             for imt in gmfs_.dtype.names:
                 gmfs = numpy.zeros(len(gmfs_), dt)
-                for i, gmf in enumerate(gmfs_):
+                for i in range(len(gmfs)):
                     gmfs[i] = tuple(gmfs_[imt][i])
                 dest = dstore.export_path('gmf-%s-%s.csv' % (gsim, imt))
                 data = util.compose_arrays(sitemesh, gmfs)
