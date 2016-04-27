@@ -1,7 +1,7 @@
 Event Based Hazard
 ==================
 
-gem-tstation:/home/michele/ssd/calc_77.hdf5 updated Wed Apr 27 10:54:49 2016
+gem-tstation:/home/michele/ssd/calc_130.hdf5 updated Wed Apr 27 11:10:17 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0               
 random_seed                  24                 
 master_seed                  0                  
-oqlite_version               '0.13.0-gitcbbc4a8'
+oqlite_version               '0.13.0-git952b07b'
 ============================ ===================
 
 Input files
@@ -78,8 +78,11 @@ require_epsilons True
 
 Specific information for event based
 ------------------------------------
-Total number of ruptures: 5
-Total number of events: 6
+======================== =====
+Total number of ruptures 5    
+Total number of events   6    
+Rupture multiplicity     1.200
+======================== =====
 
 Exposure model
 --------------
@@ -99,8 +102,8 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            3         SimpleFaultSource    482    15        0.002       0.049      0.376    
-0            1         CharacteristicFaultS 1.000  1         0.002       0.0        0.030    
+0            3         SimpleFaultSource    482    15        0.002       0.047      0.375    
+0            1         CharacteristicFaultS 1.000  1         0.002       0.0        0.012    
 ============ ========= ==================== ====== ========= =========== ========== =========
 
 Slowest operations
@@ -108,19 +111,19 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.414     0.0       16    
-managing sources               0.071     0.0       1     
-splitting sources              0.049     0.0       1     
-filtering ruptures             0.048     0.0       5     
-total compute_gmfs_and_curves  0.038     0.0       5     
-make contexts                  0.034     0.0       5     
+total compute_ruptures         0.395     0.062     16    
+managing sources               0.078     0.0       1     
+total compute_gmfs_and_curves  0.055     0.008     5     
+make contexts                  0.049     0.0       5     
+splitting sources              0.047     0.0       1     
+filtering ruptures             0.031     0.0       5     
 reading composite source model 0.017     0.0       1     
-store source_info              0.006     0.0       1     
+store source_info              0.008     0.0       1     
+saving ruptures                0.005     0.0       1     
+aggregate curves               0.004     0.0       16    
 filtering sources              0.004     0.0       2     
-saving ruptures                0.004     0.0       1     
+compute poes                   0.003     0.0       5     
 reading exposure               0.003     0.0       1     
-compute poes                   0.002     0.0       5     
-saving gmfs                    0.002     0.0       5     
-aggregate curves               0.002     0.0       16    
+saving gmfs                    0.003     0.0       5     
 reading site collection        8.106E-06 0.0       1     
 ============================== ========= ========= ======

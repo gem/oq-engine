@@ -1,7 +1,7 @@
 event based risk
 ================
 
-gem-tstation:/home/michele/ssd/calc_79.hdf5 updated Wed Apr 27 10:55:07 2016
+gem-tstation:/home/michele/ssd/calc_132.hdf5 updated Wed Apr 27 11:10:35 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  24                 
 master_seed                  0                  
 avg_losses                   True               
-oqlite_version               '0.13.0-gitcbbc4a8'
+oqlite_version               '0.13.0-git952b07b'
 ============================ ===================
 
 Input files
@@ -92,22 +92,25 @@ filtered_weight 968
 Informational data
 ------------------
 ====================================== ==============
-event_based_risk_max_received_per_task 113637        
+event_based_risk_max_received_per_task 111203        
 event_based_risk_num_tasks             7             
 event_based_risk_sent.assetcol         30919         
-event_based_risk_sent.monitor          18886         
+event_based_risk_sent.monitor          4711          
 event_based_risk_sent.riskinputs       30663         
 event_based_risk_sent.riskmodel        75236         
-event_based_risk_sent.rlzs_assoc       48503         
-event_based_risk_tot_received          565929        
+event_based_risk_sent.rlzs_assoc       48454         
+event_based_risk_tot_received          548579        
 hostname                               'gem-tstation'
 require_epsilons                       True          
 ====================================== ==============
 
 Specific information for event based
 ------------------------------------
-Total number of ruptures: 9
-Total number of events: 106
+======================== ===
+Total number of ruptures 9  
+Total number of events   106
+Rupture multiplicity     11 
+======================== ===
 
 Maximum memory allocated for the GMFs
 -------------------------------------
@@ -138,10 +141,10 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            1         SimpleFaultSource    482    15        0.002       0.048      0.278    
-2            1         SimpleFaultSource    482    15        0.002       0.047      0.224    
-1            2         SimpleFaultSource    4.000  1         0.002       0.0        0.021    
-3            2         CharacteristicFaultS 1.000  1         0.001       0.0        0.002    
+0            1         SimpleFaultSource    482    15        0.002       0.040      0.288    
+2            1         SimpleFaultSource    482    15        0.001       0.037      0.263    
+1            2         SimpleFaultSource    4.000  1         0.002       0.0        0.011    
+3            2         CharacteristicFaultS 1.000  1         0.001       0.0        0.004    
 ============ ========= ==================== ====== ========= =========== ========== =========
 
 Slowest operations
@@ -149,29 +152,29 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total event_based_risk         1.461     0.031     7     
-computing risk                 1.204     0.0       63    
-total compute_ruptures         0.538     0.0       30    
-compute poes                   0.372     0.0       18    
-total compute_gmfs_and_curves  0.261     0.0       7     
-aggregate losses               0.256     0.0       99    
-getting hazard                 0.212     0.0       63    
-building hazard                0.197     0.0       9     
-managing sources               0.184     0.0       1     
-saving event loss tables       0.152     0.0       7     
+total event_based_risk         1.380     0.062     7     
+computing risk                 1.133     0.0       63    
+total compute_ruptures         0.579     0.008     30    
+compute poes                   0.351     0.0       18    
+total compute_gmfs_and_curves  0.231     0.012     7     
+saving event loss tables       0.225     0.0       7     
+getting hazard                 0.224     0.0       63    
+aggregate losses               0.203     0.0       99    
+building hazard                0.191     0.0       9     
+managing sources               0.171     0.0       1     
 make contexts                  0.102     0.0       18    
-splitting sources              0.095     0.0       2     
-bulding hazard curves          0.048     0.0       7     
-reading composite source model 0.027     0.0       1     
-filtering ruptures             0.024     0.0       9     
-compute and save statistics    0.015     0.0       1     
-aggregating hcurves            0.014     0.0       24    
-save curves_by_rlz             0.013     0.0       1     
-saving gmfs                    0.009     0.0       24    
-filtering sources              0.007     0.0       4     
+splitting sources              0.077     0.0       2     
+bulding hazard curves          0.041     0.0       7     
+reading composite source model 0.021     0.0       1     
+filtering ruptures             0.019     0.0       9     
+compute and save statistics    0.018     0.0       1     
+aggregating hcurves            0.015     0.0       24    
+save curves_by_rlz             0.014     0.0       1     
+saving gmfs                    0.010     0.0       24    
 saving ruptures                0.007     0.0       1     
-reading exposure               0.007     0.0       1     
-store source_info              0.006     0.0       1     
-aggregate curves               0.004     0.0       54    
-reading site collection        9.060E-06 0.0       1     
+store source_info              0.007     0.0       1     
+aggregate curves               0.006     0.0       54    
+filtering sources              0.006     0.0       4     
+reading exposure               0.005     0.0       1     
+reading site collection        6.914E-06 0.0       1     
 ============================== ========= ========= ======
