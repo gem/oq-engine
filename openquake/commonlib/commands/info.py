@@ -55,13 +55,13 @@ def info(calculators, gsims, views, report, input_file=''):
         for name in sorted(datastore.view):
             print(name)
     if input_file.endswith('.xml'):
-        print(nrml.read(name).to_str())
+        print(nrml.read(input_file).to_str())
     elif input_file.endswith(('.ini', '.zip')):
         with Monitor('info', measuremem=True) as mon:
             if report:
-                print('Generated', reportwriter.build_report(name))
+                print('Generated', reportwriter.build_report(input_file))
             else:
-                print_csm_info(name)
+                print_csm_info(input_file)
         if mon.duration > 1:
             print(mon)
     elif input_file:
