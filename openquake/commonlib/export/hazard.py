@@ -531,7 +531,7 @@ def export_gmf_spec(ekey, dstore, spec):
     else:  # event based
         for eid in eids:
             etag = etags[eid]
-            for gmfa, imt in _get_gmfs(dstore, etag):
+            for gmfa, imt in _get_gmfs(dstore, util.get_serial(etag), eid):
                 dest = dstore.export_path('gmf-%s-%s.csv' % (etag, imt))
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
@@ -590,27 +590,26 @@ def get_rup_idx(ebrup, etag):
     raise ValueError('event tag %s not found in the rupture collection')
 
 
-def _get_gmfs(dstore, etag):
+def _get_gmfs(dstore, serial, eid):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['rlzs_assoc']
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
-    serial = util.get_serial(etag)
     rup = dstore['sescollection/' + serial]
-    rup_idx = get_rup_idx(rup, etag)
     correl_model = readinput.get_correl_model(oq)
     gsims = rlzs_assoc.gsims_by_trt_id[rup.trt_id]
     rlzs = [rlz for gsim in map(str, gsims)
             for rlz in rlzs_assoc[rup.trt_id, gsim]]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
-    gmfa_by_rlz = event_based.make_gmfs(
+    gmf_list = event_based.make_gmfs(
         [rup], sitecol, oq.imtls, rlzs_assoc,
         oq.truncation_level, correl_model).values()
     for imt in oq.imtls:
         gmfa = numpy.zeros(N, gmf_dt)
         for rlz in rlzs:
-            data = gmfa_by_rlz[rlz.ordinal]['gmv'][imt][rup_idx]
-            gmfa['%03d' % rlz.ordinal][rup.indices] = data
+            data = gmf_list[rlz.ordinal]
+            ok = data[data['eid'] == eid]
+            gmfa['%03d' % rlz.ordinal][rup.indices] = ok['gmv'][imt]
         yield gmfa, imt
 
 

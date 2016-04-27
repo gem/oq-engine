@@ -441,7 +441,7 @@ class CompositeRiskModel(collections.Mapping):
                             hazard_by_site, mon_risk):
                         yield out_by_lr
                 finally:
-                    # store the size of the temporary file and remove it
+                    # store the size of the GFMs
                     monitor.gmfbytes += hazard_by_site.close()
 
     def gen_out_by_lr(self, riskinput, assets_by_site, hazard_by_site,
@@ -507,7 +507,7 @@ class RiskInput(object):
 
     def epsilon_getter(self, asset_ordinals):
         """
-        :param asset_ordina: ordinal of the asset
+        :param asset_ordinals: list of ordinals of the assets
         :returns: a closure returning an array of epsilons from the event IDs
         """
         return lambda _: [self.eps[aid] for aid in asset_ordinals]

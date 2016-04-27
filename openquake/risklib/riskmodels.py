@@ -254,7 +254,7 @@ class RiskModel(object):
         :param imt: restrict the risk functions to this IMT
         :param assets: an array of assets of homogeneous taxonomy
         :param hazard: a dictionary rlz -> hazard
-        :param epsgetter: an callable returning epsilons for the given eids
+        :param epsgetter: a callable returning epsilons for the given eids
         :returns: a dictionary (l, r) -> output
         """
         out_by_lr = AccumDict()
