@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 20
 =================================
 
-gem-tstation:/home/michele/ssd/calc_12032.hdf5 updated Fri Apr 22 04:10:54 2016
+gem-tstation:/home/michele/ssd/calc_92.hdf5 updated Wed Apr 27 10:55:47 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  106                
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -121,14 +121,14 @@ filtered_weight 1,242
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 2565          
+count_eff_ruptures_max_received_per_task 2505          
 count_eff_ruptures_num_tasks             90            
-count_eff_ruptures_sent.monitor          208620        
+count_eff_ruptures_sent.monitor          202980        
 count_eff_ruptures_sent.rlzs_assoc       1871550       
 count_eff_ruptures_sent.sitecol          39330         
 count_eff_ruptures_sent.siteidx          450           
 count_eff_ruptures_sent.sources          3277138       
-count_eff_ruptures_tot_received          230850        
+count_eff_ruptures_tot_received          225450        
 hazard.input_weight                      1242.0        
 hazard.n_imts                            1             
 hazard.n_levels                          4.0           
@@ -144,26 +144,26 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-3            COMFLT1   ComplexFaultSource   62     62        0.002       0.469      0.0      
-4            COMFLT1   ComplexFaultSource   62     62        0.002       0.414      0.0      
-11           COMFLT1   ComplexFaultSource   62     62        0.001       0.387      0.0      
-5            COMFLT1   ComplexFaultSource   62     62        0.001       0.371      0.0      
+3            COMFLT1   ComplexFaultSource   62     62        0.002       0.471      0.0      
+4            COMFLT1   ComplexFaultSource   62     62        0.002       0.424      0.0      
 9            COMFLT1   ComplexFaultSource   62     62        0.001       0.370      0.0      
-10           COMFLT1   ComplexFaultSource   62     62        0.001       0.370      0.0      
-1            SFLT1     SimpleFaultSource    56     56        0.002       0.051      0.0      
-0            SFLT1     SimpleFaultSource    56     56        0.003       0.040      0.0      
-2            SFLT1     SimpleFaultSource    56     56        0.002       0.027      0.0      
-3            SFLT1     SimpleFaultSource    56     56        0.002       0.025      0.0      
-10           SFLT1     SimpleFaultSource    58     58        0.002       0.022      0.0      
-9            SFLT1     SimpleFaultSource    58     58        0.001       0.021      0.0      
-8            SFLT1     SimpleFaultSource    58     58        0.001       0.021      0.0      
-7            SFLT1     SimpleFaultSource    58     58        0.001       0.020      0.0      
-6            SFLT1     SimpleFaultSource    58     58        0.001       0.020      0.0      
+10           COMFLT1   ComplexFaultSource   62     62        0.001       0.368      0.0      
+5            COMFLT1   ComplexFaultSource   62     62        0.001       0.367      0.0      
+11           COMFLT1   ComplexFaultSource   62     62        0.001       0.367      0.0      
+0            SFLT1     SimpleFaultSource    56     56        0.004       0.045      0.0      
+1            SFLT1     SimpleFaultSource    56     56        0.003       0.036      0.0      
+2            SFLT1     SimpleFaultSource    56     56        0.002       0.032      0.0      
+3            SFLT1     SimpleFaultSource    56     56        0.002       0.026      0.0      
+9            SFLT1     SimpleFaultSource    58     58        0.002       0.021      0.0      
+7            SFLT1     SimpleFaultSource    58     58        0.001       0.021      0.0      
 11           SFLT1     SimpleFaultSource    58     58        0.001       0.020      0.0      
 5            SFLT1     SimpleFaultSource    56     56        0.001       0.020      0.0      
-4            SFLT1     SimpleFaultSource    56     56        0.001       0.020      0.0      
-2            COMFLT1   ComplexFaultSource   29     1         0.001       0.0        0.0      
-0            CHAR1     CharacteristicFaultS 1.000  1         0.001       0.0        0.0      
+10           SFLT1     SimpleFaultSource    58     58        0.001       0.020      0.0      
+8            SFLT1     SimpleFaultSource    58     58        0.001       0.020      0.0      
+6            SFLT1     SimpleFaultSource    58     58        0.001       0.020      0.0      
+4            SFLT1     SimpleFaultSource    56     56        0.002       0.020      0.0      
+7            CHAR1     CharacteristicFaultS 1.000  1         0.001       0.0        0.0      
+2            CHAR1     CharacteristicFaultS 1.000  1         0.001       0.0        0.0      
 ============ ========= ==================== ====== ========= =========== ========== =========
 
 Slowest operations
@@ -171,12 +171,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               3.096     0.0       1     
-splitting sources              2.687     0.0       18    
-reading composite source model 0.855     0.0       1     
-filtering sources              0.050     0.0       36    
-total count_eff_ruptures       0.031     0.0       90    
+managing sources               3.033     0.0       1     
+splitting sources              2.669     0.0       18    
+reading composite source model 0.882     0.0       1     
+filtering sources              0.052     0.0       36    
+total count_eff_ruptures       0.030     0.0       90    
 store source_info              0.005     0.0       1     
 aggregate curves               0.002     0.0       90    
-reading site collection        2.885E-05 0.0       1     
+reading site collection        3.099E-05 0.0       1     
 ============================== ========= ========= ======

@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 12
 =================================
 
-gem-tstation:/home/michele/ssd/calc_12039.hdf5 updated Fri Apr 22 04:11:29 2016
+gem-tstation:/home/michele/ssd/calc_99.hdf5 updated Wed Apr 27 10:56:23 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  1066               
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -80,14 +80,14 @@ filtered_weight 0.050
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 2727          
+count_eff_ruptures_max_received_per_task 2667          
 count_eff_ruptures_num_tasks             2             
-count_eff_ruptures_sent.monitor          4964          
+count_eff_ruptures_sent.monitor          4838          
 count_eff_ruptures_sent.rlzs_assoc       6318          
 count_eff_ruptures_sent.sitecol          874           
 count_eff_ruptures_sent.siteidx          10            
 count_eff_ruptures_sent.sources          2318          
-count_eff_ruptures_tot_received          5454          
+count_eff_ruptures_tot_received          5334          
 hazard.input_weight                      0.05          
 hazard.n_imts                            1             
 hazard.n_levels                          3.0           
@@ -103,8 +103,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  0.025  1         8.893E-05   0.0        0.0      
-1            2         PointSource  0.025  1         5.913E-05   0.0        0.0      
+0            1         PointSource  0.025  1         1.831E-04   0.0        0.0      
+1            2         PointSource  0.025  1         1.309E-04   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -112,11 +112,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-store source_info              0.004     0.0       1     
-reading composite source model 0.004     0.0       1     
-managing sources               0.002     0.0       1     
-total count_eff_ruptures       6.363E-04 0.0       2     
-filtering sources              1.481E-04 0.0       2     
-aggregate curves               3.910E-05 0.0       2     
-reading site collection        3.290E-05 0.0       1     
+reading composite source model 0.009     0.0       1     
+store source_info              0.007     0.0       1     
+managing sources               0.005     0.0       1     
+total count_eff_ruptures       8.030E-04 0.0       2     
+filtering sources              3.140E-04 0.0       2     
+aggregate curves               6.890E-05 0.0       2     
+reading site collection        6.294E-05 0.0       1     
 ============================== ========= ========= ======

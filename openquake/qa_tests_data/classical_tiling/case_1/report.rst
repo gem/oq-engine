@@ -1,7 +1,7 @@
 Classical PSHA using Area Source
 ================================
 
-gem-tstation:/home/michele/ssd/calc_12066.hdf5 updated Fri Apr 22 04:12:23 2016
+gem-tstation:/home/michele/ssd/calc_126.hdf5 updated Wed Apr 27 10:57:21 2016
 
 num_sites = 6, sitecol = 969 B
 
@@ -21,7 +21,7 @@ area_source_discretization   5.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1                  
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -71,14 +71,14 @@ source_model.xml 0      Active Shallow Crust 1           1,640        41
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 3520          
+count_eff_ruptures_max_received_per_task 3461          
 count_eff_ruptures_num_tasks             12            
-count_eff_ruptures_sent.monitor          39264         
+count_eff_ruptures_sent.monitor          38520         
 count_eff_ruptures_sent.rlzs_assoc       36012         
 count_eff_ruptures_sent.sitecol          5244          
 count_eff_ruptures_sent.siteidx          60            
 count_eff_ruptures_sent.sources          258192        
-count_eff_ruptures_tot_received          42240         
+count_eff_ruptures_tot_received          41532         
 hazard.input_weight                      41.0          
 hazard.n_imts                            3             
 hazard.n_levels                          19.0          
@@ -94,7 +94,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   41     205       0.006       0.045      0.0      
+0            1         AreaSource   41     205       0.006       0.046      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -102,12 +102,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.086     0.0       1     
-reading composite source model 0.047     0.0       1     
-splitting sources              0.045     0.0       1     
+managing sources               0.085     0.0       1     
+reading composite source model 0.048     0.0       1     
+splitting sources              0.046     0.0       1     
 filtering sources              0.006     0.0       6     
-total count_eff_ruptures       0.006     0.0       12    
+total count_eff_ruptures       0.005     0.0       12    
 store source_info              0.004     0.0       1     
 reading site collection        0.003     0.0       1     
-aggregate curves               1.698E-04 0.0       12    
+aggregate curves               1.690E-04 0.0       12    
 ============================== ========= ========= ======

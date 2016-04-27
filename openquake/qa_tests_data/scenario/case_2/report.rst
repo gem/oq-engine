@@ -1,7 +1,7 @@
 Scenario QA Test, Case 2
 ========================
 
-gem-tstation:/home/michele/ssd/calc_11989.hdf5 updated Fri Apr 22 04:09:33 2016
+gem-tstation:/home/michele/ssd/calc_49.hdf5 updated Wed Apr 27 10:54:22 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  3                  
 master_seed                  0                  
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -45,7 +45,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.011     0.0       1     
-computing gmfs          3.872E-04 0.0       1     
-reading site collection 2.789E-05 0.0       1     
+filtering sites         0.010     0.0       1     
+computing gmfs          9.642E-04 0.0       1     
+reading site collection 2.694E-05 0.0       1     
 ======================= ========= ========= ======

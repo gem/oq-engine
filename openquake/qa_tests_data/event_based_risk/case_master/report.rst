@@ -1,7 +1,7 @@
 event based risk
 ================
 
-gem-tstation:/home/michele/ssd/calc_12019.hdf5 updated Fri Apr 22 04:10:15 2016
+gem-tstation:/home/michele/ssd/calc_79.hdf5 updated Wed Apr 27 10:55:07 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  24                 
 master_seed                  0                  
 avg_losses                   True               
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -92,17 +92,22 @@ filtered_weight 968
 Informational data
 ------------------
 ====================================== ==============
-event_based_risk_max_received_per_task 114549        
+event_based_risk_max_received_per_task 113637        
 event_based_risk_num_tasks             7             
 event_based_risk_sent.assetcol         30919         
-event_based_risk_sent.monitor          18816         
-event_based_risk_sent.riskinputs       31767         
+event_based_risk_sent.monitor          18886         
+event_based_risk_sent.riskinputs       30663         
 event_based_risk_sent.riskmodel        75236         
 event_based_risk_sent.rlzs_assoc       48503         
-event_based_risk_tot_received          563703        
+event_based_risk_tot_received          565929        
 hostname                               'gem-tstation'
 require_epsilons                       True          
 ====================================== ==============
+
+Specific information for event based
+------------------------------------
+Total number of ruptures: 9
+Total number of events: 106
 
 Maximum memory allocated for the GMFs
 -------------------------------------
@@ -133,10 +138,10 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-2            1         SimpleFaultSource    482    15        0.002       0.046      0.265    
-0            1         SimpleFaultSource    482    15        0.003       0.054      0.237    
-1            2         SimpleFaultSource    4.000  1         0.002       0.0        0.019    
-3            2         CharacteristicFaultS 1.000  1         0.002       0.0        0.004    
+0            1         SimpleFaultSource    482    15        0.002       0.048      0.278    
+2            1         SimpleFaultSource    482    15        0.002       0.047      0.224    
+1            2         SimpleFaultSource    4.000  1         0.002       0.0        0.021    
+3            2         CharacteristicFaultS 1.000  1         0.001       0.0        0.002    
 ============ ========= ==================== ====== ========= =========== ========== =========
 
 Slowest operations
@@ -144,29 +149,29 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total event_based_risk         1.133     0.043     7     
-computing individual risk      0.995     0.0       9     
-total compute_ruptures         0.537     0.020     30    
-saving event loss tables       0.216     0.0       7     
-managing sources               0.201     0.0       1     
-compute poes                   0.175     0.0       18    
-aggregate losses               0.164     0.0       99    
-total compute_gmfs_and_curves  0.160     0.0       7     
-make contexts                  0.114     0.0       18    
-getting hazard                 0.106     0.0       9     
-splitting sources              0.100     0.0       2     
-bulding hazard curves          0.037     0.0       7     
-reading composite source model 0.033     0.0       1     
-filtering ruptures             0.023     0.0       9     
-compute and save statistics    0.018     0.0       1     
-combine and save curves_by_rlz 0.015     0.0       1     
-reading exposure               0.010     0.0       1     
-saving gmfs                    0.010     0.0       7     
-aggregating hcurves            0.010     0.0       14    
-filtering sources              0.008     0.0       4     
-saving ruptures                0.008     0.0       1     
-store source_info              0.007     0.0       1     
-save curves_by_trt_gsim        0.007     0.0       1     
-aggregate curves               0.005     0.0       44    
-reading site collection        1.192E-05 0.0       1     
+total event_based_risk         1.461     0.031     7     
+computing risk                 1.204     0.0       63    
+total compute_ruptures         0.538     0.0       30    
+compute poes                   0.372     0.0       18    
+total compute_gmfs_and_curves  0.261     0.0       7     
+aggregate losses               0.256     0.0       99    
+getting hazard                 0.212     0.0       63    
+building hazard                0.197     0.0       9     
+managing sources               0.184     0.0       1     
+saving event loss tables       0.152     0.0       7     
+make contexts                  0.102     0.0       18    
+splitting sources              0.095     0.0       2     
+bulding hazard curves          0.048     0.0       7     
+reading composite source model 0.027     0.0       1     
+filtering ruptures             0.024     0.0       9     
+compute and save statistics    0.015     0.0       1     
+aggregating hcurves            0.014     0.0       24    
+save curves_by_rlz             0.013     0.0       1     
+saving gmfs                    0.009     0.0       24    
+filtering sources              0.007     0.0       4     
+saving ruptures                0.007     0.0       1     
+reading exposure               0.007     0.0       1     
+store source_info              0.006     0.0       1     
+aggregate curves               0.004     0.0       54    
+reading site collection        9.060E-06 0.0       1     
 ============================== ========= ========= ======

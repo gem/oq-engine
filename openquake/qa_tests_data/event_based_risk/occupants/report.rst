@@ -1,7 +1,7 @@
 event based risk
 ================
 
-gem-tstation:/home/michele/ssd/calc_12015.hdf5 updated Fri Apr 22 04:09:38 2016
+gem-tstation:/home/michele/ssd/calc_75.hdf5 updated Wed Apr 27 10:54:29 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  24                 
 master_seed                  42                 
 avg_losses                   False              
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -72,17 +72,22 @@ source_model.xml 0      Active Shallow Crust 1           265          482
 Informational data
 ------------------
 ====================================== ==============
-event_based_risk_max_received_per_task 6853          
+event_based_risk_max_received_per_task 7020          
 event_based_risk_num_tasks             38            
 event_based_risk_sent.assetcol         67906         
-event_based_risk_sent.monitor          99370         
-event_based_risk_sent.riskinputs       410442        
+event_based_risk_sent.monitor          99750         
+event_based_risk_sent.riskinputs       406753        
 event_based_risk_sent.riskmodel        69958         
 event_based_risk_sent.rlzs_assoc       100320        
-event_based_risk_tot_received          258640        
+event_based_risk_tot_received          264988        
 hostname                               'gem-tstation'
 require_epsilons                       True          
 ====================================== ==============
+
+Specific information for event based
+------------------------------------
+Total number of ruptures: 265
+Total number of events: 392
 
 Maximum memory allocated for the GMFs
 -------------------------------------
@@ -111,7 +116,7 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 482    15        0.002       0.047      1.299    
+0            1         SimpleFaultSource 482    15        0.002       0.047      1.218    
 ============ ========= ================= ====== ========= =========== ========== =========
 
 Slowest operations
@@ -119,22 +124,23 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total event_based_risk         1.448     1.105     38    
-total compute_ruptures         1.307     0.590     15    
-getting hazard                 1.149     0.0       38    
-filtering ruptures             0.936     0.0       265   
-make contexts                  0.853     0.0       265   
-compute poes                   0.282     0.0       265   
-computing individual risk      0.265     0.0       38    
-saving ruptures                0.178     0.0       1     
-managing sources               0.072     0.0       1     
+total event_based_risk         1.560     1.027     38    
+building hazard                1.230     0.0       38    
+total compute_ruptures         1.226     0.605     15    
+make contexts                  0.898     0.0       265   
+filtering ruptures             0.878     0.0       265   
+compute poes                   0.326     0.0       265   
+computing risk                 0.272     0.0       266   
+saving ruptures                0.210     0.0       1     
+managing sources               0.078     0.0       1     
 splitting sources              0.047     0.0       1     
-aggregate losses               0.017     0.0       266   
-saving event loss tables       0.009     0.0       38    
-reading composite source model 0.008     0.0       1     
-reading exposure               0.007     0.0       1     
-store source_info              0.006     0.0       1     
-aggregate curves               0.005     0.0       15    
+aggregate losses               0.018     0.0       266   
+store source_info              0.012     0.0       1     
+getting hazard                 0.011     0.0       266   
+saving event loss tables       0.008     0.0       38    
+reading composite source model 0.007     0.0       1     
+reading exposure               0.006     0.0       1     
+aggregate curves               0.004     0.0       15    
 filtering sources              0.002     0.0       1     
 reading site collection        9.060E-06 0.0       1     
 ============================== ========= ========= ======

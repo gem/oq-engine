@@ -1,7 +1,7 @@
 Classical PSHA QA test
 ======================
 
-gem-tstation:/home/michele/ssd/calc_12026.hdf5 updated Fri Apr 22 04:10:36 2016
+gem-tstation:/home/michele/ssd/calc_86.hdf5 updated Wed Apr 27 10:55:29 2016
 
 num_sites = 21, sitecol = 1.62 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -85,14 +85,14 @@ filtered_weight 3,894
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 3138          
+count_eff_ruptures_max_received_per_task 3078          
 count_eff_ruptures_num_tasks             72            
-count_eff_ruptures_sent.monitor          208188        
+count_eff_ruptures_sent.monitor          203652        
 count_eff_ruptures_sent.rlzs_assoc       347544        
 count_eff_ruptures_sent.sitecol          66024         
 count_eff_ruptures_sent.siteidx          360           
 count_eff_ruptures_sent.sources          1312799       
-count_eff_ruptures_tot_received          225936        
+count_eff_ruptures_tot_received          221616        
 hazard.input_weight                      4686.0        
 hazard.n_imts                            2             
 hazard.n_levels                          13.0          
@@ -108,26 +108,26 @@ Slowest sources
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            81_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
 0            0_0       CharacteristicFaultS 11     1         0.001       0.0        0.0      
-1            33_1      CharacteristicFaultS 11     1         0.001       0.0        0.0      
-1            94_1      CharacteristicFaultS 11     1         0.001       0.0        0.0      
-1            33_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
-1            80_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
-1            3_1       CharacteristicFaultS 11     1         0.001       0.0        0.0      
-1            79_1      CharacteristicFaultS 11     1         0.001       0.0        0.0      
-0            32_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
-1            74_1      CharacteristicFaultS 11     1         0.001       0.0        0.0      
-0            42_1      CharacteristicFaultS 11     1         0.001       0.0        0.0      
+1            105_1     CharacteristicFaultS 11     1         0.001       0.0        0.0      
+0            81_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
+0            81_1      CharacteristicFaultS 11     1         0.001       0.0        0.0      
+0            43_1      CharacteristicFaultS 11     1         0.001       0.0        0.0      
+0            25_1      CharacteristicFaultS 11     1         0.001       0.0        0.0      
 0            22_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
-1            87_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
-1            83_1      CharacteristicFaultS 11     1         0.001       0.0        0.0      
-1            69_1      CharacteristicFaultS 11     1         0.001       0.0        0.0      
-1            96_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
-1            94_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
-1            99_1      CharacteristicFaultS 11     1         0.001       0.0        0.0      
-1            55_1      CharacteristicFaultS 11     1         0.001       0.0        0.0      
-0            1_0       CharacteristicFaultS 11     1         0.001       0.0        0.0      
+0            27_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
+0            29_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
+0            13_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
+0            35_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
+1            103_1     CharacteristicFaultS 11     1         0.001       0.0        0.0      
+0            12_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
+0            31_1      CharacteristicFaultS 11     1         0.001       0.0        0.0      
+0            0_1       CharacteristicFaultS 11     1         0.001       0.0        0.0      
+0            48_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
+1            100_1     CharacteristicFaultS 11     1         0.001       0.0        0.0      
+1            31_1      CharacteristicFaultS 11     1         0.001       0.0        0.0      
+0            41_0      CharacteristicFaultS 11     1         0.001       0.0        0.0      
+0            86_1      CharacteristicFaultS 11     1         0.001       0.0        0.0      
 ============ ========= ==================== ====== ========= =========== ========== =========
 
 Slowest operations
@@ -135,11 +135,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 2.654     0.0       1     
-managing sources               0.593     0.0       1     
-filtering sources              0.483     0.0       426   
+reading composite source model 2.821     0.0       1     
+managing sources               0.581     0.0       1     
+filtering sources              0.476     0.0       426   
 total count_eff_ruptures       0.026     0.0       72    
 store source_info              0.004     0.0       1     
-aggregate curves               9.940E-04 0.0       72    
-reading site collection        1.431E-04 0.0       1     
+aggregate curves               0.001     0.0       72    
+reading site collection        2.890E-04 0.0       1     
 ============================== ========= ========= ======
