@@ -19,7 +19,6 @@
 from __future__ import division
 import inspect
 import functools
-import mock
 import numpy
 
 from openquake.baselib.general import CallableDict, AccumDict
@@ -516,7 +515,7 @@ class ProbabilisticEventBased(RiskModel):
         :param str loss_type:
             the loss type considered
         :param assets:
-           a list with a single asset
+           a list of assets on the same site and with the same taxonomy
         :param gmvs:
            an instance of :class:`openquake.risklib.riskinput.Gmvs`
         :param epsgetter:
@@ -527,33 +526,28 @@ class ProbabilisticEventBased(RiskModel):
             instance.
         """
         eids = gmvs['eid']
+        epsilons = epsgetter(eids)
         E = len(gmvs)
         I = self.insured_losses + 1
-        loss_ratios = numpy.zeros((E, I), F32)
-        asset = assets[0]  # the only one
-        loss_ratios[:, 0] = ratios = self.risk_functions[loss_type](
-            gmvs['gmv'], epsgetter(eids))  # shape E
+        N = len(assets)
+        loss_ratios = numpy.zeros((N, E, I), F32)
         cb = self.compositemodel.curve_builders[
             self.compositemodel.lti[loss_type]]
-        if self.insured_losses and loss_type != 'occupants':
-            deductible = asset.deductible(loss_type)
-            limit = asset.insurance_limit(loss_type)
-            ilm = scientific.insured_losses(ratios, deductible, limit)
-            loss_ratios[:, 1] = ilm
-            icounts = cb.build_counts(ilm)
-        else:
-            # FIXME: ugly workaround for qa_tests.event_based_test; in Ubuntu
-            # 12.04 MagicMock does not work well, so len(cb.ratios) gives error
-            nratios = 1 if isinstance(cb, mock.Mock) else len(cb.ratios)
-            icounts = numpy.empty(nratios)
-            icounts.fill(numpy.nan)
+        for i, asset in enumerate(assets):
+            loss_ratios[i, :, 0] = ratios = self.risk_functions[loss_type](
+                gmvs['gmv'], epsilons)  # shape E
+            if self.insured_losses and loss_type != 'occupants':
+                loss_ratios[i, :, 1] = scientific.insured_losses(
+                    ratios,  asset.deductible(loss_type),
+                    asset.insurance_limit(loss_type))
         return scientific.Output(
             assets,
             loss_type,
-            losses=loss_ratios * asset.value(loss_type),
-            average_loss=loss_ratios.sum(axis=0) * self.ses_ratio,
-            counts_matrix=cb.build_counts(loss_ratios),
-            insured_counts_matrix=icounts,
+            losses=loss_ratios * get_values(loss_type, assets),
+            average_loss=loss_ratios.sum(axis=1) * self.ses_ratio,
+            counts_matrix=cb.build_counts(loss_ratios[:, :, 0]),
+            insured_counts_matrix=(cb.build_counts(loss_ratios[:, :, 1])
+                                   if self.insured_losses else None),
             eids=eids)
 
 

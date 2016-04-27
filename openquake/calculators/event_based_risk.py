@@ -122,31 +122,35 @@ def _old_loss_curves(asset_values, rcurves, ratios):
 
 def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
     # update the result dictionary and the agg array with each output
-    assets = output.assets
-    aid = assets[0].ordinal
+
+    asset_ids = [a.ordinal for a in output.assets]
     for (l, r), out in sorted(output.items()):
         indices = numpy.array([idx[eid] for eid in out.eids])
 
-        # asslosses
-        if monitor.asset_loss_table:
-            data = [(eid, aid, loss)
-                    for eid, loss in zip(out.eids, out.losses)
-                    if loss.sum() > 0]
-            result['ASSLOSS'][l, r].append(
-                numpy.array(data, monitor.ela_dt))
-
-        # agglosses
-        agg[indices, l, r] += out.losses
-
         # dictionaries asset_idx -> array of counts
         if compositemodel.curve_builders[l].user_provided:
-            result['RC'][l, r].append({aid: out.counts_matrix})
-            if out.insured_counts_matrix.sum():
-                result['IC'][l, r].append({aid: out.insured_counts_matrix})
+            result['RC'][l, r].append(dict(zip(asset_ids, out.counts_matrix)))
+            if out.insured_counts_matrix is not None:
+                result['IC'][l, r].append(
+                    dict(zip(asset_ids, out.insured_counts_matrix)))
 
-        # average losses
-        if monitor.avg_losses:
-            result['AVGLOSS'][l, r][aid] += out.average_loss
+        for i, asset in enumerate(output.assets):
+            aid = asset.ordinal
+
+            # average losses
+            if monitor.avg_losses:
+                result['AVGLOSS'][l, r][aid] += out.average_loss[i]
+
+            # asset losses
+            if monitor.asset_loss_table:
+                data = [(eid, aid, loss)
+                        for eid, loss in zip(out.eids, out.losses[i])
+                        if loss.sum() > 0]
+                result['ASSLOSS'][l, r].append(
+                    numpy.array(data, monitor.ela_dt))
+
+            # agglosses
+            agg[indices, l, r] += out.losses[i]
 
 
 @parallel.litetask

@@ -949,13 +949,17 @@ class CurveBuilder(object):
             counts[list(count_dict)] += count_dict.values()
         return counts
 
-    def build_counts(self, loss_ratios):
+    def build_counts(self, loss_matrix):
         """
-        :param loss_ratios:
-            an array of E loss ratios, where E is the number of ruptures
+        :param loss_matrix:
+            a matrix of loss ratios of size N x E, N = #assets, E = #events
         """
-        return numpy.array([(loss_ratios >= ratio).sum()
-                            for ratio in self.ratios])
+        counts = self.get_counts(len(loss_matrix), {})
+        for i, loss_ratios in enumerate(loss_matrix):
+            # build the counts for each asset
+            counts[i, :] = numpy.array([(loss_ratios >= ratio).sum()
+                                        for ratio in self.ratios])
+        return counts
 
     def build_poes(self, N, count_dicts, ses_ratio):
         """
