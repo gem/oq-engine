@@ -44,6 +44,7 @@ from openquake.calculators.classical import ClassicalCalculator
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+HAZCURVES = 1
 
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32)])
 
@@ -130,7 +131,7 @@ class EBRupture(object):
     @property
     def etags(self):
         """
-        An array of tags for the underlying seismi events
+        An array of tags for the underlying seismic events
         """
         tags = []
         for (eid, ses, occ) in self.events:
@@ -339,7 +340,6 @@ def sample_ruptures(src, num_ses, info):
     :param info: a :class:`openquake.commonlib.source.CompositionInfo` instance
     :returns: a dictionary of dictionaries rupture -> {ses_id: num_occurrences}
     """
-    # col_ids = [src.trt_model_id]
     # the dictionary `num_occ_by_rup` contains a dictionary
     # ses_id -> num_occurrences for each occurring rupture
     num_occ_by_rup = collections.defaultdict(AccumDict)
@@ -396,7 +396,12 @@ def fix_minimum_intensity(min_iml, imts):
     """
     Make sure the dictionary minimum_intensity (provided by the user in the
     job.ini file) is filled for all intensity measure types and has no key
-    named 'default'.
+    named 'default'. Here is how it works:
+
+    >>> min_iml = {'PGA': 0.1, 'default': 0.05}
+    >>> fix_minimum_intensity(min_iml, ['PGA', 'PGV'])
+    >>> sorted(min_iml.items())
+    [('PGA', 0.1), ('PGV', 0.05)]
     """
     if min_iml:
         for imt in imts:
@@ -506,7 +511,7 @@ def make_gmfs(eb_ruptures, sitecol, imts, rlzs_assoc,
     """
     :param eb_ruptures: a list of EBRuptures with the same trt_model_id
     :param sitecol: a SiteCollection instance
-    :param imts: a list of Intensity Measur e Types
+    :param imts: a list of Intensity Measure Types
     :param rlzs_assoc: a RlzsAssoc instance
     :param trunc_level: truncation level
     :param correl_model: correlation model instance
@@ -577,7 +582,7 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc, monitor):
                             continue
                         curves[imt][sid] = gmvs_to_haz_curve(
                             gmvs[imt], imls, oq.investigation_time, duration)
-                result[rlzi][1] = curves
+                result[rlzi][HAZCURVES] = curves
     return result
 
 
