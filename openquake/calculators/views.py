@@ -25,7 +25,6 @@ import decimal
 import functools
 import itertools
 import collections
-
 import numpy
 import h5py
 
@@ -167,23 +166,6 @@ def view_csm_info(token, dstore):
                classify_gsim_lt(sm.gsim_lt), '%d/%d' % (num_rlzs, num_paths))
         rows.append(row)
     return rst_table(rows, header)
-
-
-@view.add('rupture_collections')
-def view_rupture_collections(token, dstore):
-    rlzs_assoc = dstore['rlzs_assoc']
-    num_ruptures = dstore['num_ruptures']
-    csm_info = rlzs_assoc.csm_info
-    rows = []
-    col_id = 0
-    for sm in csm_info.source_models:
-        for tm in sm.trt_models:
-            for idx in range(sm.samples):
-                nr = num_ruptures[col_id]
-                if nr:
-                    rows.append((col_id, '_'.join(sm.path), tm.trt, nr))
-                col_id += 1
-    return rst_table(rows, ['col', 'smlt_path', 'TRT', 'num_ruptures'])
 
 
 @view.add('ruptures_per_trt')
@@ -486,6 +468,14 @@ def view_biggest_ebr_gmf(token, dstore):
            'contains %(n_imts)d IMT(s), %(n_rlzs)d '
            'realization(s)\nand has a size of %(humansize)s / num_tasks')
     return msg % get_max_gmf_size(dstore)
+
+
+@view.add('ruptures_events')
+def view_ruptures_events(token, dstore):
+    num_ruptures = len(dstore['sescollection'])
+    num_events = len(dstore['etags'])
+    return 'Total number of ruptures: %d\nTotal number of events: %d' % (
+        num_ruptures, num_events)
 
 
 @view.add('fullreport')

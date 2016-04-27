@@ -18,7 +18,7 @@
 
 from __future__ import print_function
 import os
-import shutil
+import re
 from openquake.commonlib import sap, datastore
 
 
@@ -27,10 +27,12 @@ def purge(calc_id):
     Remove the given calculation. If calc_id is 0, remove all calculations.
     """
     if not calc_id:
-        shutil.rmtree(datastore.DATADIR)
-        print('Removed %s' % datastore.DATADIR)
+        for fname in os.listdir(datastore.DATADIR):
+            if re.match('calc_\d+\.hdf5', fname):
+                os.remove(os.path.join(datastore.DATADIR, fname))
+                print('Removed %s' % fname)
     else:
-        hdf5path = datastore.DataStore(calc_id).hdf5path
+        hdf5path = datastore.read(calc_id).hdf5path
         os.remove(hdf5path)
         print('Removed %s' % hdf5path)
 

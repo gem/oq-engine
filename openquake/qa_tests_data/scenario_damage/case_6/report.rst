@@ -1,7 +1,7 @@
 oq-test03, depth=15km
 =====================
 
-Datastore /home/michele/ssd/calc_11385.hdf5 last updated Wed Apr 20 09:36:46 2016 on gem-tstation
+gem-tstation:/home/michele/ssd/calc_11983.hdf5 updated Fri Apr 22 04:09:32 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  3                  
 master_seed                  0                  
-oqlite_version               '0.13.0-git361357f'
+oqlite_version               '0.13.0-gitd746861'
 ============================ ===================
 
 Input files
@@ -65,7 +65,7 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 reading exposure        0.003     0.0       1     
-filtering sites         9.460E-04 0.0       1     
+filtering sites         8.428E-04 0.0       1     
 computing gmfs          3.779E-04 0.0       1     
-reading site collection 5.007E-06 0.0       1     
+reading site collection 6.914E-06 0.0       1     
 ======================= ========= ========= ======

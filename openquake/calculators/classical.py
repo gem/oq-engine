@@ -334,14 +334,21 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.set_nbytes(group.name)
             self.datastore.set_nbytes('curves_by_sm')
 
-        oq = self.oqparam
-        with self.monitor('combine and save curves_by_rlz', autoflush=True):
-            zc = zero_curves(len(self.sitecol.complete), oq.imtls)
+        with self.monitor('combine curves_by_rlz', autoflush=True):
+            zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
             curves_by_rlz = self.rlzs_assoc.combine_curves(
                 curves_by_trt_gsim, agg_curves, zc)
-            rlzs = self.rlzs_assoc.realizations
-            nsites = len(self.sitecol)
-            if oq.individual_curves:
+        self.save_curves(curves_by_rlz)
+
+    def save_curves(self, curves_by_rlz):
+        """
+        Save the dictionary curves_by_rlz
+        """
+        oq = self.oqparam
+        rlzs = self.rlzs_assoc.realizations
+        nsites = len(self.sitecol)
+        if oq.individual_curves:
+            with self.monitor('save curves_by_rlz', autoflush=True):
                 for rlz, curves in curves_by_rlz.items():
                     self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
 
@@ -354,6 +361,7 @@ class ClassicalCalculator(base.HazardCalculator):
                        else [rlz.weight for rlz in rlzs])
 
             # mean curves are always computed but stored only on request
+            zc = zero_curves(nsites, oq.imtls)
             self.mean_curves = numpy.array(zc)
             for imt in oq.imtls:
                 self.mean_curves[imt] = scientific.mean_curve(
