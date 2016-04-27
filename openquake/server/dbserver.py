@@ -19,6 +19,7 @@
 import logging
 from Queue import Queue
 from threading import Thread
+from multiprocessing import Process
 from multiprocessing.connection import Listener
 
 from openquake.commonlib import sap
@@ -31,37 +32,40 @@ from django.db import connection
 queue = Queue()
 
 
-def manage_commands():
+def run_command(cmd, args, conn):
     """
-    Execute the received commands in a separated thread. Errors are trapped
-    and we send back to the client pairs (result, exctype) for each command
-    received. `exctype` is None if there is no exception, otherwise it
-    is an exception class and `result` is an error string containing the
-    traceback.
+    Execute the received command. Errors are trapped and a pair
+    (result, exctype) is sent back.
+    `exctype` is None if there is no exception, otherwise it is an exception
+    class and `result` is an error string containing the traceback.
     """
-    connection.cursor()  # bind the db
-    while True:
-        conn, cmd = queue.get()
-        if cmd == ('@stop',):
-            # this is a somewhat special command, so I am using
-            # the convention of prepending an `@` to its name
-            # in the future I may add more special commands
-            conn.send((None, None))
-            conn.close()
-            return
+    try:
+        logging.info('Processing %s%s', cmd, args)
+        func = getattr(actions, cmd)
 
-        # execute the command by trapping any possible exception
-        func = getattr(actions, cmd[0])
-        res, etype, _ = safely_call(func, cmd[1:])
-
-        # logging
-        logging.info('Got %s', str(cmd))
+        # execute the function by trapping any possible exception
+        res, etype, _ = safely_call(func, args)
         if etype:
             logging.error(res)
 
         # send back the result and the exception class
         conn.send((res, etype))
+    finally:
         conn.close()
+
+
+def run_commands():
+    """
+    Execute the received commands in a queue.
+    """
+    connection.cursor()  # bind the db
+    while True:
+        conn, cmd, args = queue.get()
+        if cmd == 'stop':
+            conn.send((None, None))
+            conn.close()
+            break
+        run_command(cmd, args, conn)
 
 
 class DbServer(object):
@@ -71,15 +75,15 @@ class DbServer(object):
     def __init__(self, address, authkey):
         self.address = address
         self.authkey = authkey
-        self.thread = Thread(target=manage_commands)
+        self.thread = Thread(target=run_commands)
 
     def loop(self):
         listener = Listener(self.address, backlog=5, authkey=self.authkey)
         logging.warn('DB server listening on %s:%d...' % self.address)
         self.thread.start()
-        cmd = [None]
+        cmd = None
         try:
-            while cmd[0] != '@stop':
+            while cmd != 'stop':
                 try:
                     conn = listener.accept()
                 except KeyboardInterrupt:
@@ -88,8 +92,17 @@ class DbServer(object):
                     # unauthenticated connection, for instance by a port
                     # scanner such as the one in manage.py
                     continue
-                cmd = conn.recv()  # a tuple (name, arg1, ... argN)
-                queue.put((conn, cmd))
+                cmd_ = conn.recv()  # a tuple (name, arg1, ... argN)
+                cmd, args = cmd_[0], cmd_[1:]
+                if cmd.startswith('@'):  # slow command, run in process
+                    cmd = cmd[1:]  # strip @
+                    proc = Process(
+                        target=run_command, name=cmd, args=(cmd, args, conn))
+                    proc.start()
+                    logging.warn('Started %s%s in process %d',
+                                 cmd, args, proc.pid)
+                else:
+                    queue.put((conn, cmd, args))
         finally:
             listener.close()
             self.thread.join()
