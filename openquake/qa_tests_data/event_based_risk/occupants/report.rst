@@ -1,7 +1,7 @@
 event based risk
 ================
 
-gem-tstation:/home/michele/ssd/calc_128.hdf5 updated Wed Apr 27 11:09:58 2016
+gem-tstation:/home/michele/ssd/calc_381.hdf5 updated Wed Apr 27 15:36:59 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  24                 
 master_seed                  42                 
 avg_losses                   False              
-oqlite_version               '0.13.0-git952b07b'
+oqlite_version               '0.13.0-gita2cc1e1'
 ============================ ===================
 
 Input files
@@ -72,14 +72,14 @@ source_model.xml 0      Active Shallow Crust 1           265          482
 Informational data
 ------------------
 ====================================== ==============
-event_based_risk_max_received_per_task 4895          
+event_based_risk_max_received_per_task 4904          
 event_based_risk_num_tasks             38            
 event_based_risk_sent.assetcol         67906         
-event_based_risk_sent.monitor          22800         
+event_based_risk_sent.monitor          22838         
 event_based_risk_sent.riskinputs       406753        
 event_based_risk_sent.riskmodel        69958         
-event_based_risk_sent.rlzs_assoc       100054        
-event_based_risk_tot_received          184245        
+event_based_risk_sent.rlzs_assoc       100320        
+event_based_risk_tot_received          184588        
 hostname                               'gem-tstation'
 require_epsilons                       True          
 ====================================== ==============
@@ -119,7 +119,7 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 482    15        0.002       0.047      1.327    
+0            1         SimpleFaultSource 482    15        0.002       0.039      1.317    
 ============ ========= ================= ====== ========= =========== ========== =========
 
 Slowest operations
@@ -127,23 +127,23 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total event_based_risk         1.369     2.434     38    
-total compute_ruptures         1.338     3.832     15    
-building hazard                1.076     0.0       38    
-filtering ruptures             0.920     0.0       265   
-make contexts                  0.771     0.0       265   
-compute poes                   0.298     0.0       265   
-computing risk                 0.242     0.0       266   
-saving ruptures                0.169     0.0       1     
-managing sources               0.066     0.0       1     
-splitting sources              0.047     0.0       1     
-aggregate losses               0.016     0.0       266   
-store source_info              0.011     0.0       1     
-getting hazard                 0.010     0.0       266   
-saving event loss tables       0.009     0.0       38    
-reading composite source model 0.008     0.0       1     
+total event_based_risk         1.641     2.387     38    
+total compute_ruptures         1.328     3.836     15    
+building hazard                1.301     0.0       38    
+make contexts                  0.933     0.0       265   
+filtering ruptures             0.918     0.0       265   
+compute poes                   0.362     0.0       265   
+computing risk                 0.282     0.0       266   
+saving ruptures                0.134     0.0       1     
+managing sources               0.055     0.0       1     
+splitting sources              0.039     0.0       1     
+saving event loss tables       0.019     0.0       38    
+aggregate losses               0.018     0.0       266   
+getting hazard                 0.011     0.0       266   
+store source_info              0.009     0.0       1     
+reading composite source model 0.007     0.0       1     
 reading exposure               0.006     0.0       1     
-aggregate curves               0.005     0.0       15    
+aggregate curves               0.004     0.0       15    
 filtering sources              0.002     0.0       1     
-reading site collection        6.914E-06 0.0       1     
+reading site collection        1.097E-05 0.0       1     
 ============================== ========= ========= ======
