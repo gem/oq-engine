@@ -52,7 +52,7 @@ mkdir -p $HDIR
 
 rm -f $HDIR/celeryconfig.py.new_in_this_release
 cp $IDIR/celeryconfig.py $HDIR
-chown -R $USER.$USER $SDIR
+chown -R $USER.$USER $HDIR
 
 SDIR=/etc/openquake
 for cfg in openquake.cfg
