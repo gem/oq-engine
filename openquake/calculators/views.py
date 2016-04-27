@@ -25,7 +25,6 @@ import decimal
 import functools
 import itertools
 import collections
-
 import numpy
 import h5py
 
@@ -469,6 +468,14 @@ def view_biggest_ebr_gmf(token, dstore):
            'contains %(n_imts)d IMT(s), %(n_rlzs)d '
            'realization(s)\nand has a size of %(humansize)s / num_tasks')
     return msg % get_max_gmf_size(dstore)
+
+
+@view.add('ruptures_events')
+def view_ruptures_events(token, dstore):
+    num_ruptures = len(dstore['sescollection'])
+    num_events = len(dstore['etags'])
+    return 'Total number of ruptures: %d\nTotal number of events: %d' % (
+        num_ruptures, num_events)
 
 
 @view.add('fullreport')

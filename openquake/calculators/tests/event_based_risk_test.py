@@ -145,10 +145,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # export a single rupture
         [f1, f2] = export(('gmfs:0', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
-            'expected/gmf-col=05'
+            'expected/gmf-trt=05'
             '~ses=0001~src=AS_TRAS334~rup=612021-01-PGA.csv', f1)
         self.assertEqualFiles(
-            'expected/gmf-col=05'
+            'expected/gmf-trt=05'
             '~ses=0001~src=AS_TRAS334~rup=612021-01-SA(0.5).csv', f2)
 
     @attr('qa', 'hazard', 'event_based')

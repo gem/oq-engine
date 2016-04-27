@@ -1,11 +1,13 @@
   [Michele Simionato]
+  * The event based risk calculator now use different seeds for different
+    realizations; also, the performance has been substantially improved
   * Improved the .rst reports with data transfer information
 
   [Matteo Nastasi]
   * Backport of libhdf5 and h5py for ubuntu 'precise' serie
 
   [Michele Simionato]
-  * Introduced filtering on the minimum intensity of the GMF
+  * Introduced filtering on the minimum intensity of the ground shaking
   * Solved the issue of serializing large SES collections, over the HDF5 limit
   * The loss maps and curves XML exporters now export the coordinates
     of the assets, not the coordinates of the closest hazard site

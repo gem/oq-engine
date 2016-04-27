@@ -26,7 +26,7 @@ import numpy
 
 from openquake.baselib.general import groupby, humansize
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.calc import disagg, gmf
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import (
     scientificformat, floatformat, write_csv)
@@ -39,6 +39,15 @@ GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 GMF_WARNING = '''\
 There are a lot of ground motion fields; the export will be slow.
 Consider canceling the operation and accessing directly %s.'''
+
+
+def get_gmfa_by_eid(gmfa):
+    """
+    Returns a dictionary sid -> array of composite ground motion values,
+    ordered by sid by construction.
+    """
+    return groupby(gmfa, operator.itemgetter('eid'), lambda records:
+                   numpy.array(list(records)))
 
 
 class SES(object):
@@ -471,16 +480,21 @@ def export_gmf(ekey, dstore):
                           else oq.investigation_time)
     samples = oq.number_of_logic_tree_samples
     fmt = ekey[-1]
-    sid_data = dstore['sid_data']
+    etags = dstore['etags'].value
     gmf_data = dstore['gmf_data']
     nbytes = gmf_data.attrs['nbytes']
     logging.info('Internal size of the GMFs: %s', humansize(nbytes))
     if nbytes > GMF_MAX_SIZE:
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
-    for rlz, rup_by_etag in zip(rlzs_assoc.realizations,
-                                rlzs_assoc.combine_gmfs(gmf_data, sid_data)):
-        ruptures = [rup_by_etag[etag] for etag in sorted(rup_by_etag)]
+    for rlz in rlzs_assoc.realizations:
+        gmfa = gmf_data['%04d' % rlz.ordinal].value
+        ruptures = []
+        for eid, gmfa in get_gmfa_by_eid(gmfa).items():
+            rup = util.Rupture(etags[eid], gmfa['sid'])
+            rup.gmf = gmfa['gmv']
+            ruptures.append(rup)
+        ruptures.sort(key=operator.attrgetter('etag'))
         fname = build_name(dstore, rlz, 'gmf', fmt, samples)
         fnames.append(fname)
         globals()['export_gmf_%s' % fmt](
@@ -517,7 +531,7 @@ def export_gmf_spec(ekey, dstore, spec):
     else:  # event based
         for eid in eids:
             etag = etags[eid]
-            for gmfa, imt in _get_gmfs(dstore, etag):
+            for gmfa, imt in _get_gmfs(dstore, util.get_serial(etag), eid):
                 dest = dstore.export_path('gmf-%s-%s.csv' % (etag, imt))
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)
@@ -576,28 +590,26 @@ def get_rup_idx(ebrup, etag):
     raise ValueError('event tag %s not found in the rupture collection')
 
 
-def _get_gmfs(dstore, etag):
+def _get_gmfs(dstore, serial, eid):
     oq = dstore['oqparam']
     rlzs_assoc = dstore['rlzs_assoc']
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
-    serial = util.get_serial(etag)
-    ebrup = dstore['sescollection/' + serial]
-    rup_idx = get_rup_idx(ebrup, etag)
+    rup = dstore['sescollection/' + serial]
     correl_model = readinput.get_correl_model(oq)
-    gsims = rlzs_assoc.gsims_by_trt_id[ebrup.trt_id]
+    gsims = rlzs_assoc.gsims_by_trt_id[rup.trt_id]
     rlzs = [rlz for gsim in map(str, gsims)
-            for rlz in rlzs_assoc[ebrup.trt_id, gsim]]
+            for rlz in rlzs_assoc[rup.trt_id, gsim]]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
-    [gst] = event_based.make_gmfs(
-        [ebrup], sitecol, oq.imtls, gsims, oq.truncation_level, correl_model
-    ).values()
+    gmf_list = event_based.make_gmfs(
+        [rup], sitecol, oq.imtls, rlzs_assoc,
+        oq.truncation_level, correl_model).values()
     for imt in oq.imtls:
         gmfa = numpy.zeros(N, gmf_dt)
-        for gsim in map(str, gsims):
-            data = gst.gmfa[gsim][imt][rup_idx]
-            for rlz in rlzs_assoc[ebrup.trt_id, gsim]:
-                gmfa['%03d' % rlz.ordinal][ebrup.indices] = data
+        for rlz in rlzs:
+            data = gmf_list[rlz.ordinal]
+            ok = data[data['eid'] == eid]
+            gmfa['%03d' % rlz.ordinal][rup.indices] = ok['gmv'][imt]
         yield gmfa, imt
 
 
@@ -613,7 +625,7 @@ def export_gmf_scenario(ekey, dstore):
         for (trt, gsim), gmfs_ in gmfs_by_trt_gsim.items():
             for imt in gmfs_.dtype.names:
                 gmfs = numpy.zeros(len(gmfs_), dt)
-                for i, gmf in enumerate(gmfs_):
+                for i in range(len(gmfs)):
                     gmfs[i] = tuple(gmfs_[imt][i])
                 dest = dstore.export_path('gmf-%s-%s.csv' % (gsim, imt))
                 data = util.compose_arrays(sitemesh, gmfs)
