@@ -81,7 +81,7 @@ class Parser(object):
     composed together, by dispatching on a given name (if not given,
     the function name is used).
     """
-    def __init__(self, func, name=None, parentparser=None, help=False):
+    def __init__(self, func, name=None, parentparser=None, help=True):
         self.func = func
         self.name = name or func.__name__
         args, self.varargs, varkw, defaults = inspect.getargspec(func)
@@ -203,10 +203,11 @@ def compose(parsers, name='main', description=None, prog=None,
         subp = subparsers._name_parser_map.get(cmd)
         if subp is None:
             print('No help for unknown command %r' % cmd)
-            return
-        print(subp.format_help())
-    help_parser = Parser(gethelp, 'help')
-    help_parser.arg('cmd', 'subcommand')
+        else:
+            print(subp.format_help())
+    help_parser = Parser(gethelp, 'help', help=False)
+    progname = '%s ' % prog if prog else ''
+    help_parser.arg('cmd', progname + 'subcommand')
     for p in parsers + [help_parser]:
         subp = subparsers.add_parser(p.name, description=p.description)
         for args, kw in p.all_arguments:
