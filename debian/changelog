@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added an automatic help for the subcommands of oq-lite and managed
+    --version correctly
   * The event based risk calculator now use different seeds for different
     realizations; also, the performance has been substantially improved
   * Improved the .rst reports with data transfer information

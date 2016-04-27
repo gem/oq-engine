@@ -55,10 +55,6 @@ def make_figure(indices, imtls, spec_curves, curves=(), label=''):
 def plot(calc_id, other_id=None, sites='0'):
     """
     Hazard curves plotter.
-
-    :param calc_id: calculation numeric ID
-    :param other_id: ID of another calculation (optional)
-    :param sites: comma-separated string with the site indices
     """
     # read the hazard data
     haz = datastore.read(calc_id)

@@ -78,12 +78,14 @@ class CalculatorTestCase(unittest.TestCase):
         self.calc = self.get_calc(testfile, inis[0], **kw)
         with self.calc.monitor:
             result = self.calc.run()
+        self.calc.datastore.flush()
         if len(inis) == 2:
             hc_id = self.calc.datastore.calc_id
             self.calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
             with self.calc.monitor:
                 result.update(self.calc.run())
+            self.calc.datastore.flush()
         return result
 
     def execute(self, testfile, job_ini):

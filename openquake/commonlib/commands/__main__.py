@@ -28,8 +28,7 @@ def oq_lite():
                 for mod in os.listdir(commands.__path__[0])
                 if mod.endswith('.py') and not mod.startswith('_')]
     parsers = [importlib.import_module(modname).parser for modname in modnames]
-    parser = sap.compose(parsers, prog='oq-lite')
-    parser.parentparser.version = __version__
+    parser = sap.compose(parsers, prog='oq-lite', version=__version__)
     parser.callfunc()
 
 if __name__ == '__main__':
