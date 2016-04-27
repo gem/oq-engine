@@ -93,7 +93,6 @@ sig_hand () {
         if [ "$GEM_USE_CELERY" ]; then
             scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
         fi
-        scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation"
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
         upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
@@ -546,7 +545,9 @@ celeryd_wait $GEM_MAXLOOP"
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
         set -e
 
-        sudo useradd -m openquake -g openquake
+        if [ \$(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
+            sudo adduser --system openquake
+        fi
         sudo -u openquake python -m openquake.server.db.upgrade_manager /home/openquake/db.sqlite
         sudo -u openquake python -m openquake.server.dbserver 2>/dev/null & sleep 1
 
@@ -804,7 +805,6 @@ devtest_run () {
     _devtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
-    scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation.dev" || true
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/devtest.history"
 
     sudo $LXC_TERM -n $lxc_name
@@ -978,7 +978,6 @@ EOF
     if [ "$GEM_USE_CELERY" ]; then
         scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
     fi
-    scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation.pkg" || true
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
 
     sudo $LXC_TERM -n $lxc_name
