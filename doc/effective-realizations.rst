@@ -161,7 +161,7 @@ computation without running it. The command you need is the *info* command::
    usage: oq-lite info [-h] [-c] [-g] [-v] [-r] [input_file]
    
    positional arguments:
-     input_file         job.ini file or zip archive [default: ]
+     input_file         job.ini file or zip archive [default: '']
    
    optional arguments:
      -h, --help         show this help message and exit

@@ -125,7 +125,7 @@ class Parser(object):
         if default is not NODEFAULT:
             kw['nargs'] = nargs or '?'
             kw['default'] = default
-            kw['help'] = kw['help'] + ' [default: %s]' % str(default)
+            kw['help'] = kw['help'] + ' [default: %s]' % repr(default)
         self._add(name, name, **kw)
 
     def opt(self, name, help, abbrev=None,
