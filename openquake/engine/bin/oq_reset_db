@@ -25,7 +25,7 @@ echo ''
 echo ''
 
 if [[ "$answer" == "y" ]]; then
-    sudo -u openquake rm /home/openquake/db.sqlite
+    sudo -u openquake rm ~openquake/db.sqlite3
     echo " * Database dropped"
     sudo find /home -maxdepth 2 -type d -name "oqdata" -exec rm -Rf '{}' \;
     echo " * Datastores cleaned"

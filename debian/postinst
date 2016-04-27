@@ -24,7 +24,6 @@ set -e
 . /usr/share/debconf/confmodule
 
 GEM_DEB_PACKAGE="python-oq-engine"
-LSB_RELEASE=$(lsb_release --codename --short)
 
 if [ -f /usr/sbin/rabbitmqctl ]; then
     # create rabbitmq configuration for python-celery
@@ -39,18 +38,21 @@ if [ -f /usr/sbin/rabbitmqctl ]; then
     fi
 fi
 
+USER=openquake
+if [ $(cat /etc/group | grep ^openquake: | wc -l) -eq 0 ]; then
+    addgroup --system $USER
+fi
+if [ $(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
+    adduser --system --home /var/lib/$USER --group --shell /bin/bash $USER
+fi
+
 HDIR=/usr/share/openquake/engine
 IDIR=/usr/lib/python2.7/dist-packages/openquake/engine
 mkdir -p $HDIR
-chmod 1777 $HDIR
 
 rm -f $HDIR/celeryconfig.py.new_in_this_release
 cp $IDIR/celeryconfig.py $HDIR
-chmod 644 $HDIR/celeryconfig.py
-
-if [ `cat /etc/group | grep ^openquake: | wc -l` -eq 0 ]; then
-    addgroup --system openquake
-fi
+chown -R $USER.$USER $HDIR
 
 SDIR=/etc/openquake
 for cfg in openquake.cfg
@@ -66,10 +68,10 @@ do
         chmod 644 $SDIR/$cfg
     fi
 done
-chown -R root.openquake $SDIR
+chown -R $USER.$USER $SDIR
 
-# delete obsolete .pyc files in /usr/openquake/engine
-find /usr/share/openquake/engine -type f -name \*.pyc -exec rm -f {} \;
+# delete obsolete .pyc files in /usr/share/openquake
+find /usr/share/openquake -type f -name \*.pyc -exec rm -f {} \;
 
 #touch /tmp/mop-pause
 #while [ 1 ]; do
