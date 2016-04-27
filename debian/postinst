@@ -43,7 +43,7 @@ if [ $(cat /etc/group | grep ^openquake: | wc -l) -eq 0 ]; then
     addgroup --system $USER
 fi
 if [ $(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
-    adduser --system --home /var/lib/$USER --group $USER $USER
+    adduser --system --home /var/lib/$USER $USER
 fi
 
 HDIR=/usr/share/openquake/engine
