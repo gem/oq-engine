@@ -3,6 +3,7 @@
 %define oqrelease ##_release_##
 %define oqname python-%{oqrepo}
 %define oqtimestamp ##_timestamp_##
+%define oquser openquake
 
 Summary: Computes hazard, risk and socio-economic impact of earthquakes
 Name: %{oqname}
@@ -17,7 +18,9 @@ BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-engine
 
-%define common_deps python numpy scipy python-shapely python-psutil python-mock python-futures h5py python-amqp python-celery python-psycopg2 python-django python-docutils rabbitmq-server postgresql-server sudo
+Requires(pre): shadow-utils
+
+%define common_deps python numpy scipy python-shapely python-psutil python-mock python-futures h5py python-amqp python-celery python-django python-docutils rabbitmq-server sudo
 %define oqlib_deps python-oq-hazardlib >= 0.20.0 python-oq-risklib >= 0.13.0
 %define dev_deps python-nose python-coverage
 Requires: %{common_deps}
@@ -43,6 +46,12 @@ available the OpenQuake Engine default celeryconfig.py, located in
 
 Copyright (C) 2010-2016, GEM Foundation.
 
+%pre
+getent group %{oquser} >/dev/null || groupadd -r %{oquser}
+getent passwd %{oquser} >/dev/null || \
+    useradd -r -g %{oquser} -m -d /var/lib/%{oquser} -s /bin/bash \
+    -c "The OpenQuake user" %{oquser}
+exit 0
 
 %prep
 %setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{oqrepo}-%{oqversion}-%{oqrelease}
