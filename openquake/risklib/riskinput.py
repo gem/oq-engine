@@ -413,36 +413,26 @@ class CompositeRiskModel(collections.Mapping):
         mon_hazard = monitor('building hazard')
         mon_risk = monitor('computing risk')
         monitor.gmfbytes = 0
-        assets_by_site = (None if assetcol is None
-                          else assetcol.assets_by_site())
         for riskinput in riskinputs:
             with mon_hazard:
+                assets_by_site = (riskinput.assets_by_site if assetcol is None
+                                  else assetcol.assets_by_site())
                 # get assets, epsilons, hazard
                 hazard_by_site = riskinput.get_hazard(
                     rlzs_assoc, mon_hazard(measuremem=False))
-            # compute the outputs with the appropriate riskmodels
-            if assets_by_site is None:  # distribution by asset
-                with mon_risk:
-                    for assets, hazard in zip(
-                            riskinput.assets_by_site, hazard_by_site):
-                        the_assets = groupby(assets, by_taxonomy)
-                        for taxonomy, assets in the_assets.items():
-                            riskmodel = self[taxonomy]
-                            epsgetter = riskinput.epsilon_getter(
-                                [asset.ordinal for asset in assets])
-                            for imt, taxonomies in riskinput.imt_taxonomies:
-                                if taxonomy in taxonomies:
-                                    yield riskmodel.out_by_lr(
-                                        imt, assets, hazard[imt], epsgetter)
-            else:  # event based, distribution by rupture
-                try:
-                    for out_by_lr in self.gen_out_by_lr(
-                            riskinput, assets_by_site,
-                            hazard_by_site, mon_risk):
-                        yield out_by_lr
-                finally:
-                    # store the size of the GFMs
-                    monitor.gmfbytes += hazard_by_site.close()
+            with mon_risk:
+                for assets, hazard in zip(
+                        assets_by_site, hazard_by_site):
+                    the_assets = groupby(assets, by_taxonomy)
+                    for taxonomy, assets in the_assets.items():
+                        riskmodel = self[taxonomy]
+                        epsgetter = riskinput.epsilon_getter(
+                            [asset.ordinal for asset in assets])
+                        for imt, taxonomies in riskinput.imt_taxonomies:
+                            if taxonomy in taxonomies:
+                                yield riskmodel.out_by_lr(
+                                    imt, assets, hazard[imt], epsgetter)
+            monitor.gmfbytes += hazard_by_site.close()
 
     def gen_out_by_lr(self, riskinput, assets_by_site, hazard_by_site,
                       mon_risk):
@@ -457,12 +447,12 @@ class CompositeRiskModel(collections.Mapping):
             if not hazard:
                 continue
             with mon_risk:
-                for asset in assets:
-                    epsgetter = riskinput.epsilon_getter([asset.ordinal])
-                    for imt, taxonomies in riskinput.imt_taxonomies:
-                        if asset.taxonomy in taxonomies:
-                            yield self[asset.taxonomy].out_by_lr(
-                                imt, [asset], hazard[imt], epsgetter)
+                epsgetter = riskinput.epsilon_getter(
+                    [asset.ordinal for asset in assets])
+                for imt, taxonomies in riskinput.imt_taxonomies:
+                    if asset.taxonomy in taxonomies:
+                        yield self[asset.taxonomy].out_by_lr(
+                            imt, [asset], hazard[imt], epsgetter)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -712,15 +702,17 @@ class RiskInputFromRuptures(object):
         self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
         self.eids = eids  # E events
         self.eps = epsilons  # matrix N x E, events in this block
+        self.eid2idx = dict(zip(eids, range(len(eids))))
 
     def epsilon_getter(self, asset_ordinals):
         """
         :param asset_ordina: ordinal of the asset
         :returns: a closure returning an array of epsilons from the event IDs
         """
-        eps = self.eps[asset_ordinals[0]]  # assume there is only one ordinal
-        eid2eps = dict(zip(self.eids, eps))
-        return lambda eids: numpy.array([eid2eps[eid] for eid in eids])
+        def geteps(eids):
+            idx = numpy.array([self.eid2idx[eid] for eid in eids], U32)
+            return [self.eps[aid, idx] for aid in asset_ordinals]
+        return geteps
 
     def get_hazard(self, rlzs_assoc, monitor=Monitor()):
         """

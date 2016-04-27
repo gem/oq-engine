@@ -535,7 +535,7 @@ class ProbabilisticEventBased(RiskModel):
             self.compositemodel.lti[loss_type]]
         for i, asset in enumerate(assets):
             loss_ratios[i, :, 0] = ratios = self.risk_functions[loss_type](
-                gmvs['gmv'], epsilons)  # shape E
+                gmvs['gmv'], epsilons[i])  # shape E
             if self.insured_losses and loss_type != 'occupants':
                 loss_ratios[i, :, 1] = scientific.insured_losses(
                     ratios,  asset.deductible(loss_type),

@@ -225,6 +225,9 @@ class FakeMatrix(object):
         else:
             raise ValueError('Not a valid slice: %r' % sliceobj)
 
+    def __len__(self):
+        return self.shape[0]
+
 
 @base.calculators.add('event_based_risk')
 class EventBasedRiskCalculator(base.RiskCalculator):
