@@ -24,17 +24,19 @@ import tempfile
 import mock
 
 from django.db import connection
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, datastore
 from openquake.server.db import models, actions, upgrade_manager
 from openquake.server.settings import DATABASE
 from openquake.server.tests import helpers
 
+USER = getpass.getuser()
+
 
 # twin to engine.job_from_file
-def job_from_file(cfg_file, username, hazard_calculation_id=None):
+def job_from_file(cfg_file, username, datadir, hazard_calculation_id=None):
     oq = readinput.get_oqparam(cfg_file)
     job_id = actions.create_job(oq.calculation_mode, oq.description,
-                                username, hazard_calculation_id)
+                                username, datadir, hazard_calculation_id)
     return job_id, oq
 
 
@@ -43,7 +45,7 @@ def setup_module():
     fh, tmpfile = tempfile.mkstemp()
     os.close(fh)
     DATABASE['NAME'] = tmpfile
-    DATABASE['USER'] = getpass.getuser()
+    DATABASE['USER'] = USER
     connection.cursor()  # connect to the db
     # sanity check: make sure we are using the right db
     fname = connection.connection.execute(
@@ -57,7 +59,8 @@ def teardown_module():
 
 
 def get_job(cfg, username, hazard_calculation_id=None):
-    job_id, oq = job_from_file(cfg, username, hazard_calculation_id)
+    job_id, oq = job_from_file(cfg, username, datastore.DATADIR,
+                               hazard_calculation_id)
     return models.OqJob.objects.get(pk=job_id)
 
 
@@ -100,24 +103,6 @@ class CheckHazardRiskConsistencyTestCase(unittest.TestCase):
             "but you provided a 'scenario' instead")
 
 
-class JobFromFileTestCase(unittest.TestCase):
-
-    def test_create_job_default_user(self):
-        jid = actions.create_job('classical', 'test_create_job_default_user')
-        job = models.OqJob.objects.get(pk=jid)
-        self.assertEqual('openquake', job.user_name)
-        self.assertEqual('executing', job.status)
-
-    def test_create_job_specified_user(self):
-        user_name = helpers.random_string()
-        jid = actions.create_job(
-            'classical', 'test_create_job_specified_user',
-            user_name=user_name)
-        job = models.OqJob.objects.get(pk=jid)
-        self.assertEqual(user_name, job.user_name)
-        self.assertEqual('executing', job.status)
-
-
 class OpenquakeCliTestCase(unittest.TestCase):
     """
     Run "oq-engine --version" as a separate process using `subprocess`.
@@ -138,10 +123,10 @@ class DeleteHazCalcTestCase(unittest.TestCase):
             'simple_fault_demo_hazard/job.ini')
         cls.risk_cfg = helpers.get_data_path(
             'classical_psha_based_risk/job.ini')
-        cls.job = get_job(cls.hazard_cfg, getpass.getuser())
+        cls.job = get_job(cls.hazard_cfg, USER)
 
     def test_del_calc(self):
-        hazard_job = get_job(self.hazard_cfg, getpass.getuser())
+        hazard_job = get_job(self.hazard_cfg, USER)
 
         models.Output.objects.create_output(
             hazard_job, 'test_curves_1', ds_key='hcurve'
@@ -159,7 +144,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         self.assertEqual(2, outputs.count())
 
         # Delete the calculation
-        actions.del_calc(hazard_job.id)
+        actions.del_calc(hazard_job.id, USER)
 
         # Check that the hazard calculation and its outputs were deleted:
         outputs = models.Output.objects.filter(oq_job=hazard_job.id)
@@ -169,32 +154,32 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         self.assertEqual(0, hazard_jobs.count())
 
     def test_del_calc_does_not_exist(self):
-        self.assertRaises(models.NotFound, actions.del_calc, -1)
+        self.assertRaises(models.NotFound, actions.del_calc, -1, USER)
 
     def test_del_calc_no_access(self):
         # Test the case where we try to delete a hazard calculation which does
         # not belong to current user.
         # In this case, deletion is now allowed and should raise an exception.
         hazard_job = get_job(self.hazard_cfg, helpers.random_string())
-        self.assertRaises(RuntimeError, actions.del_calc, hazard_job.id)
+        self.assertRaises(RuntimeError, actions.del_calc, hazard_job.id, USER)
 
     def test_del_calc_referenced_by_risk_calc(self):
         # Test the case where a risk calculation is referencing the hazard
         # calculation we want to delete.
         # In this case, deletion is not allowed and should raise an exception.
-        risk_job = get_job(self.risk_cfg, getpass.getuser(),
+        risk_job = get_job(self.risk_cfg, USER,
                            hazard_calculation_id=self.job.id)
         hc = risk_job.hazard_calculation
-        self.assertRaises(RuntimeError, actions.del_calc, hc.id)
+        self.assertRaises(RuntimeError, actions.del_calc, hc.id, USER)
 
     def test_del_calc_output_referenced_by_risk_calc(self):
         # Test the case where a risk calculation is referencing one of the
         # belonging to the hazard calculation we want to delete.
         # In this case, deletion is not allowed and should raise an exception.
-        risk_job = get_job(self.risk_cfg, getpass.getuser(),
+        risk_job = get_job(self.risk_cfg, USER,
                            hazard_calculation_id=self.job.id)
         hc = risk_job.hazard_calculation
-        self.assertRaises(RuntimeError, actions.del_calc, hc.id)
+        self.assertRaises(RuntimeError, actions.del_calc, hc.id, USER)
 
 
 class DeleteRiskCalcTestCase(unittest.TestCase):
@@ -205,10 +190,10 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
             'simple_fault_demo_hazard/job.ini')
         cls.risk_cfg = helpers.get_data_path(
             'classical_psha_based_risk/job.ini')
-        cls.job = get_job(cls.hazard_cfg, getpass.getuser())
+        cls.job = get_job(cls.hazard_cfg, USER)
 
     def test_del_calc(self):
-        risk_job = get_job(self.risk_cfg, getpass.getuser(),
+        risk_job = get_job(self.risk_cfg, USER,
                            hazard_calculation_id=self.job.id)
         models.Output.objects.create_output(
             risk_job, 'test_curves_1', ds_key='rcurves-rlzs'
@@ -226,7 +211,7 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         self.assertEqual(2, outputs.count())
 
         # Delete the calculation
-        actions.del_calc(risk_job.id)
+        actions.del_calc(risk_job.id, USER)
 
         # Check that the risk calculation and its outputs were deleted:
         outputs = models.Output.objects.filter(oq_job=risk_job.id)
@@ -236,7 +221,7 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         self.assertEqual(0, risk_calcs.count())
 
     def test_del_calc_does_not_exist(self):
-        self.assertRaises(models.NotFound, actions.del_calc, -1)
+        self.assertRaises(models.NotFound, actions.del_calc, -1, USER)
 
     def test_del_calc_no_access(self):
         # Test the case where we try to delete a risk calculation which does
@@ -244,7 +229,7 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         # In this case, deletion is now allowed and should raise an exception.
         risk_job = get_job(self.risk_cfg, helpers.random_string(),
                            hazard_calculation_id=self.job.id)
-        self.assertRaises(RuntimeError, actions.del_calc, risk_job.id)
+        self.assertRaises(RuntimeError, actions.del_calc, risk_job.id, USER)
 
 
 class FakeOutput(object):

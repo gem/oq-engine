@@ -26,7 +26,7 @@ import traceback
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import valid, parallel, readinput
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import export
+from openquake.commonlib import export, datastore
 from openquake.calculators import base, views
 from openquake.engine import logs, config
 
@@ -113,7 +113,16 @@ def raiseMasterKilled(signum, _stack):
         msg = 'Received a signal %d' % signum
     raise MasterKilled(msg)
 
-signal.signal(signal.SIGTERM, raiseMasterKilled)
+
+# register the raiseMasterKilled callback for SIGTERM
+# when using the Django development server this module is imported by a thread,
+# so one gets a `ValueError: signal only works in main thread` that
+# can be safely ignored
+try:
+    signal.signal(signal.SIGTERM, raiseMasterKilled)
+except ValueError:
+    pass
+
 
 def job_from_file(cfg_file, username, hazard_calculation_id=None):
     """
@@ -122,7 +131,9 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
     :param str cfg_file:
         Path to a job.ini file.
     :param str username:
-        The user who will own this job profile and all results.
+        The user who will own this job profile and all results
+    :param str datadir:
+        Data directory of the user
     :param hazard_calculation_id:
         ID of a previous calculation or None
     :returns:
@@ -130,7 +141,7 @@ def job_from_file(cfg_file, username, hazard_calculation_id=None):
     """
     oq = readinput.get_oqparam(cfg_file)
     job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
-                        username, hazard_calculation_id)
+                        username, datastore.DATADIR, hazard_calculation_id)
     return job_id, oq
 
 
