@@ -1,7 +1,7 @@
 QA Scenario Risk for contents
 =============================
 
-gem-tstation:/home/michele/ssd/calc_12057.hdf5 updated Fri Apr 22 04:12:17 2016
+gem-tstation:/home/michele/ssd/calc_117.hdf5 updated Wed Apr 27 10:57:13 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  3                  
 master_seed                  0                  
 avg_losses                   False              
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -61,17 +61,17 @@ W        1
 
 Slowest operations
 ------------------
-========================= ========= ========= ======
-operation                 time_sec  memory_mb counts
-========================= ========= ========= ======
-filtering sites           0.007     0.0       1     
-total scenario_risk       0.006     0.004     3     
-computing individual risk 0.005     0.0       3     
-reading exposure          0.003     0.0       1     
-computing gmfs            0.001     0.0       1     
-saving gmfs               7.050E-04 0.0       1     
-building riskinputs       2.899E-04 0.0       1     
-building epsilons         1.121E-04 0.0       1     
-getting hazard            8.583E-05 0.0       3     
-reading site collection   6.199E-06 0.0       1     
-========================= ========= ========= ======
+======================= ========= ========= ======
+operation               time_sec  memory_mb counts
+======================= ========= ========= ======
+total scenario_risk     0.007     0.004     3     
+filtering sites         0.007     0.0       1     
+computing risk          0.006     0.0       3     
+reading exposure        0.004     0.0       1     
+computing gmfs          0.001     0.0       1     
+saving gmfs             0.001     0.0       1     
+building riskinputs     2.952E-04 0.0       1     
+building epsilons       1.111E-04 0.0       1     
+building hazard         8.488E-05 0.0       3     
+reading site collection 7.153E-06 0.0       1     
+======================= ========= ========= ======

@@ -57,7 +57,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        self.assert_stats_ok(case_1, 'job_haz.ini,job_risk.ini')
+        self.assert_stats_ok(case_1, 'job.ini')
 
         # make sure the XML and JSON exporters run
         ekeys = [
@@ -78,8 +78,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
-        self.assert_stats_ok(case_2, 'job_haz.ini,job_risk.ini',
-                             individual_curves='true')
+        self.assert_stats_ok(case_2, 'job.ini', individual_curves='true')
         fname = writetmp(view('mean_avg_losses', self.calc.datastore))
         self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
 
@@ -105,7 +104,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_4(self):
         # Turkey with SHARE logic tree
-        out = self.run_calc(case_4.__file__, 'job_h.ini,job_r.ini',
+        out = self.run_calc(case_4.__file__, 'job.ini',
                             exports='csv', individual_curves='true')
         fnames = out['agg_loss_table', 'csv']
         assert fnames, 'No agg_losses exported??'
@@ -132,7 +131,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     @attr('qa', 'hazard', 'event_based')
     def test_case_4_hazard(self):
         # Turkey with SHARE logic tree; TODO: add site model
-        out = self.run_calc(case_4.__file__, 'job_h.ini',
+        out = self.run_calc(case_4.__file__, 'job.ini',
+                            calculation_mode='event_based',
                             ground_motion_fields='false', exports='csv')
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles('expected/hazard_curve-mean.csv', fname)

@@ -1,7 +1,7 @@
 Demo Classical PSHA for Vancouver Schools
 =========================================
 
-gem-tstation:/home/michele/ssd/calc_12035.hdf5 updated Fri Apr 22 04:10:55 2016
+gem-tstation:/home/michele/ssd/calc_95.hdf5 updated Wed Apr 27 10:55:47 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   50.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -71,14 +71,14 @@ vancouver_area_source.xml 0      Active Shallow Crust 1           2,430        6
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 162942        
+count_eff_ruptures_max_received_per_task 162882        
 count_eff_ruptures_num_tasks             30            
-count_eff_ruptures_sent.monitor          4880934       
-count_eff_ruptures_sent.rlzs_assoc       4892322       
+count_eff_ruptures_sent.monitor          4879062       
+count_eff_ruptures_sent.rlzs_assoc       4892491       
 count_eff_ruptures_sent.sitecol          14550         
 count_eff_ruptures_sent.siteidx          150           
 count_eff_ruptures_sent.sources          40480         
-count_eff_ruptures_tot_received          4888260       
+count_eff_ruptures_tot_received          4886460       
 hazard.input_weight                      60.75         
 hazard.n_imts                            3             
 hazard.n_levels                          12.0          
@@ -102,12 +102,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.081     0.0       1     
-reading composite source model 0.024     0.0       1     
+managing sources               0.075     0.0       1     
+reading composite source model 0.025     0.0       1     
 total count_eff_ruptures       0.011     0.0       30    
 splitting sources              0.010     0.0       1     
-store source_info              0.006     0.0       1     
+store source_info              0.005     0.0       1     
 filtering sources              0.001     0.0       1     
-aggregate curves               7.477E-04 0.0       30    
-reading site collection        1.001E-04 0.0       1     
+aggregate curves               5.431E-04 0.0       30    
+reading site collection        4.561E-04 0.0       1     
 ============================== ========= ========= ======

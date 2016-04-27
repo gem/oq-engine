@@ -1,7 +1,7 @@
 SHARE OpenQuake Computational Settings
 ======================================
 
-gem-tstation:/home/michele/ssd/calc_12040.hdf5 updated Fri Apr 22 04:11:36 2016
+gem-tstation:/home/michele/ssd/calc_100.hdf5 updated Wed Apr 27 10:56:29 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitd746861'
+oqlite_version               '0.13.0-gitcbbc4a8'
 ============================ ===================
 
 Input files
@@ -73,14 +73,14 @@ simple_area_source_model.xml 4      Subduction Inslab 1           7,770        1
 Informational data
 ------------------
 ======================================== =================
-count_eff_ruptures_max_received_per_task 4684             
+count_eff_ruptures_max_received_per_task 4625             
 count_eff_ruptures_num_tasks             1                
-count_eff_ruptures_sent.monitor          4436             
+count_eff_ruptures_sent.monitor          4374             
 count_eff_ruptures_sent.rlzs_assoc       51783            
 count_eff_ruptures_sent.sitecol          437              
 count_eff_ruptures_sent.siteidx          5                
 count_eff_ruptures_sent.sources          2787             
-count_eff_ruptures_tot_received          4684             
+count_eff_ruptures_tot_received          4625             
 hazard.input_weight                      49408.67500000002
 hazard.n_imts                            3                
 hazard.n_levels                          26.0             
@@ -96,7 +96,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-4            s46       AreaSource   194    1         9.670E-04   0.0        0.0      
+4            s46       AreaSource   194    1         0.001       0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Slowest operations
@@ -104,11 +104,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 5.808     0.0       1     
-managing sources               0.100     0.0       1     
-filtering sources              0.022     0.0       18    
+reading composite source model 5.901     0.0       1     
+managing sources               0.102     0.0       1     
+filtering sources              0.023     0.0       18    
 store source_info              0.004     0.0       1     
-total count_eff_ruptures       3.679E-04 0.0       1     
-reading site collection        2.980E-05 0.0       1     
+total count_eff_ruptures       3.691E-04 0.0       1     
+reading site collection        4.411E-05 0.0       1     
 aggregate curves               2.003E-05 0.0       1     
 ============================== ========= ========= ======
