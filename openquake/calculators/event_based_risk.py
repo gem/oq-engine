@@ -206,29 +206,6 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assetcol, monitor):
     return result
 
 
-class FakeMatrix(object):
-    """
-    A fake epsilon matrix, to be used when the coefficients are all zeros,
-    so the epsilons are ignored.
-    """
-    def __init__(self, n, e):
-        self.shape = (n, e)
-
-    def __getitem__(self, sliceobj):
-        if isinstance(sliceobj, int):
-            e = self.shape[1]
-            return numpy.zeros(e, F32)
-        elif len(sliceobj) == 2:
-            n = self.shape[0]
-            _, indices = sliceobj
-            return self.__class__(n, len(indices))
-        else:
-            raise ValueError('Not a valid slice: %r' % sliceobj)
-
-    def __len__(self):
-        return self.shape[0]
-
-
 @base.calculators.add('event_based_risk')
 class EventBasedRiskCalculator(base.RiskCalculator):
     """
@@ -260,7 +237,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         all_ruptures.sort(key=operator.attrgetter('serial'))
         if not self.riskmodel.covs:
             # do not generate epsilons
-            eps = FakeMatrix(self.N, self.E)
+            eps = None
         else:
             eps = riskinput.make_eps(
                 self.assets_by_site, self.E, oq.master_seed,

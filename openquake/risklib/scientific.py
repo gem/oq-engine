@@ -192,23 +192,20 @@ class VulnerabilityFunction(object):
         self.distribution.epsilons = (numpy.array(epsilons)
                                       if epsilons is not None else None)
 
-    def __call__(self, gmvs, epsilons):
+    def __call__(self, gmvs, epsilons=None):
         """
         Apply the vulnerability function to a ground motion vector, by using
-        an epsilon vectors of the sample length.
+        an epsilon vector of the sample length.
 
         :param gmvs:
            array of E floats
         :param epsilons:
-           array of E floats
+           array of E floats (or None)
+        :returns:
+           array of loss ratios
         """
-        # NB: changing the order of the ground motion values for a given
-        # asset without changing the order of the corresponding epsilon
-        # values gives inconsistent results, see the MeanLossTestCase
-        assert len(epsilons) == len(gmvs), (len(epsilons), len(gmvs))
-
         # for gmvs < min(iml) we return a loss of 0 (default)
-        ret = numpy.zeros(len(gmvs))
+        ratios = numpy.zeros(len(gmvs))
 
         # gmvs are clipped to max(iml)
         gmvs_curve = numpy.piecewise(
@@ -221,12 +218,19 @@ class VulnerabilityFunction(object):
         idxs = gmvs_curve >= self.imls[0]
         gmvs_curve = gmvs_curve[idxs]
         means = self._mlr_i1d(gmvs_curve)
+        if epsilons is None:  # epsilons are not given because covs=0
+            ratios[idxs] = means
+        else:
+            # NB: changing the order of the ground motion values for a given
+            # asset without changing the order of the corresponding epsilon
+            # values gives inconsistent results, see the MeanLossTestCase
+            assert len(epsilons) == len(gmvs), (len(epsilons), len(gmvs))
 
-        # apply uncertainty
-        covs = self._cov_for(gmvs_curve)
-        self.set_distribution(epsilons)
-        ret[idxs] = self.distribution.sample(means, covs, None, idxs)
-        return ret
+            # apply uncertainty
+            covs = self._cov_for(gmvs_curve)
+            self.set_distribution(epsilons)
+            ratios[idxs] = self.distribution.sample(means, covs, None, idxs)
+        return ratios
 
     def strictly_increasing(self):
         """

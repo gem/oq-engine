@@ -382,7 +382,7 @@ class CompositeRiskModel(collections.Mapping):
         :param trunc_level: the truncation level (or None)
         :param correl_model: the correlation model (or None)
         :param min_iml: dictionary of minimum IMLs
-        :param eps: a matrix of epsilons of shape (N, E)
+        :param eps: a matrix of epsilons of shape (N, E) or None
         :param hint: hint for how many blocks to generate
 
         Yield :class:`RiskInputFromRuptures` instances.
@@ -396,7 +396,8 @@ class CompositeRiskModel(collections.Mapping):
                 eids.extend(sr.events['eid'])
             yield RiskInputFromRuptures(
                 imt_taxonomies, sitecol, ses_ruptures,
-                trunc_level, correl_model, min_iml, eps[:, eids], eids)
+                trunc_level, correl_model, min_iml,
+                eps[:, eids] if eps is not None else None, eids)
 
     def gen_outputs(self, riskinputs, rlzs_assoc, monitor,
                     assetcol=None):
@@ -701,14 +702,18 @@ class RiskInputFromRuptures(object):
         self.weight = sum(sr.multiplicity for sr in ses_ruptures)
         self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
         self.eids = eids  # E events
-        self.eps = epsilons  # matrix N x E, events in this block
-        self.eid2idx = dict(zip(eids, range(len(eids))))
+        if epsilons is not None:
+            self.eps = epsilons  # matrix N x E, events in this block
+            self.eid2idx = dict(zip(eids, range(len(eids))))
 
     def epsilon_getter(self, asset_ordinals):
         """
         :param asset_ordina: ordinal of the asset
         :returns: a closure returning an array of epsilons from the event IDs
         """
+        if not hasattr(self, 'eps'):
+            return lambda eids: [None] * len(asset_ordinals)
+
         def geteps(eids):
             idx = numpy.array([self.eid2idx[eid] for eid in eids], U32)
             return [self.eps[aid, idx] for aid in asset_ordinals]
