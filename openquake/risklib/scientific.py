@@ -454,8 +454,8 @@ class VulnerabilityFunctionWithPMF(object):
 
         # for gmvs such that iml > min(iml) we get a mean loss ratio
         # by interpolation and sample the distribution
-        idxs, = numpy.where(gmvs_curve >= self.imls[0])
-        gmvs_curve = numpy.array(gmvs_curve)[idxs]
+        idxs = gmvs_curve >= self.imls[0]
+        gmvs_curve = gmvs_curve[idxs]
         probs = self._probs_i1d(gmvs_curve)
 
         # apply uncertainty
