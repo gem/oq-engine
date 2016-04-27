@@ -192,12 +192,12 @@ class VulnerabilityFunction(object):
         self.distribution.epsilons = (numpy.array(epsilons)
                                       if epsilons is not None else None)
 
-    def __call__(self, imls, epsilons):
+    def __call__(self, gmvs, epsilons):
         """
         Apply the vulnerability function to a ground motion vector, by using
         an epsilon vectors of the sample length.
 
-        :param imls:
+        :param gmvs:
            array of E floats
         :param epsilons:
            array of E floats
@@ -205,25 +205,25 @@ class VulnerabilityFunction(object):
         # NB: changing the order of the ground motion values for a given
         # asset without changing the order of the corresponding epsilon
         # values gives inconsistent results, see the MeanLossTestCase
-        assert len(epsilons) == len(imls), (len(epsilons), len(imls))
+        assert len(epsilons) == len(gmvs), (len(epsilons), len(gmvs))
 
-        # for imls < min(iml) we return a loss of 0 (default)
-        ret = numpy.zeros(len(imls))
+        # for gmvs < min(iml) we return a loss of 0 (default)
+        ret = numpy.zeros(len(gmvs))
 
-        # imls are clipped to max(iml)
-        imls_curve = numpy.piecewise(
-            imls,
-            [imls > self.imls[-1]],
+        # gmvs are clipped to max(iml)
+        gmvs_curve = numpy.piecewise(
+            gmvs,
+            [gmvs > self.imls[-1]],
             [self.imls[-1], lambda x: x])
 
-        # for imls such that iml > min(iml) we get a mean loss ratio
+        # for gmvs such that iml > min(iml) we get a mean loss ratio
         # by interpolation and sample the distribution
-        idxs, = numpy.where(imls_curve >= self.imls[0])
-        imls_curve = numpy.array(imls_curve)[idxs]
-        means = self._mlr_i1d(imls_curve)
+        idxs, = numpy.where(gmvs_curve >= self.imls[0])
+        gmvs_curve = numpy.array(gmvs_curve)[idxs]
+        means = self._mlr_i1d(gmvs_curve)
 
         # apply uncertainty
-        covs = self._cov_for(imls_curve)
+        covs = self._cov_for(gmvs_curve)
         self.set_distribution(epsilons)
         ret[idxs] = self.distribution.sample(means, covs, None, idxs)
         return ret
@@ -430,7 +430,7 @@ class VulnerabilityFunctionWithPMF(object):
         assert probs.shape[0] == len(loss_ratios)
         assert probs.shape[1] == len(imls)
 
-    def __call__(self, imls, epsilons):
+    def __call__(self, gmvs, epsilons):
         """
         Given IML values, interpolate the corresponding loss ratio
         value(s) on the curve.
@@ -443,20 +443,20 @@ class VulnerabilityFunctionWithPMF(object):
         :returns: :py:class:`numpy.ndarray` containing a number of interpolated
             values equal to the size of the input (1 or many)
         """
-        # for imls < min(iml) we return a loss of 0 (default)
-        ret = numpy.zeros(len(imls))
+        # for gmvs < min(iml) we return a loss of 0 (default)
+        ret = numpy.zeros(len(gmvs))
 
-        # imls are clipped to max(iml)
-        imls_curve = numpy.piecewise(
-            imls,
-            [imls > self.imls[-1]],
+        # gmvs are clipped to max(iml)
+        gmvs_curve = numpy.piecewise(
+            gmvs,
+            [gmvs > self.imls[-1]],
             [self.imls[-1], lambda x: x])
 
-        # for imls such that iml > min(iml) we get a mean loss ratio
+        # for gmvs such that iml > min(iml) we get a mean loss ratio
         # by interpolation and sample the distribution
-        idxs, = numpy.where(imls_curve >= self.imls[0])
-        imls_curve = numpy.array(imls_curve)[idxs]
-        probs = self._probs_i1d(imls_curve)
+        idxs, = numpy.where(gmvs_curve >= self.imls[0])
+        gmvs_curve = numpy.array(gmvs_curve)[idxs]
+        probs = self._probs_i1d(gmvs_curve)
 
         # apply uncertainty
         self.set_distribution(epsilons)
