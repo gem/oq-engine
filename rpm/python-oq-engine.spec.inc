@@ -17,7 +17,7 @@ BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-engine
 
-%define common_deps python numpy scipy python-shapely python-psutil python-mock python-futures h5py python-amqp python-celery python-psycopg2 python-django python-docutils rabbitmq-server postgresql-server sudo
+%define common_deps python numpy scipy python-shapely python-psutil python-mock python-futures h5py python-amqp python-celery python-django python-docutils rabbitmq-server sudo
 %define oqlib_deps python-oq-hazardlib >= 0.20.0 python-oq-risklib >= 0.13.0
 %define dev_deps python-nose python-coverage
 Requires: %{common_deps}
