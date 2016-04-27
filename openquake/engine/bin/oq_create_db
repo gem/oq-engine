@@ -1,3 +1,9 @@
 #!/bin/bash
 # run this script as user openquake
-python $1 /home/openquake/db.sqlite
+
+if [ -z $1 ]; then
+    echo "ERROR: please provide the path to the 'server/db/upgrade_manager.py' script"
+    exit 1
+fi
+
+python $1 ~openquake/db.sqlite3
