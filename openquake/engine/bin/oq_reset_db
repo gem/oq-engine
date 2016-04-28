@@ -22,7 +22,7 @@ BOLD=`tput bold`
 NORMAL=`tput sgr0`
 OQ_CREATE_DB='oq_create_db'
 OQ_USER='openquake'
-
+OQ_DB=$(eval echo "~${OQ_USER}/db.sqlite3")
 
 command -v oq_create_db &> /dev/null || {
     if [ -x "./${OQ_CREATE_DB}" ]; then
@@ -33,6 +33,7 @@ command -v oq_create_db &> /dev/null || {
     fi
 }
 
+# Check if the user exists
 if [ $(cat /etc/passwd | grep ^${OQ_USER}: | wc -l) -eq 0 ]; then
     echo -e "!! User '${OQ_USER}' does not exists. Aborting." >&2
     exit 1
@@ -62,7 +63,7 @@ if [ -z $skipnew ]; then
 fi
 echo '!!'
 if [ $force ]; then
-    for i in {5..1}; do
+    for i in {3..1}; do
         echo -ne "\r!! Press CTRL-C to cancel the operation within ${i} seconds"
         sleep 1
     done
@@ -75,13 +76,15 @@ echo ''
 echo ''
 
 if [[ "$answer" == "y" ]]; then
-    sudo -u $OQ_USER rm ~${OQ_USER}/db.sqlite3
+    sudo -u $OQ_USER rm -f $OQ_DB
     echo " * Database dropped"
-    sudo find /home -maxdepth 2 -type d -name "oqdata" -exec rm -Rf '{}' \;
+    # FIXME: this requires root and should be optional
+    sudo find /home -maxdepth 2 -type d -name "oqdata" -exec rm -Rf '{}' \; || true
     echo " * Datastores cleaned"
     if [ -z $skipnew ]; then
-        sudo -u $OQ_USER $OQ_CREATE_DB
+        $OQ_CREATE_DB -u $OQ_USER -d $OQ_DB
     fi
+    echo " * Database created in ${OQ_DB}"
     echo ''
     echo "!!"
     echo "!! DONE"
