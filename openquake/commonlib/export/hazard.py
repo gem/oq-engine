@@ -26,7 +26,7 @@ import numpy
 
 from openquake.baselib.general import groupby, humansize
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc import disagg, gmf
+from openquake.hazardlib.calc import disagg
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import (
     scientificformat, floatformat, write_csv)

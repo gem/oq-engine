@@ -390,7 +390,8 @@ class CompositeRiskModel(collections.Mapping):
         imt_taxonomies = self.get_imt_taxonomies()
         by_trt_id = operator.attrgetter('trt_id')
         for ses_ruptures in split_in_blocks(
-                all_ruptures, hint or 1, key=by_trt_id):
+                all_ruptures, hint or 1, key=by_trt_id,
+                weight=operator.attrgetter('weight')):
             eids = []
             for sr in ses_ruptures:
                 eids.extend(sr.events['eid'])
