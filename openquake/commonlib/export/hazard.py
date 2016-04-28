@@ -46,8 +46,11 @@ def get_gmfa_by_eid(gmfa):
     Returns a dictionary sid -> array of composite ground motion values,
     ordered by sid by construction.
     """
-    return groupby(gmfa, operator.itemgetter('eid'), lambda records:
-                   numpy.array(list(records)))
+    def to_array(group):
+        records = list(group)
+        return numpy.array(records, records[0].dtype)
+    return groupby(gmfa, operator.itemgetter('eid'), to_array)
+
 
 
 class SES(object):
