@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 5
 ================================
 
-gem-tstation:/home/michele/ssd/calc_97.hdf5 updated Wed Apr 27 10:56:22 2016
+gem-tstation:/home/michele/ssd/calc_1012.hdf5 updated Thu Apr 28 15:42:20 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  1066               
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcbbc4a8'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -70,14 +70,14 @@ source_model.xml 0      Active Shallow Crust 1           485          485
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 2557          
+count_eff_ruptures_max_received_per_task 2543          
 count_eff_ruptures_num_tasks             1             
-count_eff_ruptures_sent.monitor          2306          
+count_eff_ruptures_sent.monitor          2295          
 count_eff_ruptures_sent.rlzs_assoc       2624          
 count_eff_ruptures_sent.sitecol          437           
 count_eff_ruptures_sent.siteidx          5             
 count_eff_ruptures_sent.sources          1170          
-count_eff_ruptures_tot_received          2557          
+count_eff_ruptures_tot_received          2543          
 hazard.input_weight                      485.0         
 hazard.n_imts                            1             
 hazard.n_levels                          3.0           
@@ -93,20 +93,24 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            1         ComplexFaultSource 485    1         0.001       7.955      0.0      
+0            1         ComplexFaultSource 485    1         0.002       18         0.0      
 ============ ========= ================== ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+Not available
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 8.029     0.0       1     
-managing sources               7.958     0.0       1     
-splitting sources              7.955     0.0       1     
-store source_info              0.004     0.0       1     
-filtering sources              0.001     0.0       1     
-total count_eff_ruptures       3.591E-04 0.0       1     
-reading site collection        3.004E-05 0.0       1     
-aggregate curves               2.098E-05 0.0       1     
+reading composite source model 19        0.0       1     
+managing sources               18        0.0       1     
+splitting sources              18        0.0       1     
+store source_info              0.006     0.0       1     
+filtering sources              0.002     0.0       1     
+total count_eff_ruptures       2.871E-04 0.0       1     
+reading site collection        4.792E-05 0.0       1     
+aggregate curves               2.909E-05 0.0       1     
 ============================== ========= ========= ======

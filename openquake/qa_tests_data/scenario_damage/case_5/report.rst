@@ -1,7 +1,7 @@
 Calculation of the ground motion fields for a scenario
 ======================================================
 
-gem-tstation:/home/michele/ssd/calc_47.hdf5 updated Wed Apr 27 10:54:22 2016
+gem-tstation:/home/michele/ssd/calc_962.hdf5 updated Thu Apr 28 15:38:30 2016
 
 num_sites = 11, sitecol = 834 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  3                  
 master_seed                  0                  
-oqlite_version               '0.13.0-gitcbbc4a8'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -57,13 +57,17 @@ UFB      2
 W        2      
 ======== =======
 
+Information about the tasks
+---------------------------
+Not available
+
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.005     0.0       1     
-filtering sites         0.003     0.0       1     
-computing gmfs          5.059E-04 0.0       1     
-reading site collection 5.007E-06 0.0       1     
+reading exposure        0.014     0.0       1     
+filtering sites         0.007     0.0       1     
+computing gmfs          0.001     0.0       1     
+reading site collection 9.060E-06 0.0       1     
 ======================= ========= ========= ======

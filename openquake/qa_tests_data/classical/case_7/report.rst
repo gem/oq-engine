@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 7
 ================================
 
-gem-tstation:/home/michele/ssd/calc_96.hdf5 updated Wed Apr 27 10:56:06 2016
+gem-tstation:/home/michele/ssd/calc_1011.hdf5 updated Thu Apr 28 15:41:42 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  1066               
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcbbc4a8'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -82,14 +82,14 @@ filtered_weight 2,287
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 2655          
+count_eff_ruptures_max_received_per_task 2641          
 count_eff_ruptures_num_tasks             3             
-count_eff_ruptures_sent.monitor          7212          
+count_eff_ruptures_sent.monitor          7179          
 count_eff_ruptures_sent.rlzs_assoc       11976         
 count_eff_ruptures_sent.sitecol          1311          
 count_eff_ruptures_sent.siteidx          15            
 count_eff_ruptures_sent.sources          3342          
-count_eff_ruptures_tot_received          7965          
+count_eff_ruptures_tot_received          7923          
 hazard.input_weight                      2287.0        
 hazard.n_imts                            1             
 hazard.n_levels                          3.0           
@@ -105,22 +105,26 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            2         ComplexFaultSource 485    1         0.002       8.187      0.0      
-0            1         SimpleFaultSource  901    1         0.001       0.521      0.0      
-1            1         SimpleFaultSource  901    1         0.001       0.506      0.0      
+0            2         ComplexFaultSource 485    1         0.003       19         0.0      
+0            1         SimpleFaultSource  901    1         0.003       1.248      0.0      
+1            1         SimpleFaultSource  901    1         0.003       1.141      0.0      
 ============ ========= ================== ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+Not available
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               9.223     0.0       1     
-splitting sources              9.214     0.0       3     
-reading composite source model 9.182     0.0       1     
-filtering sources              0.004     0.0       3     
-store source_info              0.004     0.0       1     
-total count_eff_ruptures       9.170E-04 0.0       3     
-aggregate curves               5.794E-05 0.0       3     
-reading site collection        3.815E-05 0.0       1     
+managing sources               21        0.0       1     
+splitting sources              21        0.0       3     
+reading composite source model 20        0.0       1     
+filtering sources              0.008     0.0       3     
+store source_info              0.007     0.0       1     
+total count_eff_ruptures       8.297E-04 0.0       3     
+aggregate curves               7.987E-05 0.0       3     
+reading site collection        4.506E-05 0.0       1     
 ============================== ========= ========= ======

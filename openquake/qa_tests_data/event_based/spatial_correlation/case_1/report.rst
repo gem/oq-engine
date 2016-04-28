@@ -1,7 +1,7 @@
 Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 ==================================================================
 
-gem-tstation:/home/michele/ssd/calc_108.hdf5 updated Wed Apr 27 10:56:38 2016
+gem-tstation:/home/michele/ssd/calc_1023.hdf5 updated Thu Apr 28 15:42:54 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0               
 random_seed                  123456789          
 master_seed                  0                  
-oqlite_version               '0.13.0-gitcbbc4a8'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -74,30 +74,37 @@ hostname 'gem-tstation'
 
 Specific information for event based
 ------------------------------------
-Total number of ruptures: 1
-Total number of events: 18773
+======================== ======
+Total number of ruptures 1     
+Total number of events   18,773
+Rupture multiplicity     18,773
+======================== ======
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  0.025  1         9.489E-05   0.0        0.149    
+0            1         PointSource  0.025  1         1.478E-04   0.0        0.332    
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+Not available
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.149     0.578     1     
-saving ruptures                0.089     0.0       1     
-store source_info              0.005     0.0       1     
-reading composite source model 0.004     0.0       1     
-managing sources               0.002     0.0       1     
-saving gmfs                    8.519E-04 0.0       1     
-aggregate curves               7.398E-04 0.0       1     
-filtering ruptures             5.291E-04 0.0       1     
-filtering sources              9.489E-05 0.0       1     
-reading site collection        3.505E-05 0.0       1     
+total compute_ruptures         0.333     0.734     1     
+saving ruptures                0.244     0.0       1     
+store source_info              0.012     0.0       1     
+reading composite source model 0.007     0.0       1     
+managing sources               0.003     0.0       1     
+saving gmfs                    0.002     0.0       1     
+aggregate curves               0.001     0.0       1     
+filtering ruptures             3.951E-04 0.0       1     
+filtering sources              1.478E-04 0.0       1     
+reading site collection        5.007E-05 0.0       1     
 ============================== ========= ========= ======
