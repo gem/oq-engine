@@ -1,9 +1,29 @@
 #!/bin/bash
-# run this script as user openquake
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# This script should be run as user openquake
 
-if [ -z $1 ]; then
-    echo "ERROR: please provide the path to the 'server/db/upgrade_manager.py' script"
-    exit 1
+if [ $GEM_SET_DEBUG ]; then
+    set -x
 fi
+set -e
 
-python $1 ~openquake/db.sqlite3
+SCRIPT="-m openquake.server.db.upgrade_manager"
+DBPATH="~openquake/db.sqlite3"
+
+help() {
+    echo "Syntax: $(basename "$0") [-s /custom/python/script.py] [-d /custom/db/path/db.sqlite3]"
+
+    exit 0
+}
+
+while (( "$#" )); do
+    case "$1" in
+        -d|--db) DBPATH="$2"; shift;;
+        -s|--script) SCRIPT="$2"; shift;;
+        -h|--help) help;;
+    esac
+    shift
+done
+
+echo "/usr/bin/env python $SCRIPT $DBPATH"

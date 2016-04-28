@@ -1,9 +1,59 @@
 #!/bin/bash
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+if [ $GEM_SET_DEBUG ]; then
+    set -x
+fi
+set -e
+
+help() {
+    cat <<HSD
+The command line arguments are as follows:
+
+    -s, --skip-new       The new database will not be created
+    -y, --yes            Don't pause for user input, assume yes on all questions
+    -h, --help           This help
+HSD
+    exit 0
+}
+
+BOLD=`tput bold`
+NORMAL=`tput sgr0`
+OQ_CREATE_DB='oq_create_db'
+OQ_USER='openquake'
+
+
+command -v oq_create_db &> /dev/null || {
+    if [ -x "./${OQ_CREATE_DB}" ]; then
+        oq_create_db="./${OQ_CREATE_DB}"
+    else
+        echo -e "!! Can't find oq_create_db. Aborting." >&2
+        exit 1
+    fi
+}
+
+if [ $(cat /etc/passwd | grep ^${OQ_USER}: | wc -l) -eq 0 ]; then
+    echo -e "!! User '${OQ_USER}' does not exists. Aborting." >&2
+    exit 1
+fi
+
+while (( "$#" )); do
+    case "$1" in
+        -y|--yes)
+            force=y; shift;;
+        -s|--skip-new)
+            skipnew=y; shift;;
+        -h|--help)
+            help; shift;;
+    esac
+done
+
 echo ''
-echo "!! ${bold}This script is going to remove the OpenQuake Engine data${normal}"
+echo "!! ${BOLD}This script is going to remove the OpenQuake Engine data${NORMAL}"
 echo '!!'
 echo -e "!! \t*  Make sure no calculations are running"
-echo -e "!! \t*  Make sure Celery is stopped"
+echo -e "!! \t*  Make sure Celery is stopped if used"
 echo -e "!! \t*  The OpenQuake Engine datastores located in /home/[user]/oqdata will be removed"
 echo -e "!! \t*  The OpenQuake Engine database will be dropped"
 echo -e "!! \t   All the old data contained will be lost"
@@ -25,12 +75,12 @@ echo ''
 echo ''
 
 if [[ "$answer" == "y" ]]; then
-    sudo -u openquake rm ~openquake/db.sqlite3
+    sudo -u $OQ_USER rm ~${OQ_USER}/db.sqlite3
     echo " * Database dropped"
     sudo find /home -maxdepth 2 -type d -name "oqdata" -exec rm -Rf '{}' \;
     echo " * Datastores cleaned"
     if [ -z $skipnew ]; then
-        sudo -u openquake $oq_create_db
+        sudo -u $OQ_USER $OQ_CREATE_DB
     fi
     echo ''
     echo "!!"
