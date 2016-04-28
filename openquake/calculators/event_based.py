@@ -390,7 +390,7 @@ def get_gmvs_by_sid(gmfa):
     """
     def to_array(group):  # this works with numpy 1.6 too
         records = list(group)
-        return numpy.array([record['gmv'] for record in records], record['gmv'].dtype)
+        return numpy.array([record['gmv'] for record in records], records[0]['gmv'].dtype)
     return groupby(gmfa, operator.itemgetter('sid'), to_array)
                    
 
