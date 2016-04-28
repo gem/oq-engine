@@ -76,6 +76,9 @@ do
 done
 chown -R $USER.$USER $SDIR
 
+# create the database
+su -c "/usr/bin/oq_create_db" openquake
+
 # delete obsolete .pyc files in /usr/share/openquake
 find /usr/share/openquake -type f -name \*.pyc -exec rm -f {} \;
 
