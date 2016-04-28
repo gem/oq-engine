@@ -156,12 +156,14 @@ class EBRupture(object):
         """
         return len(self.events)
 
-    def set_weight(self, num_rlzs_by_trt_id={}):
+    def set_weight(self, num_rlzs_by_trt_id={}, num_assets_by_site={}):
         """
         Set the weight attribute of each rupture with the formula
         weight = multiplicity * affected_sites * realizations
         """
-        self.weight = (len(self.events) * len(self.indices) *
+        num_assets = sum(num_assets_by_site.get(sid, 1)
+                         for sid in self.indices)
+        self.weight = (len(self.events) * num_assets *
                        num_rlzs_by_trt_id.get(self.trt_id, 1))
 
     def export(self, mesh):
@@ -489,12 +491,17 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                      sum(len(v) for v in result.values()))
         rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_trt_id()
         num_rlzs = {t: len(rlzs) for t, rlzs in rlzs_by_tr_id.items()}
+        if hasattr(self, 'assets_by_site'):
+            num_assets = {sid: len(self.assets_by_site[sid])
+                          for sid in self.sitecol.sids}
         with self.monitor('saving ruptures', autoflush=True):
             # ordering ruptures
             sescollection = []
+            weights = []
             for trt_id in result:
                 for ebr in result[trt_id]:
-                    ebr.set_weight(num_rlzs)
+                    ebr.set_weight(num_rlzs, num_assets)
+                    weights.append(ebr.weight)
                     sescollection.append(ebr)
             sescollection.sort(key=operator.attrgetter('serial'))
             etags = numpy.concatenate([ebr.etags for ebr in sescollection])
@@ -510,6 +517,8 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                     eid += 1
                 self.datastore['sescollection/%s' % ebr.serial] = ebr
             self.datastore.set_nbytes('sescollection')
+            self.datastore.set_attrs('sescollection', weights=weights)
+
         for dset in self.rup_data.values():
             numsites = dset.dset['numsites']
             multiplicity = dset.dset['multiplicity']
