@@ -30,12 +30,12 @@ F64 = numpy.float64  # higher precision to avoid task order dependency
 
 
 @parallel.litetask
-def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
+def scenario_risk(riskinput, riskmodel, rlzs_assoc, monitor):
     """
     Core function for a scenario computation.
 
-    :param riskinputs:
-        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
+    :param riskinput:
+        a of :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param rlzs_assoc:
@@ -55,8 +55,7 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     L = len(riskmodel.loss_types)
     R = len(rlzs_assoc.realizations)
     result = dict(agg=numpy.zeros((E, L, R, 2), F64), avg=[])
-    for out_by_lr in riskmodel.gen_outputs(
-            riskinputs, rlzs_assoc, monitor):
+    for out_by_lr in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
         for (l, r), out in sorted(out_by_lr.items()):
             stats = numpy.zeros((len(out.assets), 4), F32)
             # this is ugly but using a composite array (i.e.

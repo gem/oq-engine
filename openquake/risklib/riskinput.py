@@ -390,7 +390,8 @@ class CompositeRiskModel(collections.Mapping):
         imt_taxonomies = self.get_imt_taxonomies()
         by_trt_id = operator.attrgetter('trt_id')
         for ses_ruptures in split_in_blocks(
-                all_ruptures, hint or 1, key=by_trt_id):
+                all_ruptures, hint or 1, key=by_trt_id,
+                weight=operator.attrgetter('weight')):
             eids = []
             for sr in ses_ruptures:
                 eids.extend(sr.events['eid'])
@@ -399,61 +400,39 @@ class CompositeRiskModel(collections.Mapping):
                 trunc_level, correl_model, min_iml,
                 eps[:, eids] if eps is not None else None, eids)
 
-    def gen_outputs(self, riskinputs, rlzs_assoc, monitor,
+    def gen_outputs(self, riskinput, rlzs_assoc, monitor,
                     assetcol=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield the outputs generated as dictionaries
         out_by_lr.
 
-        :param riskinputs: a list of riskinputs with consistent IMT
+        :param riskinput: a RiskInput instance
         :param rlzs_assoc: a RlzsAssoc instance
         :param monitor: a monitor object used to measure the performance
         :param assetcol: not None only for event based risk
         """
         mon_hazard = monitor('building hazard')
         mon_risk = monitor('computing risk')
-        monitor.gmfbytes = 0
-        for riskinput in riskinputs:
-            with mon_hazard:
-                assets_by_site = (riskinput.assets_by_site if assetcol is None
-                                  else assetcol.assets_by_site())
-                # get assets, epsilons, hazard
-                hazard_by_site = riskinput.get_hazard(
-                    rlzs_assoc, mon_hazard(measuremem=False))
-            with mon_risk:
-                for assets, hazard in zip(
-                        assets_by_site, hazard_by_site):
-                    the_assets = groupby(assets, by_taxonomy)
-                    for taxonomy, assets in the_assets.items():
-                        riskmodel = self[taxonomy]
-                        epsgetter = riskinput.epsilon_getter(
-                            [asset.ordinal for asset in assets])
-                        for imt, taxonomies in riskinput.imt_taxonomies:
-                            if taxonomy in taxonomies:
-                                yield riskmodel.out_by_lr(
-                                    imt, assets, hazard[imt], epsgetter)
-            monitor.gmfbytes += hazard_by_site.close()
-
-    def gen_out_by_lr(self, riskinput, assets_by_site, hazard_by_site,
-                      mon_risk):
-        """
-        Yield the outputs by loss type and realization for each site id,
-        asset and intensity measure type.
-        """
-        mon_hazard = mon_risk('getting hazard', measuremem=False)
-        for sid, assets in enumerate(assets_by_site):
-            with mon_hazard:
+        with mon_hazard:
+            assets_by_site = (riskinput.assets_by_site if assetcol is None
+                              else assetcol.assets_by_site())
+            hazard_by_site = riskinput.get_hazard(
+                rlzs_assoc, mon_hazard(measuremem=False))
+        with mon_risk:
+            for sid, assets in enumerate(assets_by_site):
                 hazard = hazard_by_site[sid]
-            if not hazard:
-                continue
-            with mon_risk:
-                epsgetter = riskinput.epsilon_getter(
-                    [asset.ordinal for asset in assets])
-                for imt, taxonomies in riskinput.imt_taxonomies:
-                    if asset.taxonomy in taxonomies:
-                        yield self[asset.taxonomy].out_by_lr(
-                            imt, [asset], hazard[imt], epsgetter)
+                the_assets = groupby(assets, by_taxonomy)
+                for taxonomy, assets in the_assets.items():
+                    riskmodel = self[taxonomy]
+                    epsgetter = riskinput.epsilon_getter(
+                        [asset.ordinal for asset in assets])
+                    for imt, taxonomies in riskinput.imt_taxonomies:
+                        if taxonomy in taxonomies:
+                            yield riskmodel.out_by_lr(
+                                imt, assets, hazard[imt], epsgetter)
+        if hasattr(hazard_by_site, 'close'):  # for event based risk
+            monitor.gmfbytes = hazard_by_site.close()
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
