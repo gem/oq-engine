@@ -26,4 +26,4 @@ while (( "$#" )); do
     shift
 done
 
-echo "/usr/bin/env python $SCRIPT $DBPATH"
+/usr/bin/env python $SCRIPT $DBPATH
