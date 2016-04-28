@@ -548,6 +548,8 @@ celeryd_wait $GEM_MAXLOOP"
         if [ \$(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
             sudo adduser --system --home /var/lib/openquake --group --shell /bin/bash openquake
         fi
+        # Make sure that the DB does not exist
+        sudo -u openquake rm -Rf ~openquake/db.sqlite3
         sudo -u openquake python -m openquake.server.db.upgrade_manager ~openquake/db.sqlite3
         sudo -u openquake python -m openquake.server.dbserver 2>/dev/null & sleep 1
 
