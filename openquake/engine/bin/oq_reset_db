@@ -83,8 +83,8 @@ if [[ "$answer" == "y" ]]; then
     echo " * Datastores cleaned"
     if [ -z $skipnew ]; then
         $OQ_CREATE_DB -u $OQ_USER -d $OQ_DB
+        echo " * Database created in ${OQ_DB}"
     fi
-    echo " * Database created in ${OQ_DB}"
     echo ''
     echo "!!"
     echo "!! DONE"
