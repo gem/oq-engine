@@ -129,10 +129,10 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
 
         # dictionaries asset_idx -> array of counts
         if compositemodel.curve_builders[l].user_provided:
-            result['RC'][l, r].append(dict(zip(asset_ids, out.counts_matrix)))
+            result['RC'][l, r] += dict(zip(asset_ids, out.counts_matrix))
             if out.insured_counts_matrix is not None:
-                result['IC'][l, r].append(
-                    dict(zip(asset_ids, out.insured_counts_matrix)))
+                result['IC'][l, r] += dict(
+                    zip(asset_ids, out.insured_counts_matrix))
 
         for i, asset in enumerate(output.assets):
             aid = asset.ordinal
@@ -179,7 +179,7 @@ def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
 
     def zeroN():
         return numpy.zeros((monitor.num_assets, I))
-    result = dict(RC=square(L, R, list), IC=square(L, R, list),
+    result = dict(RC=square(L, R, AccumDict), IC=square(L, R, AccumDict),
                   AGGLOSS=square(L, R, list))
     if monitor.asset_loss_table:
         result['ASSLOSS'] = square(L, R, list)
@@ -196,10 +196,6 @@ def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
             [(eids[i], loss) for i, loss in enumerate(agg[:, l, r])
              if loss.sum() > 0], monitor.elt_dt)
         result['AGGLOSS'][l, r] = records
-    for (l, r), lst in numpy.ndenumerate(result['RC']):
-        result['RC'][l, r] = sum(lst, AccumDict())
-    for (l, r), lst in numpy.ndenumerate(result['IC']):
-        result['IC'][l, r] = sum(lst, AccumDict())
 
     # store the size of the GMFs
     result['gmfbytes'] = monitor.gmfbytes

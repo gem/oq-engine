@@ -652,6 +652,7 @@ class EventBasedCalculator(ClassicalCalculator):
                     self.agg_dicts(acc, {rlzi: curves})
         sav_mon.flush()
         agg_mon.flush()
+        self.datastore.flush()
         return acc
 
     def execute(self):
