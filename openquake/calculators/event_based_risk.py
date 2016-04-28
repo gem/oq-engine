@@ -261,10 +261,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             logging.info('Generated %s epsilons', eps.shape)
 
         event_based.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
-        self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
+
+        # NB: self.riskinputs is a generator and it is used only once
+        self.riskinputs = self.riskmodel.build_inputs_from_ruptures(
             self.sitecol.complete, all_ruptures, oq.truncation_level,
-            correl_model, oq.minimum_intensity, eps, oq.concurrent_tasks or 1))
-        logging.info('Built %d risk inputs', len(self.riskinputs))
+            correl_model, oq.minimum_intensity, eps, oq.concurrent_tasks or 1)
 
         # preparing empty datasets
         loss_types = self.riskmodel.loss_types
@@ -313,9 +314,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
         return starmap(
             self.core_task.__func__,
-            [(riskinput, self.riskmodel, self.rlzs_assoc,
+            ((riskinput, self.riskmodel, self.rlzs_assoc,
               self.assetcol, self.monitor.new('task'))
-             for riskinput in self.riskinputs]).reduce(
+             for riskinput in self.riskinputs)).reduce(
                      agg=self.agg, posthook=self.save_data_transfer)
 
     def agg(self, acc, result):
