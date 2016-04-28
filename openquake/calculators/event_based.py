@@ -494,6 +494,8 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         if hasattr(self, 'assets_by_site'):
             num_assets = {sid: len(self.assets_by_site[sid])
                           for sid in self.sitecol.sids}
+        else:
+            num_assets = {}
         with self.monitor('saving ruptures', autoflush=True):
             # ordering ruptures
             sescollection = []
