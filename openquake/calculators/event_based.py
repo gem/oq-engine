@@ -388,8 +388,11 @@ def get_gmvs_by_sid(gmfa):
     """
     Returns a dictionary sid -> array of composite ground motion values
     """
-    return groupby(gmfa, operator.itemgetter('sid'), lambda group:
-                   numpy.array([record['gmv'] for record in group]))
+    def to_array(group):  # this works with numpy 1.6 too
+        records = list(group)
+        return numpy.array([record['gmv'] for record in records], records[0]['gmv'].dtype)
+    return groupby(gmfa, operator.itemgetter('sid'), to_array)
+                   
 
 
 def fix_minimum_intensity(min_iml, imts):
