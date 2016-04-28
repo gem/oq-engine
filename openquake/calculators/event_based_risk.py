@@ -29,7 +29,7 @@ from openquake.baselib.general import AccumDict, humansize
 from openquake.calculators import base, event_based
 from openquake.commonlib import readinput, parallel
 from openquake.risklib import riskinput, scientific
-from openquake.commonlib.parallel import apply_reduce
+from openquake.commonlib.parallel import starmap
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -150,10 +150,10 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
 
 
 @parallel.litetask
-def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assetcol, monitor):
+def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     """
-    :param riskinputs:
-        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
+    :param riskinput:
+        a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param rlzs_assoc:
@@ -168,7 +168,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assetcol, monitor):
     lti = riskmodel.lti  # loss type -> index
     L, R = len(lti), len(rlzs_assoc.realizations)
     I = monitor.insured_losses + 1
-    eids = numpy.concatenate([ri.eids for ri in riskinputs])
+    eids = riskinput.eids
     E = len(eids)
     idx = dict(zip(eids, range(E)))
     agg = numpy.zeros((E, L, R, I), F32)
@@ -184,7 +184,7 @@ def event_based_risk(riskinputs, riskmodel, rlzs_assoc, assetcol, monitor):
 
     agglosses_mon = monitor('aggregate losses', measuremem=False)
     for output in riskmodel.gen_outputs(
-            riskinputs, rlzs_assoc, monitor, assetcol):
+            riskinput, rlzs_assoc, monitor, assetcol):
         with agglosses_mon:
             _aggregate_output(output, riskmodel, agg, idx, result, monitor)
     for (l, r), lst in numpy.ndenumerate(result['AGGLOSS']):
@@ -261,10 +261,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             logging.info('Generated %s epsilons', eps.shape)
 
         event_based.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
-        self.riskinputs = list(self.riskmodel.build_inputs_from_ruptures(
+
+        # NB: self.riskinputs is a generator and it is used only once
+        self.riskinputs = self.riskmodel.build_inputs_from_ruptures(
             self.sitecol.complete, all_ruptures, oq.truncation_level,
-            correl_model, oq.minimum_intensity, eps, oq.concurrent_tasks or 1))
-        logging.info('Built %d risk inputs', len(self.riskinputs))
+            correl_model, oq.minimum_intensity, eps, oq.concurrent_tasks or 1)
 
         # preparing empty datasets
         loss_types = self.riskmodel.loss_types
@@ -311,14 +312,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
-        return apply_reduce(
+        return starmap(
             self.core_task.__func__,
-            (self.riskinputs, self.riskmodel, self.rlzs_assoc,
-             self.assetcol, self.monitor.new('task')),
-            concurrent_tasks=self.oqparam.concurrent_tasks, agg=self.agg,
-            weight=operator.attrgetter('weight'),
-            key=operator.attrgetter('trt_id'),
-            posthook=self.save_data_transfer)
+            ((riskinput, self.riskmodel, self.rlzs_assoc,
+              self.assetcol, self.monitor.new('task'))
+             for riskinput in self.riskinputs)).reduce(
+                     agg=self.agg, posthook=self.save_data_transfer)
 
     def agg(self, acc, result):
         """
