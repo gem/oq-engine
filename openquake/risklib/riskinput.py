@@ -405,7 +405,7 @@ class CompositeRiskModel(collections.Mapping):
         underlying riskmodels. Yield the outputs generated as dictionaries
         out_by_lr.
 
-        :param riskinputs: a list of riskinputs with consistent IMT
+        :param riskinput: a RiskInput instance
         :param rlzs_assoc: a RlzsAssoc instance
         :param monitor: a monitor object used to measure the performance
         :param assetcol: not None only for event based risk
