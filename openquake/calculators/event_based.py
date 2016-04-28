@@ -672,7 +672,7 @@ class EventBasedCalculator(ClassicalCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks,
             acc=zerodict, agg=self.combine_curves_and_save_gmfs,
             key=operator.attrgetter('trt_id'),
-            weight=operator.attrgetter('multiplicity'))
+            weight=operator.attrgetter('weight'))
         if oq.ground_motion_fields:
             self.datastore.set_nbytes('gmf_data')
         return acc
