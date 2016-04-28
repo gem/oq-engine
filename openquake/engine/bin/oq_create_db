@@ -1,29 +1,43 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# This script should be run as user openquake
 
 if [ $GEM_SET_DEBUG ]; then
     set -x
 fi
 set -e
 
-SCRIPT="-m openquake.server.db.upgrade_manager"
-DBPATH="~openquake/db.sqlite3"
+OQ_USER='openquake'
+OQ_DB_SCRIPT='-m openquake.server.db.upgrade_manager'
+OQ_DB=$(eval echo "~${OQ_USER}/db.sqlite3")
 
 help() {
-    echo "Syntax: $(basename "$0") [-s /custom/python/script.py] [-d /custom/db/path/db.sqlite3]"
-
+    echo "Syntax: $(basename "$0") [-u user] [-s /custom/python/script.py] [-d /custom/db/path/to/db.sqlite3]"
     exit 0
 }
 
 while (( "$#" )); do
     case "$1" in
-        -d|--db) DBPATH="$2"; shift;;
-        -s|--script) SCRIPT="$2"; shift;;
+        -u|--user) OQ_USER="$2"; shift;;
+        -s|--script) OQ_DB_SCRIPT="$2"; shift;;
+        -d|--db) OQ_DB_CUSTOM="$2"; shift;;
         -h|--help) help;;
     esac
     shift
 done
 
-/usr/bin/env python $SCRIPT $DBPATH
+# Check if the user exists
+if [ $(cat /etc/passwd | grep ^${OQ_USER}: | wc -l) -eq 0 ]; then
+    echo -e "User '${OQ_USER}' does not exists. Aborting." >&2
+    exit 1
+fi
+
+if [ "$OQ_USER" != "openquake" ]; then
+    if [ -z "$OQ_DB_CUSTOM" ]; then
+        echo -e "Please specify a custom path fo the database using:\n\t-d /custom/db/path/to/db.sqlite3." >&2
+        exit 1
+    fi
+    OQ_DB=$OQ_DB_CUSTOM
+fi
+
+sudo -u $OQ_USER /usr/bin/env python $OQ_DB_SCRIPT $OQ_DB
