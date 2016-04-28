@@ -33,7 +33,7 @@ from openquake.baselib.performance import Monitor
 from openquake.commonlib import (
     readinput, riskmodels, datastore, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.parallel import apply_reduce, executor
+from openquake.commonlib.parallel import starmap, executor
 from openquake.risklib import riskinput
 from openquake.baselib.python3compat import with_metaclass
 
@@ -614,13 +614,10 @@ class RiskCalculator(HazardCalculator):
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
-        all_args = ((self.riskinputs, self.riskmodel, self.rlzs_assoc) +
-                    self.extra_args + (self.monitor,))
-        res = apply_reduce(
-            self.core_task.__func__, all_args,
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=get_weight, key=self.riskinput_key,
-            posthook=self.save_data_transfer)
+        all_args = [(riskinput, self.riskmodel, self.rlzs_assoc) +
+                    self.extra_args + (self.monitor,)
+                    for riskinput in self.riskinputs]
+        res = starmap(self.core_task.__func__, all_args).reduce()
         return res
 
 

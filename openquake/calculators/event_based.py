@@ -48,6 +48,7 @@ HAZCURVES = 1
 
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32)])
 
+
 def get_geom(surface, is_from_fault_source, is_multi_surface):
     """
     The following fields can be interpreted different ways,
@@ -127,6 +128,7 @@ class EBRupture(object):
         self.source_id = source_id
         self.trt_id = trt_id
         self.serial = serial
+        self.weight = 1  # set later on, before saving
 
     @property
     def etags(self):
@@ -153,6 +155,14 @@ class EBRupture(object):
         How many times the underlying rupture occurs.
         """
         return len(self.events)
+
+    def set_weight(self, num_rlzs_by_trt_id={}):
+        """
+        Set the weight attribute of each rupture with the formula
+        weight = multiplicity * affected_sites * realizations
+        """
+        self.weight = (len(self.events) * len(self.indices) *
+                       num_rlzs_by_trt_id.get(self.trt_id, 1))
 
     def export(self, mesh):
         """
@@ -388,8 +398,11 @@ def get_gmvs_by_sid(gmfa):
     """
     Returns a dictionary sid -> array of composite ground motion values
     """
-    return groupby(gmfa, operator.itemgetter('sid'), lambda group:
-                   numpy.array([record['gmv'] for record in group]))
+    def to_array(group):  # this works with numpy 1.6 too
+        records = list(group)
+        return numpy.array([record['gmv'] for record in records], records[0]['gmv'].dtype)
+    return groupby(gmfa, operator.itemgetter('sid'), to_array)
+                   
 
 
 def fix_minimum_intensity(min_iml, imts):
@@ -474,11 +487,14 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         """
         logging.info('Generated %d EBRuptures',
                      sum(len(v) for v in result.values()))
+        rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_trt_id()
+        num_rlzs = {t: len(rlzs) for t, rlzs in rlzs_by_tr_id.items()}
         with self.monitor('saving ruptures', autoflush=True):
             # ordering ruptures
             sescollection = []
             for trt_id in result:
                 for ebr in result[trt_id]:
+                    ebr.set_weight(num_rlzs)
                     sescollection.append(ebr)
             sescollection.sort(key=operator.attrgetter('serial'))
             etags = numpy.concatenate([ebr.etags for ebr in sescollection])
@@ -659,7 +675,7 @@ class EventBasedCalculator(ClassicalCalculator):
             concurrent_tasks=self.oqparam.concurrent_tasks,
             acc=zerodict, agg=self.combine_curves_and_save_gmfs,
             key=operator.attrgetter('trt_id'),
-            weight=operator.attrgetter('multiplicity'))
+            weight=operator.attrgetter('weight'))
         if oq.ground_motion_fields:
             self.datastore.set_nbytes('gmf_data')
         return acc

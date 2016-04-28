@@ -390,7 +390,8 @@ class CompositeRiskModel(collections.Mapping):
         imt_taxonomies = self.get_imt_taxonomies()
         by_trt_id = operator.attrgetter('trt_id')
         for ses_ruptures in split_in_blocks(
-                all_ruptures, hint or 1, key=by_trt_id):
+                all_ruptures, hint or 1, key=by_trt_id,
+                weight=operator.attrgetter('weight')):
             eids = []
             for sr in ses_ruptures:
                 eids.extend(sr.events['eid'])
@@ -398,14 +399,14 @@ class CompositeRiskModel(collections.Mapping):
                 imt_taxonomies, sitecol, ses_ruptures,
                 trunc_level, correl_model, min_iml, eps[:, eids], eids)
 
-    def gen_outputs(self, riskinputs, rlzs_assoc, monitor,
+    def gen_outputs(self, riskinput, rlzs_assoc, monitor,
                     assetcol=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield the outputs generated as dictionaries
         out_by_lr.
 
-        :param riskinputs: a list of riskinputs with consistent IMT
+        :param riskinput: a RiskInput instance
         :param rlzs_assoc: a RlzsAssoc instance
         :param monitor: a monitor object used to measure the performance
         :param assetcol: not None only for event based risk
@@ -415,34 +416,33 @@ class CompositeRiskModel(collections.Mapping):
         monitor.gmfbytes = 0
         assets_by_site = (None if assetcol is None
                           else assetcol.assets_by_site())
-        for riskinput in riskinputs:
-            with mon_hazard:
-                # get assets, epsilons, hazard
-                hazard_by_site = riskinput.get_hazard(
-                    rlzs_assoc, mon_hazard(measuremem=False))
-            # compute the outputs with the appropriate riskmodels
-            if assets_by_site is None:  # distribution by asset
-                with mon_risk:
-                    for assets, hazard in zip(
-                            riskinput.assets_by_site, hazard_by_site):
-                        the_assets = groupby(assets, by_taxonomy)
-                        for taxonomy, assets in the_assets.items():
-                            riskmodel = self[taxonomy]
-                            epsgetter = riskinput.epsilon_getter(
-                                [asset.ordinal for asset in assets])
-                            for imt, taxonomies in riskinput.imt_taxonomies:
-                                if taxonomy in taxonomies:
-                                    yield riskmodel.out_by_lr(
-                                        imt, assets, hazard[imt], epsgetter)
-            else:  # event based, distribution by rupture
-                try:
-                    for out_by_lr in self.gen_out_by_lr(
-                            riskinput, assets_by_site,
-                            hazard_by_site, mon_risk):
-                        yield out_by_lr
-                finally:
-                    # store the size of the GFMs
-                    monitor.gmfbytes += hazard_by_site.close()
+        with mon_hazard:
+            # get assets, epsilons, hazard
+            hazard_by_site = riskinput.get_hazard(
+                rlzs_assoc, mon_hazard(measuremem=False))
+        # compute the outputs with the appropriate riskmodels
+        if assets_by_site is None:  # distribution by asset
+            with mon_risk:
+                for assets, hazard in zip(
+                        riskinput.assets_by_site, hazard_by_site):
+                    the_assets = groupby(assets, by_taxonomy)
+                    for taxonomy, assets in the_assets.items():
+                        riskmodel = self[taxonomy]
+                        epsgetter = riskinput.epsilon_getter(
+                            [asset.ordinal for asset in assets])
+                        for imt, taxonomies in riskinput.imt_taxonomies:
+                            if taxonomy in taxonomies:
+                                yield riskmodel.out_by_lr(
+                                    imt, assets, hazard[imt], epsgetter)
+        else:  # event based, distribution by rupture
+            try:
+                for out_by_lr in self.gen_out_by_lr(
+                        riskinput, assets_by_site,
+                        hazard_by_site, mon_risk):
+                    yield out_by_lr
+            finally:
+                # store the size of the GFMs
+                monitor.gmfbytes += hazard_by_site.close()
 
     def gen_out_by_lr(self, riskinput, assets_by_site, hazard_by_site,
                       mon_risk):
