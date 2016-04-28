@@ -25,6 +25,12 @@ set -e
 
 GEM_DEB_PACKAGE="python-oq-engine"
 
+LSB_RELEASE=$(lsb_release --codename --short)
+if [ "$LSB_RELEASE" != "precise" -a "$LSB_RELEASE" != "trusty" ]; then
+    db_input high python-oq-engine/distro_alert || true
+    db_go
+fi
+
 if [ -f /usr/sbin/rabbitmqctl ]; then
     # create rabbitmq configuration for python-celery
     celeryuser_count=`rabbitmqctl list_users | grep celeryuser | wc -l`
