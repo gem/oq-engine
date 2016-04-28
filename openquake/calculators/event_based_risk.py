@@ -214,14 +214,18 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     def pre_execute(self):
         """
-        Read the precomputed ruptures (or compute them on the fly) and
-        prepare some datasets in the datastore.
+        Read the precomputed ruptures (or compute them on the fly)
         """
         super(EventBasedRiskCalculator, self).pre_execute()
         if not self.riskmodel:  # there is no riskmodel, exit early
             self.execute = lambda: None
             self.post_execute = lambda result: None
             return
+
+    def execute(self):
+        """
+        Run the event_based_risk calculator and aggregate the results
+        """
         oq = self.oqparam
         correl_model = readinput.get_correl_model(oq)
         self.N = len(self.assetcol)
@@ -240,12 +244,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 oq.asset_correlation)
             logging.info('Generated %s epsilons', eps.shape)
 
+        # ugly: fix the minimum_intensity dictionary, should go before
         event_based.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
-
-        # NB: self.riskinputs is a generator and it is used only once
-        self.riskinputs = self.riskmodel.build_inputs_from_ruptures(
-            self.sitecol.complete, all_ruptures, oq.truncation_level,
-            correl_model, oq.minimum_intensity, eps, oq.concurrent_tasks or 1)
 
         # preparing empty datasets
         loss_types = self.riskmodel.loss_types
@@ -254,7 +254,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.R = R = len(self.rlzs_assoc.realizations)
         self.I = self.oqparam.insured_losses
 
-        # ugly: attaching an attribute needed in the task function
+        # ugly: attaching attributes needed in the task function
         mon = self.monitor
         mon.num_assets = self.count_assets()
         mon.avg_losses = self.oqparam.avg_losses
@@ -281,10 +281,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.agg_loss_table[l, r] = self.datastore.create_dset(
                 'agg_loss_table/rlz-%03d/%s' % (r, lt), self.elt_dt)
 
-    def execute(self):
-        """
-        Run the event_based_risk calculator and aggregate the results
-        """
         self.saved = collections.Counter()  # nbytes per HDF5 key
         self.ass_bytes = 0
         self.agg_bytes = 0
@@ -292,11 +288,16 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
+
+        # NB: riskinputs is a generator
+        riskinputs = self.riskmodel.build_inputs_from_ruptures(
+            self.sitecol.complete, all_ruptures, oq.truncation_level,
+            correl_model, oq.minimum_intensity, eps, oq.concurrent_tasks or 1)
         return starmap(
             self.core_task.__func__,
             ((riskinput, self.riskmodel, self.rlzs_assoc,
               self.assetcol, self.monitor.new('task'))
-             for riskinput in self.riskinputs)).reduce(
+             for riskinput in riskinputs)).reduce(
                      agg=self.agg, posthook=self.save_data_transfer)
 
     def agg(self, acc, result):
