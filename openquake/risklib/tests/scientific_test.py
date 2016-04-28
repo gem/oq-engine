@@ -274,7 +274,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         # count how many ratios are greater equal than each ratio
         b = scientific.CurveBuilder('structural', numpy.linspace(0.2, 1, 5),
                                     user_provided=True)
-        aaae(map(b.build_counts, expected_lrem), expected_counts)
+        aaae(b.build_counts(expected_lrem), expected_counts)
 
 
 class VulnerabilityFunctionBlockSizeTestCase(unittest.TestCase):
