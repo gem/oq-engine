@@ -291,7 +291,7 @@ def main():
         sock.close()
     if err:
         sys.exit('Please start the DbServer: '
-                 'sudo -u openquake python -m openquake.server.dbserver &')
+                 'see the documentation for details')
 
     if args.upgrade_db:
         logs.set_level('info')
