@@ -413,22 +413,23 @@ class CompositeRiskModel(collections.Mapping):
         :param assetcol: not None only for event based risk
         """
         mon_hazard = monitor('building hazard')
-        mon_risk = monitor('computing risk')
+        mon_risk = monitor('computing riskmodel', measuremem=False)
         with mon_hazard:
             assets_by_site = (riskinput.assets_by_site if assetcol is None
                               else assetcol.assets_by_site())
             hazard_by_site = riskinput.get_hazard(
                 rlzs_assoc, mon_hazard(measuremem=False))
-        with mon_risk:
-            for sid, assets in enumerate(assets_by_site):
-                hazard = hazard_by_site[sid]
-                the_assets = groupby(assets, by_taxonomy)
-                for taxonomy, assets in the_assets.items():
-                    riskmodel = self[taxonomy]
-                    epsgetter = riskinput.epsilon_getter(
-                        [asset.ordinal for asset in assets])
-                    for imt, taxonomies in riskinput.imt_taxonomies:
-                        if taxonomy in taxonomies:
+
+        for sid, assets in enumerate(assets_by_site):
+            hazard = hazard_by_site[sid]
+            the_assets = groupby(assets, by_taxonomy)
+            for taxonomy, assets in the_assets.items():
+                riskmodel = self[taxonomy]
+                epsgetter = riskinput.epsilon_getter(
+                    [asset.ordinal for asset in assets])
+                for imt, taxonomies in riskinput.imt_taxonomies:
+                    if taxonomy in taxonomies:
+                        with mon_risk:
                             yield riskmodel.out_by_lr(
                                 imt, assets, hazard[imt], epsgetter)
         if hasattr(hazard_by_site, 'close'):  # for event based risk
