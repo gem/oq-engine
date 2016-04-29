@@ -1,7 +1,7 @@
 Scenario Damage
 ===============
 
-gem-tstation:/home/michele/ssd/calc_42.hdf5 updated Wed Apr 27 10:54:21 2016
+gem-tstation:/home/michele/ssd/calc_957.hdf5 updated Thu Apr 28 15:38:29 2016
 
 num_sites = 7, sitecol = 690 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  42                 
 master_seed                  0                  
-oqlite_version               '0.13.0-gitcbbc4a8'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -56,15 +56,23 @@ Taxonomy #Assets
 Wood     1      
 ======== =======
 
+Information about the tasks
+---------------------------
+Not available
+
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.008     0.0       1     
-reading exposure        0.002     0.0       1     
-computing gmfs          9.449E-04 0.0       1     
-reading site collection 9.320E-04 0.0       1     
-saving gmfs             8.070E-04 0.0       1     
-building riskinputs     8.106E-05 0.0       1     
+total scenario_damage   0.093     0.008     1     
+computing risk          0.092     0.0       1     
+filtering sites         0.014     0.0       1     
+reading exposure        0.004     0.0       1     
+computing gmfs          0.002     0.0       1     
+saving gmfs             0.001     0.0       1     
+assoc_assets_sites      7.560E-04 0.0       1     
+reading site collection 1.450E-04 0.0       1     
+building riskinputs     1.431E-04 0.0       1     
+building hazard         2.384E-05 0.0       1     
 ======================= ========= ========= ======

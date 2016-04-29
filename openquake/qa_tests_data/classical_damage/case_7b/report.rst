@@ -1,7 +1,7 @@
 Classical PSHA-Based Hazard
 ===========================
 
-gem-tstation:/home/michele/ssd/calc_70.hdf5 updated Wed Apr 27 10:54:27 2016
+gem-tstation:/home/michele/ssd/calc_985.hdf5 updated Thu Apr 28 15:38:41 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -21,7 +21,7 @@ area_source_discretization   20.0
 random_seed                  42                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcbbc4a8'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -72,14 +72,14 @@ source_model.xml 0      Active Shallow Crust 1           1,694        1,694
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 2701          
+count_eff_ruptures_max_received_per_task 2687          
 count_eff_ruptures_num_tasks             15            
-count_eff_ruptures_sent.monitor          37290         
+count_eff_ruptures_sent.monitor          37110         
 count_eff_ruptures_sent.rlzs_assoc       39450         
 count_eff_ruptures_sent.sitecol          8715          
 count_eff_ruptures_sent.siteidx          75            
 count_eff_ruptures_sent.sources          16415         
-count_eff_ruptures_tot_received          40515         
+count_eff_ruptures_tot_received          40291         
 hazard.input_weight                      1694.0        
 hazard.n_imts                            3             
 hazard.n_levels                          8.0           
@@ -111,21 +111,25 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 1,694  15        0.003       0.121      0.0      
+0            1         SimpleFaultSource 1,694  15        0.003       0.164      0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+Not available
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.142     0.0       1     
-splitting sources              0.121     0.0       1     
-reading composite source model 0.019     0.0       1     
-store source_info              0.008     0.0       1     
-reading exposure               0.008     0.0       1     
-total count_eff_ruptures       0.005     0.0       15    
+managing sources               0.349     0.0       1     
+splitting sources              0.164     0.0       1     
+reading composite source model 0.017     0.0       1     
+store source_info              0.007     0.0       1     
+reading exposure               0.006     0.0       1     
+total count_eff_ruptures       0.004     0.004     15    
 filtering sources              0.003     0.0       1     
-aggregate curves               3.777E-04 0.0       15    
-reading site collection        8.106E-06 0.0       1     
+aggregate curves               2.871E-04 0.0       15    
+reading site collection        1.001E-05 0.0       1     
 ============================== ========= ========= ======
