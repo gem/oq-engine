@@ -1,5 +1,5 @@
   [Daniele Viganò]
-  * Removed the openquake_worker.cfg file because isn't used anymore
+  * Removed the openquake_worker.cfg file because it is not used anymore
 
   [Michele Simionato]
   * Replaced PostgreSQL with SQLite
