@@ -1,7 +1,7 @@
 Event-Based Hazard QA Test, Case 4
 ==================================
 
-gem-tstation:/home/michele/ssd/calc_109.hdf5 updated Wed Apr 27 10:56:38 2016
+gem-tstation:/home/michele/ssd/calc_1024.hdf5 updated Thu Apr 28 15:42:54 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   10.0               
 random_seed                  1066               
 master_seed                  0                  
-oqlite_version               '0.13.0-gitcbbc4a8'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -74,36 +74,47 @@ hostname 'gem-tstation'
 
 Specific information for event based
 ------------------------------------
-Total number of ruptures: 10
-Total number of events: 44
+======================== =====
+Total number of ruptures 10   
+Total number of events   44   
+Rupture multiplicity     4.400
+======================== =====
 
 Slowest sources
 ---------------
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 10     1         0.002       0.002      0.035    
+0            1         SimpleFaultSource 10     1         0.003       0.005      0.031    
 ============ ========= ================= ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+================================= ===== ===== ===== ======
+measurement                       min   max   mean  stddev
+compute_gmfs_and_curves.time_sec  0.003 0.007 0.003 0.001 
+compute_gmfs_and_curves.memory_mb 0.0   0.0   0.0   0.0   
+================================= ===== ===== ===== ======
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.035     0.0       1     
-total compute_gmfs_and_curves  0.031     0.0       10    
-make contexts                  0.022     0.0       10    
-filtering ruptures             0.019     0.0       10    
+total compute_gmfs_and_curves  0.033     0.0       10    
+total compute_ruptures         0.031     0.0       1     
+make contexts                  0.024     0.0       10    
+filtering ruptures             0.017     0.0       10    
 saving ruptures                0.011     0.0       1     
-store source_info              0.009     0.0       1     
-aggregating hcurves            0.007     0.0       10    
-reading composite source model 0.006     0.0       1     
-managing sources               0.006     0.0       1     
-saving gmfs                    0.005     0.0       10    
+reading composite source model 0.011     0.0       1     
+managing sources               0.011     0.0       1     
+aggregating hcurves            0.009     0.0       10    
+store source_info              0.008     0.0       1     
+saving gmfs                    0.006     0.0       10    
+splitting sources              0.005     0.0       1     
+filtering sources              0.003     0.0       1     
 bulding hazard curves          0.002     0.0       10    
 compute poes                   0.002     0.0       10    
-splitting sources              0.002     0.0       1     
-filtering sources              0.002     0.0       1     
-aggregate curves               0.001     0.0       11    
-reading site collection        2.980E-05 0.0       1     
+aggregate curves               0.002     0.0       11    
+reading site collection        5.102E-05 0.0       1     
 ============================== ========= ========= ======

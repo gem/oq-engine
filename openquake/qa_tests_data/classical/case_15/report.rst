@@ -1,7 +1,7 @@
 Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
-gem-tstation:/home/michele/ssd/calc_83.hdf5 updated Wed Apr 27 10:55:08 2016
+gem-tstation:/home/michele/ssd/calc_998.hdf5 updated Thu Apr 28 15:39:31 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcbbc4a8'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -93,14 +93,14 @@ filtered_weight 12
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 3212          
+count_eff_ruptures_max_received_per_task 3197          
 count_eff_ruptures_num_tasks             34            
-count_eff_ruptures_sent.monitor          100724        
+count_eff_ruptures_sent.monitor          100316        
 count_eff_ruptures_sent.rlzs_assoc       327206        
 count_eff_ruptures_sent.sitecol          16490         
 count_eff_ruptures_sent.siteidx          170           
 count_eff_ruptures_sent.sources          42774         
-count_eff_ruptures_tot_received          109208        
+count_eff_ruptures_tot_received          108698        
 hazard.input_weight                      12.75         
 hazard.n_imts                            2             
 hazard.n_levels                          8.5           
@@ -116,23 +116,27 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-2            1         AreaSource   6.000  16        0.001       0.004      0.0      
-3            1         AreaSource   6.000  16        9.561E-04   0.003      0.0      
-0            1         PointSource  0.375  1         1.431E-04   0.0        0.0      
-1            2         PointSource  0.375  1         1.130E-04   0.0        0.0      
+2            1         AreaSource   6.000  16        0.002       0.006      0.0      
+3            1         AreaSource   6.000  16        0.001       0.005      0.0      
+0            1         PointSource  0.375  1         1.800E-04   0.0        0.0      
+1            2         PointSource  0.375  1         1.571E-04   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+Not available
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.075     0.0       1     
-reading composite source model 0.021     0.0       1     
-total count_eff_ruptures       0.011     0.0       34    
-splitting sources              0.007     0.0       2     
-store source_info              0.005     0.0       1     
+managing sources               0.126     0.0       1     
+reading composite source model 0.028     0.0       1     
+splitting sources              0.011     0.0       2     
+total count_eff_ruptures       0.009     0.0       34    
+store source_info              0.006     0.0       1     
 filtering sources              0.003     0.0       4     
-aggregate curves               5.913E-04 0.0       34    
-reading site collection        4.315E-05 0.0       1     
+aggregate curves               7.718E-04 0.0       34    
+reading site collection        4.911E-05 0.0       1     
 ============================== ========= ========= ======

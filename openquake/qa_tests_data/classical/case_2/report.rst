@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 2
 ================================
 
-gem-tstation:/home/michele/ssd/calc_81.hdf5 updated Wed Apr 27 10:55:07 2016
+gem-tstation:/home/michele/ssd/calc_996.hdf5 updated Thu Apr 28 15:39:30 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  1066               
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcbbc4a8'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -70,14 +70,14 @@ source_model.xml 0      Active Shallow Crust 1           3,000        75
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 2527          
+count_eff_ruptures_max_received_per_task 2512          
 count_eff_ruptures_num_tasks             1             
-count_eff_ruptures_sent.monitor          2276          
+count_eff_ruptures_sent.monitor          2264          
 count_eff_ruptures_sent.rlzs_assoc       2624          
 count_eff_ruptures_sent.sitecol          437           
 count_eff_ruptures_sent.siteidx          5             
 count_eff_ruptures_sent.sources          1171          
-count_eff_ruptures_tot_received          2527          
+count_eff_ruptures_tot_received          2512          
 hazard.input_weight                      75.0          
 hazard.n_imts                            1             
 hazard.n_levels                          4.0           
@@ -93,20 +93,24 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  75     1         0.007       1.049E-04  0.0      
+0            1         PointSource  75     1         0.007       7.987E-05  0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+Not available
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.016     0.0       1     
-managing sources               0.011     0.0       1     
+reading composite source model 0.014     0.0       1     
+managing sources               0.010     0.0       1     
 filtering sources              0.007     0.0       1     
-store source_info              0.007     0.0       1     
-total count_eff_ruptures       3.390E-04 0.0       1     
-splitting sources              1.049E-04 0.0       1     
-reading site collection        6.700E-05 0.0       1     
-aggregate curves               3.505E-05 0.0       1     
+store source_info              0.006     0.0       1     
+total count_eff_ruptures       2.871E-04 0.0       1     
+splitting sources              7.987E-05 0.0       1     
+reading site collection        4.697E-05 0.0       1     
+aggregate curves               2.813E-05 0.0       1     
 ============================== ========= ========= ======

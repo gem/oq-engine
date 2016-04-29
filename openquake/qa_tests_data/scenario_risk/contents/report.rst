@@ -1,7 +1,7 @@
 QA Scenario Risk for contents
 =============================
 
-gem-tstation:/home/michele/ssd/calc_117.hdf5 updated Wed Apr 27 10:57:13 2016
+gem-tstation:/home/michele/ssd/calc_1032.hdf5 updated Thu Apr 28 15:44:06 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  3                  
 master_seed                  0                  
 avg_losses                   False              
-oqlite_version               '0.13.0-gitcbbc4a8'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -59,19 +59,27 @@ RM       1
 W        1      
 ======== =======
 
+Information about the tasks
+---------------------------
+======================= ===== ===== ===== =========
+measurement             min   max   mean  stddev   
+scenario_risk.time_sec  0.002 0.002 0.002 6.204E-05
+scenario_risk.memory_mb 0.004 0.004 0.004 0.0      
+======================= ===== ===== ===== =========
+
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
+filtering sites         0.011     0.0       1     
+reading exposure        0.008     0.0       1     
 total scenario_risk     0.007     0.004     3     
-filtering sites         0.007     0.0       1     
-computing risk          0.006     0.0       3     
-reading exposure        0.004     0.0       1     
-computing gmfs          0.001     0.0       1     
-saving gmfs             0.001     0.0       1     
-building riskinputs     2.952E-04 0.0       1     
-building epsilons       1.111E-04 0.0       1     
-building hazard         8.488E-05 0.0       3     
-reading site collection 7.153E-06 0.0       1     
+computing risk          0.005     0.0       3     
+computing gmfs          0.002     0.0       1     
+saving gmfs             0.002     0.0       1     
+building riskinputs     5.109E-04 0.0       1     
+building epsilons       1.659E-04 0.0       1     
+building hazard         7.796E-05 0.0       3     
+reading site collection 1.001E-05 0.0       1     
 ======================= ========= ========= ======
