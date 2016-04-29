@@ -480,7 +480,7 @@ class RiskInput(object):
         :param asset_ordinals: list of ordinals of the assets
         :returns: a closure returning an array of epsilons from the event IDs
         """
-        return lambda _: [self.eps[aid] for aid in asset_ordinals]
+        return lambda: [self.eps[aid] for aid in asset_ordinals]
 
     def get_hazard(self, rlzs_assoc, monitor=Monitor()):
         """
@@ -691,11 +691,10 @@ class RiskInputFromRuptures(object):
         :returns: a closure returning an array of epsilons from the event IDs
         """
         if not hasattr(self, 'eps'):
-            return lambda eids: [None] * len(asset_ordinals)
+            return lambda aid, eids: None
 
-        def geteps(eids):
-            idx = numpy.array([self.eid2idx[eid] for eid in eids], U32)
-            return [self.eps[aid, idx] for aid in asset_ordinals]
+        def geteps(aid, eids):
+            return self.eps[aid, [self.eid2idx[eid] for eid in eids]]
         return geteps
 
     def get_hazard(self, rlzs_assoc, monitor=Monitor()):
