@@ -88,8 +88,8 @@ setup(
     py_modules=PY_MODULES,
     include_package_data=True,
     package_data={"openquake.engine": [
-        "openquake.cfg", "openquake_worker.cfg",
-        "README.md", "LICENSE", "CONTRIBUTORS.txt"]},
+        "openquake.cfg", "README.md",
+        "LICENSE", "CONTRIBUTORS.txt"]},
     namespace_packages=['openquake'],
     install_requires=[
         'openquake.hazardlib',
