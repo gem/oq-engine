@@ -1,2 +1,2 @@
-INSERT INTO test.hazard_calculation (id, description)
-VALUES ('Should be a number', 'Some calculation');
+INSERT INTO test_hazard_calculation (id, description)
+VALUES (1, 'Some calculation');

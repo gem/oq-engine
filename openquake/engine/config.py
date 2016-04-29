@@ -173,3 +173,8 @@ def refresh():
     could cause undesirable side-effects.
     """
     cfg._load_from_file()
+
+
+port = int(get('dbserver', 'port'))
+DBS_ADDRESS = (get('dbserver', 'host'), port)
+DBS_AUTHKEY = get('dbserver', 'authkey')

@@ -93,7 +93,6 @@ sig_hand () {
         if [ "$GEM_USE_CELERY" ]; then
             scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
         fi
-        scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation"
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
         upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
@@ -250,8 +249,7 @@ _pkgbuild_innervm_run () {
 #                       files and install them
 #                     - builds oq-hazardlib speedups
 #                     - installs oq-engine sources on lxc
-#                     - set up postgres
-#                     - upgrade db
+#                     - set up db
 #                     - runs tests
 #                     - runs coverage
 #                     - collects all tests output files from lxc
@@ -316,15 +314,6 @@ _devtest_innervm_run () {
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
     # configure the machine to run tests
-    ssh $lxc_ip "set -e
-        for dbu in oq_job_init oq_admin; do
-            sudo sed -i \"1ilocal   openquake2   \$dbu                   md5\" /etc/postgresql/*/main/pg_hba.conf
-        done"
-
-    ssh $lxc_ip "sudo service postgresql restart"
-    ssh $lxc_ip "set -e ; sudo su postgres -c \"cd oq-engine ; openquake/engine/bin/oq_create_db --yes --db-name=openquake2\""
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine ; bin/oq-engine --upgrade-db --yes"
-
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         if [ -n "$GEM_DEVTEST_SKIP_SLOW_TESTS" ]; then
             # skip slow tests
@@ -415,8 +404,7 @@ _builddoc_innervm_run () {
 #                     - copies 'oq-*' package repositories on lxc
 #                     - adds repositories to apt sources on lxc
 #                     - performs package tests (install, remove, reinstall ..)
-#                     - set up postgres
-#                     - upgrade db
+#                     - set up db
 #                     - runs celeryd if GEM_USE_CELERY is set
 #                     - executes demos
 #
@@ -510,10 +498,6 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
     # configure the machine to run tests
-    ssh $lxc_ip "sudo service postgresql restart"
-    # XXX: should the --upgrade-db command go in the postint script?
-    ssh $lxc_ip "set -e; oq-engine --upgrade-db --yes"
-
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # Is the GEM_USE_CELERY flag is set, use celery to run the demos
         if [ "$GEM_USE_CELERY" ]; then
@@ -560,6 +544,13 @@ celeryd_wait $GEM_MAXLOOP"
         # run all of the hazard and risk demos
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
         set -e
+
+        if [ \$(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
+            sudo adduser --system --home /var/lib/openquake --group --shell /bin/bash openquake
+        fi
+        sudo -u openquake python -m openquake.server.db.upgrade_manager ~openquake/db.sqlite3
+        sudo -u openquake python -m openquake.server.dbserver 2>/dev/null & sleep 1
+
         if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
             export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
             set -x
@@ -602,10 +593,11 @@ celeryd_wait $GEM_MAXLOOP"
             oq-engine --run-risk job_risk.ini --exports csv,xml --hazard-calculation-id -1
             cd -
             fi
-        done"
+        done
+        python -m openquake.server.stop"
     fi
 
-    ssh $lxc_ip "oq-engine --make-html-report today"
+    ssh $lxc_ip "sudo -u openquake python -m openquake.server.dbserver & sleep 1 ; oq-engine --make-html-report today ; python -m openquake.server.stop"
     scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
@@ -813,7 +805,6 @@ devtest_run () {
     _devtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
-    scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation.dev" || true
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/devtest.history"
 
     sudo $LXC_TERM -n $lxc_name
@@ -987,7 +978,6 @@ EOF
     if [ "$GEM_USE_CELERY" ]; then
         scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
     fi
-    scp "${lxc_ip}:/var/tmp/openquake-db-installation" "out_${BUILD_UBUVER}/openquake-db-installation.pkg" || true
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
 
     sudo $LXC_TERM -n $lxc_name
