@@ -25,7 +25,8 @@ import os.path
 import logging
 from datetime import datetime
 from contextlib import contextmanager
-from openquake.server.db import actions
+from multiprocessing.connection import Client
+from openquake.engine import config
 
 
 LEVELS = {'debug': logging.DEBUG,
@@ -42,12 +43,23 @@ LOG = logging.getLogger()
 
 def dbcmd(action, *args):
     """
-    A fake dispatcher to the database server.
+    A dispatcher to the database server.
 
     :param action: database action to perform
     :param args: arguments
     """
-    return getattr(actions, action)(*args)
+    try:
+        client = Client(config.DBS_ADDRESS, authkey=config.DBS_AUTHKEY)
+    except:
+        raise RuntimeError('Cannot connect on %s:%s' % config.DBS_ADDRESS)
+    try:
+        client.send((action,) + args)
+        res, etype = client.recv()
+    finally:
+        client.close()
+    if etype:
+        raise etype(res)
+    return res
 
 
 def touch_log_file(log_file):

@@ -16,7 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 from concurrent.futures import ThreadPoolExecutor
 
 # recommended setting for development
+
 executor = ThreadPoolExecutor(max_workers=1)
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'openquake.server.settings')

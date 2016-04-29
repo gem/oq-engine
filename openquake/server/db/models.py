@@ -26,15 +26,30 @@ Model representations of the OpenQuake DB tables.
 '''
 import os
 from datetime import datetime
-
+import openquake.engine.utils  # side effect setting OQ_DISTRIBUTE
 from openquake.commonlib import datastore
 from openquake.commonlib.oqvalidation import RISK_CALCULATORS
 import django
-if hasattr(django, 'setup'):
-    django.setup()  # for Django >= 1.7
 from django.db import models as djm
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import connection
+if hasattr(django, 'setup'):
+    django.setup()  # for Django >= 1.7
+
+
+# this is pickleable, ObjectDoesNotExist is not
+class NotFound(Exception):
+    """Raised when a Django object does not exist"""
+
+
+def get(djm, **kw):
+    """
+    Small wrapper around `djm.objects.get`
+    """
+    try:
+        return djm.objects.get(**kw)
+    except ObjectDoesNotExist:
+        raise NotFound(kw)
+
 
 #: Kind of supported curve statistics
 STAT_CHOICES = (
@@ -138,19 +153,6 @@ class OqJob(djm.Model):
         return ('risk' if self.calculation_mode in RISK_CALCULATORS
                 else 'hazard')
 
-    def get_or_create_output(self, display_name, ds_key):
-        """
-        :param disp_name: display name of the output
-        :returns: an Output instance
-        """
-        try:
-            output = Output.objects.get(
-                oq_job=self, display_name=display_name)
-        except ObjectDoesNotExist:
-            output = Output.objects.create_output(
-                self, display_name, ds_key)
-        return output
-
     def get_oqparam(self):
         """
         Return an OqParam object as read from the database
@@ -206,24 +208,6 @@ class Log(djm.Model):
     class Meta:
         db_table = 'log'
         ordering = ['id']
-
-
-def extract_from(objlist, attr):
-    """
-    Extract an attribute from a list of Django objects, by scanning
-    them in order until a not None attribute is found. If nothing is
-    found, or if an exception ObjectDoesNotExist is raised, return None.
-
-    :param objlist: the list of Django objects
-    :param str attr: the name of the attribute to look for
-    """
-    for obj in objlist:
-        try:
-            value = getattr(obj, attr, None)
-        except ObjectDoesNotExist:
-            value = None
-        if value is not None:
-            return value
 
 
 class OutputManager(djm.Manager):

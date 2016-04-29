@@ -24,24 +24,12 @@ set -e
 . /usr/share/debconf/confmodule
 
 GEM_DEB_PACKAGE="python-oq-engine"
-LSB_RELEASE=$(lsb_release --codename --short)
-if [ "$LSB_RELEASE" = "precise" ]; then
-    PG_VERSION="9.1"
-elif [ "$LSB_RELEASE" = "trusty" ]; then
-    PG_VERSION="9.3"
-else
-    PG_VERSION=$(sudo -u postgres psql -c'show server_version' -At)
-    PG_VERSION=$(echo "$PG_VERSION" | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/')
-    if [ -z "$PG_VERSION" -o ! -f "/etc/postgresql/$PG_VERSION/main/postgresql.conf" ]; then
-        echo "This operating system is running an unsupported version of Postgres."
-        exit 1
-    fi
 
+LSB_RELEASE=$(lsb_release --codename --short)
+if [ "$LSB_RELEASE" != "precise" -a "$LSB_RELEASE" != "trusty" ]; then
     db_input high python-oq-engine/distro_alert || true
     db_go
 fi
-
-PG_CONF="/etc/postgresql/$PG_VERSION/main/postgresql.conf"
 
 if [ -f /usr/sbin/rabbitmqctl ]; then
     # create rabbitmq configuration for python-celery
@@ -56,18 +44,21 @@ if [ -f /usr/sbin/rabbitmqctl ]; then
     fi
 fi
 
+USER=openquake
+if [ $(cat /etc/group | grep ^openquake: | wc -l) -eq 0 ]; then
+    addgroup --system $USER
+fi
+if [ $(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
+    adduser --system --home /var/lib/$USER --group --shell /bin/bash $USER
+fi
+
 HDIR=/usr/share/openquake/engine
 IDIR=/usr/lib/python2.7/dist-packages/openquake/engine
 mkdir -p $HDIR
-chmod 1777 $HDIR
 
 rm -f $HDIR/celeryconfig.py.new_in_this_release
 cp $IDIR/celeryconfig.py $HDIR
-chmod 644 $HDIR/celeryconfig.py
-
-if [ `cat /etc/group | grep ^openquake: | wc -l` -eq 0 ]; then
-    addgroup --system openquake
-fi
+chown -R $USER.$USER $HDIR
 
 SDIR=/etc/openquake
 for cfg in openquake.cfg
@@ -83,87 +74,13 @@ do
         chmod 644 $SDIR/$cfg
     fi
 done
-chown -R root.openquake $SDIR
+chown -R $USER.$USER $SDIR
 
-if [ -f /usr/lib/postgresql/$PG_VERSION/bin/postgres ]; then
-    # postgres is installed, flatten and recreate the database.
+# create the database. This is run as "openquake" by default
+/usr/bin/oq_create_db
 
-    # Restart postgres in order to get rid of idle/open connections
-    # held by celeryd processes.
-
-    for pid in `ps ax | grep '/usr/bin/celery' | grep -v grep | awk '{print $1}'`; do
-        echo $pid
-        kill -15 $pid
-    done
-
-    # Make sure the celeryd  processes are gone.
-    sleep 3
-    for pid in `ps ax | grep '/usr/bin/celery' | grep -v grep | awk '{print $1}'`; do
-        echo $pid
-        kill -9 $pid
-    done
-
-    /etc/init.d/postgresql restart $PG_VERSION
-
-    pgport=`cat $PG_CONF | perl -wane ' if ($_ =~ /^\s*port\s*=/) { s/^\s*port\s*=\s*(\d+).*$/$1/; print $_; }'`
-    LOGFILE=/var/tmp/openquake-db-installation
-    rm -f $LOGFILE
-    su -c "/usr/bin/oq_create_db --yes --db-name=openquake2 --db-port=$pgport > $LOGFILE 2>&1" postgres
-    for dbu in oq_admin oq_job_init
-    do
-        su -c "psql -p $pgport -c \"ALTER ROLE $dbu WITH PASSWORD 'openquake'\" >> $LOGFILE 2>&1" postgres
-    done
-    chmod 644 $LOGFILE
-
-    num_of_errors=`grep -i error $LOGFILE | grep -v "is not empty" | grep -v error_msg_ | grep -v ON_ERROR_STOP | wc -l`
-    if [ $num_of_errors -gt 0 ]; then
-        echo "Failed to initialise the openquake database"
-        echo "Please file a bug here:"
-        echo "    https://bugs.launchpad.net/openquake/+filebug"
-        echo "and attach this file to it:"
-        echo "    $LOGFILE"
-        db_stop
-        exit 1
-    fi
-
-    PG_ROOT=/etc/postgresql/$PG_VERSION/main
-    # Do we already have oq_* database users configured and how many?
-    oq_config_lines=`grep oq_ $PG_ROOT/pg_hba.conf | grep -v '^#' | wc -l`
-    # Do we already have oq_* database users *auto-configured* and how many?
-    auto_oq_config_lines=`grep oq_ $PG_ROOT/pg_hba.conf | grep -v '^#' | grep '^local' | wc -l`
-    if [ $oq_config_lines -eq $auto_oq_config_lines ]; then
-        # The oq_* db users (if any) have been auto-configured i.e. it's OK
-        # if we flatten them.
-        rm -f $PG_ROOT/pg_hba.conf.orig
-        mv $PG_ROOT/pg_hba.conf $PG_ROOT/pg_hba.conf.orig
-        for dbu in oq_admin oq_job_init
-        do
-            echo "local   openquake2   $dbu                   md5" >> $PG_ROOT/pg_hba.conf
-        done
-        cat $PG_ROOT/pg_hba.conf.orig | grep -v 'local..*oq_' >> $PG_ROOT/pg_hba.conf
-        /etc/init.d/postgresql reload $PG_VERSION
-    else
-        echo ""
-        echo "============================================================"
-        echo "Your system seems to have a custom pg_hba.conf (postgres"
-        echo "authentication configuration)"
-        echo ""
-        echo "Please ask the system administrator to grant access to the"
-        echo "'openquake2' database to the following users:"
-        echo ""
-        echo "      oq_admin oq_job_init"
-        echo "============================================================"
-        echo ""
-    fi
-
-    # Restart the remaining services just to be on the safe side.
-    if [ -f /usr/sbin/rabbitmqctl ]; then
-        /etc/init.d/rabbitmq-server restart
-    fi
-fi
-
-# Last but not least delete obsolete .pyc files in /usr/openquake/engine
-find /usr/share/openquake/engine -type f -name \*.pyc -exec rm -f {} \;
+# delete obsolete .pyc files in /usr/share/openquake
+find /usr/share/openquake -type f -name \*.pyc -exec rm -f {} \;
 
 #touch /tmp/mop-pause
 #while [ 1 ]; do
