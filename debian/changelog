@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * If uniform_hazard_spectra is true, the UHS curves must be generated
+    even if hazard_maps is false; the hazard maps must not be exported
   * Optimized the case when the epsilons are not required, i.e. all the
     covariance coefficients are zero in the vulnerability functions
   * Added another test for event based risk (`case_miriam`)

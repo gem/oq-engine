@@ -409,9 +409,8 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.hazard_maps or oq.uniform_hazard_spectra:
             # hmaps is a composite array of shape (N, P)
             hmaps = self.hazard_maps(curves)
-            if oq.hazard_maps:
-                self._store('hmaps/' + kind, hmaps, rlz,
-                            poes=oq.poes, nbytes=hmaps.nbytes)
+            self._store('hmaps/' + kind, hmaps, rlz,
+                        poes=oq.poes, nbytes=hmaps.nbytes)
 
     def _store(self, name, curves, rlz, **kw):
         self.datastore.hdf5[name] = curves
