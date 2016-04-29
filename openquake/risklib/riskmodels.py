@@ -259,15 +259,14 @@ class RiskModel(object):
         out_by_lr = AccumDict()
         out_by_lr.assets = assets
         loss_types = self.get_loss_types(imt)
-        # extract the realizations from the first asset
         for rlz in sorted(hazard):
-            r = rlz.ordinal
             haz = hazard[rlz]
             if len(haz) == 0:
                 continue
+            r = rlz.ordinal
             for loss_type in loss_types:
                 out = self(loss_type, assets, haz, epsgetter)
-                if out:
+                if out:  # can be None in scenario_risk with no valid values
                     l = self.compositemodel.lti[loss_type]
                     out.hid = r
                     out.weight = rlz.weight
