@@ -519,6 +519,17 @@ def view_performance(token, dstore):
     return rst_table(performance_view(dstore))
 
 
+def stats(name, array):
+    """
+    Returns statistics from an array of numbers.
+
+    :param name: a descriptive string
+    :returns: (name, mean, std, min, max, len)
+    """
+    return (name, numpy.mean(array), numpy.std(array, ddof=1),
+            numpy.min(array), numpy.max(array), len(array))
+
+
 @view.add('task_info')
 def view_task_info(token, dstore):
     """
@@ -526,15 +537,14 @@ def view_task_info(token, dstore):
     """
     pdata = dstore['performance_data'].value
     tasks = [calc.core_task.__name__ for calc in base.calculators.values()]
-    data = ['measurement min max mean stddev'.split()]
+    data = ['measurement mean stddev min max num_tasks'.split()]
     for task in tasks:
         records = pdata[pdata['operation'] == 'total ' + task]
         if len(records):
             for stat in ('time_sec', 'memory_mb'):
                 val = records[stat]
                 if len(val) > 1:
-                    data.append([task + '.' + stat, val.min(), val.max(),
-                                 val.mean(), val.std(ddof=1)])
+                    data.append(stats(task + '.' + stat, val))
     if len(data) == 1:
         return 'Not available'
     return rst_table(data)
@@ -546,7 +556,7 @@ def view_assets_by_site(token, dstore):
     Display statistical information about the distribution of the assets
     """
     assets_by_site = dstore['assetcol'].assets_by_site()
-    data = ['taxonomy num_sites min max mean stddev'.split()]
+    data = ['taxonomy mean stddev min max num_sites'.split()]
     num_assets = AccumDict()
     for assets in assets_by_site:
         num_assets += {k: [len(v)] for k, v in groupby(
@@ -554,11 +564,8 @@ def view_assets_by_site(token, dstore):
     for taxo in sorted(num_assets):
         val = numpy.array(num_assets[taxo])
         if len(val) > 1:
-            data.append([taxo, len(val), val.min(), val.max(), val.mean(),
-                         val.std(ddof=1)])
-    val = numpy.array([len(assets) for assets in assets_by_site])
-    data.append(['*ALL*', len(val), val.min(), val.max(), val.mean(),
-                 val.std(ddof=1)])
+            data.append(stats(taxo, val))
+    data.append(stats('*ALL*', [len(assets) for assets in assets_by_site]))
     return rst_table(data)
 
 
