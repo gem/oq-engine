@@ -80,6 +80,7 @@ class CalculatorTestCase(unittest.TestCase):
             result = self.calc.run()
         self.calc.datastore.flush()
         if len(inis) == 2:
+            self.calc.datastore.close()
             hc_id = self.calc.datastore.calc_id
             self.calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
