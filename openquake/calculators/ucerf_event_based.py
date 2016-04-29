@@ -656,6 +656,13 @@ class UCERFSESControl(object):
         idx_set["total_key"] = branch_code.replace("/", "|")
         return idx_set
 
+    def hazard_curves_per_trt(
+
+class UCERFClassicalControl(UCERFSESControl):
+    """
+
+    """
+
 
 def num_affected_sites(rupture, num_sites):
     """
