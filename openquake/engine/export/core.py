@@ -23,14 +23,9 @@ file formats."""
 
 import os
 import zipfile
-import logging
 
-from openquake.server.db import models
-from openquake.baselib.general import CallableDict
-from openquake.commonlib.export import export as ds_export
+from openquake.commonlib.export import export
 from openquake.commonlib import datastore
-
-export_output = CallableDict()
 
 
 class DataStoreExportError(Exception):
@@ -50,28 +45,24 @@ def zipfiles(fnames, archive):
     z.close()
 
 
-def export_from_datastore(output_key, output, target):
+def export_from_datastore(output_key, calc_id, datadir, target):
     """
     :param output_key: a pair (ds_key, fmt)
-    :param output: an Output instance
-    :param target: a directory, temporary when called from the engine server
+    :param calc_id: calculation ID
+    :param datadir: directory containing the datastore
+    :param target: directory, temporary when called from the engine server
     """
     ds_key, fmt = output_key
-    assert ds_key == output.ds_key, (ds_key, output.ds_key)
-    datadir = os.path.dirname(output.oq_job.ds_calc_dir)
-    dstore = datastore.read(output.oq_job.id, datadir=datadir)
-    parent_id = dstore['oqparam'].hazard_calculation_id
-    if parent_id:
-        dstore.set_parent(datastore.read(parent_id, datadir=datadir))
+    dstore = datastore.read(calc_id, datadir=datadir)
     dstore.export_dir = target
     try:
-        exported = ds_export((output.ds_key, fmt), dstore)
+        exported = export(output_key, dstore)
     except KeyError:
         raise DataStoreExportError(
-            'Could not export %s in %s' % (output.ds_key, fmt))
+            'Could not export %s in %s' % output_key)
     if not exported:
         raise DataStoreExportError(
-            'Nothing to export for %s' % output.ds_key)
+            'Nothing to export for %s' % ds_key)
     elif len(exported) > 1:
         # NB: I am hiding the archive by starting its name with a '.',
         # to avoid confusing the users, since the unzip files are
@@ -79,33 +70,11 @@ def export_from_datastore(output_key, output, target):
         # by the WebUI, so it must be there; it would be nice not to
         # generate it when not using the Web UI, but I will leave that
         # feature for after the removal of the old calculators
-        archname = '.' + output.ds_key + '-' + fmt + '.zip'
+        archname = '.' + ds_key + '-' + fmt + '.zip'
         zipfiles(exported, os.path.join(target, archname))
         return os.path.join(target, archname)
     else:  # single file
         return exported[0]
-
-# update export_output with ds_export
-for ekey in ds_export:
-    export_output.add(ekey)(export_from_datastore)
-
-
-def export(output_id, target, export_type='xml,geojson,csv'):
-    """
-    Export the given calculation `output_id` from the database to the
-    specified `target` directory in the specified `export_type`.
-    """
-    output = models.Output.objects.get(id=output_id)
-    if isinstance(target, basestring):  # create target directory
-        makedirs(target)
-    for exptype in export_type.split(','):
-        rtype = output.ds_key
-        key = (rtype, exptype)
-        if key in export_output:
-            return export_output(key, output, target)
-    logging.warn(
-        'No "%(fmt)s" exporter is available for "%(rtype)s"'
-        ' outputs' % dict(fmt=export_type, rtype=rtype))
 
 #: Used to separate node labels in a logic tree path
 LT_PATH_JOIN_TOKEN = '_'
@@ -123,17 +92,3 @@ def makedirs(path):
                                % path)
     else:
         os.makedirs(path)
-
-
-def get_outputs(job_id):
-    """Get all :class:`openquake.server.db.models.Output` objects associated
-    with the specified job and output_type.
-
-    :param int job_id:
-        ID of a :class:`openquake.server.db.models.OqJob`.
-    :returns:
-        :class:`django.db.models.query.QuerySet` of
-        :class:`openquake.server.db.models.Output` objects.
-    """
-    queryset = models.Output.objects.filter(oq_job=job_id)
-    return queryset
