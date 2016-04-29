@@ -1,7 +1,7 @@
 Scenario Damage
 ===============
 
-gem-tstation:/home/michele/ssd/calc_957.hdf5 updated Thu Apr 28 15:38:29 2016
+gem-tstation:/home/michele/ssd/calc_1800.hdf5 updated Fri Apr 29 08:18:17 2016
 
 num_sites = 7, sitecol = 690 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  42                 
 master_seed                  0                  
-oqlite_version               '0.13.0-git93d6f64'
+oqlite_version               '0.13.0-git5086754'
 ============================ ===================
 
 Input files
@@ -50,29 +50,32 @@ Exposure model
 #taxonomies 1
 =========== =
 
-======== =======
-Taxonomy #Assets
-======== =======
-Wood     1      
-======== =======
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+Wood     1.000 NaN    1   1   1         1         
+======== ===== ====== === === ========= ==========
 
 Information about the tasks
 ---------------------------
-Not available
+========================= ===== ====== ===== ===== =========
+measurement               mean  stddev min   max   num_tasks
+scenario_damage.time_sec  0.049 NaN    0.049 0.049 1        
+scenario_damage.memory_mb 0.020 NaN    0.020 0.020 1        
+========================= ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-total scenario_damage   0.093     0.008     1     
-computing risk          0.092     0.0       1     
-filtering sites         0.014     0.0       1     
-reading exposure        0.004     0.0       1     
-computing gmfs          0.002     0.0       1     
+total scenario_damage   0.049     0.020     1     
+computing risk          0.049     0.0       1     
+filtering sites         0.009     0.0       1     
+reading exposure        0.003     0.0       1     
+computing gmfs          0.001     0.0       1     
 saving gmfs             0.001     0.0       1     
-assoc_assets_sites      7.560E-04 0.0       1     
-reading site collection 1.450E-04 0.0       1     
-building riskinputs     1.431E-04 0.0       1     
-building hazard         2.384E-05 0.0       1     
+assoc_assets_sites      5.610E-04 0.0       1     
+reading site collection 1.330E-04 0.0       1     
+building riskinputs     1.011E-04 0.0       1     
+building hazard         2.503E-05 0.0       1     
 ======================= ========= ========= ======

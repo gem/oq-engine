@@ -1,7 +1,7 @@
 Scenario Calculation with Simple Fault Rupture
 ==============================================
 
-gem-tstation:/home/michele/ssd/calc_1037.hdf5 updated Thu Apr 28 15:44:14 2016
+gem-tstation:/home/michele/ssd/calc_1880.hdf5 updated Fri Apr 29 08:20:48 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  42                 
 master_seed                  0                  
-oqlite_version               '0.13.0-git93d6f64'
+oqlite_version               '0.13.0-git5086754'
 ============================ ===================
 
 Input files
@@ -50,7 +50,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.016     0.0       1     
-computing gmfs          0.014     0.0       1     
-reading site collection 1.609E-04 0.0       1     
+filtering sites         0.008     0.0       1     
+computing gmfs          0.007     0.0       1     
+reading site collection 9.298E-05 0.0       1     
 ======================= ========= ========= ======

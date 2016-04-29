@@ -1,7 +1,7 @@
 Classical PSHA-Based Hazard
 ===========================
 
-gem-tstation:/home/michele/ssd/calc_982.hdf5 updated Thu Apr 28 15:38:39 2016
+gem-tstation:/home/michele/ssd/calc_1825.hdf5 updated Fri Apr 29 08:18:21 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   20.0
 random_seed                  42                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git93d6f64'
+oqlite_version               '0.13.0-git5086754'
 ============================ ===================
 
 Input files
@@ -72,14 +72,14 @@ source_model.xml 0      Active Shallow Crust 1           1,694        1,694
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 2836          
+count_eff_ruptures_max_received_per_task 2837          
 count_eff_ruptures_num_tasks             15            
-count_eff_ruptures_sent.monitor          39300         
+count_eff_ruptures_sent.monitor          39315         
 count_eff_ruptures_sent.rlzs_assoc       39450         
 count_eff_ruptures_sent.sitecol          6555          
 count_eff_ruptures_sent.siteidx          75            
 count_eff_ruptures_sent.sources          16415         
-count_eff_ruptures_tot_received          42540         
+count_eff_ruptures_tot_received          42555         
 hazard.input_weight                      1694.0        
 hazard.n_imts                            1             
 hazard.n_levels                          20.0          
@@ -98,18 +98,17 @@ Exposure model
 #taxonomies 1
 =========== =
 
-======== =======
-Taxonomy #Assets
-======== =======
-Steel    1      
-======== =======
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+Steel    1.000 NaN    1   1   1         1         
+======== ===== ====== === === ========= ==========
 
 Slowest sources
 ---------------
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 1,694  15        0.019       0.188      0.0      
+0            1         SimpleFaultSource 1,694  15        0.001       0.075      0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
 
 Information about the tasks
@@ -121,13 +120,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.360     0.0       1     
-splitting sources              0.188     0.0       1     
-reading composite source model 0.082     0.0       1     
-filtering sources              0.019     0.0       1     
-store source_info              0.007     0.0       1     
-total count_eff_ruptures       0.004     0.0       15    
-reading exposure               0.004     0.0       1     
-aggregate curves               2.854E-04 0.0       15    
-reading site collection        1.001E-05 0.0       1     
+managing sources               0.092     0.0       1     
+splitting sources              0.075     0.0       1     
+reading composite source model 0.009     0.0       1     
+total count_eff_ruptures       0.006     0.0       15    
+store source_info              0.004     0.0       1     
+reading exposure               0.002     0.0       1     
+filtering sources              0.001     0.0       1     
+aggregate curves               1.898E-04 0.0       15    
+reading site collection        5.960E-06 0.0       1     
 ============================== ========= ========= ======

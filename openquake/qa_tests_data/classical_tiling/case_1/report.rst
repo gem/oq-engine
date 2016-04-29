@@ -1,7 +1,7 @@
 Classical PSHA using Area Source
 ================================
 
-gem-tstation:/home/michele/ssd/calc_1041.hdf5 updated Thu Apr 28 15:44:26 2016
+gem-tstation:/home/michele/ssd/calc_1884.hdf5 updated Fri Apr 29 08:20:53 2016
 
 num_sites = 6, sitecol = 969 B
 
@@ -21,7 +21,7 @@ area_source_discretization   5.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1                  
-oqlite_version               '0.13.0-git93d6f64'
+oqlite_version               '0.13.0-git5086754'
 ============================ ===================
 
 Input files
@@ -94,7 +94,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   41     205       0.011       0.089      0.0      
+0            1         AreaSource   41     205       0.006       0.044      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Information about the tasks
@@ -106,12 +106,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.168     0.0       1     
-reading composite source model 0.113     0.0       1     
-splitting sources              0.089     0.0       1     
-filtering sources              0.011     0.0       6     
-reading site collection        0.009     0.0       1     
-store source_info              0.006     0.0       1     
-total count_eff_ruptures       0.004     0.0       12    
-aggregate curves               2.501E-04 0.0       12    
+managing sources               0.086     0.0       1     
+reading composite source model 0.046     0.0       1     
+splitting sources              0.044     0.0       1     
+filtering sources              0.006     0.0       6     
+total count_eff_ruptures       0.005     0.0       12    
+store source_info              0.004     0.0       1     
+reading site collection        0.003     0.0       1     
+aggregate curves               1.588E-04 0.0       12    
 ============================== ========= ========= ======

@@ -71,6 +71,8 @@ def form(value):
             return '%.3f' % value
         elif value > 1000:
             return '{:,d}'.format(int(round(value)))
+        elif numpy.isnan(value):
+            return 'NaN'
         else:  # in the range 10-1000
             return str(int(value))
     elif hasattr(value, '__iter__'):
@@ -410,15 +412,9 @@ def view_exposure_info(token, dstore):
     """
     assetcol = dstore['assetcol/array'][:]
     taxonomies = dstore['assetcol/taxonomies'][:]
-    counts = numpy.zeros(len(taxonomies), numpy.uint32)
-    for ass in assetcol:
-        tax_idx = ass['taxonomy']
-        counts[tax_idx] += 1
-    tbl = zip(taxonomies, counts)
     data = [('#assets', len(assetcol)),
             ('#taxonomies', len(taxonomies))]
-    return rst_table(data) + '\n\n' + rst_table(
-        tbl, header=['Taxonomy', '#Assets'])
+    return rst_table(data) + '\n\n' + view_assets_by_site(token, dstore)
 
 
 @view.add('assetcol')
@@ -519,7 +515,7 @@ def view_performance(token, dstore):
     return rst_table(performance_view(dstore))
 
 
-def stats(name, array):
+def stats(name, array, *extras):
     """
     Returns statistics from an array of numbers.
 
@@ -527,7 +523,7 @@ def stats(name, array):
     :returns: (name, mean, std, min, max, len)
     """
     return (name, numpy.mean(array), numpy.std(array, ddof=1),
-            numpy.min(array), numpy.max(array), len(array))
+            numpy.min(array), numpy.max(array), len(array)) + extras
 
 
 @view.add('task_info')
@@ -543,8 +539,7 @@ def view_task_info(token, dstore):
         if len(records):
             for stat in ('time_sec', 'memory_mb'):
                 val = records[stat]
-                if len(val) > 1:
-                    data.append(stats(task + '.' + stat, val))
+                data.append(stats(task + '.' + stat, val))
     if len(data) == 1:
         return 'Not available'
     return rst_table(data)
@@ -556,16 +551,17 @@ def view_assets_by_site(token, dstore):
     Display statistical information about the distribution of the assets
     """
     assets_by_site = dstore['assetcol'].assets_by_site()
-    data = ['taxonomy mean stddev min max num_sites'.split()]
+    data = ['taxonomy mean stddev min max num_sites num_assets'.split()]
     num_assets = AccumDict()
     for assets in assets_by_site:
         num_assets += {k: [len(v)] for k, v in groupby(
             assets, operator.attrgetter('taxonomy')).items()}
     for taxo in sorted(num_assets):
         val = numpy.array(num_assets[taxo])
-        if len(val) > 1:
-            data.append(stats(taxo, val))
-    data.append(stats('*ALL*', [len(assets) for assets in assets_by_site]))
+        data.append(stats(taxo, val, val.sum()))
+    if len(num_assets) > 1:  # more than one taxonomy, add a summary
+        n_assets = numpy.array([len(assets) for assets in assets_by_site])
+        data.append(stats('*ALL*', n_assets, n_assets.sum()))
     return rst_table(data)
 
 

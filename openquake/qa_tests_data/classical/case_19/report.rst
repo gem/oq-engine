@@ -1,7 +1,7 @@
 SHARE OpenQuake Computational Settings
 ======================================
 
-gem-tstation:/home/michele/ssd/calc_1015.hdf5 updated Thu Apr 28 15:42:35 2016
+gem-tstation:/home/michele/ssd/calc_1858.hdf5 updated Fri Apr 29 08:20:02 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git93d6f64'
+oqlite_version               '0.13.0-git5086754'
 ============================ ===================
 
 Input files
@@ -96,7 +96,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-4            s46       AreaSource   194    1         0.002       0.0        0.0      
+4            s46       AreaSource   194    1         0.001       0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Information about the tasks
@@ -108,11 +108,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 13        0.0       1     
-managing sources               0.275     0.0       1     
-filtering sources              0.069     0.0       18    
-store source_info              0.007     0.0       1     
-total count_eff_ruptures       2.830E-04 0.0       1     
-reading site collection        5.007E-05 0.0       1     
-aggregate curves               3.195E-05 0.0       1     
+reading composite source model 5.821     0.0       1     
+managing sources               0.104     0.0       1     
+filtering sources              0.023     0.0       18    
+store source_info              0.004     0.0       1     
+total count_eff_ruptures       3.672E-04 0.0       1     
+reading site collection        2.480E-05 0.0       1     
+aggregate curves               2.003E-05 0.0       1     
 ============================== ========= ========= ======

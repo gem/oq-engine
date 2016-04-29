@@ -1,7 +1,7 @@
 Classical PSHA-Based Hazard
 ===========================
 
-gem-tstation:/home/michele/ssd/calc_987.hdf5 updated Thu Apr 28 15:38:42 2016
+gem-tstation:/home/michele/ssd/calc_1830.hdf5 updated Fri Apr 29 08:18:22 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -21,7 +21,7 @@ area_source_discretization   20.0
 random_seed                  42                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git93d6f64'
+oqlite_version               '0.13.0-git5086754'
 ============================ ===================
 
 Input files
@@ -72,14 +72,14 @@ source_model.xml 0      Active Shallow Crust 1           1,694        1,694
 Informational data
 ------------------
 ======================================== =================
-count_eff_ruptures_max_received_per_task 2695             
+count_eff_ruptures_max_received_per_task 2696             
 count_eff_ruptures_num_tasks             15               
-count_eff_ruptures_sent.monitor          37245            
+count_eff_ruptures_sent.monitor          37260            
 count_eff_ruptures_sent.rlzs_assoc       39450            
 count_eff_ruptures_sent.sitecol          8715             
 count_eff_ruptures_sent.siteidx          75               
 count_eff_ruptures_sent.sources          16415            
-count_eff_ruptures_tot_received          40425            
+count_eff_ruptures_tot_received          40440            
 hazard.input_weight                      1694.0           
 hazard.n_imts                            3                
 hazard.n_levels                          8.333333333333334
@@ -98,20 +98,20 @@ Exposure model
 #taxonomies 3
 =========== =
 
-======== =======
-Taxonomy #Assets
-======== =======
-Concrete 2      
-Steel    2      
-Wood     3      
-======== =======
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+Concrete 1.000 0.0    1   1   2         2         
+Steel    1.000 0.0    1   1   2         2         
+Wood     1.000 0.0    1   1   3         3         
+*ALL*    1.000 0.0    1   1   7         7         
+======== ===== ====== === === ========= ==========
 
 Slowest sources
 ---------------
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 1,694  15        0.003       0.171      0.0      
+0            1         SimpleFaultSource 1,694  15        0.002       0.077      0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
 
 Information about the tasks
@@ -123,13 +123,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.233     0.0       1     
-splitting sources              0.171     0.0       1     
-reading composite source model 0.018     0.0       1     
-store source_info              0.007     0.0       1     
-reading exposure               0.006     0.0       1     
-total count_eff_ruptures       0.004     0.0       15    
-filtering sources              0.003     0.0       1     
-aggregate curves               2.868E-04 0.0       15    
-reading site collection        1.097E-05 0.0       1     
+managing sources               0.094     0.0       1     
+splitting sources              0.077     0.0       1     
+reading composite source model 0.008     0.0       1     
+total count_eff_ruptures       0.005     0.0       15    
+store source_info              0.004     0.0       1     
+reading exposure               0.003     0.0       1     
+filtering sources              0.002     0.0       1     
+aggregate curves               1.709E-04 0.0       15    
+reading site collection        5.960E-06 0.0       1     
 ============================== ========= ========= ======
