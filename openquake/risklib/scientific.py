@@ -378,7 +378,7 @@ class VulnerabilityFunction(object):
         return '<VulnerabilityFunction(%s, %s)>' % (self.id, self.imt)
 
 
-class VulnerabilityFunctionWithPMF(object):
+class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
     """
     Vulnerability function with an explicit distribution of probabilities
 

@@ -522,7 +522,7 @@ def view_performance(token, dstore):
 @view.add('task_info')
 def view_task_info(token, dstore):
     """
-    Display statistics information about the tasks performance
+    Display statistical information about the tasks performance
     """
     pdata = dstore['performance_data'].value
     tasks = [calc.core_task.__name__ for calc in base.calculators.values()]
@@ -537,6 +537,18 @@ def view_task_info(token, dstore):
                                  val.mean(), val.std(ddof=1)])
     if len(data) == 1:
         return 'Not available'
+    return rst_table(data)
+
+
+@view.add('assets_by_site')
+def view_asset_info(token, dstore):
+    """
+    Display statistical information about the distribution of the assets
+    """
+    assets_by_site = dstore['assetcol'].assets_by_site()
+    val = numpy.array([len(assets) for assets in assets_by_site])
+    data = ['num_sites min max mean stddev'.split()]
+    data.append([len(val), val.min(), val.max(), val.mean(), val.std(ddof=1)])
     return rst_table(data)
 
 
