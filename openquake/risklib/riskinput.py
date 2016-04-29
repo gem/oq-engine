@@ -382,7 +382,7 @@ class CompositeRiskModel(collections.Mapping):
         :param trunc_level: the truncation level (or None)
         :param correl_model: the correlation model (or None)
         :param min_iml: dictionary of minimum IMLs
-        :param eps: a matrix of epsilons of shape (N, E)
+        :param eps: a matrix of epsilons of shape (N, E) or None
         :param hint: hint for how many blocks to generate
 
         Yield :class:`RiskInputFromRuptures` instances.
@@ -397,7 +397,8 @@ class CompositeRiskModel(collections.Mapping):
                 eids.extend(sr.events['eid'])
             yield RiskInputFromRuptures(
                 imt_taxonomies, sitecol, ses_ruptures,
-                trunc_level, correl_model, min_iml, eps[:, eids], eids)
+                trunc_level, correl_model, min_iml,
+                eps[:, eids] if eps is not None else None, eids)
 
     def gen_outputs(self, riskinput, rlzs_assoc, monitor,
                     assetcol=None):
@@ -412,57 +413,27 @@ class CompositeRiskModel(collections.Mapping):
         :param assetcol: not None only for event based risk
         """
         mon_hazard = monitor('building hazard')
-        mon_risk = monitor('computing risk')
-        monitor.gmfbytes = 0
-        assets_by_site = (None if assetcol is None
-                          else assetcol.assets_by_site())
+        mon_risk = monitor('computing riskmodel', measuremem=False)
         with mon_hazard:
-            # get assets, epsilons, hazard
+            assets_by_site = (riskinput.assets_by_site if assetcol is None
+                              else assetcol.assets_by_site())
             hazard_by_site = riskinput.get_hazard(
                 rlzs_assoc, mon_hazard(measuremem=False))
-        # compute the outputs with the appropriate riskmodels
-        if assets_by_site is None:  # distribution by asset
-            with mon_risk:
-                for assets, hazard in zip(
-                        riskinput.assets_by_site, hazard_by_site):
-                    the_assets = groupby(assets, by_taxonomy)
-                    for taxonomy, assets in the_assets.items():
-                        riskmodel = self[taxonomy]
-                        epsgetter = riskinput.epsilon_getter(
-                            [asset.ordinal for asset in assets])
-                        for imt, taxonomies in riskinput.imt_taxonomies:
-                            if taxonomy in taxonomies:
-                                yield riskmodel.out_by_lr(
-                                    imt, assets, hazard[imt], epsgetter)
-        else:  # event based, distribution by rupture
-            try:
-                for out_by_lr in self.gen_out_by_lr(
-                        riskinput, assets_by_site,
-                        hazard_by_site, mon_risk):
-                    yield out_by_lr
-            finally:
-                # store the size of the GFMs
-                monitor.gmfbytes += hazard_by_site.close()
 
-    def gen_out_by_lr(self, riskinput, assets_by_site, hazard_by_site,
-                      mon_risk):
-        """
-        Yield the outputs by loss type and realization for each site id,
-        asset and intensity measure type.
-        """
-        mon_hazard = mon_risk('getting hazard', measuremem=False)
         for sid, assets in enumerate(assets_by_site):
-            with mon_hazard:
-                hazard = hazard_by_site[sid]
-            if not hazard:
-                continue
-            with mon_risk:
-                for asset in assets:
-                    epsgetter = riskinput.epsilon_getter([asset.ordinal])
-                    for imt, taxonomies in riskinput.imt_taxonomies:
-                        if asset.taxonomy in taxonomies:
-                            yield self[asset.taxonomy].out_by_lr(
-                                imt, [asset], hazard[imt], epsgetter)
+            hazard = hazard_by_site[sid]
+            the_assets = groupby(assets, by_taxonomy)
+            for taxonomy, assets in the_assets.items():
+                riskmodel = self[taxonomy]
+                epsgetter = riskinput.epsilon_getter(
+                    [asset.ordinal for asset in assets])
+                for imt, taxonomies in riskinput.imt_taxonomies:
+                    if taxonomy in taxonomies:
+                        with mon_risk:
+                            yield riskmodel.out_by_lr(
+                                imt, assets, hazard[imt], epsgetter)
+        if hasattr(hazard_by_site, 'close'):  # for event based risk
+            monitor.gmfbytes = hazard_by_site.close()
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
@@ -510,7 +481,7 @@ class RiskInput(object):
         :param asset_ordinals: list of ordinals of the assets
         :returns: a closure returning an array of epsilons from the event IDs
         """
-        return lambda _: [self.eps[aid] for aid in asset_ordinals]
+        return lambda: [self.eps[aid] for aid in asset_ordinals]
 
     def get_hazard(self, rlzs_assoc, monitor=Monitor()):
         """
@@ -711,16 +682,21 @@ class RiskInputFromRuptures(object):
         self.weight = sum(sr.multiplicity for sr in ses_ruptures)
         self.imts = sorted(set(imt for imt, _ in imt_taxonomies))
         self.eids = eids  # E events
-        self.eps = epsilons  # matrix N x E, events in this block
+        if epsilons is not None:
+            self.eps = epsilons  # matrix N x E, events in this block
+            self.eid2idx = dict(zip(eids, range(len(eids))))
 
     def epsilon_getter(self, asset_ordinals):
         """
         :param asset_ordina: ordinal of the asset
         :returns: a closure returning an array of epsilons from the event IDs
         """
-        eps = self.eps[asset_ordinals[0]]  # assume there is only one ordinal
-        eid2eps = dict(zip(self.eids, eps))
-        return lambda eids: [numpy.array([eid2eps[eid] for eid in eids])]
+        if not hasattr(self, 'eps'):
+            return lambda aid, eids: None
+
+        def geteps(aid, eids):
+            return self.eps[aid, [self.eid2idx[eid] for eid in eids]]
+        return geteps
 
     def get_hazard(self, rlzs_assoc, monitor=Monitor()):
         """
