@@ -206,7 +206,7 @@ class VulnerabilityFunction(object):
         gmvs_curve = gmvs_curve[idxs]
         return self._mlr_i1d(gmvs_curve), self._cov_for(gmvs_curve), idxs
 
-    def __call__(self, means, covs, idxs, epsilons):
+    def apply_to(self, means, covs, idxs, epsilons):
         """
         Apply the vulnerability function to a ground motion vector, by using
         an epsilon vector of the sample length.
@@ -224,6 +224,14 @@ class VulnerabilityFunction(object):
         self.set_distribution(epsilons)
         ratios[idxs] = self.distribution.sample(means, covs, None, idxs)
         return ratios
+
+    # this is used in the tests, not in the engine code base
+    def __call__(self, gmvs, epsilons):
+        """
+        A small wrapper around .interpolate and .apply_to
+        """
+        means, covs, idxs = self.interpolate(gmvs)
+        return self.apply_to(means, covs, idxs, epsilons)
 
     def strictly_increasing(self):
         """
