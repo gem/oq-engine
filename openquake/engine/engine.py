@@ -83,16 +83,18 @@ def expose_outputs(dstore):
     calcmode = dstore['oqparam'].calculation_mode
     if 'scenario' in calcmode and 'sescollection' in exportable:
         exportable.remove('sescollection')
-    outkeys = []
+    dskeys = []  # datastore keys, a list of strings
+    # another hack: if the user has asked from UHS curves and there are
+    # hazard maps, put them in the list of exported outputs
     uhs = dstore['oqparam'].uniform_hazard_spectra
     if uhs and 'hmaps' in dstore:
-        outkeys.append('uhs')
+        dskeys.append('uhs')
     for key in dstore:
         if key in exportable:
             if key == 'realizations' and len(dstore['realizations']) == 1:
                 continue  # do not export a single realization
-            outkeys.append(key)
-    logs.dbcmd('create_outputs', dstore.calc_id, outkeys)
+            dskeys.append(key)
+    logs.dbcmd('create_outputs', dstore.calc_id, dskeys)
 
 
 class MasterKilled(KeyboardInterrupt):
