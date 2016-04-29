@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed the export: first the xml exporter is tried and then the csv exporter;
+    if both are available, only the first is used, not both of them
+
   [Daniele Viganò]
   * Removed the openquake_worker.cfg file because it is not used anymore
 
