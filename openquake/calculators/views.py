@@ -29,7 +29,7 @@ import numpy
 import h5py
 
 from openquake.calculators import base
-from openquake.baselib.general import humansize, groupby
+from openquake.baselib.general import humansize, groupby, AccumDict
 from openquake.baselib.performance import perf_dt
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source
@@ -541,14 +541,24 @@ def view_task_info(token, dstore):
 
 
 @view.add('assets_by_site')
-def view_asset_info(token, dstore):
+def view_assets_by_site(token, dstore):
     """
     Display statistical information about the distribution of the assets
     """
     assets_by_site = dstore['assetcol'].assets_by_site()
+    data = ['taxonomy num_sites min max mean stddev'.split()]
+    num_assets = AccumDict()
+    for assets in assets_by_site:
+        num_assets += {k: [len(v)] for k, v in groupby(
+            assets, operator.attrgetter('taxonomy')).items()}
+    for taxo in sorted(num_assets):
+        val = numpy.array(num_assets[taxo])
+        if len(val) > 1:
+            data.append([taxo, len(val), val.min(), val.max(), val.mean(),
+                         val.std(ddof=1)])
     val = numpy.array([len(assets) for assets in assets_by_site])
-    data = ['num_sites min max mean stddev'.split()]
-    data.append([len(val), val.min(), val.max(), val.mean(), val.std(ddof=1)])
+    data.append(['*ALL*', len(val), val.min(), val.max(), val.mean(),
+                 val.std(ddof=1)])
     return rst_table(data)
 
 
