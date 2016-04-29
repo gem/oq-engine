@@ -20,7 +20,7 @@ Url: http://github.com/gem/oq-engine
 
 Requires(pre): shadow-utils
 
-%define common_deps python numpy scipy python-shapely python-psutil python-mock python-futures h5py python-amqp python-celery python-django python-docutils rabbitmq-server sudo
+%define common_deps sudo systemd python numpy scipy python-shapely python-psutil python-mock python-futures h5py python-amqp python-celery python-django python-docutils python-gunicorn rabbitmq-server
 %define oqlib_deps python-oq-hazardlib >= 0.20.0 python-oq-risklib >= 0.13.0
 %define dev_deps python-nose python-coverage
 Requires: %{common_deps}
@@ -32,7 +32,7 @@ Requires: %{dev_deps}
 #BuildRequires: %{dev_deps}
 #BuildRequires: %{oqlib_deps}
 
-BuildRequires: python-setuptools
+BuildRequires: systemd python-setuptools
 
 %description
 
@@ -69,6 +69,14 @@ mkdir -p %{buildroot}/%{_sysconfdir}/openquake
 mkdir -p %{buildroot}/%{_datadir}/openquake/engine
 install -m 644 celeryconfig.py %{buildroot}/%{_datadir}/openquake/engine
 install -m 644 openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
+install -m 644 rpm/systemd/openquake-dbserver.service %{buildroot}%{_unitdir}/openquake-dbserver.service
+install -m 644 rpm/systemd/openquake-webui.service %{buildroot}%{_unitdir}/openquake-webui.service
+install -m 644 rpm/systemd/openquake-celery.service %{buildroot}%{_unitdir}/openquake-celery.service
+
+%post
+%systemd_post openquake-dbserver.service
+%systemd_post openquake-webui.service
+%systemd_post openquake-celery.service
 
 %clean
 rm -rf %{buildroot}
