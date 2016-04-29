@@ -449,7 +449,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         gmvs_curve = gmvs_curve[idxs]
         return self._probs_i1d(gmvs_curve), None, idxs
 
-    def __call__(self, probs, _covs, idxs, epsilons):
+    def apply_to(self, probs, _covs, idxs, epsilons):
         """
         Given IML values, interpolate the corresponding loss ratio
         value(s) on the curve.
