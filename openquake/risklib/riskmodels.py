@@ -526,7 +526,6 @@ class ProbabilisticEventBased(RiskModel):
             instance.
         """
         eids = gmvs['eid']
-        epsilons = epsgetter(eids)
         E = len(gmvs)
         I = self.insured_losses + 1
         N = len(assets)
@@ -534,8 +533,9 @@ class ProbabilisticEventBased(RiskModel):
         cb = self.compositemodel.curve_builders[
             self.compositemodel.lti[loss_type]]
         for i, asset in enumerate(assets):
+            epsilons = epsgetter(asset.ordinal, eids)
             loss_ratios[i, :, 0] = ratios = self.risk_functions[loss_type](
-                gmvs['gmv'], epsilons[i])  # shape E
+                gmvs['gmv'], epsilons)  # shape E
             if self.insured_losses and loss_type != 'occupants':
                 loss_ratios[i, :, 1] = scientific.insured_losses(
                     ratios,  asset.deductible(loss_type),
@@ -625,7 +625,7 @@ class Scenario(RiskModel):
         self.time_event = time_event
 
     def __call__(self, loss_type, assets, ground_motion_values, epsgetter):
-        epsilons = epsgetter(None)
+        epsilons = epsgetter()
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():
