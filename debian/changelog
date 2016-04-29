@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Removed the openquake_worker.cfg file because it is not used anymore
+
   [Michele Simionato]
   * Replaced PostgreSQL with SQLite
   * Introduced a dbserver to mediate the interaction with the database
