@@ -25,7 +25,8 @@ from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.export import export
 from openquake.qa_tests_data.event_based_risk import (
-    case_1, case_2, case_3, case_4, case_4a, case_master, occupants)
+    case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
+    occupants)
 
 
 def strip_calc_id(fname):
@@ -125,6 +126,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assert_stats_ok(case_master, 'job.ini')
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname)
+
+    @attr('qa', 'risk', 'event_based_risk')
+    def test_case_miriam(self):
+        # this is a case with a grid and asset-hazard association
+        out = self.run_calc(case_miriam.__file__, 'job.ini', exports='csv')
+        [fname] = out['agg_loss_table', 'csv']
+        self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
+                              fname)
 
     # now a couple of hazard tests
 

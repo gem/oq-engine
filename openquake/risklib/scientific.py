@@ -830,8 +830,6 @@ class LogNormalDistribution(Distribution):
 
     :attr epsilons: An array of random numbers generated with
                     :func:`numpy.random.multivariate_normal` with size E
-    :attr asset_idx: a counter used in sampling to iterate over the
-                     attribute `epsilons`
     """
     def __init__(self, epsilons=None):
         self.epsilons = epsilons

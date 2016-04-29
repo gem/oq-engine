@@ -529,11 +529,13 @@ class ProbabilisticEventBased(RiskModel):
         I = self.insured_losses + 1
         N = len(assets)
         loss_ratios = numpy.zeros((N, E, I), F32)
+        losses = numpy.zeros((N, E, I), F32)
         cb = self.compositemodel.curve_builders[
             self.compositemodel.lti[loss_type]]
         vf = self.risk_functions[loss_type]
         means, covs, idxs = vf.interpolate(gmvs['gmv'])
         for i, asset in enumerate(assets):
+            val = asset.value(loss_type)
             epsilons = epsgetter(asset.ordinal, eids)
             if epsilons is not None:
                 ratios = vf.apply_to(means, covs, idxs, epsilons)
@@ -544,10 +546,11 @@ class ProbabilisticEventBased(RiskModel):
                 loss_ratios[i, :, 1] = scientific.insured_losses(
                     ratios,  asset.deductible(loss_type),
                     asset.insurance_limit(loss_type))
+            losses[i] = val * loss_ratios[i]
         return scientific.Output(
             assets,
             loss_type,
-            losses=loss_ratios * get_values(loss_type, assets),
+            losses=losses,
             average_loss=loss_ratios.sum(axis=1) * self.ses_ratio,
             counts_matrix=cb.build_counts(loss_ratios[:, :, 0]),
             insured_counts_matrix=(cb.build_counts(loss_ratios[:, :, 1])
