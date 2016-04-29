@@ -1,7 +1,7 @@
 QA test for blocksize independence (hazard)
 ===========================================
 
-gem-tstation:/home/michele/ssd/calc_112.hdf5 updated Wed Apr 27 10:56:48 2016
+gem-tstation:/home/michele/ssd/calc_1027.hdf5 updated Thu Apr 28 15:43:14 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.5
 area_source_discretization   10.0               
 random_seed                  1024               
 master_seed                  0                  
-oqlite_version               '0.13.0-gitcbbc4a8'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -74,36 +74,49 @@ hostname 'gem-tstation'
 
 Specific information for event based
 ------------------------------------
-Total number of ruptures: 3
-Total number of events: 3
+======================== =====
+Total number of ruptures 3    
+Total number of events   3    
+Rupture multiplicity     1.000
+======================== =====
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   175    1,170     8.030E-04   0.305      4.718    
-0            2         AreaSource   58     389       7.730E-04   0.097      1.250    
-0            3         AreaSource   44     352       7.319E-04   0.080      0.510    
+0            1         AreaSource   175    1,170     0.002       0.611      9.402    
+0            2         AreaSource   58     389       0.002       0.199      2.468    
+0            3         AreaSource   44     352       0.002       0.161      1.211    
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+================================= ===== ===== ===== =========
+measurement                       min   max   mean  stddev   
+compute_ruptures.time_sec         0.008 0.494 0.345 0.110    
+compute_ruptures.memory_mb        0.0   0.0   0.0   0.0      
+compute_gmfs_and_curves.time_sec  0.002 0.002 0.002 1.870E-05
+compute_gmfs_and_curves.memory_mb 0.0   0.0   0.0   0.0      
+================================= ===== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         6.522     0.0       38    
-reading composite source model 1.736     0.0       1     
-managing sources               0.611     0.0       1     
-splitting sources              0.482     0.0       3     
-store source_info              0.016     0.0       1     
-filtering sources              0.007     0.0       9     
+total compute_ruptures         13        0.0       38    
+reading composite source model 3.460     0.0       1     
+managing sources               1.249     0.0       1     
+splitting sources              0.971     0.0       3     
+store source_info              0.061     0.0       1     
+filtering sources              0.014     0.0       9     
 total compute_gmfs_and_curves  0.006     0.0       3     
-make contexts                  0.002     0.0       3     
-compute poes                   0.002     0.0       3     
-saving ruptures                0.002     0.0       1     
+saving ruptures                0.004     0.0       1     
+make contexts                  0.003     0.0       3     
 aggregate curves               0.002     0.0       38    
-saving gmfs                    0.001     0.0       3     
+compute poes                   0.002     0.0       3     
+saving gmfs                    0.002     0.0       3     
 filtering ruptures             0.001     0.0       3     
-reading site collection        3.386E-05 0.0       1     
+reading site collection        5.102E-05 0.0       1     
 ============================== ========= ========= ======
