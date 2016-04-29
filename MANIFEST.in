@@ -1,4 +1,4 @@
-include openquake.cfg openquake_worker.cfg
+include openquake.cfg
 include README.md LICENSE CONTRIBUTORS.txt
 
 recursive-include openquake/server/db *.sql
