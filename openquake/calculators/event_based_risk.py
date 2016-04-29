@@ -289,10 +289,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
 
-        # NB: riskinputs is a generator
         riskinputs = self.riskmodel.build_inputs_from_ruptures(
             self.sitecol.complete, all_ruptures, oq.truncation_level,
             correl_model, oq.minimum_intensity, eps, oq.concurrent_tasks or 1)
+        # NB: I am using generators so that the tasks are submitted one at
+        # the time, without keeping all of the arguments in memory
         return starmap(
             self.core_task.__func__,
             ((riskinput, self.riskmodel, self.rlzs_assoc,

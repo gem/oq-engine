@@ -1,6 +1,7 @@
   [Michele Simionato]
-  * Optimized the case when the epsilons are not required, i.e. all the covariance
-    coefficients are zero in the vulnerability functions.
+  * Optimized the case when the epsilons are not required, i.e. all the
+    covariance coefficients are zero in the vulnerability functions
+  * Added another test for event based risk (`case_miriam`)
   * Revisited the distribution mechanism and refined the weight of the
     ruptures in the event based calculators to avoid generating slow tasks
   * Added an automatic help for the subcommands of oq-lite and managed
