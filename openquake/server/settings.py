@@ -22,7 +22,7 @@ from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
 
 from openquake.engine import config
 
-DB_SECTION = config.get_section('database')
+DB_SECTION = config.get_section('dbserver')
 
 INSTALLED_APPS = ('openquake.server.db',)
 
@@ -49,12 +49,11 @@ STATICFILES_DIRS = [
 
 # We need a 'default' database to make Django happy:
 DATABASE = {
-    'ENGINE': 'django.db.backends.postgresql_psycopg2',
-    'NAME': DB_SECTION.get('name', 'openquake'),
-    'USER': DB_SECTION.get('admin_user', 'oq_admin'),
-    'PASSWORD': DB_SECTION.get('admin_password', 'openquake'),
-    'HOST': DB_SECTION.get('host', 'localhost'),
-    'PORT': DB_SECTION.get('port', '5432'),
+    'ENGINE': 'django.db.backends.sqlite3',
+    'NAME': DB_SECTION.get('file'),
+    'USER': 'openquake',
+    'HOST': DB_SECTION.get('host'),
+    'PORT': DB_SECTION.get('port'),
 }
 DATABASES = {'default': DATABASE}
 

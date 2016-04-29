@@ -62,15 +62,8 @@ from openquake.baselib.general import git_suffix
 #  "-" + <pkg-version> + "+dev" + <secs_since_epoch> + "-" + <commit-id>
 # NB: the next line is managed by packager.sh script (we retrieve the version
 #     using sed and optionally replace it)
-__version__ = '1.10.0'
+__version__ = '2.0.0'
 __version__ += git_suffix(__file__)
 
 # The path to the OpenQuake root directory
 OPENQUAKE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-
-
-def set_django_settings_module():
-    os.environ.setdefault(
-        'DJANGO_SETTINGS_MODULE', 'openquake.server.settings')
-
-set_django_settings_module()

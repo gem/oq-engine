@@ -24,6 +24,7 @@ import logging
 import argparse
 import os
 import sys
+import socket
 import getpass
 
 from os.path import abspath
@@ -40,8 +41,6 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR") is not None:
     )
 
 from openquake.engine import utils, config
-from openquake.engine.logs import dbcmd
-
 config.abort_if_no_config_available()
 
 # Please note: the /usr/bin/oq-engine script requires a celeryconfig.py
@@ -54,16 +53,12 @@ if utils.USE_CELERY:
     except ImportError:
         sys.path.append('/usr/share/openquake/engine')
 
+from openquake.engine.utils import confirm, config
 import openquake.engine
-
-from openquake.engine import __version__
 from openquake.engine import engine, logs
+from openquake.engine.tools.make_html_report import make_report
 from openquake.commonlib import datastore
 from openquake.calculators import views
-from openquake.server.db import models, upgrade_manager
-from openquake.engine.export import core
-from openquake.engine.tools.make_html_report import make_report
-from django.db import connection as conn
 
 from openquake.commonlib.concurrent_futures_process_mpatch import (
     concurrent_futures_process_monkeypatch)
@@ -71,6 +66,14 @@ from openquake.commonlib.concurrent_futures_process_mpatch import (
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
+
+
+def get_job_id(job_id, username=None):
+    username = username or getpass.getuser()
+    job_id = logs.dbcmd('get_job_id', job_id, username)
+    if not job_id:
+        sys.exit('Job %s of %s not found' % (job_id, username))
+    return job_id
 
 
 def run_job(cfg_file, log_level, log_file, exports='',
@@ -92,14 +95,28 @@ def run_job(cfg_file, log_level, log_file, exports='',
     """
     # if the master dies, automatically kill the workers
     concurrent_futures_process_monkeypatch()
-    job_id, oqparam = dbcmd(
-        'job_from_file', cfg_file, getpass.getuser(), hazard_calculation_id)
+    job_ini = os.path.abspath(cfg_file)
+    job_id, oqparam = engine.job_from_file(
+        job_ini, getpass.getuser(), hazard_calculation_id)
     calc = engine.run_calc(job_id, oqparam, log_level, log_file, exports,
                            hazard_calculation_id=hazard_calculation_id)
-    duration = calc.monitor.duration  # set this before monitor.flush()
     calc.monitor.flush()
-    dbcmd('print_results', job_id, duration)
+    for line in logs.dbcmd('list_outputs', job_id, False):
+        print line
     return job_id
+
+
+def delete_calculation(job_id, confirmed=False):
+    """
+    Delete a calculation and all associated outputs.
+    """
+    if confirmed or confirm(
+            'Are you sure you want to delete this calculation and all '
+            'associated outputs?\nThis action cannot be undone. (y/n): '):
+        try:
+            logs.dbcmd('del_calc', job_id, getpass.getuser())
+        except RuntimeError as err:
+            print(err)
 
 
 def set_up_arg_parser():
@@ -248,7 +265,7 @@ def main():
     exports = args.exports or 'xml,csv'
 
     if args.version:
-        print __version__
+        print openquake.engine.__version__
         sys.exit(0)
 
     if args.run or args.run_hazard or args.run_risk:
@@ -266,37 +283,43 @@ def main():
     if args.no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'
 
+    # check if the DbServer is up
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        err = sock.connect_ex(config.DBS_ADDRESS)
+    finally:
+        sock.close()
+    if err:
+        sys.exit('Please start the DbServer: '
+                 'see the documentation for details')
+
     if args.upgrade_db:
         logs.set_level('info')
-        msg = upgrade_manager.what_if_I_upgrade(
-            conn, extract_scripts='read_scripts')
-        print msg
+        msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')
         if msg.startswith('Your database is already updated'):
             pass
-        elif args.yes or utils.confirm('Proceed? (y/n) '):
-            upgrade_manager.upgrade_db(conn)
+        elif args.yes or confirm('Proceed? (y/n) '):
+            logs.dbcmd('upgrade_db')
         sys.exit(0)
 
     if args.version_db:
-        print upgrade_manager.version_db(conn)
+        print logs.dbcmd('version_db')
         sys.exit(0)
 
     if args.what_if_I_upgrade:
-        print upgrade_manager.what_if_I_upgrade(conn)
+        print logs.dbcmd('what_if_I_upgrade', 'extract_upgrade_scripts')
         sys.exit(0)
 
     # check if the db is outdated
-    outdated = dbcmd('check_outdated')
+    outdated = logs.dbcmd('check_outdated')
     if outdated:
         sys.exit(outdated)
 
     # hazard or hazard+risk
-    hc_id = args.hazard_calculation_id
-    if hc_id:
-        hc_id = int(hc_id)
-        if hc_id < 0:
-            # make it possible to run `oq-engine --run job_risk.ini --hc -1`
-            hc_id = dbcmd('get_hc_id', hc_id)
+    if args.hazard_calculation_id:
+        hc_id = get_job_id(args.hazard_calculation_id)
+    else:
+        hc_id = None
     if args.run:
         job_inis = map(expanduser, args.run.split(','))
         if len(job_inis) not in (1, 2):
@@ -320,17 +343,21 @@ def main():
                 args.exports, hazard_calculation_id=hc_id)
     # hazard
     elif args.list_hazard_calculations:
-        dbcmd('list_calculations', 'hazard')
+        for line in logs.dbcmd(
+                'list_calculations', 'hazard', getpass.getuser()):
+            print line
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         run_job(expanduser(args.run_hazard), args.log_level,
                 log_file, args.exports)
     elif args.delete_calculation is not None:
-        dbcmd('delete_calculation', args.delete_calculation, args.yes)
+        logs.dbcmd('delete_calculation', args.delete_calculation, args.yes,
+                   getpass.getuser())
     # risk
     elif args.list_risk_calculations:
-        dbcmd('list_calculations', 'risk')
+        for line in logs.dbcmd('list_calculations', 'risk', getpass.getuser()):
+            print line
     elif args.run_risk is not None:
         if args.hazard_calculation_id is None:
             sys.exit(MISSING_HAZARD_MSG)
@@ -343,34 +370,40 @@ def main():
 
     # export
     elif args.make_html_report:
-        print 'Written', make_report(conn, args.make_html_report)
+        print 'Written', make_report(args.make_html_report)
         sys.exit(0)
 
     elif args.list_outputs is not None:
-        hc_id = dbcmd('get_hc_id', args.list_outputs)
-        dbcmd('list_outputs', hc_id)
+        hc_id = get_job_id(args.list_outputs)
+        for line in logs.dbcmd('list_outputs', hc_id):
+            print line
     elif args.show_view is not None:
         job_id, view_name = args.show_view
         print views.view(view_name, datastore.read(int(job_id)))
     elif args.show_log is not None:
-        hc_id = dbcmd('get_hc_id', args.show_log[0])
-        print dbcmd('get_log', hc_id)
+        hc_id = get_job_id(args.show_log[0])
+        for line in logs.dbcmd('get_log', hc_id):
+            print line
 
     elif args.export_output is not None:
         output_id, target_dir = args.export_output
-        dbcmd('export_output', int(output_id), expanduser(target_dir),
-              exports)
+        for line in logs.dbcmd('@export_output', int(output_id),
+                               expanduser(target_dir), exports):
+            print line
 
     elif args.export_outputs is not None:
         job_id, target_dir = args.export_outputs
-        hc_id = dbcmd('get_hc_id', job_id)
-        dbcmd('export_outputs', hc_id, expanduser(target_dir), exports)
+        hc_id = get_job_id(job_id)
+        for line in logs.dbcmd('@export_outputs', hc_id,
+                               expanduser(target_dir), exports):
+            print line
 
     elif args.delete_uncompleted_calculations:
-        dbcmd('delete_uncompleted_calculations')
+        logs.dbcmd('delete_uncompleted_calculations', getpass.getuser())
     else:
         arg_parser.print_usage()
 
 
 if __name__ == '__main__':
+    config.abort_if_no_config_available()
     main()

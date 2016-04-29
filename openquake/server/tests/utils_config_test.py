@@ -27,9 +27,9 @@ import unittest
 
 from openquake.engine import config
 
-from openquake.engine.tests.utils.helpers import ConfigTestCase
-from openquake.engine.tests.utils.helpers import patch
-from openquake.engine.tests.utils.helpers import touch
+from openquake.server.tests.helpers import ConfigTestCase
+from openquake.server.tests.helpers import patch
+from openquake.server.tests.helpers import touch
 
 
 class ConfigTestCase(ConfigTestCase, unittest.TestCase):
