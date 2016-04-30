@@ -111,7 +111,7 @@ def export_avg_losses(ekey, dstore):
     avg_losses = dstore[ekey[0]].value
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets(dstore)
-    writer = writers.CsvWriter(fmt='%.6E')
+    writer = writers.CsvWriter(fmt='%.5E')
     for rlz in rlzs:
         losses = avg_losses[:, rlz.ordinal]
         dest = dstore.export_path('losses_by_asset-rlz%03d.csv' % rlz.ordinal)
@@ -130,7 +130,7 @@ def export_avg_losses_stats(ekey, dstore):
     avg_losses = dstore[ekey[0]].value
     quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     assets = get_assets(dstore)
-    writer = writers.CsvWriter(fmt='%10.6E')
+    writer = writers.CsvWriter(fmt='%.5E')
     for i, quantile in enumerate(quantiles):
         losses = avg_losses[:, i]
         dest = dstore.export_path('avg_losses-%s.csv' % quantile)
