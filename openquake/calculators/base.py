@@ -84,7 +84,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     assetcol = datastore.persistent_attribute('assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
     job_info = datastore.persistent_attribute('job_info')
-    oqparam = datastore.persistent_attribute('oqparam')
     performance = datastore.persistent_attribute('performance')
     csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
@@ -107,7 +106,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         Update the current calculation parameters and save oqlite_version
         """
         vars(self.oqparam).update(oqlite_version=__version__, **kw)
-        self.oqparam = self.oqparam  # save the updated oqparam
+        self.datastore['oqparam'] = self.oqparam  # save the updated oqparam
         self.datastore.flush()
 
     def set_log_format(self):
@@ -226,8 +225,10 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             self.realizations = numpy.array(
                 [(r.uid, r.weight) for r in rlzs], rlz_dt)
         self.datastore.flush()
-        # NB: the datastore must not be closed, otherwise some tests
-        # will break; it will be closed automatically anyway
+        try:
+            self.datastore.close()
+        except RuntimeError:  # there could be a mysterious HDF5 error
+            logging.error('', exc_info=True)
 
 
 def check_time_event(oqparam, time_events):
