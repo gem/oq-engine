@@ -228,7 +228,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         try:
             self.datastore.close()
         except RuntimeError:  # there could be a mysterious HDF5 error
-            logging.error('', exc_info=True)
+            logging.warn('', exc_info=True)
 
 
 def check_time_event(oqparam, time_events):
