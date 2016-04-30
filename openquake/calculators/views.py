@@ -380,7 +380,7 @@ def view_mean_avg_losses(token, dstore):
     assets = util.get_assets(dstore)
     losses = util.compose_arrays(assets, data)
     losses.sort()
-    return rst_table(losses, fmt='%8.6E')
+    return rst_table(losses, fmt='%.5E')
 
 
 # this is used by the classical calculator
