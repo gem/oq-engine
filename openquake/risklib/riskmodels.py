@@ -483,32 +483,17 @@ class ProbabilisticEventBased(RiskModel):
     kind = 'vulnerability'
 
     def __init__(
-            self, taxonomy,
-            vulnerability_functions,
-            investigation_time,
-            risk_investigation_time,
-            number_of_logic_tree_samples,
-            ses_per_logic_tree_path,
-            loss_curve_resolution,
-            conditional_loss_poes,
-            insured_losses=False,
-            loss_ratios=()):
+            self, taxonomy, vulnerability_functions, loss_curve_resolution,
+            conditional_loss_poes, insured_losses=False):
         """
         See :func:`openquake.risklib.scientific.event_based` for a description
         of the input parameters.
         """
-        time_span = risk_investigation_time or investigation_time
-        self.ses_ratio = time_span / (
-            investigation_time * ses_per_logic_tree_path)
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.loss_curve_resolution = loss_curve_resolution
-        self.curves = functools.partial(
-            scientific.event_based, curve_resolution=loss_curve_resolution,
-            ses_ratio=self.ses_ratio)
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
-        self.loss_ratios = loss_ratios
 
     def __call__(self, loss_type, assets, gmvs, epsgetter):
         """
@@ -539,8 +524,7 @@ class ProbabilisticEventBased(RiskModel):
                     ratios,  asset.deductible(loss_type),
                     asset.insurance_limit(loss_type))
         return scientific.Output(
-            assets, loss_type, loss_ratios=loss_ratios,
-            ses_ratio=self.ses_ratio, eids=eids)
+            assets, loss_type, loss_ratios=loss_ratios, eids=eids)
 
 
 @registry.add('classical_bcr')

@@ -144,7 +144,7 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
             # average losses
             if monitor.avg_losses:
                 result['AVGLOSS'][l, r][aid] += (
-                    loss_ratios.sum(axis=0) * out.ses_ratio)
+                    loss_ratios.sum(axis=0) * monitor.ses_ratio)
 
             # asset losses
             if monitor.asset_loss_table:
@@ -265,6 +265,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         mon.avg_losses = self.oqparam.avg_losses
         mon.asset_loss_table = self.oqparam.asset_loss_table
         mon.insured_losses = self.I
+        mon.ses_ratio = (
+            oq.risk_investigation_time or oq.investigation_time) / (
+                oq.investigation_time * oq.ses_per_logic_tree_path)
 
         self.N = N = len(self.assetcol)
         self.E = len(self.datastore['etags'])
