@@ -125,32 +125,37 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
 
     asset_ids = [a.ordinal for a in output.assets]
     for (l, r), out in sorted(output.items()):
+        loss_type = compositemodel.loss_types[l]
         indices = numpy.array([idx[eid] for eid in out.eids])
 
-        # dictionaries asset_idx -> array of counts
-        if compositemodel.curve_builders[l].user_provided:
-            result['RC'][l, r] += dict(zip(asset_ids, out.counts_matrix))
-            if out.insured_counts_matrix is not None:
+        cb = compositemodel.curve_builders[l]
+        if cb.user_provided:
+            counts_matrix = cb.build_counts(out.loss_ratios[:, :, 0])
+            result['RC'][l, r] += dict(zip(asset_ids, counts_matrix))
+            if monitor.insured_losses:
                 result['IC'][l, r] += dict(
-                    zip(asset_ids, out.insured_counts_matrix))
+                    zip(asset_ids, cb.build_counts(out.loss_ratios[:, :, 1])))
 
         for i, asset in enumerate(output.assets):
             aid = asset.ordinal
+            loss_ratios = out.loss_ratios[i]
+            losses = loss_ratios * asset.value(loss_type)
 
             # average losses
             if monitor.avg_losses:
-                result['AVGLOSS'][l, r][aid] += out.average_loss[i]
+                result['AVGLOSS'][l, r][aid] += (
+                    loss_ratios.sum(axis=0) * out.ses_ratio)
 
             # asset losses
             if monitor.asset_loss_table:
                 data = [(eid, aid, loss)
-                        for eid, loss in zip(out.eids, out.losses[i])
+                        for eid, loss in zip(out.eids, losses)
                         if loss.sum() > 0]
                 result['ASSLOSS'][l, r].append(
                     numpy.array(data, monitor.ela_dt))
 
             # agglosses
-            agg[indices, l, r] += out.losses[i]
+            agg[indices, l, r] += losses
 
 
 @parallel.litetask
