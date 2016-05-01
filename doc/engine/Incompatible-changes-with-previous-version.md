@@ -1,5 +1,5 @@
 The OpenQuake 1.2 release is a major change with respect to the OpenQuake 1.0 release.
-You can find a detailed list of the improvements [on this page](What's-new-in-OpenQuake-1.2.md).
+You can find a detailed list of the improvements [on this page](What's-new.md).
 
 A few new features were added and the performance of all calculators has been improved significatively. In some cases even of several orders of magnitude! Moreover the database name and schema have changed, the underlying dependencies have changed and a lot of bugs were fixed. Most of the changes have been backward compatible though.
 
