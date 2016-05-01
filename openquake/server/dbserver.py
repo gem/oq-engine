@@ -28,6 +28,8 @@ from openquake.engine import config
 from openquake.server.db import actions
 from openquake.server.settings import DATABASE
 from django.db import connection
+from django import setup
+setup()
 
 queue = Queue()
 
