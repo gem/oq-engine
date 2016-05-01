@@ -1,7 +1,7 @@
 The difference in OpenQuake 1.2 is mostly in the performance of the hazard calculators.
 They are *much* faster, sometimes several order of magnitudes faster. 
 
-The changes which are not compatible with the past [are listed here](Incompatible-changes-between-OpenQuake-1.0-and-1.2.md).
+The changes which are not compatible with the past [are listed here](Incompatible-changes-with-previous-version.md).
 Moreover a few new features have been added.
 
 1. it is possible to avoid saving the individual hazard curves. This is useful for people working
