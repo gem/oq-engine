@@ -29,10 +29,13 @@ import unittest
 import platform
 import subprocess
 import tempfile
-
 import requests
+import django
 if requests.__version__ < '1.0.0':
     requests.Response.text = property(lambda self: self.content)
+if hasattr(django, 'setup'):
+    django.setup()  # for Django >= 1.7
+
 
 UBUNTU12 = platform.dist() == ('Ubuntu', '12.04', 'precise')
 
