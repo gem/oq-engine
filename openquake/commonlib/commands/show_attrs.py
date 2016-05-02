@@ -18,18 +18,16 @@
 
 from __future__ import print_function
 from openquake.commonlib import sap, datastore
+import h5py
 
 
 def show_attrs(key, calc_id=-1):
     """
-    Show the attributes of a HDF5 dataset in the datastore
-
-    :param key: key of the datastore
-    :param calc_id: numeric calculation ID (default last calculation)
+    Show the attributes of a HDF5 dataset in the datastore.
     """
     ds = datastore.read(calc_id)
     try:
-        attrs = ds.hdf5[key].attrs
+        attrs = h5py.File.__getitem__(ds.hdf5, key).attrs
     except KeyError:
         print('%r is not in %s' % (key, ds))
         return

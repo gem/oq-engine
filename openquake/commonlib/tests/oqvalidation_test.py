@@ -309,3 +309,13 @@ class OqParamTestCase(unittest.TestCase):
         self.assertIn("The `uniform_hazard_spectra` can be True only if "
                       "the IMT set contains SA(...) or PGA",
                       str(ctx.exception))
+
+    def test_set_risk_imtls(self):
+        oq = object.__new__(OqParam)
+        vf = mock.Mock()
+        vf.imt = ' SA(0.1)'
+        vf.imls = [0.1, 0.2]
+        rm = dict(taxo=dict(structural=vf))
+        with self.assertRaises(ValueError) as ctx:
+            oq.set_risk_imtls(rm)
+        self.assertIn("Unknown IMT: ' SA(0.1)'", str(ctx.exception))

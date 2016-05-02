@@ -20,6 +20,7 @@ from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.classical_risk import (
     case_1, case_2, case_3, case_4, case_5, case_master)
+from openquake.baselib.general import writetmp
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.writers import scientificformat
 from openquake.commonlib.datastore import view
@@ -32,7 +33,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='xml')
 
         # check loss ratios
-        lrs = self.calc.datastore['composite_risk_model/VF-structural']
+        lrs = self.calc.datastore['composite_risk_model/VF/structural']
         got = scientificformat(lrs.mean_loss_ratios, '%.2f')
         self.assertEqual(got, '0.05 0.10 0.20 0.40 0.80')
 
@@ -84,6 +85,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-mean-structural.xml',
                               fname)
 
+    # test with 1 hazard site and 2 risk sites using assoc_assets_sites
     @attr('qa', 'risk', 'classical_risk')
     def test_case_5(self):
         # test with different curve resolution for different taxonomies
@@ -95,13 +97,8 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/loss_curves-mean.xml', fname)
 
         # check individual avg losses
-        text = view('loss_curves_avg', self.calc.datastore)
-        self.assertEqual(text, '''========= ========= ============= ============ ===================================================
-asset_ref taxonomy  lon           lat          structural                                         
-========= ========= ============= ============ ===================================================
-a6        MC-RLSB-2 -7.816800E+01 1.559329E+01 2.837295E-03 2.886262E-03 2.872555E-03 2.889799E-03
-a7        MS-SLSB-1 -7.816812E+01 1.559329E+01 1.073631E-06 1.110482E-06 1.096380E-06 1.115112E-06
-========= ========= ============= ============ ===================================================''')
+        fname = writetmp(view('loss_curves_avg', self.calc.datastore))
+        self.assertEqualFiles('expected/loss_curves_avg.txt', fname)
 
     @attr('qa', 'risk', 'classical_risk')
     def test_case_master(self):

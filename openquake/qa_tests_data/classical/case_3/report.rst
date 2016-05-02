@@ -1,26 +1,28 @@
 Classical Hazard QA Test, Case 3
 ================================
 
-num_sites = 1, sitecol = 684 B
+gem-tstation:/home/michele/ssd/calc_1004.hdf5 updated Thu Apr 28 15:40:48 2016
+
+num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ =========
-calculation_mode             classical
-number_of_logic_tree_samples 0        
-maximum_distance             200      
-investigation_time           1.000    
-ses_per_logic_tree_path      1        
-truncation_level             0.0      
-rupture_mesh_spacing         1.000    
-complex_fault_mesh_spacing   1.000    
-width_of_mfd_bin             1.000    
-area_source_discretization   0.050    
-random_seed                  1,066    
-master_seed                  0        
-concurrent_tasks             16       
-sites_per_tile               1000     
-============================ =========
+============================ ===================
+calculation_mode             'classical'        
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           1.0                
+ses_per_logic_tree_path      1                  
+truncation_level             0.0                
+rupture_mesh_spacing         1.0                
+complex_fault_mesh_spacing   1.0                
+width_of_mfd_bin             1.0                
+area_source_discretization   0.05               
+random_seed                  1066               
+master_seed                  0                  
+sites_per_tile               1000               
+oqlite_version               '0.13.0-git93d6f64'
+============================ ===================
 
 Input files
 -----------
@@ -38,7 +40,7 @@ Composite source model
 ========= ====== ====================================== =============== ================
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations
 ========= ====== ====================================== =============== ================
-b1        1.00   `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
+b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1             
 ========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
@@ -65,17 +67,50 @@ source_model     trt_id trt                  num_sources eff_ruptures weight
 source_model.xml 0      Active Shallow Crust 1           31,353       783   
 ================ ====== ==================== =========== ============ ======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =======
-Number of tasks to generate 16     
-Sent data                   6.34 MB
-=========================== =======
+Informational data
+------------------
+======================================== ==============
+count_eff_ruptures_max_received_per_task 2543          
+count_eff_ruptures_num_tasks             79            
+count_eff_ruptures_sent.monitor          181305        
+count_eff_ruptures_sent.rlzs_assoc       207296        
+count_eff_ruptures_sent.sitecol          34523         
+count_eff_ruptures_sent.siteidx          395           
+count_eff_ruptures_sent.sources          6601094       
+count_eff_ruptures_tot_received          200896        
+hazard.input_weight                      783.825       
+hazard.n_imts                            1             
+hazard.n_levels                          3.0           
+hazard.n_realizations                    1             
+hazard.n_sites                           1             
+hazard.n_sources                         0             
+hazard.output_weight                     3.0           
+hostname                                 'gem-tstation'
+======================================== ==============
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   783    31,353    0.002       6.579      0.0      
+0            1         AreaSource   783    31,353    0.002       9.992      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+Not available
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+managing sources               12        0.0       1     
+splitting sources              9.992     0.0       1     
+reading composite source model 9.464     0.0       1     
+total count_eff_ruptures       0.044     0.0       79    
+store source_info              0.007     0.0       1     
+filtering sources              0.002     0.0       1     
+aggregate curves               0.002     0.0       79    
+reading site collection        4.697E-05 0.0       1     
+============================== ========= ========= ======

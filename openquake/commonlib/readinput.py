@@ -49,14 +49,6 @@ MAX_SITE_MODEL_DISTANCE = 5  # km, given by Graeme Weatherill
 
 F32 = numpy.float32
 
-info_dt = numpy.dtype([('input_weight', float),
-                       ('output_weight', float),
-                       ('n_imts', numpy.uint32),
-                       ('n_levels', numpy.uint32),
-                       ('n_sites', numpy.uint32),
-                       ('n_sources', numpy.uint32),
-                       ('n_realizations', numpy.uint32)])
-
 
 class DuplicatedPoint(Exception):
     """
@@ -540,6 +532,7 @@ def get_job_info(oqparam, source_models, sitecol):
         a dictionary with same parameters of the computation, in particular
         the input and output weights
     """
+    info = {}
     # The input weight is given by the number of ruptures generated
     # by the sources; for point sources however a corrective factor
     # given by the parameter `point_source_weight` is applied
@@ -580,9 +573,14 @@ def get_job_info(oqparam, source_models, sitecol):
         output_weight *= n_levels
 
     n_sources = 0  # to be set later
-    return numpy.array([
-        (input_weight, output_weight, n_imts, n_levels, n_sites, n_sources,
-         n_realizations)], info_dt)
+    info['hazard'] = dict(input_weight=input_weight,
+                          output_weight=output_weight,
+                          n_imts=n_imts,
+                          n_levels=n_levels,
+                          n_sites=n_sites,
+                          n_sources=n_sources,
+                          n_realizations=n_realizations)
+    return info
 
 
 def get_imts(oqparam):
@@ -706,7 +704,7 @@ def get_exposure_lazy(fname, ok_cost_types):
     exp = Exposure(
         exposure['id'], exposure['category'],
         ~description, numpy.array(cost_types, cost_type_dt), time_events,
-        ~inslimit, ~deductible, area.attrib, [], set())
+        ~inslimit, ~deductible, area.attrib, [], set(), [])
     cc = riskmodels.CostCalculator(
         {}, {}, exp.deductible_is_absolute, exp.insurance_limit_is_absolute)
     for ct in exp.cost_types:
@@ -743,7 +741,7 @@ def get_exposure(oqparam):
     asset_refs = set()
     ignore_missing_costs = set(oqparam.ignore_missing_costs)
 
-    for asset in assets_node:
+    for idx, asset in enumerate(assets_node):
         values = {}
         deductibles = {}
         insurance_limits = {}
@@ -753,6 +751,7 @@ def get_exposure(oqparam):
             if asset_id in asset_refs:
                 raise DuplicatedID(asset_id)
             asset_refs.add(asset_id)
+            exposure.asset_refs.append(asset_id)
             taxonomy = asset['taxonomy']
             if 'damage' in oqparam.calculation_mode:
                 # calculators of 'damage' kind require the 'number'
@@ -818,7 +817,7 @@ def get_exposure(oqparam):
             values['occupants_None'] = tot_occupants / len(occupancies)
         area = float(asset.attrib.get('area', 1))
         ass = riskmodels.Asset(
-            asset_id, taxonomy, number, location, values, area,
+            idx, taxonomy, number, location, values, area,
             deductibles, insurance_limits, retrofitteds, cc)
         exposure.assets.append(ass)
         exposure.taxonomies.add(taxonomy)
@@ -840,22 +839,7 @@ def get_exposure(oqparam):
 Exposure = collections.namedtuple(
     'Exposure', ['id', 'category', 'description', 'cost_types', 'time_events',
                  'insurance_limit_is_absolute', 'deductible_is_absolute',
-                 'area', 'assets', 'taxonomies'])
-
-
-def get_specific_assets(oqparam):
-    """
-    Get the assets from the parameters specific_assets or specific_assets_csv
-
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    """
-    try:
-        return set(oqparam.specific_assets)
-    except AttributeError:
-        if 'specific_assets' not in oqparam.inputs:
-            return set()
-        return set(open(oqparam.inputs['specific_assets']).read().split())
+                 'area', 'assets', 'taxonomies', 'asset_refs'])
 
 
 def get_sitecol_assets(oqparam, exposure):
@@ -1035,7 +1019,7 @@ def get_gmfs_from_txt(oqparam, fname):
         if not oqparam.imtls:
             oqparam.set_risk_imtls(get_risk_models(oqparam))
         imts = list(oqparam.imtls)
-        imt_dt = numpy.dtype([(imt, F32) for imt in imts])
+        imt_dt = numpy.dtype([(bytes(imt), F32) for imt in imts])
         num_gmfs = oqparam.number_of_ground_motion_fields
         gmf_by_imt = numpy.zeros((num_gmfs, len(sitecol)), imt_dt)
         etags = []
@@ -1093,7 +1077,7 @@ def get_scenario_from_nrml(oqparam, fname):
         oqparam.set_risk_imtls(get_risk_models(oqparam))
     imts = list(oqparam.imtls)
     num_imts = len(imts)
-    imt_dt = numpy.dtype([(imt, F32) for imt in imts])
+    imt_dt = numpy.dtype([(bytes(imt), F32) for imt in imts])
     gmfset = nrml.read(fname).gmfCollection.gmfSet
     etags, sitecounts = _extract_etags_sitecounts(gmfset)
     oqparam.sites = sorted(sitecounts)

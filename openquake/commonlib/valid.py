@@ -30,6 +30,7 @@ from decimal import Decimal
 import numpy
 
 from openquake.baselib.python3compat import with_metaclass
+from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim
 from openquake.baselib.general import distinct
 
@@ -184,20 +185,34 @@ name = Regex(r'^[a-zA-Z_]\w*$')
 
 name_with_dashes = Regex(r'^[a-zA-Z_][\w\-]*$')
 
+
+class SimpleId(object):
+    """
+    Check if the given value is a valid ID.
+
+    :param length: maximum length of the ID
+    :param regex: accepted characters
+    """
+    def __init__(self, length, regex=r'^[\w_\-]+$'):
+        self.length = length
+        self.regex = regex
+        self.__name__ = 'SimpleId(%d, %s)' % (length, regex)
+
+    def __call__(self, value):
+        if len(value) > self.length:
+            raise ValueError('The ID %r is longer than %d character' %
+                             (value, self.length))
+        if re.match(self.regex, value):
+            return value
+        raise ValueError(
+            'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-' % value)
+
 MAX_ID_LENGTH = 100
+ASSET_ID_LENGTH = 100
 
-
-def simple_id(value):
-    """
-    Check the source id; the only accepted chars are `a-zA-Z0-9_-`
-    """
-    if len(value) > MAX_ID_LENGTH:
-        raise ValueError('The ID %r is longer than %d character' %
-                         (value, MAX_ID_LENGTH))
-    if re.match(r'^[\w_\-]+$', value):
-        return value
-    raise ValueError(
-        'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-' % value)
+simple_id = SimpleId(MAX_ID_LENGTH)
+asset_id = SimpleId(ASSET_ID_LENGTH)
+source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\.\-_]+$')
 
 
 class FloatRange(object):
@@ -889,7 +904,7 @@ class MetaParamSet(type):
 
 
 # used in commonlib.oqvalidation
-class ParamSet(with_metaclass(MetaParamSet)):
+class ParamSet(with_metaclass(MetaParamSet, hdf5.LiteralAttrs)):
     """
     A set of valid interrelated parameters. Here is an example
     of usage:
@@ -1003,8 +1018,3 @@ class ParamSet(with_metaclass(MetaParamSet)):
     def __iter__(self):
         for item in sorted(vars(self).items()):
             yield item
-
-    def __repr__(self):
-        names = sorted(n for n in vars(self) if not n.startswith('_'))
-        nameval = ', '.join('%s=%r' % (n, getattr(self, n)) for n in names)
-        return '<%s %s>' % (self.__class__.__name__, nameval)

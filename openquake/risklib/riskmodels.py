@@ -19,7 +19,6 @@
 from __future__ import division
 import inspect
 import functools
-import mock
 import numpy
 
 from openquake.baselib.general import CallableDict, AccumDict
@@ -80,9 +79,9 @@ class CostCalculator(object):
         raise RuntimeError('Unable to compute cost')
 
     def __toh5__(self):
+        loss_types = sorted(self.cost_types)
         dt = numpy.dtype([('cost_type', (bytes, 10)),
                           ('area_type', (bytes, 10))])
-        loss_types = sorted(self.cost_types)
         array = numpy.zeros(len(loss_types), dt)
         array['cost_type'] = [self.cost_types[lt] for lt in loss_types]
         array['area_type'] = [self.area_types[lt] for lt in loss_types]
@@ -91,10 +90,9 @@ class CostCalculator(object):
         return array, attrs
 
     def __fromh5__(self, array, attrs):
-        loss_types = attrs.pop('loss_types')
         vars(self).update(attrs)
-        self.cost_types = dict(zip(loss_types, array['cost_type']))
-        self.area_types = dict(zip(loss_types, array['area_type']))
+        self.cost_types = dict(zip(self.loss_types, array['cost_type']))
+        self.area_types = dict(zip(self.loss_types, array['area_type']))
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, vars(self))
@@ -126,7 +124,7 @@ class Asset(object):
                  insurance_limits=None,
                  retrofitteds=None,
                  calc=costcalculator,
-                 idx=None):
+                 ordinal=None):
         """
         :param asset_id:
             an unique identifier of the assets within the given exposure
@@ -148,8 +146,8 @@ class Asset(object):
             asset retrofitting values keyed by loss types
         :param calc:
             cost calculator instance
-        :param idx:
-            asset collection index
+        :param ordinal:
+            asset collection ordinal
         """
         self.id = asset_id
         self.taxonomy = taxonomy
@@ -161,7 +159,7 @@ class Asset(object):
         self.deductibles = deductibles
         self.insurance_limits = insurance_limits
         self.calc = calc
-        self.idx = idx
+        self.ordinal = ordinal
         self._cost = {}  # cache for the costs
 
     def value(self, loss_type, time_event=None):
@@ -212,9 +210,6 @@ class Asset(object):
     def __repr__(self):
         return '<Asset %s>' % self.id
 
-    def __str__(self):
-        return self.id
-
 
 def get_values(loss_type, assets, time_event=None):
     """
@@ -253,24 +248,25 @@ class RiskModel(object):
         return [lt for lt in self.loss_types
                 if self.risk_functions[lt].imt == imt]
 
-    def out_by_lr(self, imt, assets, hazard, epsilons, eids=None):
+    def out_by_lr(self, imt, assets, hazard, epsgetter):
         """
         :param imt: restrict the risk functions to this IMT
         :param assets: an array of assets of homogeneous taxonomy
         :param hazard: a dictionary rlz -> hazard
-        :param epsilons: an array of epsilons per each asset
-        :param eids: rupture indices (only for event based)
+        :param epsgetter: a callable returning epsilons for the given eids
         :returns: a dictionary (l, r) -> output
         """
         out_by_lr = AccumDict()
         out_by_lr.assets = assets
-        out_by_lr.eids = eids
         loss_types = self.get_loss_types(imt)
         # extract the realizations from the first asset
         for rlz in sorted(hazard):
             r = rlz.ordinal
+            haz = hazard[rlz]
+            if len(haz) == 0:
+                continue
             for loss_type in loss_types:
-                out = self(loss_type, assets, hazard[rlz], epsilons, eids)
+                out = self(loss_type, assets, haz, epsgetter)
                 if out:
                     l = self.compositemodel.lti[loss_type]
                     out.hid = r
@@ -394,8 +390,7 @@ class Classical(RiskModel):
             lt: vf.mean_loss_ratios_with_steps(lrem_steps_per_interval)
             for lt, vf in vulnerability_functions.items()}
 
-    def __call__(self, loss_type, assets, hazard_curve, _epsilons=None,
-                 _eids=None):
+    def __call__(self, loss_type, assets, hazard_curve, _eps=None):
         """
         :param str loss_type:
             the loss type considered
@@ -404,7 +399,7 @@ class Classical(RiskModel):
             :class:`openquake.risklib.scientific.Asset` instances
         :param hazard_curve:
             an array of poes
-        :param _epsilons:
+        :param _eps:
             ignored, here only for API compatibility with other calculators
         :returns:
             a :class:`openquake.risklib.scientific.Classical.Output` instance.
@@ -504,8 +499,7 @@ class ProbabilisticEventBased(RiskModel):
         """
         time_span = risk_investigation_time or investigation_time
         self.ses_ratio = time_span / (
-            investigation_time * ses_per_logic_tree_path *
-            (number_of_logic_tree_samples or 1))
+            investigation_time * ses_per_logic_tree_path)
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.loss_curve_resolution = loss_curve_resolution
@@ -516,55 +510,47 @@ class ProbabilisticEventBased(RiskModel):
         self.insured_losses = insured_losses
         self.loss_ratios = loss_ratios
 
-    def __call__(self, loss_type, assets, ground_motion_values, epsilons,
-                 eids):
+    def __call__(self, loss_type, assets, gmvs, epsgetter):
         """
-        :param str loss_type: the loss type considered
-
+        :param str loss_type:
+            the loss type considered
         :param assets:
-           a list with a single asset
-
-        :param ground_motion_values:
-           an array of E ground_motion_values
-
-        :param epsilons:
-           a list with a single array of E stochastic values
-
-        :param eids:
-           a numpy array of E rupture IDs
-
+           a list of assets on the same site and with the same taxonomy
+        :param gmvs:
+           an instance of :class:`openquake.risklib.riskinput.Gmvs`
+        :param epsgetter:
+           a callable returning the correct epsilons for the given gmvs
         :returns:
             a :class:
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
-        E = len(eids)
+        eids = gmvs['eid']
+        E = len(gmvs)
         I = self.insured_losses + 1
-        loss_ratios = numpy.zeros((E, I), F32)
-        asset = assets[0]  # the only one
-        loss_ratios[:, 0] = ratios = self.risk_functions[loss_type].apply_to(
-            [ground_motion_values], epsilons)[0]  # shape E
+        N = len(assets)
+        loss_ratios = numpy.zeros((N, E, I), F32)
+        losses = numpy.zeros((N, E, I), F32)
         cb = self.compositemodel.curve_builders[
             self.compositemodel.lti[loss_type]]
-        if self.insured_losses and loss_type != 'occupants':
-            deductible = asset.deductible(loss_type)
-            limit = asset.insurance_limit(loss_type)
-            ilm = scientific.insured_losses(ratios, deductible, limit)
-            loss_ratios[:, 1] = ilm
-            icounts = cb.build_counts(ilm)
-        else:
-            # FIXME: ugly workaround for qa_tests.event_based_test; in Ubuntu
-            # 12.04 MagicMock does not work well, so len(cb.ratios) gives error
-            nratios = 1 if isinstance(cb, mock.Mock) else len(cb.ratios)
-            icounts = numpy.empty(nratios)
-            icounts.fill(numpy.nan)
+        for i, asset in enumerate(assets):
+            val = asset.value(loss_type)
+            epsilons = epsgetter(asset.ordinal, eids)
+            loss_ratios[i, :, 0] = ratios = self.risk_functions[loss_type](
+                gmvs['gmv'], epsilons)  # shape E
+            if self.insured_losses and loss_type != 'occupants':
+                loss_ratios[i, :, 1] = scientific.insured_losses(
+                    ratios,  asset.deductible(loss_type),
+                    asset.insurance_limit(loss_type))
+            losses[i] = val * loss_ratios[i]
         return scientific.Output(
             assets,
             loss_type,
-            losses=loss_ratios * asset.value(loss_type),
-            average_loss=loss_ratios.sum(axis=0) * self.ses_ratio,
-            counts_matrix=cb.build_counts(loss_ratios),
-            insured_counts_matrix=icounts,
+            losses=losses,
+            average_loss=loss_ratios.sum(axis=1) * self.ses_ratio,
+            counts_matrix=cb.build_counts(loss_ratios[:, :, 0]),
+            insured_counts_matrix=(cb.build_counts(loss_ratios[:, :, 1])
+                                   if self.insured_losses else None),
             eids=eids)
 
 
@@ -641,8 +627,8 @@ class Scenario(RiskModel):
         self.insured_losses = insured_losses
         self.time_event = time_event
 
-    def __call__(self, loss_type, assets, ground_motion_values, epsilons,
-                 _eids=None):
+    def __call__(self, loss_type, assets, ground_motion_values, epsgetter):
+        epsilons = epsgetter()
         values = get_values(loss_type, assets, self.time_event)
         ok = ~numpy.isnan(values)
         if not ok.any():
@@ -655,8 +641,10 @@ class Scenario(RiskModel):
             epsilons = epsilons[ok]
 
         # a matrix of N x E elements
-        loss_ratio_matrix = self.risk_functions[loss_type].apply_to(
-            [ground_motion_values] * len(assets), epsilons)
+        loss_ratio_matrix = numpy.zeros((len(assets), len(epsilons[0])))
+        for i, eps in enumerate(epsilons):
+            loss_ratio_matrix[i] = self.risk_functions[loss_type](
+                ground_motion_values, eps)
         # another matrix of N x E elements
         loss_matrix = (loss_ratio_matrix.T * values).T
         # an array of E elements
@@ -694,13 +682,12 @@ class Damage(RiskModel):
         self.taxonomy = taxonomy
         self.risk_functions = fragility_functions
 
-    def __call__(self, loss_type, assets, gmvs, _epsilons=None, _eids=None):
+    def __call__(self, loss_type, assets, gmvs, _eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
         :param gmvs: an array of E elements
-        :param _epsilons: dummy parameter, unused
-        :param _eids: dummy parameter, unused
+        :param _eps: dummy parameter, unused
         :returns: an array of N assets and an array of N x E x D elements
 
         where N is the number of points, E the number of events
@@ -729,8 +716,7 @@ class ClassicalDamage(Damage):
         self.investigation_time = investigation_time
         self.risk_investigation_time = risk_investigation_time
 
-    def __call__(self, loss_type, assets, hazard_curve, _epsilons=None,
-                 _eids=None):
+    def __call__(self, loss_type, assets, hazard_curve, _eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy

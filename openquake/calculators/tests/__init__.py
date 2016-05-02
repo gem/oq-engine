@@ -43,14 +43,6 @@ def columns(line):
     return data
 
 
-def get_datastore(calc):
-    ds = datastore.DataStore(calc.datastore.calc_id)
-    hc_id = ds.attrs.get('hazard_calculation_id')
-    if hc_id:
-        ds.parent = datastore.DataStore(int(hc_id))
-    return ds
-
-
 class CalculatorTestCase(unittest.TestCase):
     OVERWRITE_EXPECTED = False
 
@@ -84,6 +76,10 @@ class CalculatorTestCase(unittest.TestCase):
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
             with self.calc.monitor:
                 result.update(self.calc.run())
+        # reopen datastore, since some tests need to export from it
+        dstore = datastore.read(self.calc.datastore.calc_id)
+        dstore.export_dir = dstore['oqparam'].export_dir
+        self.calc.datastore = dstore
         return result
 
     def execute(self, testfile, job_ini):

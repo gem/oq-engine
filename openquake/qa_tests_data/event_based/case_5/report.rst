@@ -1,25 +1,27 @@
 Germany_SHARE Combined Model event_based
 ========================================
 
-num_sites = 100, sitecol = 5.13 KB
+gem-tstation:/home/michele/ssd/calc_1028.hdf5 updated Thu Apr 28 15:44:05 2016
+
+num_sites = 100, sitecol = 5.19 KB
 
 Parameters
 ----------
-============================ ===========
-calculation_mode             event_based
-number_of_logic_tree_samples 0          
-maximum_distance             80         
-investigation_time           30         
-ses_per_logic_tree_path      1          
-truncation_level             3.000      
-rupture_mesh_spacing         5.000      
-complex_fault_mesh_spacing   5.000      
-width_of_mfd_bin             0.100      
-area_source_discretization   10         
-random_seed                  23         
-master_seed                  0          
-concurrent_tasks             16         
-============================ ===========
+============================ ===================
+calculation_mode             'event_based'      
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 80.0}  
+investigation_time           30.0               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         5.0                
+complex_fault_mesh_spacing   5.0                
+width_of_mfd_bin             0.1                
+area_source_discretization   10.0               
+random_seed                  23                 
+master_seed                  0                  
+oqlite_version               '0.13.0-git93d6f64'
+============================ ===================
 
 Input files
 -----------
@@ -40,7 +42,7 @@ Composite source model
 ========= ====== ================================================================================================ ================ ================
 smlt_path weight source_model_file                                                                                gsim_logic_tree  num_realizations
 ========= ====== ================================================================================================ ================ ================
-b1        0.50   `source_models/as_model.xml <source_models/as_model.xml>`_                                       trivial(1,0,0,0) 1/1             
+b1        0.500  `source_models/as_model.xml <source_models/as_model.xml>`_                                       trivial(1,0,0,0) 1/1             
 b2        0.200  `source_models/fs_bg_source_model.xml <source_models/fs_bg_source_model.xml>`_                   simple(0,0,5,0)  5/5             
 b3        0.300  `source_models/ss_model_final_250km_Buffer.xml <source_models/ss_model_final_250km_Buffer.xml>`_ trivial(0,0,0,0) 0/0             
 ========= ====== ================================================================================================ ================ ================
@@ -67,55 +69,90 @@ Realizations per (TRT, GSIM)
   4,ChiouYoungs2008: ['<3,b2,@_b2_3_@_@,w=0.0571428571429>']
   4,ToroEtAl2002SHARE: ['<4,b2,@_b2_4_@_@,w=0.0571428571429>']>
 
-Non-empty rupture collections
------------------------------
-=== ========= ==================== ============
-col smlt_path TRT                  num_ruptures
-=== ========= ==================== ============
-1   b1        Volcanic             2           
-4   b2        Stable Shallow Crust 3           
-=== ========= ==================== ============
+Number of ruptures per tectonic region type
+-------------------------------------------
+==================================== ====== ==================== =========== ============ ======
+source_model                         trt_id trt                  num_sources eff_ruptures weight
+==================================== ====== ==================== =========== ============ ======
+source_models/as_model.xml           1      Volcanic             2           2            2.100 
+source_models/fs_bg_source_model.xml 4      Stable Shallow Crust 39          3            7,896 
+==================================== ====== ==================== =========== ============ ======
 
-Collections <-> realizations
-----------------------------
-=========== ============
-Collections Realizations
-1           0           
-4           1 2 3 4 5   
-=========== ============
+=============== =====
+#TRT models     2    
+#sources        41   
+#eff_ruptures   5    
+filtered_weight 7,898
+=============== =====
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =========
-Number of tasks to generate 12       
-Sent data                   5.12 MB  
-Total received data         167.23 KB
-Maximum received per task   34.6 KB  
-=========================== =========
+Informational data
+------------------
+======== ==============
+hostname 'gem-tstation'
+======== ==============
+
+Specific information for event based
+------------------------------------
+======================== =====
+Total number of ruptures 5    
+Total number of events   5    
+Rupture multiplicity     1.000
+======================== =====
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-4            327       AreaSource   1,544  5,145     0.007       4.593      32       
-4            328       AreaSource   1,544  5,145     0.019       4.866      29       
-4            329       AreaSource   1,544  5,145     0.019       4.965      21       
-4            317       AreaSource   449    1         0.002       0.0        13       
-4            318       AreaSource   449    1         0.002       0.0        11       
-4            316       AreaSource   449    1         0.002       0.0        11       
-4            322       AreaSource   307    1         0.001       0.0        9.401    
-4            323       AreaSource   307    1         0.001       0.0        8.333    
-4            265       AreaSource   85     1         0.001       0.0        2.498    
-4            264       AreaSource   85     1         0.001       0.0        2.277    
-4            263       AreaSource   85     1         0.001       0.0        2.261    
-4            267       AreaSource   56     1         0.001       0.0        1.861    
-4            332       AreaSource   56     1         0.001       0.0        1.835    
-4            331       AreaSource   56     1         0.001       0.0        1.721    
-4            330       AreaSource   56     1         0.001       0.0        1.589    
-4            266       AreaSource   56     1         0.001       0.0        1.577    
-4            333       AreaSource   39     1         0.001       0.0        1.290    
-4            249       AreaSource   30     1         0.001       0.0        1.056    
-4            334       AreaSource   39     1         0.001       0.0        1.011    
-4            250       AreaSource   30     1         0.001       0.0        0.949    
+4            327       AreaSource   1,544  5,145     0.005       4.380      29       
+4            328       AreaSource   1,544  5,145     0.005       3.962      28       
+4            329       AreaSource   1,544  5,145     0.005       4.175      27       
+4            318       AreaSource   449    1         0.004       0.0        11       
+4            317       AreaSource   449    1         0.004       0.0        10       
+4            316       AreaSource   449    1         0.004       0.0        10       
+4            323       AreaSource   307    1         0.002       0.0        9.065    
+4            322       AreaSource   307    1         0.002       0.0        7.836    
+4            265       AreaSource   85     1         0.002       0.0        2.393    
+4            264       AreaSource   85     1         0.002       0.0        2.348    
+4            263       AreaSource   85     1         0.002       0.0        1.815    
+4            330       AreaSource   56     1         0.002       0.0        1.457    
+4            332       AreaSource   56     1         0.002       0.0        1.364    
+4            333       AreaSource   39     1         0.002       0.0        1.334    
+4            266       AreaSource   56     1         0.002       0.0        1.266    
+4            267       AreaSource   56     1         0.002       0.0        1.142    
+4            331       AreaSource   56     1         0.002       0.0        1.099    
+4            249       AreaSource   30     1         0.002       0.0        1.045    
+4            248       AreaSource   30     1         0.002       0.0        1.045    
+4            334       AreaSource   39     1         0.002       0.0        0.980    
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+================================= ===== ===== ===== ======
+measurement                       min   max   mean  stddev
+compute_ruptures.time_sec         0.131 12    7.701 4.190 
+compute_ruptures.memory_mb        0.0   0.031 0.006 0.011 
+compute_gmfs_and_curves.time_sec  0.002 0.004 0.003 0.001 
+compute_gmfs_and_curves.memory_mb 0.0   0.0   0.0   0.0   
+================================= ===== ===== ===== ======
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+total compute_ruptures         161       0.031     21    
+reading composite source model 24        0.0       1     
+managing sources               14        0.0       1     
+splitting sources              12        0.0       3     
+filtering sources              0.314     0.0       142   
+store source_info              0.297     0.0       1     
+total compute_gmfs_and_curves  0.015     0.0       5     
+saving gmfs                    0.009     0.0       17    
+compute poes                   0.008     0.0       5     
+saving ruptures                0.007     0.0       1     
+make contexts                  0.005     0.0       5     
+filtering ruptures             0.004     0.0       8     
+aggregate curves               0.003     0.0       21    
+reading site collection        6.800E-04 0.0       1     
+============================== ========= ========= ======

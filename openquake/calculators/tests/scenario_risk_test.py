@@ -19,8 +19,9 @@
 from nose.plugins.attrib import attr
 
 from openquake.qa_tests_data.scenario_risk import (
-    case_1, case_2, case_1g, case_3, occupants, case_6a)
+    case_1, case_2, case_1g, case_3, case_4, occupants, case_6a)
 
+from openquake.baselib.general import writetmp
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.datastore import view
 from openquake.commonlib.export import export
@@ -39,7 +40,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/gmf1.csv', gmf1)
         self.assertEqualFiles('expected/gmf2.csv', gmf2)
 
-        [fname] = export(('gmfs', 'csv'), self.calc.datastore)
+        [fname] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-FromFile-PGA.csv', fname)
 
     @attr('qa', 'risk', 'scenario_risk')
@@ -59,6 +60,17 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg_loss.csv', fname)
 
     @attr('qa', 'risk', 'scenario_risk')
+    def test_case_4(self):
+        # this test is sensitive to the ordering of the epsilons
+        # in openquake.riskinput.make_eps
+        out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
+        fname = writetmp(view('totlosses', self.calc.datastore))
+        self.assertEqualFiles('expected/totlosses.txt', fname)
+
+        [fname] = out['agglosses-rlzs', 'csv']
+        self.assertEqualFiles('expected/agglosses.csv', fname)
+
+    @attr('qa', 'risk', 'scenario_risk')
     def test_occupants(self):
         out = self.run_calc(occupants.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv,xml')
@@ -72,14 +84,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['agglosses-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_loss.csv', fname)
 
-        # check wrong time_event
-        self.calc.datastore.attrs['time_event'] = "'Day'"
-        with self.assertRaises(ValueError) as ctx:
-            self.calc.pre_execute()
-        msg = str(ctx.exception)
-        self.assertIn("time_event is 'Day' in", msg)
-        self.assertIn("but the exposure contains day, night, transit", msg)
-
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_6a(self):
         # case with two gsims
@@ -91,14 +95,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # testing the totlosses view
         dstore = self.calc.datastore
-        text = view('totlosses', dstore)
-        self.assertEqual(text, '''\
-===============
-structural-mean
-===============
-2.687250E+03   
-3.234137E+03   
-===============''')
+        fname = writetmp(view('totlosses', dstore))
+        self.assertEqualFiles('expected/totlosses.txt', fname)
 
         # testing the specific GMF exporter
         [gmf] = export(('gmfs:0', 'csv'), self.calc.datastore)

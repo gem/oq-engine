@@ -21,6 +21,7 @@ import logging
 import collections
 import numpy
 
+from openquake.hazardlib.imt import from_string
 from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import get_risk_files
 
@@ -94,6 +95,7 @@ class OqParam(valid.ParamSet):
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
     maximum_tile_weight = valid.Param(valid.positivefloat)
     mean_hazard_curves = valid.Param(valid.boolean, False)
+    minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint)
@@ -130,6 +132,22 @@ class OqParam(valid.ParamSet):
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
 
+    @property
+    def risk_files(self):
+        try:
+            return self._risk_files
+        except AttributeError:
+            self._file_type, self._risk_files = get_risk_files(self.inputs)
+            return self._risk_files
+
+    @property
+    def file_type(self):
+        try:
+            return self._file_type
+        except AttributeError:
+            self._file_type, self._risk_files = get_risk_files(self.inputs)
+            return self._file_type
+
     def __init__(self, **names_vals):
         super(OqParam, self).__init__(**names_vals)
         self.risk_investigation_time = (
@@ -144,8 +162,7 @@ class OqParam(valid.ParamSet):
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
             delattr(self, 'intensity_measure_types')
-        self.file_type, self.risk_files = get_risk_files(self.inputs)
-        self.risk_imtls = {}  # to be overridden later by get_risk_models
+        self._file_type, self._risk_files = get_risk_files(self.inputs)
 
         # check the IMTs vs the GSIMs
         if 'gsim_logic_tree' in self.inputs:
@@ -239,9 +256,10 @@ class OqParam(valid.ParamSet):
         for taxonomy, risk_functions in risk_models.items():
             for loss_type, rf in risk_functions.items():
                 imt = rf.imt
+                from_string(imt)  # make sure it is a valid IMT
                 imls = list(rf.imls)
                 if imt in imtls and imtls[imt] != imls:
-                    logging.info(
+                    logging.debug(
                         'Different levels for IMT %s: got %s, expected %s',
                         imt, imls, imtls[imt])
                     imtls[imt] = sorted(set(imls + imtls[imt]))
@@ -251,6 +269,17 @@ class OqParam(valid.ParamSet):
 
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
+
+    def loss_dt(self, dtype=numpy.float32):
+        """
+        Return a composite dtype based on the loss types, including occupants
+        """
+        loss_types = self.all_cost_types
+        dts = [(lt, dtype) for lt in loss_types]
+        if self.insured_losses:
+            for lt in loss_types:
+                dts.append((lt + '_ins', dtype))
+        return numpy.dtype(dts)
 
     def no_imls(self):
         """

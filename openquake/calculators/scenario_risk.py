@@ -30,12 +30,12 @@ F64 = numpy.float64  # higher precision to avoid task order dependency
 
 
 @parallel.litetask
-def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
+def scenario_risk(riskinput, riskmodel, rlzs_assoc, monitor):
     """
     Core function for a scenario computation.
 
-    :param riskinputs:
-        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
+    :param riskinput:
+        a of :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param rlzs_assoc:
@@ -55,8 +55,7 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     L = len(riskmodel.loss_types)
     R = len(rlzs_assoc.realizations)
     result = dict(agg=numpy.zeros((E, L, R, 2), F64), avg=[])
-    for out_by_lr in riskmodel.gen_outputs(
-            riskinputs, rlzs_assoc, monitor):
+    for out_by_lr in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
         for (l, r), out in sorted(out_by_lr.items()):
             stats = numpy.zeros((len(out.assets), 4), F32)
             # this is ugly but using a composite array (i.e.
@@ -70,7 +69,7 @@ def scenario_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
             stats[:, 2] = out.insured_loss_matrix.mean(axis=1)
             stats[:, 3] = out.insured_loss_matrix.std(ddof=1, axis=1)
             for asset, stat in zip(out.assets, stats):
-                result['avg'].append((l, r, asset.idx, stat))
+                result['avg'].append((l, r, asset.ordinal, stat))
             result['agg'][:, l, r, 0] += out.aggregate_losses
             result['agg'][:, l, r, 1] += out.insured_losses
     return result

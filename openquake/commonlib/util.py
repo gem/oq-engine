@@ -123,29 +123,29 @@ def get_assets(dstore):
     :returns: an ordered array of records (asset_ref, taxonomy, lon, lat)
     """
     assetcol = dstore['assetcol']
-    taxo = dstore['taxonomies'].value
-    asset_data = [(a['asset_ref'], taxo[a['taxonomy']], a['lon'], a['lat'])
-                  for a in assetcol]
+    asset_refs = dstore['asset_refs'].value
+    taxo = assetcol.taxonomies
+    asset_data = [(asset_refs[a['idx']], taxo[a['taxonomy']],
+                   a['lon'], a['lat']) for a in assetcol.array]
     return numpy.array(asset_data, asset_dt)
 
 
 def get_ses_idx(etag):
     """
-    >>> get_ses_idx("col=00~ses=0007~src=1-3~rup=018-01")
+    >>> get_ses_idx("trt=00~ses=0007~src=1-3~rup=018-01")
     7
     """
     return int(etag.split('~')[1][4:])
 
 
-def get_col_serial(etag):
+def get_serial(etag):
     """
-    >>> get_col_serial("col=00~ses=0007~src=1-3~rup=018-01")
-    (0, 18)
+    >>> get_serial("trt=00~ses=0007~src=1-3~rup=018-01")
+    '018'
     """
-    col, ses, src, rup = etag.split('~')
-    col_id = int(col.split('=')[1])
-    serial = int(rup.split('=')[1].split('-')[0])
-    return col_id, serial
+    trt, ses, src, rup = etag.split('~')
+    serial = rup.split('=')[1].split('-')[0]
+    return serial
 
 
 class Rupture(object):

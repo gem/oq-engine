@@ -18,21 +18,13 @@
 
 import os
 import re
-import pydoc
 from openquake.baselib.python3compat import pickle
 import collections
 
 import numpy
-try:
-    import h5py
-except ImportError:
-    # there is no need of h5py in the workers
-    class mock_h5py(object):
-        def __getattr__(self, name):
-            raise ImportError('Could not import h5py.%s' % name)
-    h5py = mock_h5py()
+import h5py
 
-from openquake.baselib.hdf5 import Hdf5Dataset
+from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict
 from openquake.commonlib.writers import write_csv
 
@@ -87,7 +79,7 @@ def get_calc_ids(datadir=DATADIR):
     if not os.path.exists(datadir):
         return []
     calc_ids = []
-    for f in os.listdir(DATADIR):
+    for f in os.listdir(datadir):
         mo = re.match(r'calc_(\d+)\.hdf5', f)
         if mo:
             calc_ids.append(int(mo.group(1)))
@@ -118,7 +110,12 @@ def read(calc_id, mode='r', datadir=DATADIR):
         calc_id = get_calc_ids(datadir)[calc_id]
     fname = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
     open(fname).close()  # check if the file exists and is accessible
-    return DataStore(calc_id, datadir, mode=mode)
+    dstore = DataStore(calc_id, datadir, mode=mode)
+    if not dstore.parent:
+        hc_id = dstore['oqparam'].hazard_calculation_id
+        if hc_id:
+            dstore.set_parent(read(hc_id))
+    return dstore
 
 
 class DataStore(collections.MutableMapping):
@@ -164,7 +161,7 @@ class DataStore(collections.MutableMapping):
         self.export_dir = export_dir
         self.hdf5path = self.calc_dir + '.hdf5'
         mode = mode or 'r+' if os.path.exists(self.hdf5path) else 'w'
-        self.hdf5 = h5py.File(self.hdf5path, mode, libver='latest')
+        self.hdf5 = hdf5.File(self.hdf5path, mode, libver='latest')
         self.attrs = self.hdf5.attrs
         for name, value in params:
             self.attrs[name] = value
@@ -180,12 +177,15 @@ class DataStore(collections.MutableMapping):
             if name not in self.attrs:  # add missing parameter
                 self.attrs[name] = value
 
-    def set_nbytes(self, key):
+    def set_nbytes(self, key, nbytes=None):
         """
         Set the `nbytes` attribute on the HDF5 object identified by `key`.
         """
-        obj = self.hdf5[key]
-        obj.attrs['nbytes'] = nbytes = ByteCounter.get_nbytes(obj)
+        obj = h5py.File.__getitem__(self.hdf5, key)
+        if nbytes is not None:  # size set from outside
+            obj.attrs['nbytes'] = nbytes
+        else:  # recursively determine the size of the datagroup
+            obj.attrs['nbytes'] = nbytes = ByteCounter.get_nbytes(obj)
         return nbytes
 
     def set_attrs(self, key, **kw):
@@ -193,7 +193,7 @@ class DataStore(collections.MutableMapping):
         Set the HDF5 attributes of the given key
         """
         for k, v in kw.items():
-            self.hdf5[key].attrs[k] = v
+            h5py.File.__getitem__(self.hdf5, key).attrs[k] = v
 
     def get_attr(self, key, name, default=None):
         """
@@ -201,7 +201,7 @@ class DataStore(collections.MutableMapping):
         :param name: name of the attribute
         :param default: value to return if the attribute is missing
         """
-        obj = self[key]
+        obj = h5py.File.__getitem__(self.hdf5, key)
         try:
             return obj.attrs[name]
         except KeyError:
@@ -217,7 +217,18 @@ class DataStore(collections.MutableMapping):
         :param dtype: dtype of the dataset (usually composite)
         :param size: size of the dataset (if None, the dataset is extendable)
         """
-        return Hdf5Dataset.create(self.hdf5, key, dtype, size, compression)
+        return hdf5.Hdf5Dataset.create(
+            self.hdf5, key, dtype, size, compression)
+
+    def save(self, key, kw):
+        """
+        Update the object associated to `key` with the `kw` dictionary;
+        works for LiteralAttrs objects and automatically flushes.
+        """
+        obj = self[key]
+        vars(obj).update(kw)
+        self[key] = obj
+        self.flush()
 
     def export_path(self, relname, export_dir=None):
         """
@@ -242,11 +253,13 @@ class DataStore(collections.MutableMapping):
 
     def flush(self):
         """Flush the underlying hdf5 file"""
+        if self.parent != ():
+            self.parent.flush()
         self.hdf5.flush()
 
     def close(self):
         """Close the underlying hdf5 file"""
-        if self.parent:
+        if self.parent != ():
             self.parent.close()
         if self.hdf5:  # is open
             self.hdf5.close()
@@ -263,7 +276,7 @@ class DataStore(collections.MutableMapping):
         """
         if key is None:
             return os.path.getsize(self.hdf5path)
-        return ByteCounter.get_nbytes(self.hdf5[key])
+        return ByteCounter.get_nbytes(h5py.File.__getitem__(self.hdf5, key))
 
     def get(self, key, default):
         """
@@ -290,21 +303,13 @@ class DataStore(collections.MutableMapping):
             shape = val.shape
         except AttributeError:  # val is a group
             return val
-        if '__pyclass__' in val.attrs:  # serialized object
-            value, attrs = val.value, dict(val.attrs)
-            cls = pydoc.locate(attrs.pop('__pyclass__'))
-            val = cls.__new__(cls)
-            val.__fromh5__(value, attrs)
         if not shape:
             val = pickle.loads(val.value)
         return val
 
     def __setitem__(self, key, value):
-        attrs = {}
-        if hasattr(value, '__toh5__'):
-            val, attrs = value.__toh5__()
-            attrs['__pyclass__'] = '.'.join([value.__class__.__module__,
-                                             value.__class__.__name__])
+        if isinstance(value, dict) or hasattr(value, '__toh5__'):
+            val = value
         elif (not isinstance(value, numpy.ndarray) or
                 value.dtype is numpy.dtype(object)):
             val = numpy.array(pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
@@ -320,15 +325,8 @@ class DataStore(collections.MutableMapping):
         except RuntimeError as exc:
             raise RuntimeError('Could not save %s: %s in %s' %
                                (key, exc, self.hdf5path))
-        # save attributes if any
-        for k, v in attrs.items():
-            self.hdf5[key].attrs[k] = v
 
     def __delitem__(self, key):
-        if (h5py.version.version <= '2.0.1' and not
-                hasattr(self.hdf5[key], 'shape')):
-            # avoid bug when deleting groups that produces a segmentation fault
-            return
         del self.hdf5[key]
 
     def __enter__(self):

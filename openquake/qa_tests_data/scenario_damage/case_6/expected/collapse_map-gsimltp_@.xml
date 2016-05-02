@@ -10,11 +10,11 @@ xmlns:gml="http://www.opengis.net/gml"
                     -75.07679 6.90913
                 </gml:pos>
             </gml:Point>
-            <cf assetRef="ant_13_S1" mean="3.7066865E-08" stdDev="7.6173151E-08"/>
-            <cf assetRef="ant_13_S2" mean="1.5823355E-17" stdDev="4.4883032E-17"/>
-            <cf assetRef="ant_13_S3" mean="2.0426863E-28" stdDev="6.3611935E-28"/>
-            <cf assetRef="ant_13_S4" mean="6.2691162E-29" stdDev="1.9824685E-28"/>
-            <cf assetRef="ant_13_S5" mean="6.5448714E-26" stdDev="2.0696695E-25"/>
+            <cf assetRef="ant_13_S1" mean="4.3651478E-09" stdDev="9.0853902E-09"/>
+            <cf assetRef="ant_13_S2" mean="7.3321354E-20" stdDev="1.5599866E-19"/>
+            <cf assetRef="ant_13_S3" mean="7.4403084E-33" stdDev="1.6159129E-32"/>
+            <cf assetRef="ant_13_S4" mean="2.8025969E-44" stdDev="8.2676609E-44"/>
+            <cf assetRef="ant_13_S5" mean="3.5061749E-40" stdDev="1.0414618E-39"/>
         </CMNode>
     </collapseMap>
 </nrml>

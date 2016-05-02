@@ -15,15 +15,12 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-import random
-
 import numpy
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput
-from openquake.calculators import base, calc
+from openquake.calculators import base
 
 
 @base.calculators.add('scenario')
@@ -53,28 +50,31 @@ class ScenarioCalculator(base.HazardCalculator):
                 'All sites were filtered out! maximum_distance=%s km' %
                 maxdist)
         self.etags = numpy.array(
-            sorted(['scenario-%010d' % i for i in range(n_gmfs)]),
+            sorted(['scenario-%010d~ses=1' % i for i in range(n_gmfs)]),
             (bytes, 100))
         self.computer = GmfComputer(
             rupture, self.sitecol, self.oqparam.imtls, self.gsims,
             trunc_level, correl_model)
-        rnd = random.Random(self.oqparam.random_seed)
-        self.etag_seed_pairs = [(etag, rnd.randint(0, calc.MAX_INT))
-                               for etag in self.etags]
 
     def execute(self):
         """
         Compute the GMFs and return a dictionary gmf_by_etag
         """
+        gmfa_by_rlz = {}
         with self.monitor('computing gmfs', autoflush=True):
-            etags, seeds = zip(*self.etag_seed_pairs)
-            return self.computer.compute(seeds)
+            eids = range(self.oqparam.number_of_ground_motion_fields)
+            for i, gsim in enumerate(self.gsims):
+                gmfa_by_rlz[i] = self.computer.compute(
+                    self.oqparam.random_seed, gsim, eids)
+        return gmfa_by_rlz
 
-    def post_execute(self, gmfa):
+    def post_execute(self, gmfa_by_rlz):
         """
-        :param gmfa: an array of shape (E, N)
+        :param gmfa: a dictionary rlzi -> gmfa
         """
         with self.monitor('saving gmfs', autoflush=True):
-            self.datastore['gmf_data/1'] = gmfa
-            self.datastore['gmf_data'].attrs['nbytes'] = gmfa.nbytes
-            self.datastore['sid_data/1'] = self.sitecol.indices
+            for rlzi, gsim in enumerate(self.gsims):
+                rlzstr = 'gmf_data/%04d' % rlzi
+                self.datastore[rlzstr] = gmfa_by_rlz[rlzi]
+                self.datastore.set_attrs(rlzstr, gsim=str(gsim))
+            self.datastore.set_nbytes('gmf_data')

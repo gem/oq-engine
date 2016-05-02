@@ -1,26 +1,28 @@
 Hazard Calculation for end-to-end hazard+risk
 =============================================
 
-num_sites = 1, sitecol = 684 B
+gem-tstation:/home/michele/ssd/calc_956.hdf5 updated Thu Apr 28 15:38:29 2016
+
+num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ =========
-calculation_mode             classical
-number_of_logic_tree_samples 0        
-maximum_distance             300      
-investigation_time           15       
-ses_per_logic_tree_path      1        
-truncation_level             4.000    
-rupture_mesh_spacing         20       
-complex_fault_mesh_spacing   20       
-width_of_mfd_bin             0.200    
-area_source_discretization   10       
-random_seed                  1,024    
-master_seed                  0        
-concurrent_tasks             16       
-sites_per_tile               1000     
-============================ =========
+============================ ===================
+calculation_mode             'classical'        
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 300.0} 
+investigation_time           15.0               
+ses_per_logic_tree_path      1                  
+truncation_level             4.0                
+rupture_mesh_spacing         20.0               
+complex_fault_mesh_spacing   20.0               
+width_of_mfd_bin             0.2                
+area_source_discretization   10.0               
+random_seed                  1024               
+master_seed                  0                  
+sites_per_tile               1000               
+oqlite_version               '0.13.0-git93d6f64'
+============================ ===================
 
 Input files
 -----------
@@ -38,7 +40,7 @@ Composite source model
 ========= ====== ====================================== =============== ================
 smlt_path weight source_model_file                      gsim_logic_tree num_realizations
 ========= ====== ====================================== =============== ================
-b1        1.0    `source_model.xml <source_model.xml>`_ simple(1,4)     4/4             
+b1        1.000  `source_model.xml <source_model.xml>`_ simple(1,4)     4/4             
 ========= ====== ====================================== =============== ================
 
 Required parameters per tectonic region type
@@ -78,18 +80,50 @@ source_model.xml 1      Subduction Interface 1           23           0.575
 filtered_weight 1.150
 =============== =====
 
-Expected data transfer for the sources
---------------------------------------
-=========================== ========
-Number of tasks to generate 2       
-Sent data                   16.18 KB
-=========================== ========
+Informational data
+------------------
+======================================== ==================
+count_eff_ruptures_max_received_per_task 2839              
+count_eff_ruptures_num_tasks             2                 
+count_eff_ruptures_sent.monitor          5240              
+count_eff_ruptures_sent.rlzs_assoc       8678              
+count_eff_ruptures_sent.sitecol          874               
+count_eff_ruptures_sent.siteidx          10                
+count_eff_ruptures_sent.sources          2332              
+count_eff_ruptures_tot_received          5677              
+hazard.input_weight                      1.1500000000000001
+hazard.n_imts                            1                 
+hazard.n_levels                          50.0              
+hazard.n_realizations                    4                 
+hazard.n_sites                           1                 
+hazard.n_sources                         0                 
+hazard.output_weight                     200.0             
+hostname                                 'gem-tstation'    
+======================================== ==================
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            A         PointSource  0.575  1         1.850E-04   0.0        0.0      
-1            B         PointSource  0.575  1         1.190E-04   0.0        0.0      
+0            A         PointSource  0.575  1         1.981E-04   0.0        0.0      
+1            B         PointSource  0.575  1         1.440E-04   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+Not available
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+managing sources               0.024     0.0       1     
+store source_info              0.012     0.0       1     
+reading composite source model 0.009     0.0       1     
+total count_eff_ruptures       5.529E-04 0.008     2     
+filtering sources              3.421E-04 0.0       2     
+aggregate curves               5.698E-05 0.0       2     
+reading site collection        4.601E-05 0.0       1     
+============================== ========= ========= ======

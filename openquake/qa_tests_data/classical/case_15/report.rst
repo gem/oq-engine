@@ -1,26 +1,28 @@
 Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
-num_sites = 3, sitecol = 776 B
+gem-tstation:/home/michele/ssd/calc_998.hdf5 updated Thu Apr 28 15:39:31 2016
+
+num_sites = 3, sitecol = 831 B
 
 Parameters
 ----------
-============================ =========
-calculation_mode             classical
-number_of_logic_tree_samples 0        
-maximum_distance             200      
-investigation_time           50       
-ses_per_logic_tree_path      1        
-truncation_level             3.000    
-rupture_mesh_spacing         1.000    
-complex_fault_mesh_spacing   1.000    
-width_of_mfd_bin             0.100    
-area_source_discretization   10       
-random_seed                  23       
-master_seed                  0        
-concurrent_tasks             16       
-sites_per_tile               1000     
-============================ =========
+============================ ===================
+calculation_mode             'classical'        
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           50.0               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         1.0                
+complex_fault_mesh_spacing   1.0                
+width_of_mfd_bin             0.1                
+area_source_discretization   10.0               
+random_seed                  23                 
+master_seed                  0                  
+sites_per_tile               1000               
+oqlite_version               '0.13.0-git93d6f64'
+============================ ===================
 
 Input files
 -----------
@@ -39,7 +41,7 @@ Composite source model
 ============== ====== ========================================== =============== ================
 smlt_path      weight source_model_file                          gsim_logic_tree num_realizations
 ============== ====== ========================================== =============== ================
-SM1            0.50   `source_model_1.xml <source_model_1.xml>`_ complex(2,2)    4/4             
+SM1            0.500  `source_model_1.xml <source_model_1.xml>`_ complex(2,2)    4/4             
 SM2_a3b1       0.250  `source_model_2.xml <source_model_2.xml>`_ simple(2,0)     2/2             
 SM2_a3pt2b0pt8 0.250  `source_model_2.xml <source_model_2.xml>`_ simple(2,0)     2/2             
 ============== ====== ========================================== =============== ================
@@ -88,20 +90,53 @@ source_model_2.xml 3      Active Shallow Crust     1           240          6.00
 filtered_weight 12 
 =============== ===
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =========
-Number of tasks to generate 18       
-Sent data                   243.78 KB
-=========================== =========
+Informational data
+------------------
+======================================== ==============
+count_eff_ruptures_max_received_per_task 3197          
+count_eff_ruptures_num_tasks             34            
+count_eff_ruptures_sent.monitor          100316        
+count_eff_ruptures_sent.rlzs_assoc       327206        
+count_eff_ruptures_sent.sitecol          16490         
+count_eff_ruptures_sent.siteidx          170           
+count_eff_ruptures_sent.sources          42774         
+count_eff_ruptures_tot_received          108698        
+hazard.input_weight                      12.75         
+hazard.n_imts                            2             
+hazard.n_levels                          8.5           
+hazard.n_realizations                    8             
+hazard.n_sites                           3             
+hazard.n_sources                         0             
+hazard.output_weight                     408.0         
+hostname                                 'gem-tstation'
+======================================== ==============
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-2            1         AreaSource   6.000  16        0.003       0.004      0.0      
-3            1         AreaSource   6.000  16        0.001       0.004      0.0      
-0            1         PointSource  0.375  1         1.621E-04   0.0        0.0      
-1            2         PointSource  0.375  1         1.070E-04   0.0        0.0      
+2            1         AreaSource   6.000  16        0.002       0.006      0.0      
+3            1         AreaSource   6.000  16        0.001       0.005      0.0      
+0            1         PointSource  0.375  1         1.800E-04   0.0        0.0      
+1            2         PointSource  0.375  1         1.571E-04   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+Not available
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+managing sources               0.126     0.0       1     
+reading composite source model 0.028     0.0       1     
+splitting sources              0.011     0.0       2     
+total count_eff_ruptures       0.009     0.0       34    
+store source_info              0.006     0.0       1     
+filtering sources              0.003     0.0       4     
+aggregate curves               7.718E-04 0.0       34    
+reading site collection        4.911E-05 0.0       1     
+============================== ========= ========= ======

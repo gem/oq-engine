@@ -84,24 +84,6 @@ class RlzsAssoc(collections.Mapping):
         """
         return {self.rlzs_assoc[key][0]: result[key] for key in result}
 
-    # this is used in the scenario export
-    def combine_gmfs(self, gmf_data, sid_data):
-        """
-        :param gmf_data: dataset gmf_data
-        :param sid_data: dataset sid_data
-        :returns: a list of R dictionaries etag -> rupture
-        """
-        dicts = [{} for rlz in self.realizations]
-        gmf = gmf_data['1']  # '1' is the serial of the only rupture there is
-        indices = sid_data['1'].value
-        for rlz in self.realizations:
-            gsim = str(rlz)
-            for i, gmvs in enumerate(gmf):
-                rup = util.Rupture(i, indices)
-                rup.gmf = gmvs[gsim]
-                dicts[rlz.ordinal][rup.etag] = rup
-        return dicts
-
     def __iter__(self):
         return iter(self.rlzs_assoc.keys())
 

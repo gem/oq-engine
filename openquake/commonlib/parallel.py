@@ -155,11 +155,13 @@ class Pickled(object):
     """
     def __init__(self, obj):
         self.clsname = obj.__class__.__name__
+        self.calc_id = str(getattr(obj, 'calc_id', ''))  # for monitors
         self.pik = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
 
     def __repr__(self):
         """String representation of the pickled object"""
-        return '<Pickled %s %s>' % (self.clsname, humansize(len(self)))
+        return '<Pickled %s %s %s>' % (
+            self.clsname, self.calc_id, humansize(len(self)))
 
     def __len__(self):
         """Length of the pickled bytestring"""
@@ -245,6 +247,8 @@ class TaskManager(object):
         self = cls(task, name)
         for i, a in enumerate(task_args, 1):
             cls.progress('Submitting task %s #%d', self.name, i)
+            if isinstance(a[-1], Monitor):  # add incremental task number
+                a[-1].task_no = i
             self.submit(*a)
         return self
 
@@ -284,10 +288,10 @@ class TaskManager(object):
         cls.apply_reduce.__func__._chunks = chunks
         if not concurrent_tasks or no_distribute() or len(chunks) == 1:
             # apply the function in the master process
-            for chunk in chunks:
+            for i, chunk in enumerate(chunks):
+                if args and hasattr(args[-1], 'flush'):  # is monitor
+                    args[-1].task_no = i
                 acc = agg(acc, task_func(chunk, *args))
-                if args and hasattr(args[-1], 'flush'):
-                    args[-1].flush()
             return acc
         logging.info('Starting %d tasks', len(chunks))
         self = cls.starmap(task, [(chunk,) + args for chunk in chunks], name)
@@ -298,9 +302,10 @@ class TaskManager(object):
         self.task_func = getattr(oqtask, 'task_func', oqtask)
         self.name = name or oqtask.__name__
         self.results = []
-        self.sent = 0
+        self.sent = AccumDict()
         self.received = []
         self.no_distribute = no_distribute()
+        self.argnames = inspect.getargspec(self.task_func).args
 
     def submit(self, *args):
         """
@@ -312,11 +317,11 @@ class TaskManager(object):
         check_mem_usage()
         # log a warning if too much memory is used
         if self.no_distribute:
-            sent = 0
+            sent = {}
             res = (self.task_func(*args), None, args[-1])
         else:
             piks = pickle_sequence(args)
-            sent = sum(len(p) for p in piks)
+            sent = {arg: len(p) for arg, p in zip(self.argnames, piks)}
             res = self._submit(piks)
         self.sent += sent
         self.results.append(res)
@@ -411,7 +416,7 @@ class TaskManager(object):
             agg_result = reduce(agg_and_percent, self.results, acc)
         else:
             self.progress('Sent %s of data in %d task(s)',
-                          humansize(self.sent), num_tasks)
+                          humansize(sum(self.sent.values())), num_tasks)
             agg_result = self.aggregate_result_set(agg_and_percent, acc)
             self.progress('Received %s of data, maximum per task %s',
                           humansize(sum(self.received)),

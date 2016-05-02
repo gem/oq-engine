@@ -1,25 +1,27 @@
 Event-Based Hazard QA Test, Case 18
 ===================================
 
-num_sites = 1, sitecol = 684 B
+gem-tstation:/home/michele/ssd/calc_1025.hdf5 updated Thu Apr 28 15:42:58 2016
+
+num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ===========
-calculation_mode             event_based
-number_of_logic_tree_samples 3          
-maximum_distance             200        
-investigation_time           1.000      
-ses_per_logic_tree_path      350        
-truncation_level             0.0        
-rupture_mesh_spacing         1.000      
-complex_fault_mesh_spacing   1.000      
-width_of_mfd_bin             0.001      
-area_source_discretization   10         
-random_seed                  1,064      
-master_seed                  0          
-concurrent_tasks             16         
-============================ ===========
+============================ ===================
+calculation_mode             'event_based'      
+number_of_logic_tree_samples 3                  
+maximum_distance             {'default': 200.0} 
+investigation_time           1.0                
+ses_per_logic_tree_path      350                
+truncation_level             0.0                
+rupture_mesh_spacing         1.0                
+complex_fault_mesh_spacing   1.0                
+width_of_mfd_bin             0.001              
+area_source_discretization   10.0               
+random_seed                  1064               
+master_seed                  0                  
+oqlite_version               '0.13.0-git93d6f64'
+============================ ===================
 
 Input files
 -----------
@@ -57,38 +59,54 @@ Realizations per (TRT, GSIM)
   0,AkkarBommer2010: ['<0,b1,AB,w=0.333333333333>', '<1,b1,AB,w=0.333333333333>']
   0,CauzziFaccioli2008: ['<2,b1,CF,w=0.333333333333>']>
 
-Non-empty rupture collections
------------------------------
-=== ========= ==================== ============
-col smlt_path TRT                  num_ruptures
-=== ========= ==================== ============
-0   b1        active shallow crust 1           
-1   b1        active shallow crust 2           
-2   b1        active shallow crust 3           
-=== ========= ==================== ============
+Number of ruptures per tectonic region type
+-------------------------------------------
+================ ====== ==================== =========== ============ ======
+source_model     trt_id trt                  num_sources eff_ruptures weight
+================ ====== ==================== =========== ============ ======
+source_model.xml 0      Active Shallow Crust 1           1            75    
+================ ====== ==================== =========== ============ ======
 
-Collections <-> realizations
-----------------------------
-=========== ============
-Collections Realizations
-0           0           
-1           1           
-2           2           
-=========== ============
+Informational data
+------------------
+======== ==============
+hostname 'gem-tstation'
+======== ==============
 
-Expected data transfer for the sources
---------------------------------------
-=========================== ========
-Number of tasks to generate 1       
-Sent data                   18.69 KB
-Total received data         6.89 KB 
-Maximum received per task   6.89 KB 
-=========================== ========
+Specific information for event based
+------------------------------------
+======================== =====
+Total number of ruptures 1    
+Total number of events   1    
+Rupture multiplicity     1.000
+======================== =====
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  75     1         0.005       2.718E-05  3.745    
+0            1         PointSource  75     1         0.007       3.099E-05  3.431    
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+Not available
+
+Slowest operations
+------------------
+============================== ========= ========= ======
+operation                      time_sec  memory_mb counts
+============================== ========= ========= ======
+total compute_ruptures         3.431     0.105     1     
+managing sources               0.025     0.0       1     
+reading composite source model 0.017     0.0       1     
+store source_info              0.012     0.0       1     
+filtering sources              0.007     0.0       1     
+saving ruptures                0.002     0.0       1     
+saving gmfs                    0.002     0.0       3     
+aggregate curves               0.001     0.0       1     
+filtering ruptures             4.909E-04 0.0       1     
+reading site collection        5.102E-05 0.0       1     
+splitting sources              3.099E-05 0.0       1     
+============================== ========= ========= ======
