@@ -1,4 +1,5 @@
   [Daniele Viganò]
+  * Add support for Ubuntu 16.04 (xenial) packages
   * Removed the openquake_worker.cfg file because it is not used anymore
 
   [Michele Simionato]
