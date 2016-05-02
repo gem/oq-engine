@@ -1,5 +1,6 @@
   [Michele Simionato]
   * If uniform_hazard_spectra is true, the UHS curves must be generated
+  * Fixed a segmentation fault in the tests for the most recent h5py
     even if hazard_maps is false; the hazard maps must not be exported
   * Optimized the case when the epsilons are not required, i.e. all the
     covariance coefficients are zero in the vulnerability functions
