@@ -1,118 +1,43 @@
 #!/bin/bash
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 if [ $GEM_SET_DEBUG ]; then
     set -x
 fi
-
-help() {
-cat <<HSD
-This script must be run as postgres user.
-
-!! The database must not exist already !!
-
-The command line arguments are as follows:
-
-    --db-name=name         The name of the database to set up.
-    --db-port=port         The postgresql server port (default: 5432)
-    --verbose              Enable verbose output
-    --load-fixtures=path   Load test fixtures from path
-    --yes                  Don't pause for user input, assume yes on all questions
-HSD
-exit 0
-}
-
-
-# Stop at the first error in a batch to give a chance to see the error message
-psql_batch_options='--set ON_ERROR_STOP=1'
-
-# defaults to be overridden by the arguments given in the command-line
-db_port=5432
-db_name="openquake2"
-user_interaction="on"
-verbose="off"
-fixtures=""
-
-db_admin_user="postgres"
-
-# What is the name of the db group that all OpenQuake db users belong to?
-db_group_name="openquake"
-
-# What OpenQuake db users should be created?
-read -r -d '' db_roles <<'EOF'
-oq_admin
-oq_job_init
-EOF
-
-for i in $*
-do
-    case $i in
-    --db-name=*)
-        db_name=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
-        ;;
-    --db-port=*)
-        db_port=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
-        ;;
-    -v|--verbose)
-        verbose="on"
-        ;;
-    --load-fixtures=*)
-        fixtures=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
-        ;;
-    -y|--yes)
-        user_interaction="off"
-        ;;
-    -h|--help)
-        help
-        ;;
-    *)
-        echo "!! Uknown option: " $i
-        exit 2
-        ;;
-    esac
-done
-
-# if --verbose is off, set "quiet" mode for psql
-if [ "$verbose" = "off" ]; then
-    psql_batch_options="$psql_batch_options -q"
-fi
-
-if [ -z "$db_name" ]; then
-    echo "!! Please specify a database name."
-    exit 3
-fi
-
-if [ "$(whoami)" != "postgres" ]; then
-    echo ""
-    echo "!! This script should be run as postgres."
-fi
-
-
-# Create OpenQuake database group if not present.
-echo ".. creating roles .."
-oq_group_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_group WHERE groname = '$db_group_name';"`
-if [ $oq_group_present -eq 0 ]; then
-    psql -p $db_port -d postgres -U $db_admin_user -c "CREATE ROLE $db_group_name"
-fi
-
-# Create OpenQuake database users/roles if/as needed.
-for role in $db_roles; do
-    role_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_user WHERE usename = '$role';"`
-    if [ $role_present -eq 0 ]; then
-        psql -p $db_port -d postgres -U $db_admin_user -c "CREATE ROLE $role WITH LOGIN IN GROUP openquake PASSWORD 'openquake'" $psql_batch_options
-    fi
-done
-
-# Exit at the first error, should not be on the first line, otherwise it
-# exits too early (at the `read` command)
 set -e
 
-# Create the OpenQuake database
+OQ_USER='openquake'
+OQ_DB_SCRIPT='-m openquake.server.db.upgrade_manager'
+OQ_DB=$(eval echo "~${OQ_USER}/db.sqlite3")
 
-db_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_database WHERE datname='"$db_name"';"`
-if [ $db_present -eq 1 ]; then
-    echo "WARNING: there is already a $db_name database."
+help() {
+    echo "Syntax: $(basename "$0") [-u user] [-s /custom/python/script.py] [-d /custom/db/path/to/db.sqlite3]"
     exit 0
+}
+
+while (( "$#" )); do
+    case "$1" in
+        -u|--user) OQ_USER="$2"; shift;;
+        -s|--script) OQ_DB_SCRIPT="$2"; shift;;
+        -d|--db) OQ_DB_CUSTOM="$2"; shift;;
+        -h|--help) help;;
+    esac
+    shift
+done
+
+# Check if the user exists
+if [ $(cat /etc/passwd | grep ^${OQ_USER}: | wc -l) -eq 0 ]; then
+    echo -e "User '${OQ_USER}' does not exists. Aborting." >&2
+    exit 1
 fi
 
-echo ".. Creating database $db_name .."
-psql -p $db_port -d postgres -U $db_admin_user -c "CREATE DATABASE $db_name OWNER oq_admin" $psql_batch_options
+if [ "$OQ_USER" != "openquake" ]; then
+    if [ -z "$OQ_DB_CUSTOM" ]; then
+        echo -e "Please specify a custom path fo the database using:\n\t-d /custom/db/path/to/db.sqlite3." >&2
+        exit 1
+    fi
+    OQ_DB=$OQ_DB_CUSTOM
+fi
+
+sudo -u $OQ_USER /usr/bin/env python $OQ_DB_SCRIPT $OQ_DB

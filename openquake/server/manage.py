@@ -21,21 +21,47 @@ import os
 import sys
 from django.core.management import execute_from_command_line
 from openquake.server import executor
+from openquake.engine import logs
 
+
+def use_tmp_db(tmpfile_port):
+    from django.db import connection
+    from openquake.engine import config
+    from openquake.server.settings import DATABASE
+    from openquake.server.db import upgrade_manager
+    tmpfile, port_str = tmpfile_port.rsplit(':', 1)
+    DATABASE['NAME'] = tmpfile
+    DATABASE['PORT'] = port = int(port_str)
+    connection.cursor()  # connect to the db
+    upgrade_manager.upgrade_db(connection.connection)
+    connection.close()
+    # make sure we use the server on the temporary db
+    config.DBS_ADDRESS = ('localhost', port)
+
+
+def parse_args(argv):
+    # manages the argument "tmpdb=XXX" used in the functional tests
+    args = []
+    dbname = None
+    for arg in argv:
+        if arg.startswith('tmpdb='):
+            dbname = arg[6:]
+        else:
+            args.append(arg)
+    return args, dbname
 
 # the code here is run in development mode; for instance
 # $ python manage.py runserver 0.0.0.0:8800
 if __name__ == "__main__":
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE", "openquake.server.settings")
-    # notice that the import must be done after the os.environ.setdefault;
-    # the issue is that importing openquake.engine sets a wrong
-    # DJANGO_SETTINGS_MODULE environment variable, causing the irritating
-    # CommandError: You must set settings.ALLOWED_HOSTS if DEBUG is False.
-
-    from django.db import connection
-    connection.cursor().execute(
-        # cleanup of the flag oq_job.is_running
-        'UPDATE job SET is_running=false WHERE is_running')
+    argv, tmpfile_port = parse_args(sys.argv)
+    if tmpfile_port:  # this is used in the functional tests
+        use_tmp_db(tmpfile_port)
+    else:
+        # check the database version
+        logs.dbcmd('check_outdated')
+        # reset is_running
+        logs.dbcmd('reset_is_running')
     with executor:
-        execute_from_command_line(sys.argv)
+        execute_from_command_line(argv)

@@ -20,12 +20,14 @@
 calculations."""
 
 import sys
+import signal
 import traceback
 
 from openquake.baselib.performance import Monitor
-from openquake.commonlib import valid, parallel
+from openquake.commonlib import valid, parallel, readinput
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.calculators import base
+from openquake.commonlib import export, datastore
+from openquake.calculators import base, views
 from openquake.engine import logs, config
 
 TERMINATE = valid.boolean(
@@ -68,7 +70,83 @@ if USE_CELERY:
             logs.LOG.debug('Revoked task %s', tid)
 
 
-# used by bin/openquake and openquake.server.views
+def expose_outputs(dstore):
+    """
+    Build a correspondence between the outputs in the datastore and the
+    ones in the database.
+
+    :param dstore: datastore
+    """
+    exportable = set(ekey[0] for ekey in export.export)
+    # small hack: remove the sescollection outputs from scenario
+    # calculators, as requested by Vitor
+    calcmode = dstore['oqparam'].calculation_mode
+    if 'scenario' in calcmode and 'sescollection' in exportable:
+        exportable.remove('sescollection')
+    dskeys = []  # datastore keys, a list of strings
+    # another hack: if the user has asked from UHS curves and there are
+    # hazard maps, put them in the list of exported outputs
+    uhs = dstore['oqparam'].uniform_hazard_spectra
+    if uhs and 'hmaps' in dstore:
+        dskeys.append('uhs')
+    for key in dstore:
+        if key in exportable:
+            if key == 'realizations' and len(dstore['realizations']) == 1:
+                continue  # do not export a single realization
+            dskeys.append(key)
+    logs.dbcmd('create_outputs', dstore.calc_id, dskeys)
+
+
+class MasterKilled(KeyboardInterrupt):
+    "Exception raised when a job is killed manually"
+
+
+def raiseMasterKilled(signum, _stack):
+    """
+    When a SIGTERM is received, raise the MasterKilled
+    exception with an appropriate error message.
+
+    :param int signum: the number of the received signal
+    :param _stack: the current frame object, ignored
+    """
+    if signum == signal.SIGTERM:
+        msg = 'The openquake master process was killed manually'
+    else:
+        msg = 'Received a signal %d' % signum
+    raise MasterKilled(msg)
+
+
+# register the raiseMasterKilled callback for SIGTERM
+# when using the Django development server this module is imported by a thread,
+# so one gets a `ValueError: signal only works in main thread` that
+# can be safely ignored
+try:
+    signal.signal(signal.SIGTERM, raiseMasterKilled)
+except ValueError:
+    pass
+
+
+def job_from_file(cfg_file, username, hazard_calculation_id=None):
+    """
+    Create a full job profile from a job config file.
+
+    :param str cfg_file:
+        Path to a job.ini file.
+    :param str username:
+        The user who will own this job profile and all results
+    :param str datadir:
+        Data directory of the user
+    :param hazard_calculation_id:
+        ID of a previous calculation or None
+    :returns:
+        a pair (job_id, oqparam)
+    """
+    oq = readinput.get_oqparam(cfg_file)
+    job_id = logs.dbcmd('create_job', oq.calculation_mode, oq.description,
+                        username, datastore.DATADIR, hazard_calculation_id)
+    return job_id, oq
+
+
 def run_calc(job_id, oqparam, log_level, log_file, exports,
              hazard_calculation_id=None):
     """
@@ -96,8 +174,11 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         try:
             _do_run_calc(calc, exports, hazard_calculation_id)
             logs.dbcmd('finish', job_id, 'complete')
-            logs.dbcmd('expose_outputs', job_id)
-            logs.LOG.info('Calculation %d finished correctly', job_id)
+            expose_outputs(calc.datastore)
+            records = views.performance_view(calc.datastore)
+            logs.dbcmd('save_performance', job_id, records)
+            logs.LOG.info('Calculation %d finished correctly in %d seconds',
+                          job_id, calc.monitor.duration)
         except:
             tb = traceback.format_exc()
             try:
@@ -120,7 +201,6 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     return calc
 
 
-# keep this as a private function, since it is mocked by engine_test.py
 def _do_run_calc(calc, exports, hazard_calculation_id):
     with calc.monitor:
         calc.run(exports=exports, hazard_calculation_id=hazard_calculation_id)
