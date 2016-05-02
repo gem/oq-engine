@@ -495,10 +495,8 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         with self.monitor('saving ruptures', autoflush=True):
             # ordering ruptures
             sescollection = []
-            weights = []
             for trt_id in result:
                 for ebr in result[trt_id]:
-                    weights.append(ebr.weight)
                     sescollection.append(ebr)
             sescollection.sort(key=operator.attrgetter('serial'))
             etags = numpy.concatenate([ebr.etags for ebr in sescollection])
@@ -514,7 +512,6 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                     eid += 1
                 self.datastore['sescollection/%s' % ebr.serial] = ebr
             self.datastore.set_nbytes('sescollection')
-            self.datastore.set_attrs('sescollection', weights=weights)
 
         for dset in self.rup_data.values():
             numsites = dset.dset['numsites']
