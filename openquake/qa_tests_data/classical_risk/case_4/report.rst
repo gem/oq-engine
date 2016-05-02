@@ -1,7 +1,7 @@
 Classical Hazard-Risk QA test 4
 ===============================
 
-gem-tstation:/home/michele/ssd/calc_1797.hdf5 updated Fri Apr 29 08:18:16 2016
+gem-tstation:/home/michele/ssd/calc_954.hdf5 updated Thu Apr 28 15:38:26 2016
 
 num_sites = 6, sitecol = 969 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git5086754'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -75,7 +75,7 @@ Informational data
 ======================================== ==============
 count_eff_ruptures_max_received_per_task 3211          
 count_eff_ruptures_num_tasks             2             
-count_eff_ruptures_sent.monitor          5996          
+count_eff_ruptures_sent.monitor          5994          
 count_eff_ruptures_sent.rlzs_assoc       5986          
 count_eff_ruptures_sent.sitecol          1114          
 count_eff_ruptures_sent.siteidx          10            
@@ -99,20 +99,20 @@ Exposure model
 #taxonomies 2
 =========== =
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-A        1.000 NaN    1   1   1         1         
-W        1.000 0.0    1   1   5         5         
-*ALL*    1.000 0.0    1   1   6         6         
-======== ===== ====== === === ========= ==========
+======== =======
+Taxonomy #Assets
+======== =======
+A        1      
+W        5      
+======== =======
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            376       AreaSource   55     1         6.971E-04   0.0        0.0      
-0            231       AreaSource   104    1         6.840E-04   0.0        0.0      
+0            231       AreaSource   104    1         0.001       0.0        0.0      
+0            376       AreaSource   55     1         0.001       0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Information about the tasks
@@ -124,12 +124,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 2.450     0.0       1     
-managing sources               0.032     0.0       1     
-filtering sources              0.028     0.0       39    
-store source_info              0.008     0.0       1     
-reading exposure               0.004     0.0       1     
-total count_eff_ruptures       0.003     0.0       2     
-aggregate curves               2.909E-05 0.0       2     
-reading site collection        7.868E-06 0.0       1     
+reading composite source model 5.174     0.0       1     
+managing sources               0.067     0.0       1     
+filtering sources              0.058     0.0       39    
+store source_info              0.029     0.0       1     
+reading exposure               0.006     0.0       1     
+total count_eff_ruptures       0.002     0.004     2     
+aggregate curves               5.603E-05 0.0       2     
+reading site collection        1.001E-05 0.0       1     
 ============================== ========= ========= ======

@@ -1,7 +1,7 @@
 QA test for disaggregation case_1, taken from the disagg demo
 =============================================================
 
-gem-tstation:/home/michele/ssd/calc_1882.hdf5 updated Fri Apr 29 08:20:48 2016
+gem-tstation:/home/michele/ssd/calc_1039.hdf5 updated Thu Apr 28 15:44:16 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   10.0               
 random_seed                  9000               
 master_seed                  0                  
-oqlite_version               '0.13.0-git5086754'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -92,10 +92,10 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            4         ComplexFaultSource 164    29        0.001       0.146      0.0      
-0            3         SimpleFaultSource  617    83        0.002       0.046      0.0      
-0            2         AreaSource         36     96        0.001       0.014      0.0      
-0            1         PointSource        0.375  1         1.070E-04   0.0        0.0      
+0            4         ComplexFaultSource 164    29        0.003       0.404      0.0      
+0            3         SimpleFaultSource  617    83        0.003       0.119      0.0      
+0            2         AreaSource         36     96        0.002       0.028      0.0      
+0            1         PointSource        0.375  1         1.929E-04   0.0        0.0      
 ============ ========= ================== ====== ========= =========== ========== =========
 
 Information about the tasks
@@ -107,12 +107,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.254     0.0       1     
-splitting sources              0.205     0.0       3     
-reading composite source model 0.040     0.0       1     
-total count_eff_ruptures       0.009     0.0       30    
-store source_info              0.006     0.0       1     
-filtering sources              0.004     0.0       4     
-aggregate curves               5.860E-04 0.0       30    
-reading site collection        2.885E-05 0.0       1     
+managing sources               0.825     0.0       1     
+splitting sources              0.551     0.0       3     
+reading composite source model 0.100     0.0       1     
+total count_eff_ruptures       0.008     0.0       30    
+filtering sources              0.007     0.0       4     
+store source_info              0.007     0.0       1     
+aggregate curves               5.560E-04 0.0       30    
+reading site collection        4.888E-05 0.0       1     
 ============================== ========= ========= ======

@@ -1,7 +1,7 @@
 scenario hazard
 ===============
 
-gem-tstation:/home/michele/ssd/calc_1806.hdf5 updated Fri Apr 29 08:18:17 2016
+gem-tstation:/home/michele/ssd/calc_963.hdf5 updated Thu Apr 28 15:38:30 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  42                 
 master_seed                  0                  
-oqlite_version               '0.13.0-git5086754'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -50,13 +50,13 @@ Exposure model
 #taxonomies 3
 =========== =
 
-======== ===== ====== === === ========= ==========
-taxonomy mean  stddev min max num_sites num_assets
-tax1     1.000 0.0    1   1   4         4         
-tax2     1.000 0.0    1   1   2         2         
-tax3     1.000 NaN    1   1   1         1         
-*ALL*    1.000 0.0    1   1   7         7         
-======== ===== ====== === === ========= ==========
+======== =======
+Taxonomy #Assets
+======== =======
+tax1     4      
+tax2     2      
+tax3     1      
+======== =======
 
 Information about the tasks
 ---------------------------
@@ -67,8 +67,8 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.009     0.0       1     
-computing gmfs          0.006     0.0       1     
-reading exposure        0.005     0.0       1     
-reading site collection 6.914E-06 0.0       1     
+filtering sites         0.015     0.0       1     
+reading exposure        0.012     0.0       1     
+computing gmfs          0.010     0.0       1     
+reading site collection 1.001E-05 0.0       1     
 ======================= ========= ========= ======

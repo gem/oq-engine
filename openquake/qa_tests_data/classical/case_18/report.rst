@@ -1,7 +1,7 @@
 Demo Classical PSHA for Vancouver Schools
 =========================================
 
-gem-tstation:/home/michele/ssd/calc_1853.hdf5 updated Fri Apr 29 08:19:22 2016
+gem-tstation:/home/michele/ssd/calc_1010.hdf5 updated Thu Apr 28 15:41:00 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   50.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git5086754'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -73,8 +73,8 @@ Informational data
 ======================================== ==============
 count_eff_ruptures_max_received_per_task 162868        
 count_eff_ruptures_num_tasks             30            
-count_eff_ruptures_sent.monitor          4878744       
-count_eff_ruptures_sent.rlzs_assoc       4892587       
+count_eff_ruptures_sent.monitor          4878756       
+count_eff_ruptures_sent.rlzs_assoc       4892683       
 count_eff_ruptures_sent.sitecol          14550         
 count_eff_ruptures_sent.siteidx          150           
 count_eff_ruptures_sent.sources          40480         
@@ -94,7 +94,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            VICM      AreaSource   60     30        0.001       0.010      0.0      
+0            VICM      AreaSource   60     30        0.002       0.016      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Information about the tasks
@@ -106,12 +106,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.102     0.0       1     
-reading composite source model 0.025     0.0       1     
-total count_eff_ruptures       0.010     0.0       30    
-splitting sources              0.010     0.0       1     
-store source_info              0.006     0.0       1     
-filtering sources              0.001     0.0       1     
-aggregate curves               7.029E-04 0.0       30    
-reading site collection        1.059E-04 0.0       1     
+managing sources               0.353     0.0       1     
+reading composite source model 0.037     0.0       1     
+splitting sources              0.016     0.0       1     
+total count_eff_ruptures       0.008     0.0       30    
+store source_info              0.007     0.0       1     
+filtering sources              0.002     0.0       1     
+aggregate curves               6.676E-04 0.0       30    
+reading site collection        1.299E-04 0.0       1     
 ============================== ========= ========= ======

@@ -1,7 +1,7 @@
 Event-based PSHA producing hazard curves only
 =============================================
 
-gem-tstation:/home/michele/ssd/calc_1862.hdf5 updated Fri Apr 29 08:20:09 2016
+gem-tstation:/home/michele/ssd/calc_1019.hdf5 updated Thu Apr 28 15:42:50 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   20.0               
 random_seed                  23                 
 master_seed                  0                  
-oqlite_version               '0.13.0-git5086754'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -101,38 +101,38 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   61     307       0.001       0.065      4.255    
-1            1         AreaSource   61     307       0.001       0.065      3.043    
+0            1         AreaSource   61     307       0.002       0.108      9.368    
+1            1         AreaSource   61     307       0.002       0.104      5.916    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Information about the tasks
 ---------------------------
-================================= ===== ====== ===== ===== =========
-measurement                       mean  stddev min   max   num_tasks
-compute_ruptures.time_sec         0.118 0.029  0.047 0.202 62       
-compute_ruptures.memory_mb        0.0   0.0    0.0   0.0   62       
-compute_gmfs_and_curves.time_sec  0.215 0.094  0.112 0.562 41       
-compute_gmfs_and_curves.memory_mb 0.005 0.020  0.0   0.098 41       
-================================= ===== ====== ===== ===== =========
+================================= ===== ===== ========= ======
+measurement                       min   max   mean      stddev
+compute_ruptures.time_sec         0.109 0.441 0.247     0.076 
+compute_ruptures.memory_mb        0.0   0.020 3.780E-04 0.003 
+compute_gmfs_and_curves.time_sec  0.236 1.151 0.416     0.225 
+compute_gmfs_and_curves.memory_mb 0.0   0.070 0.002     0.011 
+================================= ===== ===== ========= ======
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_gmfs_and_curves  8.830     0.098     41    
-total compute_ruptures         7.333     0.0       62    
-compute poes                   5.948     0.0       3,081 
-make contexts                  2.651     0.0       3,081 
-saving ruptures                1.849     0.0       1     
-filtering ruptures             1.481     0.0       3,081 
-managing sources               0.297     0.0       1     
-bulding hazard curves          0.166     0.0       41    
-reading composite source model 0.133     0.0       1     
-splitting sources              0.130     0.0       2     
-aggregating hcurves            0.096     0.0       123   
-aggregate curves               0.029     0.0       185   
-store source_info              0.010     0.0       1     
-filtering sources              0.003     0.0       2     
-reading site collection        3.791E-05 0.0       1     
+total compute_gmfs_and_curves  17        0.070     41    
+total compute_ruptures         15        0.020     62    
+compute poes                   11        0.0       3,081 
+make contexts                  4.834     0.0       3,081 
+filtering ruptures             3.493     0.0       3,081 
+saving ruptures                3.415     0.0       1     
+managing sources               0.837     0.0       1     
+reading composite source model 0.259     0.0       1     
+bulding hazard curves          0.252     0.0       41    
+splitting sources              0.213     0.0       2     
+aggregating hcurves            0.151     0.0       123   
+aggregate curves               0.101     0.0       185   
+store source_info              0.029     0.0       1     
+filtering sources              0.004     0.0       2     
+reading site collection        4.697E-05 0.0       1     
 ============================== ========= ========= ======

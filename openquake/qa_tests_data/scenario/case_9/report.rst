@@ -1,7 +1,7 @@
 Scenario QA Test, Case 9, Multiple GSIMs
 ========================================
 
-gem-tstation:/home/michele/ssd/calc_1809.hdf5 updated Fri Apr 29 08:18:18 2016
+gem-tstation:/home/michele/ssd/calc_966.hdf5 updated Thu Apr 28 15:38:31 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  3                  
 master_seed                  0                  
-oqlite_version               '0.13.0-git5086754'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -51,7 +51,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.014     0.0       1     
-computing gmfs          6.139E-04 0.0       1     
-reading site collection 3.004E-05 0.0       1     
+filtering sites         0.025     0.0       1     
+computing gmfs          0.001     0.0       1     
+reading site collection 4.911E-05 0.0       1     
 ======================= ========= ========= ======

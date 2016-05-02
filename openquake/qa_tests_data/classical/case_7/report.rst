@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 7
 ================================
 
-gem-tstation:/home/michele/ssd/calc_1854.hdf5 updated Fri Apr 29 08:19:40 2016
+gem-tstation:/home/michele/ssd/calc_1011.hdf5 updated Thu Apr 28 15:41:42 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  1066               
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git5086754'
+oqlite_version               '0.13.0-git93d6f64'
 ============================ ===================
 
 Input files
@@ -105,9 +105,9 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            2         ComplexFaultSource 485    1         0.001       7.719      0.0      
-1            1         SimpleFaultSource  901    1         0.002       0.504      0.0      
-0            1         SimpleFaultSource  901    1         0.001       0.495      0.0      
+0            2         ComplexFaultSource 485    1         0.003       19         0.0      
+0            1         SimpleFaultSource  901    1         0.003       1.248      0.0      
+1            1         SimpleFaultSource  901    1         0.003       1.141      0.0      
 ============ ========= ================== ====== ========= =========== ========== =========
 
 Information about the tasks
@@ -119,12 +119,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 8.887     0.0       1     
-managing sources               8.727     0.0       1     
-splitting sources              8.718     0.0       3     
-filtering sources              0.004     0.0       3     
-store source_info              0.004     0.0       1     
-total count_eff_ruptures       0.001     0.0       3     
-aggregate curves               5.054E-05 0.0       3     
-reading site collection        3.719E-05 0.0       1     
+managing sources               21        0.0       1     
+splitting sources              21        0.0       3     
+reading composite source model 20        0.0       1     
+filtering sources              0.008     0.0       3     
+store source_info              0.007     0.0       1     
+total count_eff_ruptures       8.297E-04 0.0       3     
+aggregate curves               7.987E-05 0.0       3     
+reading site collection        4.506E-05 0.0       1     
 ============================== ========= ========= ======
