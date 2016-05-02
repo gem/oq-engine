@@ -16,20 +16,19 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
-import sys
 import zipfile
-import getpass
 import operator
 from datetime import datetime
 
 from django.core import exceptions
 from django import db
 
-from openquake.commonlib import datastore, readinput, export
+from openquake.commonlib import datastore, valid
+from openquake.commonlib.export import export
 from openquake.server.db import models
-from openquake.engine import utils
 from openquake.engine.export import core
 from openquake.server.db.schema.upgrades import upgrader
+from openquake.server.db import upgrade_manager
 
 
 class InvalidCalculationID(Exception):
@@ -50,20 +49,31 @@ UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 
 def check_outdated():
     """
-    Check if the db is outdated
+    Check if the db is outdated, called before starting anything
     """
     return upgrader.check_versions(db.connection)
 
 
-def create_job(calc_mode, description, user_name="openquake", hc_id=None):
+def reset_is_running():
+    """
+    Reset the flag job.is_running to False. This is called when the
+    Web UI is re-started: the idea is that it is restarted only when
+    all computations are completed.
+    """
+    db.connection.cursor().execute(  # reset the flag job.is_running
+        'UPDATE job SET is_running=0 WHERE is_running=1')
+
+
+def create_job(calc_mode, description, user_name, datadir, hc_id=None):
     """
     Create job for the given user, return it.
 
     :param str calc_mode:
         Calculation mode, such as classical, event_based, etc
-    :param username:
-        Username of the user who owns/started this job. If the username doesn't
-        exist, a user record for this name will be created.
+    :param user_name:
+        User who owns/started this job.
+    :param datadir:
+        Data directory of the user who owns/started this job.
     :param description:
          Description of the calculation
     :param hc_id:
@@ -71,36 +81,51 @@ def create_job(calc_mode, description, user_name="openquake", hc_id=None):
     :returns:
         :class:`openquake.server.db.models.OqJob` instance.
     """
-    calc_id = get_calc_id() + 1
+    calc_id = get_calc_id(datadir) + 1
     job = models.OqJob.objects.create(
         id=calc_id,
         calculation_mode=calc_mode,
         description=description,
         user_name=user_name,
-        ds_calc_dir=os.path.join(datastore.DATADIR, 'calc_%s' % calc_id))
+        ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     if hc_id:
-        job.hazard_calculation = models.OqJob.objects.get(pk=hc_id)
+        job.hazard_calculation = models.get(models.OqJob, pk=hc_id)
     job.save()
-    return job
+    return job.id
 
 
-def get_hc_id(hc_id):
+def delete_uncompleted_calculations(user):
     """
-    If hc_id is negative, return the last calculation of the current user
+    Delete the uncompleted calculations of the given user
     """
-    hc_id = int(hc_id)
-    if hc_id > 0:
-        return hc_id
-    return models.OqJob.objects.filter(
-        user_name=getpass.getuser()).latest('id').id + hc_id + 1
+    for job in models.OqJob.objects.filter(
+            oqjob__user_name=user).exclude(
+            oqjob__status="complete"):
+        del_calc(job.id, user)
 
 
-def get_calc_id(job_id=None):
+def get_job_id(job_id, username):
+    """
+    If job_id is negative, return the last calculation of the current
+    user, otherwise returns the job_id unchanged.
+    """
+    job_id = int(job_id)
+    if job_id > 0:
+        return job_id
+    my_jobs = models.OqJob.objects.filter(user_name=username).order_by('id')
+    n = my_jobs.count()
+    if n == 0:  # no jobs
+        return
+    else:  # typically job_id is -1
+        return my_jobs[n + job_id].id
+
+
+def get_calc_id(datadir, job_id=None):
     """
     Return the latest calc_id by looking both at the datastore
     and the database.
     """
-    calcs = datastore.get_calc_ids(datastore.DATADIR)
+    calcs = datastore.get_calc_ids(datadir)
     calc_id = 0 if not calcs else calcs[-1]
     if job_id is None:
         try:
@@ -110,20 +135,20 @@ def get_calc_id(job_id=None):
     return max(calc_id, job_id)
 
 
-def list_calculations(job_type):
+def list_calculations(job_type, user_name):
     """
-    Print a summary of past calculations.
+    Yield a summary of past calculations.
 
     :param job_type: 'hazard' or 'risk'
     """
     jobs = [job for job in models.OqJob.objects.filter(
-        user_name=getpass.getuser()).order_by('start_time')
+        user_name=user_name).order_by('start_time')
             if job.job_type == job_type]
 
     if len(jobs) == 0:
-        print 'None'
+        yield 'None'
     else:
-        print ('job_id |     status |          start_time | '
+        yield ('job_id |     status |          start_time | '
                '        description')
         for job in jobs:
             descr = job.description
@@ -138,73 +163,54 @@ def list_calculations(job_type):
             start_time = latest_job.start_time.strftime(
                 '%Y-%m-%d %H:%M:%S %Z'
             )
-            print ('%6d | %10s | %s| %s' % (
+            yield ('%6d | %10s | %s| %s' % (
                 job.id, status, start_time, descr)).encode('utf-8')
 
 
-def export_outputs(hc_id, target_dir, export_type):
+def export_outputs(job_id, target_dir, export_type):
     # make it possible commands like `oq-engine --eos -1 /tmp`
-    outputs = models.Output.objects.filter(oq_job=hc_id)
+    outputs = models.Output.objects.filter(oq_job=job_id)
     if not outputs:
-        sys.exit('Found nothing to export for job %s' % hc_id)
+        yield('Found nothing to export for job %s' % job_id)
     for output in outputs:
-        print('Exporting %s...' % output)
+        yield('Exporting %s...' % output)
         try:
-            export_output(output.id, target_dir, export_type)
+            for line in export_output(output.id, target_dir, export_type):
+                yield line
         except Exception as exc:
-            print(exc)
+            yield(exc)
 
 
 def export_output(output_id, target_dir, export_type):
     """
     Simple UI wrapper around
-    :func:`openquake.engine.export.core.export` which prints a summary
-    of files exported, if any.
+    :func:`openquake.engine.export.core.export_from_datastore` yielding
+    a summary of files exported, if any.
     """
     queryset = models.Output.objects.filter(pk=output_id)
     if not queryset.exists():
-        print 'No output found for OUTPUT_ID %s' % output_id
+        yield('No output found for OUTPUT_ID %s' % output_id)
         return
 
     if queryset.all()[0].oq_job.status != "complete":
-        print ("Exporting output produced by a job which did not run "
-               "successfully. Results might be uncomplete")
+        yield("Exporting output produced by a job which did not run "
+              "successfully. Results might be uncomplete")
 
-    the_file = core.export(output_id, target_dir, export_type)
-    if the_file.endswith('.zip'):
-        dname = os.path.dirname(the_file)
-        fnames = zipfile.ZipFile(the_file).namelist()
-        print('Files exported:')
-        for fname in fnames:
-            print(os.path.join(dname, fname))
-    else:
-        print('File exported: %s' % the_file)
-
-
-def delete_uncompleted_calculations():
-    for job in models.OqJob.objects.filter(
-            oqjob__user_name=getpass.getuser()).exclude(
-            oqjob__status="successful"):
-        del_calc(job.id, True)
-
-
-def delete_calculation(job_id, confirmed=False):
-    """
-    Delete a calculation and all associated outputs.
-    """
-    if confirmed or utils.confirm(
-            'Are you sure you want to delete this calculation and all '
-            'associated outputs?\nThis action cannot be undone. (y/n): '):
-        try:
-            del_calc(job_id)
-        except RuntimeError as err:
-            print(err)
-
-
-def print_results(job_id, duration):
-    print('Calculation %d completed in %d seconds. Results:' % (
-        job_id, duration))
-    list_outputs(job_id, full=False)
+    dskey, calc_id, datadir = get_output(output_id)
+    for exptype in export_type.split(','):
+        outkey = (dskey, exptype)
+        if outkey not in export:  # missing exporter for exptype
+            continue
+        the_file = core.export_from_datastore(
+            outkey, calc_id, datadir, target_dir)
+        if the_file.endswith('.zip'):
+            dname = os.path.dirname(the_file)
+            fnames = zipfile.ZipFile(the_file).namelist()
+            yield('Files exported:')
+            for fname in fnames:
+                yield(os.path.join(dname, fname))
+        else:
+            yield('File exported: %s' % the_file)
 
 
 def list_outputs(job_id, full=True):
@@ -218,10 +224,28 @@ def list_outputs(job_id, full=True):
         If True produce a full listing, otherwise a short version
     """
     outputs = get_outputs(job_id)
-    print_outputs_summary(outputs, full)
+    return print_outputs_summary(outputs, full)
 
 
-# this is patched in the tests
+def print_outputs_summary(outputs, full=True):
+    """
+    List of :class:`openquake.server.db.models.Output` objects.
+    """
+    if len(outputs) > 0:
+        truncated = False
+        yield '  id | name'
+        outs = sorted(outputs, key=operator.attrgetter('display_name'))
+        for i, o in enumerate(outs):
+            if not full and i >= 10:
+                yield ' ... | %d additional output(s)' % (len(outs) - 10)
+                truncated = True
+                break
+            yield '%4d | %s' % (o.id, o.display_name)
+        if truncated:
+            yield ('Some outputs where not shown. You can see the full list '
+                   'with the command\n`oq-engine --list-outputs`')
+
+
 def get_outputs(job_id):
     """
     :param job_id:
@@ -231,73 +255,21 @@ def get_outputs(job_id):
     """
     return models.Output.objects.filter(oq_job=job_id)
 
-
-def print_outputs_summary(outputs, full=True):
-    """
-    List of :class:`openquake.server.db.models.Output` objects.
-    """
-    if len(outputs) > 0:
-        truncated = False
-        print '  id | name'
-        outs = sorted(outputs, key=operator.attrgetter('display_name'))
-        for i, o in enumerate(outs):
-            if not full and i >= 10:
-                print ' ... | %d additional output(s)' % (len(outs) - 10)
-                truncated = True
-                break
-            print '%4d | %s' % (o.id, o.display_name)
-        if truncated:
-            print ('Some outputs where not shown. You can see the full list '
-                   'with the command\n`oq-engine --list-outputs`')
-
-
-@db.transaction.atomic
-def job_from_file(cfg_file, username, hazard_calculation_id=None):
-    """
-    Create a full job profile from a job config file.
-
-    :param str cfg_file:
-        Path to a job.ini file.
-    :param str username:
-        The user who will own this job profile and all results.
-    :param hazard_calculation_id:
-        ID of a previous calculation or None
-    :returns:
-        a pair (job_id, oqparam)
-    """
-    oq = readinput.get_oqparam(cfg_file)
-    job = create_job(oq.calculation_mode, oq.description,
-                     username, hazard_calculation_id)
-    return job.id, oq
-
 DISPLAY_NAME = dict(dmg_by_asset='dmg_by_asset_and_collapse_map')
 
 
-def expose_outputs(job_id):
+def create_outputs(job_id, dskeys):
     """
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
 
-    :param job_id: job ID
+    :param job_id: ID of the current job
+    :param dskeys: a list of datastore keys
     """
-    exportable = set(ekey[0] for ekey in export.export)
-    job = models.OqJob.objects.get(pk=job_id)
-    with datastore.read(
-            job.id, datadir=os.path.dirname(job.ds_calc_dir)) as dstore:
-        # small hack: remove the sescollection outputs from scenario
-        # calculators, as requested by Vitor
-        calcmode = job.calculation_mode
-        if 'scenario' in calcmode and 'sescollection' in exportable:
-            exportable.remove('sescollection')
-        uhs = dstore.get_attr('/', 'uniform_hazard_spectra', False)
-        if uhs and 'hmaps' in dstore:
-            models.Output.objects.create_output(job, 'uhs', ds_key='uhs')
-        for key in dstore:
-            if key in exportable:
-                if key == 'realizations' and len(dstore['realizations']) == 1:
-                    continue  # do not export a single realization
-                models.Output.objects.create_output(
-                    job, DISPLAY_NAME.get(key, key), ds_key=key)
+    job = models.get(models.OqJob, pk=job_id)
+    for key in dskeys:
+        models.Output.objects.create_output(
+            job, DISPLAY_NAME.get(key, key), ds_key=key)
 
 
 def check_hazard_risk_consistency(haz_job, risk_mode):
@@ -330,14 +302,14 @@ def finish(job_id, status):
     """
     Set the job columns `is_running`, `status`, and `stop_time`
     """
-    job = models.OqJob.objects.get(pk=job_id)
+    job = models.get(models.OqJob, pk=job_id)
     job.is_running = False
     job.status = status
     job.stop_time = datetime.utcnow()
     job.save()
 
 
-def del_calc(job_id):
+def del_calc(job_id, user):
     """
     Delete a calculation and all associated outputs.
 
@@ -345,12 +317,10 @@ def del_calc(job_id):
         ID of a :class:`~openquake.server.db.models.OqJob`.
     """
     try:
-        job = models.OqJob.objects.get(id=job_id)
+        job = models.get(models.OqJob, pk=job_id)
     except exceptions.ObjectDoesNotExist:
         raise RuntimeError('Unable to delete hazard calculation: '
                            'ID=%s does not exist' % job_id)
-
-    user = getpass.getuser()
     if job.user_name == user:
         # we are allowed to delete this
 
@@ -364,14 +334,7 @@ def del_calc(job_id):
         if assoc_outputs.count() > 0:
             raise RuntimeError(
                 msg % ', '.join(str(x.id) for x in assoc_outputs))
-
-        # No risk calculation are referencing what we want to delete.
-        # Carry on with the deletion. Notice that we cannot use job.delete()
-        # directly because Django is so stupid that it reads from the database
-        # all the records to delete before deleting them: thus, it runs out
-        # of memory for large calculations
-        curs = db.connection.cursor()
-        curs.execute('DELETE FROM job WHERE id=%s', (job_id,))
+        job.delete()
     else:
         # this doesn't belong to the current user
         raise RuntimeError(UNABLE_TO_DEL_HC_FMT % 'Access denied')
@@ -379,17 +342,15 @@ def del_calc(job_id):
         os.remove(job.ds_calc_dir + '.hdf5')
     except:  # already removed or missing permission
         pass
-    else:
-        print('Removed %s' % job.ds_calc_dir + '.hdf5')
 
 
 def log(job_id, timestamp, level, process, message):
     """
     Write a log record in the database
     """
-    models.Log.objects.create(
-        job_id=job_id, timestamp=timestamp,
-        level=level, process=process, message=message)
+    db.connection.cursor().execute(
+        'INSERT INTO log (job_id, timestamp, level, process, message) VALUES'
+        '(?, ?, ?, ?, ?)', (job_id, timestamp, level, process, message))
 
 
 def get_log(job_id):
@@ -397,9 +358,166 @@ def get_log(job_id):
     Extract the logs as a big string
     """
     logs = models.Log.objects.filter(job=job_id).order_by('id')
-    lines = []
     for log in logs:
         time = str(log.timestamp)[:-4]  # strip decimals
-        line = '[%s #%d %s] %s' % (time, job_id, log.level, log.message)
-        lines.append(line)
-    return '\n'.join(lines)
+        yield '[%s #%d %s] %s' % (time, job_id, log.level, log.message)
+
+
+def get_output(output_id):
+    """
+    :param output_id: ID of an Output object
+    :returns: (ds_key, calc_id, dirname)
+    """
+    out = models.get(models.Output, pk=output_id)
+    return out.ds_key, out.oq_job.id, os.path.dirname(out.oq_job.ds_calc_dir)
+
+
+def save_performance(job_id, records):
+    """
+    Save in the database the performance information about the given job
+    """
+    for rec in records:
+        models.Performance.objects.create(
+            job_id=job_id, operation=rec['operation'],
+            time_sec=rec['time_sec'], memory_mb=rec['memory_mb'],
+            counts=rec['counts'])
+
+
+# used in make_report
+def fetch(templ, *args):
+    """
+    Run queries directly on the database. Return header + rows
+    """
+    curs = db.connection.cursor()
+    curs.execute(templ, args)
+    header = [r[0] for r in curs.description]
+    return [header] + curs.fetchall()
+
+
+def get_dbpath():
+    """
+    Returns the path to the database file
+    """
+    curs = db.connection.cursor()
+    curs.execute('PRAGMA database_list')
+    # return a row with fields (id, dbname, dbpath)
+    return curs.fetchall()[0][-1]
+
+
+# ########################## upgrade operations ########################## #
+
+def what_if_I_upgrade(extract_scripts):
+    conn = db.connection.connection
+    return upgrade_manager.what_if_I_upgrade(
+        conn, extract_scripts=extract_scripts)
+
+
+def version_db():
+    conn = db.connection.connection
+    return upgrade_manager.version_db(conn)
+
+
+def upgrade_db():
+    conn = db.connection.connection
+    return upgrade_manager.upgrade_db(conn)
+
+
+# ################### used in Web UI ######################## #
+
+def calc_info(calc_id):
+    """
+    :param calc_id: calculation ID
+    :returns: dictionary of info about the given calculation
+    """
+    job = models.get(models.OqJob, pk=calc_id)
+    response_data = {}
+    response_data['user_name'] = job.user_name
+    response_data['status'] = job.status
+    response_data['start_time'] = str(job.start_time)
+    response_data['stop_time'] = str(job.stop_time)
+    response_data['is_running'] = job.is_running
+    return response_data
+
+
+def get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
+    """
+    :returns:
+        list of tuples (job_id, user_name, job_status, job_type,
+                        job_is_running, job_description)
+    """
+    # helper to get job+calculation data from the oq-engine database
+    jobs = models.OqJob.objects.filter()
+    if not user_is_super:
+        jobs = jobs.filter(user_name=user_name)
+
+    if id is not None:
+        jobs = jobs.filter(id=id)
+
+    if 'job_type' in request_get_dict:
+        job_type = request_get_dict.get('job_type')
+        jobs = jobs.filter(hazard_calculation__isnull=job_type == 'hazard')
+
+    if 'is_running' in request_get_dict:
+        is_running = request_get_dict.get('is_running')
+        jobs = jobs.filter(is_running=valid.boolean(is_running))
+
+    if 'relevant' in request_get_dict:
+        relevant = request_get_dict.get('relevant')
+        jobs = jobs.filter(relevant=valid.boolean(relevant))
+
+    return [(job.id, job.user_name, job.status, job.job_type,
+             job.is_running, job.description) for job in jobs.order_by('-id')]
+
+
+def set_relevant(calc_id, flag):
+    """
+    Set the `relevant` field of the given calculation record
+    """
+    job = models.get(models.OqJob, pk=calc_id)
+    job.relevant = flag
+    job.save()
+
+
+def log_to_json(log):
+    """
+    Convert a log record into a list of strings
+    """
+    return [log.timestamp.isoformat()[:22],
+            log.level, log.process, log.message]
+
+
+def get_log_slice(calc_id, start, stop):
+    """
+    Get a slice of the calculation log as a JSON list of rows
+    """
+    start = start or 0
+    stop = stop or None
+    rows = models.Log.objects.filter(job_id=calc_id)[start:stop]
+    return map(log_to_json, rows)
+
+
+def get_log_size(calc_id):
+    """
+    Get a slice of the calculation log as a JSON list of rows
+    """
+    return models.Log.objects.filter(job_id=calc_id).count()
+
+
+def get_traceback(calc_id):
+    """
+    Return the traceback of the given calculation as a list of lines.
+    The list is empty if the calculation was successful.
+    """
+    # strange: understand why the filter returns two lines
+    log = list(models.Log.objects.filter(job_id=calc_id, level='CRITICAL'))[-1]
+    response_data = log.message.splitlines()
+    return response_data
+
+
+def get_result(result_id):
+    """
+    :returns: (job_status, datastore_key)
+    """
+    output = models.get(models.Output, pk=result_id)
+    job = output.oq_job
+    return job.status, output.ds_key

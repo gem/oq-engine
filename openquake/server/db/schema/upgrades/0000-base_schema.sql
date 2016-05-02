@@ -1,19 +1,33 @@
-/*
-  Copyright (C) 2010-2016, GEM Foundation.
+CREATE TABLE job(
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     description TEXT NOT NULL,
+     user_name TEXT NOT NULL,
+     calculation_mode TEXT NOT NULL,
+     hazard_calculation_id INTEGER REFERENCES job (id) ON DELETE CASCADE,
+     status TEXT NOT NULL DEFAULT 'created',
+     is_running BOOL NOT NULL DEFAULT false,
+     start_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     stop_time TIMESTAMP,
+     relevant BOOL DEFAULT true,
+     ds_calc_dir TEXT NOT NULL);
 
-  OpenQuake is free software: you can redistribute it and/or modify it
-  under the terms of the GNU Affero General Public License as published
-  by the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  OpenQuake is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU Affero General Public License
-  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
--- Disable unnecessarily verbose output
-SET client_min_messages TO WARNING;
+CREATE TABLE log(
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     job_id INTEGER NOT NULL REFERENCES job (id) ON DELETE CASCADE,
+     timestamp TIMESTAMP NOT NULL,
+     level TEXT NOT NULL,
+     process TEXT NOT NULL,
+     message TEXT NOT NULL);   
+CREATE TABLE output(
+     id INTEGER PRIMARY KEY AUTOINCREMENT,     
+     oq_job_id INTEGER NOT NULL REFERENCES job (id) ON DELETE CASCADE,
+     display_name TEXT NOT NULL,
+     last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     ds_key TEXT NOT NULL);
+CREATE TABLE performance(
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     job_id INTEGER NOT NULL REFERENCES job (id) ON DELETE CASCADE,
+     operation TEXT NOT NULL,
+     time_sec FLOAT NOT NULL,
+     memory_mb FLOAT NOT NULL,
+     counts INTEGER NOT NULL);
