@@ -66,13 +66,21 @@ if [ "$GEM_EPHEM_NAME" = "" ]; then
 fi
 
 if command -v lxc-shutdown &> /dev/null; then
-    # Older lxc (< 1.0.0) with lxc-shutdown
+    # Old lxc (< 1.0.0) with lxc-shutdown
     LXC_TERM="lxc-shutdown -t 10 -w"
     LXC_KILL="lxc-stop"
 else
-    # Newer lxc (>= 1.0.0) with lxc-stop only
+    # New lxc (>= 1.0.0) with lxc-stop only
     LXC_TERM="lxc-stop -t 10"
     LXC_KILL="lxc-stop -k"
+fi
+
+if command -v lxc-copy &> /dev/null; then
+    # New lxc (>= 2.0.0) with lxc-copy
+    GEM_EPHEM_CMD="${GEM_EPHEM_CMD} -n ${GEM_EPHEM_NAME} -e"
+else
+    # Old lxc (< 2.0.0) with lxc-start-ephimeral
+    GEM_EPHEM_CMD="${GEM_EPHEM_CMD} -o ${GEM_EPHEM_NAME} -d"
 fi
 
 NL="
@@ -184,8 +192,8 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [<-s|--serie> <precise|trusty>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
-    echo "       if -s is present try to produce sources for a specific ubuntu version (precise or trusty),"
+    echo "    $0 [<-s|--serie> <precise|trusty|xenial>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "       if -s is present try to produce sources for a specific ubuntu version (precise, trusty or xenial),"
     echo "           (default precise)"
     echo "       if -S is present try to copy sources to <GEM_DEB_MONOTONE>/<BUILD_UBUVER>/source directory"
     echo "       if -B is present binary package is build too."
@@ -797,7 +805,7 @@ devtest_run () {
     IFS="$old_ifs"
 
     sudo echo
-    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_CMD} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
@@ -896,7 +904,7 @@ builddoc_run () {
     IFS="$old_ifs"
 
     sudo echo
-    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_CMD} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
@@ -966,7 +974,7 @@ EOF
     cd -
 
     sudo echo
-    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_CMD} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
@@ -1061,7 +1069,7 @@ while [ $# -gt 0 ]; do
             ;;
         -s|--serie)
             BUILD_UBUVER="$2"
-            if [ "$BUILD_UBUVER" != "precise" -a "$BUILD_UBUVER" != "trusty" ]; then
+            if [ "$BUILD_UBUVER" != "precise" -a "$BUILD_UBUVER" != "trusty"  -a "$BUILD_UBUVER" != "xenial" ]; then
                 echo
                 echo "ERROR: ubuntu version '$BUILD_UBUVER' not supported"
                 echo
@@ -1245,7 +1253,7 @@ mv celeryconfig.py openquake/engine
 mv openquake.cfg   openquake/engine
 
 if [ $BUILD_ON_LXC -eq 1 ]; then
-    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_CMD} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
     _wait_ssh $lxc_ip
 
