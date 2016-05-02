@@ -236,10 +236,16 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.N = len(self.assetcol)
         self.E = len(self.etags)
         logging.info('Populating the risk inputs')
+        rlzs_by_tr_id = self.rlzs_assoc.get_rlzs_by_trt_id()
+        num_rlzs = {t: len(rlzs) for t, rlzs in rlzs_by_tr_id.items()}
+        num_assets = {sid: len(self.assets_by_site[sid])
+                      for sid in self.sitecol.sids}
         all_ruptures = []
         for serial in self.datastore['sescollection']:
-            all_ruptures.append(self.datastore['sescollection/' + serial])
-        all_ruptures.sort(key=operator.attrgetter('serial'))
+            rup = self.datastore['sescollection/' + serial]
+            rup.set_weight(num_rlzs, num_assets)
+            all_ruptures.append(rup)
+        all_ruptures.sort(key=operator.attrgetter('serial'), reverse=True)
         if not self.riskmodel.covs:
             # do not generate epsilons
             eps = None

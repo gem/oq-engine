@@ -22,7 +22,7 @@ from nose.plugins.attrib import attr
 
 import numpy.testing
 
-from openquake.commonlib.datastore import DataStore
+from openquake.commonlib.datastore import read
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.commonlib.export import export
 from openquake.calculators.event_based import get_gmvs_by_sid
@@ -81,7 +81,7 @@ class EventBasedTestCase(CalculatorTestCase):
             self.run_calc(case.__file__, 'job.ini')
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
-            dstore = DataStore(self.calc.datastore.calc_id)
+            dstore = read(self.calc.datastore.calc_id)
             gmvs_by_sid = get_gmvs_by_sid(dstore['gmf_data/0000'])
             dstore.close()
             gmvs_site_1 = gmvs_by_sid[0]['PGA']

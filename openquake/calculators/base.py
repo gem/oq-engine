@@ -116,10 +116,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         for handler in logging.root.handlers:
             handler.setFormatter(logging.Formatter(fmt))
 
-    def run(self, pre_execute=True, concurrent_tasks=None, **kw):
+    def run(self, pre_execute=True, concurrent_tasks=None, close=True, **kw):
         """
         Run the calculation and return the exported outputs.
         """
+        self.close = close
         self.set_log_format()
         if (concurrent_tasks is not None and concurrent_tasks !=
                 OqParam.concurrent_tasks.default):
@@ -225,10 +226,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             self.realizations = numpy.array(
                 [(r.uid, r.weight) for r in rlzs], rlz_dt)
         self.datastore.flush()
-        try:
-            self.datastore.close()
-        except RuntimeError:  # there could be a mysterious HDF5 error
-            logging.warn('', exc_info=True)
+        if self.close:  # in the engine we close later
+            try:
+                self.datastore.close()
+            except RuntimeError:  # there could be a mysterious HDF5 error
+                logging.warn('', exc_info=True)
 
 
 def check_time_event(oqparam, time_events):
