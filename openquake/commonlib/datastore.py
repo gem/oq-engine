@@ -253,11 +253,13 @@ class DataStore(collections.MutableMapping):
 
     def flush(self):
         """Flush the underlying hdf5 file"""
+        if self.parent != ():
+            self.parent.flush()
         self.hdf5.flush()
 
     def close(self):
         """Close the underlying hdf5 file"""
-        if self.parent:
+        if self.parent != ():
             self.parent.close()
         if self.hdf5:  # is open
             self.hdf5.close()
