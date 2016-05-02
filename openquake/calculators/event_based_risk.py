@@ -240,7 +240,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             rup = self.datastore['sescollection/' + serial]
             rup.set_weight(num_rlzs, num_assets)
             all_ruptures.append(rup)
-        all_ruptures.sort(key=operator.attrgetter('weight'), reverse=True)
+        all_ruptures.sort(key=operator.attrgetter('serial'), reverse=True)
         if not self.riskmodel.covs:
             # do not generate epsilons
             eps = None
