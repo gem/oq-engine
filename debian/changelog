@@ -1,3 +1,6 @@
+  [Daniele Viganò]
+  * Added support for Ubuntu 16.04 (xenial) packages
+
   [Michele Simionato]
   * Optimized the case when the epsilons are not required, i.e. all the
     covariance coefficients are zero in the vulnerability functions
