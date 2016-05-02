@@ -1,2 +1,2 @@
-CREATE TBL test.error(
+CREATE TBL test_error(
 id SERIAL PRIMARY KEY);

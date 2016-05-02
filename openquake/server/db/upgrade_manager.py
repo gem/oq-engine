@@ -17,12 +17,13 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import re
 import time
 import urllib
 import logging
 import importlib
-from django.db import connection
+import sqlite3
 
 
 class DuplicatedVersion(RuntimeError):
@@ -40,7 +41,7 @@ CREATE_VERSIONING = '''\
 CREATE TABLE %s(
 version TEXT PRIMARY KEY,
 scriptname TEXT NOT NULL,
-executed TIMESTAMP NOT NULL DEFAULT now()
+executed TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 '''
 
@@ -80,15 +81,17 @@ class WrappedConnection(object):
         return curs
 
 
-def check_script(upgrade, dry_run=True, debug=True):
+# not used right now
+def check_script(upgrade, conn, dry_run=True, debug=True):
     """
     An utility to debug upgrade scripts written in Python
 
     :param upgrade: upgrade procedure
+    :param conn: a DB API 2 connection
     :param dry_run: if True, do not change the database
     :param debug: if True, print the queries which are executed
     """
-    conn = WrappedConnection(connection, debug=debug)
+    conn = WrappedConnection(conn, debug=debug)
     try:
         upgrade(conn)
     except:
@@ -110,7 +113,7 @@ def apply_sql_script(conn, fname):
     """
     sql = open(fname).read()
     try:
-        conn.cursor().execute(sql)
+        conn.executescript(sql)
     except:
         logging.error('Error executing %s' % fname)
         raise
@@ -127,14 +130,14 @@ class UpgradeManager(object):
     :param upgrade_dir:
         the directory were the upgrade script reside
     :param version_table:
-        the name of the versioning table (default public.revision_info)
+        the name of the versioning table (default revision_info)
     :param version_pattern:
         a regulation expression for the script version number (\d\d\d\d)
     """
     ENGINE_URL = 'https://github.com/gem/oq-engine/tree/master/'
     UPGRADES = 'openquake/server/db/schema/upgrades/'
 
-    def __init__(self, upgrade_dir, version_table='public.revision_info',
+    def __init__(self, upgrade_dir, version_table='revision_info',
                  version_pattern='\d\d\d\d', flag_pattern='(-slow|-danger)?'):
         self.upgrade_dir = upgrade_dir
         self.version_table = version_table
@@ -143,19 +146,14 @@ class UpgradeManager(object):
         self.pattern = r'^(%s)%s-([\w\-_]+)\.(sql|py)$' % (
             version_pattern, flag_pattern)
         self.upgrades_url = self.ENGINE_URL + self.UPGRADES
-        if '.' in version_table:  # contains the schema name
-            self.version_schema_name, self.version_table_name = \
-                version_table.split('.')
-        else:  # assume the schema name is 'public'
-            self.version_schema_name, self.version_table_name = \
-                ('public', self.version_table)
         if re.match('[\w_\.]+', version_table) is None:
             raise ValueError(version_table)
         self.starting_version = None  # will be updated after the run
 
     def _insert_script(self, script, conn):
         conn.cursor().execute(
-            'INSERT INTO {} VALUES (%s, %s)'.format(self.version_table),
+            'INSERT INTO {} (version, scriptname) VALUES (?, ?)'.format(
+                self.version_table),
             (script['version'], script['name']))
 
     def install_versioning(self, conn):
@@ -166,7 +164,7 @@ class UpgradeManager(object):
         :param conn: a DB API 2 connection
         """
         logging.info('Creating the versioning table %s', self.version_table)
-        conn.cursor().execute(CREATE_VERSIONING % self.version_table)
+        conn.executescript(CREATE_VERSIONING % self.version_table)
         self._insert_script(self.read_scripts()[0], conn)
 
     def init(self, conn):
@@ -317,10 +315,8 @@ class UpgradeManager(object):
                 'the pattern %s' % upgrader.pattern)
         curs = conn.cursor()
         # check if there is already a versioning table
-        curs.execute("SELECT tablename FROM pg_tables "
-                     "WHERE schemaname=%s AND tablename=%s",
-                     (upgrader.version_schema_name,
-                      upgrader.version_table_name))
+        curs.execute("SELECT name FROM sqlite_master "
+                     "WHERE name=%r" % upgrader.version_table)
         versioning_table = curs.fetchall()
         # if not, run the base script and create the versioning table
         if not versioning_table:
@@ -420,3 +416,9 @@ def what_if_I_upgrade(conn, pkg_name='openquake.server.db.schema.upgrades',
         msg += ('\nEven dangerous scripts are fine if they '
                 'affect empty tables or data you are not interested in.')
     return msg
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
+    conn = sqlite3.connect(sys.argv[1])
+    upgrade_db(conn)
