@@ -357,8 +357,7 @@ def main():
         run_job(expanduser(args.run_hazard), args.log_level,
                 log_file, args.exports)
     elif args.delete_calculation is not None:
-        logs.dbcmd('delete_calculation', args.delete_calculation, args.yes,
-                   getpass.getuser())
+        delete_calculation(args.delete_calculation, args.yes)
     # risk
     elif args.list_risk_calculations:
         for line in logs.dbcmd('list_calculations', 'risk', getpass.getuser()):
