@@ -27,7 +27,7 @@ from openquake.risklib import scientific
 from openquake.commonlib.export import export
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.util import get_assets, compose_arrays
-
+from openquake.calculators.views import FIVEDIGITS
 from openquake.commonlib.risk_writers import (
     DmgState, DmgDistPerTaxonomy, DmgDistPerAsset, DmgDistTotal,
     ExposureData, Site)
@@ -111,7 +111,7 @@ def export_avg_losses(ekey, dstore):
     avg_losses = dstore[ekey[0]].value
     rlzs = dstore['rlzs_assoc'].realizations
     assets = get_assets(dstore)
-    writer = writers.CsvWriter(fmt='%.6E')
+    writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz in rlzs:
         losses = avg_losses[:, rlz.ordinal]
         dest = dstore.export_path('losses_by_asset-rlz%03d.csv' % rlz.ordinal)
@@ -130,7 +130,7 @@ def export_avg_losses_stats(ekey, dstore):
     avg_losses = dstore[ekey[0]].value
     quantiles = ['mean'] + ['quantile-%s' % q for q in oq.quantile_loss_curves]
     assets = get_assets(dstore)
-    writer = writers.CsvWriter(fmt='%10.6E')
+    writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for i, quantile in enumerate(quantiles):
         losses = avg_losses[:, i]
         dest = dstore.export_path('avg_losses-%s.csv' % quantile)
@@ -149,7 +149,7 @@ def export_agg_losses(ekey, dstore):
     agg_losses = compactify(dstore[ekey[0]].value)
     rlzs = dstore['rlzs_assoc'].realizations
     etags = dstore['etags'].value
-    writer = writers.CsvWriter(fmt='%10.6E')
+    writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz in rlzs:
         losses = agg_losses[:, rlz.ordinal]
         dest = dstore.export_path('agg_losses-rlz%03d.csv' % rlz.ordinal)
@@ -169,7 +169,7 @@ def export_agg_losses_ebr(ekey, dstore):
     agg_losses = dstore[ekey[0]]
     etags = dstore['etags'].value
     rlzs = dstore['rlzs_assoc'].realizations
-    writer = writers.CsvWriter(fmt='%10.6E')
+    writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz in rlzs:
         for loss_type in loss_types:
             data = agg_losses['rlz-%03d/%s' % (rlz.ordinal, loss_type)].value

@@ -37,11 +37,12 @@ from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
 
-# ########################## utility functions ############################## #
-
+FIVEDIGITS = '%.5E'
 FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
 INT = (int, numpy.uint32, numpy.int64)
 
+
+# ########################## utility functions ############################## #
 
 def form(value):
     """
@@ -382,7 +383,7 @@ def view_mean_avg_losses(token, dstore):
     assets = util.get_assets(dstore)
     losses = util.compose_arrays(assets, data)
     losses.sort()
-    return rst_table(losses, fmt='%8.6E')
+    return rst_table(losses, fmt=FIVEDIGITS)
 
 
 # this is used by the classical calculator
