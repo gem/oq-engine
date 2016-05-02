@@ -624,12 +624,15 @@ celeryd_wait $GEM_MAXLOOP"
 deps_list() {
     local old_ifs out_list skip i d listtype="$1" control_file="$2"/control rules_file="$2"/rules
 
-    # Use the default values in debian/rules
-    rules_dep=$(grep "^DEFAULT_DEP *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
-    rules_rec=$(grep "^DEFAULT_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
-    # If custom settings exists, overwrite those
-    rules_dep=$(grep "^${BUILD_UBUVER^^}_DEP *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
-    rules_rec=$(grep "^${BUILD_UBUVER^^}_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+    if grep -q "^${BUILD_UBUVER^^}_DEP" $rules_file; then
+        # Use custom dependencies in debian/rules
+        rules_dep=$(grep "^${BUILD_UBUVER^^}_DEP *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+        rules_rec=$(grep "^${BUILD_UBUVER^^}_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+    else
+        # Otherwise use the default values in debian/rules
+        rules_dep=$(grep "^DEFAULT_DEP *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+        rules_rec=$(grep "^DEFAULT_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+    fi
 
     out_list=""
     if [ "$listtype" = "all" ]; then
