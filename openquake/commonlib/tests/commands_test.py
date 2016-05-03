@@ -24,6 +24,7 @@ import tempfile
 import unittest
 
 from openquake.baselib.general import writetmp
+from openquake.calculators.tests import check_platform
 from openquake.commonlib.commands.info import info
 from openquake.commonlib.commands.tidy import tidy
 from openquake.commonlib.commands.show import show
@@ -161,6 +162,10 @@ lon,lat
 0.000000E+00,0.000000E+00''')
 
     def test_show_attrs(self):
+        # gives mysterious core dumps in Ubuntu 16.04, but only if called
+        # together with all other tests with the command
+        # nosetests openquake/commonlib/
+        check_platform()
         with Print.patch() as p:
             show_attrs('hcurve', self.calc_id)
         self.assertEqual("'hcurve' is not in <DataStore %d>" %
