@@ -146,8 +146,9 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
                 data = [(eid, aid, loss)
                         for eid, loss in zip(out.eids, out.losses[i])
                         if loss.sum() > 0]
-                result['ASSLOSS'][l, r].append(
-                    numpy.array(data, monitor.ela_dt))
+                if data:
+                    result['ASSLOSS'][l, r].append(
+                        numpy.array(data, monitor.ela_dt))
 
             # agglosses
             agg[indices, l, r] += out.losses[i]
@@ -191,11 +192,14 @@ def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
             riskinput, rlzs_assoc, monitor, assetcol):
         with agglosses_mon:
             _aggregate_output(output, riskmodel, agg, idx, result, monitor)
-    for (l, r), lst in numpy.ndenumerate(result['AGGLOSS']):
+    for (l, r), _ in numpy.ndenumerate(result['AGGLOSS']):
         records = numpy.array(
             [(eids[i], loss) for i, loss in enumerate(agg[:, l, r])
              if loss.sum() > 0], monitor.elt_dt)
         result['AGGLOSS'][l, r] = records
+    if monitor.asset_loss_table:
+        for (l, r), lst in numpy.ndenumerate(result['ASSLOSS']):
+            result['AGGLOSS'][l, r] = numpy.concatenate(lst)
 
     # store the size of the GMFs
     result['gmfbytes'] = monitor.gmfbytes
@@ -317,10 +321,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.gmfbytes += result.pop('gmfbytes')
         with self.monitor('saving event loss tables', autoflush=True):
             if self.oqparam.asset_loss_table:
-                for (l, r), arrays in numpy.ndenumerate(result.pop('ASSLOSS')):
-                    for array in arrays:
-                        self.ass_loss_table[l, r].extend(array)
-                        self.ass_bytes += array.nbytes
+                for (l, r), array in numpy.ndenumerate(result.pop('ASSLOSS')):
+                    self.ass_loss_table[l, r].extend(array)
+                    self.ass_bytes += array.nbytes
             for (l, r), array in numpy.ndenumerate(result.pop('AGGLOSS')):
                 self.agg_loss_table[l, r].extend(array)
                 self.agg_bytes += array.nbytes
