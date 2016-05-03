@@ -35,8 +35,6 @@ calc_path = None  # set only when the flag --slowest is given
 PStatData = collections.namedtuple(
     'PStatData', 'ncalls tottime percall cumtime percall2 path')
 
-CLOSE = True  # make sure the datastore is closed
-
 
 def get_pstats(pstatfile, n):
     """
@@ -79,13 +77,13 @@ def run2(job_haz, job_risk, concurrent_tasks, pdb, exports, params, monitor):
     hcalc = base.calculators(readinput.get_oqparam(job_haz), monitor)
     with hcalc.monitor:
         hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
-                  exports=exports, close=CLOSE, **params)
+                  exports=exports, **params)
         hc_id = hcalc.datastore.calc_id
         oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
     rcalc = base.calculators(oq, monitor)
     with rcalc.monitor:
         rcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports,
-                  hazard_calculation_id=hc_id, close=CLOSE, **params)
+                  hazard_calculation_id=hc_id, **params)
     return rcalc
 
 
@@ -116,7 +114,7 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, hc, exports, params):
         with calc.monitor:
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports, hazard_calculation_id=hc_id,
-                     rlz_ids=rlz_ids, close=CLOSE, **params)
+                     rlz_ids=rlz_ids, **params)
     else:  # run hazard + risk
         calc = run2(
             job_inis[0], job_inis[1], concurrent_tasks, pdb,

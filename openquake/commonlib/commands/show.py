@@ -70,7 +70,6 @@ def show(what, calc_id=-1):
                 continue
             else:
                 rows.append((calc_id, cmode, descr.encode('utf-8')))
-                ds.close()
         for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
             print('#%d %s: %s' % row)
         return
@@ -98,6 +97,7 @@ def show(what, calc_id=-1):
         else:
             print(obj)
 
+    ds.close()
 
 parser = sap.Parser(show)
 parser.arg('what', 'key or view of the datastore')
