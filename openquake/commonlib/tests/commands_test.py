@@ -19,7 +19,6 @@
 import os
 import sys
 import mock
-import time
 import shutil
 import tempfile
 import unittest
