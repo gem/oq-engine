@@ -58,8 +58,8 @@ def show(what, calc_id=-1):
             return
         rows = []
         for calc_id in datastore.get_calc_ids(datastore.DATADIR):
+            ds = datastore.read(calc_id)
             try:
-                ds = datastore.read(calc_id)
                 oq = ds['oqparam']
                 cmode, descr = oq.calculation_mode, oq.description
             except:
@@ -70,6 +70,7 @@ def show(what, calc_id=-1):
                 continue
             else:
                 rows.append((calc_id, cmode, descr.encode('utf-8')))
+            finally:
                 ds.close()
         for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
             print('#%d %s: %s' % row)
