@@ -181,6 +181,15 @@ def export_outputs(job_id, target_dir, export_type):
             yield(exc)
 
 
+def get_outkey(dskey, export_types):
+    """
+    Extract the first pair (dskey, exptype) found in export
+    """
+    for exptype in export_types:
+        if (dskey, exptype) in export:
+            return (dskey, exptype)
+
+
 def export_output(output_id, target_dir, export_type):
     """
     Simple UI wrapper around
@@ -197,20 +206,19 @@ def export_output(output_id, target_dir, export_type):
               "successfully. Results might be uncomplete")
 
     dskey, calc_id, datadir = get_output(output_id)
-    for exptype in export_type.split(','):
-        outkey = (dskey, exptype)
-        if outkey not in export:  # missing exporter for exptype
-            continue
-        the_file = core.export_from_datastore(
-            outkey, calc_id, datadir, target_dir)
-        if the_file.endswith('.zip'):
-            dname = os.path.dirname(the_file)
-            fnames = zipfile.ZipFile(the_file).namelist()
-            yield('Files exported:')
-            for fname in fnames:
-                yield(os.path.join(dname, fname))
-        else:
-            yield('File exported: %s' % the_file)
+    outkey = get_outkey(dskey, export_type.split(','))
+    if not outkey:
+        yield 'There is not exporter for %s, %s' % (dskey, export_type)
+        return
+    the_file = core.export_from_datastore(outkey, calc_id, datadir, target_dir)
+    if the_file.endswith('.zip'):
+        dname = os.path.dirname(the_file)
+        fnames = zipfile.ZipFile(the_file).namelist()
+        yield('Files exported:')
+        for fname in fnames:
+            yield(os.path.join(dname, fname))
+    else:
+        yield('File exported: %s' % the_file)
 
 
 def list_outputs(job_id, full=True):
