@@ -19,6 +19,7 @@
 import os
 import logging
 import unittest
+import platform
 
 import numpy
 
@@ -29,6 +30,14 @@ from openquake.commonlib import readinput, oqvalidation, datastore
 
 class DifferentFiles(Exception):
     pass
+
+
+def check_platform():
+    """
+    Skip the test if the platform is not the reference one
+    """
+    if platform.dist()[-1] != 'trusty':  # Ubuntu 14.04
+        raise unittest.SkipTest
 
 
 def columns(line):

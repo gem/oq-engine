@@ -16,13 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import unittest
-import platform
 from nose.plugins.attrib import attr
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, check_platform
 from openquake.qa_tests_data.disagg import case_1, case_2
-
-dist = platform.dist()[-1]  # linux distribution
 
 
 class DisaggregationTestCase(CalculatorTestCase):
@@ -37,8 +33,7 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_1(self):
-        if dist != 'trusty':  # the numbers here are good only for trusty
-            raise unittest.SkipTest('The platform is not Ubuntu 14.04')
+        check_platform()
         self.assert_curves_ok([
             'poe-0.02-rlz-0-PGA-10.1-40.1.xml',
             'poe-0.02-rlz-0-SA(0.025)-10.1-40.1.xml',
