@@ -18,7 +18,7 @@ PRECISE_DEP = python-h5py (= 2.2.1-1build3~precise03)
 ifeq ($(shell lsb_release --codename --short),precise)
         DEPENDS = -Vdist:Depends="$(PRECISE_DEP)"
 else
-        DEPENDS = -Vdist:Depends="$(DEFAUL_DEP)"
+        DEPENDS = -Vdist:Depends="$(DEFAULT_DEP)"
 endif
 
 %:
