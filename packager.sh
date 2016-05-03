@@ -62,22 +62,22 @@ if [ "$GEM_EPHEM_NAME" = "" ]; then
     GEM_EPHEM_NAME="ubuntu-lxc-eph"
 fi
 
-if command -v lxc-shutdown &> /dev/null; then
-    # Old lxc (< 1.0.0) with lxc-shutdown
-    LXC_TERM="lxc-shutdown -t 10 -w"
-    LXC_KILL="lxc-stop"
-else
-    # New lxc (>= 1.0.0) with lxc-stop only
-    LXC_TERM="lxc-stop -t 10"
-    LXC_KILL="lxc-stop -k"
+LXC_VER=$(lxc-ls --version | cut -d '.' -f 1)
+
+if [ $LXC_VER -lt 1 ]; then
+    echo "lxc >= 1.0.0 is required." >&2
+    exit 1
 fi
+
+LXC_TERM="lxc-stop -t 10"
+LXC_KILL="lxc-stop -k"
 
 if command -v lxc-copy &> /dev/null; then
     # New lxc (>= 2.0.0) with lxc-copy
-    GEM_EPHEM_CMD="${GEM_EPHEM_CMD} -n ${GEM_EPHEM_NAME} -e"
+    GEM_EPHEM_EXE="${GEM_EPHEM_CMD} -n ${GEM_EPHEM_NAME} -e"
 else
     # Old lxc (< 2.0.0) with lxc-start-ephimeral
-    GEM_EPHEM_CMD="${GEM_EPHEM_CMD} -o ${GEM_EPHEM_NAME} -d"
+    GEM_EPHEM_EXE="${GEM_EPHEM_CMD} -o ${GEM_EPHEM_NAME} -d"
 fi
 
 NL="
@@ -736,7 +736,7 @@ devtest_run () {
     IFS="$old_ifs"
 
     sudo echo
-    sudo ${GEM_EPHEM_CMD} 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
@@ -830,7 +830,7 @@ builddoc_run () {
     IFS="$old_ifs"
 
     sudo echo
-    sudo ${GEM_EPHEM_CMD} 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
@@ -905,7 +905,7 @@ EOF
     cd -
 
     sudo echo
-    sudo ${GEM_EPHEM_CMD} 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
@@ -1181,7 +1181,7 @@ if [ 0 -eq 1 ]; then
 fi
 
 if [ $BUILD_ON_LXC -eq 1 ]; then
-    sudo ${GEM_EPHEM_CMD} 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
     _wait_ssh $lxc_ip
 
