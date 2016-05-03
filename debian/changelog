@@ -1,5 +1,7 @@
   [Michele Simionato]
   * Optimized the saving of the asset loss table
+  * Optimized the case of multiple assets of the same taxonomy on the
+    same point and introduced a datastore view `assets_by_site`
   * Fixed HDF5 segmentation faults in the tests for Ubuntu 16.04
 
   [Daniele Viganò]
