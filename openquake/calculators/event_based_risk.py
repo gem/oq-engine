@@ -120,7 +120,7 @@ def _old_loss_curves(asset_values, rcurves, ratios):
                         for avalue, poes in zip(asset_values, rcurves)])
 
 
-def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
+def _aggregate_output(output, compositemodel, agg, ass, idx, result, monitor):
     # update the result dictionary and the agg array with each output
 
     asset_ids = [a.ordinal for a in output.assets]
@@ -152,8 +152,7 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
                         for eid, loss in zip(out.eids, losses)
                         if loss.sum() > 0]
                 if data:
-                    result['ASSLOSS'][l, r].append(
-                        numpy.array(data, monitor.ela_dt))
+                    ass[l, r].append(numpy.array(data, monitor.ela_dt))
 
             # agglosses
             agg[indices, l, r] += losses
@@ -182,13 +181,12 @@ def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     E = len(eids)
     idx = dict(zip(eids, range(E)))
     agg = numpy.zeros((E, L, R, I), F32)
+    ass = collections.defaultdict(list)
 
     def zeroN():
         return numpy.zeros((monitor.num_assets, I))
     result = dict(RC=square(L, R, AccumDict), IC=square(L, R, AccumDict),
-                  AGGLOSS=square(L, R, list))
-    if monitor.asset_loss_table:
-        result['ASSLOSS'] = square(L, R, list)
+                  AGGLOSS=AccumDict(), ASSLOSS=AccumDict())
     if monitor.avg_losses:
         result['AVGLOSS'] = square(L, R, zeroN)
 
@@ -196,15 +194,16 @@ def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     for output in riskmodel.gen_outputs(
             riskinput, rlzs_assoc, monitor, assetcol):
         with agglosses_mon:
-            _aggregate_output(output, riskmodel, agg, idx, result, monitor)
-    for (l, r), _ in numpy.ndenumerate(result['AGGLOSS']):
-        records = numpy.array(
-            [(eids[i], loss) for i, loss in enumerate(agg[:, l, r])
-             if loss.sum() > 0], monitor.elt_dt)
-        result['AGGLOSS'][l, r] = records
-    if monitor.asset_loss_table:
-        for (l, r), lst in numpy.ndenumerate(result['ASSLOSS']):
-            result['AGGLOSS'][l, r] = numpy.concatenate(lst)
+            _aggregate_output(
+                output, riskmodel, agg, ass, idx, result, monitor)
+    for (l, r) in itertools.product(range(L), range(R)):
+        records = [(eids[i], loss) for i, loss in enumerate(agg[:, l, r])
+                   if loss.sum() > 0]
+        if records:
+            result['AGGLOSS'][l, r] = numpy.array(records, monitor.elt_dt)
+    for lr in ass:
+        if ass[lr]:
+            result['ASSLOSS'][lr] = numpy.concatenate(ass[lr])
 
     # store the size of the GMFs
     result['gmfbytes'] = monitor.gmfbytes
@@ -329,10 +328,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.gmfbytes += result.pop('gmfbytes')
         with self.monitor('saving event loss tables', autoflush=True):
             if self.oqparam.asset_loss_table:
-                for (l, r), array in numpy.ndenumerate(result.pop('ASSLOSS')):
+                for (l, r), array in sorted(result.pop('ASSLOSS').items()):
                     self.ass_loss_table[l, r].extend(array)
                     self.ass_bytes += array.nbytes
-            for (l, r), array in numpy.ndenumerate(result.pop('AGGLOSS')):
+            for (l, r), array in sorted(result.pop('AGGLOSS').items()):
                 self.agg_loss_table[l, r].extend(array)
                 self.agg_bytes += array.nbytes
             self.datastore.hdf5.flush()
