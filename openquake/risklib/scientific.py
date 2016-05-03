@@ -34,6 +34,7 @@ from openquake.risklib import utils
 from openquake.baselib.python3compat import with_metaclass
 
 F32 = numpy.float32
+U32 = numpy.uint32
 
 
 def build_dtypes(curve_resolution, conditional_loss_poes, insured=False):
@@ -946,9 +947,9 @@ class CurveBuilder(object):
                [5, 3, 2, 1],
                [6, 0, 0, 0]], dtype=uint32)
         """
-        counts = numpy.zeros((N, self.curve_resolution), numpy.uint32)
+        counts = numpy.zeros((N, self.curve_resolution), U32)
         for count_dict in count_dicts:
-            counts[list(count_dict)] += count_dict.values()
+            counts[list(count_dict)] += U32(count_dict.values())
         return counts
 
     def build_counts(self, loss_matrix):
