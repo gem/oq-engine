@@ -98,6 +98,7 @@ def show(what, calc_id=-1):
         else:
             print(obj)
 
+    ds.close()
 
 parser = sap.Parser(show)
 parser.arg('what', 'key or view of the datastore')
