@@ -23,9 +23,8 @@ import shutil
 import tempfile
 import unittest
 
-import numpy
-
 from openquake.baselib.general import writetmp
+from openquake.calculators.tests import check_platform
 from openquake.commonlib.commands.info import info
 from openquake.commonlib.commands.tidy import tidy
 from openquake.commonlib.commands.show import show
@@ -140,12 +139,14 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         Build a datastore instance to show what it is inside
         """
+        # the tests here gives mysterious core dumps in Ubuntu 16.04,
+        # but only if called together with all other tests with the command
+        # nosetests openquake/commonlib/
+        check_platform()
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
-            run.CLOSE = False  # don't close the datastore too soon
-            cls.datastore = run._run(
-                job_ini, 0, False, 'info', None, '', {}).datastore
-            run.CLOSE = True
+            calc = run._run(job_ini, 0, False, 'info', None, '', {})
+        cls.calc_id = calc.datastore.calc_id
 
     def test_run_calc(self):
         self.assertIn('See the output with hdfview', str(self.p))
@@ -155,34 +156,29 @@ class RunShowExportTestCase(unittest.TestCase):
         with Print.patch() as p:
             show('all')
         with Print.patch() as p:
-            show('contents', self.datastore.calc_id)
+            show('contents', self.calc_id)
         self.assertIn('sitemesh', str(p))
 
         with Print.patch() as p:
-            show('sitemesh', self.datastore.calc_id)
+            show('sitemesh', self.calc_id)
         self.assertEqual(str(p), '''\
 lon,lat
 0.000000E+00,0.000000E+00''')
 
     def test_show_attrs(self):
         with Print.patch() as p:
-            show_attrs('hcurve', self.datastore.calc_id)
-        self.assertEqual("'hcurve' is not in %s" % self.datastore, str(p))
-
+            show_attrs('hcurve', self.calc_id)
+        self.assertEqual("'hcurve' is not in <DataStore %d>" %
+                         self.calc_id, str(p))
         with Print.patch() as p:
-            self.datastore['one'] = numpy.array([1])
-            show_attrs('one', self.datastore.calc_id)
-        self.assertEqual('one has no attributes', str(p))
-
-        with Print.patch() as p:
-            show_attrs('hcurves', self.datastore.calc_id)
+            show_attrs('hcurves', self.calc_id)
         self.assertEqual("imtls [['PGA' '3']\n ['SA(0.1)' '3']]\nnbytes 48",
                          str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            export('hcurves', tempdir, self.datastore.calc_id)
+            export('hcurves', tempdir, self.calc_id)
         [fname] = os.listdir(tempdir)
         self.assertIn(str(fname), str(p))
         shutil.rmtree(tempdir)

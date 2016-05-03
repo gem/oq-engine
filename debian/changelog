@@ -1,5 +1,10 @@
   [Michele Simionato]
-  * Fixed a segmentation fault in the tests for the most recent h5py
+  * Fixed HDF5 segmentation faults in the tests for Ubuntu 16.04
+
+  [Daniele Viganò]
+  * Added support for Ubuntu 16.04 (xenial) packages
+
+  [Michele Simionato]
   * Optimized the case when the epsilons are not required, i.e. all the
     covariance coefficients are zero in the vulnerability functions
   * Added another test for event based risk (`case_miriam`)

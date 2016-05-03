@@ -23,6 +23,7 @@ from openquake.calculators.base import BaseCalculator
 
 class FakeParams(object):
     export_dir = '/tmp'
+    hazard_calculation_id = None
 
     def to_params(self):
         return {}
