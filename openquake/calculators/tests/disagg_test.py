@@ -17,23 +17,17 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+import platform
 from nose.plugins.attrib import attr
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.disagg import case_1, case_2
 
-try:
-    from shapely.geos import geos_version
-except:
-    old_geos = True
-else:
-    old_geos = geos_version < (3, 4, 2)
+dist = platform.dist()[-1]  # linux distribution
 
 
 class DisaggregationTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None):
-        if old_geos:  # Ubuntu 12.04
-            raise unittest.SkipTest('libgeos too old')
         out = self.run_calc(test_dir, 'job.ini', exports='xml')
         got = out['disagg', 'xml']
         self.assertEqual(len(expected), len(got))
@@ -43,6 +37,8 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test_case_1(self):
+        if dist != 'trusty':  # the numbers here are good only for trusty
+            raise unittest.SkipTest('The platform is not Ubuntu 14.04')
         self.assert_curves_ok([
             'poe-0.02-rlz-0-PGA-10.1-40.1.xml',
             'poe-0.02-rlz-0-SA(0.025)-10.1-40.1.xml',
