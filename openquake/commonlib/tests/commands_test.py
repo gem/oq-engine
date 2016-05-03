@@ -139,6 +139,10 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         Build a datastore instance to show what it is inside
         """
+        # the tests here gives mysterious core dumps in Ubuntu 16.04,
+        # but only if called together with all other tests with the command
+        # nosetests openquake/commonlib/
+        check_platform()
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
             calc = run._run(job_ini, 0, False, 'info', None, '', {})
@@ -162,10 +166,6 @@ lon,lat
 0.000000E+00,0.000000E+00''')
 
     def test_show_attrs(self):
-        # gives mysterious core dumps in Ubuntu 16.04, but only if called
-        # together with all other tests with the command
-        # nosetests openquake/commonlib/
-        check_platform()
         with Print.patch() as p:
             show_attrs('hcurve', self.calc_id)
         self.assertEqual("'hcurve' is not in <DataStore %d>" %
