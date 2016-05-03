@@ -259,15 +259,14 @@ class RiskModel(object):
         out_by_lr = AccumDict()
         out_by_lr.assets = assets
         loss_types = self.get_loss_types(imt)
-        # extract the realizations from the first asset
         for rlz in sorted(hazard):
-            r = rlz.ordinal
             haz = hazard[rlz]
             if len(haz) == 0:
                 continue
+            r = rlz.ordinal
             for loss_type in loss_types:
                 out = self(loss_type, assets, haz, epsgetter)
-                if out:
+                if out:  # can be None in scenario_risk with no valid values
                     l = self.compositemodel.lti[loss_type]
                     out.hid = r
                     out.weight = rlz.weight
@@ -515,10 +514,15 @@ class ProbabilisticEventBased(RiskModel):
         I = self.insured_losses + 1
         N = len(assets)
         loss_ratios = numpy.zeros((N, E, I), F32)
+        vf = self.risk_functions[loss_type]
+        means, covs, idxs = vf.interpolate(gmvs['gmv'])
         for i, asset in enumerate(assets):
             epsilons = epsgetter(asset.ordinal, eids)
-            loss_ratios[i, :, 0] = ratios = self.risk_functions[loss_type](
-                gmvs['gmv'], epsilons)  # shape E
+            if epsilons is not None:
+                ratios = vf.apply_to(means, covs, idxs, epsilons)
+            else:
+                ratios = means
+            loss_ratios[i, :, 0] = ratios
             if self.insured_losses and loss_type != 'occupants':
                 loss_ratios[i, :, 1] = scientific.insured_losses(
                     ratios,  asset.deductible(loss_type),
@@ -614,10 +618,11 @@ class Scenario(RiskModel):
             epsilons = epsilons[ok]
 
         # a matrix of N x E elements
+        vf = self.risk_functions[loss_type]
+        means, covs, idxs = vf.interpolate(ground_motion_values)
         loss_ratio_matrix = numpy.zeros((len(assets), len(epsilons[0])))
         for i, eps in enumerate(epsilons):
-            loss_ratio_matrix[i] = self.risk_functions[loss_type](
-                ground_motion_values, eps)
+            loss_ratio_matrix[i] = vf.apply_to(means, covs, idxs, eps)
         # another matrix of N x E elements
         loss_matrix = (loss_ratio_matrix.T * values).T
         # an array of E elements
