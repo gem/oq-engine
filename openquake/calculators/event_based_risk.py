@@ -125,33 +125,38 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
 
     asset_ids = [a.ordinal for a in output.assets]
     for (l, r), out in sorted(output.items()):
+        loss_type = compositemodel.loss_types[l]
         indices = numpy.array([idx[eid] for eid in out.eids])
 
-        # dictionaries asset_idx -> array of counts
-        if compositemodel.curve_builders[l].user_provided:
-            result['RC'][l, r] += dict(zip(asset_ids, out.counts_matrix))
-            if out.insured_counts_matrix is not None:
+        cb = compositemodel.curve_builders[l]
+        if cb.user_provided:
+            counts_matrix = cb.build_counts(out.loss_ratios[:, :, 0])
+            result['RC'][l, r] += dict(zip(asset_ids, counts_matrix))
+            if monitor.insured_losses:
                 result['IC'][l, r] += dict(
-                    zip(asset_ids, out.insured_counts_matrix))
+                    zip(asset_ids, cb.build_counts(out.loss_ratios[:, :, 1])))
 
         for i, asset in enumerate(output.assets):
             aid = asset.ordinal
+            loss_ratios = out.loss_ratios[i]
+            losses = loss_ratios * asset.value(loss_type)
 
             # average losses
             if monitor.avg_losses:
-                result['AVGLOSS'][l, r][aid] += out.average_loss[i]
+                result['AVGLOSS'][l, r][aid] += (
+                    loss_ratios.sum(axis=0) * monitor.ses_ratio)
 
             # asset losses
             if monitor.asset_loss_table:
                 data = [(eid, aid, loss)
-                        for eid, loss in zip(out.eids, out.losses[i])
+                        for eid, loss in zip(out.eids, losses)
                         if loss.sum() > 0]
                 if data:
                     result['ASSLOSS'][l, r].append(
                         numpy.array(data, monitor.ela_dt))
 
             # agglosses
-            agg[indices, l, r] += out.losses[i]
+            agg[indices, l, r] += losses
 
 
 @parallel.litetask
@@ -244,7 +249,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             rup = self.datastore['sescollection/' + serial]
             rup.set_weight(num_rlzs, num_assets)
             all_ruptures.append(rup)
-        all_ruptures.sort(key=operator.attrgetter('serial'), reverse=True)
+        all_ruptures.sort(key=operator.attrgetter('serial'))
         if not self.riskmodel.covs:
             # do not generate epsilons
             eps = None
@@ -270,6 +275,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         mon.avg_losses = self.oqparam.avg_losses
         mon.asset_loss_table = self.oqparam.asset_loss_table
         mon.insured_losses = self.I
+        mon.ses_ratio = (
+            oq.risk_investigation_time or oq.investigation_time) / (
+                oq.investigation_time * oq.ses_per_logic_tree_path)
 
         self.N = N = len(self.assetcol)
         self.E = len(self.datastore['etags'])
