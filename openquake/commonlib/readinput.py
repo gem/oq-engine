@@ -29,7 +29,6 @@ import collections
 import numpy
 from shapely import wkt, geometry
 
-from openquake.baselib import hdf5
 from openquake.hazardlib import geo, site, correlation, imt
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.risklib import riskmodels, riskinput
@@ -533,7 +532,7 @@ def get_job_info(oqparam, source_models, sitecol):
         a dictionary with same parameters of the computation, in particular
         the input and output weights
     """
-    info = hdf5.LiteralAttrs()
+    info = {}
     # The input weight is given by the number of ruptures generated
     # by the sources; for point sources however a corrective factor
     # given by the parameter `point_source_weight` is applied
@@ -574,13 +573,13 @@ def get_job_info(oqparam, source_models, sitecol):
         output_weight *= n_levels
 
     n_sources = 0  # to be set later
-    info.hazard = dict(input_weight=input_weight,
-                       output_weight=output_weight,
-                       n_imts=n_imts,
-                       n_levels=n_levels,
-                       n_sites=n_sites,
-                       n_sources=n_sources,
-                       n_realizations=n_realizations)
+    info['hazard'] = dict(input_weight=input_weight,
+                          output_weight=output_weight,
+                          n_imts=n_imts,
+                          n_levels=n_levels,
+                          n_sites=n_sites,
+                          n_sources=n_sources,
+                          n_realizations=n_realizations)
     return info
 
 

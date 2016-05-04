@@ -1,25 +1,27 @@
 Scenario QA Test with AtkinsonBoore2003SInter
 =============================================
 
+gem-tstation:/home/michele/ssd/calc_12590.hdf5 updated Wed May  4 04:54:03 2016
+
 num_sites = 2, sitecol = 785 B
 
 Parameters
 ----------
-============================ ================
-calculation_mode             'scenario'      
-number_of_logic_tree_samples 0               
-maximum_distance             {'default': 200}
-investigation_time           None            
-ses_per_logic_tree_path      1               
-truncation_level             None            
-rupture_mesh_spacing         1.0             
-complex_fault_mesh_spacing   1.0             
-width_of_mfd_bin             None            
-area_source_discretization   None            
-random_seed                  3               
-master_seed                  0               
-concurrent_tasks             40              
-============================ ================
+============================ ===================
+calculation_mode             'scenario'         
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200}   
+investigation_time           None               
+ses_per_logic_tree_path      1                  
+truncation_level             None               
+rupture_mesh_spacing         1.0                
+complex_fault_mesh_spacing   1.0                
+width_of_mfd_bin             None               
+area_source_discretization   None               
+random_seed                  3                  
+master_seed                  0                  
+oqlite_version               '0.13.0-git02c4b55'
+============================ ===================
 
 Input files
 -----------
@@ -38,12 +40,16 @@ Realizations per (TRT, GSIM)
   <RlzsAssoc(1)
   0,AtkinsonBoore2003SInter: ['AtkinsonBoore2003SInter']>
 
+Information about the tasks
+---------------------------
+Not available
+
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.009     0.0       1     
-computing gmfs          6.118E-04 0.0       1     
-reading site collection 2.909E-05 0.0       1     
+filtering sites         0.011     0.0       1     
+computing gmfs          0.006     0.0       1     
+reading site collection 3.600E-05 0.0       1     
 ======================= ========= ========= ======

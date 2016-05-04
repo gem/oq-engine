@@ -1,26 +1,28 @@
 SHARE OpenQuake Computational Settings
 ======================================
 
+gem-tstation:/home/michele/ssd/calc_12638.hdf5 updated Wed May  4 04:55:55 2016
+
 num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'classical'       
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 200.0}
-investigation_time           50.0              
-ses_per_logic_tree_path      1                 
-truncation_level             3.0               
-rupture_mesh_spacing         5.0               
-complex_fault_mesh_spacing   5.0               
-width_of_mfd_bin             0.2               
-area_source_discretization   10.0              
-random_seed                  23                
-master_seed                  0                 
-concurrent_tasks             32                
-sites_per_tile               1000              
-============================ ==================
+============================ ===================
+calculation_mode             'classical'        
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           50.0               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         5.0                
+complex_fault_mesh_spacing   5.0                
+width_of_mfd_bin             0.2                
+area_source_discretization   10.0               
+random_seed                  23                 
+master_seed                  0                  
+sites_per_tile               1000               
+oqlite_version               '0.13.0-git02c4b55'
+============================ ===================
 
 Input files
 -----------
@@ -68,31 +70,49 @@ source_model                 trt_id trt               num_sources eff_ruptures w
 simple_area_source_model.xml 4      Subduction Inslab 1           7,770        194   
 ============================ ====== ================= =========== ============ ======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== ========
-Number of tasks to generate 1       
-Sent data                   57.66 KB
-=========================== ========
+Informational data
+------------------
+======================================== =================
+count_eff_ruptures_max_received_per_task 4644             
+count_eff_ruptures_num_tasks             1                
+count_eff_ruptures_sent.monitor          4385             
+count_eff_ruptures_sent.rlzs_assoc       51783            
+count_eff_ruptures_sent.sitecol          437              
+count_eff_ruptures_sent.siteidx          5                
+count_eff_ruptures_sent.sources          2787             
+count_eff_ruptures_tot_received          4644             
+hazard.input_weight                      49408.67500000002
+hazard.n_imts                            3                
+hazard.n_levels                          26.0             
+hazard.n_realizations                    160              
+hazard.n_sites                           1                
+hazard.n_sources                         0                
+hazard.output_weight                     12480.0          
+hostname                                 'gem-tstation'   
+======================================== =================
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-4            s46       AreaSource   194    1         0.001       0.0        0.0      
+4            s46       AreaSource   194    1         9.611E-04   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+Not available
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 5.861     0.0       1     
-managing sources               0.101     0.0       1     
-filtering sources              0.023     0.0       18    
-total count_eff_ruptures       3.381E-04 0.0       1     
-store source_info              2.420E-04 0.0       1     
-reading site collection        3.195E-05 0.0       1     
-aggregate curves               1.907E-05 0.0       1     
+reading composite source model 5.744     0.0       1     
+managing sources               0.100     0.0       1     
+filtering sources              0.022     0.0       18    
+store source_info              0.004     0.0       1     
+total count_eff_ruptures       3.710E-04 0.0       1     
+reading site collection        4.292E-05 0.0       1     
+aggregate curves               2.980E-05 0.0       1     
 ============================== ========= ========= ======

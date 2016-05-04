@@ -312,7 +312,9 @@ class OqParamTestCase(unittest.TestCase):
 
     def test_set_risk_imtls(self):
         oq = object.__new__(OqParam)
-        vf = mock.Mock(imt=' SA(0.1)', imls=[0.1, 0.2])
+        vf = mock.Mock()
+        vf.imt = ' SA(0.1)'
+        vf.imls = [0.1, 0.2]
         rm = dict(taxo=dict(structural=vf))
         with self.assertRaises(ValueError) as ctx:
             oq.set_risk_imtls(rm)

@@ -274,7 +274,7 @@ class ClassicalCalculator(base.HazardCalculator):
         monitor = self.monitor.new(self.core_task.__name__)
         monitor.oqparam = self.oqparam
         curves_by_trt_gsim = self.manager.tm.reduce(
-            self.agg_dicts, self.zerodict())
+            self.agg_dicts, self.zerodict(), posthook=self.save_data_transfer)
         with self.monitor('store source_info', autoflush=True):
             self.store_source_info(curves_by_trt_gsim)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
@@ -286,10 +286,11 @@ class ClassicalCalculator(base.HazardCalculator):
         # store the information about received data
         received = self.manager.tm.received
         if received:
-            attrs = self.datastore['source_chunks'].attrs
-            attrs['max_received'] = max(received)
-            attrs['tot_received'] = sum(received)
-
+            tname = self.manager.tm.name
+            self.datastore.save('job_info', {
+                tname + '_max_received_per_task': max(received),
+                tname + '_tot_received': sum(received),
+                tname + '_num_tasks': len(received)})
         # then save the calculation times per each source
         calc_times = getattr(curves_by_trt_gsim, 'calc_times', [])
         if calc_times:
@@ -333,14 +334,21 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.set_nbytes(group.name)
             self.datastore.set_nbytes('curves_by_sm')
 
-        oq = self.oqparam
-        with self.monitor('combine and save curves_by_rlz', autoflush=True):
-            zc = zero_curves(len(self.sitecol.complete), oq.imtls)
+        with self.monitor('combine curves_by_rlz', autoflush=True):
+            zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
             curves_by_rlz = self.rlzs_assoc.combine_curves(
                 curves_by_trt_gsim, agg_curves, zc)
-            rlzs = self.rlzs_assoc.realizations
-            nsites = len(self.sitecol)
-            if oq.individual_curves:
+        self.save_curves(curves_by_rlz)
+
+    def save_curves(self, curves_by_rlz):
+        """
+        Save the dictionary curves_by_rlz
+        """
+        oq = self.oqparam
+        rlzs = self.rlzs_assoc.realizations
+        nsites = len(self.sitecol)
+        if oq.individual_curves:
+            with self.monitor('save curves_by_rlz', autoflush=True):
                 for rlz, curves in curves_by_rlz.items():
                     self.store_curves('rlz-%03d' % rlz.ordinal, curves, rlz)
 
@@ -351,12 +359,13 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('compute and save statistics', autoflush=True):
             weights = (None if oq.number_of_logic_tree_samples
                        else [rlz.weight for rlz in rlzs])
-            mean = oq.mean_hazard_curves
-            if mean:
-                self.mean_curves = numpy.array(zc)
-                for imt in oq.imtls:
-                    self.mean_curves[imt] = scientific.mean_curve(
-                        [curves_by_rlz[rlz][imt] for rlz in rlzs], weights)
+
+            # mean curves are always computed but stored only on request
+            zc = zero_curves(nsites, oq.imtls)
+            self.mean_curves = numpy.array(zc)
+            for imt in oq.imtls:
+                self.mean_curves[imt] = scientific.mean_curve(
+                    [curves_by_rlz[rlz][imt] for rlz in rlzs], weights)
 
             self.quantile = {}
             for q in oq.quantile_hazard_curves:
@@ -366,7 +375,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     qc[imt] = scientific.quantile_curve(
                         curves, q, weights).reshape((nsites, -1))
 
-            if mean:
+            if oq.mean_hazard_curves:
                 self.store_curves('mean', self.mean_curves)
             for q in self.quantile:
                 self.store_curves('quantile-%s' % q, self.quantile[q])

@@ -50,7 +50,7 @@ class ScenarioCalculator(base.HazardCalculator):
                 'All sites were filtered out! maximum_distance=%s km' %
                 maxdist)
         self.etags = numpy.array(
-            sorted(['scenario-%010d' % i for i in range(n_gmfs)]),
+            sorted(['scenario-%010d~ses=1' % i for i in range(n_gmfs)]),
             (bytes, 100))
         self.computer = GmfComputer(
             rupture, self.sitecol, self.oqparam.imtls, self.gsims,
@@ -60,16 +60,21 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         Compute the GMFs and return a dictionary gmf_by_etag
         """
+        gmfa_by_rlz = {}
         with self.monitor('computing gmfs', autoflush=True):
-            n_gmfs = self.oqparam.number_of_ground_motion_fields
-            return self.computer.calcgmfs(n_gmfs, self.oqparam.random_seed)
+            eids = range(self.oqparam.number_of_ground_motion_fields)
+            for i, gsim in enumerate(self.gsims):
+                gmfa_by_rlz[i] = self.computer.compute(
+                    self.oqparam.random_seed, gsim, eids)
+        return gmfa_by_rlz
 
-    def post_execute(self, gmfa):
+    def post_execute(self, gmfa_by_rlz):
         """
-        :param gmfa: an array of shape (E, N)
+        :param gmfa: a dictionary rlzi -> gmfa
         """
         with self.monitor('saving gmfs', autoflush=True):
-            # there is a single rupture in gmf_data/1
-            self.datastore['gmf_data/1'] = gmfa
-            self.datastore['gmf_data'].attrs['nbytes'] = gmfa.nbytes
-            self.datastore['sid_data/1'] = self.sitecol.indices
+            for rlzi, gsim in enumerate(self.gsims):
+                rlzstr = 'gmf_data/%04d' % rlzi
+                self.datastore[rlzstr] = gmfa_by_rlz[rlzi]
+                self.datastore.set_attrs(rlzstr, gsim=str(gsim))
+            self.datastore.set_nbytes('gmf_data')

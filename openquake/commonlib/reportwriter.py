@@ -24,24 +24,13 @@ from __future__ import print_function
 import os
 import sys
 import mock
+import time
 import logging
 
 
 from openquake.baselib.general import humansize
 from openquake.commonlib import readinput, datastore, source, parallel
 from openquake.calculators import base
-
-
-def set_ancestors(dstore):
-    """
-    Set the chain of ancestors of a datastore
-    """
-    if not dstore.parent:
-        hc_id = dstore['oqparam'].hazard_calculation_id
-        if hc_id:
-            parent = datastore.read(hc_id)
-            dstore.set_parent(parent)
-            set_ancestors(parent)
 
 
 def indent(text):
@@ -57,24 +46,28 @@ class ReportWriter(object):
         inputs='Input files',
         csm_info='Composite source model',
         required_params_per_trt='Required parameters per tectonic region type',
-        rupture_collections='Non-empty rupture collections',
-        col_rlz_assocs='Collections <-> realizations',
         ruptures_per_trt='Number of ruptures per tectonic region type',
+        ruptures_events='Specific information for event based',
         rlzs_assoc='Realizations per (TRT, GSIM)',
-        source_data_transfer='Expected data transfer for the sources',
+        job_info='Informational data',
         biggest_ebr_gmf='Maximum memory allocated for the GMFs',
         avglosses_data_transfer='Estimated data transfer for the avglosses',
         exposure_info='Exposure model',
         short_source_info='Slowest sources',
+        task_info='Information about the tasks',
         performance='Slowest operations',
     )
 
     def __init__(self, dstore):
-        set_ancestors(dstore)
         self.dstore = dstore
         self.oq = oq = dstore['oqparam']
         self.text = (oq.description.encode('utf8') + '\n' +
                      '=' * len(oq.description))
+        info = dstore['job_info']
+        dpath = dstore.hdf5path
+        mtime = os.path.getmtime(dpath)
+        self.text += '\n\n%s:%s updated %s' % (
+            info.hostname, dpath, time.ctime(mtime))
         # NB: in the future, the sitecol could be transferred as
         # an array by leveraging the HDF5 serialization protocol in
         # litetask decorator; for the moment however the size of the
@@ -102,13 +95,13 @@ class ReportWriter(object):
             self.add('csm_info')
             self.add('required_params_per_trt')
         self.add('rlzs_assoc', ds['rlzs_assoc'])
-        if 'num_ruptures' in ds:
-            self.add('rupture_collections')
-            self.add('col_rlz_assocs')
-        elif 'composite_source_model' in ds:
+        if 'composite_source_model' in ds:
             self.add('ruptures_per_trt')
         if 'scenario' not in oq.calculation_mode:
-            self.add('source_data_transfer')
+            self.add('job_info')
+        if oq.calculation_mode in ('event_based_rupture', 'event_based',
+                                   'event_based_risk'):
+            self.add('ruptures_events')
         if oq.calculation_mode in ('event_based_risk',):
             self.add('biggest_ebr_gmf')
             self.add('avglosses_data_transfer')
@@ -117,6 +110,7 @@ class ReportWriter(object):
         if 'source_info' in ds:
             self.add('short_source_info')
         if 'performance_data' in ds:
+            self.add('task_info')
             self.add('performance')
         return self.text
 
