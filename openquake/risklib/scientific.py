@@ -221,7 +221,7 @@ class VulnerabilityFunction(object):
         :param epsilons:
            array of E floats (or None)
         :returns:
-           array of E loss ratios
+           array of E' loss ratios
         """
         self.set_distribution(epsilons)
         return self.distribution.sample(means, covs, None, idxs)
