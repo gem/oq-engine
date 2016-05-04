@@ -622,7 +622,7 @@ class Scenario(RiskModel):
         means, covs, idxs = vf.interpolate(ground_motion_values)
         loss_ratio_matrix = numpy.zeros((len(assets), len(epsilons[0])))
         for i, eps in enumerate(epsilons):
-            loss_ratio_matrix[i] = vf.apply_to(means, covs, idxs, eps)
+            loss_ratio_matrix[i, idxs] = vf.apply_to(means, covs, idxs, eps)
         # another matrix of N x E elements
         loss_matrix = (loss_ratio_matrix.T * values).T
         # an array of E elements

@@ -233,7 +233,7 @@ class VulnerabilityFunction(object):
         """
         means, covs, idxs = self.interpolate(gmvs)
         # for gmvs < min(iml) we return a loss of 0 (default)
-        ratios = numpy.zeros(len(epsilons))
+        ratios = numpy.zeros(len(gmvs))
         ratios[idxs] = self.apply_to(means, covs, idxs, epsilons)
         return ratios
 
@@ -466,12 +466,8 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         :returns: :py:class:`numpy.ndarray` containing a number of interpolated
             values equal to the size of the input (1 or many)
         """
-        # for gmvs < min(iml) we return a loss of 0 (default)
-        ratios = numpy.zeros(len(epsilons))
-        # apply uncertainty
         self.set_distribution(epsilons)
-        ratios[idxs] = self.distribution.sample(self.loss_ratios, probs)
-        return ratios
+        return self.distribution.sample(self.loss_ratios, probs)
 
     @utils.memoized
     def loss_ratio_exceedance_matrix(self, steps):
