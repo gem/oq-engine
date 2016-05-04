@@ -207,7 +207,7 @@ class VulnerabilityFunction(object):
         gmvs_curve = gmvs_curve[idxs]
         return self._mlr_i1d(gmvs_curve), self._cov_for(gmvs_curve), idxs
 
-    def apply_to(self, means, covs, idxs, epsilons):
+    def sample(self, means, covs, idxs, epsilons):
         """
         Apply the vulnerability function to a ground motion vector, by using
         an epsilon vector of the sample length.
@@ -217,7 +217,7 @@ class VulnerabilityFunction(object):
         :param covs:
            array of E' floats
         :param idxs:
-           array of E booleans with E > E'
+           array of E booleans with E >= E'
         :param epsilons:
            array of E floats (or None)
         :returns:
@@ -234,7 +234,7 @@ class VulnerabilityFunction(object):
         means, covs, idxs = self.interpolate(gmvs)
         # for gmvs < min(iml) we return a loss of 0 (default)
         ratios = numpy.zeros(len(gmvs))
-        ratios[idxs] = self.apply_to(means, covs, idxs, epsilons)
+        ratios[idxs] = self.sample(means, covs, idxs, epsilons)
         return ratios
 
     def strictly_increasing(self):
@@ -453,7 +453,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         gmvs_curve = gmvs_curve[idxs]
         return self._probs_i1d(gmvs_curve), None, idxs
 
-    def apply_to(self, probs, _covs, idxs, epsilons):
+    def sample(self, probs, _covs, idxs, epsilons):
         """
         Given IML values, interpolate the corresponding loss ratio
         value(s) on the curve.

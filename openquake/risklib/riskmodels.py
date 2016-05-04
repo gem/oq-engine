@@ -519,7 +519,7 @@ class ProbabilisticEventBased(RiskModel):
         for i, asset in enumerate(assets):
             epsilons = epsgetter(asset.ordinal, eids)
             if epsilons is not None:
-                ratios = vf.apply_to(means, covs, idxs, epsilons)
+                ratios = vf.sample(means, covs, idxs, epsilons)
             else:
                 ratios = means
             loss_ratios[i, idxs, 0] = ratios
@@ -622,7 +622,7 @@ class Scenario(RiskModel):
         means, covs, idxs = vf.interpolate(ground_motion_values)
         loss_ratio_matrix = numpy.zeros((len(assets), len(epsilons[0])))
         for i, eps in enumerate(epsilons):
-            loss_ratio_matrix[i, idxs] = vf.apply_to(means, covs, idxs, eps)
+            loss_ratio_matrix[i, idxs] = vf.sample(means, covs, idxs, eps)
         # another matrix of N x E elements
         loss_matrix = (loss_ratio_matrix.T * values).T
         # an array of E elements
