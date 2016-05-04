@@ -1,18 +1,21 @@
-# The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# Copyright (C) 2012-2016 GEM Foundation
 #
-# This program is distributed in the hope that it will be useful,
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 """
 Module exports :class:`ChiouYoungs2014`.
 """
@@ -182,7 +185,10 @@ class ChiouYoungs2014(GMPE):
         # centered_ztor
         centered_ztor = self._get_centered_ztor(rup, Frv)
         #
-
+        dist_taper = np.fmax(1 - (np.fmax(dists.rrup - 40,
+                                  np.zeros_like(dists)) / 30.),
+                             np.zeros_like(dists))
+        dist_taper = dist_taper.astype(np.float64)
         ln_y_ref = (
             # first part of eq. 11
             C['c1']
@@ -205,9 +211,7 @@ class ChiouYoungs2014(GMPE):
             + (C['cg1'] + C['cg2'] / (np.cosh(max(rup.mag - C['cg3'], 0))))
             * dists.rrup
             # fifth part
-            + C['c8'] * np.fmax(1 - (np.fmax(dists.rrup - 40,
-                                np.zeros_like(dists)) / 30.),
-                                np.zeros_like(dists))[0]
+            + C['c8'] * dist_taper
             * min(max(rup.mag - 5.5, 0) / 0.8, 1.0)
             * np.exp(-1 * C['c8a'] * (rup.mag - C['c8b']) ** 2) * centered_dpp
             # sixth part
@@ -319,6 +323,7 @@ class ChiouYoungs2014PEER(ChiouYoungs2014):
                 # eq. 13
                 ret.append(0.65 * np.ones_like(sites.vs30))
         return ret
+
 
 class ChiouYoungs2014NearFaultEffect(ChiouYoungs2014):
     """

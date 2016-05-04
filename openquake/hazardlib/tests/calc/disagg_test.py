@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012-2016 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,6 +24,7 @@ from openquake.hazardlib.calc import filters
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.geo import Point, Mesh
 from openquake.hazardlib.site import Site
+from openquake.hazardlib.gsim.base import ContextMaker
 
 
 class _BaseDisaggTestCase(unittest.TestCase):
@@ -67,6 +68,10 @@ class _BaseDisaggTestCase(unittest.TestCase):
             raise ValueError('Something bad happened')
 
     class FakeGSIM(object):
+        REQUIRES_DISTANCES = set()
+        REQUIRES_RUPTURE_PARAMETERS = set()
+        REQUIRES_SITES_PARAMETERS = set()
+
         def __init__(self, iml, imt, truncation_level, n_epsilons,
                      disaggregated_poes):
             self.disaggregated_poes = disaggregated_poes
@@ -76,13 +81,9 @@ class _BaseDisaggTestCase(unittest.TestCase):
             self.truncation_level = truncation_level
             self.dists = object()
 
-        def make_contexts(self, sites, rupture):
-            return (sites, rupture, self.dists)
-
         def disaggregate_poe(self, sctx, rctx, dctx, imt, iml,
                              truncation_level, n_epsilons):
             assert truncation_level is self.truncation_level
-            assert dctx is self.dists
             assert imt is self.imt
             assert iml is self.iml
             assert n_epsilons is self.n_epsilons
@@ -118,8 +119,8 @@ class _BaseDisaggTestCase(unittest.TestCase):
             self.tom, 'trt2'
         )
         self.disagreggated_poes = dict(
-            (rupture, poes) for (poes, rupture) in self.ruptures_and_poes1
-            + self.ruptures_and_poes2
+            (rupture, poes) for (poes, rupture) in self.ruptures_and_poes1 +
+            self.ruptures_and_poes2
         )
         self.site = Site(Point(0, 0), 2, False, 4, 5)
 
@@ -131,6 +132,13 @@ class _BaseDisaggTestCase(unittest.TestCase):
         self.gsim = gsim
         self.gsims = {'trt1': gsim, 'trt2': gsim}
         self.sources = [self.source1, self.source2]
+
+        self.orig_make_contexts = ContextMaker.make_contexts
+        ContextMaker.make_contexts = lambda self, sites, rupture: (
+            sites, rupture, None)
+
+    def tearDown(self):
+        ContextMaker.make_contexts = self.orig_make_contexts
 
 
 class CollectBinsDataTestCase(_BaseDisaggTestCase):

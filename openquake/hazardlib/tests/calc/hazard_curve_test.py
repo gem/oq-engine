@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012-2016 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,6 +23,13 @@ from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
+from openquake.hazardlib.gsim.base import ContextMaker
+
+
+class FakeSiteContext(object):
+    def __init__(self, sites):
+        self.sites = sites
+        self.mesh = sites.mesh
 
 
 class HazardCurvesTestCase(unittest.TestCase):
@@ -50,18 +57,17 @@ class HazardCurvesTestCase(unittest.TestCase):
             raise ValueError('Something bad happened')
 
     class FakeGSIM(object):
+        REQUIRES_DISTANCES = set()
+        REQUIRES_RUPTURE_PARAMETERS = set()
+        REQUIRES_SITES_PARAMETERS = set()
+
         def __init__(self, truncation_level, imts, poes):
             self.truncation_level = truncation_level
             self.imts = imts
             self.poes = poes
-            self.dists = object()
-
-        def make_contexts(self, sites, rupture):
-            return (sites, rupture, self.dists)
 
         def get_poes(self, sctx, rctx, dctx, imt, imls, truncation_level):
             assert truncation_level is self.truncation_level
-            assert dctx is self.dists
             return numpy.array([self.poes[(epicenter.latitude, rctx, imt)]
                                 for epicenter in sctx.mesh])
 
@@ -69,6 +75,9 @@ class HazardCurvesTestCase(unittest.TestCase):
             return self.__class__.__name__
 
     def setUp(self):
+        self.orig_make_contexts = ContextMaker.make_contexts
+        ContextMaker.make_contexts = lambda self, sites, rupture: (
+            FakeSiteContext(sites), rupture, None)
         self.truncation_level = 3.4
         self.imts = {'PGA': [1, 2, 3], 'PGD': [2, 4]}
         self.time_span = 49.2
@@ -105,6 +114,9 @@ class HazardCurvesTestCase(unittest.TestCase):
         })
         self.gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: gsim1,
                       const.TRT.VOLCANIC: gsim2}
+
+    def tearDown(self):
+        ContextMaker.make_contexts = self.orig_make_contexts
 
     def test1(self):
         site1_pga_poe_expected = [0.0639157, 0.03320212, 0.02145989]

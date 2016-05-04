@@ -1,7 +1,98 @@
+  [Daniele Viganò]
+  * Added support for Ubuntu 16.04 (xenial) packages
+
+  [Michele Simionato]
+  * Major change to the GmfCalculator API
+
+  [Matteo Nastasi]
+  * Backport of libhdf5 and h5py for ubuntu 'precise' serie
+
+  [Michele Simionato]
+  * Added a PickleableSequence class to serialize Python objects on HDF5
+
+  [Graeme Weatherill]
+  * Fixes Z1.0 units bug in Abrahamson, Silva and Kamai (2014)
+
+  [Michele Simionato]
+  * Improved the validity check on the Intensity Measure Type
+  * Showing the `calc_id` in Monitor instances string representation
+  * Added a h5py.File subclass to manage the serialization of objects
+    satisfying the HDF5 protocol used by the OpenQuake software
+  * Added a LiteralAttrs class to serialize literal attributes on HDF5
+  * Added to the Monitor the ability to send commands
+
+python-oq-hazardlib (0.19.0-0~precise01) precise; urgency=low
+
+  [Nick Ackerley]
+  * Added Japan regionalization to GMPE of Atkinson & Boore (2003).
+
+  [Michele Simionato]
+  * Using 32 bit floats for the GMFs, instead of 64, to save memory
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 02 Mar 2016 10:51:43 +0100
+
+python-oq-hazardlib (0.18.0-0~precise01) precise; urgency=low
+
+  [Yen-Shin Chen]
+  * Fix a bug in ChiouYoungs2014NearFaultEffect
+
+  [Daniele Viganò, Matteo Nastasi]
+  * Updates Copyrights to 2016 and uniformize them
+
+  [Michele Simionato]
+  * SiteCollection instances are now serializable in HDF5 format
+
+  [Graeme Weatherill]
+  * Adds `arbitrary' magnitude frequency distribution
+  * Adds version of NSHMP Western US (NGA West) GMPEs to calculated the
+    weighted mean of the epistemic uncertainty adjustment factor
+
+  [Nick Ackerley]
+  * Added Japan regionalization to GMPE of Atkinson & Boore (2003).
+  * Implemented GMPE of Kanno et al. (2006) for shallow and deep earthquakes.
+  * Implemented GMPE of Raghukanth & Iyengar (2007) for stable continental
+    regions of peninsular India.
+  * Implemented GMPE of Nath (2012) for anomalous interface subduction in the
+    intraplate margin of the Shillong plateau in India.
+  * Implemented GMPE of Gupta (2010) for Indo-Burmese intraslab subduction.
+  * Implemented GMPE of Sharma et al. (2009) for active shallow crust of
+    Indian Himalayas.
+  * Give more feedback in error messages on validation.
+
+  [Michele Simionato]
+  * Added a .weight property to sources, as well as a .num_ruptures attribute
+  * The GMPETable now understands paths relative to a directory GMPE_DIR
+
+  [Graeme Weatherill]
+  * Implements Drouet (2015) GMPE for Brazil
+  * Revises Montalva et al. (2015) GMPE (on author's advice)
+
+  [Silvia Canessa]
+  * Adds Dowrick and Rhoades 2005 GMPE
+
+  [Michele Simionato]
+  * Fixed the equality check for SiteCollections: now all of the parameters
+    are compared, not only lons and lats.
+
+  [Yen-Shin Chen]
+  * Modified the hypocentre_patch_index method to obtain the best solution
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 15 Feb 2016 11:27:19 +0100
+
+python-oq-hazardlib (0.17.0-0~precise01) precise; urgency=low
+
+  [Michele Simionato]
+  * Avoided doing the rupture filtering twice
+  * Optimized the case of multiple GSIMs by instantiating the
+    ruptures/sites/distances contexts only once
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 14 Dec 2015 09:46:06 +0100
+
 python-oq-hazardlib (0.16.0-0~precise01) precise; urgency=low
 
   [Graeme Weatherill]
   * Adds methods for modifying the geometry configurations of the fault sources
+  * Adds Allen, Wald and Worden (2012) Intensity Prediction Equation
 
   [Michele Simionato]
   * Refactored atkinson_boore_2003 classes to avoid unneeded instantiation
@@ -9,7 +100,7 @@ python-oq-hazardlib (0.16.0-0~precise01) precise; urgency=low
   [Matteo Nastasi]
   * Imposed version for python-h5py dependency, Ubuntu 12.04 will use
     backported version from GEM repository
-  
+
   [Graeme Weatherill]
   * Adds Montalva et al. (2015) GMPE
 

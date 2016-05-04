@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012-2016 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -13,6 +13,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# pylint: disable=missing-docstring,protected-access
+
 from openquake.hazardlib.mfd import TruncatedGRMFD
 
 from openquake.hazardlib.tests.mfd.base_test import BaseMFDTestCase
@@ -24,50 +27,38 @@ class TruncatedGRMFDConstraintsTestCase(BaseMFDTestCase):
             TruncatedGRMFD,
             min_mag=-1, max_mag=2, bin_width=0.4, a_val=1, b_val=2
         )
-        self.assertEqual(str(exc), 'minimum magnitude must be non-negative')
+        self.assertEqual(str(exc), 'minimum magnitude -1 must be non-negative')
 
-    def test_min_mag_higher_than_max_mag(self):
-        exc = self.assert_mfd_error(
-            TruncatedGRMFD,
-            min_mag=2.4, max_mag=2, bin_width=0.4, a_val=1, b_val=0.2
-        )
-        error = 'maximum magnitude must be higher than minimum magnitude ' \
-                'by bin width at least'
-        self.assertEqual(str(exc), error)
+    def test_min_higher_than_max_mag(self):
+        min_mags = [2.4, 6.5, 6.7]
+        max_mags = [2, 6.5, 7.3]
+        bin_widths = [0.4, 0.1, 1.0]
+        for min_mag, max_mag, bin_width in zip(min_mags, max_mags, bin_widths):
+            exc = self.assert_mfd_error(
+                TruncatedGRMFD,
+                min_mag=min_mag, max_mag=max_mag, bin_width=bin_width,
+                a_val=1, b_val=0.2
+            )
+            error = 'maximum magnitude %g must be higher ' % max_mag + \
+                    'than minimum magnitude %g by ' % min_mag + \
+                    'bin width %g at least' % bin_width
+            self.assertEqual(str(exc), error)
 
     def test_negative_bin_width(self):
         exc = self.assert_mfd_error(
             TruncatedGRMFD,
             min_mag=1, max_mag=2, bin_width=-0.4, a_val=1, b_val=0.2
         )
-        self.assertEqual(str(exc), 'bin width must be positive')
+        self.assertEqual(str(exc), 'bin width -0.4 must be positive')
 
     def test_non_positive_b_val(self):
-        error = 'b value must be non-negative'
-        exc = self.assert_mfd_error(
-            TruncatedGRMFD,
-            min_mag=1, max_mag=2, bin_width=0.4, a_val=1, b_val=-2
-        )
-        self.assertEqual(str(exc), error)
-        exc = self.assert_mfd_error(
-            TruncatedGRMFD,
-            min_mag=1, max_mag=2, bin_width=0.4, a_val=1, b_val=0
-        )
-        self.assertEqual(str(exc), error)
-
-    def test_equal_min_mag_and_max_mag(self):
-        error = 'maximum magnitude must be higher than minimum magnitude ' \
-                'by bin width at least'
-        exc = self.assert_mfd_error(
-            TruncatedGRMFD,
-            min_mag=6.5, max_mag=6.5, bin_width=0.1, a_val=0.5, b_val=1.0
-        )
-        self.assertEqual(str(exc), error)
-        exc = self.assert_mfd_error(
-            TruncatedGRMFD,
-            min_mag=6.7, max_mag=7.3, bin_width=1.0, a_val=0.5, b_val=1.0
-        )
-        self.assertEqual(str(exc), error)
+        for b_val in [-2, 0]:
+            exc = self.assert_mfd_error(
+                TruncatedGRMFD,
+                min_mag=1, max_mag=2, bin_width=0.4, a_val=1, b_val=b_val
+            )
+            self.assertEqual(str(exc),
+                             'b-value %g must be non-negative' % b_val)
 
 
 class TruncatedGRMFDMFDGetRatesTestCase(BaseMFDTestCase):
@@ -83,6 +74,7 @@ class TruncatedGRMFDMFDGetRatesTestCase(BaseMFDTestCase):
                 self.assertEqual((mag, mag + 2), mfd.get_min_max_mag())
 
     def test_1_different_min_mag_and_max_mag(self):
+        # pylint: disable=invalid-name
         expected_rates = [
             (5.5, 2.846049894e-5),
             (6.5, 2.846049894e-6),
@@ -93,6 +85,7 @@ class TruncatedGRMFDMFDGetRatesTestCase(BaseMFDTestCase):
                    a_val=0.5, b_val=1.0)
 
     def test_2_different_min_mag_and_max_mag(self):
+        # pylint: disable=invalid-name
         expected_rates = [
             (5.5, 2.846049894e-5),
             (6.5, 2.846049894e-6),
@@ -104,6 +97,7 @@ class TruncatedGRMFDMFDGetRatesTestCase(BaseMFDTestCase):
 
 
 class TruncatedGRMFDMFDRoundingTestCase(BaseMFDTestCase):
+    # pylint: disable=too-few-public-methods
     def test(self):
         mfd = TruncatedGRMFD(min_mag=0.61, max_mag=0.94, bin_width=0.1,
                              a_val=1, b_val=0.2)
@@ -122,9 +116,10 @@ class TruncatedGRMFDModificationsTestCase(BaseMFDTestCase):
         self.assertAlmostEqual(mfd._get_total_moment_rate(), 1.6140553)
 
     def test_get_total_moment_rate_when_b_equal_to_1_5(self):
+        # pylint: disable=invalid-name
         mfd = TruncatedGRMFD(min_mag=6.0, max_mag=8.0, bin_width=0.1,
                              a_val=-9.4, b_val=1.5)
-        self.assertAlmostEqual(mfd._get_total_moment_rate(),  1.3400508)
+        self.assertAlmostEqual(mfd._get_total_moment_rate(), 1.3400508)
 
     def test_set_a(self):
         mfd = TruncatedGRMFD(min_mag=6.0, max_mag=8.0, bin_width=0.1,
@@ -139,6 +134,7 @@ class TruncatedGRMFDModificationsTestCase(BaseMFDTestCase):
         self.assertAlmostEqual(mfd.a_val, -8.4319519)
 
     def test_set_a_and_get_total_moment_rate(self):
+        # pylint: disable=invalid-name
         mfd = TruncatedGRMFD(min_mag=3.0, max_mag=4.0, bin_width=0.1,
                              a_val=4.4, b_val=0.5)
         tmr = mfd._get_total_moment_rate()
@@ -147,6 +143,7 @@ class TruncatedGRMFDModificationsTestCase(BaseMFDTestCase):
         self.assertEqual(mfd._get_total_moment_rate(), tmr)
 
     def test_set_a_and_get_total_moment_rate_when_b_equal_to_1_5(self):
+        # pylint: disable=invalid-name
         mfd = TruncatedGRMFD(min_mag=2.4, max_mag=5.6, bin_width=0.4,
                              a_val=-0.44, b_val=1.5)
         tmr = mfd._get_total_moment_rate()
@@ -169,6 +166,7 @@ class TruncatedGRMFDModificationsTestCase(BaseMFDTestCase):
         self.assertAlmostEqual(mfd.a_val, -18.2)
 
     def test_increment_max_mag_check_constraints(self):
+        # pylint: disable=invalid-name
         mfd = TruncatedGRMFD(min_mag=6.0, max_mag=7.0, bin_width=0.1,
                              a_val=1, b_val=1)
         self.assert_mfd_error(mfd.modify, 'increment_max_mag', {'value': -1})
@@ -183,6 +181,7 @@ class TruncatedGRMFDModificationsTestCase(BaseMFDTestCase):
         self.assertEqual(mfd.min_mag, 3.5)
 
     def test_set_max_mag_check_constraints(self):
+        # pylint: disable=invalid-name
         mfd = TruncatedGRMFD(min_mag=3.5, max_mag=5.5, bin_width=0.5,
                              a_val=1, b_val=1.3)
         self.assert_mfd_error(mfd.modify, 'set_max_mag', {'value': 3.6})
@@ -202,6 +201,7 @@ class TruncatedGRMFDModificationsTestCase(BaseMFDTestCase):
         self.assertAlmostEqual(mfd.a_val, -20.5)
 
     def test_increment_b_check_constraints(self):
+        # pylint: disable=invalid-name
         mfd = TruncatedGRMFD(min_mag=6.0, max_mag=7.0, bin_width=0.1,
                              a_val=1, b_val=1)
         self.assert_mfd_error(mfd.modify, 'increment_b', {'value': -1})

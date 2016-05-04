@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012-2016 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -81,6 +81,15 @@ class IMC(ConstantContainer):
     GREATER_OF_TWO_HORIZONTAL = 'Greater of two horizontal'
     #: The vertical component.
     VERTICAL = 'Vertical'
+    #: "Vectorial addition: a_V = sqrt(max|a_1(t)|^2 + max|a_2(t)|^2)).
+    #: This means that the maximum ground amplitudes occur simultaneously on
+    #: the two horizontal components; this is a conservative assumption."
+    #: p. 53 of Douglas (2003, Earth-Sci. Rev. 61, 43-104)
+    VECTORIAL = 'Square root of sum of squares of peak horizontals'
+    #: "the peak square root of the sum of squares of two orthogonal
+    #: horizontal components in the time domain"
+    #: p. 880 of Kanno et al. (2006, Bull. Seism. Soc. Am. 96, 879-897)
+    PEAK_SRSS_HORIZONTAL = 'Peak square root of sum of squares of horizontals'
 
 
 class StdDev(ConstantContainer):

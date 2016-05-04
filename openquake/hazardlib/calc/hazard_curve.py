@@ -1,33 +1,35 @@
-# coding: utf-8
-# The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# Copyright (C) 2012-2016 GEM Foundation
 #
-# This program is distributed in the hope that it will be useful,
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 """
 :mod:`openquake.hazardlib.calc.hazard_curve` implements
 :func:`hazard_curves`.
 """
-from openquake.baselib.python3compat import range
-from openquake.baselib.python3compat import raise_
 import sys
 import time
 import collections
 
 import numpy
 
-from openquake.baselib.performance import DummyMonitor
+from openquake.baselib.python3compat import range, raise_
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc import filters
+from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 from openquake.baselib.general import deprecated
 
@@ -45,16 +47,19 @@ def zero_curves(num_sites, imtls):
     return zero
 
 
-def zero_maps(num_sites, imts):
+def zero_maps(num_sites, imts, poes=()):
     """
     :param num_sites: the number of sites
     :param imts: the intensity measure types
     :returns: an array of zero curves with length num_sites
     """
     # numpy dtype for the hazard maps
-    imt_dt = numpy.dtype([(imt, float) for imt in imts])
-    zero = numpy.zeros(num_sites, imt_dt)
-    return zero
+    if poes:
+        imt_dt = numpy.dtype([('%s~%s' % (imt, poe), numpy.float32)
+                              for imt in imts for poe in poes])
+    else:
+        imt_dt = numpy.dtype([(imt, numpy.float32) for imt in imts])
+    return numpy.zeros(num_sites, imt_dt)
 
 
 def agg_curves(acc, curves):
@@ -93,7 +98,8 @@ def hazard_curves(
 def calc_hazard_curves(
         sources, sites, imtls, gsim_by_trt, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
-        rupture_site_filter=filters.rupture_site_noop_filter):
+        rupture_site_filter=filters.rupture_site_noop_filter,
+        maximum_distance=None):
     """
     Compute hazard curves on a list of sites, given a set of seismic sources
     and a set of ground shaking intensity models (one per tectonic region type
@@ -158,11 +164,13 @@ def calc_hazard_curves(
     return curves
 
 
+# TODO: remove the rupture_site_filter, since its work is now done by the
+# maximum_distance parameter; see what would break
 def hazard_curves_per_trt(
         sources, sites, imtls, gsims, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter,
-        monitor=DummyMonitor()):
+        maximum_distance=None, bbs=(), monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -175,6 +183,7 @@ def hazard_curves_per_trt(
         by the intensity measure types; the size of each field is given by the
         number of levels in ``imtls``.
     """
+    cmaker = ContextMaker(gsims, maximum_distance)
     gnames = list(map(str, gsims))
     imt_dt = numpy.dtype([(imt, float, len(imtls[imt]))
                           for imt in sorted(imtls)])
@@ -182,26 +191,47 @@ def hazard_curves_per_trt(
     curves = [numpy.ones(len(sites), imt_dt) for gname in gnames]
     sources_sites = ((source, sites) for source in sources)
     ctx_mon = monitor('making contexts', measuremem=False)
-    rup_mon = monitor('getting ruptures', measuremem=False)
     pne_mon = monitor('computing poes', measuremem=False)
     monitor.calc_times = []  # pairs (src_id, delta_t)
+    monitor.eff_ruptures = 0  # effective number of contributing ruptures
     for source, s_sites in source_site_filter(sources_sites):
         t0 = time.time()
         try:
-            with rup_mon:
-                rupture_sites = list(rupture_site_filter(
-                    (rupture, s_sites) for rupture in source.iter_ruptures()))
+            rupture_sites = rupture_site_filter(
+                (rupture, s_sites) for rupture in source.iter_ruptures())
             for rupture, r_sites in rupture_sites:
+                with ctx_mon:
+                    try:
+                        sctx, rctx, dctx = cmaker.make_contexts(
+                            r_sites, rupture)
+                    except FarAwayRupture:
+                        continue
+
+                    monitor.eff_ruptures += 1
+
+                    # add optional disaggregation information (bounding boxes)
+                    if bbs:
+                        sids = set(sctx.sites.sids)
+                        jb_dists = dctx.rjb
+                        closest_points = rupture.surface.get_closest_points(
+                            sctx.sites.mesh)
+                        bs = [bb for bb in bbs if bb.site_id in sids]
+                        # NB: the assert below is always true; we are
+                        # protecting against possible refactoring errors
+                        assert len(bs) == len(jb_dists) == len(closest_points)
+                        for bb, dist, p in zip(bs, jb_dists, closest_points):
+                            if dist < maximum_distance:
+                                # ruptures too far away are ignored
+                                bb.update([dist], [p.longitude], [p.latitude])
+
                 for i, gsim in enumerate(gsims):
-                    with ctx_mon:
-                        sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
                     with pne_mon:
                         for imt in imts:
                             poes = gsim.get_poes(
                                 sctx, rctx, dctx, imt, imts[imt],
                                 truncation_level)
                             pno = rupture.get_probability_no_exceedance(poes)
-                            expanded_pno = r_sites.expand(pno, placeholder=1)
+                            expanded_pno = sctx.sites.expand(pno, 1.0)
                             curves[i][str(imt)] *= expanded_pno
         except Exception as err:
             etype, err, tb = sys.exc_info()

@@ -1,20 +1,20 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2015, GEM Foundation
+# Copyright (C) 2015-2016 GEM Foundation
 
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
 
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 Compatibility layer for Python 2 and 3. Mostly copied from six and future,
@@ -36,6 +36,7 @@ if PY3:
     import configparser
     exec_ = eval('exec')
 
+    zip = zip
     range = range
     unicode = str
 
@@ -62,11 +63,12 @@ if PY3:
 else:  # Python 2
     import cPickle as pickle
     import ConfigParser as configparser
+    from itertools import izip as zip
 
     range = xrange
     round = round
     unicode = unicode
-    
+
     # taken from six
     def exec_(_code_, _globs_=None, _locs_=None):
         """Execute code in a namespace."""

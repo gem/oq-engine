@@ -1,19 +1,21 @@
-#!/usr/bin/env python
-# The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# Copyright (C) 2012-2016 GEM Foundation
 #
-# This program is distributed in the hope that it will be useful,
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 """
 Check GMPE/IPE class versus data file in CSV format by calculating standard
 deviation and/or mean value and comparing the result to the expected value.
@@ -29,10 +31,10 @@ import copy
 import numpy
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
+from openquake.hazardlib.gsim.base import GroundShakingIntensityModel, IPE
 from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
-from openquake.hazardlib.imt import PGA, PGV, PGD, SA, CAV
+from openquake.hazardlib.imt import PGA, PGV, PGD, SA, CAV, MMI
 
 
 def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
@@ -90,10 +92,18 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
                 break
 
             if result_type == 'MEAN':
-                result = numpy.exp(mean)
+                if isinstance(gsim, IPE):
+                    # For IPEs it is the values, not the logarithms returned
+                    result = mean
+                else:
+                    result = numpy.exp(mean)
             else:
                 [result] = stddevs
-            assert isinstance(result, numpy.ndarray), result_type
+            assert (isinstance(result, numpy.ndarray) or
+                    isinstance(result, numpy.float64) or
+                    isinstance(result, float)), \
+                '%s is %s instead of numpy.ndarray, numpy.float64 or float' % \
+                (result_type, type(result))
 
             discrep_percentage = numpy.abs(
                 result / expected_result * 100 - 100
@@ -292,6 +302,8 @@ def _parse_csv_line(headers, values):
                 imt = PGD()
             elif param == 'cav':
                 imt = CAV()
+            elif param == 'mmi':
+                imt = MMI()
             else:
                 period = float(param)
                 assert damping is not None

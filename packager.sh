@@ -27,14 +27,22 @@ if [ "$GEM_EPHEM_NAME" = "" ]; then
     GEM_EPHEM_NAME="ubuntu-lxc-eph"
 fi
 
-if command -v lxc-shutdown &> /dev/null; then
-    # Older lxc (< 1.0.0) with lxc-shutdown
-    LXC_TERM="lxc-shutdown -t 10 -w"
-    LXC_KILL="lxc-stop"
+LXC_VER=$(lxc-ls --version | cut -d '.' -f 1)
+
+if [ $LXC_VER -lt 1 ]; then
+    echo "lxc >= 1.0.0 is required." >&2
+    exit 1
+fi
+
+LXC_TERM="lxc-stop -t 10"
+LXC_KILL="lxc-stop -k"
+
+if command -v lxc-copy &> /dev/null; then
+    # New lxc (>= 2.0.0) with lxc-copy
+    GEM_EPHEM_EXE="${GEM_EPHEM_CMD} -n ${GEM_EPHEM_NAME} -e"
 else
-    # Newer lxc (>= 1.0.0) with lxc-stop only
-    LXC_TERM="lxc-stop -t 10"
-    LXC_KILL="lxc-stop -k"
+    # Old lxc (< 2.0.0) with lxc-start-ephimeral
+    GEM_EPHEM_EXE="${GEM_EPHEM_CMD} -o ${GEM_EPHEM_NAME} -d"
 fi
 
 NL="
@@ -125,8 +133,8 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [<-s|--serie> <precise|trusty>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
-    echo "       if -s is present try to produce sources for a specific ubuntu version (precise or trusty),"
+    echo "    $0 [<-s|--serie> <precise|trusty|xenial>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "       if -s is present try to produce sources for a specific ubuntu version (precise, trusty or xenial),"
     echo "           (default precise)"
     echo "       if -S is present try to copy sources to <GEM_DEB_MONOTONE>/<BUILD_UBUVER>/source directory"
     echo "       if -B is present binary package is build too."
@@ -163,6 +171,7 @@ _pkgbuild_innervm_run () {
     scp -r * $lxc_ip:build-deb
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
     ssh $lxc_ip sudo apt-get update
+    ssh $lxc_ip sudo apt-get -y upgrade
     ssh $lxc_ip sudo apt-get -y install build-essential dpatch fakeroot devscripts equivs lintian quilt
     ssh $lxc_ip "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
@@ -186,13 +195,13 @@ _devtest_innervm_run () {
 
     # add custom packages
     ssh $lxc_ip mkdir -p "repo"
-    scp -r ${GEM_DEB_REPO}/${BUILD_UBUVER}/custom_pkgs $lxc_ip:repo/custom_pkgs
-    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
+    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
 
-    pkgs_list="$(deps_list debian/control)"
+    pkgs_list="$(deps_list all debian)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
     # TODO: version check
@@ -235,8 +244,8 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
 
     # add custom packages
-    scp -r ${GEM_DEB_REPO}/${BUILD_UBUVER}/custom_pkgs $lxc_ip:repo/custom_pkgs
-    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
+    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
@@ -255,18 +264,68 @@ _pkgtest_innervm_run () {
     return
 }
 
-deps_list() {
-    local oldifs out_list i filename="$1" build_only="$2"
+_builddoc_innervm_run () {
+    local i lxc_ip="$1"
 
-    oldifs="$IFS"
-    IFS=','
-    out_list=""
-    if [ "$build_only" = "y" ]; then
-        i_all="$(cat "$filename" | grep "^Build-Depends:" | sed 's/^Build-Depends: //g')"
+    trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
+
+    ssh $lxc_ip "sudo apt-get update"
+    ssh $lxc_ip "sudo apt-get upgrade -y"
+
+    gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
+    # install package to manage repository properly
+    # ssh $lxc_ip "sudo apt-get install -y python-software-properties"
+
+    pkgs_list="$(deps_list all debian)"
+    ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+
+    # TODO: version check
+    git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
+
+    ssh $lxc_ip "sudo apt-get -y install python-pip"
+    ssh $lxc_ip "sudo pip install sphinx==1.3.4"
+
+    ssh $lxc_ip "cd ${GEM_GIT_PACKAGE} ; export PYTHONPATH=\$PWD ; cd doc ; make html"
+    scp -r "$lxc_ip:${GEM_GIT_PACKAGE}/doc/build/html" "out_${BUILD_UBUVER}/"
+
+    trap ERR
+
+    return
+}
+
+#
+#  deps_list <listtype> <filename> - retrieve dependencies list from debian/control and debian/rules
+#                                    to be able to install them without the package
+#      listtype    inform deps_list which control lines use to get dependencies
+#      filename    control file used for input
+#
+deps_list() {
+    local old_ifs out_list skip i d listtype="$1" control_file="$2"/control rules_file="$2"/rules
+
+    if grep -q "^${BUILD_UBUVER^^}_DEP" $rules_file; then
+        # Use custom dependencies in debian/rules
+        rules_dep=$(grep "^${BUILD_UBUVER^^}_DEP *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+        rules_rec=$(grep "^${BUILD_UBUVER^^}_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
     else
-        i_all="$(cat "$filename" | grep "^\(Build-\)\?Depends:" | sed 's/^\(Build-\)\?Depends: //g')"
+        # Otherwise use the default values in debian/rules
+        rules_dep=$(grep "^DEFAULT_DEP *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+        rules_rec=$(grep "^DEFAULT_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
     fi
-    for i in $i_all ; do
+
+    out_list=""
+    if [ "$listtype" = "all" ]; then
+        in_list="$((cat "$control_file" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' ; echo ", $rules_dep, $rules_rec") | tr '\n' ','| sed 's/,\+/,/g')"
+    elif [  "$listtype" = "deprec" ]; then
+        in_list="$((cat "$control_file" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' ; echo ", $rules_dep, $rules_rec") | tr '\n' ','| sed 's/,\+/,/g')"
+    elif [  "$listtype" = "build" ]; then
+        in_list="$((cat "$control_file" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' ; echo ", $rules_dep") | tr '\n' ','| sed 's/,\+/,/g')"
+    else
+        in_list="$((cat "$control_file" | egrep "^Depends:" | sed 's/^Depends: //g'; echo ", $rules_dep") | tr '\n' ','| sed 's/,\+/,/g')"
+    fi
+
+    old_ifs="$IFS"
+    IFS=','
+    for i in $in_list ; do
         item="$(echo "$i" |  sed 's/^ \+//g;s/ \+$//g')"
         pkg_name="$(echo "${item} " | cut -d ' ' -f 1)"
         pkg_vers="$(echo "${item} " | cut -d ' ' -f 2)"
@@ -274,18 +333,30 @@ deps_list() {
         if echo "$pkg_name" | grep -q "^\${" ; then
             continue
         fi
-        if [ "$out_list" == "" ]; then
+        skip=0
+        for d in $(echo "$GEM_GIT_DEPS" | sed 's/ /,/g'); do
+            if [ "$pkg_name" = "python-${d}" ]; then
+                skip=1
+                break
+            fi
+        done
+        if [ $skip -eq 1 ]; then
+            continue
+        fi
+
+        if [ "$out_list" = "" ]; then
             out_list="$pkg_name"
         else
             out_list="$out_list $pkg_name"
         fi
     done
-    IFS="$oldifs"
+    IFS="$old_ifs"
 
     echo "$out_list"
 
     return 0
 }
+
 
 _lxc_name_and_ip_get()
 {
@@ -321,7 +392,7 @@ devtest_run () {
     fi
 
     sudo echo
-    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
@@ -365,25 +436,28 @@ pkgtest_run () {
     dpkg-scansources . > Sources
     cat Sources | gzip > Sources.gz
     cat > Release <<EOF
-Archive: $BUILD_UBUVER
-Origin: Ubuntu
-Label: Local Ubuntu ${BUILD_UBUVER^} Repository
-Architecture: amd64
-MD5Sum:
+Origin: openquake-${BUILD_UBUVER}
+Label: OpenQuake Local Ubuntu Repository
+Codename: $BUILD_UBUVER
+Date: $(date -R)
+Architectures: amd64
+Components: main
+Description: OpenQuake Local Ubuntu Repository
+SHA256:
 EOF
-    printf ' '$(md5sum Packages | cut --delimiter=' ' --fields=1)' %16d Packages\n' \
+    printf ' '$(sha256sum Packages | cut --delimiter=' ' --fields=1)' %16d Packages\n' \
         $(wc --bytes Packages | cut --delimiter=' ' --fields=1) >> Release
-    printf ' '$(md5sum Packages.gz | cut --delimiter=' ' --fields=1)' %16d Packages.gz\n' \
+    printf ' '$(sha256sum Packages.gz | cut --delimiter=' ' --fields=1)' %16d Packages.gz\n' \
         $(wc --bytes Packages.gz | cut --delimiter=' ' --fields=1) >> Release
-    printf ' '$(md5sum Sources | cut --delimiter=' ' --fields=1)' %16d Sources\n' \
+    printf ' '$(sha256sum Sources | cut --delimiter=' ' --fields=1)' %16d Sources\n' \
         $(wc --bytes Sources | cut --delimiter=' ' --fields=1) >> Release
-    printf ' '$(md5sum Sources.gz | cut --delimiter=' ' --fields=1)' %16d Sources.gz\n' \
+    printf ' '$(sha256sum Sources.gz | cut --delimiter=' ' --fields=1)' %16d Sources.gz\n' \
         $(wc --bytes Sources.gz | cut --delimiter=' ' --fields=1) >> Release
     gpg --armor --detach-sign --output Release.gpg Release
     cd -
 
     sudo echo
-    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
@@ -440,6 +514,30 @@ EOF
     return
 }
 
+builddoc_run () {
+    if [ ! -d "out_${BUILD_UBUVER}" ]; then
+        mkdir "out_${BUILD_UBUVER}"
+    fi
+
+    sudo echo
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
+    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+
+    _wait_ssh $lxc_ip
+
+    set +e
+    _builddoc_innervm_run $lxc_ip
+    inner_ret=$?
+    sudo $LXC_TERM -n $lxc_name
+    set -e
+
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
+
+    return $inner_ret
+}
+
 #
 #  MAIN
 #
@@ -468,7 +566,7 @@ while [ $# -gt 0 ]; do
             ;;
         -s|--serie)
             BUILD_UBUVER="$2"
-            if [ "$BUILD_UBUVER" != "precise" -a "$BUILD_UBUVER" != "trusty" ]; then
+            if [ "$BUILD_UBUVER" != "precise" -a "$BUILD_UBUVER" != "trusty" -a "$BUILD_UBUVER" != "xenial" ]; then
                 echo
                 echo "ERROR: ubuntu version '$BUILD_UBUVER' not supported"
                 echo
@@ -505,6 +603,11 @@ while [ $# -gt 0 ]; do
         pkgtest)
             # Sed removes 'origin/' from the branch name
             pkgtest_run $(echo "$2" | sed 's@.*/@@g')
+            exit $?
+            break
+            ;;
+        builddoc)
+            builddoc_run $(echo "$2" | sed 's@.*/@@g')
             exit $?
             break
             ;;
@@ -642,7 +745,7 @@ if [ 0 -eq 1 ]; then
 fi
 
 if [ $BUILD_ON_LXC -eq 1 ]; then
-    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
     _wait_ssh $lxc_ip
 

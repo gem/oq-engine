@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012-2016 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,18 +24,19 @@ from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.calc.gmf import (
     ground_motion_fields, CorrelationButNoInterIntraStdDevs)
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.correlation import JB2009CorrelationModel
 
 
 class BaseFakeGSIM(object):
+    REQUIRES_DISTANCES = set()
+    REQUIRES_RUPTURE_PARAMETERS = set()
+    REQUIRES_SITES_PARAMETERS = set()
+
     expect_stddevs = True
-    expect_same_sitecol = True
 
     def __init__(self, testcase):
         self.testcase = testcase
-
-    def make_contexts(gsim, sites, rupture):
-        raise NotImplementedError
 
     def get_mean_and_stddevs(gsim, mean, std_inter, std_intra, imt,
                              stddev_types):
@@ -49,14 +50,6 @@ class FakeGSIMInterIntraStdDevs(BaseFakeGSIM):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set(
         [const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT]
     )
-
-    def make_contexts(gsim, sites, rupture):
-        if gsim.expect_same_sitecol:
-            gsim.testcase.assertIs(sites, gsim.testcase.sites)
-        else:
-            gsim.testcase.assertIsNot(sites, gsim.testcase.sites)
-        gsim.testcase.assertIs(rupture, gsim.testcase.rupture)
-        return sites.vs30, sites.z1pt0, sites.z2pt5
 
     def get_mean_and_stddevs(gsim, mean, std_inter, std_intra, imt,
                              stddev_types):
@@ -74,14 +67,6 @@ class FakeGSIMInterIntraStdDevs(BaseFakeGSIM):
 
 class FakeGSIMTotalStdDev(BaseFakeGSIM):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
-
-    def make_contexts(gsim, sites, rupture):
-        if gsim.expect_same_sitecol:
-            gsim.testcase.assertIs(sites, gsim.testcase.sites_total)
-        else:
-            gsim.testcase.assertIsNot(sites, gsim.testcase.sites_total)
-        gsim.testcase.assertIs(rupture, gsim.testcase.rupture)
-        return sites.vs30, sites.z1pt0, sites.z2pt5
 
     def get_mean_and_stddevs(gsim, mean, std_total, not_used, imt,
                              stddev_types):
@@ -159,6 +144,14 @@ class BaseGMFCalcTestCase(unittest.TestCase):
 
         self.gsim = FakeGSIMInterIntraStdDevs(self)
         self.total_stddev_gsim = FakeGSIMTotalStdDev(self)
+
+        def make_contexts(gsim, sites, rupture):
+            return sites.vs30, sites.z1pt0, sites.z2pt5
+        self.orig_make_contexts = ContextMaker.make_contexts
+        ContextMaker.make_contexts = make_contexts
+
+    def tearDown(self):
+        ContextMaker.make_contexts = self.orig_make_contexts
 
 
 class GMFCalcNoCorrelationTestCase(BaseGMFCalcTestCase):
@@ -291,7 +284,6 @@ class GMFCalcNoCorrelationTestCase(BaseGMFCalcTestCase):
     def test_filtered_no_truncation(self):
         numpy.random.seed(17)
         realizations = 50
-        self.gsim.expect_same_sitecol = False
         gmfs = ground_motion_fields(
             self.rupture, self.sites, [self.imt1, self.imt2],
             self.gsim, truncation_level=None,
@@ -311,7 +303,6 @@ class GMFCalcNoCorrelationTestCase(BaseGMFCalcTestCase):
 
     def test_filtered_zero_truncation(self):
         self.gsim.expect_stddevs = False
-        self.gsim.expect_same_sitecol = False
         gmfs = ground_motion_fields(
             self.rupture, self.sites, [self.imt1, self.imt2], self.gsim,
             truncation_level=0, rupture_site_filter=self.rupture_site_filter,
@@ -407,7 +398,6 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
         numpy.random.seed(41)
         cormo = JB2009CorrelationModel(vs30_clustering=False)
         gsim = FakeGSIMTotalStdDev(self)
-        gsim.expect_same_sitecol = False
         with self.assertRaises(CorrelationButNoInterIntraStdDevs):
             ground_motion_fields(
                 self.rupture, self.sites, [self.imt1], gsim,
@@ -425,8 +415,6 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
         def rupture_site_filter(rupture_sites):
             [(rupture, sites)] = rupture_sites
             yield rupture, sites.filter(sites.mesh.lats == 0)
-
-        self.gsim.expect_same_sitecol = False
 
         numpy.random.seed(37)
         cormo = JB2009CorrelationModel(vs30_clustering=False)

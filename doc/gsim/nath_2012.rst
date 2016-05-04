@@ -1,0 +1,11 @@
+================
+Nath et al. 2012
+================
+
+.. module:: openquake.hazardlib.gsim.nath_2012
+
+.. autoclass:: NathEtAl2012Lower
+    :members:
+
+.. autoclass:: NathEtAl2012Upper
+    :members:

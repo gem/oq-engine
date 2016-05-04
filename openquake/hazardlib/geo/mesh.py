@@ -1,19 +1,21 @@
-# coding: utf-8
-# The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# Copyright (C) 2012-2016 GEM Foundation
 #
-# This program is distributed in the hope that it will be useful,
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 """
 Module :mod:`openquake.hazardlib.geo.mesh` defines classes :class:`Mesh` and
 its subclass :class:`RectangularMesh`.
@@ -51,12 +53,12 @@ class Mesh(object):
     DIST_TOLERANCE = 0.005
 
     def __init__(self, lons, lats, depths=None):
-        assert (isinstance(lons, numpy.ndarray)
-                and isinstance(lats, numpy.ndarray)
-                and (depths is None or isinstance(depths, numpy.ndarray))
+        assert (isinstance(lons, numpy.ndarray) and
+                isinstance(lats, numpy.ndarray) and
+                (depths is None or isinstance(depths, numpy.ndarray))
                 ), (type(lons), type(lats), type(depths))
-        assert ((lons.shape == lats.shape)
-                and (depths is None or depths.shape == lats.shape)
+        assert ((lons.shape == lats.shape) and
+                (depths is None or depths.shape == lats.shape)
                 ), (lons.shape, lats.shape)
         assert lons.size > 0
         self.lons = lons
@@ -91,10 +93,8 @@ class Mesh(object):
         """
         Return the shape of this mesh.
 
-        :returns:
-            The shape of this mesh.
-        :rtype:
-            tuple in the following format (rows, columns)
+        :returns tuple:
+            The shape of this mesh as (rows, columns)
         """
         return self.lons.shape
 
@@ -128,11 +128,8 @@ class Mesh(object):
             A new object of the same type that borrows a portion of geometry
             from this mesh (doesn't copy the array, just references it).
         """
-        assert (isinstance(item, slice) or
-                (isinstance(item, (list, tuple))
-                 and all(isinstance(subitem, slice) for subitem in item))
-                ), '%s objects can only be indexed by slices' % \
-            type(self).__name__
+        if isinstance(item, int):
+            raise ValueError('You must pass a slice, not an index: %s' % item)
         lons = self.lons[item]
         lats = self.lats[item]
         depths = None
@@ -241,7 +238,6 @@ class Mesh(object):
         # replace geodetic distance values for points-closer-than-the-threshold
         # by more accurate point-to-polygon distance values.
         distances.put(idxs, distances_2d)
-
         return distances.reshape(mesh.shape)
 
     def get_closest_points(self, mesh):
@@ -394,7 +390,7 @@ class RectangularMesh(Mesh):
             objects.
         """
         assert points is not None and len(points) > 0 and len(points[0]) > 0, \
-               'list of at least one non-empty list of points is required'
+            'list of at least one non-empty list of points is required'
         lons = numpy.zeros((len(points), len(points[0])), dtype=float)
         lats = lons.copy()
         depths = lons.copy()

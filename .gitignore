@@ -8,3 +8,4 @@ build-rpm
 *.so
 .coverage
 .DS_Store
+*.noseids

@@ -1,18 +1,21 @@
-# The Hazard Library
-# Copyright (C) 2015, GEM Foundation
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# Copyright (C) 2015-2016 GEM Foundation
 #
-# This program is distributed in the hope that it will be useful,
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 """
 Module :mod:`openquake.hazardlib.gsim.gsim_table` defines the
 :class:`openquake.hazardlib.gsim.gsim_table.GMPETable` for defining GMPEs
@@ -22,7 +25,7 @@ the corresponding amplification of the IMLs
 """
 
 from __future__ import division
-
+import os
 from copy import deepcopy
 
 import h5py
@@ -32,8 +35,7 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.gsim.base import (GMPE, RuptureContext, SitesContext,
-                                           DistancesContext)
+from openquake.hazardlib.gsim.base import GMPE, RuptureContext, SitesContext
 from openquake.baselib.python3compat import round
 
 
@@ -140,12 +142,12 @@ class AmplificationTable(object):
                 else:
                     assert numpy.allclose(self.periods, amp_model["IMLs/T"][:])
             for imt in ["SA", "PGA", "PGV"]:
-                if imt in amp_model["IMLs"].keys():
-                    self.mean[imt][:, :, :, self.argidx[iloc]] =\
+                if imt in amp_model["IMLs"]:
+                    self.mean[imt][:, :, :, self.argidx[iloc]] = \
                         amp_model["IMLs/" + imt][:]
                     for stddev_type in self.sigma:
-                        self.sigma[stddev_type][imt]\
-                            [:, :, :, self.argidx[iloc]] =\
+                        self.sigma[stddev_type][imt][
+                            :, :, :, self.argidx[iloc]] = \
                             amp_model["/".join([stddev_type, imt])][:]
         self.shape = (n_d, n_p, n_m, n_levels)
 
@@ -290,19 +292,20 @@ class GMPETable(GMPE):
     """
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
 
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set(())
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
 
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ""
 
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
 
-    REQUIRES_SITES_PARAMETERS = set(())
+    REQUIRES_SITES_PARAMETERS = set()
 
-    REQUIRES_DISTANCES = set(())
+    REQUIRES_DISTANCES = set()
 
     REQUIRES_RUPTURE_PARAMETERS = {"mag"}
 
     GMPE_TABLE = None
+    GMPE_DIR = '.'
 
     def __init__(self, gmpe_table=None):
         """
@@ -318,7 +321,13 @@ class GMPETable(GMPE):
         """
         if not self.GMPE_TABLE:
             if gmpe_table:
-                self.GMPE_TABLE = gmpe_table
+                if os.path.isabs(gmpe_table):
+                    self.GMPE_TABLE = gmpe_table
+                else:
+                    self.GMPE_TABLE = os.path.abspath(
+                        os.path.join(self.GMPE_DIR, gmpe_table))
+                if not os.path.exists(self.GMPE_TABLE):
+                    raise IOError('Missing file %r' % self.GMPE_TABLE)
             else:
                 raise IOError("GMPE Table Not Defined!")
         super(GMPETable, self).__init__()
@@ -337,15 +346,14 @@ class GMPETable(GMPE):
         """
         fle = h5py.File(self.GMPE_TABLE, "r")
         self.distance_type = fle["Distances"].attrs["metric"].decode('utf8')
-        self.REQUIRES_DISTANCES.clear()
-        self.REQUIRES_DISTANCES.add(self.distance_type)
+        self.REQUIRES_DISTANCES = set([self.distance_type])
         # Load in magnitude
         self.m_w = fle["Mw"][:]
         # Load in distances
         self.distances = fle["Distances"][:]
         # Load intensity measure types and levels
         self.imls = hdf_arrays_to_dict(fle["IMLs"])
-        self._update_supported_imts()
+        self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = set(self._supported_imts())
         if "SA" in self.imls.keys() and "T" not in self.imls:
             raise ValueError("Spectral Acceleration must be accompanied by "
                              "periods")
@@ -381,19 +389,20 @@ class GMPETable(GMPE):
                                                 self.m_w,
                                                 self.distances)
         if self.amplification.element == "Sites":
-            self.REQUIRES_SITES_PARAMETERS = set(())
-            self.REQUIRES_SITES_PARAMETERS.add(self.amplification.parameter)
+            self.REQUIRES_SITES_PARAMETERS = set(
+                [self.amplification.parameter])
         elif self.amplification.element == "Rupture":
             # Re-set the site parameters
-            self.REQUIRES_SITES_PARAMETERS = set(())
-            self.REQUIRES_RUPTURE_PARAMETERS.add(self.amplification.parameter)
+            self.REQUIRES_SITES_PARAMETERS = set()
+            self.REQUIRES_RUPTURE_PARAMETERS.add(
+                self.amplification.parameter)
 
-    def _update_supported_imts(self):
+    def _supported_imts(self):
         """
         Updates the list of supported IMTs from the tables
         """
         imt_list = []
-        for key in self.imls.keys():
+        for key in self.imls:
             if "SA" in key:
                 imt_list.append(imt_module.SA)
             elif key == "T":
@@ -404,7 +413,7 @@ class GMPETable(GMPE):
                 except:
                     continue
                 imt_list.append(imt_val.__class__)
-        self.DEFINED_FOR_INTENSITY_MEASURE_TYPES.update(imt_list)
+        return imt_list
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """

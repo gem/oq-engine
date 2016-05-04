@@ -20,6 +20,7 @@ Built-in GSIMs
     akkar_bommer_2010
     akkar_cagnan_2010
     allen_2012
+    allen_2012_ipe
     atkinson_boore_1995
     atkinson_boore_2003
     atkinson_boore_2006
@@ -48,25 +49,32 @@ Built-in GSIMs
     convertito_2012
     dost_2004
     douglas_stochastic_2013
+    dowrickrhoades_2005
+    drouet_2015_brazil
     edwards_fah_2013a
     edwards_fah_2013f
     faccioli_2010
     frankel_1996
     fukushima_tanaka_1990
     garcia_2005
+    gupta_2010
     geomatrix_1993
     ghofrani_atkinson_2014
     gsim_table
     idriss_2014
+    kanno_2006
     lin_lee_2008
     lin_2009
     mcverry_2006
     megawati_pan_2010
     montalva_2015
+    nath_2012
     nshmp_2014
     pezeshk_2011
+    raghukanth_iyengar_2007
     rietbrock_2013
     sadigh_1997
+    sharma_2009
     silva_2002
     si_midorikawa_1999
     somerville_2001

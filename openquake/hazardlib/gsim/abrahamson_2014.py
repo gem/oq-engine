@@ -1,18 +1,21 @@
-# The Hazard Library
-# Copyright (C) 2012-2015, GEM Foundation
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# Copyright (C) 2014-2016 GEM Foundation
 #
-# This program is distributed in the hope that it will be useful,
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 """
 Module exports :class:`AbrahamsonEtAl2014`
                :class:`AbrahamsonEtAl2014RegCHN`
@@ -29,6 +32,8 @@ from scipy import interpolate
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+
+METRES_PER_KM = 1000.0
 
 
 class AbrahamsonEtAl2014(GMPE):
@@ -94,7 +99,8 @@ class AbrahamsonEtAl2014(GMPE):
                 self._get_site_response_term(C, imt, sites.vs30, sa1180) +
                 self._get_hanging_wall_term(C, dists, rup) +
                 self._get_top_of_rupture_depth_term(C, imt, rup) +
-                self._get_soil_depth_term(C, sites.z1pt0, sites.vs30)
+                self._get_soil_depth_term(C, sites.z1pt0 / METRES_PER_KM,
+                                          sites.vs30)
                 )
         mean += self._get_regional_term(C, imt, sites.vs30, dists.rrup)
         # get standard deviations
@@ -108,7 +114,7 @@ class AbrahamsonEtAl2014(GMPE):
         (vs30 = 1100 m/s)
         """
         # reference vs30 = 1180 m/s
-        vs30_1180 = np.ones_like(sites.vs30) * 1180
+        vs30_1180 = np.ones_like(sites.vs30) * 1180.
         # reference shaking intensity = 0
         ref_iml = np.zeros_like(sites.vs30)
         # fake Z1.0 - Since negative it will be replaced by the default Z1.0
@@ -236,7 +242,7 @@ class AbrahamsonEtAl2014(GMPE):
             # Compute taper t1
             T1 = np.ones_like(dists.rx)
             T1 *= 60./45. if rup.dip <= 30. else (90.-rup.dip)/45.0
-            # Compute taper t2 (eq 12 at page 1039) - a2hw set to 0.2 as 
+            # Compute taper t2 (eq 12 at page 1039) - a2hw set to 0.2 as
             # indicated at page 1041
             T2 = np.zeros_like(dists.rx)
             a2hw = 0.2
@@ -293,8 +299,8 @@ class AbrahamsonEtAl2014(GMPE):
         This computes the reference depth to the 1.0 km/s interface using
         equation 18 at page 1042 of Abrahamson et al. (2014)
         """
-        return 1/1000 * np.exp(-7.67 / 4.*np.log((vs30**4 + 610.**4) /
-                                                 (1360.**4 + 610.**4)))
+        return (1. / 1000.) * np.exp((-7.67 / 4.)*np.log((vs30**4 + 610.**4) /
+                                                         (1360.**4 + 610.**4)))
 
     def _get_soil_depth_term(self, C, z1pt0, vs30):
         """

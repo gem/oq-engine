@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012-2016 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -64,6 +64,8 @@ class PointSource(ParametricSeismicSource):
     '''.split()
 
     MODIFICATIONS = set(())
+
+    RUPTURE_WEIGHT = 1 / 40.
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -182,8 +184,8 @@ class PointSource(ParametricSeismicSource):
                     hypocenter = Point(latitude=location.latitude,
                                        longitude=location.longitude,
                                        depth=hc_depth)
-                    occurrence_rate = (mag_occ_rate
-                                       * float(np_prob) * float(hc_prob))
+                    occurrence_rate = (
+                        mag_occ_rate * float(np_prob) * float(hc_prob))
                     occurrence_rate *= rate_scaling_factor
                     surface = self._get_rupture_surface(mag, np, hypocenter)
                     yield ParametricProbabilisticRupture(

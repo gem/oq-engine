@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012-2016 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -29,3 +29,4 @@ from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from openquake.hazardlib.mfd.youngs_coppersmith_1985 import (
     YoungsCoppersmith1985MFD
 )
+from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD

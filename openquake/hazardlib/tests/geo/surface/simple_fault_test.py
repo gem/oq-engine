@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012-2016 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -380,6 +380,27 @@ class PatchIndexTest(unittest.TestCase):
             lower_seismogenic_depth, dip)
         # The value used for this test is by hand calculation
         self.assertEqual(index, 1)
+
+    def test_hypocentre_index_multi_segments(self):
+        hypocentre = Point(0.588100, 0.479057, 7.1711)
+        upper_seismogenic_depth = 0.5
+        lower_seismogenic_depth = 15.
+        dip = 56.5
+
+        mesh_spacing = 2.
+        fault_trace = Line([Point(0., 0.), Point(0.55, 0.5), Point(1.2, 1.2)])
+
+        whole_fault_surface = SimpleFaultSurface.from_fault_data(
+            fault_trace, upper_seismogenic_depth,
+            lower_seismogenic_depth, dip, mesh_spacing
+        )
+
+        target_rupture_surface = whole_fault_surface.get_resampled_top_edge()
+        index = SimpleFaultSurface.hypocentre_patch_index(
+            hypocentre, target_rupture_surface, upper_seismogenic_depth,
+            lower_seismogenic_depth, dip)
+        # The value used for this test is by hand calculation
+        self.assertEqual(index, 2)
 
 
 class SimpleFaultSurfaceGetWidthTestCase(unittest.TestCase):

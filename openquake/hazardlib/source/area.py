@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012-2016 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -42,6 +42,8 @@ class AreaSource(PointSource):
     _slots_ = PointSource._slots_ + 'polygon area_discretization'.split()
 
     MODIFICATIONS = set(())
+
+    RUPTURE_WEIGHT = 1 / 40.
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,

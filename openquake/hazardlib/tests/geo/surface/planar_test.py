@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012-2016 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,7 +22,8 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 
-from openquake.hazardlib.tests.geo.surface import _planar_test_data as test_data
+from openquake.hazardlib.tests.geo.surface \
+    import _planar_test_data as test_data
 from openquake.hazardlib.tests.geo.surface import _utils as utils
 
 
@@ -36,44 +37,38 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
     def test_top_edge_depth_differs(self):
         corners = [Point(0, -1, 0.3), Point(0, 1, 0.30001),
                    Point(0, 1, 0.5), Point(0, -1, 0.5)]
-        self.assert_failed_creation(1, 0, 90, corners, ValueError,
-            'top and bottom edges must be parallel to the earth surface'
-        )
+        msg = 'top and bottom edges must be parallel to the earth surface'
+        self.assert_failed_creation(1, 0, 90, corners, ValueError, msg)
 
     def test_bottom_edge_depth_differs(self):
         corners = [Point(0, -1, 0.3), Point(0, 1, 0.3),
                    Point(0, 1, 0.5), Point(0, -1, 0.499999)]
-        self.assert_failed_creation(1, 0, 90, corners, ValueError,
-            'top and bottom edges must be parallel to the earth surface'
-        )
+        msg = 'top and bottom edges must be parallel to the earth surface'
+        self.assert_failed_creation(1, 0, 90, corners, ValueError, msg)
 
     def test_twisted_surface(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, -1, 2), Point(0, 1, 2)]
-        self.assert_failed_creation(1, 0, 90, corners, ValueError,
-            'corners are in the wrong order'
-        )
+        msg = 'corners are in the wrong order'
+        self.assert_failed_creation(1, 0, 90, corners, ValueError, msg)
 
     def test_corners_not_on_the_same_plane(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(-0.3, 1, 2), Point(0.3, -1, 2)]
-        self.assert_failed_creation(1, 0, 90, corners, ValueError,
-            'corner points do not lie on the same plane'
-        )
+        msg = 'corner points do not lie on the same plane'
+        self.assert_failed_creation(1, 0, 90, corners, ValueError, msg)
 
     def test_top_edge_shorter_than_bottom_edge(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, 1.2, 2), Point(0, -1.2, 2)]
-        self.assert_failed_creation(1, 0, 90, corners, ValueError,
-            'top and bottom edges have different lengths'
-        )
+        msg = 'top and bottom edges have different lengths'
+        self.assert_failed_creation(1, 0, 90, corners, ValueError, msg)
 
     def test_non_right_angles(self):
         corners = [Point(0, 0, 1), Point(1, 0, 1),
                    Point(1.045, 0, 2), Point(0.045, 0, 2)]
-        self.assert_failed_creation(1, 0, 90, corners, ValueError,
-            "surface's angles are not right"
-        )
+        msg = "surface's angles are not right"
+        self.assert_failed_creation(1, 0, 90, corners, ValueError, msg)
 
     def test_non_positive_mesh_spacing(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
@@ -85,17 +80,17 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
     def test_strike_out_of_range(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, 1, 2), Point(0, -1, 2)]
-        msg = 'strike is out of range [0, 360)'
-        self.assert_failed_creation(10, -1, 90, corners, ValueError, msg)
-        self.assert_failed_creation(10, 360, 90, corners, ValueError, msg)
+        for strike in [-1, 360]:
+            msg = 'strike %g is out of range [0, 360)' % strike
+            self.assert_failed_creation(10, strike, 90,
+                                        corners, ValueError, msg)
 
     def test_dip_out_of_range(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, 1, 2), Point(0, -1, 2)]
-        msg = 'dip is out of range (0, 90]'
-        self.assert_failed_creation(10, 0, 0, corners, ValueError, msg)
-        self.assert_failed_creation(10, 0, 91, corners, ValueError, msg)
-        self.assert_failed_creation(10, 0, -1, corners, ValueError, msg)
+        for dip in [0, 91, -1]:
+            msg = 'dip %g is out of range (0, 90]' % dip
+            self.assert_failed_creation(10, 0, dip, corners, ValueError, msg)
 
     def assert_successfull_creation(self, mesh_spacing, strike, dip,
                                     tl, tr, br, bl):
@@ -183,7 +178,7 @@ class PlanarSurfaceProjectTestCase(unittest.TestCase):
             numpy.array([[60, -10, -10], [59, 0, 0], [70, -11, -10]], float)
         )
 
-        dists, xx, yy =  surface._project(plons, plats, pdepths)
+        dists, xx, yy = surface._project(plons, plats, pdepths)
         aaae(xx, [0, 10, 0])
         aaae(yy, [0, 10, -1])
         aaae(dists, [0, 1, -10])
@@ -201,7 +196,7 @@ class PlanarSurfaceProjectTestCase(unittest.TestCase):
         )
         plons, plats, pdepths = [[4., 4.3, 3.1], [1.5, 1.7, 3.5],
                                  [11., 12., 13.]]
-        dists, xx, yy =  surface._project(plons, plats, pdepths)
+        dists, xx, yy = surface._project(plons, plats, pdepths)
         lons, lats, depths = surface._project_back(dists, xx, yy)
         aaae = numpy.testing.assert_array_almost_equal
         aaae(lons, plons)
@@ -216,11 +211,11 @@ class PlanarSurfaceGetMeshTestCase(utils.SurfaceTestCase):
 
     def test_2(self):
         self.assert_mesh_is(self._surface(test_data.TEST_2_CORNERS),
-                expected_mesh=test_data.TEST_2_MESH)
+                            expected_mesh=test_data.TEST_2_MESH)
 
     def test_3(self):
         self.assert_mesh_is(self._surface(test_data.TEST_3_CORNERS),
-                expected_mesh=test_data.TEST_3_MESH)
+                            expected_mesh=test_data.TEST_3_MESH)
 
     def test_4(self):
         self.assert_mesh_is(self._surface(test_data.TEST_4_CORNERS),
@@ -228,46 +223,46 @@ class PlanarSurfaceGetMeshTestCase(utils.SurfaceTestCase):
 
     def test_5(self):
         self.assert_mesh_is(self._surface(test_data.TEST_5_CORNERS),
-                expected_mesh=test_data.TEST_5_MESH)
+                            expected_mesh=test_data.TEST_5_MESH)
 
     def test_6(self):
         corners = [Point(0, 0, 9), Point(0, 1e-9, 9),
                    Point(0, 1e-9, 9.0 + 1e-9), Point(0, 0, 9.0 + 1e-9)]
         mesh = [[(0, 0, 9)]]
         self.assert_mesh_is(self._surface(corners),
-                expected_mesh=mesh)
+                            expected_mesh=mesh)
 
     def test_7_rupture_1(self):
         self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_1_CORNERS),
-                expected_mesh=test_data.TEST_7_RUPTURE_1_MESH)
+                            expected_mesh=test_data.TEST_7_RUPTURE_1_MESH)
 
     def test_7_rupture_2(self):
         self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_2_CORNERS),
-                expected_mesh=test_data.TEST_7_RUPTURE_2_MESH)
+                            expected_mesh=test_data.TEST_7_RUPTURE_2_MESH)
 
     def test_7_rupture_3(self):
         self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_3_CORNERS),
-                expected_mesh=test_data.TEST_7_RUPTURE_3_MESH)
+                            expected_mesh=test_data.TEST_7_RUPTURE_3_MESH)
 
     def test_7_rupture_4(self):
         self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_4_CORNERS),
-                expected_mesh=test_data.TEST_7_RUPTURE_4_MESH)
+                            expected_mesh=test_data.TEST_7_RUPTURE_4_MESH)
 
     def test_7_rupture_5(self):
         self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_5_CORNERS),
-                expected_mesh=test_data.TEST_7_RUPTURE_5_MESH)
+                            expected_mesh=test_data.TEST_7_RUPTURE_5_MESH)
 
     def test_7_rupture_6(self):
         self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_6_CORNERS),
-                expected_mesh=test_data.TEST_7_RUPTURE_6_MESH)
+                            expected_mesh=test_data.TEST_7_RUPTURE_6_MESH)
 
     def test_7_rupture_7(self):
         self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_7_CORNERS),
-                expected_mesh=test_data.TEST_7_RUPTURE_7_MESH)
+                            expected_mesh=test_data.TEST_7_RUPTURE_7_MESH)
 
     def test_7_rupture_8(self):
         self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_8_CORNERS),
-                expected_mesh=test_data.TEST_7_RUPTURE_8_MESH)
+                            expected_mesh=test_data.TEST_7_RUPTURE_8_MESH)
 
 
 class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):

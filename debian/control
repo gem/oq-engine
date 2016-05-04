@@ -2,7 +2,7 @@ Source: python-oq-hazardlib
 Section: python
 Priority: extra
 Maintainer: Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>
-Build-Depends: debhelper (>= 7.0.50~), python (>=2.6), python-setuptools, python-sphinx, python-numpy, python-scipy, python-shapely, gcc, python2.7-dev, python-nose, python-coverage, python-mock, quilt
+Build-Depends: debhelper (>= 7.0.50~), python (>=2.6), lsb-release, python-setuptools, python-sphinx, python-numpy, python-scipy, python-shapely, gcc, python2.7-dev, python-nose, python-coverage, python-mock, quilt
 Standards-Version: 3.9.3
 Homepage: http://github.com/gem/oq-hazardlib
 #Vcs-Git: git://git.debian.org/collab-maint/python-dateutil.git
@@ -11,5 +11,5 @@ Homepage: http://github.com/gem/oq-hazardlib
 Package: python-oq-hazardlib
 Architecture: any
 Conflicts: python-nhlib
-Depends: ${shlibs:Depends}, ${misc:Depends}, python-numpy, python-scipy, python-shapely, python-psutil, python-h5py (>= 2.2.1), python-decorator
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${dist:Depends}, python-numpy, python-scipy, python-shapely, python-psutil, python-decorator
 Description: hazardlib is a library for performing seismic hazard analysis

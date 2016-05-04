@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012-2016 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -13,11 +13,14 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import os
 import pickle
 import unittest
+import tempfile
 
 import numpy
 
+from openquake.baselib import hdf5
 from openquake.hazardlib.site import \
     Site, SiteCollection, FilteredSiteCollection
 from openquake.hazardlib.geo.point import Point
@@ -101,6 +104,16 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
             self.assertEqual(arr.dtype, bool)
         self.assertEqual(len(cll), 2)
 
+        # test serialization to hdf5
+        fd, fpath = tempfile.mkstemp(suffix='.hdf5')
+        os.close(fd)
+        with hdf5.File(fpath, 'w') as f:
+            f['folder'] = dict(sitecol=cll, b=[2, 3])
+            newcll = f['folder/sitecol']
+            self.assertEqual(newcll, cll)
+            self.assertEqual(list(f['folder/b']), [2, 3])
+        os.remove(fpath)
+
     def test_from_points(self):
         lons = [10, -1.2]
         lats = [20, -3.4]
@@ -113,7 +126,7 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         assert_eq(cll.mesh.lats, [20, -3.4])
         assert_eq(cll.mesh.depths, None)
         assert_eq(cll.backarc, [False, False])
-        
+
         for arr in (cll.vs30, cll.z1pt0, cll.z2pt5):
             self.assertIsInstance(arr, numpy.ndarray)
             self.assertEqual(arr.dtype, float)
@@ -122,6 +135,16 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
             self.assertEqual(arr.flags.writeable, False)
             self.assertEqual(arr.dtype, bool)
         self.assertEqual(len(cll), 2)
+
+        # test split_in_tiles
+        tiles = cll.split_in_tiles(0)
+        self.assertEqual(len(tiles), 1)
+
+        tiles = cll.split_in_tiles(1)
+        self.assertEqual(len(tiles), 1)
+
+        tiles = cll.split_in_tiles(2)
+        self.assertEqual(len(tiles), 2)
 
 
 class SiteCollectionFilterTestCase(unittest.TestCase):
@@ -260,6 +283,11 @@ class SiteCollectionIterTestCase(unittest.TestCase):
         # test equality of site collections
         sc = SiteCollection([exp_s1, exp_s2])
         self.assertEqual(cll, sc)
+
+        # test nonequality of site collections
+        # (see https://github.com/gem/oq-hazardlib/pull/403)
+        sc._vs30 = numpy.array([numpy.nan, numpy.nan])
+        self.assertNotEqual(cll, sc)
 
 
 class SitePickleTestCase(unittest.TestCase):
