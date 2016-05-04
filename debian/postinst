@@ -60,6 +60,9 @@ rm -f $HDIR/celeryconfig.py.new_in_this_release
 cp $IDIR/celeryconfig.py $HDIR
 chown -R $USER.$USER $HDIR
 
+# FIXME should be moved inside rules
+sed -i 's/file = ~/file = \/var\/lib\/openquake/g' $IDIR/$cfg
+
 SDIR=/etc/openquake
 for cfg in openquake.cfg
 do
