@@ -43,7 +43,7 @@ from openquake.engine.export import core
 from openquake.engine import engine, logs
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import executor, utils
-from openquake.server.db import models, actions
+from openquake.server.db import models
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -459,7 +459,8 @@ def get_result(request, result_id):
     # the job which it is related too is not complete,
     # throw back a 404.
     try:
-        job_status, ds_key = logs.dbcmd('get_result', result_id)
+        job_id, job_status, datadir, ds_key = logs.dbcmd(
+            'get_result', result_id)
         if not job_status == 'complete':
             return HttpResponseNotFound()
     except models.NotFound:
@@ -470,7 +471,8 @@ def get_result(request, result_id):
 
     tmpdir = tempfile.mkdtemp()
     try:
-        exported = core.export(result_id, tmpdir, export_type=export_type)
+        exported = core.export_from_datastore(
+            (ds_key, export_type), job_id, datadir, tmpdir)
     except DataStoreExportError as exc:
         # TODO: there should be a better error page
         return HttpResponse(content='%s: %s' % (exc.__class__.__name__, exc),
