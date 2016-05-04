@@ -233,11 +233,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             numpy.array([0.700, 0.700]),
             self.vulnerability_function1([0.525, 0.530], EPSILONS[:2]))
 
-        # min IML in this case is 0.01, there are no epsilons
-        numpy.testing.assert_allclose(
-            numpy.array([0.0, 0.0, 0.0]),
-            self.vulnerability_function1([0.0001, 0.0002, 0.0003], None))
-
     def test_loss_ratios_computation_using_gmfs(self):
         """Loss ratios generation given a GMFs and a vulnerability function.
 
