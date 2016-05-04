@@ -522,9 +522,9 @@ class ProbabilisticEventBased(RiskModel):
                 ratios = vf.apply_to(means, covs, idxs, epsilons)
             else:
                 ratios = means
-            loss_ratios[i, :, 0] = ratios
+            loss_ratios[i, idxs, 0] = ratios
             if self.insured_losses and loss_type != 'occupants':
-                loss_ratios[i, :, 1] = scientific.insured_losses(
+                loss_ratios[i, idxs, 1] = scientific.insured_losses(
                     ratios,  asset.deductible(loss_type),
                     asset.insurance_limit(loss_type))
         return scientific.Output(
