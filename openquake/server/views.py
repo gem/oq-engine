@@ -405,7 +405,8 @@ def calc_results(request, calc_id):
     for result in results:
         try:  # output from the datastore
             rtype = result.ds_key
-            outtypes = output_types[rtype]
+            # Catalina asked to remove the .txt outputs (used for the GMFs)
+            outtypes = [ot for ot in output_types[rtype] if ot != 'txt']
         except KeyError:
             continue  # non-exportable outputs should not be shown
         url = urlparse.urljoin(base_url, 'v1/calc/result/%d' % result.id)
