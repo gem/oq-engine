@@ -26,7 +26,7 @@ from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9)
 
 from openquake.commonlib import writers
-from openquake.calculators.event_based import get_gmvs_by_sid
+from openquake.baselib.general import get_array
 from openquake.calculators.tests import CalculatorTestCase
 
 
@@ -49,9 +49,8 @@ class ScenarioHazardTestCase(CalculatorTestCase):
     def frequencies(self, case, fst_value, snd_value):
         [gmfa] = self.execute(case.__file__, 'job.ini').values()
         [imt] = self.calc.oqparam.imtls
-        gmvs_by_sid = get_gmvs_by_sid(gmfa)
-        gmvs0 = gmvs_by_sid[0][imt]
-        gmvs1 = gmvs_by_sid[1][imt]
+        gmvs0 = get_array(sid=0, imti=0)['gmv']
+        gmvs1 = get_array(sid=11, imti=0)['gmv']
         realizations = float(self.calc.oqparam.number_of_ground_motion_fields)
         gmvs_within_range_fst = count_close(fst_value, gmvs0, gmvs1)
         gmvs_within_range_snd = count_close(snd_value, gmvs0, gmvs1)
@@ -61,10 +60,10 @@ class ScenarioHazardTestCase(CalculatorTestCase):
     def medians(self, case):
         [gmfa] = self.execute(case.__file__, 'job.ini').values()
         median = self.calc.oqparam.imtls.copy()
-        gmvs_by_sid = get_gmvs_by_sid(gmfa)
-        for imt in median:
-            gmf = [gmvs_by_sid[sid][imt] for sid in sorted(gmvs_by_sid)]
-            median[imt] = numpy.median(gmf, axis=1)  # shape N
+        for imti, imt in enumerate(self.calc.oqparam.imtls):
+            gmvs = sorted(get_array(gmfa, imti=imti)['gmv'])
+            import pdb; pdb.set_trace()
+            median[imt] = numpy.median(gmvs, axis=1)  # shape N
         return median
 
     @attr('qa', 'hazard', 'scenario')

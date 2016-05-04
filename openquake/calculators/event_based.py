@@ -25,7 +25,8 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict, groupby
+from openquake.baselib.general import (
+    AccumDict, groupby2, group_array, get_array)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
@@ -41,12 +42,14 @@ from openquake.calculators.classical import ClassicalCalculator
 
 # ######################## rupture calculator ############################ #
 
+U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 HAZCURVES = 1
 
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32)])
+gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface):
@@ -399,25 +402,19 @@ def build_eb_ruptures(
                             src.source_id, src.trt_model_id, serial)
 
 
-def get_gmvs_by_sid(gmfa):
-    """
-    Returns a dictionary sid -> array of composite ground motion values
-    """
-    def to_array(group):  # this works with numpy 1.6 too
-        records = list(group)
-        return numpy.array([record['gmv'] for record in records],
-                           records[0]['gmv'].dtype)
-    return groupby(gmfa, operator.itemgetter('sid'), to_array)
-
-
 def fix_minimum_intensity(min_iml, imts):
     """
+    :param min_iml: a dictionary, possibly with a 'default' key
+    :param imts: an ordered list of IMTs
+    :returns: a numpy array of intensities, one per IMT
+
     Make sure the dictionary minimum_intensity (provided by the user in the
     job.ini file) is filled for all intensity measure types and has no key
     named 'default'. Here is how it works:
 
     >>> min_iml = {'PGA': 0.1, 'default': 0.05}
     >>> fix_minimum_intensity(min_iml, ['PGA', 'PGV'])
+    array([ 0.1 ,  0.05], dtype=float32)
     >>> sorted(min_iml.items())
     [('PGA', 0.1), ('PGV', 0.05)]
     """
@@ -431,6 +428,7 @@ def fix_minimum_intensity(min_iml, imts):
                     'file is missing the IMT %r' % imt)
     if 'default' in min_iml:
         del min_iml['default']
+    return F32([min_iml.get(imt, 0) for imt in imts])
 
 
 @base.calculators.add('event_based_rupture')
@@ -449,7 +447,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         """
         oq = self.oqparam
         self.random_seed = oq.random_seed
-        fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
+        self.min_iml = fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
 
     def count_eff_ruptures(self, ruptures_by_trt_id, trt_model):
         """
@@ -526,7 +524,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
 # ######################## GMF calculator ############################ #
 
 def make_gmfs(eb_ruptures, sitecol, imts, rlzs_assoc,
-              trunc_level, correl_model, monitor=Monitor()):
+              trunc_level, correl_model, min_iml=None, monitor=Monitor()):
     """
     :param eb_ruptures: a list of EBRuptures with the same trt_model_id
     :param sitecol: a SiteCollection instance
@@ -539,27 +537,26 @@ def make_gmfs(eb_ruptures, sitecol, imts, rlzs_assoc,
     """
     trt_id = eb_ruptures[0].trt_id
     gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
-    dic = collections.defaultdict(list)  # rlzi -> [gmfa, ...]
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(trt_id)
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
+    data = []
     for ebr in eb_ruptures:
+        rup = ebr.rupture
         with ctx_mon:
             r_sites = site.FilteredSiteCollection(ebr.indices, sites)
             computer = calc.gmf.GmfComputer(
-                ebr.rupture, r_sites, imts, gsims, trunc_level, correl_model)
+                rup, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
-            for gsim in gsims:
-                for i, rlz in enumerate(rlzs_assoc[trt_id, str(gsim)]):
-                    seed = ebr.rupture.seed + i
-                    gmfa = computer.compute(seed, gsim, ebr.eids)
-                    dic[rlz.ordinal].append(gmfa)
-    res = {rlzi: numpy.concatenate(dic[rlzi]) for rlzi in dic}
-    return res
+            data.append(
+                computer.compute(rup.seed, ebr.eids, rlzs_by_gsim, min_iml))
+    return numpy.concatenate(data)
 
 
 @parallel.litetask
-def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc, monitor):
+def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
+                            min_iml, monitor):
     """
     :param eb_ruptures:
         a list of blocks of EBRuptures of the same SESCollection
@@ -580,9 +577,10 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc, monitor):
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
     tot_sites = len(sitecol.complete)
-    gmfadict = make_gmfs(
+    gmfa = make_gmfs(
         eb_ruptures, sitecol, imts, rlzs_assoc, trunc_level, correl_model,
-        monitor)
+        min_iml, monitor)
+    gmfadict = group_array(gmfa, 'rlzi')
     result = {rlzi: [gmfadict[rlzi], None]
               if oq.ground_motion_fields else [None, None]
               for rlzi in gmfadict}
@@ -590,17 +588,18 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc, monitor):
         with monitor('bulding hazard curves', measuremem=False):
             duration = oq.investigation_time * oq.ses_per_logic_tree_path
             for rlzi in gmfadict:
-                gmvs_by_sid = get_gmvs_by_sid(gmfadict[rlzi])
+                gmvs_by_sid = group_array(gmfadict[rlzi], 'sid')
                 curves = zero_curves(tot_sites, oq.imtls)
-                for imt in oq.imtls:
+                for imti, imt in enumerate(oq.imtls):
                     imls = numpy.array(oq.imtls[imt])
                     for sid in range(tot_sites):
                         try:
-                            gmvs = gmvs_by_sid[sid]
+                            gmvs = get_array(
+                                gmvs_by_sid[sid], imti=imti)['gmv']
                         except KeyError:
                             continue
                         curves[imt][sid] = gmvs_to_haz_curve(
-                            gmvs[imt], imls, oq.investigation_time, duration)
+                            gmvs, imls, oq.investigation_time, duration)
                 result[rlzi][HAZCURVES] = curves
     return result
 
@@ -631,7 +630,6 @@ class EventBasedCalculator(ClassicalCalculator):
             sr.set_weight(num_rlzs, {})
             self.sesruptures.append(sr)
         self.sesruptures.sort(key=operator.attrgetter('serial'))
-        gmv_dt = calc.gmf.gmv_dt(self.oqparam.imtls)
         if self.oqparam.ground_motion_fields:
             for rlz in self.rlzs_assoc.realizations:
                 self.datastore.create_dset(
@@ -676,10 +674,11 @@ class EventBasedCalculator(ClassicalCalculator):
         zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         zerodict = AccumDict({rlz.ordinal: zc
                               for rlz in self.rlzs_assoc.realizations})
+        min_iml = fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
         acc = parallel.apply_reduce(
             self.core_task.__func__,
             (self.sesruptures, self.sitecol, oq.imtls, self.rlzs_assoc,
-             monitor),
+             min_iml, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             acc=zerodict, agg=self.combine_curves_and_save_gmfs,
             key=operator.attrgetter('trt_id'),

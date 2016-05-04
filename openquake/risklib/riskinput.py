@@ -525,58 +525,6 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     return eps
 
 
-# this not used; it could be used in the future, if we find computations
-# that run out of memory. For now it is not used for two reasons:
-# 1) it is slower than keeping everything in memory
-# 2) it requires having disk space on the workers, which apparently is
-# not the case for some sponsors
-class _GmfCollector(object):
-    """
-    An object storing the GMFs into a temporary HDF5 file to save memory.
-    """
-    def __init__(self, calc_id, task_no, imts, rlzs):
-        self.calc_id = calc_id
-        self.task_no = task_no
-        self.imts = imts
-        self.rlzs = rlzs
-        self.fname = os.path.join(
-            tempfile.gettempdir(), '%d-%d.hdf5' % (calc_id, task_no))
-        self.hdf5 = h5py.File(self.fname, 'w')
-
-    def close(self):
-        self.hdf5.close()
-        nbytes = os.path.getsize(self.fname)
-        os.remove(self.fname)
-        return nbytes
-
-    def save(self, sid, imt, rlz, gmvs, eids):
-        key = '%s/%s/%s' % (sid, imt, rlz.ordinal)
-        try:
-            dset = self.hdf5[key]
-        except KeyError:
-            dset = self.hdf5.create_dataset(
-                key, (0,), gmv_eid_dt, chunks=True, maxshape=(None,))
-        hdf5.extend(dset, numpy.array(list(zip(gmvs, eids)), gmv_eid_dt))
-
-    def __getitem__(self, sid):
-        hazard = {}
-        try:
-            dset = self.hdf5[str(sid)]
-        except KeyError:
-            return hazard
-        for imt in self.imts:
-            try:
-                items = dset[imt].items()
-            except KeyError:
-                hazard[imt] = {}
-            else:
-                hazard[imt] = {self.rlzs[int(rlzi)]: ds.value
-                               for rlzi, ds in items}
-        return hazard
-
-gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U32)])
-
-
 class GmfCollector(object):
     """
     An object storing the GMFs in memory.
@@ -591,11 +539,10 @@ class GmfCollector(object):
         self.dic.clear()
         return self.nbytes
 
-    def save(self, sid, imt, rlz, gmvs, eids):
-        key = '%s/%s/%s' % (sid, imt, rlz.ordinal)
-        array = numpy.array(list(zip(gmvs, eids)), gmv_eid_dt)
-        self.dic[key].append(array)
-        self.nbytes += array.nbytes
+    def save(self, sid, imti, rlz, gmvs_eids):
+        key = '%s/%s/%s' % (sid, self.imts[imti], rlz.ordinal)
+        self.dic[key].append(gmvs_eids)
+        self.nbytes += gmvs_eids.nbytes
 
     def __getitem__(self, sid):
         hazard = {}
@@ -635,24 +582,15 @@ def calc_gmfs(eb_ruptures, sitecol, imts, rlzs_assoc,
     sites = sitecol.complete
     gmfcoll = GmfCollector(imts, rlzs)
     for ebr in eb_ruptures:
+        rup = ebr.rupture
         with ctx_mon:
             r_sites = site.FilteredSiteCollection(ebr.indices, sites)
             computer = GmfComputer(
-                ebr.rupture, r_sites, imts, gsims,
-                trunc_level, correl_model)
+                rup, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
-            ddic = computer.calcgmfs(
-                ebr.multiplicity, ebr.rupture.seed, rlzs_by_gsim)
-            for rlz, gmf_by_imt in ddic.items():
-                for imt, gmf in gmf_by_imt.items():
-                    for sid, gmvs in zip(r_sites.sids, gmf):
-                        if min_iml:
-                            ok = gmvs >= min_iml[imt]
-                            gmvs, eids = gmvs[ok], ebr.eids[ok]
-                        else:
-                            eids = ebr.eids
-                        if len(eids):
-                            gmfcoll.save(sid, imt, rlz, gmvs, eids)
+            data = computer.calcgmfs(rup.seed, ebr.eids, rlzs_by_gsim, min_iml)
+            for sid, rlz, imti, gmvs_eids in data:
+                gmfcoll.save(sid, imti, rlz, gmvs_eids)
     return gmfcoll
 
 

@@ -24,7 +24,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import groupby, humansize
+from openquake.baselib.general import groupby, humansize, get_array
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.commonlib.export import export
@@ -604,13 +604,13 @@ def _get_gmfs(dstore, serial, eid):
     rlzs = [rlz for gsim in map(str, gsims)
             for rlz in rlzs_assoc[rup.trt_id, gsim]]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
-    gmf_list = event_based.make_gmfs(
+    gmfa = event_based.make_gmfs(
         [rup], sitecol, oq.imtls, rlzs_assoc,
         oq.truncation_level, correl_model).values()
     for imt in oq.imtls:
         gmfa = numpy.zeros(N, gmf_dt)
         for rlz in rlzs:
-            data = gmf_list[rlz.ordinal]
+            data = get_array(gmfa, rlzi=rlz.ordinal)
             ok = data[data['eid'] == eid]
             gmfa['%03d' % rlz.ordinal][rup.indices] = ok['gmv'][imt]
         yield gmfa, imt
