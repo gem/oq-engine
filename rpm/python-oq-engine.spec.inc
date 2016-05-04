@@ -32,7 +32,7 @@ Requires: %{dev_deps}
 #BuildRequires: %{dev_deps}
 #BuildRequires: %{oqlib_deps}
 
-BuildRequires: python-setuptools
+BuildRequires: sed python-setuptools
 
 %description
 
@@ -69,6 +69,7 @@ mkdir -p %{buildroot}/%{_sysconfdir}/openquake
 mkdir -p %{buildroot}/%{_datadir}/openquake/engine
 install -m 644 celeryconfig.py %{buildroot}/%{_datadir}/openquake/engine
 install -m 644 openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
+sed -i 's/file = ~/file = \/var\/lib\/openquake/g' %{buildroot}/%{_sysconfdir}/openquake/openquake.cfg
 
 %clean
 rm -rf %{buildroot}
