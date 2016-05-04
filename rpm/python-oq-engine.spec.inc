@@ -69,6 +69,7 @@ mkdir -p %{buildroot}/%{_sysconfdir}/openquake
 mkdir -p %{buildroot}/%{_datadir}/openquake/engine
 install -m 644 celeryconfig.py %{buildroot}/%{_datadir}/openquake/engine
 install -m 644 openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
+# FIXME this should be moved inside a patch file
 sed -i 's/file = ~/file = \/var\/lib\/openquake/g' %{buildroot}/%{_sysconfdir}/openquake/openquake.cfg
 
 %clean
