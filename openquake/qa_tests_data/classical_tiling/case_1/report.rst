@@ -1,26 +1,28 @@
 Classical PSHA using Area Source
 ================================
 
+gem-tstation:/home/michele/ssd/calc_12664.hdf5 updated Wed May  4 04:56:46 2016
+
 num_sites = 6, sitecol = 969 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'classical'       
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 200.0}
-investigation_time           50.0              
-ses_per_logic_tree_path      1                 
-truncation_level             3.0               
-rupture_mesh_spacing         2.0               
-complex_fault_mesh_spacing   2.0               
-width_of_mfd_bin             0.2               
-area_source_discretization   5.0               
-random_seed                  23                
-master_seed                  0                 
-concurrent_tasks             4                 
-sites_per_tile               1                 
-============================ ==================
+============================ ===================
+calculation_mode             'classical'        
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           50.0               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         2.0                
+complex_fault_mesh_spacing   2.0                
+width_of_mfd_bin             0.2                
+area_source_discretization   5.0                
+random_seed                  23                 
+master_seed                  0                  
+sites_per_tile               1                  
+oqlite_version               '0.13.0-git02c4b55'
+============================ ===================
 
 Input files
 -----------
@@ -66,32 +68,50 @@ source_model     trt_id trt                  num_sources eff_ruptures weight
 source_model.xml 0      Active Shallow Crust 1           1,640        41    
 ================ ====== ==================== =========== ============ ======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =========
-Number of tasks to generate 12       
-Sent data                   333.53 KB
-=========================== =========
+Informational data
+------------------
+======================================== ==============
+count_eff_ruptures_max_received_per_task 3480          
+count_eff_ruptures_num_tasks             12            
+count_eff_ruptures_sent.monitor          38652         
+count_eff_ruptures_sent.rlzs_assoc       36012         
+count_eff_ruptures_sent.sitecol          5244          
+count_eff_ruptures_sent.siteidx          60            
+count_eff_ruptures_sent.sources          258192        
+count_eff_ruptures_tot_received          41760         
+hazard.input_weight                      41.0          
+hazard.n_imts                            3             
+hazard.n_levels                          19.0          
+hazard.n_realizations                    2             
+hazard.n_sites                           6             
+hazard.n_sources                         0             
+hazard.output_weight                     684.0         
+hostname                                 'gem-tstation'
+======================================== ==============
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   41     205       0.056       0.100      0.0      
+0            1         AreaSource   41     205       0.007       0.045      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+Not available
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.318     0.0       1     
-splitting sources              0.100     0.0       1     
-reading composite source model 0.084     0.0       1     
-filtering sources              0.056     0.0       6     
-reading site collection        0.005     0.0       1     
-total count_eff_ruptures       0.004     0.0       12    
-store source_info              4.230E-04 0.0       1     
-aggregate curves               2.344E-04 0.0       12    
+managing sources               0.087     0.0       1     
+reading composite source model 0.046     0.0       1     
+splitting sources              0.045     0.0       1     
+filtering sources              0.007     0.0       6     
+total count_eff_ruptures       0.005     0.0       12    
+store source_info              0.004     0.0       1     
+reading site collection        0.003     0.0       1     
+aggregate curves               1.609E-04 0.0       12    
 ============================== ========= ========= ======

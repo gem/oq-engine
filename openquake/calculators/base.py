@@ -19,6 +19,7 @@ import sys
 import abc
 import pdb
 import math
+import socket
 import logging
 import operator
 import traceback
@@ -27,12 +28,12 @@ import collections
 import numpy
 
 from openquake.hazardlib.geo import geodetic
-from openquake.baselib import general
+from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import (
     readinput, riskmodels, datastore, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.parallel import apply_reduce, executor
+from openquake.commonlib.parallel import starmap, executor
 from openquake.risklib import riskinput
 from openquake.baselib.python3compat import with_metaclass
 
@@ -83,7 +84,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     assetcol = datastore.persistent_attribute('assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
     job_info = datastore.persistent_attribute('job_info')
-    oqparam = datastore.persistent_attribute('oqparam')
     performance = datastore.persistent_attribute('performance')
     csm = datastore.persistent_attribute('composite_source_model')
     pre_calculator = None  # to be overridden
@@ -105,9 +105,9 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         """
         Update the current calculation parameters and save oqlite_version
         """
-        vars(self.oqparam).update(oqlite_version=repr(__version__), **kw)
-        self.oqparam = self.oqparam  # save the updated oqparam
-        self.datastore.hdf5.flush()
+        vars(self.oqparam).update(oqlite_version=__version__, **kw)
+        self.datastore['oqparam'] = self.oqparam  # save the updated oqparam
+        self.datastore.flush()
 
     def set_log_format(self):
         """Set the format of the root logger"""
@@ -116,10 +116,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         for handler in logging.root.handlers:
             handler.setFormatter(logging.Formatter(fmt))
 
-    def run(self, pre_execute=True, concurrent_tasks=None, **kw):
+    def run(self, pre_execute=True, concurrent_tasks=None, close=True, **kw):
         """
         Run the calculation and return the exported outputs.
         """
+        self.close = close
         self.set_log_format()
         if (concurrent_tasks is not None and concurrent_tasks !=
                 OqParam.concurrent_tasks.default):
@@ -217,27 +218,19 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         then close the datastore.
         """
         if 'hcurves' in self.datastore:
-            _set_nbytes('hcurves', self.datastore)
+            self.datastore.set_nbytes('hcurves')
         if 'hmaps' in self.datastore:
-            _set_nbytes('hmaps', self.datastore)
+            self.datastore.set_nbytes('hmaps')
         if 'rlzs_assoc' in self.datastore:
             rlzs = self.rlzs_assoc.realizations
             self.realizations = numpy.array(
                 [(r.uid, r.weight) for r in rlzs], rlz_dt)
         self.datastore.flush()
-        # NB: the datastore must not be closed, otherwise some tests
-        # will break; it will be closed automatically anyway
-
-
-def _set_nbytes(dkey, dstore):
-    # set the number of bytes assuming the dkey correspond to a flat group
-    # with all elements having the same 'nbytes' attribute
-    # NB: this is a workaround for a bug in HDF5 affecting Ubuntu 12.04;
-    # in newer version just use dstore.set_nbytes
-    # the problem was discovered in demos/hazard/LogicTreeCase1ClassicalPSHA
-    group = dstore[dkey]
-    key = group.keys()[0]
-    group.attrs['nbytes'] = group[key].attrs['nbytes'] * len(group)
+        if self.close:  # in the engine we close later
+            try:
+                self.datastore.close()
+            except RuntimeError:  # there could be a mysterious HDF5 error
+                logging.warn('', exc_info=True)
 
 
 def check_time_event(oqparam, time_events):
@@ -299,6 +292,7 @@ class HazardCalculator(BaseCalculator):
         If yes, read the inputs by invoking the precalculator or by retrieving
         the previous calculation; if not, read the inputs directly.
         """
+        job_info = hdf5.LiteralAttrs()
         if self.pre_calculator is not None:
             # the parameter hazard_calculation_id is only meaningful if
             # there is a precalculator
@@ -337,21 +331,32 @@ class HazardCalculator(BaseCalculator):
                     self.rup_data = {}
 
                     # we could manage limits here
-                    self.job_info = readinput.get_job_info(
-                        self.oqparam, self.csm, self.sitecol)
+                    vars(job_info).update(readinput.get_job_info(
+                        self.oqparam, self.csm, self.sitecol))
                     logging.info('Expected output size=%s',
-                                 self.job_info.hazard['output_weight'])
+                                 job_info.hazard['output_weight'])
                     logging.info('Total weight of the sources=%s',
-                                 self.job_info.hazard['input_weight'])
+                                 job_info.hazard['input_weight'])
+                self.init()
                 with self.monitor('managing sources', autoflush=True):
                     self.send_sources()
-                self.manager.store_source_info(
-                    self.datastore, self.core_task.__func__.__name__)
+                self.manager.store_source_info(self.datastore)
                 attrs = self.datastore.hdf5['composite_source_model'].attrs
                 attrs['weight'] = self.csm.weight
                 attrs['filtered_weight'] = self.csm.filtered_weight
                 attrs['maxweight'] = self.csm.maxweight
-        self.datastore.hdf5.flush()
+
+        job_info.hostname = socket.gethostname()
+        if hasattr(self, 'riskmodel'):
+            job_info.require_epsilons = bool(self.riskmodel.covs)
+        self.job_info = job_info
+        self.datastore.flush()
+
+    def init(self):
+        """
+        To be overridden to initialize the datasets needed by the calculation
+        """
+        self.random_seed = None
 
     def read_exposure(self):
         """
@@ -497,13 +502,26 @@ class HazardCalculator(BaseCalculator):
             self.csm, self.core_task.__func__,
             oq.maximum_distance, self.datastore,
             self.monitor.new(oqparam=oq),
-            filter_sources=oq.filter_sources, num_tiles=num_tiles)
+            self.random_seed, oq.filter_sources, num_tiles=num_tiles)
         siteidx = 0
         for i, tile in enumerate(tiles, 1):
             if num_tiles > 1:
                 logging.info('Processing tile %d', i)
             self.manager.submit_sources(tile, siteidx)
             siteidx += len(tile)
+
+    def save_data_transfer(self, taskmanager):
+        """
+        Save information about the data transfer in the risk calculation
+        as attributes of agg_loss_table
+        """
+        if taskmanager.received:  # nothing is received when OQ_DISTRIBUTE=no
+            tname = taskmanager.name
+            self.datastore.save('job_info', {
+                tname + '_sent': taskmanager.sent,
+                tname + '_max_received_per_task': max(taskmanager.received),
+                tname + '_tot_received': sum(taskmanager.received),
+                tname + '_num_tasks': len(taskmanager.received)})
 
     def post_process(self):
         """For compatibility with the engine"""
@@ -599,12 +617,10 @@ class RiskCalculator(HazardCalculator):
         rlz_ids = getattr(self.oqparam, 'rlz_ids', ())
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
-        all_args = ((self.riskinputs, self.riskmodel, self.rlzs_assoc) +
-                    self.extra_args + (self.monitor,))
-        res = apply_reduce(
-            self.core_task.__func__, all_args,
-            concurrent_tasks=self.oqparam.concurrent_tasks,
-            weight=get_weight, key=self.riskinput_key)
+        all_args = [(riskinput, self.riskmodel, self.rlzs_assoc) +
+                    self.extra_args + (self.monitor,)
+                    for riskinput in self.riskinputs]
+        res = starmap(self.core_task.__func__, all_args).reduce()
         return res
 
 
@@ -613,7 +629,7 @@ class RiskCalculator(HazardCalculator):
 def get_gmfs(dstore):
     """
     :param dstore: a datastore
-    :returns: a dictionary of gmfs
+    :returns: a dictionary trt_id, gsid -> gmfa
     """
     oq = dstore['oqparam']
     if 'gmfs' in oq.inputs:  # from file
@@ -627,9 +643,9 @@ def get_gmfs(dstore):
         logging.info('Preparing the risk input')
         return etags, {(0, 'FromFile'): gmfs_by_imt}
 
-    # else from rupture
+    # else from datastore
+    rlzs = dstore['rlzs_assoc'].realizations
     sitecol = dstore['sitecol']
-    gmfa = dstore['gmf_data/1'].value
     # NB: if the hazard site collection has N sites, the hazard
     # filtered site collection for the nonzero GMFs has N' <= N sites
     # whereas the risk site collection associated to the assets
@@ -641,15 +657,14 @@ def get_gmfs(dstore):
     risk_indices = set(sitecol.indices)  # N'' values
     N = len(haz_sitecol.complete)
     imt_dt = numpy.dtype([(bytes(imt), F32) for imt in oq.imtls])
-    E = gmfa.shape[0]
+    E = oq.number_of_ground_motion_fields
     # build a matrix N x E for each GSIM realization
     gmfs = {(trt_id, gsim): numpy.zeros((N, E), imt_dt)
             for trt_id, gsim in dstore['rlzs_assoc']}
-    for eid, gmf in enumerate(gmfa):
-        assert len(haz_sitecol.indices) == len(gmf), (
-            len(haz_sitecol.indices), len(gmf))
-        for sid, gmv in zip(haz_sitecol.indices, gmf):
+    for i, rlz in enumerate(rlzs):
+        for rec in dstore['gmf_data/%04d' % i]:
+            sid = rec['sid']
             if sid in risk_indices:
                 for trt_id, gsim in gmfs:
-                    gmfs[trt_id, gsim][sid, eid] = gmv[gsim]
+                    gmfs[trt_id, str(rlz)][sid, rec['eid']] = rec['gmv']
     return dstore['etags'].value, gmfs

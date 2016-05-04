@@ -24,7 +24,6 @@ import logging
 from openquake.hazardlib.calc.hazard_curve import zero_curves
 from openquake.commonlib import sap, datastore
 from openquake.commonlib.writers import write_csv
-from openquake.commonlib.reportwriter import set_ancestors
 from openquake.commonlib.util import rmsep
 from openquake.risklib import scientific
 
@@ -52,10 +51,7 @@ def get_hcurves_and_means(dstore):
 
 def show(what, calc_id=-1):
     """
-    Show the content of a datastore.
-
-    :param what: key or view of the datastore
-    :param calc_id: numeric calculation ID; if -1, show the last calculation
+    Show the content of a datastore (by default the last one).
     """
     if what == 'all':  # show all
         if not os.path.exists(datastore.DATADIR):
@@ -74,17 +70,11 @@ def show(what, calc_id=-1):
                 continue
             else:
                 rows.append((calc_id, cmode, descr.encode('utf-8')))
-                ds.close()
         for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
             print('#%d %s: %s' % row)
         return
-    elif what == 'views':
-        for name in sorted(datastore.view):
-            print(name)
-        return
 
     ds = datastore.read(calc_id)
-    set_ancestors(ds)
 
     # this part is experimental
     if what == 'rlzs' and 'hcurves' in ds:
@@ -107,6 +97,7 @@ def show(what, calc_id=-1):
         else:
             print(obj)
 
+    ds.close()
 
 parser = sap.Parser(show)
 parser.arg('what', 'key or view of the datastore')

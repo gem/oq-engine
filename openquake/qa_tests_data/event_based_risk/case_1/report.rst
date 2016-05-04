@@ -1,39 +1,44 @@
-PEB QA test 1
-=============
+Event Based Risk QA Test 1
+==========================
+
+gem-tstation:/home/michele/ssd/calc_12618.hdf5 updated Wed May  4 04:54:34 2016
 
 num_sites = 3, sitecol = 831 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'event_based'     
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 100.0}
-investigation_time           50.0              
-ses_per_logic_tree_path      20                
-truncation_level             3.0               
-rupture_mesh_spacing         5.0               
-complex_fault_mesh_spacing   5.0               
-width_of_mfd_bin             0.3               
-area_source_discretization   10.0              
-random_seed                  23                
-master_seed                  0                 
-concurrent_tasks             40                
-============================ ==================
+============================ ===================
+calculation_mode             'event_based_risk' 
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 100.0} 
+investigation_time           50.0               
+ses_per_logic_tree_path      20                 
+truncation_level             3.0                
+rupture_mesh_spacing         5.0                
+complex_fault_mesh_spacing   5.0                
+width_of_mfd_bin             0.3                
+area_source_discretization   10.0               
+random_seed                  23                 
+master_seed                  42                 
+avg_losses                   True               
+oqlite_version               '0.13.0-git02c4b55'
+============================ ===================
 
 Input files
 -----------
-=========================== ====================================================================
-Name                        File                                                                
-=========================== ====================================================================
-contents_vulnerability      `vulnerability_model_coco.xml <vulnerability_model_coco.xml>`_      
-gsim_logic_tree             `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                        
-job_ini                     `job_haz.ini <job_haz.ini>`_                                        
-nonstructural_vulnerability `vulnerability_model_nonstco.xml <vulnerability_model_nonstco.xml>`_
-source                      `source_model.xml <source_model.xml>`_                              
-source_model_logic_tree     `source_model_logic_tree.xml <source_model_logic_tree.xml>`_        
-structural_vulnerability    `vulnerability_model_stco.xml <vulnerability_model_stco.xml>`_      
-=========================== ====================================================================
+=========================== ========================================================================
+Name                        File                                                                    
+=========================== ========================================================================
+contents_vulnerability      `vulnerability_model_coco.xml <vulnerability_model_coco.xml>`_          
+exposure                    `exposure.xml <exposure.xml>`_                                          
+gsim_logic_tree             `gmpe_logic_tree.xml <gmpe_logic_tree.xml>`_                            
+job_ini                     `job.ini <job.ini>`_                                                    
+nonstructural_vulnerability `vulnerability_model_nonstco.xml <vulnerability_model_nonstco.xml>`_    
+occupants_vulnerability     `vulnerability_model_occupants.xml <vulnerability_model_occupants.xml>`_
+source                      `source_model.xml <source_model.xml>`_                                  
+source_model_logic_tree     `source_model_logic_tree.xml <source_model_logic_tree.xml>`_            
+structural_vulnerability    `vulnerability_model_stco.xml <vulnerability_model_stco.xml>`_          
+=========================== ========================================================================
 
 Composite source model
 ----------------------
@@ -68,40 +73,97 @@ source_model     trt_id trt                  num_sources eff_ruptures weight
 source_model.xml 0      Active Shallow Crust 3           8            0.450 
 ================ ====== ==================== =========== ============ ======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== ========
-Number of tasks to generate 1       
-Sent data                   9.32 KB 
-Total received data         12.34 KB
-Maximum received per task   12.34 KB
-=========================== ========
+Informational data
+------------------
+====================================== ==============
+event_based_risk_max_received_per_task 5673          
+event_based_risk_num_tasks             8             
+event_based_risk_sent.assetcol         21880         
+event_based_risk_sent.monitor          21096         
+event_based_risk_sent.riskinput        25402         
+event_based_risk_sent.riskmodel        41128         
+event_based_risk_sent.rlzs_assoc       23912         
+event_based_risk_tot_received          44250         
+hostname                               'gem-tstation'
+require_epsilons                       True          
+====================================== ==============
+
+Specific information for event based
+------------------------------------
+======================== =====
+Total number of ruptures 8    
+Total number of events   26   
+Rupture multiplicity     3.250
+======================== =====
+
+Maximum memory allocated for the GMFs
+-------------------------------------
+The largest GMF block is for trt_model_id=0, contains 6 IMT(s), 2 realization(s)
+and has a size of 1.22 KB / num_tasks
+
+Estimated data transfer for the avglosses
+-----------------------------------------
+4 asset(s) x 2 realization(s) x 4 loss type(s) x 1 losses x 8 bytes x 40 tasks = 10 KB
+
+Exposure model
+--------------
+=========== =
+#assets     4
+#taxonomies 3
+=========== =
+
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+RC       1.000 NaN    1   1   1         1         
+RM       1.000 0.0    1   1   2         2         
+W        1.000 NaN    1   1   1         1         
+*ALL*    1.333 0.577  1   2   3         4         
+======== ===== ====== === === ========= ==========
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  0.150  1         1.240E-04   0.0        0.004    
-0            2         PointSource  0.150  1         8.893E-05   0.0        0.004    
-0            3         PointSource  0.150  1         8.178E-05   0.0        0.004    
+0            2         PointSource  0.150  1         1.581E-04   0.0        0.005    
+0            3         PointSource  0.150  1         1.452E-04   0.0        0.005    
+0            1         PointSource  0.150  1         2.129E-04   0.0        0.005    
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Information about the tasks
+---------------------------
+================================= ===== ====== ===== ===== =========
+measurement                       mean  stddev min   max   num_tasks
+compute_ruptures.time_sec         0.016 NaN    0.016 0.016 1        
+compute_ruptures.memory_mb        0.0   NaN    0.0   0.0   1        
+compute_gmfs_and_curves.time_sec  0.009 0.003  0.005 0.013 8        
+compute_gmfs_and_curves.memory_mb 0.0   0.0    0.0   0.0   8        
+event_based_risk.time_sec         0.017 0.005  0.009 0.025 8        
+event_based_risk.memory_mb        0.0   0.0    0.0   0.0   8        
+================================= ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
+total event_based_risk         0.139     0.0       8     
+compute poes                   0.113     0.0       16    
 total compute_gmfs_and_curves  0.071     0.0       8     
-compute poes                   0.057     0.0       8     
-total compute_ruptures         0.013     0.0       1     
-make contexts                  0.010     0.0       8     
-saving gmfs                    0.009     0.0       8     
-reading composite source model 0.006     0.0       1     
-managing sources               0.002     0.0       1     
-saving ruptures                0.002     0.0       1     
-store source_info              0.001     0.0       1     
-aggregate curves               6.950E-04 0.0       1     
-filtering sources              2.947E-04 0.0       3     
-reading site collection        3.791E-05 0.0       1     
+building hazard                0.065     0.0       8     
+computing riskmodel            0.060     0.0       72    
+make contexts                  0.018     0.0       16    
+saving event loss tables       0.017     0.0       8     
+total compute_ruptures         0.016     0.0       1     
+aggregate losses               0.014     0.0       72    
+reading composite source model 0.010     0.0       1     
+saving gmfs                    0.009     0.0       16    
+store source_info              0.009     0.0       1     
+saving ruptures                0.008     0.0       1     
+reading exposure               0.006     0.0       1     
+managing sources               0.004     0.0       1     
+filtering ruptures             0.003     0.0       8     
+aggregate curves               0.001     0.0       1     
+filtering sources              5.162E-04 0.0       3     
+reading site collection        5.198E-05 0.0       1     
 ============================== ========= ========= ======
