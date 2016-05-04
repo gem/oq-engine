@@ -213,18 +213,18 @@ class VulnerabilityFunction(object):
         an epsilon vector of the sample length.
 
         :param gmvs:
-           array of E floats
+           array of E' floats
+        :param covs:
+           array of E' floats
+        :param idxs:
+           array of E booleans with E > E'
         :param epsilons:
            array of E floats (or None)
         :returns:
-           array of loss ratios
+           array of E loss ratios
         """
-        # for gmvs < min(iml) we return a loss of 0 (default)
-        ratios = numpy.zeros(len(epsilons))
-        # apply uncertainty
         self.set_distribution(epsilons)
-        ratios[idxs] = self.distribution.sample(means, covs, None, idxs)
-        return ratios
+        return self.distribution.sample(means, covs, None, idxs)
 
     # this is used in the tests, not in the engine code base
     def __call__(self, gmvs, epsilons):
@@ -232,7 +232,10 @@ class VulnerabilityFunction(object):
         A small wrapper around .interpolate and .apply_to
         """
         means, covs, idxs = self.interpolate(gmvs)
-        return self.apply_to(means, covs, idxs, epsilons)
+        # for gmvs < min(iml) we return a loss of 0 (default)
+        ratios = numpy.zeros(len(epsilons))
+        ratios[idxs] = self.apply_to(means, covs, idxs, epsilons)
+        return ratios
 
     def strictly_increasing(self):
         """
