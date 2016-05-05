@@ -18,6 +18,8 @@ BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-engine
 
+Patch1: rpm/openquake.cfg.patch
+
 Requires(pre): shadow-utils
 
 %define common_deps python numpy scipy python-shapely python-psutil python-mock python-futures h5py python-amqp python-celery python-django python-docutils rabbitmq-server sudo
@@ -32,7 +34,7 @@ Requires: %{dev_deps}
 #BuildRequires: %{dev_deps}
 #BuildRequires: %{oqlib_deps}
 
-BuildRequires: sed python-setuptools
+BuildRequires: python-setuptools
 
 %description
 
@@ -54,6 +56,7 @@ getent passwd %{oquser} >/dev/null || \
 exit 0
 
 %prep
+%patch1 -p0
 %setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{oqrepo}-%{oqversion}-%{oqrelease}
 
 %build
@@ -69,8 +72,6 @@ mkdir -p %{buildroot}/%{_sysconfdir}/openquake
 mkdir -p %{buildroot}/%{_datadir}/openquake/engine
 install -m 644 celeryconfig.py %{buildroot}/%{_datadir}/openquake/engine
 install -m 644 openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
-# FIXME this should be moved inside a patch file
-sed -i 's/file = ~/file = \/var\/lib\/openquake/g' %{buildroot}/%{_sysconfdir}/openquake/openquake.cfg
 
 %clean
 rm -rf %{buildroot}
