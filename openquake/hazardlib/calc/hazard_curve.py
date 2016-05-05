@@ -223,10 +223,12 @@ def hazard_curves_per_trt(
     pne_mon = monitor('computing poes', measuremem=False)
     monitor.calc_times = []  # pairs (src_id, delta_t)
     monitor.eff_ruptures = 0  # effective number of contributing ruptures
-    acc = numpy.zeros((len(gsims), len(sites)), imt_dt)
+    tot_sites = len(sites)
+    acc = numpy.zeros((len(gsims), tot_sites), imt_dt)
     for source, s_sites in source_site_filter(sources_sites):
         t0 = time.time()
-        curves = numpy.ones((len(gsims), len(sites)), imt_dt)
+        n_sites = len(s_sites)
+        curves = numpy.ones((len(gsims), n_sites), imt_dt)
         try:
             for rupture in source.iter_ruptures():
                 with ctx_mon:
@@ -256,12 +258,15 @@ def hazard_curves_per_trt(
                 for i, gsim in enumerate(gsims):
                     with pne_mon:
                         for imt in imts:
+                            the_curves = curves[i][str(imt)]
                             poes = gsim.get_poes(
                                 sctx, rctx, dctx, imt, imts[imt],
                                 truncation_level)
                             pno = rupture.get_probability_no_exceedance(poes)
-                            expanded_pno = sctx.sites.expand(pno, 1.0)
-                            curves[i][str(imt)] *= expanded_pno
+                            if len(pno) < n_sites:
+                                the_curves[sctx.mask, :] *= pno
+                            else:
+                                the_curves[:] *= pno
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
@@ -275,5 +280,5 @@ def hazard_curves_per_trt(
         # with source.source_id, which is a string
         for imt in imtls:
             curves[imt] = 1. - curves[imt]
-        acc = agg_curves(acc, curves)
+        acc = agg_curves(acc, expand(curves.T, s_sites.indices, tot_sites).T)
     return acc

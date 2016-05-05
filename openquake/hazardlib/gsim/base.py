@@ -295,6 +295,7 @@ class ContextMaker(object):
                 raise FarAwayRupture
 
         sctx = self.make_sites_context(sites)
+        sctx.mask = mask if self.maximum_distance else None
         dctx = self.make_distances_context(sites, rupture, {'rjb': distances})
         return (sctx, rctx, dctx)
 
