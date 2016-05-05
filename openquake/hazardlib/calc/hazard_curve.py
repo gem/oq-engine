@@ -256,12 +256,13 @@ def hazard_curves_per_trt(
                 for i, gsim in enumerate(gsims):
                     with pne_mon:
                         for imt in imts:
+                            the_curves = curves[i][str(imt)]
                             poes = gsim.get_poes(
                                 sctx, rctx, dctx, imt, imts[imt],
                                 truncation_level)
                             pno = rupture.get_probability_no_exceedance(poes)
-                            expanded_pno = sctx.sites.expand(pno, 1.0)
-                            curves[i][str(imt)] *= expanded_pno
+                            the_curves[sctx.sites.indices, :] *= pno
+
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
