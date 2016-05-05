@@ -56,8 +56,8 @@ getent passwd %{oquser} >/dev/null || \
 exit 0
 
 %prep
-%patch1 -p0
 %setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{oqrepo}-%{oqversion}-%{oqrelease}
+%patch1 -p1
 
 %build
 python setup.py build
