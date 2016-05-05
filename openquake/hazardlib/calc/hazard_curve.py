@@ -322,14 +322,16 @@ def hazard_curves_per_trt(
                                 bb.update([dist], [p.longitude], [p.latitude])
                 for i, gsim in enumerate(gsims):
                     with pne_mon:
+                        pnos = []  # list of arrays nsites x lvls
                         for imt in imts:
-                            imt_str = str(imt)
                             poes = gsim.get_poes(
                                 sctx, rctx, dctx, imt, imts[imt],
                                 truncation_level)
-                            pno = rupture.get_probability_no_exceedance(poes)
-                            for j, sid in enumerate(sctx.sites.indices):
-                                curves[sid][imt_str][i, :] *= pno[j]
+                            pnos.append(
+                                rupture.get_probability_no_exceedance(poes))
+                        pno = numpy.concatenate(pnos, axis=1)
+                        for j, sid in enumerate(sctx.sites.indices):
+                            curves[sid].array[i, :] *= pno[j]
 
         except Exception as err:
             etype, err, tb = sys.exc_info()
