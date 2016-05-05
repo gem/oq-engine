@@ -26,12 +26,101 @@ import collections
 
 import numpy
 
-from openquake.baselib.python3compat import range, raise_
+from openquake.baselib.python3compat import raise_
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 from openquake.baselib.general import deprecated
+
+U32 = numpy.uint32
+F64 = numpy.float64
+
+
+class HazardCurve(object):
+    """
+    >>> imt_dt = numpy.dtype([('PGA', float, 3), ('PGV', float, 2)])
+    >>> poe = HazardCurve(imt_dt, numpy.zeros(1, (F64, 5)))
+    >>> poe['PGA'] = [0.1, 0.2, 0.33]
+    >>> 1 - poe * poe
+    <HazardCurve
+    PGA: [[[ 0.81    0.64    0.4489]]]
+    PGV: [[[ 1.  1.]]]>
+    """
+    @classmethod
+    def build(cls, imtls, gsims, sids, initvalue=0.):
+        imt_dt = numpy.dtype([(imt, float, 1 if imls is None else len(imls))
+                              for imt, imls in imtls.items()])
+        num_levels = sum(imt_dt[name].shape[0] for name in imt_dt.names)
+        num_gsims = len(gsims)
+        dic = {}
+        for sid in sids:
+            array = numpy.empty(num_gsims, (F64, num_levels))
+            array.fill(initvalue)
+            dic[sid] = cls(imt_dt, array)
+        return dic
+
+    @classmethod
+    def compose(cls, dic1, dic2):
+        """
+        >>> imtls = dict(PGA=[1, 2, 3], PGV=[4, 5])
+        >>> gsims = [None]
+        >>> curves1 = HazardCurve.build(imtls, gsims, [0, 1], initvalue=.1)
+        >>> curves2 = HazardCurve.build(imtls, gsims, [1, 2], initvalue=.1)
+        >>> dic = HazardCurve.compose(curves1, curves2)
+        >>> dic[0]
+        <HazardCurve
+        PGV: [[[ 0.1  0.1]]]
+        PGA: [[[ 0.1  0.1  0.1]]]>
+        >>> dic[1]
+        <HazardCurve
+        PGV: [[[ 0.19  0.19]]]
+        PGA: [[[ 0.19  0.19  0.19]]]>
+        >>> dic[2]
+        <HazardCurve
+        PGV: [[[ 0.1  0.1]]]
+        PGA: [[[ 0.1  0.1  0.1]]]>
+        """
+        sids = set(dic1) | set(dic2)
+        return {sid: dic1.get(sid) * dic2.get(sid) for sid in sids}
+
+    def __init__(self, imt_dt, array):
+        self.imt_dt = imt_dt
+        self.array = array
+
+    def __setitem__(self, imt, array):
+        self.array.view(self.imt_dt)[imt] = array
+
+    def __getitem__(self, imt):
+        return self.array.view(self.imt_dt)[imt]
+
+    def __mul__(self, other):
+        if other is None:
+            return self
+        elif hasattr(other, 'array'):
+            return self.__class__(
+                self.imt_dt, 1. - (1. - self.array) * (1. - other.array))
+        else:
+            return self.__class__(self.imt_dt, self.array * other)
+
+    __rmul__ = __mul__
+
+    def __sub__(self, other):
+        if hasattr(other, 'array'):
+            return self.__class__(self.imt_dt, self.array - other.array)
+        else:
+            return self.__class__(self.imt_dt, self.array - other)
+
+    def __rsub__(self, other):
+        if hasattr(other, 'array'):
+            return self.__class__(self.imt_dt, other.array - self.array)
+        else:  # allow to define 1. - self
+            return self.__class__(self.imt_dt, other - self.array)
+
+    def __repr__(self):
+        array = self.array.view(self.imt_dt)
+        data = ['%s: %s' % (imt, array[imt]) for imt in self.imt_dt.names]
+        return '<HazardCurve\n%s>' % '\n'.join(data)
 
 
 def zero_curves(num_sites, imtls):
@@ -150,11 +239,19 @@ def calc_hazard_curves(
     sources_by_trt = collections.defaultdict(list)
     for src in sources:
         sources_by_trt[src.tectonic_region_type].append(src)
-    curves = zero_curves(len(sites), imtls)
+    acc = {}
     for trt in sources_by_trt:
-        curves = agg_curves(curves, hazard_curves_per_trt(
+        acc = HazardCurve.compose(acc, hazard_curves_per_trt(
             sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
-            truncation_level, source_site_filter)[0])
+            truncation_level, source_site_filter))
+    return acc2curves(acc, 1, len(sites), imtls)[0]  # there is a single GSIM
+
+
+def acc2curves(acc, ngsims, nsites, imtls):
+    curves = zero_curves((ngsims, nsites), imtls)
+    for sid in acc:
+        for j in range(ngsims):
+            curves[j, sid] = acc[sid].array[j].view(curves.dtype)
     return curves
 
 
@@ -169,33 +266,6 @@ def expand(array, indices, n):
     z = numpy.zeros(n, array.dtype)
     z[indices] = array
     return z
-
-
-def compose2(prob1, prob2):
-    """
-    >> compose2(0.1, 0.1)
-    0.19
-    """
-    return 1. - (1. - prob1) * (1. - prob2)
-
-
-def compose4(prob1, idx1, prob2, idx2):
-    """
-    >>> compose([0.1, 0.2], [0, 2], [0.3], [1])
-    """
-    if idx1 == idx2:
-        return compose2(prob1, prob2), idx1
-    dic1 = dict(zip(idx1, prob1))
-    dic2 = dict(zip(idx2, prob2))
-    dic = {}
-    for idx in dic1:
-        dic[idx] = compose2(dic1[idx], dic2.get(idx))
-    for idx in dic2:
-        dic[idx] = compose2(dic1.get(idx), dic2[idx])
-    z = numpy.zeros(len(dic), prob1.dtype)
-    idx = dic.keys()
-    z[idx] = dic.values()
-    return z, idx
 
 
 def hazard_curves_per_trt(
@@ -215,20 +285,16 @@ def hazard_curves_per_trt(
         number of levels in ``imtls``.
     """
     cmaker = ContextMaker(gsims, maximum_distance)
-    imt_dt = numpy.dtype([(imt, float, len(imtls[imt]))
-                          for imt in sorted(imtls)])
     imts = {from_string(imt): imls for imt, imls in imtls.items()}
     sources_sites = ((source, sites) for source in sources)
     ctx_mon = monitor('making contexts', measuremem=False)
     pne_mon = monitor('computing poes', measuremem=False)
     monitor.calc_times = []  # pairs (src_id, delta_t)
     monitor.eff_ruptures = 0  # effective number of contributing ruptures
-    tot_sites = len(sites)
-    acc = numpy.zeros((len(gsims), tot_sites), imt_dt)
+    acc = {}
     for source, s_sites in source_site_filter(sources_sites):
         t0 = time.time()
-        n_sites = len(s_sites)
-        curves = numpy.ones((len(gsims), n_sites), imt_dt)
+        curves = HazardCurve.build(imtls, gsims, s_sites.indices, initvalue=1.)
         try:
             for rupture in source.iter_ruptures():
                 with ctx_mon:
@@ -252,21 +318,19 @@ def hazard_curves_per_trt(
                         assert len(bs) == len(jb_dists) == len(closest_points)
                         for bb, dist, p in zip(bs, jb_dists, closest_points):
                             if dist < maximum_distance:
-                                # ruptures too far away are ignored
+                                # rbuptures too far away are ignored
                                 bb.update([dist], [p.longitude], [p.latitude])
-
                 for i, gsim in enumerate(gsims):
                     with pne_mon:
                         for imt in imts:
-                            the_curves = curves[i][str(imt)]
+                            imt_str = str(imt)
                             poes = gsim.get_poes(
                                 sctx, rctx, dctx, imt, imts[imt],
                                 truncation_level)
                             pno = rupture.get_probability_no_exceedance(poes)
-                            if len(pno) < n_sites:
-                                the_curves[sctx.mask, :] *= pno
-                            else:
-                                the_curves[:] *= pno
+                            for j, sid in enumerate(sctx.sites.indices):
+                                curves[sid][imt_str][i, :] *= pno[j]
+
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
@@ -278,7 +342,6 @@ def hazard_curves_per_trt(
         monitor.calc_times.append((source.id, time.time() - t0))
         # NB: source.id is an integer; it should not be confused
         # with source.source_id, which is a string
-        for imt in imtls:
-            curves[imt] = 1. - curves[imt]
-        acc = agg_curves(acc, expand(curves.T, s_sites.indices, tot_sites).T)
-    return acc
+        acc = HazardCurve.compose(
+            acc, {sid: 1. - curves[sid] for sid in curves})
+    return acc  # sid -> HazardCurve
