@@ -164,6 +164,46 @@ def calc_hazard_curves(
     return curves
 
 
+def expand(array, indices, n):
+    n1 = len(array)
+    if n1 != len(indices):
+        raise ValueError('The array has length %d, the indices %d' %
+                         (n1, len(indices)))
+    if n < n1:
+        raise ValueError('You cannot expand to a shorter array, n=%d < %d' %
+                         n, n1)
+    z = numpy.zeros(n, array.dtype)
+    z[indices] = array
+    return z
+
+
+def compose2(prob1, prob2):
+    """
+    >> compose2(0.1, 0.1)
+    0.19
+    """
+    return 1. - (1. - prob1) * (1. - prob2)
+
+
+def compose4(prob1, idx1, prob2, idx2):
+    """
+    >>> compose([0.1, 0.2], [0, 2], [0.3], [1])
+    """
+    if idx1 == idx2:
+        return compose2(prob1, prob2), idx1
+    dic1 = dict(zip(idx1, prob1))
+    dic2 = dict(zip(idx2, prob2))
+    dic = {}
+    for idx in dic1:
+        dic[idx] = compose2(dic1[idx], dic2.get(idx))
+    for idx in dic2:
+        dic[idx] = compose2(dic1.get(idx), dic2[idx])
+    z = numpy.zeros(len(dic), prob1.dtype)
+    idx = dic.keys()
+    z[idx] = dic.values()
+    return z, idx
+
+
 # TODO: remove the rupture_site_filter, since its work is now done by the
 # maximum_distance parameter; see what would break
 def hazard_curves_per_trt(
@@ -188,14 +228,15 @@ def hazard_curves_per_trt(
     imt_dt = numpy.dtype([(imt, float, len(imtls[imt]))
                           for imt in sorted(imtls)])
     imts = {from_string(imt): imls for imt, imls in imtls.items()}
-    curves = [numpy.ones(len(sites), imt_dt) for gname in gnames]
     sources_sites = ((source, sites) for source in sources)
     ctx_mon = monitor('making contexts', measuremem=False)
     pne_mon = monitor('computing poes', measuremem=False)
     monitor.calc_times = []  # pairs (src_id, delta_t)
     monitor.eff_ruptures = 0  # effective number of contributing ruptures
+    acc = numpy.zeros((len(gsims), len(sites)), imt_dt)
     for source, s_sites in source_site_filter(sources_sites):
         t0 = time.time()
+        curves = numpy.ones((len(gsims), len(sites)), imt_dt)
         try:
             rupture_sites = rupture_site_filter(
                 (rupture, s_sites) for rupture in source.iter_ruptures())
@@ -244,7 +285,7 @@ def hazard_curves_per_trt(
         monitor.calc_times.append((source.id, time.time() - t0))
         # NB: source.id is an integer; it should not be confused
         # with source.source_id, which is a string
-    for i in range(len(gnames)):
         for imt in imtls:
-            curves[i][imt] = 1. - curves[i][imt]
-    return curves
+            curves[imt] = 1. - curves[imt]
+        acc = agg_curves(acc, curves)
+    return acc
