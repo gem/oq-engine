@@ -26,7 +26,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.python3compat import range, raise_
+from openquake.baselib.python3compat import raise_
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -156,46 +156,6 @@ def calc_hazard_curves(
             sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
             truncation_level, source_site_filter)[0])
     return curves
-
-
-def expand(array, indices, n):
-    n1 = len(array)
-    if n1 != len(indices):
-        raise ValueError('The array has length %d, the indices %d' %
-                         (n1, len(indices)))
-    if n < n1:
-        raise ValueError('You cannot expand to a shorter array, n=%d < %d' %
-                         n, n1)
-    z = numpy.zeros(n, array.dtype)
-    z[indices] = array
-    return z
-
-
-def compose2(prob1, prob2):
-    """
-    >> compose2(0.1, 0.1)
-    0.19
-    """
-    return 1. - (1. - prob1) * (1. - prob2)
-
-
-def compose4(prob1, idx1, prob2, idx2):
-    """
-    >>> compose([0.1, 0.2], [0, 2], [0.3], [1])
-    """
-    if idx1 == idx2:
-        return compose2(prob1, prob2), idx1
-    dic1 = dict(zip(idx1, prob1))
-    dic2 = dict(zip(idx2, prob2))
-    dic = {}
-    for idx in dic1:
-        dic[idx] = compose2(dic1[idx], dic2.get(idx))
-    for idx in dic2:
-        dic[idx] = compose2(dic1.get(idx), dic2[idx])
-    z = numpy.zeros(len(dic), prob1.dtype)
-    idx = dic.keys()
-    z[idx] = dic.values()
-    return z, idx
 
 
 def hazard_curves_per_trt(
