@@ -70,16 +70,16 @@ class HazardCurve(object):
         >>> dic = HazardCurve.compose(curves1, curves2)
         >>> dic[0]
         <HazardCurve
-        PGV: [[[ 0.1  0.1]]]
-        PGA: [[[ 0.1  0.1  0.1]]]>
+        PGA: [[[ 0.1  0.1  0.1]]]
+        PGV: [[[ 0.1  0.1]]]>
         >>> dic[1]
         <HazardCurve
-        PGV: [[[ 0.19  0.19]]]
-        PGA: [[[ 0.19  0.19  0.19]]]>
+        PGA: [[[ 0.19  0.19  0.19]]]
+        PGV: [[[ 0.19  0.19]]]>
         >>> dic[2]
         <HazardCurve
-        PGV: [[[ 0.1  0.1]]]
-        PGA: [[[ 0.1  0.1  0.1]]]>
+        PGA: [[[ 0.1  0.1  0.1]]]
+        PGV: [[[ 0.1  0.1]]]>
         """
         sids = set(dic1) | set(dic2)
         return {sid: dic1.get(sid) * dic2.get(sid) for sid in sids}
@@ -119,7 +119,8 @@ class HazardCurve(object):
 
     def __repr__(self):
         array = self.array.view(self.imt_dt)
-        data = ['%s: %s' % (imt, array[imt]) for imt in self.imt_dt.names]
+        data = ['%s: %s' % (imt, array[imt])
+                for imt in sorted(self.imt_dt.names)]
         return '<HazardCurve\n%s>' % '\n'.join(data)
 
 
