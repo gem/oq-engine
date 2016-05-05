@@ -28,7 +28,7 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
-    hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
+    hazard_curves_per_trt, zero_curves, zero_maps, agg_curves, acc2curves)
 from openquake.risklib import scientific
 from openquake.commonlib import parallel, datastore, source
 from openquake.baselib.general import AccumDict
@@ -171,14 +171,15 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     # NB: the source_site_filter below is ESSENTIAL for performance inside
     # hazard_curves_per_trt, since it reduces the full site collection
     # to a filtered one *before* doing the rupture filtering
-    curves_by_gsim = hazard_curves_per_trt(
+    curves_by_sid = hazard_curves_per_trt(
         sources, sitecol, imtls, gsims, truncation_level,
         source_site_filter=source_site_distance_filter(max_dist),
         maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
+    curves = acc2curves(curves_by_sid, len(gsims), len(sitecol), imtls)
     dic.calc_times = monitor.calc_times  # added by hazard_curves_per_trt
     dic.eff_ruptures = {trt_model_id: monitor.eff_ruptures}  # idem
-    for gsim, curves in zip(gsims, curves_by_gsim):
-        dic[trt_model_id, str(gsim)] = curves
+    for i, gsim in enumerate(gsims):
+        dic[trt_model_id, str(gsim)] = curves[i]
     return dic
 
 
