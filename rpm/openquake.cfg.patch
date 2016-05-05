@@ -1,0 +1,11 @@
+--- openquake.cfg.orig	2016-05-04 13:38:29.853479427 +0200
++++ openquake.cfg	2016-05-05 13:55:52.133111971 +0200
+@@ -41,7 +41,7 @@
+ [dbserver]
+ # enable multi_user if you have a multiple user installation
+ multi_user = false
+-file = ~/db.sqlite3
++file = /var/lib/openquake/db.sqlite3
+ host = localhost
+ port = 1999
+ authkey = changeme
