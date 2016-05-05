@@ -256,19 +256,6 @@ def acc2curves(acc, ngsims, nsites, imtls):
     return curves
 
 
-def expand(array, indices, n):
-    n1 = len(array)
-    if n1 != len(indices):
-        raise ValueError('The array has length %d, the indices %d' %
-                         (n1, len(indices)))
-    if n < n1:
-        raise ValueError('You cannot expand to a shorter array, n=%d < %d' %
-                         n, n1)
-    z = numpy.zeros(n, array.dtype)
-    z[indices] = array
-    return z
-
-
 def hazard_curves_per_trt(
         sources, sites, imtls, gsims, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
