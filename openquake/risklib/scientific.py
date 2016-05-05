@@ -209,8 +209,8 @@ class VulnerabilityFunction(object):
 
     def sample(self, means, covs, idxs, epsilons):
         """
-        Apply the vulnerability function to a ground motion vector, by using
-        an epsilon vector of the sample length.
+        Sample the epsilons and applies the corrections to the means.
+        This method is called only if there are nonzero covs.
 
         :param gmvs:
            array of E' floats
@@ -219,7 +219,7 @@ class VulnerabilityFunction(object):
         :param idxs:
            array of E booleans with E >= E'
         :param epsilons:
-           array of E floats (or None)
+           array of E floats
         :returns:
            array of E' loss ratios
         """
@@ -455,16 +455,19 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
 
     def sample(self, probs, _covs, idxs, epsilons):
         """
-        Given IML values, interpolate the corresponding loss ratio
-        value(s) on the curve.
+        Sample the epsilons and applies the corrections to the probabilities.
+        This method is called only if there are epsilons.
 
-        Input IML value(s) is/are clipped to IML range defined for this
-        vulnerability function.
-
-        :param float array iml: IML value
-
-        :returns: :py:class:`numpy.ndarray` containing a number of interpolated
-            values equal to the size of the input (1 or many)
+        :param probs:
+           array of E' floats
+        :param _covs:
+           ignored, it is there only for API consistency
+        :param idxs:
+           array of E booleans with E >= E'
+        :param epsilons:
+           array of E floats
+        :returns:
+           array of E' probabilities
         """
         self.set_distribution(epsilons)
         return self.distribution.sample(self.loss_ratios, probs)
