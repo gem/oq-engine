@@ -245,16 +245,10 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
 
         from openquake.hazardlib.calc import filters
         source_site_filter = self.SitesCounterSourceFilter(
-            filters.source_site_distance_filter(30)
-        )
-        rupture_site_filter = self.SitesCounterRuptureFilter(
-            filters.rupture_site_distance_filter(30)
-        )
+            filters.source_site_distance_filter(30))
         calc_hazard_curves(
             sources, sitecol, imts, gsims, truncation_level,
-            source_site_filter=source_site_filter,
-            rupture_site_filter=rupture_site_filter
-        )
+            source_site_filter=source_site_filter)
         # there are two sources and four sites. The first source contains only
         # one rupture, the second source contains three ruptures.
         #
@@ -287,5 +281,3 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         # affect the 3rd and 4th sites.
         self.assertEqual(source_site_filter.counts,
                          [('point2', [1, 3, 4])])
-        self.assertEqual(rupture_site_filter.counts,
-                         [(6, [4]), (8, [3, 4])])
