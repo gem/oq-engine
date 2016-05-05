@@ -226,6 +226,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for bb in getattr(val, 'bbs', []):
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
             self.agg_curves(acc, val)
+        self.datastore.flush()
         return acc
 
     def agg_curves(self, acc, val):
