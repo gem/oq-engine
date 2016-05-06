@@ -207,24 +207,24 @@ class VulnerabilityFunction(object):
         gmvs_curve = gmvs_curve[idxs]
         return self._mlr_i1d(gmvs_curve), self._cov_for(gmvs_curve), idxs
 
-    def apply_to(self, means, covs, idxs, epsilons):
+    def sample(self, means, covs, idxs, epsilons):
         """
-        Apply the vulnerability function to a ground motion vector, by using
-        an epsilon vector of the sample length.
+        Sample the epsilons and applies the corrections to the means.
+        This method is called only if there are nonzero covs.
 
         :param gmvs:
-           array of E floats
+           array of E' floats
+        :param covs:
+           array of E' floats
+        :param idxs:
+           array of E booleans with E >= E'
         :param epsilons:
-           array of E floats (or None)
+           array of E floats
         :returns:
-           array of loss ratios
+           array of E' loss ratios
         """
-        # for gmvs < min(iml) we return a loss of 0 (default)
-        ratios = numpy.zeros(len(epsilons))
-        # apply uncertainty
         self.set_distribution(epsilons)
-        ratios[idxs] = self.distribution.sample(means, covs, None, idxs)
-        return ratios
+        return self.distribution.sample(means, covs, None, idxs)
 
     # this is used in the tests, not in the engine code base
     def __call__(self, gmvs, epsilons):
@@ -232,7 +232,10 @@ class VulnerabilityFunction(object):
         A small wrapper around .interpolate and .apply_to
         """
         means, covs, idxs = self.interpolate(gmvs)
-        return self.apply_to(means, covs, idxs, epsilons)
+        # for gmvs < min(iml) we return a loss of 0 (default)
+        ratios = numpy.zeros(len(gmvs))
+        ratios[idxs] = self.sample(means, covs, idxs, epsilons)
+        return ratios
 
     def strictly_increasing(self):
         """
@@ -450,25 +453,24 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         gmvs_curve = gmvs_curve[idxs]
         return self._probs_i1d(gmvs_curve), None, idxs
 
-    def apply_to(self, probs, _covs, idxs, epsilons):
+    def sample(self, probs, _covs, idxs, epsilons):
         """
-        Given IML values, interpolate the corresponding loss ratio
-        value(s) on the curve.
+        Sample the epsilons and applies the corrections to the probabilities.
+        This method is called only if there are epsilons.
 
-        Input IML value(s) is/are clipped to IML range defined for this
-        vulnerability function.
-
-        :param float array iml: IML value
-
-        :returns: :py:class:`numpy.ndarray` containing a number of interpolated
-            values equal to the size of the input (1 or many)
+        :param probs:
+           array of E' floats
+        :param _covs:
+           ignored, it is there only for API consistency
+        :param idxs:
+           array of E booleans with E >= E'
+        :param epsilons:
+           array of E floats
+        :returns:
+           array of E' probabilities
         """
-        # for gmvs < min(iml) we return a loss of 0 (default)
-        ratios = numpy.zeros(len(epsilons))
-        # apply uncertainty
         self.set_distribution(epsilons)
-        ratios[idxs] = self.distribution.sample(self.loss_ratios, probs)
-        return ratios
+        return self.distribution.sample(self.loss_ratios, probs)
 
     @utils.memoized
     def loss_ratio_exceedance_matrix(self, steps):
