@@ -29,7 +29,7 @@ Requires: %{common_deps}
 Requires: %{oqlib_deps}
 Requires: %{dev_deps}
 
-# Since tests are currently not enabled during the packaging phase, the following build dependencies are not required
+# since tests are currently not enabled during the packaging phase, the following build dependencies are not required
 #BuildRequires: %{common_deps}
 #BuildRequires: %{dev_deps}
 #BuildRequires: %{oqlib_deps}
@@ -57,7 +57,10 @@ exit 0
 
 %prep
 %setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{oqrepo}-%{oqversion}-%{oqrelease}
-%patch1 -p1
+
+# this should be -p1, but is -p3 to keep compatibility with the debian patch,
+# which is generated usign some hacks
+%patch1 -p3
 
 %build
 python setup.py build
