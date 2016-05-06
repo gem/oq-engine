@@ -326,7 +326,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
 
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
-        for key, probs in results.iteritems():
+        for key, probs in sorted(results.iteritems()):
             sid, rlz_id, poe, imt, iml, trt_names = key
             edges = self.bin_edges[sm_id[rlz_id], sid]
             self.save_disagg_result(

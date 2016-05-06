@@ -209,11 +209,11 @@ class VulnerabilityFunction(object):
 
     def sample(self, means, covs, idxs, epsilons):
         """
-        Sample the epsilons and applies the corrections to the means.
+        Sample the epsilons and apply the corrections to the means.
         This method is called only if there are nonzero covs.
 
-        :param gmvs:
-           array of E' floats
+        :param means:
+           array of E' loss ratios
         :param covs:
            array of E' floats
         :param idxs:

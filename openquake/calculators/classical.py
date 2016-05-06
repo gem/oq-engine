@@ -300,15 +300,14 @@ class ClassicalCalculator(base.HazardCalculator):
                     curves_by_gsim = acc2curves(
                         curves_by_trt_id[tm.id], len(gsims), nsites, imtls)
                     for i, gsim in enumerate(gsims):
-                        gs = str(gsim)
                         curves = curves_by_gsim[i]
                         ts = '%03d-%d' % (tm.id, i)
                         if nonzero(curves):
                             group[ts] = curves
                             group[ts].attrs['trt'] = tm.trt
                             group[ts].attrs['nbytes'] = curves.nbytes
-                            group[ts].attrs['gsim'] = gs
-                            curves_by_trt_gsim[tm.id, gs] = curves
+                            group[ts].attrs['gsim'] = str(gsim)
+                            curves_by_trt_gsim[tm.id, gsim] = curves
                 self.datastore.set_nbytes(group.name)
             self.datastore.set_nbytes('curves_by_sm')
 
