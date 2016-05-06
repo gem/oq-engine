@@ -37,13 +37,13 @@ U32 = numpy.uint32
 F64 = numpy.float64
 
 
-class HazardCurve(object):
+class PoeCurve(object):
     """
     >>> imt_dt = numpy.dtype([('PGA', float, 3), ('PGV', float, 2)])
-    >>> poe = HazardCurve(imt_dt, numpy.zeros(1, (F64, 5)))
+    >>> poe = PoeCurve(imt_dt, numpy.zeros(1, (F64, 5)))
     >>> poe['PGA'] = [0.1, 0.2, 0.33]
-    >>> 1 - poe * poe
-    <HazardCurve
+    >>> ~(poe + poe)
+    <PoeCurve
     PGA: [[[ 0.81    0.64    0.4489]]]
     PGV: [[[ 1.  1.]]]>
     """
@@ -65,24 +65,24 @@ class HazardCurve(object):
         """
         >>> imtls = dict(PGA=[1, 2, 3], PGV=[4, 5])
         >>> gsims = [None]
-        >>> curves1 = HazardCurve.build(imtls, gsims, [0, 1], initvalue=.1)
-        >>> curves2 = HazardCurve.build(imtls, gsims, [1, 2], initvalue=.1)
-        >>> dic = HazardCurve.compose(curves1, curves2)
+        >>> curves1 = PoeCurve.build(imtls, gsims, [0, 1], initvalue=.1)
+        >>> curves2 = PoeCurve.build(imtls, gsims, [1, 2], initvalue=.1)
+        >>> dic = PoeCurve.compose(curves1, curves2)
         >>> dic[0]
-        <HazardCurve
+        <PoeCurve
         PGA: [[[ 0.1  0.1  0.1]]]
         PGV: [[[ 0.1  0.1]]]>
         >>> dic[1]
-        <HazardCurve
+        <PoeCurve
         PGA: [[[ 0.19  0.19  0.19]]]
         PGV: [[[ 0.19  0.19]]]>
         >>> dic[2]
-        <HazardCurve
+        <PoeCurve
         PGA: [[[ 0.1  0.1  0.1]]]
         PGV: [[[ 0.1  0.1]]]>
         """
         sids = set(dic1) | set(dic2)
-        return {sid: dic1.get(sid) * dic2.get(sid) for sid in sids}
+        return {sid: dic1.get(sid, 0) + dic2.get(sid, 0) for sid in sids}
 
     def __init__(self, imt_dt, array):
         self.imt_dt = imt_dt
@@ -94,34 +94,31 @@ class HazardCurve(object):
     def __getitem__(self, imt):
         return self.array.view(self.imt_dt)[imt]
 
-    def __mul__(self, other):
-        if other is None:
+    def __add__(self, other):
+        if other == 0:
             return self
-        elif hasattr(other, 'array'):
+        else:
             return self.__class__(
                 self.imt_dt, 1. - (1. - self.array) * (1. - other.array))
+    __radd__ = __add__
+
+    def __mul__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__class__(self.imt_dt, self.array * other.array)
+        elif other == 1:
+            return self
         else:
             return self.__class__(self.imt_dt, self.array * other)
-
     __rmul__ = __mul__
 
-    def __sub__(self, other):
-        if hasattr(other, 'array'):
-            return self.__class__(self.imt_dt, self.array - other.array)
-        else:
-            return self.__class__(self.imt_dt, self.array - other)
-
-    def __rsub__(self, other):
-        if hasattr(other, 'array'):
-            return self.__class__(self.imt_dt, other.array - self.array)
-        else:  # allow to define 1. - self
-            return self.__class__(self.imt_dt, other - self.array)
+    def __invert__(self):
+        return self.__class__(self.imt_dt, 1. - self.array)
 
     def __repr__(self):
         array = self.array.view(self.imt_dt)
         data = ['%s: %s' % (imt, array[imt])
                 for imt in sorted(self.imt_dt.names)]
-        return '<HazardCurve\n%s>' % '\n'.join(data)
+        return '<PoeCurve\n%s>' % '\n'.join(data)
 
 
 def zero_curves(num_sites, imtls):
@@ -242,7 +239,7 @@ def calc_hazard_curves(
         sources_by_trt[src.tectonic_region_type].append(src)
     acc = {}
     for trt in sources_by_trt:
-        acc = HazardCurve.compose(acc, hazard_curves_per_trt(
+        acc = PoeCurve.compose(acc, hazard_curves_per_trt(
             sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
             truncation_level, source_site_filter))
     return acc2curves(acc, 1, len(sites), imtls)[0]  # there is a single GSIM
@@ -273,7 +270,7 @@ def hazard_curves_per_trt(
         number of levels in ``imtls``.
     """
     cmaker = ContextMaker(gsims, maximum_distance)
-    imts = {from_string(imt): imls for imt, imls in imtls.items()}
+    imts = [(from_string(imt), imls) for imt, imls in imtls.items()]
     sources_sites = ((source, sites) for source in sources)
     ctx_mon = monitor('making contexts', measuremem=False)
     pne_mon = monitor('computing poes', measuremem=False)
@@ -282,7 +279,7 @@ def hazard_curves_per_trt(
     acc = {}
     for source, s_sites in source_site_filter(sources_sites):
         t0 = time.time()
-        curves = HazardCurve.build(imtls, gsims, s_sites.indices, initvalue=1.)
+        curves = PoeCurve.build(imtls, gsims, s_sites.indices, initvalue=1.)
         try:
             for rupture in source.iter_ruptures():
                 with ctx_mon:
@@ -311,10 +308,9 @@ def hazard_curves_per_trt(
                 for i, gsim in enumerate(gsims):
                     with pne_mon:
                         pnos = []  # list of arrays nsites x lvls
-                        for imt in imts:
+                        for imt, imls in imts:
                             poes = gsim.get_poes(
-                                sctx, rctx, dctx, imt, imts[imt],
-                                truncation_level)
+                                sctx, rctx, dctx, imt, imls, truncation_level)
                             pnos.append(
                                 rupture.get_probability_no_exceedance(poes))
                         pno = numpy.concatenate(pnos, axis=1)
@@ -332,6 +328,6 @@ def hazard_curves_per_trt(
         monitor.calc_times.append((source.id, time.time() - t0))
         # NB: source.id is an integer; it should not be confused
         # with source.source_id, which is a string
-        acc = HazardCurve.compose(
-            acc, {sid: 1. - curves[sid] for sid in curves})
-    return acc  # sid -> HazardCurve
+        acc = PoeCurve.compose(
+            acc, {sid: ~curves[sid] for sid in curves})
+    return acc  # sid -> PoeCurve
