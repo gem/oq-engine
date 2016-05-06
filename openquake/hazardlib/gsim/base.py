@@ -643,6 +643,10 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         return str(self) == str(other)
 
     def __hash__(self):
+        """
+        We use the __str__ representation as hash: it means that we can
+        use equivalently GSIM instances or strings as dictionary keys.
+        """
         return hash(str(self))
 
     def __str__(self):
