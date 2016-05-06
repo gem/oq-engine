@@ -32,24 +32,31 @@ __all__ = ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'CAV', 'RSD', 'MMI')
 
 DEFAULT_SA_DAMPING = 5.0
 
+imt_cache = {}  # used in from_string
+
 
 def from_string(imt):
     """
-    Convert an IMT string into a hazardlib object.
+    Convert an IMT string into a hazardlib object. It is fast because cached.
 
     :param str imt:
         Intensity Measure Type.
     """
-    if imt.startswith('SA'):
-        match = re.match(r'^SA\(([^)]+?)\)$', imt)
-        period = float(match.group(1))
-        return SA(period, DEFAULT_SA_DAMPING)
-    else:
-        try:
-            imt_class = globals()[imt]
-        except KeyError:
-            raise ValueError('Unknown IMT: ' + repr(imt))
-        return imt_class(None, None)
+    try:
+        return imt_cache[imt]
+    except KeyError:
+        if imt.startswith('SA'):
+            match = re.match(r'^SA\(([^)]+?)\)$', imt)
+            period = float(match.group(1))
+            instance = SA(period, DEFAULT_SA_DAMPING)
+        else:
+            try:
+                imt_class = globals()[imt]
+            except KeyError:
+                raise ValueError('Unknown IMT: ' + repr(imt))
+            instance = imt_class(None, None)
+        imt_cache[imt] = instance
+        return instance
 
 
 class IMTMeta(type):

@@ -28,97 +28,11 @@ import numpy
 
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.performance import Monitor
+from openquake.hazardlib.poe import PoeCurve, Imtls
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 from openquake.baselib.general import deprecated
-
-U32 = numpy.uint32
-F64 = numpy.float64
-
-
-class PoeCurve(object):
-    """
-    >>> imt_dt = numpy.dtype([('PGA', float, 3), ('PGV', float, 2)])
-    >>> poe = PoeCurve(imt_dt, numpy.zeros(1, (F64, 5)))
-    >>> poe['PGA'] = [0.1, 0.2, 0.33]
-    >>> ~(poe + poe)
-    <PoeCurve
-    PGA: [[[ 0.81    0.64    0.4489]]]
-    PGV: [[[ 1.  1.]]]>
-    """
-    @classmethod
-    def build(cls, imtls, gsims, sids, initvalue=0.):
-        imt_dt = numpy.dtype([(imt, float, 1 if imls is None else len(imls))
-                              for imt, imls in imtls.items()])
-        num_levels = sum(imt_dt[name].shape[0] for name in imt_dt.names)
-        num_gsims = len(gsims)
-        dic = {}
-        for sid in sids:
-            array = numpy.empty(num_gsims, (F64, num_levels))
-            array.fill(initvalue)
-            dic[sid] = cls(imt_dt, array)
-        return dic
-
-    @classmethod
-    def compose(cls, dic1, dic2):
-        """
-        >>> imtls = dict(PGA=[1, 2, 3], PGV=[4, 5])
-        >>> gsims = [None]
-        >>> curves1 = PoeCurve.build(imtls, gsims, [0, 1], initvalue=.1)
-        >>> curves2 = PoeCurve.build(imtls, gsims, [1, 2], initvalue=.1)
-        >>> dic = PoeCurve.compose(curves1, curves2)
-        >>> dic[0]
-        <PoeCurve
-        PGA: [[[ 0.1  0.1  0.1]]]
-        PGV: [[[ 0.1  0.1]]]>
-        >>> dic[1]
-        <PoeCurve
-        PGA: [[[ 0.19  0.19  0.19]]]
-        PGV: [[[ 0.19  0.19]]]>
-        >>> dic[2]
-        <PoeCurve
-        PGA: [[[ 0.1  0.1  0.1]]]
-        PGV: [[[ 0.1  0.1]]]>
-        """
-        sids = set(dic1) | set(dic2)
-        return {sid: dic1.get(sid, 0) + dic2.get(sid, 0) for sid in sids}
-
-    def __init__(self, imt_dt, array):
-        self.imt_dt = imt_dt
-        self.array = array
-
-    def __setitem__(self, imt, array):
-        self.array.view(self.imt_dt)[imt] = array
-
-    def __getitem__(self, imt):
-        return self.array.view(self.imt_dt)[imt]
-
-    def __add__(self, other):
-        if other == 0:
-            return self
-        else:
-            return self.__class__(
-                self.imt_dt, 1. - (1. - self.array) * (1. - other.array))
-    __radd__ = __add__
-
-    def __mul__(self, other):
-        if isinstance(other, self.__class__):
-            return self.__class__(self.imt_dt, self.array * other.array)
-        elif other == 1:
-            return self
-        else:
-            return self.__class__(self.imt_dt, self.array * other)
-    __rmul__ = __mul__
-
-    def __invert__(self):
-        return self.__class__(self.imt_dt, 1. - self.array)
-
-    def __repr__(self):
-        array = self.array.view(self.imt_dt)
-        data = ['%s: %s' % (imt, array[imt])
-                for imt in sorted(self.imt_dt.names)]
-        return '<PoeCurve\n%s>' % '\n'.join(data)
 
 
 def zero_curves(num_sites, imtls):
@@ -270,7 +184,7 @@ def hazard_curves_per_trt(
         number of levels in ``imtls``.
     """
     cmaker = ContextMaker(gsims, maximum_distance)
-    imts = [(from_string(imt), imls) for imt, imls in imtls.items()]
+    imtls = Imtls(imtls)
     sources_sites = ((source, sites) for source in sources)
     ctx_mon = monitor('making contexts', measuremem=False)
     pne_mon = monitor('computing poes', measuremem=False)
@@ -305,17 +219,11 @@ def hazard_curves_per_trt(
                             if dist < maximum_distance:
                                 # rbuptures too far away are ignored
                                 bb.update([dist], [p.longitude], [p.latitude])
-                for i, gsim in enumerate(gsims):
-                    with pne_mon:
-                        pnos = []  # list of arrays nsites x lvls
-                        for imt, imls in imts:
-                            poes = gsim.get_poes(
-                                sctx, rctx, dctx, imt, imls, truncation_level)
-                            pnos.append(
-                                rupture.get_probability_no_exceedance(poes))
-                        pno = numpy.concatenate(pnos, axis=1)
-                        for j, sid in enumerate(sctx.sites.indices):
-                            curves[sid].array[i, :] *= pno[j]
+
+                with pne_mon:
+                    update_probabilities(
+                        curves, rupture, sctx, rctx, dctx, imtls, gsims,
+                        truncation_level)
 
         except Exception as err:
             etype, err, tb = sys.exc_info()
@@ -328,6 +236,28 @@ def hazard_curves_per_trt(
         monitor.calc_times.append((source.id, time.time() - t0))
         # NB: source.id is an integer; it should not be confused
         # with source.source_id, which is a string
-        acc = PoeCurve.compose(
-            acc, {sid: ~curves[sid] for sid in curves})
+        acc = PoeCurve.compose(acc, {sid: ~curves[sid] for sid in curves})
     return acc  # sid -> PoeCurve
+
+
+# NB: it is important for this to be fast since it is inside an inner loop
+def update_probabilities(
+        curves, rupture, sctx, rctx, dctx, imtls, gsims, trunclevel):
+    """
+    :curves: a dictionary of PoeCurves by site id.
+    :param rupture: a Rupture instance
+    :param sctx: the corresponding SiteContext instance
+    :param rctx: the corresponding RuptureContext instance
+    :param dctx: the corresponding DistanceContext instance
+    :param gsims: the list of GSIMs to use
+    :param trunclevel: the truncation level
+    """
+    for i, gsim in enumerate(gsims):
+        pnos = []  # list of arrays nsites x nlevels
+        for imt in imtls:
+            poes = gsim.get_poes(
+                sctx, rctx, dctx, from_string(imt), imtls[imt], trunclevel)
+            pnos.append(rupture.get_probability_no_exceedance(poes))
+        pnos = numpy.concatenate(pnos, axis=1)
+        for sid, pno in zip(sctx.sites.indices, pnos):
+            curves[sid].array[i, :] *= pno
