@@ -75,11 +75,10 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, trt_model_id,
                 pne_dict = {}
                 # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
                 for gsim in gsims:
-                    gs = str(gsim)
                     for imt_str, imls in imtls.iteritems():
                         imt = from_string(imt_str)
                         imls = numpy.array(imls[::-1])
-                        for rlz in rlzs_assoc[trt_model_id, gs]:
+                        for rlz in rlzs_assoc[trt_model_id, gsim]:
                             rlzi = rlz.ordinal
                             curve_poes = curves[rlzi, imt_str][::-1]
                             for poe in poes:
@@ -327,7 +326,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
 
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
-        for key, probs in results.iteritems():
+        for key, probs in sorted(results.iteritems()):
             sid, rlz_id, poe, imt, iml, trt_names = key
             edges = self.bin_edges[sm_id[rlz_id], sid]
             self.save_disagg_result(
