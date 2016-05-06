@@ -553,7 +553,11 @@ celeryd_wait $GEM_MAXLOOP"
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
         set -e
 
-        python -m openquake.server.db.upgrade_manager ~/oqdata/db.sqlite3
+        if [ \$(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
+            sudo adduser --system --home /var/lib/openquake --group --shell /bin/bash openquake
+        fi
+        sudo -u openquake python -m openquake.server.db.upgrade_manager ~openquake/db.sqlite3
+        sudo -u openquake python -m openquake.server.dbserver 2>/dev/null & sleep 1
 
         if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
             export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
@@ -601,7 +605,7 @@ celeryd_wait $GEM_MAXLOOP"
         python -m openquake.server.stop"
     fi
 
-    ssh $lxc_ip "oq-engine --make-html-report today ; python -m openquake.server.stop"
+    ssh $lxc_ip "sudo -u openquake python -m openquake.server.dbserver & sleep 1 ; oq-engine --make-html-report today ; python -m openquake.server.stop"
     scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
