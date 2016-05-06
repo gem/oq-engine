@@ -693,7 +693,7 @@ class EventBasedCalculator(ClassicalCalculator):
             dic = {}
             for rlzi in result:
                 dic[rlzs[rlzi]] = acc2curves(
-                    result[rlzi], 1, len(self.sitecol), oq.imtls)
+                    result[rlzi], 1, len(self.sitecol), oq.imtls)[0]
             self.save_curves(dic)
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
