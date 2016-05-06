@@ -243,7 +243,7 @@ def hazard_curves_per_trt(
 
 # NB: it is important for this to be fast since it is inside an inner loop
 def get_probability_no_exceedance(
-        curves, rupture, sctx, rctx, dctx, imtls, gsims, trunclevel):
+        rupture, sctx, rctx, dctx, imtls, gsims, trunclevel):
     """
     :param rupture: a Rupture instance
     :param sctx: the corresponding SiteContext instance
