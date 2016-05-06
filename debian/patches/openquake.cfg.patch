@@ -1,0 +1,13 @@
+Index: oq-engine/openquake.cfg
+===================================================================
+--- oq-engine.orig/openquake.cfg	2016-05-06 12:00:48.777607350 +0000
++++ oq-engine/openquake.cfg	2016-05-06 12:07:00.701344241 +0000
+@@ -41,7 +41,7 @@
+ [dbserver]
+ # enable multi_user if you have a multiple user installation
+ multi_user = false
+-file = ~/db.sqlite3
++file = /var/lib/openquake/db.sqlite3
+ host = localhost
+ port = 1999
+ authkey = changeme
