@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a terrible bug with the ordering of the GSIMs affecting the
+    stored hazard curves
   * Optimized the saving of the asset loss table
   * Fixed a bug with indices over the minimum IML when computing the loss
     ratios

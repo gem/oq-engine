@@ -309,14 +309,14 @@ class RlzsAssoc(collections.Mapping):
     region types and 4 + 2 + 2 realizations, there are the following
     associations:
 
-    (0, 'BooreAtkinson2008') ['#0-SM1-BA2008_C2003', '#1-SM1-BA2008_T2002']
-    (0, 'CampbellBozorgnia2008') ['#2-SM1-CB2008_C2003', '#3-SM1-CB2008_T2002']
-    (1, 'Campbell2003') ['#0-SM1-BA2008_C2003', '#2-SM1-CB2008_C2003']
-    (1, 'ToroEtAl2002') ['#1-SM1-BA2008_T2002', '#3-SM1-CB2008_T2002']
-    (2, 'BooreAtkinson2008') ['#4-SM2_a3pt2b0pt8-BA2008']
-    (2, 'CampbellBozorgnia2008') ['#5-SM2_a3pt2b0pt8-CB2008']
-    (3, 'BooreAtkinson2008') ['#6-SM2_a3b1-BA2008']
-    (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
+    (0, 'BooreAtkinson2008()') ['#0-SM1-BA2008_C2003', '#1-SM1-BA2008_T2002']
+    (0, 'CampbellBozorgnia2008()') ['#2-SM1-CB2008_C2003', '#3-SM1-CB2008_T2002']
+    (1, 'Campbell2003()') ['#0-SM1-BA2008_C2003', '#2-SM1-CB2008_C2003']
+    (1, 'ToroEtAl2002()') ['#1-SM1-BA2008_T2002', '#3-SM1-CB2008_T2002']
+    (2, 'BooreAtkinson2008()') ['#4-SM2_a3pt2b0pt8-BA2008']
+    (2, 'CampbellBozorgnia2008()') ['#5-SM2_a3pt2b0pt8-CB2008']
+    (3, 'BooreAtkinson2008()') ['#6-SM2_a3b1-BA2008']
+    (3, 'CampbellBozorgnia2008()') ['#7-SM2_a3b1-CB2008']
     """
     def __init__(self, csm_info):
         self.csm_info = csm_info

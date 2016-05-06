@@ -75,11 +75,11 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, trt_model_id,
                 pne_dict = {}
                 # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
                 for gsim in gsims:
+                    gs = str(gsim)
                     for imt_str, imls in imtls.iteritems():
                         imt = from_string(imt_str)
                         imls = numpy.array(imls[::-1])
-                        for rlz in rlzs_assoc[
-                                trt_model_id, gsim.__class__.__name__]:
+                        for rlz in rlzs_assoc[trt_model_id, gs]:
                             rlzi = rlz.ordinal
                             curve_poes = curves[rlzi, imt_str][::-1]
                             for poe in poes:
@@ -179,8 +179,7 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
         for poe in oqparam.poes_disagg:
             for imt in oqparam.imtls:
                 for gsim in gsims:
-                    for rlz in rlzs_assoc[
-                            trt_model_id, gsim.__class__.__name__]:
+                    for rlz in rlzs_assoc[trt_model_id, gsim]:
                         rlzi = rlz.ordinal
                         # extract the probabilities of non-exceedance for the
                         # given realization, disaggregation PoE, and IMT
