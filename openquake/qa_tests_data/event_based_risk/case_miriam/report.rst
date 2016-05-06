@@ -1,7 +1,7 @@
 Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
-gem-tstation:/home/michele/ssd/calc_2007.hdf5 updated Fri Apr 29 11:26:55 2016
+gem-tstation:/home/michele/ssd/calc_12617.hdf5 updated Wed May  4 04:54:33 2016
 
 num_sites = 1792, sitecol = 44.71 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  1024               
 master_seed                  100                
 avg_losses                   False              
-oqlite_version               '0.13.0-git920d730'
+oqlite_version               '0.13.0-git02c4b55'
 ============================ ===================
 
 Input files
@@ -72,14 +72,14 @@ source_model.xml 0      Active Shallow Crust 1           44           2,558
 Informational data
 ------------------
 ====================================== ==============
-event_based_risk_max_received_per_task 1973          
+event_based_risk_max_received_per_task 4030          
 event_based_risk_num_tasks             44            
 event_based_risk_sent.assetcol         978428        
-event_based_risk_sent.monitor          26532         
-event_based_risk_sent.riskinput        2203406       
-event_based_risk_sent.riskmodel        869528        
+event_based_risk_sent.monitor          116072        
+event_based_risk_sent.riskinput        2204291       
+event_based_risk_sent.riskmodel        836264        
 event_based_risk_sent.rlzs_assoc       133408        
-event_based_risk_tot_received          86460         
+event_based_risk_tot_received          177057        
 hostname                               'gem-tstation'
 require_epsilons                       True          
 ====================================== ==============
@@ -108,62 +108,61 @@ Exposure model
 #taxonomies 11 
 =========== ===
 
-========== =======
-Taxonomy   #Assets
-========== =======
-A-SPSB-1   10     
-MC-RCSB-1  27     
-MC-RLSB-2  49     
-MR-RCSB-2  249    
-MR-SLSB-1  5      
-MS-FLSB-2  15     
-MS-SLSB-1  17     
-PCR-RCSM-5 2      
-PCR-SLSB-1 3      
-W-FLFB-2   66     
-W-SLFB-1   105    
-========== =======
+========== ===== ====== === === ========= ==========
+taxonomy   mean  stddev min max num_sites num_assets
+A-SPSB-1   1.250 0.463  1   2   8         10        
+MC-RCSB-1  1.286 0.561  1   3   21        27        
+MC-RLSB-2  1.256 0.880  1   6   39        49        
+MR-RCSB-2  1.456 0.799  1   6   171       249       
+MR-SLSB-1  1.000 0.0    1   1   5         5         
+MS-FLSB-2  1.250 0.452  1   2   12        15        
+MS-SLSB-1  1.545 0.934  1   4   11        17        
+PCR-RCSM-5 1.000 0.0    1   1   2         2         
+PCR-SLSB-1 1.000 0.0    1   1   3         3         
+W-FLFB-2   1.222 0.502  1   3   54        66        
+W-SLFB-1   1.265 0.520  1   3   83        105       
+*ALL*      1.950 1.306  1   10  281       548       
+========== ===== ====== === === ========= ==========
 
 Slowest sources
 ---------------
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            F         ComplexFaultSource 2,558  1,119     0.002       2.572      3.251    
+0            F         ComplexFaultSource 2,558  1,119     0.002       2.698      3.462    
 ============ ========= ================== ====== ========= =========== ========== =========
 
 Information about the tasks
 ---------------------------
-========================== ===== ===== ===== ======
-measurement                min   max   mean  stddev
-compute_ruptures.time_sec  0.002 0.561 0.078 0.175 
-compute_ruptures.memory_mb 0.0   3.598 1.078 1.292 
-event_based_risk.time_sec  0.044 0.116 0.074 0.017 
-event_based_risk.memory_mb 0.105 1.680 0.989 0.525 
-========================== ===== ===== ===== ======
+========================== ===== ====== ===== ===== =========
+measurement                mean  stddev min   max   num_tasks
+compute_ruptures.time_sec  0.083 0.186  0.001 0.597 42       
+compute_ruptures.memory_mb 0.002 0.005  0.0   0.027 42       
+event_based_risk.time_sec  0.068 0.017  0.043 0.106 44       
+event_based_risk.memory_mb 0.113 0.089  0.0   0.277 44       
+========================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-total compute_ruptures         3.291    3.598     42    
-total event_based_risk         3.261    1.680     44    
-managing sources               2.720    0.0       1     
-splitting sources              2.572    0.0       1     
-computing risk                 1.883    0.0       12,364
-building hazard                0.354    0.0       44    
-compute poes                   0.311    0.0       44    
-reading site collection        0.235    0.0       1     
-getting hazard                 0.174    0.0       12,364
-reading exposure               0.123    0.0       1     
-aggregate losses               0.121    0.0       24,112
-reading composite source model 0.090    0.0       1     
-make contexts                  0.033    0.0       44    
-saving ruptures                0.023    0.0       1     
+total compute_ruptures         3.484    0.027     42    
+total event_based_risk         2.972    0.277     44    
+managing sources               2.808    0.0       1     
+splitting sources              2.698    0.0       1     
+building hazard                1.280    0.0       44    
+computing riskmodel            0.826    0.0       17,996
+compute poes                   0.351    0.0       44    
+reading site collection        0.288    0.0       1     
+aggregate losses               0.135    0.0       17,996
+reading composite source model 0.129    0.0       1     
+reading exposure               0.122    0.0       1     
+saving ruptures                0.043    0.0       1     
+make contexts                  0.034    0.0       44    
+store source_info              0.025    0.0       1     
 filtering ruptures             0.018    0.0       57    
-store source_info              0.015    0.0       1     
 saving event loss tables       0.011    0.0       44    
-aggregate curves               0.003    0.0       42    
+aggregate curves               0.005    0.0       42    
 filtering sources              0.002    0.0       1     
 ============================== ======== ========= ======
