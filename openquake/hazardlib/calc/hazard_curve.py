@@ -26,7 +26,7 @@ import collections
 
 import numpy
 
-from openquake.baselib.python3compat import raise_
+from openquake.baselib.python3compat import raise_, zip
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.poe import PoeCurve, Imtls
 from openquake.hazardlib.calc import filters
@@ -221,10 +221,11 @@ def hazard_curves_per_trt(
                                 bb.update([dist], [p.longitude], [p.latitude])
 
                 with pne_mon:
-                    update_probabilities(
-                        curves, rupture, sctx, rctx, dctx, imtls, gsims,
+                    pnes = get_probability_no_exceedance(
+                        rupture, sctx, rctx, dctx, imtls, gsims,
                         truncation_level)
-
+                    for sid, pne in zip(sctx.sites.indices, pnes):
+                        curves[sid].array *= pne
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
@@ -241,23 +242,23 @@ def hazard_curves_per_trt(
 
 
 # NB: it is important for this to be fast since it is inside an inner loop
-def update_probabilities(
+def get_probability_no_exceedance(
         curves, rupture, sctx, rctx, dctx, imtls, gsims, trunclevel):
     """
-    :curves: a dictionary of PoeCurves by site id.
     :param rupture: a Rupture instance
     :param sctx: the corresponding SiteContext instance
     :param rctx: the corresponding RuptureContext instance
     :param dctx: the corresponding DistanceContext instance
     :param gsims: the list of GSIMs to use
     :param trunclevel: the truncation level
+    :returns: an array of shape (num_sites, num_gsim, num_levels)
     """
+    pne_array = numpy.zeros((len(sctx.sites), len(gsims), len(imtls.array)))
     for i, gsim in enumerate(gsims):
         pnos = []  # list of arrays nsites x nlevels
         for imt in imtls:
             poes = gsim.get_poes(
                 sctx, rctx, dctx, from_string(imt), imtls[imt], trunclevel)
             pnos.append(rupture.get_probability_no_exceedance(poes))
-        pnos = numpy.concatenate(pnos, axis=1)
-        for sid, pno in zip(sctx.sites.indices, pnos):
-            curves[sid].array[i, :] *= pno
+        pne_array[:, i, :] = numpy.concatenate(pnos, axis=1)
+    return pne_array

@@ -48,6 +48,11 @@ class Imtls(collections.Mapping):
     def __len__(self):
         return len(self.imt_dt.names)
 
+    def __repr__(self):
+        array = self.array.view(self.imt_dt)
+        data = ['%s: %s' % (imt, array[imt][0]) for imt in self]
+        return '<Imtls\n%s>' % '\n'.join(data)
+
 
 class PoeCurve(object):
     """
