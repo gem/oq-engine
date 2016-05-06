@@ -142,7 +142,7 @@ class RunShowExportTestCase(unittest.TestCase):
         # the tests here gives mysterious core dumps in Ubuntu 16.04,
         # but only if called together with all other tests with the command
         # nosetests openquake/commonlib/
-        check_platform()
+        check_platform('trusty')
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
             calc = run._run(job_ini, 0, False, 'info', None, '', {})
