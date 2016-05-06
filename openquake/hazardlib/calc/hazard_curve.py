@@ -164,7 +164,10 @@ def acc2curves(acc, ngsims, nsites, imtls):
     Convert a dictionary of curves into an array of curves of shape
     (ngsims, nsites) and dtype imt_dt.
     """
-    imt_dt = imtls.imt_dt
+    try:
+        imt_dt = imtls.imt_dt
+    except AttributeError:
+        imt_dt = Imtls(imtls).imt_dt
     curves = numpy.zeros((ngsims, nsites), imt_dt)
     for sid in acc:
         for j in range(ngsims):
