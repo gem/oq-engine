@@ -160,7 +160,12 @@ def calc_hazard_curves(
 
 
 def acc2curves(acc, ngsims, nsites, imtls):
-    curves = zero_curves((ngsims, nsites), imtls)
+    """
+    Convert a dictionary of curves into an array of curves of shape
+    (ngsims, nsites) and dtype imt_dt.
+    """
+    imt_dt = imtls.imt_dt
+    curves = numpy.zeros((ngsims, nsites), imt_dt)
     for sid in acc:
         for j in range(ngsims):
             curves[j, sid] = acc[sid].array[j].view(curves.dtype)
@@ -185,31 +190,40 @@ def hazard_curves_per_trt(
     """
     cmaker = ContextMaker(gsims, maximum_distance)
     imtls = Imtls(imtls)
+    n_gsims = len(gsims)
     sources_sites = ((source, sites) for source in sources)
     ctx_mon = monitor('making contexts', measuremem=False)
     pne_mon = monitor('computing poes', measuremem=False)
+    disagg_mon = monitor('get closest points', measuremem=False)
     monitor.calc_times = []  # pairs (src_id, delta_t)
     monitor.eff_ruptures = 0  # effective number of contributing ruptures
     acc = {}
     for source, s_sites in source_site_filter(sources_sites):
         t0 = time.time()
-        curves = PoeCurve.build(imtls, gsims, s_sites.indices, initvalue=1.)
+        curves = PoeCurve.build(imtls, n_gsims, s_sites.indices, initvalue=1.)
         try:
-            for rupture in source.iter_ruptures():
-                with ctx_mon:
+            for rup in source.iter_ruptures():
+                with ctx_mon:  # compute distances
                     try:
-                        sctx, rctx, dctx = cmaker.make_contexts(
-                            s_sites, rupture)
+                        sctx, rctx, dctx = cmaker.make_contexts(s_sites, rup)
                     except FarAwayRupture:
                         continue
 
-                    monitor.eff_ruptures += 1
+                with pne_mon:  # compute probabilities and updates the curves
+                    pnes = get_probability_no_exceedance(
+                        rup, sctx, rctx, dctx, imtls, gsims,
+                        truncation_level)
+                    for sid, pne in zip(sctx.sites.indices, pnes):
+                        curves[sid].array *= pne
 
-                    # add optional disaggregation information (bounding boxes)
-                    if bbs:
+                monitor.eff_ruptures += 1
+
+                # add optional disaggregation information (bounding boxes)
+                if bbs:
+                    with disagg_mon:
                         sids = set(sctx.sites.sids)
                         jb_dists = dctx.rjb
-                        closest_points = rupture.surface.get_closest_points(
+                        closest_points = rup.surface.get_closest_points(
                             sctx.sites.mesh)
                         bs = [bb for bb in bbs if bb.site_id in sids]
                         # NB: the assert below is always true; we are
@@ -219,13 +233,6 @@ def hazard_curves_per_trt(
                             if dist < maximum_distance:
                                 # rbuptures too far away are ignored
                                 bb.update([dist], [p.longitude], [p.latitude])
-
-                with pne_mon:
-                    pnes = get_probability_no_exceedance(
-                        rupture, sctx, rctx, dctx, imtls, gsims,
-                        truncation_level)
-                    for sid, pne in zip(sctx.sites.indices, pnes):
-                        curves[sid].array *= pne
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
@@ -249,6 +256,7 @@ def get_probability_no_exceedance(
     :param sctx: the corresponding SiteContext instance
     :param rctx: the corresponding RuptureContext instance
     :param dctx: the corresponding DistanceContext instance
+    :param imtls: a dictionary-like object providing the intensity levels
     :param gsims: the list of GSIMs to use
     :param trunclevel: the truncation level
     :returns: an array of shape (num_sites, num_gsim, num_levels)

@@ -18,7 +18,6 @@
 import collections
 import numpy
 
-U32 = numpy.uint32
 F64 = numpy.float64
 
 
@@ -36,7 +35,7 @@ class Imtls(collections.Mapping):
             self[imt] = imls
 
     def __getitem__(self, imt):
-        return self.array.view(self.imt_dt)[imt]
+        return self.array.view(self.imt_dt)[0][imt]
 
     def __setitem__(self, imt, array):
         self.array.view(self.imt_dt)[imt] = array
@@ -50,7 +49,7 @@ class Imtls(collections.Mapping):
 
     def __repr__(self):
         array = self.array.view(self.imt_dt)
-        data = ['%s: %s' % (imt, array[imt][0]) for imt in self]
+        data = ['%s: %s' % (imt, array[imt]) for imt in self]
         return '<Imtls\n%s>' % '\n'.join(data)
 
 
@@ -82,8 +81,12 @@ class PoeCurve(object):
     PGV: [[[ 0.5  0.5]]]>
     """
     @classmethod
-    def build(cls, imtls, gsims, sids, initvalue=0.):
-        num_gsims = len(gsims)
+    def build(cls, imtls, num_gsims, sids, initvalue=0.):
+        """
+        :param imtls: an :class:`openquake.hazardlib.imt.Imtls` instance
+        :param num_gsims: the number of GSIMs
+        :returns: a dictionary of PoeCurves
+        """
         dic = {}
         for sid in sids:
             array = numpy.empty(num_gsims, (F64, len(imtls.array)))
@@ -94,10 +97,9 @@ class PoeCurve(object):
     @classmethod
     def compose(cls, dic1, dic2):
         """
-        >>> imtls = dict(PGA=[1, 2, 3], PGV=[4, 5])
-        >>> gsims = [None]
-        >>> curves1 = PoeCurve.build(imtls, gsims, [0, 1], initvalue=.1)
-        >>> curves2 = PoeCurve.build(imtls, gsims, [1, 2], initvalue=.1)
+        >>> imtls = Imtls(dict(PGA=[1, 2, 3], PGV=[4, 5]))
+        >>> curves1 = PoeCurve.build(imtls, 1, [0, 1], initvalue=.1)
+        >>> curves2 = PoeCurve.build(imtls, 1, [1, 2], initvalue=.1)
         >>> dic = PoeCurve.compose(curves1, curves2)
         >>> dic[0]
         <PoeCurve
@@ -117,6 +119,9 @@ class PoeCurve(object):
 
     @classmethod
     def multiply(cls, dic1, dic2):
+        """
+        Multiply two dictionaries of curves
+        """
         sids = set(dic1) | set(dic2)
         return {sid: dic1.get(sid, 1) * dic2.get(sid, 1) for sid in sids}
 
