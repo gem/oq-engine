@@ -29,7 +29,7 @@ from openquake.baselib.general import AccumDict, groupby
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
-from openquake.hazardlib.calc.hazard_curve import zero_curves
+from openquake.hazardlib.calc.hazard_curve import acc2curves, Imtls
 from openquake.hazardlib import geo, site, calc
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, parallel, datastore
@@ -579,7 +579,6 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc, monitor):
     # ruptures of the same trt_model_id
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
-    tot_sites = len(sitecol.complete)
     gmfadict = make_gmfs(
         eb_ruptures, sitecol, imts, rlzs_assoc, trunc_level, correl_model,
         monitor)
@@ -587,21 +586,14 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc, monitor):
               if oq.ground_motion_fields else [None, None]
               for rlzi in gmfadict}
     if oq.hazard_curves_from_gmfs:
+        imtls = Imtls(oq.imtls)
         with monitor('bulding hazard curves', measuremem=False):
             duration = oq.investigation_time * oq.ses_per_logic_tree_path
             for rlzi in gmfadict:
                 gmvs_by_sid = get_gmvs_by_sid(gmfadict[rlzi])
-                curves = zero_curves(tot_sites, oq.imtls)
-                for imt in oq.imtls:
-                    imls = numpy.array(oq.imtls[imt])
-                    for sid in range(tot_sites):
-                        try:
-                            gmvs = gmvs_by_sid[sid]
-                        except KeyError:
-                            continue
-                        curves[imt][sid] = gmvs_to_haz_curve(
-                            gmvs[imt], imls, oq.investigation_time, duration)
-                result[rlzi][HAZCURVES] = curves
+                result[rlzi][HAZCURVES] = {sid: gmvs_to_haz_curve(
+                    gmvs, imtls, oq.investigation_time, duration)
+                        for sid, gmvs in gmvs_by_sid.items()}
     return result
 
 
@@ -673,8 +665,7 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         monitor = self.monitor(self.core_task.__name__)
         monitor.oqparam = oq
-        zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
-        zerodict = AccumDict({rlz.ordinal: zc
+        zerodict = AccumDict({rlz.ordinal: {}
                               for rlz in self.rlzs_assoc.realizations})
         acc = parallel.apply_reduce(
             self.core_task.__func__,
@@ -699,7 +690,11 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         elif oq.hazard_curves_from_gmfs:
             rlzs = self.rlzs_assoc.realizations
-            self.save_curves({rlzs[rlzi]: result[rlzi] for rlzi in result})
+            dic = {}
+            for rlzi in result:
+                dic[rlzs[rlzi]] = acc2curves(
+                    result[rlzi], 1, len(self.sitecol), oq.imtls)
+            self.save_curves(dic)
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')
             if not os.path.exists(export_dir):

@@ -203,11 +203,14 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc.eff_ruptures += val.eff_ruptures
             for bb in getattr(val, 'bbs', []):
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
-            for trt_id in val:
-                acc[trt_id] = PoeCurve.compose(
-                    acc.get(trt_id, {}), val[trt_id])
+            self.agg_curves(acc, val)
         self.datastore.flush()
         return acc
+
+    # overridden in event_based_rupture
+    def agg_curves(self, acc, val):
+        for trt_id in val:
+            acc[trt_id] = PoeCurve.compose(acc.get(trt_id, {}), val[trt_id])
 
     def count_eff_ruptures(self, result_dict, trt_model):
         """
@@ -293,9 +296,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 for tm in sm.trt_models:
                     if tm.id not in curves_by_trt_id:
                         continue   # no data for this tectonic model
+                    gsims = self.rlzs_assoc.gsims_by_trt_id[tm.id]
                     curves_by_gsim = acc2curves(
-                        curves_by_trt_id[tm.id], len(tm.gsims), nsites, imtls)
-                    for i, gsim in enumerate(tm.gsims):
+                        curves_by_trt_id[tm.id], len(gsims), nsites, imtls)
+                    for i, gsim in enumerate(gsims):
                         gs = str(gsim)
                         curves = curves_by_gsim[i]
                         ts = '%03d-%d' % (tm.id, i)
