@@ -936,6 +936,7 @@ class SourceManager(object):
         """
         rlzs_assoc = self.csm.info.get_rlzs_assoc()
         for kind in ('light', 'heavy'):
+            logging.info('Filtering %s sources', kind)
             sources = list(self.get_sources(kind, sitecol))
             if not sources:
                 continue
