@@ -29,7 +29,7 @@ from openquake.baselib.general import AccumDict, groupby
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
-from openquake.hazardlib.calc.hazard_curve import acc2curves, Imtls
+from openquake.hazardlib.calc.hazard_curve import array_of_curves, Imtls
 from openquake.hazardlib import geo, site, calc
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, parallel, datastore
@@ -692,8 +692,8 @@ class EventBasedCalculator(ClassicalCalculator):
             rlzs = self.rlzs_assoc.realizations
             dic = {}
             for rlzi in result:
-                dic[rlzs[rlzi]] = acc2curves(
-                    result[rlzi], 1, len(self.sitecol), oq.imtls)[0]
+                dic[rlzs[rlzi]] = array_of_curves(
+                    result[rlzi], len(self.sitecol), oq.imtls)
             self.save_curves(dic)
         if oq.compare_with_classical:  # compute classical curves
             export_dir = os.path.join(oq.export_dir, 'cl')

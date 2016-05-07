@@ -29,7 +29,7 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
-    hazard_curves_per_trt, zero_curves, zero_maps, agg_curves, acc2curves)
+    hazard_curves_per_trt, zero_curves, zero_maps, agg_curves, array_of_curves)
 from openquake.risklib import scientific
 from openquake.commonlib import parallel, datastore, source
 from openquake.baselib.general import AccumDict
@@ -297,10 +297,9 @@ class ClassicalCalculator(base.HazardCalculator):
                     if tm.id not in curves_by_trt_id:
                         continue   # no data for this tectonic model
                     gsims = self.rlzs_assoc.gsims_by_trt_id[tm.id]
-                    curves_by_gsim = acc2curves(
-                        curves_by_trt_id[tm.id], len(gsims), nsites, imtls)
                     for i, gsim in enumerate(gsims):
-                        curves = curves_by_gsim[i]
+                        curves = array_of_curves(
+                            curves_by_trt_id[tm.id], nsites, imtls, i)
                         ts = '%03d-%d' % (tm.id, i)
                         if nonzero(curves):
                             group[ts] = curves
