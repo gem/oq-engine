@@ -203,7 +203,7 @@ def get_probability_no_exceedance(
     return pne_array
 
 
-def hazard_curves_from_src(
+def curves_from_src(
         src, s_sites, imtls, cmaker, trunclevel, bbs,
         ctx_mon, pne_mon, disagg_mon):
     """
@@ -274,7 +274,7 @@ def hazard_curves_per_trt(
     acc = {}
     for src, s_sites in source_site_filter(sources_sites):
         t0 = time.time()
-        curves = hazard_curves_from_src(
+        curves = curves_from_src(
             src, s_sites, imtls, cmaker, truncation_level, bbs,
             ctx_mon, pne_mon, disagg_mon)
         # we are attaching the calculation times to the monitor
