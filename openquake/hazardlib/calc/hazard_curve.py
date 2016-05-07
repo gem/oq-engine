@@ -77,6 +77,26 @@ def agg_curves(acc, curves):
     return new
 
 
+def array_of_curves(acc, nsites, imtls, gsim_idx=0):
+    """
+    Convert a dictionary of curves into an array of curves of length `nsites`
+    and dtype `imt_dt`.
+
+    :param acc: a dictionary sid -> PoeCurve
+    :param nsites: the number of sites in the full site collection
+    :param imtls: intensity measure types and levels
+    :param gsims_idx: extract the data corresponding to a specific GSIM
+    """
+    try:
+        imt_dt = imtls.imt_dt
+    except AttributeError:
+        imt_dt = Imtls(imtls).imt_dt
+    curves = numpy.zeros(nsites, imt_dt)
+    for sid in acc:
+        curves[sid] = acc[sid].array[gsim_idx].view(curves.dtype)
+    return curves
+
+
 @deprecated('Use calc_hazard_curves instead')
 def hazard_curves(
         sources, sites, imtls, gsim_by_trt, truncation_level=None,
@@ -156,99 +176,7 @@ def calc_hazard_curves(
         acc = PoeCurve.compose(acc, hazard_curves_per_trt(
             sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
             truncation_level, source_site_filter))
-    return acc2curves(acc, 1, len(sites), imtls)[0]  # there is a single GSIM
-
-
-def acc2curves(acc, ngsims, nsites, imtls):
-    """
-    Convert a dictionary of curves into an array of curves of shape
-    (ngsims, nsites) and dtype imt_dt.
-    """
-    try:
-        imt_dt = imtls.imt_dt
-    except AttributeError:
-        imt_dt = Imtls(imtls).imt_dt
-    curves = numpy.zeros((ngsims, nsites), imt_dt)
-    for sid in acc:
-        for j in range(ngsims):
-            curves[j, sid] = acc[sid].array[j].view(curves.dtype)
-    return curves
-
-
-def hazard_curves_per_trt(
-        sources, sites, imtls, gsims, truncation_level=None,
-        source_site_filter=filters.source_site_noop_filter,
-        maximum_distance=None, bbs=(), monitor=Monitor()):
-    """
-    Compute the hazard curves for a set of sources belonging to the same
-    tectonic region type for all the GSIMs associated to that TRT.
-    The arguments are the same as in :func:`calc_hazard_curves`, except
-    for ``gsims``, which is a list of GSIM instances.
-
-    :returns:
-        A list of G arrays of size N, where N is the number of sites and
-        G the number of gsims. Each array contains records with fields given
-        by the intensity measure types; the size of each field is given by the
-        number of levels in ``imtls``.
-    """
-    cmaker = ContextMaker(gsims, maximum_distance)
-    imtls = Imtls(imtls)
-    n_gsims = len(gsims)
-    sources_sites = ((source, sites) for source in sources)
-    ctx_mon = monitor('making contexts', measuremem=False)
-    pne_mon = monitor('computing poes', measuremem=False)
-    disagg_mon = monitor('get closest points', measuremem=False)
-    monitor.calc_times = []  # pairs (src_id, delta_t)
-    monitor.eff_ruptures = 0  # effective number of contributing ruptures
-    acc = {}
-    for source, s_sites in source_site_filter(sources_sites):
-        t0 = time.time()
-        curves = PoeCurve.build(imtls, n_gsims, s_sites.sids, initvalue=1.)
-        try:
-            for rup in source.iter_ruptures():
-                with ctx_mon:  # compute distances
-                    try:
-                        sctx, rctx, dctx = cmaker.make_contexts(s_sites, rup)
-                    except FarAwayRupture:
-                        continue
-
-                with pne_mon:  # compute probabilities and updates the curves
-                    pnes = get_probability_no_exceedance(
-                        rup, sctx, rctx, dctx, imtls, gsims,
-                        truncation_level)
-                    for sid, pne in zip(sctx.sites.sids, pnes):
-                        curves[sid].array *= pne
-
-                monitor.eff_ruptures += 1
-
-                # add optional disaggregation information (bounding boxes)
-                if bbs:
-                    with disagg_mon:
-                        sids = set(sctx.sites.sids)
-                        jb_dists = dctx.rjb
-                        closest_points = rup.surface.get_closest_points(
-                            sctx.sites.mesh)
-                        bs = [bb for bb in bbs if bb.site_id in sids]
-                        # NB: the assert below is always true; we are
-                        # protecting against possible refactoring errors
-                        assert len(bs) == len(jb_dists) == len(closest_points)
-                        for bb, dist, p in zip(bs, jb_dists, closest_points):
-                            if dist < maximum_distance:
-                                # rbuptures too far away are ignored
-                                bb.update([dist], [p.longitude], [p.latitude])
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = 'An error occurred with source id=%s. Error: %s'
-            msg %= (source.source_id, str(err))
-            raise_(etype, msg, tb)
-
-        # we are attaching the calculation times to the monitor
-        # so that oq-lite (and the engine) can store them
-        monitor.calc_times.append((source.id, time.time() - t0))
-        # NB: source.id is an integer; it should not be confused
-        # with source.source_id, which is a string
-        acc = PoeCurve.compose(acc, {sid: ~curves[sid] for sid in curves})
-    return acc  # sid -> PoeCurve
+    return array_of_curves(acc, len(sites), imtls)
 
 
 # NB: it is important for this to be fast since it is inside an inner loop
@@ -273,3 +201,89 @@ def get_probability_no_exceedance(
             pnos.append(rupture.get_probability_no_exceedance(poes))
         pne_array[:, i, :] = numpy.concatenate(pnos, axis=1)
     return pne_array
+
+
+def hazard_curves_from_src(
+        src, s_sites, imtls, cmaker, trunclevel, bbs,
+        ctx_mon, pne_mon, disagg_mon, monitor):
+    """
+    Returns the dictionary site_id -> PoeCurve generated by the
+    given source. Also, store some information in the monitors
+    and optionally in the bounding boxes.
+    """
+    curves = PoeCurve.build(
+        imtls, len(cmaker.gsims), s_sites.sids, initvalue=1.)
+    try:
+        for rup in src.iter_ruptures():
+            with ctx_mon:  # compute distances
+                try:
+                    sctx, rctx, dctx = cmaker.make_contexts(s_sites, rup)
+                except FarAwayRupture:
+                    continue
+                else:
+                    monitor.eff_ruptures += 1  # counts the close ruptures
+
+            with pne_mon:  # compute probabilities and updates the curves
+                pnes = get_probability_no_exceedance(
+                    rup, sctx, rctx, dctx, imtls, cmaker.gsims, trunclevel)
+                for sid, pne in zip(sctx.sites.sids, pnes):
+                    curves[sid].array *= pne
+
+            # add optional disaggregation information (bounding boxes)
+            if bbs:
+                with disagg_mon:
+                    sids = set(sctx.sites.sids)
+                    jb_dists = dctx.rjb
+                    closest_points = rup.surface.get_closest_points(
+                        sctx.sites.mesh)
+                    bs = [bb for bb in bbs if bb.site_id in sids]
+                    # NB: the assert below is always true; we are
+                    # protecting against possible refactoring errors
+                    assert len(bs) == len(jb_dists) == len(closest_points)
+                    for bb, dist, p in zip(bs, jb_dists, closest_points):
+                        if dist < cmaker.maximum_distance:
+                            # rbuptures too far away are ignored
+                            bb.update([dist], [p.longitude], [p.latitude])
+    except Exception as err:
+        etype, err, tb = sys.exc_info()
+        msg = 'An error occurred with source id=%s. Error: %s'
+        msg %= (src.source_id, str(err))
+        raise_(etype, msg, tb)
+    return curves
+
+
+# this is used by the engine
+def hazard_curves_per_trt(
+        sources, sites, imtls, gsims, truncation_level=None,
+        source_site_filter=filters.source_site_noop_filter,
+        maximum_distance=None, bbs=(), monitor=Monitor()):
+    """
+    Compute the hazard curves for a set of sources belonging to the same
+    tectonic region type for all the GSIMs associated to that TRT.
+    The arguments are the same as in :func:`calc_hazard_curves`, except
+    for ``gsims``, which is a list of GSIM instances.
+
+    :returns:
+        A dictionary site_id -> PoeCurve
+    """
+    imtls = Imtls(imtls)
+    cmaker = ContextMaker(gsims, maximum_distance)
+    sources_sites = ((source, sites) for source in sources)
+    ctx_mon = monitor('making contexts', measuremem=False)
+    pne_mon = monitor('computing poes', measuremem=False)
+    disagg_mon = monitor('get closest points', measuremem=False)
+    monitor.calc_times = []  # pairs (src_id, delta_t)
+    monitor.eff_ruptures = 0  # effective number of contributing ruptures
+    acc = {}
+    for src, s_sites in source_site_filter(sources_sites):
+        t0 = time.time()
+        curves = hazard_curves_from_src(
+            src, s_sites, imtls, cmaker, truncation_level, bbs,
+            ctx_mon, pne_mon, disagg_mon, monitor)
+        # we are attaching the calculation times to the monitor
+        # so that oq-lite (and the engine) can store them
+        monitor.calc_times.append((src.id, time.time() - t0))
+        # NB: source.id is an integer; it should not be confused
+        # with source.source_id, which is a string
+        acc = PoeCurve.compose(acc, {sid: ~curves[sid] for sid in curves})
+    return acc  # sid -> PoeCurve
