@@ -203,7 +203,7 @@ def hazard_curves_per_trt(
     acc = {}
     for source, s_sites in source_site_filter(sources_sites):
         t0 = time.time()
-        curves = PoeCurve.build(imtls, n_gsims, s_sites.indices, initvalue=1.)
+        curves = PoeCurve.build(imtls, n_gsims, s_sites.sids, initvalue=1.)
         try:
             for rup in source.iter_ruptures():
                 with ctx_mon:  # compute distances
@@ -216,7 +216,7 @@ def hazard_curves_per_trt(
                     pnes = get_probability_no_exceedance(
                         rup, sctx, rctx, dctx, imtls, gsims,
                         truncation_level)
-                    for sid, pne in zip(sctx.sites.indices, pnes):
+                    for sid, pne in zip(sctx.sites.sids, pnes):
                         curves[sid].array *= pne
 
                 monitor.eff_ruptures += 1
