@@ -133,19 +133,17 @@ class HazardCurvesTestCase(unittest.TestCase):
         self.assertIsInstance(pga_curves, numpy.ndarray)
         self.assertEqual(pga_curves.shape, (2, 3))  # two sites, three IMLs
         site1_pga_poe, site2_pga_poe = pga_curves
-        self.assertTrue(numpy.allclose(site1_pga_poe, site1_pga_poe_expected),
-                        str(site1_pga_poe))
-        self.assertTrue(numpy.allclose(site2_pga_poe, site2_pga_poe_expected),
-                        str(site2_pga_poe))
+        numpy.testing.assert_allclose(
+            site1_pga_poe, site1_pga_poe_expected, 1E-6)
+        numpy.testing.assert_allclose(
+            site2_pga_poe, site2_pga_poe_expected, 1E-6)
 
         pgd_curves = curves['PGD']
         self.assertIsInstance(pgd_curves, numpy.ndarray)
         self.assertEqual(pgd_curves.shape, (2, 2))  # two sites, two IMLs
         site1_pgd_poe, site2_pgd_poe = pgd_curves
-        self.assertTrue(numpy.allclose(site1_pgd_poe, site1_pgd_poe_expected),
-                        str(site1_pgd_poe))
-        self.assertTrue(numpy.allclose(site2_pgd_poe, site2_pgd_poe_expected),
-                        str(site2_pgd_poe))
+        numpy.testing.assert_allclose(site1_pgd_poe, site1_pgd_poe_expected)
+        numpy.testing.assert_allclose(site2_pgd_poe, site2_pgd_poe_expected)
 
     def test_source_errors(self):
         # exercise `hazard_curves_poissonian` in the case of an exception,
