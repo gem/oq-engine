@@ -28,8 +28,12 @@ class Imtls(collections.Mapping):
     """
     def __init__(self, imtls):
         self.imt_dt = dt = numpy.dtype(
-            [(imt, F64, len(imls)) for imt, imls in sorted(imtls.items())])
-        num_levels = sum(dt[name].shape[0] for name in dt.names)
+            [(imt, F64, 1 if imls is None else len(imls))
+             for imt, imls in sorted(imtls.items())])
+        num_levels = 0
+        for name in dt.names:
+            shp = dt[name].shape
+            num_levels += shp[0] if shp else 1
         self.array = numpy.empty(num_levels, F64)
         for imt, imls in imtls.items():
             self[imt] = imls
