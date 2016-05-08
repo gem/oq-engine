@@ -829,7 +829,7 @@ class SourceManager(object):
     """
     def __init__(self, csm, taskfunc, maximum_distance,
                  dstore, monitor, random_seed=None,
-                 filter_sources=True, num_tiles=1, reduce_weight=.5):
+                 filter_sources=True, num_tiles=1, reduce_weight=.25):
         self.tm = parallel.TaskManager(taskfunc)
         self.csm = csm
         self.maximum_distance = maximum_distance
@@ -852,8 +852,10 @@ class SourceManager(object):
                 nr = src.num_ruptures
                 self.src_serial[src.id] = rup_serial[start:start + nr]
                 start += nr
-        self.maxweight = self.csm.maxweight * self.num_tiles * (
-            self.reduce_weight if self.filter_sources else 1)
+        self.maxweight = self.csm.maxweight
+        if self.filter_sources and self.num_tiles > 1:
+            # reduce_weight is a trick to generate 4 times more tasks
+            self.maxweight *= reduce_weight
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
 
