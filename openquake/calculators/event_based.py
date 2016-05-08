@@ -29,7 +29,7 @@ from openquake.baselib.general import AccumDict, groupby
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
-from openquake.hazardlib.calc.hazard_curve import array_of_curves, Imtls
+from openquake.hazardlib.calc.hazard_curve import array_of_curves
 from openquake.hazardlib import geo, site, calc
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, parallel, datastore
@@ -586,13 +586,12 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc, monitor):
               if oq.ground_motion_fields else [None, None]
               for rlzi in gmfadict}
     if oq.hazard_curves_from_gmfs:
-        imtls = Imtls(oq.imtls)
         with monitor('bulding hazard curves', measuremem=False):
             duration = oq.investigation_time * oq.ses_per_logic_tree_path
             for rlzi in gmfadict:
                 gmvs_by_sid = get_gmvs_by_sid(gmfadict[rlzi])
                 result[rlzi][HAZCURVES] = {sid: gmvs_to_haz_curve(
-                    gmvs, imtls, oq.investigation_time, duration)
+                    gmvs, oq.imtls, oq.investigation_time, duration)
                         for sid, gmvs in gmvs_by_sid.items()}
     return result
 

@@ -23,7 +23,7 @@ from functools import partial
 
 import numpy
 
-from openquake.hazardlib.poe import PoeCurve, Imtls
+from openquake.hazardlib.poe import PoeCurve
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -150,7 +150,7 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
         an AccumDict rlz -> curves
     """
     truncation_level = monitor.oqparam.truncation_level
-    imtls = Imtls(monitor.oqparam.imtls)
+    imtls = monitor.oqparam.imtls
     trt_model_id = sources[0].trt_model_id
     # sanity check: the trt_model must be the same for all sources
     for src in sources[1:]:
@@ -286,7 +286,7 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary trt_id -> hazard curves
         """
         nsites = len(self.sitecol)
-        imtls = Imtls(self.oqparam.imtls)
+        imtls = self.oqparam.imtls
         curves_by_trt_gsim = {}
         with self.monitor('save curves_by_trt_id', autoflush=True):
             for sm in self.rlzs_assoc.csm_info.source_models:

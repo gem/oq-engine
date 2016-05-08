@@ -543,9 +543,9 @@ def get_job_info(oqparam, source_models, sitecol):
     imtls = oqparam.imtls
     n_sites = len(sitecol) if sitecol else 0
 
-    # the imtls dictionary has values None when the levels are unknown
+    # the imtls object has values [NaN] when the levels are unknown
     # (this is a valid case for the event based hazard calculator)
-    if None in imtls.values():  # there are no levels
+    if numpy.isnan(imtls.values()).any():  # there are no levels
         n_imts = len(imtls)
         n_levels = 0
     else:  # there are levels
