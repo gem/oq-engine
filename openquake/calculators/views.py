@@ -127,6 +127,39 @@ def rst_table(data, header=None, fmt=None):
     return '\n'.join(lines)
 
 
+def sum_tbl(tbl, kfield, vfields):
+    """
+    Aggregate a composite array and compute the totals on a given key.
+
+    >>> dt = numpy.dtype([('name', (bytes, 10)), ('value', int)])
+    >>> tbl = numpy.array([('a', 1), ('a', 2), ('b', 3)], dt)
+    >>> sum_tbl(tbl, 'name', ['value'])
+    [('a', 3), ('b', 3)]
+    """
+    dt = numpy.dtype([(n, tbl.dtype[n]) for n in [kfield] + vfields])
+
+    def sum_all(group):
+        vals = numpy.zeros(1, dt)[0]
+        for rec in group:
+            for vfield in vfields:
+                vals[vfield] += rec[vfield]
+        vals[kfield] = rec[kfield]
+        return vals
+    rows = groupby(tbl, operator.itemgetter(kfield), sum_all).values()
+    return numpy.array(rows, dt)
+
+
+@view.add('times_by_source_class')
+def view_times_by_source_class(token, dstore):
+    """
+    Returns the calculation times depending on the source typology
+    """
+    totals = sum_tbl(
+        dstore['source_info'], 'source_class',
+        ['filter_time', 'split_time', 'calc_time'])
+    return rst_table(totals)
+
+
 def classify_gsim_lt(gsim_lt):
     """
     :returns: "trivial", "simple" or "complex"
