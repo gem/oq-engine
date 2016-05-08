@@ -28,7 +28,7 @@ class Imtls(collections.Mapping):
     """
     def __init__(self, imtls):
         self.imt_dt = dt = numpy.dtype(
-            [(imt, F64, len(imls)) for imt, imls in imtls.items()])
+            [(imt, F64, len(imls)) for imt, imls in sorted(imtls.items())])
         num_levels = sum(dt[name].shape[0] for name in dt.names)
         self.array = numpy.empty(num_levels, F64)
         for imt, imls in imtls.items():
@@ -41,7 +41,7 @@ class Imtls(collections.Mapping):
         self.array.view(self.imt_dt)[imt] = array
 
     def __iter__(self):
-        for imt in sorted(self.imt_dt.names):
+        for imt in self.imt_dt.names:
             yield imt
 
     def __len__(self):

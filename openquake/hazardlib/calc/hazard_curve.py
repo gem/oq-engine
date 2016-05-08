@@ -168,6 +168,7 @@ def calc_hazard_curves(
         are records with fields given by the intensity measure types; the
         size of each field is given by the number of levels in ``imtls``.
     """
+    imtls = Imtls(imtls)
     sources_by_trt = collections.defaultdict(list)
     for src in sources:
         sources_by_trt[src.tectonic_region_type].append(src)
