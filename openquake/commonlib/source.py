@@ -854,7 +854,7 @@ class SourceManager(object):
                 start += nr
         # decrease the weight with the number of tiles, to increase
         # the number of generated tasks; this is an heuristic trick
-        self.maxweight = self.csm.maxweight / math.sqrt(num_tiles)
+        self.maxweight = self.csm.maxweight / math.sqrt(num_tiles) / 2.
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
 
