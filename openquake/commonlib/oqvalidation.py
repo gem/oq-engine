@@ -124,7 +124,7 @@ class OqParam(valid.ParamSet):
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
-    sites_per_tile = valid.Param(valid.positiveint, 100000)
+    sites_per_tile = valid.Param(valid.positiveint, 10000)
     specific_assets = valid.Param(valid.namelist, [])
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)

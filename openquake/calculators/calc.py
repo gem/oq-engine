@@ -228,6 +228,7 @@ def gmvs_to_haz_curve(gmvs, imtls, invest_time, duration):
     for imt in imtls:
         data.append(
             _gmvs_to_haz_curve(gmvs[imt], imtls[imt], invest_time, duration))
+    # the array underlying the PoeCurve has size (1, num_levels)
     return PoeCurve(imtls.imt_dt, numpy.concatenate(data).reshape(1, -1))
 
 
