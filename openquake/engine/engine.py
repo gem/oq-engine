@@ -21,6 +21,7 @@ calculations."""
 
 import sys
 import signal
+import logging
 import traceback
 
 from openquake.baselib.performance import Monitor
@@ -48,8 +49,7 @@ if USE_CELERY:
             sys.exit("No live compute nodes, aborting calculation")
         num_cores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
         OqParam.concurrent_tasks.default = 2 * num_cores
-        logs.LOG.info('Using %s, %d cores',
-                      ', '.join(sorted(stats)), num_cores)
+        logging.info('Using %s, %d cores', ', '.join(sorted(stats)), num_cores)
 
     def celery_cleanup(terminate, task_ids=()):
         """
@@ -62,12 +62,12 @@ if USE_CELERY:
         # Using the celery API, terminate and revoke and terminate any running
         # tasks associated with the current job.
         if task_ids:
-            logs.LOG.warn('Revoking %d tasks', len(task_ids))
+            logging.warn('Revoking %d tasks', len(task_ids))
         else:  # this is normal when OQ_DISTRIBUTE=no
-            logs.LOG.debug('No task to revoke')
+            logging.debug('No task to revoke')
         for tid in task_ids:
             celery.task.control.revoke(tid, terminate=terminate)
-            logs.LOG.debug('Revoked task %s', tid)
+            logging.debug('Revoked task %s', tid)
 
 
 def expose_outputs(dstore):
@@ -165,10 +165,10 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     :param exports:
         A comma-separated string of export types.
     """
-    if USE_CELERY:
-        set_concurrent_tasks_default()
     monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
+        if USE_CELERY:
+            set_concurrent_tasks_default()
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
         tb = 'None\n'
         try:
@@ -182,7 +182,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
         except:
             tb = traceback.format_exc()
             try:
-                logs.LOG.critical(tb)
+                logging.critical(tb)
                 logs.dbcmd('finish', job_id, 'failed')
             except:  # an OperationalError may always happen
                 sys.stderr.write(tb)
@@ -197,7 +197,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             except:
                 # log the finalization error only if there is no real error
                 if tb == 'None\n':
-                    logs.LOG.error('finalizing', exc_info=True)
+                    logging.error('finalizing', exc_info=True)
     return calc
 
 
