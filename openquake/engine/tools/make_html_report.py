@@ -146,7 +146,10 @@ def add_duration(stats):
     STOP_TIME = 3
     stats[0] = stats[0] + ['duration']
     for i, rec in enumerate(stats[1:], 1):
-        duration = (rec[STOP_TIME] - rec[START_TIME]).total_seconds()
+        if rec[STOP_TIME] is None:
+            duration = '?'
+        else:
+            duration = (rec[STOP_TIME] - rec[START_TIME]).total_seconds()
         stats[i] = rec + (duration,)
 
 
