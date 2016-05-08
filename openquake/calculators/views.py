@@ -136,13 +136,15 @@ def sum_tbl(tbl, kfield, vfields):
     >>> sum_tbl(tbl, 'name', ['value'])
     [('a', 3), ('b', 3)]
     """
-    dt = numpy.dtype([(n, tbl.dtype[n]) for n in [kfield] + vfields])
+    pairs = [(n, tbl.dtype[n]) for n in [kfield] + vfields]
+    dt = numpy.dtype(pairs + [('counts', int)])
 
     def sum_all(group):
         vals = numpy.zeros(1, dt)[0]
         for rec in group:
             for vfield in vfields:
                 vals[vfield] += rec[vfield]
+                vals['counts'] += 1
         vals[kfield] = rec[kfield]
         return vals
     rows = groupby(tbl, operator.itemgetter(kfield), sum_all).values()
