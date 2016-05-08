@@ -21,6 +21,7 @@ import io
 import sys
 import ast
 import copy
+import math
 import logging
 import operator
 import collections
@@ -829,7 +830,7 @@ class SourceManager(object):
     """
     def __init__(self, csm, taskfunc, maximum_distance,
                  dstore, monitor, random_seed=None,
-                 filter_sources=True, num_tiles=1, reduce_weight=.25):
+                 filter_sources=True, num_tiles=1):
         self.tm = parallel.TaskManager(taskfunc)
         self.csm = csm
         self.maximum_distance = maximum_distance
@@ -838,7 +839,6 @@ class SourceManager(object):
         self.monitor = monitor
         self.filter_sources = filter_sources
         self.num_tiles = num_tiles
-        self.reduce_weight = reduce_weight
         self.split_map = {}  # trt_model_id, source_id -> split sources
         self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
@@ -852,10 +852,9 @@ class SourceManager(object):
                 nr = src.num_ruptures
                 self.src_serial[src.id] = rup_serial[start:start + nr]
                 start += nr
-        self.maxweight = self.csm.maxweight
-        if self.filter_sources and self.num_tiles > 1:
-            # reduce_weight is a trick to generate 4 times more tasks
-            self.maxweight *= reduce_weight
+        # decrease the weight with the number of tiles, to increase
+        # the number of generated tasks; this is an heuristic trick
+        self.maxweight = self.csm.maxweight / math.sqrt(num_tiles) / 2.
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
 
