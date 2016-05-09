@@ -144,7 +144,7 @@ def sum_tbl(tbl, kfield, vfields):
         for rec in group:
             for vfield in vfields:
                 vals[vfield] += rec[vfield]
-                vals['counts'] += 1
+            vals['counts'] += 1
         vals[kfield] = rec[kfield]
         return vals
     rows = groupby(tbl, operator.itemgetter(kfield), sum_all).values()
