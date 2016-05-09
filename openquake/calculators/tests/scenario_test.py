@@ -60,9 +60,9 @@ class ScenarioHazardTestCase(CalculatorTestCase):
 
     def medians(self, case):
         [gmfa] = self.execute(case.__file__, 'job.ini').values()
-        median = self.calc.oqparam.imtls.copy()
+        median = {}
         gmvs_by_sid = get_gmvs_by_sid(gmfa)
-        for imt in median:
+        for imt in self.calc.oqparam.imtls:
             gmf = [gmvs_by_sid[sid][imt] for sid in sorted(gmvs_by_sid)]
             median[imt] = numpy.median(gmf, axis=1)  # shape N
         return median
