@@ -65,6 +65,7 @@ echo "$LIB - $BRANCH - $SHA - $VER"
 sed "s/##_repo_##/${REPO}/g;s/##_version_##/${VER}/g;s/##_release_##/git${SHA}/g;s/##_timestamp_##/${TIME}/g" rpm/python-${REPO}.spec.inc > build-rpm/SPECS/python-${REPO}.spec
 
 git archive --format=tar --prefix=${REPO}-${VER}-git${SHA}/ $BRANCH | gzip -9 > build-rpm/SOURCES/${REPO}-${VER}-git${SHA}.tar.gz
+cp debian/patches/openquake.cfg.patch build-rpm/SOURCES
 
 mock -r openquake --buildsrpm --spec build-rpm/SPECS/python-${REPO}.spec --source build-rpm/SOURCES --resultdir=build-rpm/SRPMS/
 if [ "$BUILD" == "1" ]; then
