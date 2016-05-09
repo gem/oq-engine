@@ -285,7 +285,8 @@ class OqParam(valid.ParamSet):
         """
         Return True if there are no intensity measure levels
         """
-        return all(ls == [] for ls in self.imtls.values())
+        return all(ls is None or numpy.isnan(ls).any()
+                   for ls in self.imtls.values())
 
     def is_valid_truncation_level_disaggregation(self):
         """
