@@ -29,6 +29,7 @@ import random
 from xml.etree import ElementTree as etree
 
 import numpy
+import shapely
 
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import AccumDict, groupby, block_splitter
@@ -815,6 +816,23 @@ source_chunk_dt = numpy.dtype([
     ('sent', numpy.int32)])
 
 
+class FatMesh(object):
+    """
+    The convex hull of a mesh of points expanded by buffer kilometers,
+    depending on the TRT.
+    """
+    def __init__(self, mesh, buffers):
+        hull = mesh.get_convex_hull()
+        self.hull = {}
+        for trt in buffers:
+            self.hull[trt] = hull.dilate(buffers[trt])._polygon2d
+
+    def contains(self, src):
+        loc = src.location
+        hull = self.hull[src.tectonic_region_type]
+        return hull.contains(shapely.geometry.Point(loc.x, loc.y))
+
+
 class SourceManager(object):
     """
     Manager associated to a CompositeSourceModel instance.
@@ -858,25 +876,27 @@ class SourceManager(object):
         """
         filter_mon = self.monitor('filtering sources')
         split_mon = self.monitor('splitting sources')
+        fatmesh = FatMesh(sitecol.mesh, self.maximum_distance)
         for src in self.csm.get_sources(kind):
             filter_time = split_time = 0
             if self.filter_sources:
-                try:
-                    max_dist = self.maximum_distance[src.tectonic_region_type]
-                except KeyError:
-                    max_dist = self.maximum_distance['default']
+                max_dist = self.maximum_distance[src.tectonic_region_type]
                 with filter_mon:
                     try:
-                        sites = src.filter_sites_by_distance_to_source(
-                            max_dist, sitecol)
+                        # notice that AreaSource is a subclass of PointSource
+                        if (src.__class__.__name__ == 'PointSource' and not
+                                fatmesh.contains(src)):  # skip point sources
+                            continue
+                        else:
+                            if src.filter_sites_by_distance_to_source(
+                                    max_dist, sitecol) is None:
+                                continue
                     except:
                         etype, err, tb = sys.exc_info()
                         msg = 'An error occurred with source id=%s: %s'
                         msg %= (src.source_id, unicode(err))
                         raise_(etype, msg, tb)
                 filter_time = filter_mon.dt
-                if sites is None:
-                    continue
             if kind == 'heavy':
                 if (src.trt_model_id, src.id) not in self.split_map:
                     logging.info('splitting %s of weight %s',
