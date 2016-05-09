@@ -28,7 +28,7 @@ class Imtls(collections.Mapping):
     """
     def __init__(self, imtls):
         self.imt_dt = dt = numpy.dtype(
-            [(imt, F64, 1 if imls is None else len(imls))
+            [(imt, F64, len(imls) if hasattr(imls, '__len__') else 1)
              for imt, imls in sorted(imtls.items())])
         num_levels = 0
         for name in dt.names:
