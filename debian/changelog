@@ -2,6 +2,9 @@
   * Fixed the export: if the export directory does not exists, it is created
   * Introduced the configuration variable `multi_user`, false for source
     installations and true for package installations
+  * Fixed the WebUI export
+  * Removed the .txt outputs from the WebUI page engine/<output_id>/outputs
+    (they are useful only internally)
   * Fixed the export: first the xml exporter is tried and then the csv exporter;
     if both are available, only the first is used, not both of them
 
