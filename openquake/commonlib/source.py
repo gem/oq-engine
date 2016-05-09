@@ -27,6 +27,7 @@ import collections
 import random
 from xml.etree import ElementTree as etree
 
+import h5py
 import numpy
 
 from openquake.baselib.python3compat import raise_
@@ -807,7 +808,7 @@ SourceInfo.__iadd__ = source_info_iadd
 source_info_dt = numpy.dtype([
     ('trt_model_id', numpy.uint32),  # 0
     ('source_id', (bytes, valid.MAX_ID_LENGTH)),  # 1
-    ('source_class', (bytes, 20)),   # 2
+    ('source_class', (bytes, 30)),   # 2
     ('weight', numpy.float32),       # 3
     ('split_num', numpy.uint32),     # 4
     ('filter_time', numpy.float32),  # 5
