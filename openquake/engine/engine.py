@@ -178,6 +178,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
             expose_outputs(calc.datastore)
             records = views.performance_view(calc.datastore)
             logs.dbcmd('save_performance', job_id, records)
+            calc.datastore.close()
             logs.LOG.info('Calculation %d finished correctly in %d seconds',
                           job_id, calc.monitor.duration)
         except:
