@@ -646,19 +646,15 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         return hash(str(self))
 
     def __str__(self):
-        """
-        To be overridden in subclasses if the GSIM takes parameters.
-        """
-        return self.__class__.__name__
+        kwargs = ', '.join('%s=%r' % kv for kv in sorted(self.kwargs.items()))
+        return "%s(%s)" % (self.__class__.__name__, kwargs)
 
     def __repr__(self):
         """
         Default string representation for GSIM instances. It contains
         the name and values of the arguments, if any.
         """
-        # NB: ast.literal_eval(repr(gsim)) must work
-        kwargs = ', '.join('%s=%r' % kv for kv in sorted(self.kwargs.items()))
-        return repr("%s(%s)" % (self.__class__.__name__, kwargs))
+        return repr(str(self))
 
 
 def _truncnorm_sf(truncation_level, values):
@@ -951,7 +947,7 @@ class CoeffsTable(object):
     KeyError: SA(period=0.01, damping=5)
     """
     def __init__(self, **kwargs):
-        if not 'table' in kwargs:
+        if 'table' not in kwargs:
             raise TypeError('CoeffsTable requires "table" kwarg')
         table = kwargs.pop('table').strip().splitlines()
         sa_damping = kwargs.pop('sa_damping', None)
