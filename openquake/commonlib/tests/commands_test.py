@@ -61,7 +61,7 @@ class InfoTestCase(unittest.TestCase):
 b1, x15.xml, trt=[0], weight=1.00: 1 realization(s)>
 See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst for an explanation
 <RlzsAssoc(size=1, rlzs=1)
-0,AkkarBommer2010: ['<0,b1,@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>'''
+0,AkkarBommer2010(): ['<0,b1,@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>'''
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
@@ -142,7 +142,7 @@ class RunShowExportTestCase(unittest.TestCase):
         # the tests here gives mysterious core dumps in Ubuntu 16.04,
         # but only if called together with all other tests with the command
         # nosetests openquake/commonlib/
-        check_platform()
+        check_platform('trusty')
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
             calc = run._run(job_ini, 0, False, 'info', None, '', {})

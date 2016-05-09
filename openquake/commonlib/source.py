@@ -104,8 +104,7 @@ class SourceModel(object):
         Return an empty copy of the source model, i.e. without sources,
         but with the proper attributes for each TrtModel contained within.
         """
-        trt_models = [TrtModel(tm.trt, [], tm.min_mag,
-                               tm.max_mag, tm.gsims, tm.id)
+        trt_models = [TrtModel(tm.trt, [], tm.min_mag, tm.max_mag, tm.id)
                       for tm in self.trt_models]
         return self.__class__(self.name, self.weight, self.path, trt_models,
                               self.gsim_lt, self.ordinal, self.samples)
@@ -160,12 +159,11 @@ class TrtModel(collections.Sequence):
         return sorted(source_stats_dict.values())
 
     def __init__(self, trt, sources=None,
-                 min_mag=None, max_mag=None, gsims=None, id=0):
+                 min_mag=None, max_mag=None, id=0):
         self.trt = trt
         self.sources = sources or []
         self.min_mag = min_mag
         self.max_mag = max_mag
-        self.gsims = gsims or []
         self.id = id
         for src in self.sources:
             self.update(src)
@@ -310,14 +308,14 @@ class RlzsAssoc(collections.Mapping):
     region types and 4 + 2 + 2 realizations, there are the following
     associations:
 
-    (0, 'BooreAtkinson2008') ['#0-SM1-BA2008_C2003', '#1-SM1-BA2008_T2002']
-    (0, 'CampbellBozorgnia2008') ['#2-SM1-CB2008_C2003', '#3-SM1-CB2008_T2002']
-    (1, 'Campbell2003') ['#0-SM1-BA2008_C2003', '#2-SM1-CB2008_C2003']
-    (1, 'ToroEtAl2002') ['#1-SM1-BA2008_T2002', '#3-SM1-CB2008_T2002']
-    (2, 'BooreAtkinson2008') ['#4-SM2_a3pt2b0pt8-BA2008']
-    (2, 'CampbellBozorgnia2008') ['#5-SM2_a3pt2b0pt8-CB2008']
-    (3, 'BooreAtkinson2008') ['#6-SM2_a3b1-BA2008']
-    (3, 'CampbellBozorgnia2008') ['#7-SM2_a3b1-CB2008']
+    (0, 'BooreAtkinson2008()') ['#0-SM1-BA2008_C2003', '#1-SM1-BA2008_T2002']
+    (0, 'CampbellBozorgnia2008()') ['#2-SM1-CB2008_C2003', '#3-SM1-CB2008_T2002']
+    (1, 'Campbell2003()') ['#0-SM1-BA2008_C2003', '#2-SM1-CB2008_C2003']
+    (1, 'ToroEtAl2002()') ['#1-SM1-BA2008_T2002', '#3-SM1-CB2008_T2002']
+    (2, 'BooreAtkinson2008()') ['#4-SM2_a3pt2b0pt8-BA2008']
+    (2, 'CampbellBozorgnia2008()') ['#5-SM2_a3pt2b0pt8-CB2008']
+    (3, 'BooreAtkinson2008()') ['#6-SM2_a3b1-BA2008']
+    (3, 'CampbellBozorgnia2008()') ['#7-SM2_a3b1-CB2008']
     """
     def __init__(self, csm_info):
         self.csm_info = csm_info
@@ -483,9 +481,9 @@ class RlzsAssoc(collections.Mapping):
         probability, which however is close to the sum for small probabilities.
         """
         ad = AccumDict()
-        for key, value in results.items():
-            gsim = self.csm_info.gsimdict[key]
-            for rlz in self.rlzs_assoc[key[0], gsim]:
+        for (trt_id, gsim_idx), value in results.items():
+            gsim = self.gsims_by_trt_id[trt_id][int(gsim_idx)]
+            for rlz in self.rlzs_assoc[trt_id, gsim]:
                 ad[rlz] = agg(ad.get(rlz, 0), value)
         return ad
 
@@ -561,14 +559,11 @@ class CompositionInfo(object):
         self.eff_ruptures = numpy.zeros(len(self.source_models),
                                         (bytes, LENGTH))
         self.tmdict = {}  # trt_id -> trt_model
-        self.gsimdict = {}  # (trt_id, gsim_no) -> gsim instance
         for sm in self.source_models:
             for trt_model in sm.trt_models:
                 trt_model.source_model = sm
                 trt_id = trt_model.id
                 self.tmdict[trt_id] = trt_model
-                for i, gsim in enumerate(trt_model.gsims):
-                    self.gsimdict[trt_model.id, str(i)] = gsim
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
@@ -595,7 +590,6 @@ class CompositionInfo(object):
             trtmodels = []
             for trt in trts:
                 tm = TrtModel(trt, id=trt_id)
-                tm.gsims = gsim_lt.values[trt]
                 trtmodels.append(tm)
                 trt_id += 1
             sm = SourceModel(rec['name'], rec['weight'], path, trtmodels,
@@ -653,8 +647,6 @@ class CompositionInfo(object):
                 indices = numpy.arange(idx, idx + len(rlzs))
                 idx += len(indices)
                 assoc._add_realizations(indices, smodel, rlzs)
-                for trt_model in smodel.trt_models:
-                    trt_model.gsims = smodel.gsim_lt.values[trt_model.trt]
             else:
                 logging.warn('No realizations for %s, %s',
                              '_'.join(smodel.path), smodel.name)
