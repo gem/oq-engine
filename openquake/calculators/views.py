@@ -133,8 +133,8 @@ def sum_tbl(tbl, kfield, vfields):
 
     >>> dt = numpy.dtype([('name', (bytes, 10)), ('value', int)])
     >>> tbl = numpy.array([('a', 1), ('a', 2), ('b', 3)], dt)
-    >>> sum_tbl(tbl, 'name', ['value'])
-    [('a', 3), ('b', 3)]
+    >>> print(sum_tbl(tbl, 'name', ['value']))
+    [('a', 3, 2) ('b', 3, 1)]
     """
     pairs = [(n, tbl.dtype[n]) for n in [kfield] + vfields]
     dt = numpy.dtype(pairs + [('counts', int)])
