@@ -546,7 +546,7 @@ def get_job_info(oqparam, source_models, sitecol):
     # the imtls object has values [NaN] when the levels are unknown
     # (this is a valid case for the event based hazard calculator)
     n_imts = len(imtls)
-    n_levels = sum(0 if numpy.isnan(ls) else len(ls)
+    n_levels = sum(len(ls) if hasattr(ls, '__len__') else 0
                    for ls in imtls.values()) / float(n_imts)
 
     n_realizations = oqparam.number_of_logic_tree_samples or sum(
