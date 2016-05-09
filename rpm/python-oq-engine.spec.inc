@@ -18,6 +18,8 @@ BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-engine
 
+Patch1: openquake.cfg.patch
+
 Requires(pre): shadow-utils
 
 %define common_deps python numpy scipy python-shapely python-psutil python-mock python-futures h5py python-amqp python-celery python-django python-docutils rabbitmq-server sudo
@@ -27,7 +29,7 @@ Requires: %{common_deps}
 Requires: %{oqlib_deps}
 Requires: %{dev_deps}
 
-# Since tests are currently not enabled during the packaging phase, the following build dependencies are not required
+# since tests are currently not enabled during the packaging phase, the following build dependencies are not required
 #BuildRequires: %{common_deps}
 #BuildRequires: %{dev_deps}
 #BuildRequires: %{oqlib_deps}
@@ -55,6 +57,10 @@ exit 0
 
 %prep
 %setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{oqrepo}-%{oqversion}-%{oqrelease}
+
+# this should be -p1, but is -p3 to keep compatibility with the debian patch,
+# which is generated usign some hacks
+%patch1 -p3
 
 %build
 python setup.py build
