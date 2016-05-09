@@ -524,8 +524,8 @@ def get_traceback(calc_id):
 
 def get_result(result_id):
     """
-    :returns: (job_status, datastore_key)
+    :returns: (job_id, job_status, datadir, datastore_key)
     """
     output = models.get(models.Output, pk=result_id)
     job = output.oq_job
-    return job.status, output.ds_key
+    return job.id, job.status, os.path.dirname(job.ds_calc_dir), output.ds_key
