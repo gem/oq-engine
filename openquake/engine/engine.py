@@ -19,6 +19,7 @@
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
 
+import os
 import sys
 import signal
 import traceback
@@ -167,7 +168,7 @@ def run_calc(job_id, oqparam, log_level, log_file, exports,
     """
     monitor = Monitor('total runtime', measuremem=True)
     with logs.handle(job_id, log_level, log_file):  # run the job
-        if USE_CELERY:
+        if USE_CELERY and os.environ.get('OQ_DISTRIBUTE') == 'celery':
             set_concurrent_tasks_default()
         calc = base.calculators(oqparam, monitor, calc_id=job_id)
         tb = 'None\n'
