@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed the WebUI export
+  * Removed the .txt outputs from the WebUI page engine/<output_id>/outputs
+    (they are useful only internally)
   * Fixed the export: first the xml exporter is tried and then the csv exporter;
     if both are available, only the first is used, not both of them
 
