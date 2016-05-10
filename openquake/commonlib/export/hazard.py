@@ -597,15 +597,15 @@ def _get_gmfs(dstore, serial, eid):
     rlzs = [rlz for gsim in map(str, gsims)
             for rlz in rlzs_assoc[rup.trt_id, gsim]]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
-    gmfa = event_based.make_gmfs(
+    gmfs = event_based.make_gmfs(
         [rup], sitecol, oq.imtls, rlzs_assoc,
         oq.truncation_level, correl_model)
-    for imt in oq.imtls:
+    for imti, imt in enumerate(oq.imtls):
+        gmfs_by_imt = get_array(gmfs, imti=imti)
         gmfa = numpy.zeros(N, gmf_dt)
-        for rlz in rlzs:
-            data = get_array(gmfa, rlzi=rlz.ordinal)
-            ok = data[data['eid'] == eid]
-            gmfa['%03d' % rlz.ordinal][rup.indices] = ok['gmv'][imt]
+        for rlzname in gmf_dt.names:
+            gmvs = get_array(gmfs_by_imt, rlzi=int(rlzname))['gmv']
+            gmfa[rlzname][rup.indices] = gmvs
         yield gmfa, imt
 
 
