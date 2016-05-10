@@ -483,7 +483,7 @@ def export_gmf(ekey, dstore):
         gmf_arr = gmf_data['%04d' % rlz.ordinal].value
         ruptures = []
         for eid, gmfa in group_array(gmf_arr, 'eid').items():
-            rup = util.Rupture(etags[eid], gmfa['sid'])
+            rup = util.Rupture(etags[eid], sorted(set(gmfa['sid'])))
             rup.gmfa = gmfa
             ruptures.append(rup)
         ruptures.sort(key=operator.attrgetter('etag'))
