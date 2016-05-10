@@ -55,6 +55,7 @@ class ReportWriter(object):
         exposure_info='Exposure model',
         short_source_info='Slowest sources',
         task_info='Information about the tasks',
+        times_by_source_class='Computation times by source typology',
         performance='Slowest operations',
     )
 
@@ -109,6 +110,7 @@ class ReportWriter(object):
             self.add('exposure_info')
         if 'source_info' in ds:
             self.add('short_source_info')
+            self.add('times_by_source_class')
         if 'performance_data' in ds:
             self.add('task_info')
             self.add('performance')
