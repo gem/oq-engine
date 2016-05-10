@@ -78,8 +78,7 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, trt_model_id,
                     for imt_str, imls in imtls.iteritems():
                         imt = from_string(imt_str)
                         imls = numpy.array(imls[::-1])
-                        for rlz in rlzs_assoc[
-                                trt_model_id, gsim.__class__.__name__]:
+                        for rlz in rlzs_assoc[trt_model_id, gsim]:
                             rlzi = rlz.ordinal
                             curve_poes = curves[rlzi, imt_str][::-1]
                             for poe in poes:
@@ -179,8 +178,7 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
         for poe in oqparam.poes_disagg:
             for imt in oqparam.imtls:
                 for gsim in gsims:
-                    for rlz in rlzs_assoc[
-                            trt_model_id, gsim.__class__.__name__]:
+                    for rlz in rlzs_assoc[trt_model_id, gsim]:
                         rlzi = rlz.ordinal
                         # extract the probabilities of non-exceedance for the
                         # given realization, disaggregation PoE, and IMT
@@ -328,7 +326,7 @@ class DisaggregationCalculator(classical.ClassicalCalculator):
 
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
-        for key, probs in results.iteritems():
+        for key, probs in sorted(results.iteritems()):
             sid, rlz_id, poe, imt, iml, trt_names = key
             edges = self.bin_edges[sm_id[rlz_id], sid]
             self.save_disagg_result(

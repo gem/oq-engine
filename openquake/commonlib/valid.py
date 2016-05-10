@@ -47,6 +47,8 @@ def gsim(value, **kwargs):
     >>> gsim('BooreAtkinson2011')
     'BooreAtkinson2011()'
     """
+    if value.endswith('()'):
+        value = value[:-2]
     try:
         gsim_class = GSIM[value]
     except KeyError:
