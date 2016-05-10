@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.boore_atkinson_2011 import BooreAtkinson2011
+from openquake.hazardlib.gsim.boore_atkinson_2011 import (BooreAtkinson2011,
+                                                          Atkinson2008prime)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -29,4 +30,14 @@ class BooreAtkinson2011TestCase(BaseGSIMTestCase):
 
     def test_mean_normal(self):
         self.check('BA11/BA11_MEDIAN.csv',
+                   max_discrep_percentage=1.1)
+
+
+class Atkinson2008primeTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = Atkinson2008prime
+
+    # Test data created using GMPE adjustment factor
+
+    def test_mean_normal(self):
+        self.check('BA11/A08_BA11_MEAN.csv',
                    max_discrep_percentage=1.1)

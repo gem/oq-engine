@@ -27,14 +27,22 @@ if [ "$GEM_EPHEM_NAME" = "" ]; then
     GEM_EPHEM_NAME="ubuntu-lxc-eph"
 fi
 
-if command -v lxc-shutdown &> /dev/null; then
-    # Older lxc (< 1.0.0) with lxc-shutdown
-    LXC_TERM="lxc-shutdown -t 10 -w"
-    LXC_KILL="lxc-stop"
+LXC_VER=$(lxc-ls --version | cut -d '.' -f 1)
+
+if [ $LXC_VER -lt 1 ]; then
+    echo "lxc >= 1.0.0 is required." >&2
+    exit 1
+fi
+
+LXC_TERM="lxc-stop -t 10"
+LXC_KILL="lxc-stop -k"
+
+if command -v lxc-copy &> /dev/null; then
+    # New lxc (>= 2.0.0) with lxc-copy
+    GEM_EPHEM_EXE="${GEM_EPHEM_CMD} -n ${GEM_EPHEM_NAME} -e"
 else
-    # Newer lxc (>= 1.0.0) with lxc-stop only
-    LXC_TERM="lxc-stop -t 10"
-    LXC_KILL="lxc-stop -k"
+    # Old lxc (< 2.0.0) with lxc-start-ephimeral
+    GEM_EPHEM_EXE="${GEM_EPHEM_CMD} -o ${GEM_EPHEM_NAME} -d"
 fi
 
 NL="
@@ -125,8 +133,8 @@ usage () {
 
     echo
     echo "USAGE:"
-    echo "    $0 [<-s|--serie> <precise|trusty>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
-    echo "       if -s is present try to produce sources for a specific ubuntu version (precise or trusty),"
+    echo "    $0 [<-s|--serie> <precise|trusty|xenial>] [-D|--development] [-S--sources_copy] [-B|--binaries] [-U|--unsigned] [-R|--repository]    build debian source package."
+    echo "       if -s is present try to produce sources for a specific ubuntu version (precise, trusty or xenial),"
     echo "           (default precise)"
     echo "       if -S is present try to copy sources to <GEM_DEB_MONOTONE>/<BUILD_UBUVER>/source directory"
     echo "       if -B is present binary package is build too."
@@ -187,8 +195,8 @@ _devtest_innervm_run () {
 
     # add custom packages
     ssh $lxc_ip mkdir -p "repo"
-    scp -r ${GEM_DEB_REPO}/${BUILD_UBUVER}/custom_pkgs $lxc_ip:repo/custom_pkgs
-    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
+    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
@@ -236,8 +244,8 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
 
     # add custom packages
-    scp -r ${GEM_DEB_REPO}/${BUILD_UBUVER}/custom_pkgs $lxc_ip:repo/custom_pkgs
-    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
+    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
 
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
@@ -294,8 +302,15 @@ _builddoc_innervm_run () {
 deps_list() {
     local old_ifs out_list skip i d listtype="$1" control_file="$2"/control rules_file="$2"/rules
 
-    rules_dep=$(grep "^${BUILD_UBUVER^^}_DEP *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
-    rules_rec=$(grep "^${BUILD_UBUVER^^}_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+    if grep -q "^${BUILD_UBUVER^^}_DEP" $rules_file; then
+        # Use custom dependencies in debian/rules
+        rules_dep=$(grep "^${BUILD_UBUVER^^}_DEP *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+        rules_rec=$(grep "^${BUILD_UBUVER^^}_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+    else
+        # Otherwise use the default values in debian/rules
+        rules_dep=$(grep "^DEFAULT_DEP *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+        rules_rec=$(grep "^DEFAULT_REC *= *" $rules_file | sed 's/([^)]*)//g' | sed 's/^.*= *//g')
+    fi
 
     out_list=""
     if [ "$listtype" = "all" ]; then
@@ -377,7 +392,7 @@ devtest_run () {
     fi
 
     sudo echo
-    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
@@ -421,25 +436,28 @@ pkgtest_run () {
     dpkg-scansources . > Sources
     cat Sources | gzip > Sources.gz
     cat > Release <<EOF
-Archive: $BUILD_UBUVER
-Origin: Ubuntu
-Label: Local Ubuntu ${BUILD_UBUVER^} Repository
-Architecture: amd64
-MD5Sum:
+Origin: openquake-${BUILD_UBUVER}
+Label: OpenQuake Local Ubuntu Repository
+Codename: $BUILD_UBUVER
+Date: $(date -R)
+Architectures: amd64
+Components: main
+Description: OpenQuake Local Ubuntu Repository
+SHA256:
 EOF
-    printf ' '$(md5sum Packages | cut --delimiter=' ' --fields=1)' %16d Packages\n' \
+    printf ' '$(sha256sum Packages | cut --delimiter=' ' --fields=1)' %16d Packages\n' \
         $(wc --bytes Packages | cut --delimiter=' ' --fields=1) >> Release
-    printf ' '$(md5sum Packages.gz | cut --delimiter=' ' --fields=1)' %16d Packages.gz\n' \
+    printf ' '$(sha256sum Packages.gz | cut --delimiter=' ' --fields=1)' %16d Packages.gz\n' \
         $(wc --bytes Packages.gz | cut --delimiter=' ' --fields=1) >> Release
-    printf ' '$(md5sum Sources | cut --delimiter=' ' --fields=1)' %16d Sources\n' \
+    printf ' '$(sha256sum Sources | cut --delimiter=' ' --fields=1)' %16d Sources\n' \
         $(wc --bytes Sources | cut --delimiter=' ' --fields=1) >> Release
-    printf ' '$(md5sum Sources.gz | cut --delimiter=' ' --fields=1)' %16d Sources.gz\n' \
+    printf ' '$(sha256sum Sources.gz | cut --delimiter=' ' --fields=1)' %16d Sources.gz\n' \
         $(wc --bytes Sources.gz | cut --delimiter=' ' --fields=1) >> Release
     gpg --armor --detach-sign --output Release.gpg Release
     cd -
 
     sudo echo
-    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
@@ -502,7 +520,7 @@ builddoc_run () {
     fi
 
     sudo echo
-    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
@@ -548,7 +566,7 @@ while [ $# -gt 0 ]; do
             ;;
         -s|--serie)
             BUILD_UBUVER="$2"
-            if [ "$BUILD_UBUVER" != "precise" -a "$BUILD_UBUVER" != "trusty" ]; then
+            if [ "$BUILD_UBUVER" != "precise" -a "$BUILD_UBUVER" != "trusty" -a "$BUILD_UBUVER" != "xenial" ]; then
                 echo
                 echo "ERROR: ubuntu version '$BUILD_UBUVER' not supported"
                 echo
@@ -727,7 +745,7 @@ if [ 0 -eq 1 ]; then
 fi
 
 if [ $BUILD_ON_LXC -eq 1 ]; then
-    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
     _wait_ssh $lxc_ip
 
