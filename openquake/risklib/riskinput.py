@@ -534,7 +534,7 @@ class GmfCollector(object):
         self.dic.clear()
         return self.nbytes
 
-    def save(self, sid, rlz, imti, gmvs_eids):
+    def save(self, sid, imti, rlz, gmvs_eids):
         key = '%s/%s/%s' % (sid, self.imts[imti], rlz.ordinal)
         self.dic[key].append(gmvs_eids)
         self.nbytes += gmvs_eids.nbytes
@@ -584,7 +584,7 @@ def calc_gmfs(eb_ruptures, sitecol, imts, rlzs_assoc,
                 rup, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
             data = computer.calcgmfs(rup.seed, ebr.eids, rlzs_by_gsim, min_iml)
-            for sid, rlz, imti, gmvs_eids in data:
+            for sid, imti, rlz, gmvs_eids in data:
                 gmfcoll.save(sid, imti, rlz, gmvs_eids)
     return gmfcoll
 
