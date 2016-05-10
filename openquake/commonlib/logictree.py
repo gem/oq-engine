@@ -41,7 +41,7 @@ from openquake.baselib.python3compat import raise_
 import openquake.hazardlib
 from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib import geo
-from openquake.commonlib import valid, util
+from openquake.commonlib import valid
 from openquake.commonlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 

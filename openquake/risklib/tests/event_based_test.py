@@ -231,8 +231,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         # max IML in this case is 0.52
         numpy.testing.assert_allclose(
             numpy.array([0.700, 0.700]),
-            self.vulnerability_function1(
-                [0.525, 0.530], EPSILONS[:2]))
+            self.vulnerability_function1([0.525, 0.530], EPSILONS[:2]))
 
     def test_loss_ratios_computation_using_gmfs(self):
         """Loss ratios generation given a GMFs and a vulnerability function.

@@ -1,7 +1,7 @@
 event based risk
 ================
 
-gem-tstation:/home/michele/ssd/calc_994.hdf5 updated Thu Apr 28 15:39:29 2016
+gem-tstation:/home/michele/ssd/calc_12616.hdf5 updated Wed May  4 04:54:29 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  24                 
 master_seed                  0                  
 avg_losses                   True               
-oqlite_version               '0.13.0-git93d6f64'
+oqlite_version               '0.13.0-git02c4b55'
 ============================ ===================
 
 Input files
@@ -92,14 +92,14 @@ filtered_weight 968
 Informational data
 ------------------
 ====================================== ==============
-event_based_risk_max_received_per_task 113592        
+event_based_risk_max_received_per_task 101500        
 event_based_risk_num_tasks             6             
 event_based_risk_sent.assetcol         26502         
-event_based_risk_sent.monitor          16116         
-event_based_risk_sent.riskinput        27698         
-event_based_risk_sent.riskmodel        64488         
+event_based_risk_sent.monitor          16260         
+event_based_risk_sent.riskinput        28221         
+event_based_risk_sent.riskmodel        56424         
 event_based_risk_sent.rlzs_assoc       41574         
-event_based_risk_tot_received          523461        
+event_based_risk_tot_received          456308        
 hostname                               'gem-tstation'
 require_epsilons                       True          
 ====================================== ==============
@@ -128,65 +128,64 @@ Exposure model
 #taxonomies 3
 =========== =
 
-======== =======
-Taxonomy #Assets
-======== =======
-tax1     4      
-tax2     2      
-tax3     1      
-======== =======
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+tax1     1.000 0.0    1   1   4         4         
+tax2     1.000 0.0    1   1   2         2         
+tax3     1.000 NaN    1   1   1         1         
+*ALL*    1.000 0.0    1   1   7         7         
+======== ===== ====== === === ========= ==========
 
 Slowest sources
 ---------------
 ============ ========= ==================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
 ============ ========= ==================== ====== ========= =========== ========== =========
-0            1         SimpleFaultSource    482    15        0.003       0.151      0.441    
-2            1         SimpleFaultSource    482    15        0.003       0.083      0.390    
-1            2         SimpleFaultSource    4.000  1         0.011       0.0        0.021    
-3            2         CharacteristicFaultS 1.000  1         0.002       0.0        0.003    
+0            1         SimpleFaultSource    482    15        0.002       0.041      0.326    
+2            1         SimpleFaultSource    482    15        0.001       0.037      0.277    
+1            2         SimpleFaultSource    4.000  1         0.001       0.0        0.026    
+3            2         CharacteristicFaultS 1.000  1         0.001       0.0        0.006    
 ============ ========= ==================== ====== ========= =========== ========== =========
 
 Information about the tasks
 ---------------------------
-================================= ===== ===== ===== ======
-measurement                       min   max   mean  stddev
-compute_ruptures.time_sec         0.003 0.079 0.029 0.020 
-compute_ruptures.memory_mb        0.0   0.012 0.001 0.003 
-compute_gmfs_and_curves.time_sec  0.072 0.083 0.078 0.005 
-compute_gmfs_and_curves.memory_mb 0.0   0.012 0.003 0.005 
-event_based_risk.time_sec         0.275 0.452 0.362 0.080 
-event_based_risk.memory_mb        0.0   0.074 0.013 0.030 
-================================= ===== ===== ===== ======
+================================= ========= ====== ===== ===== =========
+measurement                       mean      stddev min   max   num_tasks
+compute_ruptures.time_sec         0.022     0.010  0.006 0.050 30       
+compute_ruptures.memory_mb        6.510E-04 0.002  0.0   0.008 30       
+compute_gmfs_and_curves.time_sec  0.042     0.008  0.031 0.056 6        
+compute_gmfs_and_curves.memory_mb 0.0       0.0    0.0   0.0   6        
+event_based_risk.time_sec         0.205     0.071  0.123 0.293 6        
+event_based_risk.memory_mb        0.024     0.027  0.0   0.055 6        
+================================= ========= ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total event_based_risk         2.170     0.074     6     
-computing risk                 1.760     0.0       42    
-total compute_ruptures         0.866     0.012     30    
-managing sources               0.537     0.0       1     
-compute poes                   0.509     0.0       18    
-total compute_gmfs_and_curves  0.468     0.012     6     
-aggregate losses               0.355     0.0       66    
-building hazard                0.314     0.0       6     
-saving event loss tables       0.259     0.0       6     
-splitting sources              0.234     0.0       2     
-bulding hazard curves          0.154     0.0       6     
-make contexts                  0.092     0.0       18    
-filtering ruptures             0.056     0.0       9     
-reading composite source model 0.049     0.0       1     
-save curves_by_rlz             0.047     0.0       1     
-compute and save statistics    0.041     0.0       1     
-getting hazard                 0.037     0.0       42    
-store source_info              0.026     0.0       1     
-aggregating hcurves            0.020     0.0       22    
-filtering sources              0.019     0.0       4     
-saving gmfs                    0.015     0.0       22    
-reading exposure               0.013     0.0       1     
-saving ruptures                0.011     0.0       1     
+total event_based_risk         1.227     0.055     6     
+computing riskmodel            0.973     0.0       66    
+total compute_ruptures         0.649     0.008     30    
+aggregate losses               0.588     0.0       66    
+compute poes                   0.330     0.0       18    
+total compute_gmfs_and_curves  0.253     0.0       6     
+building hazard                0.203     0.0       6     
+saving event loss tables       0.188     0.0       6     
+managing sources               0.150     0.0       1     
+splitting sources              0.078     0.0       2     
+make contexts                  0.076     0.0       18    
+bulding hazard curves          0.043     0.0       6     
+reading composite source model 0.021     0.0       1     
+filtering ruptures             0.021     0.0       9     
+compute and save statistics    0.020     0.0       1     
+aggregating hcurves            0.018     0.0       22    
+save curves_by_rlz             0.017     0.0       1     
+saving gmfs                    0.012     0.0       22    
+saving ruptures                0.008     0.0       1     
+store source_info              0.007     0.0       1     
+filtering sources              0.006     0.0       4     
 aggregate curves               0.006     0.0       52    
-reading site collection        1.001E-05 0.0       1     
+reading exposure               0.005     0.0       1     
+reading site collection        5.960E-06 0.0       1     
 ============================== ========= ========= ======

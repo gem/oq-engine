@@ -1,7 +1,7 @@
 Demo Classical PSHA for Vancouver Schools
 =========================================
 
-gem-tstation:/home/michele/ssd/calc_1010.hdf5 updated Thu Apr 28 15:41:00 2016
+gem-tstation:/home/michele/ssd/calc_12633.hdf5 updated Wed May  4 04:55:14 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   50.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git93d6f64'
+oqlite_version               '0.13.0-git02c4b55'
 ============================ ===================
 
 Input files
@@ -71,14 +71,14 @@ vancouver_area_source.xml 0      Active Shallow Crust 1           2,430        6
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 162868        
+count_eff_ruptures_max_received_per_task 162902        
 count_eff_ruptures_num_tasks             30            
-count_eff_ruptures_sent.monitor          4878756       
-count_eff_ruptures_sent.rlzs_assoc       4892683       
+count_eff_ruptures_sent.monitor          4879404       
+count_eff_ruptures_sent.rlzs_assoc       4892322       
 count_eff_ruptures_sent.sitecol          14550         
 count_eff_ruptures_sent.siteidx          150           
 count_eff_ruptures_sent.sources          40480         
-count_eff_ruptures_tot_received          4886040       
+count_eff_ruptures_tot_received          4887060       
 hazard.input_weight                      60.75         
 hazard.n_imts                            3             
 hazard.n_levels                          12.0          
@@ -94,7 +94,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            VICM      AreaSource   60     30        0.002       0.016      0.0      
+0            VICM      AreaSource   60     30        0.001       0.010      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Information about the tasks
@@ -106,12 +106,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.353     0.0       1     
-reading composite source model 0.037     0.0       1     
-splitting sources              0.016     0.0       1     
-total count_eff_ruptures       0.008     0.0       30    
-store source_info              0.007     0.0       1     
-filtering sources              0.002     0.0       1     
-aggregate curves               6.676E-04 0.0       30    
-reading site collection        1.299E-04 0.0       1     
+managing sources               0.075     0.0       1     
+reading composite source model 0.025     0.0       1     
+total count_eff_ruptures       0.011     0.0       30    
+splitting sources              0.010     0.0       1     
+store source_info              0.005     0.0       1     
+filtering sources              0.001     0.0       1     
+aggregate curves               5.405E-04 0.0       30    
+reading site collection        2.689E-04 0.0       1     
 ============================== ========= ========= ======

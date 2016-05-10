@@ -328,14 +328,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.gmfbytes += result.pop('gmfbytes')
         with self.monitor('saving event loss tables', autoflush=True):
             if self.oqparam.asset_loss_table:
-                for (l, r), array in sorted(result.pop('ASSLOSS').items()):
-                    self.ass_loss_table[l, r].extend(array)
+                for lr, array in sorted(result.pop('ASSLOSS').items()):
+                    self.ass_loss_table[lr].extend(array)
                     self.ass_bytes += array.nbytes
-            for (l, r), array in sorted(result.pop('AGGLOSS').items()):
-                self.agg_loss_table[l, r].extend(array)
+            for lr, array in sorted(result.pop('AGGLOSS').items()):
+                self.agg_loss_table[lr].extend(array)
                 self.agg_bytes += array.nbytes
             self.datastore.hdf5.flush()
-
         return acc + result
 
     def post_execute(self, result):
