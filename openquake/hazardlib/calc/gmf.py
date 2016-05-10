@@ -38,7 +38,6 @@ F32 = numpy.float32
 
 gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('rlzi', U16),
                       ('imti', U8), ('gmv', F32)])
-gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U32)])
 
 
 class CorrelationButNoInterIntraStdDevs(Exception):
@@ -168,25 +167,21 @@ class GmfComputer(object):
         """
         Compute a ground motion array for the given sites.
 
-        :param multiplicity:
-            the number of GMFs to return
         :param seed:
             seed for the numpy random number generator
-        :param rlzs_by_gsim:
-            a dictionary {gsim instance: realizations}
-        :param seed:
-            seed for the numpy random number generator
-        :param gsim:
-            a GSIM instance
         :param eids:
             event IDs, a list of integers
+        :param rlzs_by_gsim:
+            a dictionary {gsim instance: realizations}
+        :param min_iml:
+            an array minimum intensity per intensity measure type
         :returns:
             a numpy array of dtype gmv_dt
         """
         gmfa = []
         for sid, imti, rlz, gmvs_eids in self.calcgmfs(
                 seed, eids, rlzs_by_gsim, min_iml):
-            for gmv, eid in gmvs_eids:
+            for gmv, eid in zip(*gmvs_eids):
                 gmfa.append((sid, eid, rlz.ordinal, imti, gmv))
         return numpy.array(gmfa, gmv_dt)
 
@@ -213,11 +208,10 @@ class GmfComputer(object):
                     for sid, gmvs in zip(sids, gmf):
                         if min_iml is not None:  # is an array
                             ok = gmvs >= min_iml[imti]
-                            gmvs_eids = list(zip(gmvs[ok], eids[ok]))
+                            gmvs_eids = (gmvs[ok], eids[ok])
                         else:
-                            gmvs_eids = list(zip(gmvs, eids))
-                        yield (sid, imti, rlz,
-                               numpy.array(gmvs_eids, gmv_eid_dt))
+                            gmvs_eids = (gmvs, eids)
+                        yield sid, imti, rlz, gmvs_eids
 
 
 # this is not used in the engine; it is still useful for usage in IPython
