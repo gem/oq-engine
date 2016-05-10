@@ -258,9 +258,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 oq.asset_correlation)
             logging.info('Generated %s epsilons', eps.shape)
 
-        # ugly: fix the minimum_intensity dictionary, should go before
-        event_based.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
-
         # preparing empty datasets
         loss_types = self.riskmodel.loss_types
         self.C = self.oqparam.loss_curve_resolution
@@ -306,9 +303,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
 
+        min_iml = event_based.fix_minimum_intensity(
+            oq.minimum_intensity, oq.imtls)
         riskinputs = self.riskmodel.build_inputs_from_ruptures(
             self.sitecol.complete, all_ruptures, oq.truncation_level,
-            correl_model, oq.minimum_intensity, eps, oq.concurrent_tasks or 1)
+            correl_model, min_iml, eps, oq.concurrent_tasks or 1)
         # NB: I am using generators so that the tasks are submitted one at
         # the time, without keeping all of the arguments in memory
         return starmap(

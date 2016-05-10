@@ -599,7 +599,7 @@ def _get_gmfs(dstore, serial, eid):
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
     gmfa = event_based.make_gmfs(
         [rup], sitecol, oq.imtls, rlzs_assoc,
-        oq.truncation_level, correl_model).values()
+        oq.truncation_level, correl_model)
     for imt in oq.imtls:
         gmfa = numpy.zeros(N, gmf_dt)
         for rlz in rlzs:

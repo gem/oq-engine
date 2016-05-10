@@ -16,16 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import operator
 import logging
-import tempfile
 import collections
-
 import numpy
-import h5py
 
-from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, split_in_blocks
@@ -381,7 +376,7 @@ class CompositeRiskModel(collections.Mapping):
         :param all_ruptures: the complete list of EBRupture instances
         :param trunc_level: the truncation level (or None)
         :param correl_model: the correlation model (or None)
-        :param min_iml: dictionary of minimum IMLs
+        :param min_iml: an array of minimum IMLs per IMT
         :param eps: a matrix of epsilons of shape (N, E) or None
         :param hint: hint for how many blocks to generate
 
@@ -539,7 +534,7 @@ class GmfCollector(object):
         self.dic.clear()
         return self.nbytes
 
-    def save(self, sid, imti, rlz, gmvs_eids):
+    def save(self, sid, rlz, imti, gmvs_eids):
         key = '%s/%s/%s' % (sid, self.imts[imti], rlz.ordinal)
         self.dic[key].append(gmvs_eids)
         self.nbytes += gmvs_eids.nbytes
