@@ -25,8 +25,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import (
-    AccumDict, groupby2, group_array, get_array)
+from openquake.baselib.general import AccumDict, group_array, get_array
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture

@@ -44,13 +44,13 @@ def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
                for v1, v2 in zip(gmvs_site_one, gmvs_site_two))
 
 
-class ScenarioHazardTestCase(CalculatorTestCase):
+class ScenarioTestCase(CalculatorTestCase):
 
     def frequencies(self, case, fst_value, snd_value):
         [gmfa] = self.execute(case.__file__, 'job.ini').values()
         [imt] = self.calc.oqparam.imtls
-        gmvs0 = get_array(sid=0, imti=0)['gmv']
-        gmvs1 = get_array(sid=11, imti=0)['gmv']
+        gmvs0 = get_array(gmfa, sid=0, imti=0)['gmv']
+        gmvs1 = get_array(gmfa, sid=1, imti=0)['gmv']
         realizations = float(self.calc.oqparam.number_of_ground_motion_fields)
         gmvs_within_range_fst = count_close(fst_value, gmvs0, gmvs1)
         gmvs_within_range_snd = count_close(snd_value, gmvs0, gmvs1)
@@ -59,11 +59,12 @@ class ScenarioHazardTestCase(CalculatorTestCase):
 
     def medians(self, case):
         [gmfa] = self.execute(case.__file__, 'job.ini').values()
-        median = self.calc.oqparam.imtls.copy()
+        median = {imt: [] for imt in self.calc.oqparam.imtls}
         for imti, imt in enumerate(self.calc.oqparam.imtls):
-            gmvs = sorted(get_array(gmfa, imti=imti)['gmv'])
-            import pdb; pdb.set_trace()
-            median[imt] = numpy.median(gmvs, axis=1)  # shape N
+            gmfa_by_imt = get_array(gmfa, imti=imti)
+            for sid in self.calc.sitecol.sids:
+                gmvs = get_array(gmfa_by_imt, sid=sid)['gmv']
+                median[imt].append(numpy.median(gmvs))
         return median
 
     @attr('qa', 'hazard', 'scenario')
