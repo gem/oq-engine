@@ -94,7 +94,8 @@ class GmfComputer(object):
         # the method doing the real stuff; use compute instead
         if seed is not None:
             numpy.random.seed(seed)
-        result = collections.OrderedDict()
+        result = numpy.zeros(
+            (len(self.imts), len(self.sites), realizations), F32)
         sctx, rctx, dctx = self.ctx
 
         if self.truncation_level == 0:
@@ -179,9 +180,9 @@ class GmfComputer(object):
             a numpy array of dtype gmv_dt
         """
         gmfa = []
-        for sid, imti, rlz, gmvs_eids in self.calcgmfs(
+        for eid, imti, rlz, gmf_sids in self.calcgmfs(
                 seed, eids, rlzs_by_gsim, min_iml):
-            for gmv, eid in zip(*gmvs_eids):
+            for gmv, sid in zip(*gmf_sids):
                 gmfa.append((sid, eid, rlz.ordinal, imti, gmv))
         return numpy.array(gmfa, gmv_dt)
 
@@ -197,21 +198,24 @@ class GmfComputer(object):
         :param rlzs_by_gsim:
             a dictionary {gsim instance: realizations}
         :yields:
-            pairs (sid, imti, rlz, gmvs_eids)
+            pairs (eid, imti, rlz, gmf_sids)
         """
         multiplicity = len(eids)
         sids = self.sites.sids
+        imt_range = range(len(self.imts))
         for i, gsim in enumerate(self.gsims):
             for rlzi, rlz in enumerate(rlzs_by_gsim[gsim]):
-                for imti, gmf in self._compute(
-                        seed + rlzi, gsim, multiplicity).items():
-                    for sid, gmvs in zip(sids, gmf):
+                arr = self._compute(seed + rlzi, gsim, multiplicity).transpose(
+                    0, 2, 1)  # array of shape (I, E, S)
+                for imti in imt_range:
+                    for eid, gmf in zip(eids, arr[imti]):
                         if min_iml is not None:  # is an array
-                            ok = gmvs >= min_iml[imti]
-                            gmvs_eids = (gmvs[ok], eids[ok])
+                            ok = gmf >= min_iml[imti]
+                            gmf_sids = (gmf[ok], sids[ok])
                         else:
-                            gmvs_eids = (gmvs, eids)
-                        yield sid, imti, rlz, gmvs_eids
+                            gmf_sids = (gmf, sids)
+                        if len(gmf):
+                            yield eid, imti, rlz, gmf_sids
 
 
 # this is not used in the engine; it is still useful for usage in IPython
@@ -275,9 +279,10 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     gc = GmfComputer(rupture, sites, [str(imt) for imt in imts], [gsim],
                      truncation_level, correlation_model)
     result = gc._compute(seed, gsim, realizations)
-    for imti, gmf in result.items():
+    imtis = range(len(gc.imts))
+    for imti in imtis:
         # makes sure the lenght of the arrays in output is the same as sites
         if rupture_site_filter is not filters.rupture_site_noop_filter:
-            result[imti] = sites.expand(gmf, placeholder=0)
+            result[imti] = sites.expand(result[imti], placeholder=0)
 
-    return {gc.imts[imti]: result[imti] for imti in result}
+    return {gc.imts[imti]: result[imti] for imti in imtis}
