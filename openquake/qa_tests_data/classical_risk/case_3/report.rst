@@ -1,7 +1,7 @@
 Classical PSHA - Loss fractions QA test
 =======================================
 
-gem-tstation:/home/michele/ssd/calc_12575.hdf5 updated Wed May  4 04:53:57 2016
+gem-tstation:/home/michele/ssd/calc_15391.hdf5 updated Tue May 10 12:35:34 2016
 
 num_sites = 13, sitecol = 1.26 KB
 
@@ -22,7 +22,7 @@ random_seed                  23
 master_seed                  0                  
 avg_losses                   False              
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-gitcdd89a9'
 ============================ ===================
 
 Input files
@@ -48,11 +48,11 @@ b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =============== =========== ======================= =================
-trt_id gsims           distances   siteparams              ruptparams       
-====== =============== =========== ======================= =================
-0      ChiouYoungs2008 rx rjb rrup vs30measured vs30 z1pt0 rake dip ztor mag
-====== =============== =========== ======================= =================
+====== ================= =========== ======================= =================
+trt_id gsims             distances   siteparams              ruptparams       
+====== ================= =========== ======================= =================
+0      ChiouYoungs2008() rx rjb rrup vs30measured vs30 z1pt0 rake dip ztor mag
+====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -60,7 +60,7 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,ChiouYoungs2008: ['<0,b1,b1,w=1.0>']>
+  0,ChiouYoungs2008(): ['<0,b1,b1,w=1.0>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -98,20 +98,28 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            232       AreaSource   40     1         7.341E-04   0.0        2.434    
-0            225       AreaSource   13     1         7.560E-04   0.0        0.364    
+0            232       AreaSource   40     1         7.370E-04   0.0        2.089    
+0            225       AreaSource   13     1         7.629E-04   0.0        0.334    
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+============ =========== ========== ========= ======
+source_class filter_time split_time calc_time counts
+============ =========== ========== ========= ======
+AreaSource   0.001       0.0        2.424     2     
+============ =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
 ======================== ===== ====== ===== ===== =========
 measurement              mean  stddev min   max   num_tasks
-classical_risk.time_sec  0.575 0.181  0.390 0.802 13       
-classical_risk.memory_mb 1.137 0.024  1.125 1.195 13       
-classical.time_sec       1.404 1.463  0.369 2.438 2        
-classical.memory_mb      2.574 0.028  2.555 2.594 2        
-classical.time_sec       1.404 1.463  0.369 2.438 2        
-classical.memory_mb      2.574 0.028  2.555 2.594 2        
+classical_risk.time_sec  0.379 0.029  0.309 0.406 13       
+classical_risk.memory_mb 0.721 0.481  0.074 1.094 13       
+classical.time_sec       1.216 1.241  0.339 2.094 2        
+classical.memory_mb      2.422 0.022  2.406 2.438 2        
+classical.time_sec       1.216 1.241  0.339 2.094 2        
+classical.memory_mb      2.422 0.022  2.406 2.438 2        
 ======================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -119,21 +127,21 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total classical_risk           7.479     1.195     13    
-computing riskmodel            7.456     0.0       13    
-total classical                2.807     2.594     2     
-making contexts                1.588     0.0       2,132 
-reading composite source model 1.094     0.0       1     
-computing poes                 0.534     0.0       1,613 
-managing sources               0.040     0.0       1     
+total classical_risk           4.930     1.094     13    
+computing riskmodel            4.914     0.0       13    
+total classical                2.433     2.438     2     
+making contexts                1.413     0.0       2,132 
+reading composite source model 1.035     0.0       1     
+computing poes                 0.380     0.0       1,613 
+managing sources               0.031     0.0       1     
 filtering sources              0.013     0.0       15    
 store source_info              0.011     0.0       1     
-reading exposure               0.006     0.0       1     
-save curves_by_trt_gsim        0.002     0.0       1     
+reading exposure               0.007     0.0       1     
+save curves_by_trt_gsim        0.003     0.0       1     
 building hazard                0.002     0.0       13    
-save curves_by_rlz             0.001     0.0       1     
-aggregate curves               0.001     0.0       2     
-building riskinputs            0.001     0.0       1     
-combine curves_by_rlz          1.950E-04 0.0       1     
-reading site collection        8.821E-06 0.0       1     
+save curves_by_rlz             0.002     0.0       1     
+aggregate curves               9.952E-04 0.0       2     
+building riskinputs            9.930E-04 0.0       1     
+combine curves_by_rlz          2.050E-04 0.0       1     
+reading site collection        1.621E-05 0.0       1     
 ============================== ========= ========= ======

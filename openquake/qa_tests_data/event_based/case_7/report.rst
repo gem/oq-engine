@@ -1,7 +1,7 @@
 Event-based PSHA with logic tree sampling
 =========================================
 
-gem-tstation:/home/michele/ssd/calc_12649.hdf5 updated Wed May  4 04:56:11 2016
+gem-tstation:/home/michele/ssd/calc_15465.hdf5 updated Tue May 10 12:37:45 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   20.0               
 random_seed                  23                 
 master_seed                  0                  
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-gitcdd89a9'
 ============================ ===================
 
 Input files
@@ -46,12 +46,12 @@ b12       0.100  `source_model2.xml <source_model2.xml>`_ simple(3)       3/3
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ======================================================= =========== ============================= =================
-trt_id gsims                                                   distances   siteparams                    ruptparams       
-====== ======================================================= =========== ============================= =================
-0      BooreAtkinson2008 CampbellBozorgnia2008 ChiouYoungs2008 rx rjb rrup z2pt5 vs30measured vs30 z1pt0 ztor mag rake dip
-1      BooreAtkinson2008 CampbellBozorgnia2008                 rjb rrup    z2pt5 vs30                    ztor mag rake dip
-====== ======================================================= =========== ============================= =================
+====== ============================================================= =========== ============================= =================
+trt_id gsims                                                         distances   siteparams                    ruptparams       
+====== ============================================================= =========== ============================= =================
+0      BooreAtkinson2008() CampbellBozorgnia2008() ChiouYoungs2008() rx rjb rrup z2pt5 vs30measured vs30 z1pt0 ztor mag rake dip
+1      BooreAtkinson2008() CampbellBozorgnia2008()                   rjb rrup    z2pt5 vs30                    ztor mag rake dip
+====== ============================================================= =========== ============================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -59,11 +59,11 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=5, rlzs=10)
-  0,BooreAtkinson2008: ['<3,b11,BA,w=0.1>', '<5,b11,BA,w=0.1>']
-  0,CampbellBozorgnia2008: ['<4,b11,CB,w=0.1>', '<6,b11,CB,w=0.1>']
-  0,ChiouYoungs2008: ['<0,b11,CY,w=0.1>', '<1,b11,CY,w=0.1>', '<2,b11,CY,w=0.1>']
-  1,BooreAtkinson2008: ['<8,b12,BA,w=0.1>', '<9,b12,BA,w=0.1>']
-  1,CampbellBozorgnia2008: ['<7,b12,CB,w=0.1>']>
+  0,BooreAtkinson2008(): ['<3,b11,BA,w=0.1>', '<5,b11,BA,w=0.1>']
+  0,CampbellBozorgnia2008(): ['<4,b11,CB,w=0.1>', '<6,b11,CB,w=0.1>']
+  0,ChiouYoungs2008(): ['<0,b11,CY,w=0.1>', '<1,b11,CY,w=0.1>', '<2,b11,CY,w=0.1>']
+  1,BooreAtkinson2008(): ['<8,b12,BA,w=0.1>', '<9,b12,BA,w=0.1>']
+  1,CampbellBozorgnia2008(): ['<7,b12,CB,w=0.1>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -100,18 +100,26 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   61     307       0.001       0.065      3.674    
-1            1         AreaSource   61     307       0.002       0.065      2.445    
+0            1         AreaSource   61     307       0.001       0.068      2.361    
+1            1         AreaSource   61     307       0.001       0.067      1.513    
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+============ =========== ========== ========= ======
+source_class filter_time split_time calc_time counts
+============ =========== ========== ========= ======
+AreaSource   0.003       0.135      3.874     2     
+============ =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
 ================================= ===== ====== ===== ===== =========
 measurement                       mean  stddev min   max   num_tasks
-compute_ruptures.time_sec         0.099 0.024  0.051 0.150 62       
-compute_ruptures.memory_mb        0.0   0.0    0.0   0.0   62       
-compute_gmfs_and_curves.time_sec  0.571 0.221  0.256 1.308 42       
-compute_gmfs_and_curves.memory_mb 0.021 0.079  0.0   0.348 42       
+compute_ruptures.time_sec         0.102 0.036  0.005 0.151 38       
+compute_ruptures.memory_mb        0.0   0.0    0.0   0.0   38       
+compute_gmfs_and_curves.time_sec  0.691 0.310  0.393 1.727 21       
+compute_gmfs_and_curves.memory_mb 0.019 0.087  0.0   0.398 21       
 ================================= ===== ====== ===== ===== =========
 
 Slowest operations
@@ -119,19 +127,19 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_gmfs_and_curves  23        0.348     42    
-compute poes                   21        0.0       2,658 
-total compute_ruptures         6.159     0.0       62    
-make contexts                  2.191     0.0       2,658 
-saving ruptures                1.465     0.0       1     
-filtering ruptures             1.205     0.0       2,658 
-bulding hazard curves          0.638     0.0       42    
-managing sources               0.289     0.0       1     
-aggregating hcurves            0.240     0.0       286   
-reading composite source model 0.143     0.0       1     
-splitting sources              0.130     0.0       2     
-aggregate curves               0.045     0.0       348   
-store source_info              0.009     0.0       1     
+total compute_gmfs_and_curves  14        0.398     21    
+compute poes                   12        0.0       2,658 
+total compute_ruptures         3.892     0.0       38    
+saving ruptures                1.899     0.0       1     
+make contexts                  1.428     0.0       2,658 
+filtering ruptures             0.766     0.0       2,658 
+bulding hazard curves          0.316     0.0       21    
+managing sources               0.202     0.0       1     
+reading composite source model 0.148     0.0       1     
+splitting sources              0.135     0.0       2     
+aggregating hcurves            0.115     0.0       143   
+aggregate curves               0.058     0.0       181   
+store source_info              0.010     0.0       1     
 filtering sources              0.003     0.0       2     
-reading site collection        4.792E-05 0.0       1     
+reading site collection        4.697E-05 0.0       1     
 ============================== ========= ========= ======

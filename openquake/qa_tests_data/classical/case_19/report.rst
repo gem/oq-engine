@@ -1,7 +1,7 @@
 SHARE OpenQuake Computational Settings
 ======================================
 
-gem-tstation:/home/michele/ssd/calc_12638.hdf5 updated Wed May  4 04:55:55 2016
+gem-tstation:/home/michele/ssd/calc_15454.hdf5 updated Tue May 10 12:37:26 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-gitcdd89a9'
 ============================ ===================
 
 Input files
@@ -45,11 +45,11 @@ b1        1.000  `simple_area_source_model.xml <simple_area_source_model.xml>`_ 
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ============================================================================ ========== ========== ==============
-trt_id gsims                                                                        distances  siteparams ruptparams    
-====== ============================================================================ ========== ========== ==============
-4      AtkinsonBoore2003SSlab LinLee2008SSlab YoungsEtAl1997SSlab ZhaoEtAl2006SSlab rhypo rrup vs30       hypo_depth mag
-====== ============================================================================ ========== ========== ==============
+====== ==================================================================================== ========== ========== ==============
+trt_id gsims                                                                                distances  siteparams ruptparams    
+====== ==================================================================================== ========== ========== ==============
+4      AtkinsonBoore2003SSlab() LinLee2008SSlab() YoungsEtAl1997SSlab() ZhaoEtAl2006SSlab() rhypo rrup vs30       hypo_depth mag
+====== ==================================================================================== ========== ========== ==============
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -57,10 +57,10 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=4, rlzs=4)
-  4,AtkinsonBoore2003SSlab: ['<0,b1,@_@_@_@_b51_@_@,w=0.2>']
-  4,LinLee2008SSlab: ['<1,b1,@_@_@_@_b52_@_@,w=0.2>']
-  4,YoungsEtAl1997SSlab: ['<2,b1,@_@_@_@_b53_@_@,w=0.2>']
-  4,ZhaoEtAl2006SSlab: ['<3,b1,@_@_@_@_b54_@_@,w=0.4>']>
+  4,AtkinsonBoore2003SSlab(): ['<0,b1,@_@_@_@_b51_@_@,w=0.2>']
+  4,LinLee2008SSlab(): ['<1,b1,@_@_@_@_b52_@_@,w=0.2>']
+  4,YoungsEtAl1997SSlab(): ['<2,b1,@_@_@_@_b53_@_@,w=0.2>']
+  4,ZhaoEtAl2006SSlab(): ['<3,b1,@_@_@_@_b54_@_@,w=0.4>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -76,7 +76,7 @@ Informational data
 count_eff_ruptures_max_received_per_task 4644             
 count_eff_ruptures_num_tasks             1                
 count_eff_ruptures_sent.monitor          4385             
-count_eff_ruptures_sent.rlzs_assoc       51783            
+count_eff_ruptures_sent.rlzs_assoc       51563            
 count_eff_ruptures_sent.sitecol          437              
 count_eff_ruptures_sent.siteidx          5                
 count_eff_ruptures_sent.sources          2787             
@@ -96,8 +96,16 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-4            s46       AreaSource   194    1         9.611E-04   0.0        0.0      
+4            s46       AreaSource   194    1         9.940E-04   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+============ =========== ========== ========= ======
+source_class filter_time split_time calc_time counts
+============ =========== ========== ========= ======
+AreaSource   9.940E-04   0.0        0.0       1     
+============ =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
@@ -108,11 +116,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 5.744     0.0       1     
-managing sources               0.100     0.0       1     
-filtering sources              0.022     0.0       18    
+reading composite source model 6.127     0.0       1     
+managing sources               0.118     0.0       1     
+filtering sources              0.023     0.0       18    
 store source_info              0.004     0.0       1     
-total count_eff_ruptures       3.710E-04 0.0       1     
-reading site collection        4.292E-05 0.0       1     
-aggregate curves               2.980E-05 0.0       1     
+total count_eff_ruptures       3.400E-04 0.0       1     
+reading site collection        2.885E-05 0.0       1     
+aggregate curves               1.693E-05 0.0       1     
 ============================== ========= ========= ======

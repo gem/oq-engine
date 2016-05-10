@@ -1,7 +1,7 @@
 Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
-gem-tstation:/home/michele/ssd/calc_12621.hdf5 updated Wed May  4 04:54:34 2016
+gem-tstation:/home/michele/ssd/calc_15437.hdf5 updated Tue May 10 12:36:10 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-gitcdd89a9'
 ============================ ===================
 
 Input files
@@ -48,14 +48,14 @@ SM2_a3pt2b0pt8 0.250  `source_model_2.xml <source_model_2.xml>`_ simple(2,0)    
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ======================================= ========= ========== =================
-trt_id gsims                                   distances siteparams ruptparams       
-====== ======================================= ========= ========== =================
-0      BooreAtkinson2008 CampbellBozorgnia2008 rjb rrup  z2pt5 vs30 ztor mag rake dip
-1      Campbell2003 ToroEtAl2002               rjb rrup             mag              
-2      BooreAtkinson2008 CampbellBozorgnia2008 rjb rrup  z2pt5 vs30 ztor mag rake dip
-3      BooreAtkinson2008 CampbellBozorgnia2008 rjb rrup  z2pt5 vs30 ztor mag rake dip
-====== ======================================= ========= ========== =================
+====== =========================================== ========= ========== =================
+trt_id gsims                                       distances siteparams ruptparams       
+====== =========================================== ========= ========== =================
+0      BooreAtkinson2008() CampbellBozorgnia2008() rjb rrup  z2pt5 vs30 ztor mag rake dip
+1      Campbell2003() ToroEtAl2002()               rjb rrup             mag              
+2      BooreAtkinson2008() CampbellBozorgnia2008() rjb rrup  z2pt5 vs30 ztor mag rake dip
+3      BooreAtkinson2008() CampbellBozorgnia2008() rjb rrup  z2pt5 vs30 ztor mag rake dip
+====== =========================================== ========= ========== =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -63,14 +63,14 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=8, rlzs=8)
-  0,BooreAtkinson2008: ['<0,SM1,BA2008_C2003,w=0.125>', '<1,SM1,BA2008_T2002,w=0.125>']
-  0,CampbellBozorgnia2008: ['<2,SM1,CB2008_C2003,w=0.125>', '<3,SM1,CB2008_T2002,w=0.125>']
-  1,Campbell2003: ['<0,SM1,BA2008_C2003,w=0.125>', '<2,SM1,CB2008_C2003,w=0.125>']
-  1,ToroEtAl2002: ['<1,SM1,BA2008_T2002,w=0.125>', '<3,SM1,CB2008_T2002,w=0.125>']
-  2,BooreAtkinson2008: ['<4,SM2_a3b1,BA2008_@,w=0.125>']
-  2,CampbellBozorgnia2008: ['<5,SM2_a3b1,CB2008_@,w=0.125>']
-  3,BooreAtkinson2008: ['<6,SM2_a3pt2b0pt8,BA2008_@,w=0.125>']
-  3,CampbellBozorgnia2008: ['<7,SM2_a3pt2b0pt8,CB2008_@,w=0.125>']>
+  0,BooreAtkinson2008(): ['<0,SM1,BA2008_C2003,w=0.125>', '<1,SM1,BA2008_T2002,w=0.125>']
+  0,CampbellBozorgnia2008(): ['<2,SM1,CB2008_C2003,w=0.125>', '<3,SM1,CB2008_T2002,w=0.125>']
+  1,Campbell2003(): ['<0,SM1,BA2008_C2003,w=0.125>', '<2,SM1,CB2008_C2003,w=0.125>']
+  1,ToroEtAl2002(): ['<1,SM1,BA2008_T2002,w=0.125>', '<3,SM1,CB2008_T2002,w=0.125>']
+  2,BooreAtkinson2008(): ['<4,SM2_a3b1,BA2008_@,w=0.125>']
+  2,CampbellBozorgnia2008(): ['<5,SM2_a3b1,CB2008_@,w=0.125>']
+  3,BooreAtkinson2008(): ['<6,SM2_a3pt2b0pt8,BA2008_@,w=0.125>']
+  3,CampbellBozorgnia2008(): ['<7,SM2_a3pt2b0pt8,CB2008_@,w=0.125>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -95,8 +95,8 @@ Informational data
 ======================================== ==============
 count_eff_ruptures_max_received_per_task 3232          
 count_eff_ruptures_num_tasks             34            
-count_eff_ruptures_sent.monitor          101132        
-count_eff_ruptures_sent.rlzs_assoc       327216        
+count_eff_ruptures_sent.monitor          101212        
+count_eff_ruptures_sent.rlzs_assoc       322320        
 count_eff_ruptures_sent.sitecol          16490         
 count_eff_ruptures_sent.siteidx          170           
 count_eff_ruptures_sent.sources          42774         
@@ -116,11 +116,20 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-2            1         AreaSource   6.000  16        0.002       0.005      0.0      
-3            1         AreaSource   6.000  16        0.001       0.005      0.0      
-0            1         PointSource  0.375  1         1.290E-04   0.0        0.0      
-1            2         PointSource  0.375  1         1.040E-04   0.0        0.0      
+2            1         AreaSource   6.000  16        0.001       0.003      0.0      
+3            1         AreaSource   6.000  16        9.160E-04   0.003      0.0      
+0            1         PointSource  0.375  1         1.280E-04   0.0        0.0      
+1            2         PointSource  0.375  1         9.990E-05   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+============ =========== ========== ========= ======
+source_class filter_time split_time calc_time counts
+============ =========== ========== ========= ======
+AreaSource   0.002       0.006      0.0       2     
+PointSource  2.279E-04   0.0        0.0       2     
+============ =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
@@ -131,12 +140,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.094     0.0       1     
+managing sources               0.074     0.0       1     
 reading composite source model 0.018     0.0       1     
-total count_eff_ruptures       0.010     0.0       34    
-splitting sources              0.010     0.0       2     
+total count_eff_ruptures       0.011     0.0       34    
+splitting sources              0.006     0.0       2     
 store source_info              0.005     0.0       1     
-filtering sources              0.004     0.0       4     
-aggregate curves               6.073E-04 0.0       34    
-reading site collection        3.886E-05 0.0       1     
+filtering sources              0.002     0.0       4     
+aggregate curves               5.827E-04 0.0       34    
+reading site collection        3.815E-05 0.0       1     
 ============================== ========= ========= ======

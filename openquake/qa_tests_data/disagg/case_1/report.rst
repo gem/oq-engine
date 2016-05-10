@@ -1,7 +1,7 @@
 QA test for disaggregation case_1, taken from the disagg demo
 =============================================================
 
-gem-tstation:/home/michele/ssd/calc_12662.hdf5 updated Wed May  4 04:56:41 2016
+gem-tstation:/home/michele/ssd/calc_15478.hdf5 updated Tue May 10 12:38:16 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   10.0               
 random_seed                  9000               
 master_seed                  0                  
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-gitcdd89a9'
 ============================ ===================
 
 Input files
@@ -44,11 +44,11 @@ b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =============== =========== ======================= =================
-trt_id gsims           distances   siteparams              ruptparams       
-====== =============== =========== ======================= =================
-0      ChiouYoungs2008 rx rjb rrup vs30measured vs30 z1pt0 rake dip ztor mag
-====== =============== =========== ======================= =================
+====== ================= =========== ======================= =================
+trt_id gsims             distances   siteparams              ruptparams       
+====== ================= =========== ======================= =================
+0      ChiouYoungs2008() rx rjb rrup vs30measured vs30 z1pt0 rake dip ztor mag
+====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -56,7 +56,7 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,ChiouYoungs2008: ['<0,b1,b1,w=1.0>']>
+  0,ChiouYoungs2008(): ['<0,b1,b1,w=1.0>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -69,14 +69,14 @@ source_model.xml 0      Active Shallow Crust 4           2,236        817
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 3056          
-count_eff_ruptures_num_tasks             30            
-count_eff_ruptures_sent.monitor          83914         
-count_eff_ruptures_sent.rlzs_assoc       78890         
-count_eff_ruptures_sent.sitecol          13830         
-count_eff_ruptures_sent.siteidx          150           
-count_eff_ruptures_sent.sources          135788        
-count_eff_ruptures_tot_received          91653         
+count_eff_ruptures_max_received_per_task 3078          
+count_eff_ruptures_num_tasks             10            
+count_eff_ruptures_sent.monitor          28198         
+count_eff_ruptures_sent.rlzs_assoc       25980         
+count_eff_ruptures_sent.sitecol          4610          
+count_eff_ruptures_sent.siteidx          50            
+count_eff_ruptures_sent.sources          82110         
+count_eff_ruptures_tot_received          30771         
 hazard.input_weight                      817.375       
 hazard.n_imts                            2             
 hazard.n_levels                          19.0          
@@ -92,11 +92,22 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            4         ComplexFaultSource 164    29        0.002       0.192      0.0      
-0            3         SimpleFaultSource  617    83        0.003       0.086      0.0      
-0            2         AreaSource         36     96        0.002       0.032      0.0      
-0            1         PointSource        0.375  1         1.061E-04   0.0        0.0      
+0            3         SimpleFaultSource  617    83        0.002       0.060      0.0      
+0            4         ComplexFaultSource 164    1         0.002       0.0        0.0      
+0            2         AreaSource         36     1         9.761E-04   0.0        0.0      
+0            1         PointSource        0.375  1         1.380E-04   0.0        0.0      
 ============ ========= ================== ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+================== =========== ========== ========= ======
+source_class       filter_time split_time calc_time counts
+================== =========== ========== ========= ======
+AreaSource         9.761E-04   0.0        0.0       1     
+ComplexFaultSource 0.002       0.0        0.0       1     
+PointSource        1.380E-04   0.0        0.0       1     
+SimpleFaultSource  0.002       0.060      0.0       1     
+================== =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
@@ -107,12 +118,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.362     0.0       1     
-splitting sources              0.310     0.0       3     
-reading composite source model 0.039     0.0       1     
-total count_eff_ruptures       0.010     0.0       30    
-filtering sources              0.007     0.0       4     
-store source_info              0.006     0.0       1     
-aggregate curves               6.082E-04 0.0       30    
-reading site collection        3.004E-05 0.0       1     
+managing sources               0.090     0.0       1     
+splitting sources              0.060     0.0       1     
+reading composite source model 0.051     0.0       1     
+store source_info              0.007     0.0       1     
+filtering sources              0.005     0.0       4     
+total count_eff_ruptures       0.003     0.0       10    
+aggregate curves               2.506E-04 0.0       10    
+reading site collection        4.292E-05 0.0       1     
 ============================== ========= ========= ======

@@ -1,7 +1,7 @@
 Scenario QA Test for occupants
 ==============================
 
-gem-tstation:/home/michele/ssd/calc_12656.hdf5 updated Wed May  4 04:56:37 2016
+gem-tstation:/home/michele/ssd/calc_15472.hdf5 updated Tue May 10 12:38:12 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  3                  
 master_seed                  0                  
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-gitcdd89a9'
 ============================ ===================
 
 Input files
@@ -40,7 +40,7 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(1)
-  0,ChiouYoungs2008: ['ChiouYoungs2008']>
+  0,ChiouYoungs2008(): ['ChiouYoungs2008()']>
 
 Exposure model
 --------------
@@ -69,5 +69,5 @@ operation               time_sec  memory_mb counts
 filtering sites         0.007     0.0       1     
 reading exposure        0.003     0.0       1     
 computing gmfs          0.001     0.0       1     
-reading site collection 7.153E-06 0.0       1     
+reading site collection 7.868E-06 0.0       1     
 ======================= ========= ========= ======
