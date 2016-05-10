@@ -20,6 +20,7 @@ import time
 import os.path
 import operator
 import logging
+import functools
 import collections
 
 import numpy
@@ -214,59 +215,6 @@ class EBRupture(object):
                                         self.serial, self.trt_id)
 
 
-class RuptureFilter(object):
-    """
-    Implement two filtering mechanism:
-
-    1. if min_iml is empty, use the usual filtering on the maximum distance
-    2. otherwise, filter on the ground motion minimum intensity.
-
-    In other words, if a ground motion is below the minimum intensity
-    for all hazard sites and for all intensity measure types, ignore
-    the rupture. When a RuptureFilter instance is called on a rupture,
-    returns None if the rupture has to be discarded, or a
-    FilteredSiteCollection with the sites having ground motion intensity
-    over the threshold.
-
-    :param sites:
-        sites to filter (usually already prefiltered)
-    :param maximum_distance:
-        the maximum distance to use in the distance filtering
-    :param imts:
-        a list of intensity measure types
-    :param trunc_level:
-        the truncation level used in the GMF calculation
-    :param min_iml:
-        a dictionary with the minimum intensity measure level for each IMT
-    """
-    def __init__(self, sites, maximum_distance, imts, gsims, trunc_level,
-                 min_iml):
-        self.sites = sites
-        self.max_dist = maximum_distance
-        self.imts = imts
-        self.gsims = gsims
-        self.trunc_level = trunc_level
-        self.min_iml = min_iml
-
-    def __call__(self, rupture):
-        """
-        :returns: a FilteredSiteCollection or None
-        """
-        if self.min_iml:
-            computer = calc.gmf.GmfComputer(
-                rupture, self.sites, self.imts, self.gsims, self.trunc_level)
-            ok = numpy.zeros(len(self.sites), bool)
-            gmf_by_rlz_imt = computer.calcgmfs(1, rupture.seed)
-            for rlz, gmf_by_imt in gmf_by_rlz_imt.items():
-                for imt, gmf in gmf_by_imt.items():
-                    # NB: gmf[:, 0] because the multiplicity is 1
-                    ok += gmf[:, 0] >= self.min_iml[imt]
-            return computer.sites.filter(ok)
-        else:  # maximum_distance filtering
-            return filter_sites_by_distance_to_rupture(
-                rupture, self.max_dist, self.sites)
-
-
 def getdefault(dic_with_default, key):
     """
     :param dic_with_default: a dictionary with a 'default' key
@@ -323,10 +271,9 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
         s_sites = src.filter_sites_by_distance_to_source(max_dist, sitecol)
         if s_sites is None:
             continue
-
-        rupture_filter = RuptureFilter(
-            s_sites, max_dist, oq.imtls, cmaker.gsims,
-            oq.truncation_level, oq.minimum_intensity)
+        rupture_filter = functools.partial(
+            filter_sites_by_distance_to_rupture,
+            integration_distance=max_dist, sites=s_sites)
         num_occ_by_rup = sample_ruptures(
             src, oq.ses_per_logic_tree_path, rlzs_assoc.csm_info)
         # NB: the number of occurrences is very low, << 1, so it is
