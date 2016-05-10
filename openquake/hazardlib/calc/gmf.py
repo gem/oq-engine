@@ -278,11 +278,12 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     [(rupture, sites)] = ruptures_sites
     gc = GmfComputer(rupture, sites, [str(imt) for imt in imts], [gsim],
                      truncation_level, correlation_model)
-    result = gc._compute(seed, gsim, realizations)
-    imtis = range(len(gc.imts))
-    for imti in imtis:
+    res = gc._compute(seed, gsim, realizations)
+    result = {}
+    for imti, imt in enumerate(gc.imts):
         # makes sure the lenght of the arrays in output is the same as sites
         if rupture_site_filter is not filters.rupture_site_noop_filter:
-            result[imti] = sites.expand(result[imti], placeholder=0)
-
-    return {gc.imts[imti]: result[imti] for imti in imtis}
+            result[imt] = sites.expand(res[imti], placeholder=0)
+        else:
+            result[imt] = res[imti]
+    return result
