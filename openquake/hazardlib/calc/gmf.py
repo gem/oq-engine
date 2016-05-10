@@ -38,7 +38,7 @@ F32 = numpy.float32
 
 gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('rlzi', U16),
                       ('imti', U8), ('gmv', F32)])
-ge_dt = numpy.dtype([('gmv', F32), ('eid', U32)])
+gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U32)])
 
 
 class CorrelationButNoInterIntraStdDevs(Exception):
@@ -216,7 +216,8 @@ class GmfComputer(object):
                             gmvs_eids = list(zip(gmvs[ok], eids[ok]))
                         else:
                             gmvs_eids = list(zip(gmvs, eids))
-                        yield (sid, imti, rlz, numpy.array(gmvs_eids, ge_dt))
+                        yield (sid, imti, rlz,
+                               numpy.array(gmvs_eids, gmv_eid_dt))
 
 
 # this is not used in the engine; it is still useful for usage in IPython
