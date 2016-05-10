@@ -66,7 +66,7 @@ See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info(None, None, None, None, path)
+            info(None, None, None, None, None, path)
         self.assertEqual(self.EXPECTED, str(p))
 
 
