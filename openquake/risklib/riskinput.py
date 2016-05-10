@@ -529,17 +529,20 @@ class GmfCollector(object):
     def __init__(self, imts, rlzs):
         self.imts = imts
         self.rlzs = rlzs
-        self.dic = collections.defaultdict(list)
+        self.dic = collections.defaultdict(lambda: ([], []))
         self.nbytes = 0
 
     def close(self):
         self.dic.clear()
         return self.nbytes
 
-    def save(self, sid, imti, rlz, gmvs_eids):
-        key = '%s/%s/%s' % (sid, self.imts[imti], rlz.ordinal)
-        self.dic[key].append(gmvs_eids)
-        self.nbytes += gmvs_eids.nbytes
+    def save(self, eid, imti, rlz, gmf, sids):
+        for gmv, sid in zip(gmf, sids):
+            key = '%s/%s/%s' % (sid, self.imts[imti], rlz.ordinal)
+            glist, elist = self.dic[key]
+            glist.append(gmv)
+            elist.append(eid)
+        self.nbytes += gmf.nbytes * 2
 
     def __getitem__(self, sid):
         hazard = {}
@@ -547,13 +550,11 @@ class GmfCollector(object):
             hazard[imt] = {}
             for rlz in self.rlzs:
                 key = '%s/%s/%s' % (sid, imt, rlz.ordinal)
-                try:
-                    data = self.dic[key]
-                except KeyError:
-                    pass
-                else:
-                    if data:
-                        hazard[imt][rlz] = numpy.concatenate(data)
+                data = self.dic[key]
+                if data[0]:
+                    # a pairs of F32 arrays (gmvs, eids)
+                    hazard[imt][rlz] = (numpy.array(data[0], F32),
+                                        numpy.array(data[1], U32))
         return hazard
 
 
@@ -586,9 +587,8 @@ def calc_gmfs(eb_ruptures, sitecol, imts, rlzs_assoc,
                 rup, r_sites, imts, gsims, trunc_level, correl_model)
         with gmf_mon:
             data = computer.calcgmfs(rup.seed, ebr.eids, rlzs_by_gsim, min_iml)
-            for sid, imti, rlz, gmvs_eids in data:
-                gmfcoll.save(sid, imti, rlz,
-                             numpy.array(list(zip(*gmvs_eids)), gmv_eid_dt))
+            for eid, imti, rlz, gmf_sids in data:
+                gmfcoll.save(eid, imti, rlz, *gmf_sids)
     return gmfcoll
 
 
