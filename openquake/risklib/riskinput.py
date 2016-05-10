@@ -31,6 +31,8 @@ from openquake.risklib import scientific, riskmodels
 U32 = numpy.uint32
 F32 = numpy.float32
 
+gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U32)])
+
 FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy', 'area', 'number',
           'occupants', 'deductible~', 'insurance_limit~', 'retrofitted~')
 
@@ -585,7 +587,8 @@ def calc_gmfs(eb_ruptures, sitecol, imts, rlzs_assoc,
         with gmf_mon:
             data = computer.calcgmfs(rup.seed, ebr.eids, rlzs_by_gsim, min_iml)
             for sid, imti, rlz, gmvs_eids in data:
-                gmfcoll.save(sid, imti, rlz, gmvs_eids)
+                gmfcoll.save(sid, imti, rlz,
+                             numpy.array(list(zip(*gmvs_eids)), gmv_eid_dt))
     return gmfcoll
 
 
