@@ -816,16 +816,17 @@ source_chunk_dt = numpy.dtype([
     ('sent', numpy.int32)])
 
 
-class FatMesh(object):
+class ExpandedTile(object):
     """
-    The convex hull of a mesh of points expanded by buffer kilometers,
-    depending on the TRT.
+    The convex hull of a tile expanded by maximum_distance
+    kilometers, depending on the TRT.
     """
-    def __init__(self, mesh, buffers):
-        hull = mesh.get_convex_hull()
+    def __init__(self, sitecol, maximum_distance):
+        self.sitecol = sitecol
+        hull = sitecol.mesh.get_convex_hull()
         self.hull = {}
-        for trt in buffers:
-            self.hull[trt] = hull.dilate(buffers[trt])._polygon2d
+        for trt in maximum_distance:
+            self.hull[trt] = hull.dilate(maximum_distance[trt])._polygon2d
 
     def contains(self, src):
         loc = src.location
@@ -868,15 +869,14 @@ class SourceManager(object):
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
 
-    def get_sources(self, kind, sitecol):
+    def get_sources(self, kind, etile):
         """
         :param kind: a string 'light', 'heavy' or 'all'
-        :param sitecol: a SiteCollection instance
+        :param etile: an ExpandedTile instance
         :returns: the sources of the given kind affecting the given sitecol
         """
         filter_mon = self.monitor('filtering sources')
         split_mon = self.monitor('splitting sources')
-        fatmesh = FatMesh(sitecol.mesh, self.maximum_distance)
         for src in self.csm.get_sources(kind):
             filter_time = split_time = 0
             if self.filter_sources:
@@ -885,11 +885,11 @@ class SourceManager(object):
                     try:
                         # notice that AreaSource is a subclass of PointSource
                         if (src.__class__.__name__ == 'PointSource' and not
-                                fatmesh.contains(src)):  # skip point sources
+                                etile.contains(src)):  # skip point sources
                             continue
                         else:
                             if src.filter_sites_by_distance_to_source(
-                                    max_dist, sitecol) is None:
+                                    max_dist, etile.sitecol) is None:
                                 continue
                     except:
                         etype, err, tb = sys.exc_info()
@@ -947,11 +947,12 @@ class SourceManager(object):
         Only the sources affecting the sitecol as considered. Also,
         set the .seed attribute of each source.
         """
+        etile = ExpandedTile(sitecol, self.maximum_distance)
         rlzs_assoc = self.csm.info.get_rlzs_assoc()
         for kind in ('light', 'heavy'):
             if self.filter_sources:
                 logging.info('Filtering %s sources', kind)
-            sources = list(self.get_sources(kind, sitecol))
+            sources = list(self.get_sources(kind, etile))
             if not sources:
                 continue
             # set a seed for each split source; the seed is used
