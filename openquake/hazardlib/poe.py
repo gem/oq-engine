@@ -34,7 +34,7 @@ class Imtls(collections.Mapping):
         for name in dt.names:
             shp = dt[name].shape
             num_levels += shp[0] if shp else 1
-        self.array = numpy.empty(num_levels, F64)
+        self.array = numpy.zeros(num_levels, F64)
         for imt, imls in imtls.items():
             self[imt] = imls
 
