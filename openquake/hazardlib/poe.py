@@ -65,7 +65,7 @@ class Imtls(collections.Mapping):
         return '<Imtls\n%s>' % '\n'.join(data)
 
 
-class PoeCurve(object):
+class ProbabilityCurve(object):
     """
     This class is a small wrapper over an array of PoEs associated to
     a set of intensity measure types and levels. It provides a few
@@ -85,10 +85,10 @@ class PoeCurve(object):
     Here is an example of use:
 
     >>> imtls = Imtls({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
-    >>> poe = PoeCurve(imtls.slicedic, numpy.zeros(5, F64))
+    >>> poe = ProbabilityCurve(imtls.slicedic, numpy.zeros(5, F64))
     >>> poe['PGA'] = [0.1, 0.2, 0.3]
     >>> ~(poe | poe) * .5
-    <PoeCurve
+    <ProbabilityCurve
     PGA: [ 0.405  0.32   0.245]
     PGV: [ 0.5  0.5]>
     """
@@ -97,7 +97,7 @@ class PoeCurve(object):
         """
         :param imtls: an :class:`openquake.hazardlib.imt.Imtls` instance
         :param num_gsims: the number of GSIMs
-        :returns: a dictionary of PoeCurves
+        :returns: a dictionary of ProbabilityCurves
         """
         dic = {}
         for sid in sids:
@@ -110,25 +110,25 @@ class PoeCurve(object):
     def compose(cls, dic1, dic2):
         """
         >>> imtls = Imtls(dict(PGA=[1, 2, 3], PGV=[4, 5]))
-        >>> curves1 = PoeCurve.build(imtls, 1, [0, 1], initvalue=.1)
-        >>> curves2 = PoeCurve.build(imtls, 1, [1, 2], initvalue=.1)
-        >>> dic = PoeCurve.compose(curves1, curves2)
+        >>> curves1 = ProbabilityCurve.build(imtls, 1, [0, 1], initvalue=.1)
+        >>> curves2 = ProbabilityCurve.build(imtls, 1, [1, 2], initvalue=.1)
+        >>> dic = ProbabilityCurve.compose(curves1, curves2)
         >>> dic[0]
-        <PoeCurve
+        <ProbabilityCurve
         PGA: [[ 0.1]
          [ 0.1]
          [ 0.1]]
         PGV: [[ 0.1]
          [ 0.1]]>
         >>> dic[1]
-        <PoeCurve
+        <ProbabilityCurve
         PGA: [[ 0.19]
          [ 0.19]
          [ 0.19]]
         PGV: [[ 0.19]
          [ 0.19]]>
         >>> dic[2]
-        <PoeCurve
+        <ProbabilityCurve
         PGA: [[ 0.1]
          [ 0.1]
          [ 0.1]]
@@ -195,4 +195,4 @@ class PoeCurve(object):
 
     def __repr__(self):
         data = ['%s: %s' % (imt, self[imt]) for imt in sorted(self.slicedic)]
-        return '<PoeCurve\n%s>' % '\n'.join(data)
+        return '<ProbabilityCurve\n%s>' % '\n'.join(data)
