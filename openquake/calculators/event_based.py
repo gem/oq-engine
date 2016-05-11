@@ -27,15 +27,14 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, group_array, get_array
-from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import zero_curves
-from openquake.hazardlib import geo, site, calc
+from openquake.hazardlib import geo
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.util import max_rel_diff_index, Rupture
-
+from openquake.risklib.riskinput import create
 from openquake.calculators import base
 from openquake.calculators.calc import gmvs_to_haz_curve
 from openquake.calculators.classical import ClassicalCalculator
@@ -469,35 +468,23 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
 
 # ######################## GMF calculator ############################ #
 
-def make_gmfs(eb_ruptures, sitecol, imts, rlzs_assoc,
-              trunc_level, correl_model, min_iml=None, monitor=Monitor()):
+
+class GmfColl(object):
     """
-    :param eb_ruptures: a list of EBRuptures with the same trt_model_id
-    :param sitecol: a SiteCollection instance
-    :param imts: a list of Intensity Measure Types
-    :param rlzs_assoc: a RlzsAssoc instance
-    :param trunc_level: truncation level
-    :param correl_model: correlation model instance
-    :param monitor: a monitor instance
-    :returns: a dictionary rlzi -> gmv_dt array
+    A class to collect GMFs in memory, with methods .save and .by_rlzi
+    returning a dictionary rlzi -> gmv_dt
     """
-    trt_id = eb_ruptures[0].trt_id
-    gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
-    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(trt_id)
-    ctx_mon = monitor('make contexts')
-    gmf_mon = monitor('compute poes')
-    sites = sitecol.complete
-    data = []
-    for ebr in eb_ruptures:
-        rup = ebr.rupture
-        with ctx_mon:
-            r_sites = site.FilteredSiteCollection(ebr.indices, sites)
-            computer = calc.gmf.GmfComputer(
-                rup, r_sites, imts, gsims, trunc_level, correl_model)
-        with gmf_mon:
-            data.append(
-                computer.compute(rup.seed, ebr.eids, rlzs_by_gsim, min_iml))
-    return numpy.concatenate(data)
+    def __init__(self, imts, rlzs):
+        self.data = collections.defaultdict(list)  # rlzi -> data
+
+    def save(self, eid, imti, rlz, gmf, sids):
+        rlzi = rlz.ordinal
+        for gmv, sid in zip(gmf, sids):
+            self.data[rlzi].append((sid, eid, imti, gmv))
+
+    def by_rlzi(self):
+        return {rlzi: numpy.array(self.data[rlzi], gmv_dt)
+                for rlzi in self.data}
 
 
 @parallel.litetask
@@ -523,10 +510,9 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
     trunc_level = oq.truncation_level
     correl_model = readinput.get_correl_model(oq)
     tot_sites = len(sitecol.complete)
-    gmfa = make_gmfs(
-        eb_ruptures, sitecol, imts, rlzs_assoc, trunc_level, correl_model,
-        min_iml, monitor)
-    gmfadict = group_array(gmfa, 'rlzi')
+    gmfadict = create(
+        GmfColl, eb_ruptures, sitecol, imts, rlzs_assoc, trunc_level,
+        correl_model, min_iml, monitor).by_rlzi()
     result = {rlzi: [gmfadict[rlzi], None]
               if oq.ground_motion_fields else [None, None]
               for rlzi in gmfadict}

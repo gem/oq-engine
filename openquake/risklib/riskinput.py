@@ -24,8 +24,7 @@ import numpy
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, split_in_blocks
-from openquake.hazardlib.calc.gmf import GmfComputer
-from openquake.hazardlib import site
+from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
 
 U32 = numpy.uint32
@@ -558,40 +557,6 @@ class GmfCollector(object):
         return hazard
 
 
-def calc_gmfs(eb_ruptures, sitecol, imts, rlzs_assoc,
-              trunc_level, correl_model, min_iml, monitor=Monitor()):
-    """
-    :param eb_ruptures: a list of EBRuptures with the same trt_model_id
-    :param sitecol: a SiteCollection instance
-    :param imts: list of IMT strings
-    :param rlzs_assoc: a RlzsAssoc instance
-    :param trunc_level: truncation level
-    :param correl_model: correlation model instance
-    :param min_iml: a dictionary of minimum intensity measure levels
-    :param monitor: a monitor instance
-    :returns: a dictionary rlzi -> gmv_dt array
-    """
-    trt_id = eb_ruptures[0].trt_id
-    gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
-    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(trt_id)
-    rlzs = rlzs_assoc.realizations
-    ctx_mon = monitor('make contexts')
-    gmf_mon = monitor('compute poes')
-    sites = sitecol.complete
-    gmfcoll = GmfCollector(imts, rlzs)
-    for ebr in eb_ruptures:
-        rup = ebr.rupture
-        with ctx_mon:
-            r_sites = site.FilteredSiteCollection(ebr.indices, sites)
-            computer = GmfComputer(
-                rup, r_sites, imts, gsims, trunc_level, correl_model)
-        with gmf_mon:
-            data = computer.calcgmfs(rup.seed, ebr.eids, rlzs_by_gsim, min_iml)
-            for eid, imti, rlz, gmf_sids in data:
-                gmfcoll.save(eid, imti, rlz, *gmf_sids)
-    return gmfcoll
-
-
 class RiskInputFromRuptures(object):
     """
     Contains all the assets associated to the given IMT and a subsets of
@@ -643,11 +608,47 @@ class RiskInputFromRuptures(object):
         :returns:
             lists of N hazard dictionaries imt -> rlz -> Gmvs
         """
-        hazards = calc_gmfs(
-            self.ses_ruptures, self.sitecol, self.imts, rlzs_assoc,
-            self.trunc_level, self.correl_model, self.min_iml, monitor)
-        return hazards
+        gmfcoll = create(
+            GmfCollector, self.ses_ruptures, self.sitecol, self.imts,
+            rlzs_assoc, self.trunc_level, self.correl_model, self.min_iml,
+            monitor)
+        return gmfcoll
 
     def __repr__(self):
         return '<%s IMT_taxonomies=%s, weight=%d>' % (
             self.__class__.__name__, self.imt_taxonomies, self.weight)
+
+
+def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_assoc,
+           trunc_level, correl_model, min_iml, monitor=Monitor()):
+    """
+    :param GmfColl: a GmfCollector class to be instantiated
+    :param eb_ruptures: a list of EBRuptures with the same trt_model_id
+    :param sitecol: a SiteCollection instance
+    :param imts: list of IMT strings
+    :param rlzs_assoc: a RlzsAssoc instance
+    :param trunc_level: truncation level
+    :param correl_model: correlation model instance
+    :param min_iml: a dictionary of minimum intensity measure levels
+    :param monitor: a monitor instance
+    :returns: a GmfCollector instance
+    """
+    trt_id = eb_ruptures[0].trt_id
+    gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(trt_id)
+    rlzs = rlzs_assoc.realizations
+    ctx_mon = monitor('make contexts')
+    gmf_mon = monitor('compute poes')
+    sites = sitecol.complete
+    gmfcoll = GmfColl(imts, rlzs)
+    for ebr in eb_ruptures:
+        rup = ebr.rupture
+        with ctx_mon:
+            r_sites = site.FilteredSiteCollection(ebr.indices, sites)
+            computer = calc.gmf.GmfComputer(
+                rup, r_sites, imts, gsims, trunc_level, correl_model)
+        with gmf_mon:
+            data = computer.calcgmfs(rup.seed, ebr.eids, rlzs_by_gsim, min_iml)
+            for eid, imti, rlz, gmf_sids in data:
+                gmfcoll.save(eid, imti, rlz, *gmf_sids)
+    return gmfcoll

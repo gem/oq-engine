@@ -32,6 +32,7 @@ from openquake.commonlib.export import export
 from openquake.commonlib.writers import (
     scientificformat, floatformat, write_csv)
 from openquake.commonlib import writers, hazard_writers, util, readinput
+from openquake.risklib.riskinput import create
 from openquake.calculators import calc, base, event_based
 
 F32 = numpy.float32
@@ -588,6 +589,7 @@ def get_rup_idx(ebrup, etag):
 
 def _get_gmfs(dstore, serial, eid):
     oq = dstore['oqparam']
+    min_iml = event_based.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
     rlzs_assoc = dstore['rlzs_assoc']
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
@@ -597,14 +599,14 @@ def _get_gmfs(dstore, serial, eid):
     rlzs = [rlz for gsim in map(str, gsims)
             for rlz in rlzs_assoc[rup.trt_id, gsim]]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
-    gmfs = event_based.make_gmfs(
-        [rup], sitecol, oq.imtls, rlzs_assoc,
-        oq.truncation_level, correl_model)
+    gmfadict = create(event_based.GmfColl,
+                      [rup], sitecol, oq.imtls, rlzs_assoc,
+                      oq.truncation_level, correl_model, min_iml).by_rlzi()
     for imti, imt in enumerate(oq.imtls):
-        gmfs_by_imt = get_array(gmfs, imti=imti)
         gmfa = numpy.zeros(N, gmf_dt)
         for rlzname in gmf_dt.names:
-            gmvs = get_array(gmfs_by_imt, rlzi=int(rlzname))['gmv']
+            rlzi = int(rlzname)
+            gmvs = get_array(gmfadict[rlzi], imti=imti)['gmv']
             gmfa[rlzname][rup.indices] = gmvs
         yield gmfa, imt
 
