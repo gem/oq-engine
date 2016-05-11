@@ -21,6 +21,18 @@ import numpy
 F64 = numpy.float64
 
 
+# returns a dict imt -> slice
+def slicedict(imt_dt):
+    n = 0
+    slicedic = {}
+    for imt in imt_dt.names:
+        shp = imt_dt[imt].shape
+        n1 = n + shp[0] if shp else 1
+        slicedic[imt] = slice(n, n1)
+        n = n1
+    return slicedic, n
+
+
 class Imtls(collections.Mapping):
     """
     A small wrapper over an ordered dictionary of intensity measure types
@@ -30,19 +42,16 @@ class Imtls(collections.Mapping):
         self.imt_dt = dt = numpy.dtype(
             [(imt, F64, len(imls) if hasattr(imls, '__len__') else 1)
              for imt, imls in sorted(imtls.items())])
-        num_levels = 0
-        for name in dt.names:
-            shp = dt[name].shape
-            num_levels += shp[0] if shp else 1
+        self.slicedic, num_levels = slicedict(dt)
         self.array = numpy.zeros(num_levels, F64)
         for imt, imls in imtls.items():
             self[imt] = imls
 
     def __getitem__(self, imt):
-        return self.array.view(self.imt_dt)[0][imt]
+        return self.array[self.slicedic[imt]]
 
     def __setitem__(self, imt, array):
-        self.array.view(self.imt_dt)[imt] = array
+        self.array[self.slicedic[imt]] = array
 
     def __iter__(self):
         for imt in self.imt_dt.names:
@@ -52,8 +61,7 @@ class Imtls(collections.Mapping):
         return len(self.imt_dt.names)
 
     def __repr__(self):
-        array = self.array.view(self.imt_dt)
-        data = ['%s: %s' % (imt, array[imt]) for imt in self]
+        data = ['%s: %s' % (imt, self.array[imt]) for imt in self]
         return '<Imtls\n%s>' % '\n'.join(data)
 
 
@@ -95,7 +103,7 @@ class PoeCurve(object):
         for sid in sids:
             array = numpy.empty(num_gsims, (F64, len(imtls.array)))
             array.fill(initvalue)
-            dic[sid] = cls(imtls.imt_dt, array)
+            dic[sid] = cls(imtls.slicedic, array)
         return dic
 
     @classmethod
@@ -129,38 +137,37 @@ class PoeCurve(object):
         sids = set(dic1) | set(dic2)
         return {sid: dic1.get(sid, 1) * dic2.get(sid, 1) for sid in sids}
 
-    def __init__(self, imt_dt, array):
-        self.imt_dt = imt_dt
+    def __init__(self, slicedic, array):
+        self.slicedic = slicedic
         self.array = array
 
     def __setitem__(self, imt, array):
-        self.array.view(self.imt_dt)[imt] = array
+        self.array[self.slicedic[imt]] = array
 
     def __getitem__(self, imt):
-        return self.array.view(self.imt_dt)[imt]
+        return self.array[self.slicedic[imt]]
 
     def __or__(self, other):
         if other == 0:
             return self
         else:
             return self.__class__(
-                self.imt_dt, 1. - (1. - self.array) * (1. - other.array))
+                self.slicedic, 1. - (1. - self.array) * (1. - other.array))
     __ror__ = __or__
 
     def __mul__(self, other):
         if isinstance(other, self.__class__):
-            return self.__class__(self.imt_dt, self.array * other.array)
+            return self.__class__(self.slicedic, self.array * other.array)
         elif other == 1:
             return self
         else:
-            return self.__class__(self.imt_dt, self.array * other)
+            return self.__class__(self.slicedic, self.array * other)
     __rmul__ = __mul__
 
     def __invert__(self):
-        return self.__class__(self.imt_dt, 1. - self.array)
+        return self.__class__(self.slicedic, 1. - self.array)
 
     def __repr__(self):
-        array = self.array.view(self.imt_dt)
-        data = ['%s: %s' % (imt, array[imt])
+        data = ['%s: %s' % (imt, self.array[imt])
                 for imt in sorted(self.imt_dt.names)]
         return '<PoeCurve\n%s>' % '\n'.join(data)
