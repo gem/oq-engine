@@ -198,7 +198,7 @@ class GmfComputer(object):
         :param rlzs_by_gsim:
             a dictionary {gsim instance: realizations}
         :yields:
-            pairs (eid, imti, rlz, gmf_sids)
+            tuples (eid, imti, rlz, gmf_sids)
         """
         multiplicity = len(eids)
         sids = self.sites.sids
