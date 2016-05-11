@@ -1588,25 +1588,6 @@ class SimpleStats(object):
         """
         Compute mean and quantiles from the data in the datastore
         under the group `<name>-rlzs` and store them under the group
-        `<name>-stats`.
-        """
-        group = dstore[name + '-rlzs']
-        loss_types = sorted(group)
-        weights = [rlz.weight for rlz in self.rlzs]
-        for loss_type in loss_types:
-            data = [group[loss_type][rlz.uid][:] for rlz in self.rlzs]
-            dstore['%s-stats/%s/mean' % (name, loss_type)] = mean_curve(
-                data, weights)
-            for q in self.quantiles:
-                values = quantile_curve([d.T[0] for d in data], q, weights)
-                ins_values = quantile_curve([d.T[1] for d in data], q, weights)
-                path = '%s-stats/%s/quantile-%s' % (name, loss_type, q)
-                dstore[path] = numpy.array([values, ins_values]).T  # N x 2
-
-    def compute(self, name, dstore):
-        """
-        Compute mean and quantiles from the data in the datastore
-        under the group `<name>-rlzs` and store them under the group
         `<name>-stats`. Return the number of bytes stored.
         """
         array = dstore[name].value

@@ -569,7 +569,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         if oq.avg_losses:  # stats for avg_losses
             stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
-            stats.compute('avg_losses-rlzs', self.datastore)
+            stats.compute_and_store('avg_losses-rlzs', self.datastore)
 
         self.datastore.hdf5.flush()
 
