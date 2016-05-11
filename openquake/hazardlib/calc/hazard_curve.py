@@ -87,14 +87,15 @@ def array_of_curves(acc, nsites, imtls, gsim_idx=0):
     :param imtls: intensity measure types and levels
     :param gsims_idx: extract the data corresponding to a specific GSIM
     """
+    num_levels = sum(len(imtls[imt]) for imt in imtls)
     try:
         imt_dt = imtls.imt_dt
     except AttributeError:
         imt_dt = Imtls(imtls).imt_dt
-    curves = numpy.zeros(nsites, imt_dt)
+    curves = numpy.zeros((nsites, num_levels))
     for sid in acc:
-        curves[sid] = acc[sid].array[gsim_idx].view(curves.dtype)
-    return curves
+        curves[sid, :] = acc[sid].array[:, gsim_idx]
+    return curves.view(imt_dt)
 
 
 @deprecated('Use calc_hazard_curves instead')
@@ -191,16 +192,16 @@ def get_probability_no_exceedance(
     :param imtls: a dictionary-like object providing the intensity levels
     :param gsims: the list of GSIMs to use
     :param trunclevel: the truncation level
-    :returns: an array of shape (num_sites, num_gsim, num_levels)
+    :returns: an array of shape (num_sites, num_levels, num_gsims)
     """
-    pne_array = numpy.zeros((len(sctx.sites), len(gsims), len(imtls.array)))
+    pne_array = numpy.zeros((len(sctx.sites), len(imtls.array), len(gsims)))
     for i, gsim in enumerate(gsims):
         pnos = []  # list of arrays nsites x nlevels
         for imt in imtls:
             poes = gsim.get_poes(
                 sctx, rctx, dctx, from_string(imt), imtls[imt], trunclevel)
             pnos.append(rupture.get_probability_no_exceedance(poes))
-        pne_array[:, i, :] = numpy.concatenate(pnos, axis=1)
+        pne_array[:, :, i] = numpy.concatenate(pnos, axis=1)
     return pne_array
 
 

@@ -101,7 +101,7 @@ class PoeCurve(object):
         """
         dic = {}
         for sid in sids:
-            array = numpy.empty(num_gsims, (F64, len(imtls.array)))
+            array = numpy.empty((len(imtls.array), num_gsims), F64)
             array.fill(initvalue)
             dic[sid] = cls(imtls.slicedic, array)
         return dic
