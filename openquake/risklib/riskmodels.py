@@ -494,14 +494,14 @@ class ProbabilisticEventBased(RiskModel):
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
 
-    def __call__(self, loss_type, assets, gmvs, epsgetter):
+    def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
         """
         :param str loss_type:
             the loss type considered
         :param assets:
            a list of assets on the same site and with the same taxonomy
-        :param gmvs:
-           an instance of :class:`openquake.risklib.riskinput.Gmvs`
+        :param gmvs_eids:
+           a pair of arrays of E elements
         :param epsgetter:
            a callable returning the correct epsilons for the given gmvs
         :returns:
@@ -509,13 +509,13 @@ class ProbabilisticEventBased(RiskModel):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
-        eids = gmvs['eid']
+        gmvs, eids = gmvs_eids
         E = len(gmvs)
         I = self.insured_losses + 1
         N = len(assets)
         loss_ratios = numpy.zeros((N, E, I), F32)
         vf = self.risk_functions[loss_type]
-        means, covs, idxs = vf.interpolate(gmvs['gmv'])
+        means, covs, idxs = vf.interpolate(gmvs)
         for i, asset in enumerate(assets):
             epsilons = epsgetter(asset.ordinal, eids)
             if epsilons is not None:

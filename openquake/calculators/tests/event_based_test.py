@@ -22,10 +22,10 @@ from nose.plugins.attrib import attr
 
 import numpy.testing
 
+from openquake.baselib.general import get_array
 from openquake.commonlib.datastore import read
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.commonlib.export import export
-from openquake.calculators.event_based import get_gmvs_by_sid
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_4, case_5, case_6, case_7, case_12,
@@ -82,10 +82,10 @@ class EventBasedTestCase(CalculatorTestCase):
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
-            gmvs_by_sid = get_gmvs_by_sid(dstore['gmf_data/0000'])
+            gmvs = dstore['gmf_data/0000'].value
             dstore.close()
-            gmvs_site_1 = gmvs_by_sid[0]['PGA']
-            gmvs_site_2 = gmvs_by_sid[1]['PGA']
+            gmvs_site_1 = get_array(gmvs, sid=0, imti=0)['gmv']
+            gmvs_site_2 = get_array(gmvs, sid=1, imti=0)['gmv']
             joint_prob_0_5 = joint_prob_of_occurrence(
                 gmvs_site_1, gmvs_site_2, 0.5, oq.investigation_time,
                 oq.ses_per_logic_tree_path)
