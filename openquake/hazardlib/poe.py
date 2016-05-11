@@ -84,13 +84,13 @@ class PoeCurve(object):
 
     Here is an example of use:
 
-    >>> imt_dt = numpy.dtype([('PGA', float, 3), ('PGV', float, 2)])
-    >>> poe = PoeCurve(imt_dt, numpy.zeros(1, (F64, 5)))
+    >>> imtls = Imtls({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
+    >>> poe = PoeCurve(imtls.slicedic, numpy.zeros(5, F64))
     >>> poe['PGA'] = [0.1, 0.2, 0.3]
     >>> ~(poe | poe) * .5
     <PoeCurve
-    PGA: [[[ 0.405  0.32   0.245]]]
-    PGV: [[[ 0.5  0.5]]]>
+    PGA: [ 0.405  0.32   0.245]
+    PGV: [ 0.5  0.5]>
     """
     @classmethod
     def build(cls, imtls, num_gsims, sids, initvalue=0.):
@@ -115,16 +115,25 @@ class PoeCurve(object):
         >>> dic = PoeCurve.compose(curves1, curves2)
         >>> dic[0]
         <PoeCurve
-        PGA: [[[ 0.1  0.1  0.1]]]
-        PGV: [[[ 0.1  0.1]]]>
+        PGA: [[ 0.1]
+         [ 0.1]
+         [ 0.1]]
+        PGV: [[ 0.1]
+         [ 0.1]]>
         >>> dic[1]
         <PoeCurve
-        PGA: [[[ 0.19  0.19  0.19]]]
-        PGV: [[[ 0.19  0.19]]]>
+        PGA: [[ 0.19]
+         [ 0.19]
+         [ 0.19]]
+        PGV: [[ 0.19]
+         [ 0.19]]>
         >>> dic[2]
         <PoeCurve
-        PGA: [[[ 0.1  0.1  0.1]]]
-        PGV: [[[ 0.1  0.1]]]>
+        PGA: [[ 0.1]
+         [ 0.1]
+         [ 0.1]]
+        PGV: [[ 0.1]
+         [ 0.1]]>
         """
         sids = set(dic1) | set(dic2)
         dic = {}
