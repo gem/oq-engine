@@ -306,15 +306,17 @@ class ClassicalCalculator(base.HazardCalculator):
                             group[ts].attrs['trt'] = tm.trt
                             group[ts].attrs['nbytes'] = curves.nbytes
                             group[ts].attrs['gsim'] = str(gsim)
-                            curves_by_trt_gsim[tm.id, gsim] = curves
+                            curves_by_trt_gsim[tm.id, gsim] = PoeCurve.extract(
+                                curves_by_trt_id[tm.id], i)
                 self.datastore.set_nbytes(group.name)
             self.datastore.set_nbytes('curves_by_sm')
 
         with self.monitor('combine curves_by_rlz', autoflush=True):
-            zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
             curves_by_rlz = self.rlzs_assoc.combine_curves(
-                curves_by_trt_gsim, agg_curves, zc)
-        self.save_curves(curves_by_rlz)
+                curves_by_trt_gsim, PoeCurve.compose, {})
+
+        self.save_curves({rlz: array_of_curves(curves, nsites, imtls)
+                          for rlz, curves in curves_by_rlz.items()})
 
     def save_curves(self, curves_by_rlz):
         """
