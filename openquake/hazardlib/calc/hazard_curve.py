@@ -285,4 +285,4 @@ def hazard_curves_per_trt(
         # with source.source_id, which is a string
         acc = PoeCurve.compose(acc, {sid: ~curves[sid] for sid in curves})
     monitor.eff_ruptures = pne_mon.counts  # contributing ruptures
-    return acc  # sid -> PoeCurve
+    return acc

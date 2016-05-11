@@ -127,7 +127,12 @@ class PoeCurve(object):
         PGV: [[[ 0.1  0.1]]]>
         """
         sids = set(dic1) | set(dic2)
-        return {sid: dic1.get(sid, 0) | dic2.get(sid, 0) for sid in sids}
+        dic = {}
+        for sid in sids:
+            curve = dic1.get(sid, 0) | dic2.get(sid, 0)
+            if curve:
+                dic[sid] = curve
+        return dic
 
     @classmethod
     def multiply(cls, dic1, dic2):
@@ -168,7 +173,7 @@ class PoeCurve(object):
         return self.__class__(self.slicedic, 1. - self.array)
 
     def __nonzero__(self):
-        return self.array.sum()
+        return bool(self.array.sum())
 
     def __repr__(self):
         data = ['%s: %s' % (imt, self[imt]) for imt in sorted(self.slicedic)]
