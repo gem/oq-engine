@@ -30,8 +30,6 @@ from openquake.risklib import scientific, riskmodels
 U32 = numpy.uint32
 F32 = numpy.float32
 
-gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U32)])
-
 FIELDS = ('site_id', 'lon', 'lat', 'idx', 'taxonomy', 'area', 'number',
           'occupants', 'deductible~', 'insurance_limit~', 'retrofitted~')
 

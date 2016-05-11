@@ -606,7 +606,7 @@ def _get_gmfs(dstore, serial, eid):
         gmfa = numpy.zeros(N, gmf_dt)
         for rlzname in gmf_dt.names:
             rlzi = int(rlzname)
-            gmvs = get_array(gmfadict[rlzi], imti=imti)['gmv']
+            gmvs = get_array(gmfadict[rlzi], eid=eid, imti=imti)['gmv']
             gmfa[rlzname][rup.indices] = gmvs
         yield gmfa, imt
 
