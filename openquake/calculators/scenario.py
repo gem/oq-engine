@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
 
+from openquake.baselib.general import group_array
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput
@@ -60,21 +61,20 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         Compute the GMFs and return a dictionary gmf_by_etag
         """
-        gmfa_by_rlz = {}
+        rlzs_by_gsim = {gsim: self.rlzs_assoc[0, gsim] for gsim in self.gsims}
         with self.monitor('computing gmfs', autoflush=True):
             eids = range(self.oqparam.number_of_ground_motion_fields)
-            for i, gsim in enumerate(self.gsims):
-                gmfa_by_rlz[i] = self.computer.compute(
-                    self.oqparam.random_seed, gsim, eids)
-        return gmfa_by_rlz
+            gmfa = self.computer.compute(
+                self.oqparam.random_seed, eids, rlzs_by_gsim)
+            return group_array(gmfa, 'rlzi')
 
-    def post_execute(self, gmfa_by_rlz):
+    def post_execute(self, gmfa_by_rlzi):
         """
         :param gmfa: a dictionary rlzi -> gmfa
         """
         with self.monitor('saving gmfs', autoflush=True):
             for rlzi, gsim in enumerate(self.gsims):
                 rlzstr = 'gmf_data/%04d' % rlzi
-                self.datastore[rlzstr] = gmfa_by_rlz[rlzi]
+                self.datastore[rlzstr] = gmfa_by_rlzi[rlzi]
                 self.datastore.set_attrs(rlzstr, gsim=str(gsim))
             self.datastore.set_nbytes('gmf_data')

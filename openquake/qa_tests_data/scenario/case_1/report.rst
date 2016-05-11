@@ -1,7 +1,7 @@
 Scenario QA Test, Case 1
 ========================
 
-gem-tstation:/home/michele/ssd/calc_12594.hdf5 updated Wed May  4 04:54:04 2016
+gem-tstation:/home/michele/ssd/calc_15410.hdf5 updated Tue May 10 12:35:40 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  3                  
 master_seed                  0                  
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-gitcdd89a9'
 ============================ ===================
 
 Input files
@@ -38,7 +38,7 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(1)
-  0,BooreAtkinson2008: ['BooreAtkinson2008']>
+  0,BooreAtkinson2008(): ['BooreAtkinson2008()']>
 
 Information about the tasks
 ---------------------------
@@ -50,6 +50,6 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.013     0.0       1     
-computing gmfs          0.001     0.0       1     
-reading site collection 3.386E-05 0.0       1     
+computing gmfs          9.768E-04 0.0       1     
+reading site collection 3.099E-05 0.0       1     
 ======================= ========= ========= ======

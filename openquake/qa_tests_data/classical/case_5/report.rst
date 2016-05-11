@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 5
 ================================
 
-gem-tstation:/home/michele/ssd/calc_12635.hdf5 updated Wed May  4 04:55:48 2016
+gem-tstation:/home/michele/ssd/calc_15451.hdf5 updated Tue May 10 12:37:19 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  1066               
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-gitcdd89a9'
 ============================ ===================
 
 Input files
@@ -45,11 +45,11 @@ b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ============== ========= ========== ==========
-trt_id gsims          distances siteparams ruptparams
-====== ============== ========= ========== ==========
-0      SadighEtAl1997 rrup      vs30       rake mag  
-====== ============== ========= ========== ==========
+====== ================ ========= ========== ==========
+trt_id gsims            distances siteparams ruptparams
+====== ================ ========= ========== ==========
+0      SadighEtAl1997() rrup      vs30       rake mag  
+====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -57,7 +57,7 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,SadighEtAl1997: ['<0,b1,b1,w=1.0>']>
+  0,SadighEtAl1997(): ['<0,b1,b1,w=1.0>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -73,7 +73,7 @@ Informational data
 count_eff_ruptures_max_received_per_task 2577          
 count_eff_ruptures_num_tasks             1             
 count_eff_ruptures_sent.monitor          2318          
-count_eff_ruptures_sent.rlzs_assoc       2624          
+count_eff_ruptures_sent.rlzs_assoc       2589          
 count_eff_ruptures_sent.sitecol          437           
 count_eff_ruptures_sent.siteidx          5             
 count_eff_ruptures_sent.sources          1170          
@@ -93,8 +93,16 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            1         ComplexFaultSource 485    1         0.001       8.007      0.0      
+0            1         ComplexFaultSource 485    1         0.001       7.668      0.0      
 ============ ========= ================== ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+================== =========== ========== ========= ======
+source_class       filter_time split_time calc_time counts
+================== =========== ========== ========= ======
+ComplexFaultSource 0.001       7.668      0.0       1     
+================== =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
@@ -105,12 +113,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 8.299     0.0       1     
-managing sources               8.010     0.0       1     
-splitting sources              8.007     0.0       1     
+reading composite source model 7.721     0.0       1     
+managing sources               7.671     0.0       1     
+splitting sources              7.668     0.0       1     
 store source_info              0.004     0.0       1     
 filtering sources              0.001     0.0       1     
-total count_eff_ruptures       3.870E-04 0.0       1     
-reading site collection        6.294E-05 0.0       1     
-aggregate curves               2.003E-05 0.0       1     
+total count_eff_ruptures       3.650E-04 0.0       1     
+reading site collection        3.195E-05 0.0       1     
+aggregate curves               1.907E-05 0.0       1     
 ============================== ========= ========= ======
