@@ -429,9 +429,10 @@ class RlzsAssoc(collections.Mapping):
         :returns: a dictionary rlz -> aggregated curves
         """
         ad = AccumDict({rlz: acc for rlz in self.realizations})
-        for key, value in results.items():
+        for key in results:
+            # NB: don't use results.items(), you may run out of memory
             for rlz in self.rlzs_assoc[key]:
-                ad[rlz] = agg(ad[rlz], value)
+                ad[rlz] = agg(ad[rlz], results[key])
         return ad
 
     def combine(self, results, agg=agg_prob):
