@@ -169,5 +169,5 @@ class PoeCurve(object):
 
     def __repr__(self):
         data = ['%s: %s' % (imt, self.array[imt])
-                for imt in sorted(self.imt_dt.names)]
+                for imt in sorted(self.slicedic.names)]
         return '<PoeCurve\n%s>' % '\n'.join(data)
