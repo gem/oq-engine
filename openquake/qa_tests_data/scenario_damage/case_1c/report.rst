@@ -1,7 +1,7 @@
 Scenario Damage
 ===============
 
-gem-tstation:/home/michele/ssd/calc_15395.hdf5 updated Tue May 10 12:35:38 2016
+gem-tstation:/home/michele/ssd/calc_16042.hdf5 updated Wed May 11 14:28:26 2016
 
 num_sites = 7, sitecol = 690 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  42                 
 master_seed                  0                  
-oqlite_version               '0.13.0-gitcdd89a9'
+oqlite_version               '0.13.0-git7639915'
 ============================ ===================
 
 Input files
@@ -59,7 +59,7 @@ Information about the tasks
 ---------------------------
 ========================= ===== ====== ===== ===== =========
 measurement               mean  stddev min   max   num_tasks
-scenario_damage.time_sec  0.046 NaN    0.046 0.046 1        
+scenario_damage.time_sec  0.047 NaN    0.047 0.047 1        
 scenario_damage.memory_mb 0.004 NaN    0.004 0.004 1        
 ========================= ===== ====== ===== ===== =========
 
@@ -68,14 +68,14 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-total scenario_damage   0.046     0.004     1     
-computing riskmodel     0.045     0.0       1     
+total scenario_damage   0.047     0.004     1     
+computing riskmodel     0.046     0.0       1     
 filtering sites         0.009     0.0       1     
 reading exposure        0.003     0.0       1     
 saving gmfs             0.001     0.0       1     
 computing gmfs          0.001     0.0       1     
-assoc_assets_sites      5.920E-04 0.0       1     
-reading site collection 1.099E-04 0.0       1     
-building riskinputs     8.917E-05 0.0       1     
-building hazard         3.695E-05 0.0       1     
+assoc_assets_sites      6.311E-04 0.0       1     
+reading site collection 1.221E-04 0.0       1     
+building riskinputs     9.704E-05 0.0       1     
+building hazard         3.600E-05 0.0       1     
 ======================= ========= ========= ======

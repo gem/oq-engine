@@ -1,7 +1,7 @@
 Classical Tiling for Turkey reduced
 ===================================
 
-gem-tstation:/home/michele/ssd/calc_15479.hdf5 updated Tue May 10 12:38:20 2016
+gem-tstation:/home/michele/ssd/calc_16126.hdf5 updated Wed May 11 14:31:14 2016
 
 num_sites = 83, sitecol = 4.42 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   25.0
 random_seed                  323                
 master_seed                  0                  
 sites_per_tile               10                 
-oqlite_version               '0.13.0-gitcdd89a9'
+oqlite_version               '0.13.0-git7639915'
 ============================ ===================
 
 Input files
@@ -116,9 +116,9 @@ Slowest sources
 ============ ============ ============ ====== ========= =========== ========== =========
 trt_model_id source_id    source_class weight split_num filter_time split_time calc_time
 ============ ============ ============ ====== ========= =========== ========== =========
-4            AS_GEAS343   AreaSource   96     1         0.011       0.0        0.0      
+4            AS_GEAS343   AreaSource   96     1         0.010       0.0        0.0      
 9            FSBG_TRBG103 AreaSource   43     1         0.004       0.0        0.0      
-9            FSBG_ARAS462 AreaSource   7.650  1         8.061E-04   0.0        0.0      
+9            FSBG_ARAS462 AreaSource   7.650  1         7.820E-04   0.0        0.0      
 ============ ============ ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -126,7 +126,7 @@ Computation times by source typology
 ============ =========== ========== ========= ======
 source_class filter_time split_time calc_time counts
 ============ =========== ========== ========= ======
-AreaSource   0.016       0.0        0.0       3     
+AreaSource   0.015       0.0        0.0       3     
 ============ =========== ========== ========= ======
 
 Information about the tasks
@@ -138,11 +138,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               2.319     0.0       1     
-reading composite source model 1.162     0.0       1     
-filtering sources              0.221     0.0       248   
+managing sources               2.358     0.0       1     
+reading composite source model 1.137     0.0       1     
+filtering sources              0.215     0.0       248   
 reading site collection        0.011     0.0       1     
 total count_eff_ruptures       0.004     0.0       13    
 store source_info              0.004     0.0       1     
-aggregate curves               1.862E-04 0.0       13    
+aggregate curves               1.731E-04 0.0       13    
 ============================== ========= ========= ======

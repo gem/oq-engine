@@ -1,7 +1,7 @@
 Virtual Island - City C, 2 SES, grid=0.1
 ========================================
 
-gem-tstation:/home/michele/ssd/calc_15433.hdf5 updated Tue May 10 12:36:09 2016
+gem-tstation:/home/michele/ssd/calc_16080.hdf5 updated Wed May 11 14:28:59 2016
 
 num_sites = 1792, sitecol = 44.71 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  1024               
 master_seed                  100                
 avg_losses                   False              
-oqlite_version               '0.13.0-gitcdd89a9'
+oqlite_version               '0.13.0-git7639915'
 ============================ ===================
 
 Input files
@@ -76,10 +76,10 @@ event_based_risk_max_received_per_task 4041
 event_based_risk_num_tasks             23            
 event_based_risk_sent.assetcol         511451        
 event_based_risk_sent.monitor          60674         
-event_based_risk_sent.riskinput        1263701       
+event_based_risk_sent.riskinput        1264345       
 event_based_risk_sent.riskmodel        437138        
 event_based_risk_sent.rlzs_assoc       68931         
-event_based_risk_tot_received          92890         
+event_based_risk_tot_received          92897         
 hostname                               'gem-tstation'
 require_epsilons                       True          
 ====================================== ==============
@@ -129,7 +129,7 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            F         ComplexFaultSource 2,558  1,119     0.002       2.676      2.537    
+0            F         ComplexFaultSource 2,558  1,119     0.002       2.681      2.392    
 ============ ========= ================== ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -137,40 +137,40 @@ Computation times by source typology
 ================== =========== ========== ========= ======
 source_class       filter_time split_time calc_time counts
 ================== =========== ========== ========= ======
-ComplexFaultSource 0.002       2.676      2.537     1     
+ComplexFaultSource 0.002       2.681      2.392     1     
 ================== =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
-========================== ===== ====== ===== ===== =========
-measurement                mean  stddev min   max   num_tasks
-compute_ruptures.time_sec  0.102 0.162  0.001 0.368 25       
-compute_ruptures.memory_mb 0.004 0.014  0.0   0.059 25       
-event_based_risk.time_sec  0.049 0.012  0.034 0.076 23       
-event_based_risk.memory_mb 0.060 0.095  0.0   0.328 23       
-========================== ===== ====== ===== ===== =========
+========================== ===== ====== ========= ===== =========
+measurement                mean  stddev min       max   num_tasks
+compute_ruptures.time_sec  0.096 0.154  7.999E-04 0.362 25       
+compute_ruptures.memory_mb 0.004 0.012  0.0       0.047 25       
+event_based_risk.time_sec  0.048 0.014  0.032     0.087 23       
+event_based_risk.memory_mb 0.136 0.168  0.0       0.570 23       
+========================== ===== ====== ========= ===== =========
 
 Slowest operations
 ------------------
 ============================== ======== ========= ======
 operation                      time_sec memory_mb counts
 ============================== ======== ========= ======
-managing sources               2.793    0.0       1     
-splitting sources              2.676    0.0       1     
-total compute_ruptures         2.546    0.059     25    
-total event_based_risk         1.122    0.328     23    
-building hazard                0.544    0.0       23    
-computing riskmodel            0.299    0.0       9,407 
-reading site collection        0.249    0.0       1     
-compute poes                   0.230    0.0       44    
-reading exposure               0.122    0.0       1     
-reading composite source model 0.115    0.0       1     
-aggregate losses               0.050    0.0       9,407 
-saving ruptures                0.045    0.0       1     
-make contexts                  0.024    0.0       44    
-store source_info              0.023    0.0       1     
-filtering ruptures             0.013    0.0       57    
+managing sources               2.819    0.0       1     
+splitting sources              2.681    0.0       1     
+total compute_ruptures         2.403    0.047     25    
+total event_based_risk         1.099    0.570     23    
+building hazard                0.475    0.0       23    
+computing riskmodel            0.314    0.0       9,407 
+reading site collection        0.260    0.0       1     
+compute poes                   0.160    0.0       44    
+reading exposure               0.123    0.0       1     
+reading composite source model 0.118    0.0       1     
+aggregate losses               0.052    0.0       9,407 
+saving ruptures                0.033    0.0       1     
+make contexts                  0.025    0.0       44    
+filtering ruptures             0.014    0.0       57    
+store source_info              0.014    0.0       1     
 saving event loss tables       0.006    0.0       23    
-aggregate curves               0.005    0.0       25    
+aggregate curves               0.004    0.0       25    
 filtering sources              0.002    0.0       1     
 ============================== ======== ========= ======

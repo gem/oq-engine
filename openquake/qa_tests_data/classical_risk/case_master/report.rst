@@ -1,7 +1,7 @@
 classical risk
 ==============
 
-gem-tstation:/home/michele/ssd/calc_15393.hdf5 updated Tue May 10 12:35:38 2016
+gem-tstation:/home/michele/ssd/calc_16040.hdf5 updated Wed May 11 14:28:25 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -22,7 +22,7 @@ random_seed                  24
 master_seed                  0                  
 avg_losses                   False              
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcdd89a9'
+oqlite_version               '0.13.0-git7639915'
 ============================ ===================
 
 Input files
@@ -121,9 +121,9 @@ Slowest sources
 ============ ========= ========================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class              weight split_num filter_time split_time calc_time
 ============ ========= ========================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource         482    15        0.002       0.041      3.196    
-2            1         SimpleFaultSource         482    15        0.001       0.039      2.770    
-3            2         CharacteristicFaultSource 1.000  1         0.001       0.0        0.039    
+0            1         SimpleFaultSource         482    15        0.003       0.049      3.247    
+2            1         SimpleFaultSource         482    15        0.002       0.045      3.205    
+3            2         CharacteristicFaultSource 1.000  1         0.002       0.0        0.034    
 1            2         SimpleFaultSource         4.000  1         0.002       0.0        0.021    
 ============ ========= ========================= ====== ========= =========== ========== =========
 
@@ -132,20 +132,20 @@ Computation times by source typology
 ========================= =========== ========== ========= ======
 source_class              filter_time split_time calc_time counts
 ========================= =========== ========== ========= ======
-CharacteristicFaultSource 0.001       0.0        0.039     1     
-SimpleFaultSource         0.005       0.080      5.986     3     
+CharacteristicFaultSource 0.002       0.0        0.034     1     
+SimpleFaultSource         0.007       0.094      6.472     3     
 ========================= =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
 ======================== ===== ====== ===== ===== =========
 measurement              mean  stddev min   max   num_tasks
-classical_risk.time_sec  0.063 0.033  0.015 0.102 11       
-classical_risk.memory_mb 0.048 0.035  0.004 0.094 11       
-classical.time_sec       0.219 0.080  0.025 0.330 28       
-classical.memory_mb      0.394 0.622  0.0   1.473 28       
-classical.time_sec       0.219 0.080  0.025 0.330 28       
-classical.memory_mb      0.394 0.622  0.0   1.473 28       
+classical_risk.time_sec  0.065 0.033  0.011 0.103 11       
+classical_risk.memory_mb 0.044 0.032  0.008 0.086 11       
+classical.time_sec       0.236 0.084  0.025 0.335 28       
+classical.memory_mb      0.413 0.657  0.008 1.656 28       
+classical.time_sec       0.236 0.084  0.025 0.335 28       
+classical.memory_mb      0.413 0.657  0.008 1.656 28       
 ======================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -153,23 +153,23 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total classical                6.126     1.473     28    
-making contexts                3.659     0.0       969   
-computing poes                 2.083     0.0       1,938 
-total classical_risk           0.697     0.094     11    
-computing riskmodel            0.687     0.0       11    
-managing sources               0.150     0.0       1     
-splitting sources              0.080     0.0       2     
-save curves_by_rlz             0.030     0.0       1     
-compute and save statistics    0.023     0.0       1     
-reading composite source model 0.020     0.0       1     
-store source_info              0.020     0.0       1     
+total classical                6.615     1.656     28    
+making contexts                3.867     0.0       969   
+computing poes                 2.318     0.0       1,938 
+total classical_risk           0.712     0.086     11    
+computing riskmodel            0.702     0.0       11    
+managing sources               0.170     0.0       1     
+splitting sources              0.094     0.0       2     
+reading composite source model 0.031     0.0       1     
+save curves_by_rlz             0.031     0.0       1     
+compute and save statistics    0.022     0.0       1     
+store source_info              0.019     0.0       1     
 save curves_by_trt_gsim        0.017     0.0       1     
-filtering sources              0.006     0.0       4     
-reading exposure               0.006     0.0       1     
+reading exposure               0.012     0.0       1     
+filtering sources              0.008     0.0       4     
+aggregate curves               0.006     0.0       28    
 building hazard                0.005     0.0       11    
-aggregate curves               0.005     0.0       28    
 building riskinputs            0.002     0.0       1     
 combine curves_by_rlz          0.001     0.0       1     
-reading site collection        5.960E-06 0.0       1     
+reading site collection        1.097E-05 0.0       1     
 ============================== ========= ========= ======

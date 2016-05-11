@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 2
 ================================
 
-gem-tstation:/home/michele/ssd/calc_15435.hdf5 updated Tue May 10 12:36:10 2016
+gem-tstation:/home/michele/ssd/calc_16082.hdf5 updated Wed May 11 14:29:00 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  1066               
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcdd89a9'
+oqlite_version               '0.13.0-git7639915'
 ============================ ===================
 
 Input files
@@ -117,8 +117,8 @@ reading composite source model 0.009     0.0       1
 managing sources               0.006     0.0       1     
 store source_info              0.005     0.0       1     
 filtering sources              0.004     0.0       1     
-total count_eff_ruptures       3.591E-04 0.0       1     
+total count_eff_ruptures       3.321E-04 0.0       1     
 splitting sources              5.698E-05 0.0       1     
-reading site collection        3.719E-05 0.0       1     
-aggregate curves               2.122E-05 0.0       1     
+reading site collection        3.695E-05 0.0       1     
+aggregate curves               2.098E-05 0.0       1     
 ============================== ========= ========= ======

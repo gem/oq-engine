@@ -1,7 +1,7 @@
 Classical PSHA-Based Hazard
 ===========================
 
-gem-tstation:/home/michele/ssd/calc_15416.hdf5 updated Tue May 10 12:35:42 2016
+gem-tstation:/home/michele/ssd/calc_16063.hdf5 updated Wed May 11 14:28:30 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -21,7 +21,7 @@ area_source_discretization   20.0
 random_seed                  42                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcdd89a9'
+oqlite_version               '0.13.0-git7639915'
 ============================ ===================
 
 Input files
@@ -72,14 +72,14 @@ source_model.xml 0      Active Shallow Crust 1           1,694        1,694
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 3023          
+count_eff_ruptures_max_received_per_task 3024          
 count_eff_ruptures_num_tasks             14            
 count_eff_ruptures_sent.monitor          39298         
 count_eff_ruptures_sent.rlzs_assoc       36330         
 count_eff_ruptures_sent.sitecol          8134          
 count_eff_ruptures_sent.siteidx          70            
 count_eff_ruptures_sent.sources          15499         
-count_eff_ruptures_tot_received          42322         
+count_eff_ruptures_tot_received          42324         
 hazard.input_weight                      1694.0        
 hazard.n_imts                            1             
 hazard.n_levels                          28.0          
@@ -108,7 +108,7 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 1,694  15        0.002       0.094      0.0      
+0            1         SimpleFaultSource 1,694  15        0.003       0.125      0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -116,7 +116,7 @@ Computation times by source typology
 ================= =========== ========== ========= ======
 source_class      filter_time split_time calc_time counts
 ================= =========== ========== ========= ======
-SimpleFaultSource 0.002       0.094      0.0       1     
+SimpleFaultSource 0.003       0.125      0.0       1     
 ================= =========== ========== ========= ======
 
 Information about the tasks
@@ -128,13 +128,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.116     0.0       1     
-splitting sources              0.094     0.0       1     
-reading composite source model 0.012     0.0       1     
+managing sources               0.148     0.0       1     
+splitting sources              0.125     0.0       1     
+reading composite source model 0.021     0.0       1     
 store source_info              0.007     0.0       1     
 reading exposure               0.005     0.0       1     
-total count_eff_ruptures       0.005     0.0       14    
-filtering sources              0.002     0.0       1     
-aggregate curves               3.266E-04 0.0       14    
-reading site collection        7.868E-06 0.0       1     
+total count_eff_ruptures       0.005     0.004     14    
+filtering sources              0.003     0.0       1     
+aggregate curves               3.209E-04 0.0       14    
+reading site collection        1.001E-05 0.0       1     
 ============================== ========= ========= ======
