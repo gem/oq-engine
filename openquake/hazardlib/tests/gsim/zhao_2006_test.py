@@ -1,22 +1,26 @@
-# The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# Copyright (C) 2012-2016 GEM Foundation
 #
-# This program is distributed in the hope that it will be useful,
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 from openquake.hazardlib.gsim.zhao_2006 import (ZhaoEtAl2006Asc,
                                                 ZhaoEtAl2006SInter,
                                                 ZhaoEtAl2006SSlab,
-                                                ZhaoEtAl2006SInterNSHMP2008)
+                                                ZhaoEtAl2006SInterNSHMP2008,
+                                                ZhaoEtAl2006SSlabNSHMP2014)
 from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
 from openquake.hazardlib.imt import PGA
@@ -139,4 +143,12 @@ class ZhaoEtAl2006SInterNSHMP2008TestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check('ZHAO06/Z06SInterNSHMP_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
+
+
+class ZhaoEtAl2006SSlabNSHMP2014TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ZhaoEtAl2006SSlabNSHMP2014
+
+    def test_mean(self):
+        self.check('ZHAO06/ZHAO_SSLAB_NSHMP2014_MEAN.csv',
+                   max_discrep_percentage=0.52)
 

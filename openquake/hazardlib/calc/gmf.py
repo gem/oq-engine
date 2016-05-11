@@ -1,18 +1,21 @@
-# The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# Copyright (C) 2012-2016 GEM Foundation
 #
-# This program is distributed in the hope that it will be useful,
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 """
 Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
@@ -22,10 +25,19 @@ import collections
 import numpy
 import scipy.stats
 
+from openquake.baselib.python3compat import zip
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.gsim.base import gsim_imt_dt, ContextMaker
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
+
+U8 = numpy.uint8
+U16 = numpy.uint16
+U32 = numpy.uint32
+F32 = numpy.float32
+
+gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('rlzi', U16),
+                      ('imti', U8), ('gmv', F32)])
 
 
 class CorrelationButNoInterIntraStdDevs(Exception):
@@ -46,12 +58,7 @@ class GmfComputer(object):
     """
     Given an earthquake rupture, the ground motion field computer computes
     ground shaking over a set of sites, by randomly sampling a ground
-    shaking intensity model. The usage is::
-
-       gmfcomputer = GmfComputer(rupture, r_sites, imts, gsims,
-                                 truncation_level, correlation_model)
-       gmf1 = gmfcomputer.compute(seed1)
-       gmf2 = gmfcomputer.compute(seed2)
+    shaking intensity model.
 
     :param :class:`openquake.hazardlib.source.rupture.Rupture` rupture:
         Rupture to calculate ground motion fields radiated from.
@@ -60,12 +67,7 @@ class GmfComputer(object):
         Sites of interest to calculate GMFs.
 
     :param imts:
-        Sorted list of intensity measure type strings
-
-    :param gsims:
-        Ground-shaking intensity models, instances of subclass of either
-        :class:`~openquake.hazardlib.gsim.base.GMPE` or
-        :class:`~openquake.hazardlib.gsim.base.IPE`, sorted lexicographically.
+        a sorted list of Intensity Measure Type strings
 
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
@@ -79,32 +81,32 @@ class GmfComputer(object):
     """
     def __init__(self, rupture, sites, imts, gsims,
                  truncation_level=None, correlation_model=None):
-        assert sites and imts, (sites, imts)
+        assert sites, sites
         self.rupture = rupture
         self.sites = sites
-        self.imts = list(map(from_string, imts))
+        self.imts = [from_string(imt) for imt in imts]
         self.gsims = gsims
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.ctx = ContextMaker(gsims).make_contexts(sites, rupture)
-        self.gmf_dt = gsim_imt_dt(gsims, imts)
 
     def _compute(self, seed, gsim, realizations):
         # the method doing the real stuff; use compute instead
         if seed is not None:
             numpy.random.seed(seed)
-        result = collections.OrderedDict()
+        result = numpy.zeros(
+            (len(self.imts), len(self.sites), realizations), F32)
         sctx, rctx, dctx = self.ctx
 
         if self.truncation_level == 0:
             assert self.correlation_model is None
-            for imt in self.imts:
+            for imti, imt in enumerate(self.imts):
                 mean, _stddevs = gsim.get_mean_and_stddevs(
                     sctx, rctx, dctx, imt, stddev_types=[])
                 mean = gsim.to_imt_unit_values(mean)
                 mean.shape += (1, )
                 mean = mean.repeat(realizations, axis=1)
-                result[str(imt)] = mean
+                result[imti] = mean
             return result
         elif self.truncation_level is None:
             distribution = scipy.stats.norm()
@@ -113,7 +115,7 @@ class GmfComputer(object):
             distribution = scipy.stats.truncnorm(
                 - self.truncation_level, self.truncation_level)
 
-        for imt in self.imts:
+        for imti, imt in enumerate(self.imts):
             if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == \
                set([StdDev.TOTAL]):
                 # If the GSIM provides only total standard deviation, we need
@@ -125,32 +127,32 @@ class GmfComputer(object):
                         self.correlation_model, gsim)
 
                 mean, [stddev_total] = gsim.get_mean_and_stddevs(
-                    sctx, rctx, dctx, imt, [StdDev.TOTAL]
-                )
+                    sctx, rctx, dctx, imt, [StdDev.TOTAL])
                 stddev_total = stddev_total.reshape(stddev_total.shape + (1, ))
                 mean = mean.reshape(mean.shape + (1, ))
 
                 total_residual = stddev_total * distribution.rvs(
-                    size=(len(self.sites), realizations)
-                )
+                    size=(len(self.sites), realizations))
                 gmf = gsim.to_imt_unit_values(mean + total_residual)
             else:
                 mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
                     sctx, rctx, dctx, imt,
-                    [StdDev.INTER_EVENT, StdDev.INTRA_EVENT]
-                )
+                    [StdDev.INTER_EVENT, StdDev.INTRA_EVENT])
                 stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
                 stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
                 mean = mean.reshape(mean.shape + (1, ))
 
                 intra_residual = stddev_intra * distribution.rvs(
-                    size=(len(self.sites), realizations)
-                )
+                    size=(len(self.sites), realizations))
 
                 if self.correlation_model is not None:
-                    intra_residual = self.correlation_model.apply_correlation(
-                        self.sites, imt, intra_residual
-                    )
+                    ir = self.correlation_model.apply_correlation(
+                        self.sites, imt, intra_residual)
+                    # this fixes a mysterious bug: ir[row] is actually
+                    # a matrix of shape (E, 1) and not a vector of size E
+                    intra_residual = numpy.zeros(ir.shape)
+                    for i, val in numpy.ndenumerate(ir):
+                        intra_residual[i] = val
 
                 inter_residual = stddev_inter * distribution.rvs(
                     size=realizations)
@@ -158,39 +160,62 @@ class GmfComputer(object):
                 gmf = gsim.to_imt_unit_values(
                     mean + intra_residual + inter_residual)
 
-            result[str(imt)] = gmf
+            result[imti] = gmf
 
         return result
 
-    def compute(self, seeds):
+    def compute(self, seed, eids, rlzs_by_gsim=None, min_iml=None):
         """
-        Compute the ground motion field for the given sites and seeds.
+        Compute a ground motion array for the given sites.
 
-        :param seeds:
-            S seeds for the numpy random number generator
+        :param seed:
+            seed for the numpy random number generator
+        :param eids:
+            event IDs, a list of integers
+        :param rlzs_by_gsim:
+            a dictionary {gsim instance: realizations}
+        :param min_iml:
+            an array minimum intensity per intensity measure type
         :returns:
-            a list of numpy arrays of dtype gmf_dt and length num_sites
+            a numpy array of dtype gmv_dt
         """
-        n = len(self.sites)
-        indices = self.sites.indices
-        gmfs = []
-        for seed in seeds:
-            gmfa = numpy.zeros(n, self.gmf_dt)
-            for gsim in self.gsims:
-                gs = str(gsim)
-                for imt, value in self._compute(
-                        seed, gsim, realizations=1).items():
-                    # 1 realization, get the 0-th colum of the v-array
-                    array = list(map(float, value[:, 0]))
-                    # NB: with correlation, the value is a numpy.matrix
-                    # not an array, flatten does not work and the only
-                    # way to extract the numbers is the map before!
-                    # something is wrong and must be fixed in the future
-                    for i, gmv in enumerate(array):
-                        gmfa[i]['idx'] = indices[i]
-                        gmfa[i][gs][imt] = gmv
-            gmfs.append(gmfa)
-        return gmfs
+        gmfa = []
+        for eid, imti, rlz, gmf_sids in self.calcgmfs(
+                seed, eids, rlzs_by_gsim, min_iml):
+            for gmv, sid in zip(*gmf_sids):
+                gmfa.append((sid, eid, rlz.ordinal, imti, gmv))
+        return numpy.array(gmfa, gmv_dt)
+
+    def calcgmfs(self, seed, eids, rlzs_by_gsim, min_iml=None):
+        """
+        Compute the ground motion fields for the given gsims, sites,
+        multiplicity and seed.
+
+        :param multiplicity:
+            the number of GMFs to return
+        :param seed:
+            seed for the numpy random number generator
+        :param rlzs_by_gsim:
+            a dictionary {gsim instance: realizations}
+        :yields:
+            tuples (eid, imti, rlz, gmf_sids)
+        """
+        multiplicity = len(eids)
+        sids = self.sites.sids
+        imt_range = range(len(self.imts))
+        for i, gsim in enumerate(self.gsims):
+            for rlzi, rlz in enumerate(rlzs_by_gsim[gsim]):
+                arr = self._compute(seed + rlzi, gsim, multiplicity).transpose(
+                    0, 2, 1)  # array of shape (I, E, S)
+                for imti in imt_range:
+                    for eid, gmf in zip(eids, arr[imti]):
+                        if min_iml is not None:  # is an array
+                            ok = gmf >= min_iml[imti]
+                            gmf_sids = (gmf[ok], sids[ok])
+                        else:
+                            gmf_sids = (gmf, sids)
+                        if len(gmf):
+                            yield eid, imti, rlz, gmf_sids
 
 
 # this is not used in the engine; it is still useful for usage in IPython
@@ -251,13 +276,14 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         return dict((imt, numpy.zeros((len(sites), realizations)))
                     for imt in imts)
     [(rupture, sites)] = ruptures_sites
-
-    gc = GmfComputer(rupture, sites, list(map(str, imts)), [gsim],
+    gc = GmfComputer(rupture, sites, [str(imt) for imt in imts], [gsim],
                      truncation_level, correlation_model)
-    result = gc._compute(seed, gsim, realizations)
-    for imt, gmf in result.items():
+    res = gc._compute(seed, gsim, realizations)
+    result = {}
+    for imti, imt in enumerate(gc.imts):
         # makes sure the lenght of the arrays in output is the same as sites
         if rupture_site_filter is not filters.rupture_site_noop_filter:
-            result[imt] = sites.expand(gmf, placeholder=0)
-
-    return {from_string(imt): result[imt] for imt in result}
+            result[imt] = sites.expand(res[imti], placeholder=0)
+        else:
+            result[imt] = res[imti]
+    return result

@@ -1,18 +1,21 @@
-# The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# Copyright (C) 2012-2016 GEM Foundation
 #
-# This program is distributed in the hope that it will be useful,
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 """
 Module :mod:`openquake.hazardlib.gsim.base` defines base classes for
 different kinds of :class:`ground shaking intensity models
@@ -56,11 +59,9 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     :param sorted_gsims: a list of GSIM instances, sorted lexicographically
     :param sorted_imts: a list of intensity measure type strings
     """
-    imt_dt = numpy.dtype([(imt, float) for imt in sorted_imts])
-    gsim_imt_dt = numpy.dtype(
-        [('idx', numpy.uint32)] +
-        [(str(gsim), imt_dt) for gsim in sorted_gsims])
-    return gsim_imt_dt
+    dtlist = [(imt, numpy.float32) for imt in sorted_imts]
+    imt_dt = numpy.dtype(dtlist)
+    return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
 class MetaGSIM(abc.ABCMeta):
@@ -642,22 +643,22 @@ class GroundShakingIntensityModel(with_metaclass(MetaGSIM)):
         return str(self) == str(other)
 
     def __hash__(self):
+        """
+        We use the __str__ representation as hash: it means that we can
+        use equivalently GSIM instances or strings as dictionary keys.
+        """
         return hash(str(self))
 
     def __str__(self):
-        """
-        To be overridden in subclasses if the GSIM takes parameters.
-        """
-        return self.__class__.__name__
+        kwargs = ', '.join('%s=%r' % kv for kv in sorted(self.kwargs.items()))
+        return "%s(%s)" % (self.__class__.__name__, kwargs)
 
     def __repr__(self):
         """
         Default string representation for GSIM instances. It contains
         the name and values of the arguments, if any.
         """
-        # NB: ast.literal_eval(repr(gsim)) must work
-        kwargs = ', '.join('%s=%r' % kv for kv in sorted(self.kwargs.items()))
-        return repr("%s(%s)" % (self.__class__.__name__, kwargs))
+        return repr(str(self))
 
 
 def _truncnorm_sf(truncation_level, values):
@@ -950,7 +951,7 @@ class CoeffsTable(object):
     KeyError: SA(period=0.01, damping=5)
     """
     def __init__(self, **kwargs):
-        if not 'table' in kwargs:
+        if 'table' not in kwargs:
             raise TypeError('CoeffsTable requires "table" kwarg')
         table = kwargs.pop('table').strip().splitlines()
         sa_damping = kwargs.pop('sa_damping', None)

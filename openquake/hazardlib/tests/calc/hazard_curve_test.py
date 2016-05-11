@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# Copyright (C) 2012-2016 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -133,19 +133,17 @@ class HazardCurvesTestCase(unittest.TestCase):
         self.assertIsInstance(pga_curves, numpy.ndarray)
         self.assertEqual(pga_curves.shape, (2, 3))  # two sites, three IMLs
         site1_pga_poe, site2_pga_poe = pga_curves
-        self.assertTrue(numpy.allclose(site1_pga_poe, site1_pga_poe_expected),
-                        str(site1_pga_poe))
-        self.assertTrue(numpy.allclose(site2_pga_poe, site2_pga_poe_expected),
-                        str(site2_pga_poe))
+        numpy.testing.assert_allclose(
+            site1_pga_poe, site1_pga_poe_expected, 1E-6)
+        numpy.testing.assert_allclose(
+            site2_pga_poe, site2_pga_poe_expected, 1E-6)
 
         pgd_curves = curves['PGD']
         self.assertIsInstance(pgd_curves, numpy.ndarray)
         self.assertEqual(pgd_curves.shape, (2, 2))  # two sites, two IMLs
         site1_pgd_poe, site2_pgd_poe = pgd_curves
-        self.assertTrue(numpy.allclose(site1_pgd_poe, site1_pgd_poe_expected),
-                        str(site1_pgd_poe))
-        self.assertTrue(numpy.allclose(site2_pgd_poe, site2_pgd_poe_expected),
-                        str(site2_pgd_poe))
+        numpy.testing.assert_allclose(site1_pgd_poe, site1_pgd_poe_expected)
+        numpy.testing.assert_allclose(site2_pgd_poe, site2_pgd_poe_expected)
 
     def test_source_errors(self):
         # exercise `hazard_curves_poissonian` in the case of an exception,
@@ -245,16 +243,10 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
 
         from openquake.hazardlib.calc import filters
         source_site_filter = self.SitesCounterSourceFilter(
-            filters.source_site_distance_filter(30)
-        )
-        rupture_site_filter = self.SitesCounterRuptureFilter(
-            filters.rupture_site_distance_filter(30)
-        )
+            filters.source_site_distance_filter(30))
         calc_hazard_curves(
             sources, sitecol, imts, gsims, truncation_level,
-            source_site_filter=source_site_filter,
-            rupture_site_filter=rupture_site_filter
-        )
+            source_site_filter=source_site_filter)
         # there are two sources and four sites. The first source contains only
         # one rupture, the second source contains three ruptures.
         #
@@ -287,5 +279,3 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         # affect the 3rd and 4th sites.
         self.assertEqual(source_site_filter.counts,
                          [('point2', [1, 3, 4])])
-        self.assertEqual(rupture_site_filter.counts,
-                         [(6, [4]), (8, [3, 4])])

@@ -23,6 +23,7 @@ Daniele Vigano          March 2014
 Julio Garcia            March 2014
 Robin Gee               September 2015
 Silvia Canessa          December 2015
+Nick Ackerley           December 2015
 
 Research
 --------
@@ -35,3 +36,4 @@ Yen-Shin Chen           November 2013
 Julio Garcia            March 2014
 Robin Gee               September 2015
 Silvia Canessa          December 2015
+Nick Ackerley           December 2015

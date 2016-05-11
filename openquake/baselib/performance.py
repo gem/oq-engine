@@ -1,24 +1,24 @@
-#  -*- coding: utf-8 -*-
-#  vim: tabstop=4 shiftwidth=4 softtabstop=4
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#  Copyright (c) 2015, GEM Foundation
+# Copyright (C) 2015-2016 GEM Foundation
 
-#  OpenQuake is free software: you can redistribute it and/or modify it
-#  under the terms of the GNU Affero General Public License as published
-#  by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 
-#  OpenQuake is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
 
-#  You should have received a copy of the GNU Affero General Public License
-#  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import time
 from datetime import datetime
+from multiprocessing.connection import Client
 
 import numpy
 import h5py
@@ -54,17 +54,17 @@ perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
 
 
 # this is not thread-safe
-class PerformanceMonitor(object):
+class Monitor(object):
     """
     Measure the resident memory occupied by a list of processes during
     the execution of a block of code. Should be used as a context manager,
     as follows::
 
-     with PerformanceMonitor('do_something') as mon:
+     with Monitor('do_something') as mon:
          do_something()
      print mon.mem
 
-    At the end of the block the PerformanceMonitor object will have the
+    At the end of the block the Monitor object will have the
     following 5 public attributes:
 
     .start_time: when the monitor started (a datetime object)
@@ -72,11 +72,19 @@ class PerformanceMonitor(object):
     .exc: usually None; otherwise the exception happened in the `with` block
     .mem: the memory delta in bytes
 
-    The behaviour of the PerformanceMonitor can be customized by subclassing it
+    The behaviour of the Monitor can be customized by subclassing it
     and by overriding the method on_exit(), called at end and used to display
     or store the results of the analysis.
+
+    NB: if the .address attribute is set, it is possible for the monitor to
+    send commands to that address, assuming there is a
+    :class:`multiprocessing.connection.Listener` listening.
     """
-    def __init__(self, operation, hdf5path=None,
+    address = None
+    authkey = None
+    calc_id = None
+
+    def __init__(self, operation='dummy', hdf5path=None,
                  autoflush=False, measuremem=False):
         self.operation = operation
         self.hdf5path = hdf5path
@@ -87,6 +95,7 @@ class PerformanceMonitor(object):
         self._start_time = self._stop_time = time.time()
         self.children = []
         self.counts = 0
+        self.address = None
 
     @property
     def dt(self):
@@ -145,6 +154,17 @@ class PerformanceMonitor(object):
         if self.autoflush:
             self.flush()
 
+    def send(self, *args):
+        """
+        Send a command to the listener. Add the .calc_id as last argument.
+        """
+        if self.address:
+            client = Client(self.address, authkey=self.authkey)
+            try:
+                client.send(args + (self.calc_id,))
+            finally:
+                client.close()
+
     def flush(self):
         """
         Save the measurements on the performance file (or on stdout)
@@ -196,35 +216,12 @@ class PerformanceMonitor(object):
         return new
 
     def __repr__(self):
+        calc_id = ' #%s ' % self.calc_id if self.calc_id else ' '
+        msg = '%s%s%s' % (self.__class__.__name__, calc_id, self.operation)
         if self.measuremem:
-            return '<%s %s, duration=%ss, memory=%s>' % (
-                self.__class__.__name__, self.operation, self.duration,
-                humansize(self.mem))
-        return '<%s %s, duration=%ss>' % (self.__class__.__name__,
-                                          self.operation, self.duration)
-
-
-class DummyMonitor(PerformanceMonitor):
-    """
-    This class makes it easy to disable the monitoring in client code.
-    Disabling the monitor can improve the performance.
-    """
-    def __init__(self, operation='dummy', *args, **kw):
-        self.operation = operation
-        self.hdf5path = None
-        self.children = []
-        self.counts = 0
-        self._start_time = self._stop_time = time.time()
-
-    def __enter__(self):
-        self._start_time = time.time()
-        return self
-
-    def __exit__(self, etype, exc, tb):
-        self._stop_time = time.time()
-
-    def flush(self):
-        pass
-
-    def __repr__(self):
-        return '<%s>' % self.__class__.__name__
+            return '<%s, duration=%ss, memory=%s>' % (
+                msg, self.duration, humansize(self.mem))
+        elif self.duration:
+            return '<%s, duration=%ss>' % (msg, self.duration)
+        else:
+            return '<%s>' % msg

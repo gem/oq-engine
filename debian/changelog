@@ -1,11 +1,66 @@
+  [Michele Simionato]
+  * Fixed the string representation of GSIM instances: this solves a serious
+    bug in the GMPETable
+  * Removed the rupture_site_filter where it was not used
+
+  [Daniele Viganò]
+  * Added support for Ubuntu 16.04 (xenial) packages
+
+  [Michele Simionato]
+  * Major change to the GmfCalculator API
+
+  [Matteo Nastasi]
+  * Backport of libhdf5 and h5py for ubuntu 'precise' serie
+
+  [Michele Simionato]
+  * Added a PickleableSequence class to serialize Python objects on HDF5
+
   [Graeme Weatherill]
+  * Fixes Z1.0 units bug in Abrahamson, Silva and Kamai (2014)
+  * Added modifications to Zhao (2006) inslab GMPE and implements
+    Atkinson (2008') - needed for 2014 US NSHMP
+
+  [Michele Simionato]
+  * Improved the validity check on the Intensity Measure Type
+  * Showing the `calc_id` in Monitor instances string representation
+  * Added a h5py.File subclass to manage the serialization of objects
+    satisfying the HDF5 protocol used by the OpenQuake software
+  * Added a LiteralAttrs class to serialize literal attributes on HDF5
+  * Added to the Monitor the ability to send commands
+
+python-oq-hazardlib (0.19.0-0~precise01) precise; urgency=low
+
+  [Nick Ackerley]
+  * Added Japan regionalization to GMPE of Atkinson & Boore (2003).
+
+  [Michele Simionato]
+  * Using 32 bit floats for the GMFs, instead of 64, to save memory
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 02 Mar 2016 10:51:43 +0100
+
+python-oq-hazardlib (0.18.0-0~precise01) precise; urgency=low
+
+  [Yen-Shin Chen]
+  * Fix a bug in ChiouYoungs2014NearFaultEffect
+
+  [Daniele Viganò, Matteo Nastasi]
+  * Updates Copyrights to 2016 and uniformize them
+
+  [Michele Simionato]
+  * SiteCollection instances are now serializable in HDF5 format
+
+  [Graeme Weatherill]
+  * Adds `arbitrary' magnitude frequency distribution
   * Adds version of NSHMP Western US (NGA West) GMPEs to calculated the
     weighted mean of the epistemic uncertainty adjustment factor
 
   [Nick Ackerley]
+  * Added Japan regionalization to GMPE of Atkinson & Boore (2003).
   * Implemented GMPE of Kanno et al. (2006) for shallow and deep earthquakes.
   * Implemented GMPE of Raghukanth & Iyengar (2007) for stable continental
     regions of peninsular India.
+  * Implemented GMPE of Nath (2012) for anomalous interface subduction in the
+    intraplate margin of the Shillong plateau in India.
   * Implemented GMPE of Gupta (2010) for Indo-Burmese intraslab subduction.
   * Implemented GMPE of Sharma et al. (2009) for active shallow crust of
     Indian Himalayas.
@@ -29,6 +84,7 @@
   [Yen-Shin Chen]
   * Modified the hypocentre_patch_index method to obtain the best solution
 
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 15 Feb 2016 11:27:19 +0100
 
 python-oq-hazardlib (0.17.0-0~precise01) precise; urgency=low
 

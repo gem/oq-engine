@@ -1,18 +1,21 @@
-# The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# Copyright (C) 2012-2016 GEM Foundation
 #
-# This program is distributed in the hope that it will be useful,
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 """
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
@@ -129,8 +132,17 @@ class SiteCollection(object):
     :param sites:
         A list of instances of :class:`Site` class.
     """
-    _slots_ = (
-        'sids lons lats _vs30 _vs30measured _z1pt0 _z2pt5 _backarc'.split())
+    dtype = numpy.dtype([
+        ('sids', numpy.uint32),
+        ('lons', numpy.float64),
+        ('lats', numpy.float64),
+        ('_vs30', numpy.float64),
+        ('_vs30measured', numpy.bool),
+        ('_z1pt0', numpy.float64),
+        ('_z2pt5', numpy.float64),
+        ('_backarc', numpy.bool),
+    ])
+    _slots_ = dtype.names
 
     @classmethod
     def from_points(cls, lons, lats, site_ids, sitemodel):
@@ -197,6 +209,19 @@ class SiteCollection(object):
         for arr in (self._vs30, self._vs30measured, self._z1pt0, self._z2pt5,
                     self.lons, self.lats, self._backarc, self.sids):
             arr.flags.writeable = False
+
+    def __toh5__(self):
+        array = numpy.zeros(self.total_sites, self.dtype)
+        for slot in self._slots_:
+            array[slot] = getattr(self, slot)
+        attrs = dict(total_sites=self.total_sites)
+        return array, attrs
+
+    def __fromh5__(self, array, attrs):
+        for slot in self._slots_:
+            setattr(self, slot, array[slot])
+        vars(self).update(attrs)
+        self.complete = self
 
     @property
     def mesh(self):

@@ -1,19 +1,21 @@
-# coding: utf-8
-# The Hazard Library
-# Copyright (C) 2012-2014, GEM Foundation
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# Copyright (C) 2012-2016 GEM Foundation
 #
-# This program is distributed in the hope that it will be useful,
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 """
 :mod:`openquake.hazardlib.calc.hazard_curve` implements
 :func:`hazard_curves`.
@@ -24,8 +26,8 @@ import collections
 
 import numpy
 
-from openquake.baselib.python3compat import range, raise_
-from openquake.baselib.performance import DummyMonitor
+from openquake.baselib.python3compat import raise_
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
@@ -96,8 +98,7 @@ def agg_curves(acc, curves):
 @deprecated('Use calc_hazard_curves instead')
 def hazard_curves(
         sources, sites, imtls, gsim_by_trt, truncation_level=None,
-        source_site_filter=filters.source_site_noop_filter,
-        rupture_site_filter=filters.rupture_site_noop_filter):
+        source_site_filter=filters.source_site_noop_filter):
     """
     Deprecated. It does the same job of
     :func:`openquake.hazardlib.calc.hazard_curve.calc_hazard_curves`,
@@ -107,15 +108,13 @@ def hazard_curves(
     imtls = {str(imt): imls for imt, imls in imtls.items()}
     curves_by_imt = calc_hazard_curves(
         sources, sites, imtls, gsim_by_trt, truncation_level,
-        source_site_filter=filters.source_site_noop_filter,
-        rupture_site_filter=filters.rupture_site_noop_filter)
+        source_site_filter=filters.source_site_noop_filter)
     return {from_string(imt): curves_by_imt[imt] for imt in imtls}
 
 
 def calc_hazard_curves(
         sources, sites, imtls, gsim_by_trt, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
-        rupture_site_filter=filters.rupture_site_noop_filter,
         maximum_distance=None):
     """
     Compute hazard curves on a list of sites, given a set of seismic sources
@@ -161,9 +160,6 @@ def calc_hazard_curves(
     :param source_site_filter:
         Optional source-site filter function. See
         :mod:`openquake.hazardlib.calc.filters`.
-    :param rupture_site_filter:
-        Optional rupture-site filter function. See
-        :mod:`openquake.hazardlib.calc.filters`.
 
     :returns:
         An array of size N, where N is the number of sites, which elements
@@ -177,17 +173,14 @@ def calc_hazard_curves(
     for trt in sources_by_trt:
         curves = agg_curves(curves, hazard_curves_per_trt(
             sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
-            truncation_level, source_site_filter, rupture_site_filter)[0])
+            truncation_level, source_site_filter)[0])
     return curves
 
 
-# TODO: remove the rupture_site_filter, since its work is now done by the
-# maximum_distance parameter; see what would break
 def hazard_curves_per_trt(
         sources, sites, imtls, gsims, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
-        rupture_site_filter=filters.rupture_site_noop_filter,
-        maximum_distance=None, bbs=(), monitor=DummyMonitor()):
+        maximum_distance=None, bbs=(), monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -201,27 +194,28 @@ def hazard_curves_per_trt(
         number of levels in ``imtls``.
     """
     cmaker = ContextMaker(gsims, maximum_distance)
-    gnames = list(map(str, gsims))
     imt_dt = numpy.dtype([(imt, float, len(imtls[imt]))
                           for imt in sorted(imtls)])
     imts = {from_string(imt): imls for imt, imls in imtls.items()}
-    curves = [numpy.ones(len(sites), imt_dt) for gname in gnames]
     sources_sites = ((source, sites) for source in sources)
     ctx_mon = monitor('making contexts', measuremem=False)
     pne_mon = monitor('computing poes', measuremem=False)
     monitor.calc_times = []  # pairs (src_id, delta_t)
+    monitor.eff_ruptures = 0  # effective number of contributing ruptures
+    acc = numpy.zeros((len(gsims), len(sites)), imt_dt)
     for source, s_sites in source_site_filter(sources_sites):
         t0 = time.time()
+        curves = numpy.ones((len(gsims), len(sites)), imt_dt)
         try:
-            rupture_sites = rupture_site_filter(
-                (rupture, s_sites) for rupture in source.iter_ruptures())
-            for rupture, r_sites in rupture_sites:
+            for rupture in source.iter_ruptures():
                 with ctx_mon:
                     try:
                         sctx, rctx, dctx = cmaker.make_contexts(
-                            r_sites, rupture)
+                            s_sites, rupture)
                     except FarAwayRupture:
                         continue
+
+                    monitor.eff_ruptures += 1
 
                     # add optional disaggregation information (bounding boxes)
                     if bbs:
@@ -241,12 +235,13 @@ def hazard_curves_per_trt(
                 for i, gsim in enumerate(gsims):
                     with pne_mon:
                         for imt in imts:
+                            the_curves = curves[i][str(imt)]
                             poes = gsim.get_poes(
                                 sctx, rctx, dctx, imt, imts[imt],
                                 truncation_level)
                             pno = rupture.get_probability_no_exceedance(poes)
-                            expanded_pno = sctx.sites.expand(pno, 1.0)
-                            curves[i][str(imt)] *= expanded_pno
+                            the_curves[sctx.sites.indices, :] *= pno
+
         except Exception as err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
@@ -258,18 +253,18 @@ def hazard_curves_per_trt(
         monitor.calc_times.append((source.id, time.time() - t0))
         # NB: source.id is an integer; it should not be confused
         # with source.source_id, which is a string
-    for i in range(len(gnames)):
         for imt in imtls:
-            curves[i][imt] = 1. - curves[i][imt]
+            curves[imt] = 1. - curves[imt]
 
-    return curves
+        acc = agg_curves(acc, curves)
+    return acc
 
 
 def hazard_curves_per_group(
         group, sites, imtls, gsims, truncation_level=None,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter,
-        maximum_distance=None, bbs=(), monitor=DummyMonitor()):
+        maximum_distance=None, bbs=(), monitor=Monitor()):
     """
     Compute the hazard curves for a set of sources belonging to the same
     source group. We assume that the group contains sources belonging to the
