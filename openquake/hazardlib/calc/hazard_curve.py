@@ -95,7 +95,7 @@ def array_of_curves(acc, nsites, imtls, gsim_idx=0):
     curves = numpy.zeros((nsites, num_levels))
     for sid in acc:
         curves[sid, :] = acc[sid].array[:, gsim_idx]
-    return curves.view(imt_dt)
+    return curves.view(imt_dt).reshape(nsites)
 
 
 @deprecated('Use calc_hazard_curves instead')

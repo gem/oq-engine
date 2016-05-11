@@ -142,6 +142,15 @@ class PoeCurve(object):
         sids = set(dic1) | set(dic2)
         return {sid: dic1.get(sid, 1) * dic2.get(sid, 1) for sid in sids}
 
+    @classmethod
+    def extract(cls, dic, gsim_idx):
+        out = {}
+        for sid in dic:
+            curve = dic[sid]
+            array = curve.array[:, gsim_idx].reshape(-1, 1)
+            out[sid] = cls(curve.slicedic, array)
+        return out
+
     def __init__(self, slicedic, array):
         self.slicedic = slicedic
         self.array = array
