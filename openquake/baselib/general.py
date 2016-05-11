@@ -609,6 +609,27 @@ def groupby2(records, kfield, vfield):
     return list(dic.items())  # Python3 compatible
 
 
+def _reducerecords(group):
+    records = list(group)
+    return numpy.array(records, records[0].dtype)
+
+
+def group_array(array, *kfields):
+    """
+    Convert an array into an OrderedDict kfields -> array
+    """
+    return groupby(array, operator.itemgetter(*kfields), _reducerecords)
+
+
+def get_array(array, **kw):
+    """
+    Extract a subarray by filtering on the given keyword arguments
+    """
+    for name, value in kw.items():
+        array = array[array[name] == value]
+    return array
+
+
 def humansize(nbytes, suffixes=('B', 'KB', 'MB', 'GB', 'TB', 'PB')):
     """
     Return file size in a human-friendly format
