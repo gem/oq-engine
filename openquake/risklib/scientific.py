@@ -1559,25 +1559,10 @@ class SimpleStats(object):
     """
     A class to perform statistics on the average losses. The average losses
     are stored as N x 2 arrays (non-insured and insured losses) where N is
-    the number of assets. Here is an example of usage:
+    the number of assets.
 
-    >>> from collections import namedtuple
-    >>> Realization = namedtuple('Realization', 'ordinal uid weight')
-    >>> rlzs = [Realization(0, 'b1', 0.3), Realization(1, 'b2', 0.7)]
-    >>> dstore = {
-    ...     'avg_losses-rlzs':
-    ...        {'structural':
-    ...            {'b1': numpy.array([[0.10, 0.20], [0.30, 0.40]]),
-    ...             'b2': numpy.array([[0.12, 0.22], [0.33, 0.44]]),
-    ...            }}}
-    >>> stats = SimpleStats(rlzs, quantiles=[0.2])
-    >>> stats.compute_and_store('avg_losses', dstore)
-    >>> dstore['avg_losses-stats/structural/mean']
-    array([[ 0.114,  0.214],
-           [ 0.321,  0.428]])
-    >>> dstore['avg_losses-stats/structural/quantile-0.2']
-    array([[ 0.1,  0.2],
-           [ 0.3,  0.4]])
+    :param rlzs: a list of realizations
+    :param quantiles: a list of floats in the range 0..1
     """
     def __init__(self, rlzs, quantiles=()):
         self.rlzs = rlzs
@@ -1590,9 +1575,10 @@ class SimpleStats(object):
         under the group `<name>-rlzs` and store them under the group
         `<name>-stats`. Return the number of bytes stored.
         """
-        array = dstore[name].value
         weights = [rlz.weight for rlz in self.rlzs]
-        newname = name.replace('-rlzs', '-stats')
+        rlzsname = name + '-rlzs'
+        newname = name + '-stats'
+        array = dstore[rlzsname].value
         newshape = list(array.shape)
         newshape[1] = len(self.quantiles) + 1  # number of statistical outputs
         newarray = numpy.zeros(newshape, array.dtype)

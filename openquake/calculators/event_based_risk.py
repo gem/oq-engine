@@ -466,7 +466,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 if oq.avg_losses:  # stats for avg_losses
                     stats = scientific.SimpleStats(
                         rlzs, oq.quantile_loss_curves)
-                    stats.compute_and_store('avg_losses-rlzs', self.datastore)
+                    stats.compute_and_store('avg_losses', self.datastore)
 
         self.datastore.hdf5.flush()
 
@@ -550,7 +550,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         ltypes = self.riskmodel.loss_types
         all_stats = map(builder.build, self._collect_all_data())
         if not all_stats:
-            logging.warn('Could not compute stats')
             return
         loss_curves = numpy.zeros((self.N, self.Q1), self.loss_curve_dt)
         if oq.conditional_loss_poes:
