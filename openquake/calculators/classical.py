@@ -23,7 +23,7 @@ from functools import partial
 
 import numpy
 
-from openquake.hazardlib.poe import PoeCurve
+from openquake.hazardlib.poe import ProbabilityCurve
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -194,7 +194,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param val: a nested dictionary trt_id -> sid -> PoeCurve
+        :param val: a nested dictionary trt_id -> sid -> ProbabilityCurve
         """
         with self.monitor('aggregate curves', autoflush=True):
             if hasattr(val, 'calc_times'):
@@ -210,7 +210,7 @@ class ClassicalCalculator(base.HazardCalculator):
     # overridden in event_based_rupture
     def agg_curves(self, acc, val):
         for trt_id in val:
-            acc[trt_id] = PoeCurve.compose(acc.get(trt_id, {}), val[trt_id])
+            acc[trt_id] = ProbabilityCurve.compose(acc.get(trt_id, {}), val[trt_id])
 
     def count_eff_ruptures(self, result_dict, trt_model):
         """
@@ -306,14 +306,14 @@ class ClassicalCalculator(base.HazardCalculator):
                             group[ts].attrs['trt'] = tm.trt
                             group[ts].attrs['nbytes'] = curves.nbytes
                             group[ts].attrs['gsim'] = str(gsim)
-                            curves_by_trt_gsim[tm.id, gsim] = PoeCurve.extract(
+                            curves_by_trt_gsim[tm.id, gsim] = ProbabilityCurve.extract(
                                 curves_by_trt_id[tm.id], i)
                 self.datastore.set_nbytes(group.name)
             self.datastore.set_nbytes('curves_by_sm')
 
         with self.monitor('combine curves_by_rlz', autoflush=True):
             curves_by_rlz = self.rlzs_assoc.combine_curves(
-                curves_by_trt_gsim, PoeCurve.compose, {})
+                curves_by_trt_gsim, ProbabilityCurve.compose, {})
 
         self.save_curves({rlz: array_of_curves(curves, nsites, imtls)
                           for rlz, curves in curves_by_rlz.items()})
