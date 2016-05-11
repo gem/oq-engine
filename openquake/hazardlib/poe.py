@@ -167,6 +167,9 @@ class PoeCurve(object):
     def __invert__(self):
         return self.__class__(self.slicedic, 1. - self.array)
 
+    def __nonzero__(self):
+        return self.array.sum()
+
     def __repr__(self):
         data = ['%s: %s' % (imt, self[imt]) for imt in sorted(self.slicedic)]
         return '<PoeCurve\n%s>' % '\n'.join(data)
