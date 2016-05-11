@@ -2,7 +2,7 @@
   * Fixed the `avg_losses-stats`: they were not generated in absence of
     loss curves
   * Added filtering on the mininum intensity also in the event based
-    hazard calculator and improve the performance and memory occupation
+    hazard calculator and improved the performance and memory occupation
   * Added a view displaying the calculation times by source typology
   * Fixed the test of GMPETable after the correction in hazardlib
   * Optimized the saving of the asset loss table
