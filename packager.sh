@@ -560,6 +560,8 @@ celeryd_wait $GEM_MAXLOOP"
         sudo -u openquake python -m openquake.server.db.upgrade_manager ~openquake/db.sqlite3
         
         # dbserver should be already started by supervisord. Let's have a check
+        # FIXME instead of using a 'sleep' we should use a better way to check that
+        # the dbserver is alive
         sleep 10; sudo /usr/bin/supervisorctl status
 
         if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
