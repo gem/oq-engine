@@ -93,6 +93,9 @@ rm -rf %{buildroot}
 %doc README.md LICENSE CONTRIBUTORS.txt doc
 %{_datadir}/openquake/engine
 %{_sysconfdir}/openquake/openquake.cfg
+%{_unitdir}/openquake-dbserver.service
+%{_unitdir}/openquake-webui.service
+%{_unitdir}/openquake-celery.service
 
 %changelog
 * %(date -d @%{oqtimestamp} '+%a %b %d %Y') GEM Automatic Packager <gem-autopack@openquake.org> %{oqversion}-%{oqtimestamp}_%{oqrelease}
