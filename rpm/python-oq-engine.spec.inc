@@ -71,8 +71,9 @@ python setup.py build
 %install
 python setup.py install --single-version-externally-managed -O1 --root=%{buildroot} --record=INSTALLED_FILES
 # create directories where the files will be located
-mkdir -p %{buildroot}/%{_sysconfdir}/openquake
-mkdir -p %{buildroot}/%{_datadir}/openquake/engine
+mkdir -p %{buildroot}%{_sysconfdir}/openquake
+mkdir -p %{buildroot}%{_datadir}/openquake/engine
+mkdir -p %{buildroot}%{_unitdir}
 install -m 644 celeryconfig.py %{buildroot}/%{_datadir}/openquake/engine
 install -m 644 openquake.cfg %{buildroot}/%{_sysconfdir}/openquake
 install -m 644 rpm/systemd/openquake-dbserver.service %{buildroot}%{_unitdir}/openquake-dbserver.service
