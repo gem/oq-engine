@@ -20,12 +20,12 @@
 Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
-import collections
 
 import numpy
 import scipy.stats
 
 from openquake.baselib.python3compat import zip
+from openquake.baselib.general import get_array
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -164,14 +164,14 @@ class GmfComputer(object):
 
         return result
 
-    def compute(self, seed, eids, rlzs_by_gsim=None, min_iml=None):
+    def compute(self, seed, events, rlzs_by_gsim=None, min_iml=None):
         """
         Compute a ground motion array for the given sites.
 
         :param seed:
             seed for the numpy random number generator
-        :param eids:
-            event IDs, a list of integers
+        :param events:
+            composite array of seismic events (eid, ses, occ)
         :param rlzs_by_gsim:
             a dictionary {gsim instance: realizations}
         :param min_iml:
@@ -181,31 +181,32 @@ class GmfComputer(object):
         """
         gmfa = []
         for eid, imti, rlz, gmf_sids in self.calcgmfs(
-                seed, eids, rlzs_by_gsim, min_iml):
+                seed, events, rlzs_by_gsim, min_iml):
             for gmv, sid in zip(*gmf_sids):
                 gmfa.append((sid, eid, rlz.ordinal, imti, gmv))
         return numpy.array(gmfa, gmv_dt)
 
-    def calcgmfs(self, seed, eids, rlzs_by_gsim, min_iml=None):
+    def calcgmfs(self, seed, events, rlzs_by_gsim, min_iml=None):
         """
         Compute the ground motion fields for the given gsims, sites,
         multiplicity and seed.
 
-        :param multiplicity:
-            the number of GMFs to return
         :param seed:
             seed for the numpy random number generator
+        :param events:
+            composite array of seismic events (eid, ses, occ)
         :param rlzs_by_gsim:
             a dictionary {gsim instance: realizations}
         :yields:
             tuples (eid, imti, rlz, gmf_sids)
         """
-        multiplicity = len(eids)
         sids = self.sites.sids
         imt_range = range(len(self.imts))
         for i, gsim in enumerate(self.gsims):
-            for rlzi, rlz in enumerate(rlzs_by_gsim[gsim]):
-                arr = self._compute(seed + rlzi, gsim, multiplicity).transpose(
+            for j, rlz in enumerate(rlzs_by_gsim[gsim]):
+                eids = get_array(events, sample=rlz.sampleid)['eid']
+                import pdb; pdb.set_trace()
+                arr = self._compute(seed + j, gsim, len(eids)).transpose(
                     0, 2, 1)  # array of shape (I, E, S)
                 for imti in imt_range:
                     for eid, gmf in zip(eids, arr[imti]):
