@@ -82,6 +82,10 @@ chown -R $USER.$USER $SDIR
 # delete obsolete .pyc files in /usr/share/openquake
 find /usr/share/openquake -type f -name \*.pyc -exec rm -f {} \;
 
+# setup supervisord
+echo "Reload supervisord configuration"
+/usr/bin/supervisorctl reload
+
 #touch /tmp/mop-pause
 #while [ 1 ]; do
 #    if [ -f /tmp/mop-pause ]; then
