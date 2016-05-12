@@ -1,7 +1,7 @@
 QA test for disaggregation case_2
 =================================
 
-gem-tstation:/home/michele/ssd/calc_15477.hdf5 updated Tue May 10 12:38:16 2016
+gem-tstation:/home/michele/ssd/calc_16124.hdf5 updated Wed May 11 14:31:10 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0               
 random_seed                  23                 
 master_seed                  0                  
-oqlite_version               '0.13.0-gitcdd89a9'
+oqlite_version               '0.13.0-git7639915'
 ============================ ===================
 
 Input files
@@ -88,8 +88,8 @@ Informational data
 ======================================== ==============
 count_eff_ruptures_max_received_per_task 3136          
 count_eff_ruptures_num_tasks             18            
-count_eff_ruptures_sent.monitor          51822         
-count_eff_ruptures_sent.rlzs_assoc       105390        
+count_eff_ruptures_sent.monitor          51792         
+count_eff_ruptures_sent.rlzs_assoc       105528        
 count_eff_ruptures_sent.sitecol          8298          
 count_eff_ruptures_sent.siteidx          90            
 count_eff_ruptures_sent.sources          21981         
@@ -109,10 +109,10 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-2            1         SimpleFaultSource 1,420  15        0.004       0.170      0.0      
-0            2         AreaSource        45     1         9.770E-04   0.0        0.0      
-1            1         AreaSource        45     1         9.279E-04   0.0        0.0      
-1            3         AreaSource        45     1         9.069E-04   0.0        0.0      
+2            1         SimpleFaultSource 1,420  15        0.003       0.170      0.0      
+0            2         AreaSource        45     1         8.829E-04   0.0        0.0      
+1            1         AreaSource        45     1         8.240E-04   0.0        0.0      
+1            3         AreaSource        45     1         8.168E-04   0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -121,7 +121,7 @@ Computation times by source typology
 source_class      filter_time split_time calc_time counts
 ================= =========== ========== ========= ======
 AreaSource        0.003       0.0        0.0       3     
-SimpleFaultSource 0.004       0.170      0.0       1     
+SimpleFaultSource 0.003       0.170      0.0       1     
 ================= =========== ========== ========= ======
 
 Information about the tasks
@@ -133,12 +133,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.217     0.0       1     
+managing sources               0.203     0.0       1     
 splitting sources              0.170     0.0       1     
-reading composite source model 0.069     0.0       1     
-filtering sources              0.007     0.0       4     
-store source_info              0.006     0.0       1     
+reading composite source model 0.066     0.0       1     
 total count_eff_ruptures       0.006     0.0       18    
-aggregate curves               3.853E-04 0.0       18    
+filtering sources              0.006     0.0       4     
+store source_info              0.005     0.0       1     
+aggregate curves               2.780E-04 0.0       18    
 reading site collection        3.505E-05 0.0       1     
 ============================== ========= ========= ======

@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 10
 =================================
 
-gem-tstation:/home/michele/ssd/calc_15438.hdf5 updated Tue May 10 12:36:10 2016
+gem-tstation:/home/michele/ssd/calc_16085.hdf5 updated Wed May 11 14:29:00 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  1066               
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcdd89a9'
+oqlite_version               '0.13.0-git7639915'
 ============================ ===================
 
 Input files
@@ -104,7 +104,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  75     1         0.004       2.098E-05  0.0      
+0            1         PointSource  75     1         0.004       1.907E-05  0.0      
 1            1         PointSource  75     1         0.004       1.502E-05  0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
@@ -113,7 +113,7 @@ Computation times by source typology
 ============ =========== ========== ========= ======
 source_class filter_time split_time calc_time counts
 ============ =========== ========== ========= ======
-PointSource  0.008       3.600E-05  0.0       2     
+PointSource  0.008       3.409E-05  0.0       2     
 ============ =========== ========== ========= ======
 
 Information about the tasks
@@ -129,8 +129,8 @@ reading composite source model 0.014     0.0       1
 managing sources               0.011     0.0       1     
 filtering sources              0.008     0.0       2     
 store source_info              0.005     0.0       1     
-total count_eff_ruptures       6.659E-04 0.0       2     
-aggregate curves               4.196E-05 0.0       2     
-reading site collection        3.695E-05 0.0       1     
-splitting sources              3.600E-05 0.0       2     
+total count_eff_ruptures       6.397E-04 0.0       2     
+aggregate curves               4.125E-05 0.0       2     
+reading site collection        3.600E-05 0.0       1     
+splitting sources              3.409E-05 0.0       2     
 ============================== ========= ========= ======

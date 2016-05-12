@@ -1,7 +1,7 @@
 QA Scenario Risk for contents
 =============================
 
-gem-tstation:/home/michele/ssd/calc_15471.hdf5 updated Tue May 10 12:38:12 2016
+gem-tstation:/home/michele/ssd/calc_16118.hdf5 updated Wed May 11 14:31:05 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  3                  
 master_seed                  0                  
 avg_losses                   False              
-oqlite_version               '0.13.0-gitcdd89a9'
+oqlite_version               '0.13.0-git7639915'
 ============================ ===================
 
 Input files
@@ -63,7 +63,7 @@ Information about the tasks
 ---------------------------
 ======================= ===== ========= ===== ===== =========
 measurement             mean  stddev    min   max   num_tasks
-scenario_risk.time_sec  0.002 3.057E-05 0.002 0.002 3        
+scenario_risk.time_sec  0.002 4.393E-04 0.001 0.002 3        
 scenario_risk.memory_mb 0.0   0.0       0.0   0.0   3        
 ======================= ===== ========= ===== ===== =========
 
@@ -73,13 +73,13 @@ Slowest operations
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
 filtering sites         0.007     0.0       1     
-total scenario_risk     0.006     0.0       3     
-computing riskmodel     0.005     0.0       3     
+total scenario_risk     0.005     0.0       3     
+computing riskmodel     0.004     0.0       3     
 reading exposure        0.004     0.0       1     
 computing gmfs          0.001     0.0       1     
 saving gmfs             0.001     0.0       1     
-building riskinputs     2.971E-04 0.0       1     
-building epsilons       1.161E-04 0.0       1     
-building hazard         9.203E-05 0.0       3     
+building riskinputs     2.830E-04 0.0       1     
+building epsilons       1.090E-04 0.0       1     
+building hazard         9.036E-05 0.0       3     
 reading site collection 7.153E-06 0.0       1     
 ======================= ========= ========= ======
