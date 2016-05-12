@@ -26,6 +26,7 @@ import os
 import sys
 import socket
 import getpass
+import subprocess
 
 from os.path import abspath
 from os.path import dirname
@@ -41,7 +42,6 @@ if os.environ.get("OQ_ENGINE_USE_SRCDIR") is not None:
     )
 
 from openquake.engine import utils, config
-config.abort_if_no_config_available()
 
 # Please note: the /usr/bin/oq-engine script requires a celeryconfig.py
 # file in the PYTHONPATH; when using binary packages, if a celeryconfig.py
@@ -57,7 +57,7 @@ from openquake.engine.utils import confirm, config
 import openquake.engine
 from openquake.engine import engine, logs
 from openquake.engine.tools.make_html_report import make_report
-from openquake.commonlib import datastore
+from openquake.commonlib import datastore, valid
 from openquake.calculators import views
 
 from openquake.commonlib.concurrent_futures_process_mpatch import (
@@ -290,9 +290,14 @@ def main():
     finally:
         sock.close()
     if err:
-        sys.exit('Please start the DbServer: '
-                 'sudo -u openquake python -m openquake.server.dbserver &')
-
+        multi_user = valid.boolean(config.get('dbserver', 'multi_user'))
+        if multi_user:
+            sys.exit('Please start the DbServer: '
+                     'see the documentation for details')
+        # otherwise start the DbServer automatically
+        dblog = os.path.expanduser('~/oq-dbserver.log')
+        subprocess.Popen([sys.executable, '-m', 'openquake.server.dbserver',
+                          '-l', 'INFO'], stderr=open(dblog, 'w'))
     if args.upgrade_db:
         logs.set_level('info')
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')
@@ -352,8 +357,7 @@ def main():
         run_job(expanduser(args.run_hazard), args.log_level,
                 log_file, args.exports)
     elif args.delete_calculation is not None:
-        logs.dbcmd('delete_calculation', args.delete_calculation, args.yes,
-                   getpass.getuser())
+        delete_calculation(args.delete_calculation, args.yes)
     # risk
     elif args.list_risk_calculations:
         for line in logs.dbcmd('list_calculations', 'risk', getpass.getuser()):

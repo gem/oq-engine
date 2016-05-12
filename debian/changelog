@@ -1,4 +1,18 @@
   [Michele Simionato]
+  * Fixed the export: if the export directory does not exists, it is created
+  * Introduced the configuration variable `multi_user`, false for source
+    installations and true for package installations
+  * Fixed the WebUI export
+  * Removed the .txt outputs from the WebUI page engine/<output_id>/outputs
+    (they are useful only internally)
+  * Fixed the export: first the xml exporter is tried and then the csv exporter;
+    if both are available, only the first is used, not both of them
+
+  [Daniele Viganò]
+  * Add support for Ubuntu 16.04 (xenial) packages
+  * Removed the openquake_worker.cfg file because it is not used anymore
+
+  [Michele Simionato]
   * Replaced PostgreSQL with SQLite
   * Introduced a dbserver to mediate the interaction with the database
   * Restored the signal handler to manage properly `kill` signals so that
