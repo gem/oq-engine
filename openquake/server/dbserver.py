@@ -28,6 +28,9 @@ from openquake.engine import config
 from openquake.server.db import actions
 from openquake.server.settings import DATABASE
 from django.db import connection
+import django
+if hasattr(django, 'setup'):  # >= 1.7
+    django.setup()
 
 queue = Queue()
 
@@ -108,19 +111,19 @@ class DbServer(object):
             self.thread.join()
 
 
-def runserver(hostport=None, loglevel='WARN'):
+def runserver(dbpathport=None, loglevel='WARN'):
     logging.basicConfig(level=getattr(logging, loglevel))
-    if hostport:  # assume a string of the form "hostname:port"
-        fname, port = hostport.split(':')
+    if dbpathport:  # assume a string of the form "dbpath:port"
+        dbpath, port = dbpathport.split(':')
         addr = (DATABASE['HOST'], int(port))
-        DATABASE['NAME'] = fname
+        DATABASE['NAME'] = dbpath
         DATABASE['PORT'] = int(port)
     else:
         addr = config.DBS_ADDRESS
     DbServer(addr, config.DBS_AUTHKEY).loop()
 
 parser = sap.Parser(runserver)
-parser.arg('hostport', 'hostname:port')
+parser.arg('dbpathport', 'dbpath:port')
 parser.opt('loglevel', 'WARN or INFO')
 
 if __name__ == '__main__':
