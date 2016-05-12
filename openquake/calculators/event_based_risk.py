@@ -303,8 +303,17 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
 
+        if not oq.minimum_intensity:
+            # infer it from the risk models if not directly set in job.ini
+            oq.minimum_intensity = self.riskmodel.get_min_iml()
         min_iml = event_based.fix_minimum_intensity(
             oq.minimum_intensity, oq.imtls)
+        if min_iml.sum() == 0:
+            logging.warn('The GMFs are not filtered: '
+                         'you may want to set a minimum_intensity')
+        else:
+            logging.info('minimum_intensity=%s', oq.minimum_intensity)
+
         riskinputs = self.riskmodel.build_inputs_from_ruptures(
             self.sitecol.complete, all_ruptures, oq.truncation_level,
             correl_model, min_iml, eps, oq.concurrent_tasks or 1)
