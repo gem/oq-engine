@@ -554,10 +554,13 @@ celeryd_wait $GEM_MAXLOOP"
         set -e
 
         if [ \$(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
-            sudo adduser --system --home /var/lib/openquake --group --shell /bin/bash openquake
+            echo \"There's no 'openquake' user on this system. Installation may have failed.\"
+            exit 1
         fi
         sudo -u openquake python -m openquake.server.db.upgrade_manager ~openquake/db.sqlite3
-        sudo -u openquake python -m openquake.server.dbserver 2>/dev/null & sleep 1
+        
+        # dbserver should be already started by supervisord. Let's have a check
+        /usr/bin/supervisorctl status
 
         if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
             export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
