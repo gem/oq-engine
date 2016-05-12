@@ -63,9 +63,9 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         rlzs_by_gsim = {gsim: self.rlzs_assoc[0, gsim] for gsim in self.gsims}
         with self.monitor('computing gmfs', autoflush=True):
-            eids = range(self.oqparam.number_of_ground_motion_fields)
+            n = self.oqparam.number_of_ground_motion_fields
             gmfa = self.computer.compute(
-                self.oqparam.random_seed, eids, rlzs_by_gsim)
+                self.oqparam.random_seed, n, rlzs_by_gsim)
             return group_array(gmfa, 'rlzi')
 
     def post_execute(self, gmfa_by_rlzi):
