@@ -204,7 +204,10 @@ class GmfComputer(object):
         imt_range = range(len(self.imts))
         for i, gsim in enumerate(self.gsims):
             for j, rlz in enumerate(rlzs_by_gsim[gsim]):
-                eids = get_array(events, sample=rlz.sampleid)['eid']
+                if isinstance(events, int):  # for scenario
+                    eids = range(events)
+                else:
+                    eids = get_array(events, sample=rlz.sampleid)['eid']
                 arr = self._compute(seed + j, gsim, len(eids)).transpose(
                     0, 2, 1)  # array of shape (I, E, S)
                 for imti in imt_range:
