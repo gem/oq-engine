@@ -313,8 +313,8 @@ def sample_ruptures(src, num_ses, num_samples, seed):
     num_occ_by_rup = collections.defaultdict(AccumDict)
     # generating ruptures for the given source
     for rup_no, rup in enumerate(src.iter_ruptures()):
-        rup.seed = seed = src.serial[rup_no] + seed
-        numpy.random.seed(seed)
+        rup.seed = src.serial[rup_no] + seed
+        numpy.random.seed(rup.seed)
         for sampleid in range(num_samples):
             for ses_idx in range(1, num_ses + 1):
                 num_occurrences = rup.sample_number_of_occurrences()
