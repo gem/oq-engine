@@ -560,6 +560,7 @@ celeryd_wait $GEM_MAXLOOP"
         sudo -u openquake python -m openquake.server.db.upgrade_manager ~openquake/db.sqlite3
         
         # dbserver should be already started by supervisord. Let's have a check
+        sudo /usr/bin/supervisorctl restart dbserver
         sudo /usr/bin/supervisorctl status
 
         if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
