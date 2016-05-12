@@ -1,3 +1,7 @@
+  [Daniele Viganò]
+  * Supervisord init scripts are now provided for the dbserver, celery
+    and the webui. Celery is not started by default, other two are.
+
   [Michele Simionato]
   * Fixed the export: if the export directory does not exists, it is created
   * Introduced the configuration variable `multi_user`, false for source
