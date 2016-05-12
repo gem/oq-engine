@@ -31,14 +31,6 @@ from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.imt import from_string
 
-U8 = numpy.uint8
-U16 = numpy.uint16
-U32 = numpy.uint32
-F32 = numpy.float32
-
-gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('rlzi', U16),
-                      ('imti', U8), ('gmv', F32)])
-
 
 class CorrelationButNoInterIntraStdDevs(Exception):
     def __init__(self, corr, gsim):
@@ -80,7 +72,7 @@ class GmfComputer(object):
         Correlation model is not used if ``truncation_level`` is zero.
     """
     def __init__(self, rupture, sites, imts, gsims,
-                 truncation_level=None, correlation_model=None):
+                 truncation_level=None, correlation_model=None, samples=0):
         assert sites, sites
         self.rupture = rupture
         self.sites = sites
@@ -88,6 +80,7 @@ class GmfComputer(object):
         self.gsims = gsims
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
+        self.samples = samples
         self.ctx = ContextMaker(gsims).make_contexts(sites, rupture)
 
     def _compute(self, seed, gsim, realizations):
@@ -95,7 +88,7 @@ class GmfComputer(object):
         if seed is not None:
             numpy.random.seed(seed)
         result = numpy.zeros(
-            (len(self.imts), len(self.sites), realizations), F32)
+            (len(self.imts), len(self.sites), realizations), numpy.float32)
         sctx, rctx, dctx = self.ctx
 
         if self.truncation_level == 0:
@@ -164,28 +157,6 @@ class GmfComputer(object):
 
         return result
 
-    def compute(self, seed, events, rlzs_by_gsim=None, min_iml=None):
-        """
-        Compute a ground motion array for the given sites.
-
-        :param seed:
-            seed for the numpy random number generator
-        :param events:
-            composite array of seismic events (eid, ses, occ)
-        :param rlzs_by_gsim:
-            a dictionary {gsim instance: realizations}
-        :param min_iml:
-            an array minimum intensity per intensity measure type
-        :returns:
-            a numpy array of dtype gmv_dt
-        """
-        gmfa = []
-        for eid, imti, rlz, gmf_sids in self.calcgmfs(
-                seed, events, rlzs_by_gsim, min_iml):
-            for gmv, sid in zip(*gmf_sids):
-                gmfa.append((sid, eid, rlz.ordinal, imti, gmv))
-        return numpy.array(gmfa, gmv_dt)
-
     def calcgmfs(self, seed, events, rlzs_by_gsim, min_iml=None):
         """
         Compute the ground motion fields for the given gsims, sites,
@@ -206,8 +177,10 @@ class GmfComputer(object):
             for j, rlz in enumerate(rlzs_by_gsim[gsim]):
                 if isinstance(events, int):  # for scenario
                     eids = range(events)
-                else:
+                elif self.samples:
                     eids = get_array(events, sample=rlz.sampleid)['eid']
+                else:
+                    eids = events['eid']
                 arr = self._compute(seed + j, gsim, len(eids)).transpose(
                     0, 2, 1)  # array of shape (I, E, S)
                 for imti in imt_range:
