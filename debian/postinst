@@ -76,6 +76,11 @@ do
 done
 chown -R $USER.$USER $SDIR
 
+# create logs directory
+LDIR=/var/log/openquake
+mkdir -p $LDIR
+chown -R $USER.adm $LDIR
+
 # create the database. This is run as "openquake" by default
 /usr/bin/oq_create_db
 
