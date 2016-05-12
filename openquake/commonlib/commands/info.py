@@ -60,8 +60,11 @@ def info(calculators, gsims, views, exports, report, input_file=''):
     if exports:
         dic = groupby(export, operator.itemgetter(0),
                       lambda group: [r[1] for r in group])
+        n = 0
         for exporter, formats in dic.items():
             print(exporter, formats)
+            n += len(formats)
+        print('There are %d exporters defined.' % n)
     if input_file.endswith('.xml'):
         print(nrml.read(input_file).to_str())
     elif input_file.endswith(('.ini', '.zip')):
