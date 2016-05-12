@@ -181,11 +181,11 @@ class GmfComputer(object):
         imt_range = range(len(self.imts))
         for i, gsim in enumerate(self.gsims):
             for j, rlz in enumerate(rlzs_by_gsim[gsim]):
-                if self.samples:
+                if self.samples > 1:
                     eids = get_array(events, sample=rlz.sampleid)['eid']
                 else:
                     eids = events['eid']
-                arr = self._compute(seed + j, gsim, len(eids)).transpose(
+                arr = self.compute(seed + j, gsim, len(eids)).transpose(
                     0, 2, 1)  # array of shape (I, E, S)
                 for imti in imt_range:
                     for eid, gmf in zip(eids, arr[imti]):
