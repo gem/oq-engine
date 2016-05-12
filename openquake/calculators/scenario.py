@@ -15,13 +15,20 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import collections
 import numpy
 
-from openquake.baselib.general import group_array
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput
 from openquake.calculators import base
+
+U8 = numpy.uint8
+U16 = numpy.uint16
+U32 = numpy.uint32
+F32 = numpy.float32
+
+gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 
 @base.calculators.add('scenario')
@@ -61,12 +68,15 @@ class ScenarioCalculator(base.HazardCalculator):
         """
         Compute the GMFs and return a dictionary gmf_by_etag
         """
+        res = collections.defaultdict(list)
         rlzs_by_gsim = {gsim: self.rlzs_assoc[0, gsim] for gsim in self.gsims}
         with self.monitor('computing gmfs', autoflush=True):
             n = self.oqparam.number_of_ground_motion_fields
-            gmfa = self.computer.compute(
-                self.oqparam.random_seed, n, rlzs_by_gsim)
-            return group_array(gmfa, 'rlzi')
+            for eid, imti, rlz, gmf_sids in self.computer.calcgmfs(
+                    self.oqparam.random_seed, n, rlzs_by_gsim):
+                for gmv, sid in zip(*gmf_sids):
+                    res[rlz.ordinal].append((sid, eid, imti, gmv))
+            return {rlzi: numpy.array(res[rlzi], gmv_dt) for rlzi in res}
 
     def post_execute(self, gmfa_by_rlzi):
         """
