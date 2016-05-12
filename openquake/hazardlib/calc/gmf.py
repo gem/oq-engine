@@ -205,7 +205,6 @@ class GmfComputer(object):
         for i, gsim in enumerate(self.gsims):
             for j, rlz in enumerate(rlzs_by_gsim[gsim]):
                 eids = get_array(events, sample=rlz.sampleid)['eid']
-                import pdb; pdb.set_trace()
                 arr = self._compute(seed + j, gsim, len(eids)).transpose(
                     0, 2, 1)  # array of shape (I, E, S)
                 for imti in imt_range:
