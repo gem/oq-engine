@@ -52,6 +52,7 @@ def export_from_datastore(output_key, calc_id, datadir, target):
     :param datadir: directory containing the datastore
     :param target: directory, temporary when called from the engine server
     """
+    makedirs(target)
     ds_key, fmt = output_key
     dstore = datastore.read(calc_id, datadir=datadir)
     dstore.export_dir = target

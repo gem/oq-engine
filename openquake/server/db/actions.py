@@ -87,7 +87,6 @@ def create_job(calc_mode, description, user_name, datadir, hc_id=None):
         calculation_mode=calc_mode,
         description=description,
         user_name=user_name,
-        # NB: ignores the OQ_DATADIR variable
         ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     if hc_id:
         job.hazard_calculation = models.get(models.OqJob, pk=hc_id)
@@ -96,9 +95,12 @@ def create_job(calc_mode, description, user_name, datadir, hc_id=None):
 
 
 def delete_uncompleted_calculations(user):
+    """
+    Delete the uncompleted calculations of the given user
+    """
     for job in models.OqJob.objects.filter(
             oqjob__user_name=user).exclude(
-            oqjob__status="successful"):
+            oqjob__status="complete"):
         del_calc(job.id, user)
 
 
@@ -123,7 +125,6 @@ def get_calc_id(datadir, job_id=None):
     Return the latest calc_id by looking both at the datastore
     and the database.
     """
-    # NB: ignores the OQ_DATADIR variable
     calcs = datastore.get_calc_ids(datadir)
     calc_id = 0 if not calcs else calcs[-1]
     if job_id is None:
@@ -180,6 +181,15 @@ def export_outputs(job_id, target_dir, export_type):
             yield(exc)
 
 
+def get_outkey(dskey, export_types):
+    """
+    Extract the first pair (dskey, exptype) found in export
+    """
+    for exptype in export_types:
+        if (dskey, exptype) in export:
+            return (dskey, exptype)
+
+
 def export_output(output_id, target_dir, export_type):
     """
     Simple UI wrapper around
@@ -196,20 +206,19 @@ def export_output(output_id, target_dir, export_type):
               "successfully. Results might be uncomplete")
 
     dskey, calc_id, datadir = get_output(output_id)
-    for exptype in export_type.split(','):
-        outkey = (dskey, exptype)
-        if outkey not in export:  # missing exporter for exptype
-            continue
-        the_file = core.export_from_datastore(
-            outkey, calc_id, datadir, target_dir)
-        if the_file.endswith('.zip'):
-            dname = os.path.dirname(the_file)
-            fnames = zipfile.ZipFile(the_file).namelist()
-            yield('Files exported:')
-            for fname in fnames:
-                yield(os.path.join(dname, fname))
-        else:
-            yield('File exported: %s' % the_file)
+    outkey = get_outkey(dskey, export_type.split(','))
+    if not outkey:
+        yield 'There is not exporter for %s, %s' % (dskey, export_type)
+        return
+    the_file = core.export_from_datastore(outkey, calc_id, datadir, target_dir)
+    if the_file.endswith('.zip'):
+        dname = os.path.dirname(the_file)
+        fnames = zipfile.ZipFile(the_file).namelist()
+        yield('Files exported:')
+        for fname in fnames:
+            yield(os.path.join(dname, fname))
+    else:
+        yield('File exported: %s' % the_file)
 
 
 def list_outputs(job_id, full=True):
@@ -424,6 +433,10 @@ def upgrade_db():
 # ################### used in Web UI ######################## #
 
 def calc_info(calc_id):
+    """
+    :param calc_id: calculation ID
+    :returns: dictionary of info about the given calculation
+    """
     job = models.get(models.OqJob, pk=calc_id)
     response_data = {}
     response_data['user_name'] = job.user_name
@@ -435,6 +448,11 @@ def calc_info(calc_id):
 
 
 def get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
+    """
+    :returns:
+        list of tuples (job_id, user_name, job_status, job_type,
+                        job_is_running, job_description)
+    """
     # helper to get job+calculation data from the oq-engine database
     jobs = models.OqJob.objects.filter()
     if not user_is_super:
@@ -460,13 +478,18 @@ def get_calcs(request_get_dict, user_name, user_is_super=False, id=None):
 
 
 def set_relevant(calc_id, flag):
+    """
+    Set the `relevant` field of the given calculation record
+    """
     job = models.get(models.OqJob, pk=calc_id)
     job.relevant = flag
     job.save()
 
 
 def log_to_json(log):
-    """Convert a log record into a list of strings"""
+    """
+    Convert a log record into a list of strings
+    """
     return [log.timestamp.isoformat()[:22],
             log.level, log.process, log.message]
 
@@ -489,6 +512,10 @@ def get_log_size(calc_id):
 
 
 def get_traceback(calc_id):
+    """
+    Return the traceback of the given calculation as a list of lines.
+    The list is empty if the calculation was successful.
+    """
     # strange: understand why the filter returns two lines
     log = list(models.Log.objects.filter(job_id=calc_id, level='CRITICAL'))[-1]
     response_data = log.message.splitlines()
@@ -496,6 +523,9 @@ def get_traceback(calc_id):
 
 
 def get_result(result_id):
+    """
+    :returns: (job_id, job_status, datadir, datastore_key)
+    """
     output = models.get(models.Output, pk=result_id)
     job = output.oq_job
-    return job.status, output.ds_key
+    return job.id, job.status, os.path.dirname(job.ds_calc_dir), output.ds_key
