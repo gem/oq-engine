@@ -66,16 +66,17 @@ class ScenarioCalculator(base.HazardCalculator):
 
     def execute(self):
         """
-        Compute the GMFs and return a dictionary gmf_by_etag
+        Compute the GMFs and return a dictionary rlzi -> array gmv_dt
         """
         res = collections.defaultdict(list)
-        rlzs_by_gsim = {gsim: self.rlzs_assoc[0, gsim] for gsim in self.gsims}
+        sids = self.sitecol.sids
         with self.monitor('computing gmfs', autoflush=True):
             n = self.oqparam.number_of_ground_motion_fields
-            for eid, imti, rlz, gmf_sids in self.computer.calcgmfs(
-                    self.oqparam.random_seed, n, rlzs_by_gsim):
-                for gmv, sid in zip(*gmf_sids):
-                    res[rlz.ordinal].append((sid, eid, imti, gmv))
+            for i, gsim in enumerate(self.gsims):
+                gmfa = self.computer._compute(
+                    self.oqparam.random_seed, gsim, n)
+                for (imti, sid, eid), gmv in numpy.ndenumerate(gmfa):
+                    res[i].append((sids[sid], eid, imti, gmv))
             return {rlzi: numpy.array(res[rlzi], gmv_dt) for rlzi in res}
 
     def post_execute(self, gmfa_by_rlzi):
