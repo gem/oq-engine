@@ -525,7 +525,7 @@ source_model_dt = numpy.dtype([
 trt_model_dt = numpy.dtype(
     [('trt_id', U32),
      ('trti', U16),
-     ('nrup', U32),
+     ('effrup', U32),
      ('sm_id', U32)])
 
 
@@ -573,13 +573,14 @@ class CompositionInfo(object):
         self.source_models = []
         for sm_id, rec in enumerate(sm_data):
             tdata = tm_data[sm_id]
-            trtis = tdata[tdata['nrup'] > 0]['trti']
+            trtis = tdata[tdata['effrup'] > 0]['trti']
             path = tuple(rec['path'].split('_'))
             trts = [self.trts[trti] for trti in trtis]
             gsim_lt = logictree.GsimLogicTree(
                 io.BytesIO(self.gsim_lt_xml), trts)
-            trtmodels = [TrtModel(trts[trti], id=trt_id, eff_ruptures=nrup)
-                         for trt_id, trti, nrup, sm_id in tdata]
+            trtmodels = [
+                TrtModel(trts[trti], id=trt_id, eff_ruptures=effrup)
+                for trt_id, trti, effrup, sm_id in tdata]
             sm = SourceModel(rec['name'], rec['weight'], path, trtmodels,
                              gsim_lt, sm_id, rec['samples'])
             self.source_models.append(sm)
