@@ -163,7 +163,7 @@ class TrtModel(collections.Sequence):
         return sorted(source_stats_dict.values())
 
     def __init__(self, trt, sources=None,
-                 min_mag=None, max_mag=None, id=0, eff_ruptures=0):
+                 min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
         self.trt = trt
         self.sources = sources or []
         self.min_mag = min_mag
@@ -596,7 +596,7 @@ class CompositionInfo(object):
             return source_model.samples
         return source_model.gsim_lt.get_num_paths()
 
-    def get_rlzs_assoc(self, count_ruptures=lambda tm: -1):
+    def get_rlzs_assoc(self, count_ruptures=None):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
         rlz_idx and trt_gsims.
@@ -611,7 +611,8 @@ class CompositionInfo(object):
             # collect the effective tectonic region types and ruptures
             trts = set()
             for tm in smodel.trt_models:
-                tm.eff_ruptures = count_ruptures(tm)
+                if count_ruptures:
+                    tm.eff_ruptures = count_ruptures(tm)
                 if tm.eff_ruptures:
                     trts.add(tm.trt)
 
