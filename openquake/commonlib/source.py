@@ -440,7 +440,7 @@ class RlzsAssoc(collections.Mapping):
 
     def combine(self, results, agg=agg_prob):
         """
-        :param results: a dictionary (trt_model_id, gsim_no) -> floats
+        :param results: a dictionary (trt_model_id, gsim) -> floats
         :param agg: an aggregation function
         :returns: a dictionary rlz -> aggregated floats
 
@@ -485,8 +485,7 @@ class RlzsAssoc(collections.Mapping):
         probability, which however is close to the sum for small probabilities.
         """
         ad = AccumDict()
-        for (trt_id, gsim_idx), value in results.items():
-            gsim = self.gsims_by_trt_id[trt_id][int(gsim_idx)]
+        for (trt_id, gsim), value in results.items():
             for rlz in self.rlzs_assoc[trt_id, gsim]:
                 ad[rlz] = agg(ad.get(rlz, 0), value)
         return ad
@@ -612,7 +611,6 @@ class CompositionInfo(object):
                     tm.eff_ruptures = count_ruptures(tm)
                 if tm.eff_ruptures:
                     trts.add(tm.trt)
-
             # recompute the GSIM logic tree if needed
             if trts != set(smodel.gsim_lt.tectonic_region_types):
                 before = smodel.gsim_lt.get_num_paths()

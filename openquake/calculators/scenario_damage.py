@@ -19,7 +19,7 @@
 import itertools
 import numpy
 
-from openquake.commonlib import parallel, riskmodels, logictree
+from openquake.commonlib import parallel, riskmodels
 from openquake.risklib import scientific
 from openquake.calculators import base
 
@@ -142,10 +142,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
+        self.init()
         self.monitor.consequence_models = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        if 'gmfs' in self.oqparam.inputs:
-            self.rlzs_assoc = logictree.trivial_rlzs_assoc()
         self.etags, gmfs = base.get_gmfs(self.datastore)
         self.riskinputs = self.build_riskinputs(gmfs)
         self.monitor.taxonomies = sorted(self.taxonomies)

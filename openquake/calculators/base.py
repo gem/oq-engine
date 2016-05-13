@@ -76,7 +76,7 @@ def get_rlzs_assoc(dstore):
     try:
         return dstore['csm_info'].get_rlzs_assoc()
     except KeyError:  # no csm_info when the hazard is read from a file
-        return logictree.trivial_rlzs_assoc()
+        return
 
 
 class BaseCalculator(with_metaclass(abc.ABCMeta)):
@@ -674,6 +674,6 @@ def get_gmfs(dstore):
             if sid in risk_indices:
                 for imti, imt in enumerate(oq.imtls):
                     a = general.get_array(array, imti=imti)
-                    for trt_id, gsim in gmfs:
-                        gmfs[trt_id, str(rlz)][imt][sid, a['eid']] = a['gmv']
+                    gs = str(rlz.gsim_rlz)
+                    gmfs[0, gs][imt][sid, a['eid']] = a['gmv']
     return dstore['etags'].value, gmfs

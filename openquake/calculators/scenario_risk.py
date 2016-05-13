@@ -96,8 +96,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         logging.info('Building the epsilons')
         epsilon_matrix = self.make_eps(
             self.oqparam.number_of_ground_motion_fields)
-        if 'gmfs' in self.oqparam.inputs:
-            self.rlzs_assoc = logictree.trivial_rlzs_assoc()
+        #if 'gmfs' in self.oqparam.inputs:
+        #    self.rlzs_assoc = logictree.trivial_rlzs_assoc()
         self.etags, gmfs = base.get_gmfs(self.datastore)
         self.riskinputs = self.build_riskinputs(gmfs, epsilon_matrix)
 

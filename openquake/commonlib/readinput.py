@@ -288,6 +288,25 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
         mesh.lons, mesh.lats, site_ids, oqparam)
 
 
+def get_gsim_lt(oqparam, trts=['*']):
+    """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param trts:
+        a sequence of tectonic region types as strings; trts=['*']
+        means that there is no filtering
+    :returns:
+        a GsimLogicTree instance obtained by filtering on the provided
+        tectonic region types.
+    """
+    if 'gsim_logic_tree' not in oqparam.inputs:
+        return logictree.GsimLogicTree.from_(oqparam.gsim)
+    gsim_file = os.path.join(
+        oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
+    gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
+    return gsim_lt
+
+
 def get_gsims(oqparam):
     """
     Return an ordered list of GSIM instances from the gsim name in the
@@ -353,21 +372,6 @@ def get_rupture(oqparam):
     conv = sourceconverter.RuptureConverter(
         oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
     return conv.convert_node(rup_node)
-
-
-def get_gsim_lt(oqparam, trts):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param trts:
-        a sequence of tectonic region types as strings
-    :returns:
-        a GsimLogicTree instance obtained by filtering on the provided
-        tectonic region types.
-    """
-    gsim_file = os.path.join(
-        oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
-    return logictree.GsimLogicTree(gsim_file, trts)
 
 
 def get_source_model_lt(oqparam):
@@ -1049,7 +1053,8 @@ def get_gmfs_from_txt(oqparam, fname):
         raise InvalidFile('%s contains %d rows, expected %d' % (
             fname, lineno, num_gmfs + 1))
     if etags != sorted(etags):
-        raise InvalidFile('The etags in %s are not ordered: %s' % (fname, etags))
+        raise InvalidFile('The etags in %s are not ordered: %s'
+                          % (fname, etags))
     return sitecol, numpy.array(etags, '|S100'), gmf_by_imt.T
 
 
