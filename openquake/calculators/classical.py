@@ -237,8 +237,8 @@ class ClassicalCalculator(base.HazardCalculator):
         n = len(self.sitecol)
         tiling = self.is_tiling()
         for k, v in val.items():
-            acc[k] = agg_curves(acc[k], expand(v, n, val.siteslice)
-                                if tiling else v)
+            acc[k] = agg_curves(acc.get(k, self.zc),
+                                expand(v, n, val.siteslice) if tiling else v)
 
     def count_eff_ruptures(self, result_dict, trt_model):
         """
@@ -255,8 +255,8 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Initial accumulator, a dictionary (trt_id, gsim) -> curves
         """
-        zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
-        zd = AccumDict((key, zc) for key in self.rlzs_assoc)
+        self.zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
+        zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # trt_id -> eff_ruptures
         zd.bb_dict = {
@@ -365,7 +365,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.mean_curves = numpy.array(zc)
             for imt in oq.imtls:
                 self.mean_curves[imt] = scientific.mean_curve(
-                    [curves_by_rlz[rlz][imt] for rlz in rlzs], weights)
+                    [curves_by_rlz.get(rlz, zc)[imt] for rlz in rlzs], weights)
 
             self.quantile = {}
             for q in oq.quantile_hazard_curves:

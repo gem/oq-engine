@@ -31,7 +31,7 @@ from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import (
-    readinput, riskmodels, datastore, source, __version__)
+    readinput, riskmodels, datastore, logictree, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor
 from openquake.risklib import riskinput
@@ -52,7 +52,7 @@ F32 = numpy.float32
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
-rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('weight', float)])
+rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('weight', F32)])
 
 
 def set_array(longarray, shortarray):
@@ -68,6 +68,17 @@ def set_array(longarray, shortarray):
     longarray[len(shortarray):] = numpy.nan
 
 
+def get_rlzs_assoc(dstore):
+    """
+    Build a RlzsAssoc instance from `csm_info` in the datastore, or
+    return a trivial instance if there is no such info.
+    """
+    try:
+        return dstore['csm_info'].get_rlzs_assoc()
+    except KeyError:  # no csm_info when the hazard is read from a file
+        return logictree.trivial_rlzs_assoc()
+
+
 class BaseCalculator(with_metaclass(abc.ABCMeta)):
     """
     Abstract base class for all calculators.
@@ -79,7 +90,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     sitemesh = datastore.persistent_attribute('sitemesh')
     sitecol = datastore.persistent_attribute('sitecol')
     etags = datastore.persistent_attribute('etags')
-    realizations = datastore.persistent_attribute('realizations')
     assetcol = datastore.persistent_attribute('assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
     job_info = datastore.persistent_attribute('job_info')
@@ -220,10 +230,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             self.datastore.set_nbytes('hcurves')
         if 'hmaps' in self.datastore:
             self.datastore.set_nbytes('hmaps')
-        if 'rlzs_assoc' in self.datastore:
-            rlzs = self.rlzs_assoc.realizations
-            self.realizations = numpy.array(
-                [(r.uid, r.weight) for r in rlzs], rlz_dt)
         self.datastore.flush()
         if self.close:  # in the engine we close later
             try:
@@ -307,7 +313,6 @@ class HazardCalculator(BaseCalculator):
                 for name in ('riskmodel', 'assets_by_site'):
                     if name in pre_attrs:
                         setattr(self, name, getattr(precalc, name))
-
             else:  # read previously computed data
                 parent = datastore.read(precalc_id)
                 self.datastore.set_parent(parent)
@@ -317,7 +322,7 @@ class HazardCalculator(BaseCalculator):
                           if name not in vars(self.oqparam)}
                 self.save_params(**params)
                 self.read_risk_data()
-
+            self.init()
         else:  # we are in a basic calculator
             self.read_risk_data()
             if 'source' in self.oqparam.inputs:
@@ -325,8 +330,7 @@ class HazardCalculator(BaseCalculator):
                         'reading composite source model', autoflush=True):
                     self.csm = readinput.get_composite_source_model(
                         self.oqparam)
-                    self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
-                    self.datastore['csm_info'] = self.rlzs_assoc.csm_info
+                    self.datastore['csm_info'] = self.csm.info
                     self.rup_data = {}
 
                     # we could manage limits here
@@ -356,6 +360,9 @@ class HazardCalculator(BaseCalculator):
         To be overridden to initialize the datasets needed by the calculation
         """
         self.random_seed = None
+        self.rlzs_assoc = get_rlzs_assoc(self.datastore)
+        self.datastore['realizations'] = numpy.array(
+            [(r.uid, r.weight) for r in self.rlzs_assoc.realizations], rlz_dt)
 
     def read_exposure(self):
         """
@@ -643,7 +650,8 @@ def get_gmfs(dstore):
         return etags, {(0, 'FromFile'): gmfs_by_imt}
 
     # else from datastore
-    rlzs = dstore['rlzs_assoc'].realizations
+    rlzs_assoc = get_rlzs_assoc(dstore)
+    rlzs = rlzs_assoc.realizations
     sitecol = dstore['sitecol']
     # NB: if the hazard site collection has N sites, the hazard
     # filtered site collection for the nonzero GMFs has N' <= N sites
@@ -659,7 +667,7 @@ def get_gmfs(dstore):
     E = oq.number_of_ground_motion_fields
     # build a matrix N x E for each GSIM realization
     gmfs = {(trt_id, gsim): numpy.zeros((N, E), imt_dt)
-            for trt_id, gsim in dstore['rlzs_assoc']}
+            for trt_id, gsim in rlzs_assoc}
     for i, rlz in enumerate(rlzs):
         data = general.group_array(dstore['gmf_data/%04d' % i], 'sid')
         for sid, array in data.items():

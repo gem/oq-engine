@@ -17,9 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import io
 import sys
-import ast
 import copy
 import math
 import logging
@@ -40,6 +38,7 @@ from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
 U32 = numpy.uint32
+I32 = numpy.int32
 F32 = numpy.float32
 
 
@@ -525,7 +524,7 @@ source_model_dt = numpy.dtype([
 trt_model_dt = numpy.dtype(
     [('trt_id', U32),
      ('trti', U16),
-     ('effrup', U32),
+     ('effrup', I32),
      ('sm_id', U32)])
 
 
@@ -559,12 +558,12 @@ class CompositionInfo(object):
         lst = [(sm.name, sm.weight, '_'.join(sm.path),
                 sm.gsim_lt.get_num_paths(), sm.samples)
                for i, sm in enumerate(self.source_models)]
-        gsim_lt = self.source_models[0].gsim_lt
+        gsim_lt_xml = self.source_models[0].gsim_lt.fname
         return (dict(
             tm_data=numpy.array(data, trt_model_dt),
             sm_data=numpy.array(lst, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     trts=trts, gsim_lt_xml=open(gsim_lt.fname).read()))
+                     trts=trts, gsim_lt_xml=gsim_lt_xml))
 
     def __fromh5__(self, dic, attrs):
         tm_data = group_array(dic['tm_data'], 'sm_id')
@@ -573,14 +572,12 @@ class CompositionInfo(object):
         self.source_models = []
         for sm_id, rec in enumerate(sm_data):
             tdata = tm_data[sm_id]
-            trtis = tdata[tdata['effrup'] > 0]['trti']
-            path = tuple(rec['path'].split('_'))
-            trts = [self.trts[trti] for trti in trtis]
-            gsim_lt = logictree.GsimLogicTree(
-                io.BytesIO(self.gsim_lt_xml), trts)
             trtmodels = [
-                TrtModel(trts[trti], id=trt_id, eff_ruptures=effrup)
-                for trt_id, trti, effrup, sm_id in tdata]
+                TrtModel(self.trts[trti], id=trt_id, eff_ruptures=effrup)
+                for trt_id, trti, effrup, sm_id in tdata if effrup > 0]
+            path = tuple(rec['path'].split('_'))
+            trts = set(tm.trt for tm in trtmodels)
+            gsim_lt = logictree.GsimLogicTree(self.gsim_lt_xml, trts)
             sm = SourceModel(rec['name'], rec['weight'], path, trtmodels,
                              gsim_lt, sm_id, rec['samples'])
             self.source_models.append(sm)

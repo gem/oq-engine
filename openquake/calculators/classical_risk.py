@@ -116,7 +116,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.sitecol, self.assets_by_site = self.assoc_assets_sites(
                 haz_sitecol)
             curves_by_trt_gsim = {(0, 'FromFile'): haz_curves}
-            self.rlzs_assoc = logictree.trivial_rlzs_assoc()
+            self.init()
             self.save_mesh()
         else:  # compute hazard or read it from the datastore
             super(ClassicalRiskCalculator, self).pre_execute()
