@@ -192,8 +192,8 @@ def view_contents(token, dstore):
 
 @view.add('csm_info')
 def view_csm_info(token, dstore):
-    rlzs_assoc = dstore['rlzs_assoc']
-    csm_info = rlzs_assoc.csm_info
+    csm_info = dstore['csm_info']
+    rlzs_assoc = csm_info.get_rlzs_assoc()
     header = ['smlt_path', 'weight', 'source_model_file',
               'gsim_logic_tree', 'num_realizations']
     rows = []
@@ -217,7 +217,7 @@ def view_ruptures_per_trt(token, dstore):
     eff_ruptures = 0
     tot_weight = 0
     source_info = dstore['source_info'].value
-    csm_info = dstore['rlzs_assoc'].csm_info
+    csm_info = dstore['csm_info']
     w = groupby(source_info, operator.itemgetter('trt_model_id'),
                 lambda rows: sum(r['weight'] for r in rows))
     n = groupby(source_info, operator.itemgetter('trt_model_id'),
@@ -309,7 +309,7 @@ def avglosses_data_transfer(token, dstore):
     """
     oq = dstore['oqparam']
     N = len(dstore['assetcol'])
-    R = len(dstore['rlzs_assoc'].realizations)
+    R = len(dstore['realizations'])
     L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
     I = oq.insured_losses + 1
     ct = oq.concurrent_tasks
@@ -471,7 +471,7 @@ def get_max_gmf_size(dstore):
     """
     oq = dstore['oqparam']
     n_imts = len(oq.imtls)
-    rlzs_by_trt_id = dstore['rlzs_assoc'].get_rlzs_by_trt_id()
+    rlzs_by_trt_id = dstore['csm_info'].get_rlzs_assoc().get_rlzs_by_trt_id()
     n_ruptures = collections.Counter()
     size = collections.Counter()  # by trt_id
     for serial in dstore['sescollection']:
@@ -601,7 +601,8 @@ def view_required_params_per_trt(token, dstore):
     """
     Display the parameters needed by each tectonic region type
     """
-    gsims_per_trt_id = sorted(dstore['rlzs_assoc'].gsims_by_trt_id.items())
+    gsims_per_trt_id = sorted(
+        dstore['csm_info'].get_rlzs_assoc().gsims_by_trt_id.items())
     tbl = []
     for trt_id, gsims in gsims_per_trt_id:
         maker = ContextMaker(gsims)
