@@ -460,7 +460,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if len(rlzs) > 1:
             self.Q1 = len(self.oqparam.quantile_loss_curves) + 1
             with self.monitor('computing stats'):
-                self.compute_store_stats(rlzs, builder)
+                if 'rcurves-rlzs' in self.datastore:
+                    self.compute_store_stats(rlzs, builder)
+                if oq.avg_losses:  # stats for avg_losses
+                    stats = scientific.SimpleStats(
+                        rlzs, oq.quantile_loss_curves)
+                    stats.compute_and_store('avg_losses', self.datastore)
+
+        self.datastore.hdf5.flush()
 
     def build_agg_curve_and_stats(self, builder):
         """
@@ -493,9 +500,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     # ################### methods to compute statistics  #################### #
 
     def _collect_all_data(self):
-        # return a list of list of outputs
-        if 'rcurves-rlzs' not in self.datastore:
-            return []
+        # called only if 'rcurves-rlzs' in dstore; return a list of outputs
         all_data = []
         assets = self.datastore['asset_refs'].value[self.assetcol.array['idx']]
         rlzs = self.rlzs_assoc.realizations
@@ -565,12 +570,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.datastore['loss_curves-stats'] = loss_curves
         if oq.conditional_loss_poes:
             self.datastore['loss_maps-stats'] = loss_maps
-
-        if oq.avg_losses:  # stats for avg_losses
-            stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
-            stats.compute('avg_losses-rlzs', self.datastore)
-
-        self.datastore.hdf5.flush()
 
     def build_agg_curve_stats(self, builder, agg_curve, loss_curve_dt):
         """
