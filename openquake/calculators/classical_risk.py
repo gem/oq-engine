@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib.general import groupby
 from openquake.risklib import scientific, riskinput
-from openquake.commonlib import readinput, parallel, datastore, logictree
+from openquake.commonlib import readinput, parallel, datastore, source
 from openquake.calculators import base
 
 
@@ -116,7 +116,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.sitecol, self.assets_by_site = self.assoc_assets_sites(
                 haz_sitecol)
             curves_by_trt_gsim = {(0, 'FromFile'): haz_curves}
-            self.init()
+            self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
+            self.rlzs_assoc = fake.get_rlzs_assoc()
             self.save_mesh()
         else:  # compute hazard or read it from the datastore
             super(ClassicalRiskCalculator, self).pre_execute()

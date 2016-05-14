@@ -315,36 +315,7 @@ def get_gsims(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    gsims = list(map(str, get_rlzs_assoc(oqparam).realizations))
-    return list(map(valid.gsim, gsims))
-
-
-def get_rlzs_assoc(oqparam):
-    """
-    Extract the GSIM realizations from the gsim_logic_tree file, if present,
-    or build a single realization from the gsim attribute. It is only defined
-    for the scenario calculators.
-
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    """
-    if 'gsim_logic_tree' in oqparam.inputs:
-        gsim_lt = get_gsim_lt(oqparam, [])
-        if len(gsim_lt.values) != 1:
-            gsim_file = os.path.join(
-                oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
-            raise InvalidFile(
-                'The gsim logic tree file %s must contain a single tectonic '
-                'region type, found %s instead ' % (
-                    gsim_file, list(gsim_lt.values)))
-        trts = gsim_lt.values.keys()
-        rlzs = sorted(get_gsim_lt(oqparam, trts))
-    else:
-        rlzs = [
-            logictree.Realization(
-                value=(str(oqparam.gsim),), weight=1, lt_path=('',),
-                ordinal=0, lt_uid=('@',))]
-    return logictree.RlzsAssoc(rlzs)
+    return [valid.gsim(str(rlz)) for rlz in get_gsim_lt(oqparam)]
 
 
 def get_correl_model(oqparam):

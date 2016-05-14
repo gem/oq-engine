@@ -527,6 +527,25 @@ trt_model_dt = numpy.dtype(
      ('sm_id', U32)])
 
 
+class FakeGsimLt(object):
+    """
+    Used by risk calculators using hazard stored in a file
+    """
+    tectonic_region_types = all_trts = ['*']
+    fname = 'no-gsim-lt-file'
+
+    def get_num_paths(self):
+        return 1
+
+    def get_gsim_by_trt(self, gsim_rlz, trt):
+        return None
+
+    def __iter__(self):
+        yield logictree.Realization(
+            value=('FromFile',), weight=1, lt_path=('',), ordinal=0,
+            lt_uid=('@',))
+
+
 class CompositionInfo(object):
     """
     An object to collect information about the composition of
@@ -535,6 +554,13 @@ class CompositionInfo(object):
     :param source_model_lt: a SourceModelLogicTree object
     :param source_models: a list of SourceModel instances
     """
+    @classmethod
+    def fake(cls):
+        fakeSM = SourceModel(
+            'fake', 1,  'b1', [TrtModel('*', eff_ruptures=1)],
+            FakeGsimLt(), 0, 1)
+        return cls(0, 1, [fakeSM])
+
     def __init__(self, seed, num_samples, source_models):
         self.seed = seed
         self.num_samples = num_samples
@@ -576,7 +602,10 @@ class CompositionInfo(object):
                 for trt_id, trti, effrup, sm_id in tdata if effrup > 0]
             path = tuple(rec['path'].split('_'))
             trts = set(tm.trt for tm in trtmodels)
-            gsim_lt = logictree.GsimLogicTree(self.gsim_lt_xml, trts)
+            if self.gsim_lt_xml == 'no-gsim-lt-file':
+                gsim_lt = FakeGsimLt()
+            else:
+                gsim_lt = logictree.GsimLogicTree(self.gsim_lt_xml, trts)
             sm = SourceModel(rec['name'], rec['weight'], path, trtmodels,
                              gsim_lt, sm_id, rec['samples'])
             self.source_models.append(sm)

@@ -63,45 +63,6 @@ Realization.__str__ = lambda self: (
     else str(self.value[0]))  # gsim realization
 
 
-class RlzsAssoc(collections.Mapping):
-    """
-    Used for scenario calculators, when there is a realization for each GSIM.
-    """
-    def __init__(self, realizations):
-        self.realizations = realizations
-        self.rlzs_assoc = {}
-        self.gsims_by_trt_id = {0: []}
-        for rlz in realizations:
-            rlz_str = str(rlz)
-            self.rlzs_assoc[0, rlz_str] = [rlz]
-            if rlz_str != 'FromFile':
-                self.gsims_by_trt_id[0].append(valid.gsim(rlz_str))
-
-    def combine(self, result):  # this is used in the workers
-        """
-        Convert a dictionary key -> value into a dictionary rlz -> value,
-        since there is a single realization per key.
-        """
-        return {self.rlzs_assoc[key][0]: result[key] for key in result}
-
-    def __iter__(self):
-        return iter(self.rlzs_assoc.keys())
-
-    def __getitem__(self, key):
-        return self.rlzs_assoc[key]
-
-    def __len__(self):
-        return len(self.rlzs_assoc)
-
-    def __repr__(self):
-        pairs = []
-        for key in sorted(self.rlzs_assoc):
-            rlzs = list(map(str, self.rlzs_assoc[key]))
-            pairs.append(('%s,%s' % key, rlzs))
-        return '<%s(%d)\n%s>' % (self.__class__.__name__, len(self),
-                                 '\n'.join('%s: %s' % pair for pair in pairs))
-
-
 def get_effective_rlzs(rlzs):
     """
     Group together realizations with the same unique identifier (uid)
@@ -1296,8 +1257,8 @@ class GsimLogicTree(object):
         Generate a trivial GsimLogicTree from a single GSIM instance.
         """
         ltbranch = N('logicTreeBranch', {'branchID': 'b1'},
-                     nodes=[N('uncertaintyModel', text=gsim),
-                            N('uncertaintyWeight', text=1)])
+                     nodes=[N('uncertaintyModel', text=str(gsim)),
+                            N('uncertaintyWeight', text='1.0')])
         lt = N('logicTree', {'logicTreeID': 'lt1'},
                nodes=[N('logicTreeBranchingLevel', {'branchingLevelID': 'bl1'},
                         nodes=[N('logicTreeBranchSet',
@@ -1305,7 +1266,7 @@ class GsimLogicTree(object):
                                   'branchSetID': 'bs1',
                                   'uncertaintyType': 'gmpeModel'},
                                  nodes=[ltbranch])])])
-        return cls('no-file', ['*'], ltnode=lt)
+        return cls('no-gsim-lt-file', ['*'], ltnode=lt)
 
     def __init__(self, fname, tectonic_region_types, ltnode=None):
         self.fname = fname

@@ -73,10 +73,7 @@ def get_rlzs_assoc(dstore):
     Build a RlzsAssoc instance from `csm_info` in the datastore, or
     return a trivial instance if there is no such info.
     """
-    try:
-        return dstore['csm_info'].get_rlzs_assoc()
-    except KeyError:  # no csm_info when the hazard is read from a file
-        return
+    return dstore['csm_info'].get_rlzs_assoc()
 
 
 class BaseCalculator(with_metaclass(abc.ABCMeta)):
