@@ -8,7 +8,7 @@ xmlns:gml="http://www.opengis.net/gml"
     gsimTreePath=""
     interestRate="0.05"
     lossType="structural"
-    sourceModelTreePath=""
+    sourceModelTreePath="b_1"
     >
         <node>
             <gml:Point>

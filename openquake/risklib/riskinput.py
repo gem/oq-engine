@@ -413,7 +413,6 @@ class CompositeRiskModel(collections.Mapping):
                               else assetcol.assets_by_site())
             hazard_by_site = riskinput.get_hazard(
                 rlzs_assoc, mon_hazard(measuremem=False))
-
         for sid, assets in enumerate(assets_by_site):
             hazard = hazard_by_site[sid]
             the_assets = groupby(assets, by_taxonomy)

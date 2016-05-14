@@ -514,13 +514,13 @@ def export_gmf_spec(ekey, dstore, spec):
         _, gmfs_by_trt_gsim = base.get_gmfs(dstore)
         gsims = sorted(gsim for trt, gsim in gmfs_by_trt_gsim)
         imts = gmfs_by_trt_gsim[0, gsims[0]].dtype.names
-        gmf_dt = numpy.dtype([(gsim, F32) for gsim in gsims])
+        gmf_dt = numpy.dtype([(str(gsim), F32) for gsim in gsims])
         for eid in eids:
             etag = etags[eid]
             for imt in imts:
                 gmfa = numpy.zeros(len(sitemesh), gmf_dt)
                 for gsim in gsims:
-                    gmfa[gsim] = gmfs_by_trt_gsim[0, gsim][imt][:, eid]
+                    gmfa[str(gsim)] = gmfs_by_trt_gsim[0, gsim][imt][:, eid]
                 dest = dstore.export_path('gmf-%s-%s.csv' % (etag, imt))
                 data = util.compose_arrays(sitemesh, gmfa)
                 writer.save(data, dest)

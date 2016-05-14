@@ -198,9 +198,9 @@ class TrtModel(collections.Sequence):
             self.max_mag = max_mag
 
     def __repr__(self):
-        return '<%s #%d %s, %d source(s), %d rupture(s)>' % (
+        return '<%s #%d %s, %d source(s), %d effective rupture(s)>' % (
             self.__class__.__name__, self.id, self.trt,
-            len(self.sources), self.tot_ruptures())
+            len(self.sources), self.eff_ruptures)
 
     def __lt__(self, other):
         """
@@ -527,9 +527,10 @@ trt_model_dt = numpy.dtype(
      ('sm_id', U32)])
 
 
+# perhaps can be replaced with a GsimLogicTree.from_('FromFile')
 class FakeGsimLt(object):
     """
-    Used by risk calculators using hazard stored in a file
+    Used by risk calculators processing hazard stored in a file
     """
     tectonic_region_types = all_trts = ['*']
     fname = 'no-gsim-lt-file'
@@ -538,12 +539,12 @@ class FakeGsimLt(object):
         return 1
 
     def get_gsim_by_trt(self, gsim_rlz, trt):
-        return None
+        return 'FromFile'
 
     def __iter__(self):
         yield logictree.Realization(
             value=('FromFile',), weight=1, lt_path=('',), ordinal=0,
-            lt_uid=('@',))
+            lt_uid=('b1',))
 
 
 class CompositionInfo(object):
