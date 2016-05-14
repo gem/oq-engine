@@ -486,6 +486,12 @@ class RlzsAssoc(collections.Mapping):
         """
         ad = AccumDict()
         for (trt_id, gsim), value in results.items():
+            try:
+                gsim_idx = int(gsim)  # for classical calculations
+            except (ValueError, TypeError):  # already a GSIM
+                pass  # for scenario calculations
+            else:
+                gsim = self.gsims_by_trt_id[trt_id][gsim_idx]
             for rlz in self.rlzs_assoc[trt_id, gsim]:
                 ad[rlz] = agg(ad.get(rlz, 0), value)
         return ad

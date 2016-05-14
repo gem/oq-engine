@@ -430,7 +430,7 @@ def export_dmg_by_asset_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
     for rlz in rlzs:
-        gsim, = rlz.value
+        gsim, = rlz.gsim_rlz.value
         dmg_by_asset = build_damage_array(data[:, rlz.ordinal], damage_dt)
         fname = dstore.export_path('%s-%s.%s' % (ekey[0], gsim, ekey[1]))
         writer.save(compose_arrays(assets, dmg_by_asset), fname)
@@ -445,7 +445,7 @@ def export_dmg_by_taxon_csv(ekey, dstore):
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
-        gsim, = rlz.value
+        gsim, = rlz.gsim_rlz.value
         dmg_by_taxon = build_damage_array(data[:, rlz.ordinal], damage_dt)
         fname = dstore.export_path('%s-%s.%s' % (ekey[0], gsim, ekey[1]))
         array = compose_arrays(taxonomies, dmg_by_taxon, 'taxonomy')
@@ -460,7 +460,7 @@ def export_dmg_totalcsv(ekey, dstore):
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
-        gsim, = rlz.value
+        gsim, = rlz.gsim_rlz.value
         dmg_total = build_damage_array(data[rlz.ordinal], damage_dt)
         fname = dstore.export_path('%s-%s.%s' % (ekey[0], gsim, ekey[1]))
         writer.save(dmg_total, fname)

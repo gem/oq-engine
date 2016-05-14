@@ -31,7 +31,7 @@ from openquake.hazardlib.geo import geodetic
 from openquake.baselib import general, hdf5
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import (
-    readinput, riskmodels, datastore, logictree, source, __version__)
+    readinput, riskmodels, datastore, source, __version__)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.parallel import starmap, executor
 from openquake.risklib import riskinput
@@ -337,7 +337,8 @@ class HazardCalculator(BaseCalculator):
                                  job_info.hazard['output_weight'])
                     logging.info('Total weight of the sources=%s',
                                  job_info.hazard['input_weight'])
-                self.init()
+            self.init()
+            if 'source' in self.oqparam.inputs:
                 with self.monitor('managing sources', autoflush=True):
                     self.send_sources()
                 self.manager.store_source_info(self.datastore)
@@ -357,7 +358,11 @@ class HazardCalculator(BaseCalculator):
         To be overridden to initialize the datasets needed by the calculation
         """
         self.random_seed = None
-        self.rlzs_assoc = get_rlzs_assoc(self.datastore)
+        if 'csm_info' in self.datastore or 'csm_info' in self.datastore.parent:
+            self.rlzs_assoc = get_rlzs_assoc(self.datastore)
+        else:  # build a fake; used by risk-from-file calculators
+            self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
+            self.rlzs_assoc = fake.get_rlzs_assoc()
         self.datastore['realizations'] = numpy.array(
             [(r.uid, r.weight) for r in self.rlzs_assoc.realizations], rlz_dt)
 

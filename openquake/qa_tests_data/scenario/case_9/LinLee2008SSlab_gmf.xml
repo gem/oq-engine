@@ -5,7 +5,7 @@ xmlns:gml="http://www.opengis.net/gml"
 >
     <gmfCollection
     gsimTreePath="b1"
-    sourceModelTreePath=""
+    sourceModelTreePath="b1"
     >
         <gmfSet
         stochasticEventSetId="1"

@@ -65,6 +65,9 @@ class ScenarioCalculator(base.HazardCalculator):
             oq.random_seed, 0, [fakeSM])
         self.rlzs_assoc = cinfo.get_rlzs_assoc()
 
+    def init(self):
+        pass
+
     def execute(self):
         """
         Compute the GMFs and return a dictionary gmf_by_etag

@@ -173,10 +173,11 @@ class LossCurveXMLWriter(object):
                 loss_curve.set("assetRef", curve.asset_ref)
 
                 poes = et.SubElement(loss_curve, "poEs")
-                poes.text = " ".join(str(p) for p in curve.poes if notnan(p))
+                poes.text = " ".join("%.5E" % p for p in curve.poes
+                                     if notnan(p))
 
                 losses = et.SubElement(loss_curve, "losses")
-                losses.text = " ".join(str(p) for p in curve.losses
+                losses.text = " ".join("%.5E" % p for p in curve.losses
                                        if notnan(p))
 
                 if curve.loss_ratios is not None:
@@ -339,7 +340,7 @@ class AggregateLossCurveXMLWriter(object):
             aggregate_loss_curve.set("lossType", self._loss_type)
 
             poes = et.SubElement(aggregate_loss_curve, "poEs")
-            poes.text = " ".join([str(p) for p in data.poes])
+            poes.text = " ".join("%.5E" % p for p in data.poes)
 
             losses = et.SubElement(aggregate_loss_curve, "losses")
             losses.text = " ".join(["%.4f" % p for p in data.losses])
@@ -473,10 +474,10 @@ class LossMapXMLWriter(LossMapWriter):
                 loss_elem.set("assetRef", str(loss.asset_ref))
 
                 if loss.std_dev is not None:
-                    loss_elem.set("mean", str(loss.value))
-                    loss_elem.set("stdDev", str(loss.std_dev))
+                    loss_elem.set("mean", '%.5E' % loss.value)
+                    loss_elem.set("stdDev", '%.5E' % loss.std_dev)
                 else:
-                    loss_elem.set("value", str(loss.value))
+                    loss_elem.set("value", '%.5E' % loss.value)
 
             nrml.write(list(root), output)
 
@@ -1060,7 +1061,7 @@ class DamageWriter(object):
             node.append(self.cm_node(loc, asset_refs, means, stddevs))
         return node
 
-    def to_nrml(self, key, data, fname=None, fmt='%11.7E'):
+    def to_nrml(self, key, data, fname=None, fmt='%.5E'):
         """
         :param key:
          `dmg_dist_per_asset|dmg_dist_per_taxonomy|dmg_dist_total|collapse_map`

@@ -11,51 +11,51 @@ xmlns:gml="http://www.opengis.net/gml"
             <taxonomy>
                 MUR/LWAL/HEX:1
             </taxonomy>
-            <damage ds="no_damage" mean="2.1290000E+03" stddev="0.0000000E+00"/>
-            <damage ds="Slight" mean="-1.5236193E-11" stddev="3.2132325E-11"/>
-            <damage ds="Moderate" mean="1.0453470E-12" stddev="2.2332819E-12"/>
-            <damage ds="Extensive" mean="-4.3509560E-09" stddev="9.0554959E-09"/>
-            <damage ds="Collapse" mean="4.3651478E-09" stddev="9.0853902E-09"/>
+            <damage ds="no_damage" mean="2.12900E+03" stddev="0.00000E+00"/>
+            <damage ds="Slight" mean="-1.52361E-11" stddev="3.21321E-11"/>
+            <damage ds="Moderate" mean="1.04533E-12" stddev="2.23325E-12"/>
+            <damage ds="Extensive" mean="-4.35093E-09" stddev="9.05545E-09"/>
+            <damage ds="Collapse" mean="4.36512E-09" stddev="9.08534E-09"/>
         </DDNode>
         <DDNode>
             <taxonomy>
                 MUR/LWAL/HEX:2
             </taxonomy>
-            <damage ds="no_damage" mean="4.6000000E+02" stddev="0.0000000E+00"/>
-            <damage ds="Slight" mean="-9.2554654E-20" stddev="1.9754756E-19"/>
-            <damage ds="Moderate" mean="9.1405248E-20" stddev="1.9509375E-19"/>
-            <damage ds="Extensive" mean="-7.2171916E-20" stddev="1.5354545E-19"/>
-            <damage ds="Collapse" mean="7.3321354E-20" stddev="1.5599866E-19"/>
+            <damage ds="no_damage" mean="4.60000E+02" stddev="0.00000E+00"/>
+            <damage ds="Slight" mean="-9.25531E-20" stddev="1.97543E-19"/>
+            <damage ds="Moderate" mean="9.14037E-20" stddev="1.95090E-19"/>
+            <damage ds="Extensive" mean="-7.21709E-20" stddev="1.53543E-19"/>
+            <damage ds="Collapse" mean="7.33203E-20" stddev="1.55996E-19"/>
         </DDNode>
         <DDNode>
             <taxonomy>
                 MUR/LWAL/HEX:3
             </taxonomy>
-            <damage ds="no_damage" mean="7.7000000E+01" stddev="0.0000000E+00"/>
-            <damage ds="Slight" mean="-2.8608571E-21" stddev="6.1294879E-21"/>
-            <damage ds="Moderate" mean="-6.4674667E-20" stddev="1.3810350E-19"/>
-            <damage ds="Extensive" mean="6.8163812E-20" stddev="1.4558498E-19"/>
-            <damage ds="Collapse" mean="7.4403084E-33" stddev="1.6159129E-32"/>
+            <damage ds="no_damage" mean="7.70000E+01" stddev="0.00000E+00"/>
+            <damage ds="Slight" mean="-2.86080E-21" stddev="6.12933E-21"/>
+            <damage ds="Moderate" mean="-6.46735E-20" stddev="1.38100E-19"/>
+            <damage ds="Extensive" mean="6.81626E-20" stddev="1.45582E-19"/>
+            <damage ds="Collapse" mean="7.44008E-33" stddev="1.61585E-32"/>
         </DDNode>
         <DDNode>
             <taxonomy>
                 MUR/LWAL/HEX:4
             </taxonomy>
-            <damage ds="no_damage" mean="1.5000000E+01" stddev="0.0000000E+00"/>
-            <damage ds="Slight" mean="1.0478842E-21" stddev="2.8206972E-21"/>
-            <damage ds="Moderate" mean="-1.6573352E-23" stddev="4.3987695E-23"/>
-            <damage ds="Extensive" mean="1.6573352E-23" stddev="4.3987695E-23"/>
-            <damage ds="Collapse" mean="2.8025969E-44" stddev="8.2676609E-44"/>
+            <damage ds="no_damage" mean="1.50000E+01" stddev="0.00000E+00"/>
+            <damage ds="Slight" mean="1.04788E-21" stddev="2.82067E-21"/>
+            <damage ds="Moderate" mean="-1.65733E-23" stddev="4.39873E-23"/>
+            <damage ds="Extensive" mean="1.65733E-23" stddev="4.39873E-23"/>
+            <damage ds="Collapse" mean="2.80260E-44" stddev="8.26766E-44"/>
         </DDNode>
         <DDNode>
             <taxonomy>
                 MUR/LWAL/HEX:5
             </taxonomy>
-            <damage ds="no_damage" mean="1.0000000E+00" stddev="0.0000000E+00"/>
-            <damage ds="Slight" mean="-2.0013972E-22" stddev="5.3418142E-22"/>
-            <damage ds="Moderate" mean="1.9523939E-22" stddev="5.2106497E-22"/>
-            <damage ds="Extensive" mean="4.9003361E-24" stddev="1.3116507E-23"/>
-            <damage ds="Collapse" mean="3.5061749E-40" stddev="1.0414618E-39"/>
+            <damage ds="no_damage" mean="1.00000E+00" stddev="0.00000E+00"/>
+            <damage ds="Slight" mean="-2.00139E-22" stddev="5.34176E-22"/>
+            <damage ds="Moderate" mean="1.95239E-22" stddev="5.21060E-22"/>
+            <damage ds="Extensive" mean="4.90032E-24" stddev="1.31164E-23"/>
+            <damage ds="Collapse" mean="3.50613E-40" stddev="1.04144E-39"/>
         </DDNode>
     </dmgDistPerTaxonomy>
 </nrml>
