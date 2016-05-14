@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Used exponential notation with 5 decimal digits in most exported XML files
   * Added a command `oq-lite info --exports`
   * Added a view displaying the calculation times by source typology
   * Fixed the test of GMPETable after the correction in hazardlib
