@@ -34,8 +34,6 @@ def get_path(fname_or_fileobject):
     else:
         return TypeError(fname_or_fileobject)
 
-DEBUG = True
-
 
 def assert_xml_equal(a, b):
     """
@@ -50,9 +48,7 @@ def assert_xml_equal(a, b):
     content_a = tostring(parse(a).getroot(), nsmap=PARSE_NS_MAP)
     content_b = tostring(parse(b).getroot(), nsmap=PARSE_NS_MAP)
     if content_a != content_b:
-        if DEBUG:
-            warnings.warn(content_a, stacklevel=2)
-            import pdb; pdb.set_trace()
-        else:
-            raise AssertionError('The files %s and %s are different!' %
-                                 (path_a, path_b))
+        # uncomment this to see the differences
+        # warnings.warn(content_a, stacklevel=2)
+        raise AssertionError('The files %s and %s are different!' %
+                             (path_a, path_b))
