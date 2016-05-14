@@ -174,11 +174,11 @@ class LossCurveXMLWriter(object):
                 loss_curve.set("assetRef", curve.asset_ref)
 
                 poes = et.SubElement(loss_curve, "poEs")
-                poes.text = " ".join("%.5E" % p for p in curve.poes
+                poes.text = " ".join(FIVEDIGITS % p for p in curve.poes
                                      if notnan(p))
 
                 losses = et.SubElement(loss_curve, "losses")
-                losses.text = " ".join("%.5E" % p for p in curve.losses
+                losses.text = " ".join(FIVEDIGITS % p for p in curve.losses
                                        if notnan(p))
 
                 if curve.loss_ratios is not None:
@@ -188,11 +188,11 @@ class LossCurveXMLWriter(object):
                         ['%.3f' % p for p in curve.loss_ratios if notnan(p)])
 
                 losses = et.SubElement(loss_curve, "averageLoss")
-                losses.text = "%.4e" % curve.average_loss
+                losses.text = FIVEDIGITS % curve.average_loss
 
                 if curve.stddev_loss is not None:
                     losses = et.SubElement(loss_curve, "stdDevLoss")
-                    losses.text = "%.4e" % curve.stddev_loss
+                    losses.text = FIVEDIGITS % curve.stddev_loss
 
             nrml.write(list(root), output)
 
@@ -341,17 +341,17 @@ class AggregateLossCurveXMLWriter(object):
             aggregate_loss_curve.set("lossType", self._loss_type)
 
             poes = et.SubElement(aggregate_loss_curve, "poEs")
-            poes.text = " ".join("%.5E" % p for p in data.poes)
+            poes.text = " ".join(FIVEDIGITS % p for p in data.poes)
 
             losses = et.SubElement(aggregate_loss_curve, "losses")
-            losses.text = " ".join(["%.4f" % p for p in data.losses])
+            losses.text = " ".join([FIVEDIGITS % p for p in data.losses])
 
             losses = et.SubElement(aggregate_loss_curve, "averageLoss")
-            losses.text = "%.4e" % data.average_loss
+            losses.text = FIVEDIGITS % data.average_loss
 
             if data.stddev_loss is not None:
                 losses = et.SubElement(aggregate_loss_curve, "stdDevLoss")
-                losses.text = "%.4e" % data.stddev_loss
+                losses.text = FIVEDIGITS % data.stddev_loss
 
             nrml.write(list(root), output)
 
@@ -655,8 +655,8 @@ class LossFractionsWriter(object):
             for value, (absolute_loss, fraction) in bin_data.items():
                 bin_element = et.SubElement(parent, "bin")
                 bin_element.set("value", str(value))
-                bin_element.set("absoluteLoss", "%.4e" % absolute_loss)
-                bin_element.set("fraction", "%.5f" % fraction)
+                bin_element.set("absoluteLoss", FIVEDIGITS % absolute_loss)
+                bin_element.set("fraction", FIVEDIGITS % fraction)
 
         with NRMLFile(self.dest, 'w') as output:
             root = et.Element("nrml")
