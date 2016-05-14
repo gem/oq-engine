@@ -1,5 +1,7 @@
   [Michele Simionato]
   * Used exponential notation with 5 decimal digits in most exported XML files
+  * The event_based_risk calculator infers the minimum intensity of the GMFs
+    from the vulnerability functions (if not specified in the job.ini)
   * Fixed the `avg_losses-stats`: they were not generated in absence of
     loss curves
   * Added a command `oq-lite info --exports`

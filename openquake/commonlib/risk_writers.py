@@ -30,6 +30,7 @@ from openquake.commonlib.nrml import NRMLFile, SERIALIZE_NS_MAP
 from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib.node import Node
 from openquake.commonlib import nrml
+from openquake.commonlib.writers import FIVEDIGITS
 
 
 def notnan(value):
@@ -474,10 +475,10 @@ class LossMapXMLWriter(LossMapWriter):
                 loss_elem.set("assetRef", str(loss.asset_ref))
 
                 if loss.std_dev is not None:
-                    loss_elem.set("mean", '%.5E' % loss.value)
-                    loss_elem.set("stdDev", '%.5E' % loss.std_dev)
+                    loss_elem.set("mean", FIVEDIGITS % loss.value)
+                    loss_elem.set("stdDev", FIVEDIGITS % loss.std_dev)
                 else:
-                    loss_elem.set("value", '%.5E' % loss.value)
+                    loss_elem.set("value", FIVEDIGITS % loss.value)
 
             nrml.write(list(root), output)
 
@@ -1061,7 +1062,7 @@ class DamageWriter(object):
             node.append(self.cm_node(loc, asset_refs, means, stddevs))
         return node
 
-    def to_nrml(self, key, data, fname=None, fmt='%.5E'):
+    def to_nrml(self, key, data, fname=None, fmt=FIVEDIGITS):
         """
         :param key:
          `dmg_dist_per_asset|dmg_dist_per_taxonomy|dmg_dist_total|collapse_map`
