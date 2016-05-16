@@ -1,0 +1,17 @@
+[Unit]
+Description=The OpenQuake Engine Celery instance
+Documentation=https://github.com/gem/oq-engine/wiki
+After=network.target openquake-dbserver.service
+
+[Service]
+User=openquake
+Group=openquake
+WorkingDirectory=/usr/share/openquake/engine
+ExecStart=/usr/bin/celery worker --purge -Ofair
+Restart=always
+RestartSec=30
+KillMode=control-group
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target
