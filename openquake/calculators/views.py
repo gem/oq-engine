@@ -35,9 +35,8 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source
 from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import (
-    build_header, scientificformat, write_csv)
+    build_header, scientificformat, write_csv, FIVEDIGITS)
 
-FIVEDIGITS = '%.5E'
 FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
 INT = (int, numpy.uint32, numpy.int64)
 

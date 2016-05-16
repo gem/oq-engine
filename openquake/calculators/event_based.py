@@ -47,7 +47,8 @@ U32 = numpy.uint32
 F32 = numpy.float32
 HAZCURVES = 1
 
-event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32)])
+event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
+                        ('sample', U32)])
 gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 
@@ -138,9 +139,11 @@ class EBRupture(object):
         An array of tags for the underlying seismic events
         """
         tags = []
-        for (eid, ses, occ) in self.events:
+        for (eid, ses, occ, sampleid) in self.events:
             tag = 'trt=%02d~ses=%04d~src=%s~rup=%d-%02d' % (
                 self.trt_id, ses, self.source_id, self.serial, occ)
+            if sampleid > 0:
+                tag += '~sample=%d' % sampleid
             tags.append(tag)
         return numpy.array(tags)
 
@@ -263,6 +266,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     rup_data = []
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
+    sm = rlzs_assoc.csm_info.get_source_model(trt_model_id)
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -274,7 +278,8 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
             filter_sites_by_distance_to_rupture,
             integration_distance=max_dist, sites=s_sites)
         num_occ_by_rup = sample_ruptures(
-            src, oq.ses_per_logic_tree_path, rlzs_assoc.csm_info)
+            src, oq.ses_per_logic_tree_path, sm.samples,
+            rlzs_assoc.csm_info.seed)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
@@ -294,13 +299,14 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     return res
 
 
-def sample_ruptures(src, num_ses, info):
+def sample_ruptures(src, num_ses, num_samples, seed):
     """
     Sample the ruptures contained in the given source.
 
     :param src: a hazardlib source object
     :param num_ses: the number of Stochastic Event Sets to generate
-    :param info: a :class:`openquake.commonlib.source.CompositionInfo` instance
+    :param num_samples: how many samples for the given source
+    :param seed: master seed from the job.ini file
     :returns: a dictionary of dictionaries rupture -> {ses_id: num_occurrences}
     """
     # the dictionary `num_occ_by_rup` contains a dictionary
@@ -308,12 +314,14 @@ def sample_ruptures(src, num_ses, info):
     num_occ_by_rup = collections.defaultdict(AccumDict)
     # generating ruptures for the given source
     for rup_no, rup in enumerate(src.iter_ruptures()):
-        rup.seed = seed = src.serial[rup_no] + info.seed
-        numpy.random.seed(seed)
-        for ses_idx in range(1, num_ses + 1):
-            num_occurrences = rup.sample_number_of_occurrences()
-            if num_occurrences:
-                num_occ_by_rup[rup] += {ses_idx: num_occurrences}
+        rup.seed = src.serial[rup_no] + seed
+        numpy.random.seed(rup.seed)
+        for sampleid in range(num_samples):
+            for ses_idx in range(1, num_ses + 1):
+                num_occurrences = rup.sample_number_of_occurrences()
+                if num_occurrences:
+                    num_occ_by_rup[rup] += {
+                        (sampleid, ses_idx): num_occurrences}
         rup.rup_no = rup_no + 1
     return num_occ_by_rup
 
@@ -335,12 +343,12 @@ def build_eb_ruptures(
         # creating EBRuptures
         serial = rup.seed - random_seed + 1
         events = []
-        for ses_idx, num_occ in sorted(
+        for (sampleid, ses_idx), num_occ in sorted(
                 num_occ_by_rup[rup].items()):
             for occ_no in range(1, num_occ + 1):
                 # NB: the 0 below is a placeholder; the right eid will be
                 # set later, in EventBasedRuptureCalculator.post_execute
-                events.append((0, ses_idx, occ_no))
+                events.append((0, ses_idx, occ_no, sampleid))
         if events:
             yield EBRupture(rup, r_sites.indices,
                             numpy.array(events, event_dt),
@@ -636,7 +644,7 @@ class EventBasedCalculator(ClassicalCalculator):
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
             oq.export_dir = export_dir
-            # use a different datastore
+            # one could also set oq.number_of_logic_tree_samples = 0
             self.cl = ClassicalCalculator(oq, self.monitor)
             # TODO: perhaps it is possible to avoid reprocessing the source
             # model, however usually this is quite fast and do not dominate

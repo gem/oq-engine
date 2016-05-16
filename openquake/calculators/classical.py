@@ -164,7 +164,7 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     dic = AccumDict()
     dic.siteslice = slice(siteidx, siteidx + len(sitecol))
     if monitor.oqparam.poes_disagg:
-        sm_id = rlzs_assoc.get_sm_id(trt_model_id)
+        sm_id = rlzs_assoc.csm_info.get_source_model(trt_model_id).ordinal
         dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
     else:
         dic.bbs = []
