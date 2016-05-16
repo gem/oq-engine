@@ -30,6 +30,7 @@ from openquake.commonlib.nrml import NRMLFile, SERIALIZE_NS_MAP
 from openquake.baselib.general import groupby, writetmp
 from openquake.commonlib.node import Node
 from openquake.commonlib import nrml
+from openquake.commonlib.writers import FIVEDIGITS
 
 
 def notnan(value):
@@ -173,11 +174,11 @@ class LossCurveXMLWriter(object):
                 loss_curve.set("assetRef", curve.asset_ref)
 
                 poes = et.SubElement(loss_curve, "poEs")
-                poes.text = " ".join("%.5E" % p for p in curve.poes
+                poes.text = " ".join(FIVEDIGITS % p for p in curve.poes
                                      if notnan(p))
 
                 losses = et.SubElement(loss_curve, "losses")
-                losses.text = " ".join("%.5E" % p for p in curve.losses
+                losses.text = " ".join(FIVEDIGITS % p for p in curve.losses
                                        if notnan(p))
 
                 if curve.loss_ratios is not None:
@@ -187,11 +188,11 @@ class LossCurveXMLWriter(object):
                         ['%.3f' % p for p in curve.loss_ratios if notnan(p)])
 
                 losses = et.SubElement(loss_curve, "averageLoss")
-                losses.text = "%.4e" % curve.average_loss
+                losses.text = FIVEDIGITS % curve.average_loss
 
                 if curve.stddev_loss is not None:
                     losses = et.SubElement(loss_curve, "stdDevLoss")
-                    losses.text = "%.4e" % curve.stddev_loss
+                    losses.text = FIVEDIGITS % curve.stddev_loss
 
             nrml.write(list(root), output)
 
@@ -340,17 +341,17 @@ class AggregateLossCurveXMLWriter(object):
             aggregate_loss_curve.set("lossType", self._loss_type)
 
             poes = et.SubElement(aggregate_loss_curve, "poEs")
-            poes.text = " ".join("%.5E" % p for p in data.poes)
+            poes.text = " ".join(FIVEDIGITS % p for p in data.poes)
 
             losses = et.SubElement(aggregate_loss_curve, "losses")
-            losses.text = " ".join(["%.4f" % p for p in data.losses])
+            losses.text = " ".join([FIVEDIGITS % p for p in data.losses])
 
             losses = et.SubElement(aggregate_loss_curve, "averageLoss")
-            losses.text = "%.4e" % data.average_loss
+            losses.text = FIVEDIGITS % data.average_loss
 
             if data.stddev_loss is not None:
                 losses = et.SubElement(aggregate_loss_curve, "stdDevLoss")
-                losses.text = "%.4e" % data.stddev_loss
+                losses.text = FIVEDIGITS % data.stddev_loss
 
             nrml.write(list(root), output)
 
@@ -474,10 +475,10 @@ class LossMapXMLWriter(LossMapWriter):
                 loss_elem.set("assetRef", str(loss.asset_ref))
 
                 if loss.std_dev is not None:
-                    loss_elem.set("mean", '%.5E' % loss.value)
-                    loss_elem.set("stdDev", '%.5E' % loss.std_dev)
+                    loss_elem.set("mean", FIVEDIGITS % loss.value)
+                    loss_elem.set("stdDev", FIVEDIGITS % loss.std_dev)
                 else:
-                    loss_elem.set("value", '%.5E' % loss.value)
+                    loss_elem.set("value", FIVEDIGITS % loss.value)
 
             nrml.write(list(root), output)
 
@@ -654,8 +655,8 @@ class LossFractionsWriter(object):
             for value, (absolute_loss, fraction) in bin_data.items():
                 bin_element = et.SubElement(parent, "bin")
                 bin_element.set("value", str(value))
-                bin_element.set("absoluteLoss", "%.4e" % absolute_loss)
-                bin_element.set("fraction", "%.5f" % fraction)
+                bin_element.set("absoluteLoss", FIVEDIGITS % absolute_loss)
+                bin_element.set("fraction", FIVEDIGITS % fraction)
 
         with NRMLFile(self.dest, 'w') as output:
             root = et.Element("nrml")
@@ -1061,7 +1062,7 @@ class DamageWriter(object):
             node.append(self.cm_node(loc, asset_refs, means, stddevs))
         return node
 
-    def to_nrml(self, key, data, fname=None, fmt='%.5E'):
+    def to_nrml(self, key, data, fname=None, fmt=FIVEDIGITS):
         """
         :param key:
          `dmg_dist_per_asset|dmg_dist_per_taxonomy|dmg_dist_total|collapse_map`
