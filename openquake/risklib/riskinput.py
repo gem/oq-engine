@@ -638,15 +638,17 @@ def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_assoc,
     ctx_mon = monitor('make contexts')
     gmf_mon = monitor('compute poes')
     sites = sitecol.complete
+    samples = rlzs_assoc.csm_info.get_source_model(trt_id).samples
     gmfcoll = GmfColl(imts, rlzs)
     for ebr in eb_ruptures:
         rup = ebr.rupture
         with ctx_mon:
             r_sites = site.FilteredSiteCollection(ebr.indices, sites)
             computer = calc.gmf.GmfComputer(
-                rup, r_sites, imts, gsims, trunc_level, correl_model)
+                rup, r_sites, imts, gsims, trunc_level, correl_model, samples)
         with gmf_mon:
-            data = computer.calcgmfs(rup.seed, ebr.eids, rlzs_by_gsim, min_iml)
+            data = computer.calcgmfs(
+                rup.seed, ebr.events, rlzs_by_gsim, min_iml)
             for eid, imti, rlz, gmf_sids in data:
                 gmfcoll.save(eid, imti, rlz, *gmf_sids)
     return gmfcoll
