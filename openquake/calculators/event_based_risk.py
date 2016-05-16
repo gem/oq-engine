@@ -320,12 +320,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 correl_model, min_iml, eps, oq.concurrent_tasks or 1)
             # NB: I am using generators so that the tasks are submitted one at
             # the time, without keeping all of the arguments in memory
-            return starmap(
+            tm = starmap(
                 self.core_task.__func__,
                 ((riskinput, self.riskmodel, self.rlzs_assoc,
                   self.assetcol, self.monitor.new('task'))
-                 for riskinput in riskinputs)).reduce(
-                         agg=self.agg, posthook=self.save_data_transfer)
+                 for riskinput in riskinputs))
+        return tm.reduce(agg=self.agg, posthook=self.save_data_transfer)
 
     def agg(self, acc, result):
         """
