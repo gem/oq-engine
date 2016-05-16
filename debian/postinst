@@ -95,7 +95,7 @@ if command -v systemctl 2>&1 > /dev/null; then
     systemctl enable supervisor.service
     systemctl restart supervisor.service
 else
-    update-rc.d supervisor defaults
+    update-rc.d supervisor defaults || true
     service supervisor restart
 fi
 
