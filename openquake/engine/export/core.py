@@ -26,6 +26,7 @@ import zipfile
 
 from openquake.commonlib.export import export
 from openquake.commonlib import datastore
+from openquake.engine import logs
 
 
 class DataStoreExportError(Exception):
@@ -93,3 +94,45 @@ def makedirs(path):
                                % path)
     else:
         os.makedirs(path)
+
+
+def export_outputs(job_id, target_dir, export_types):
+    # make it possible commands like `oq-engine --eos -1 /tmp`
+    datadir, dskeys = logs.dbcmd('get_results', job_id)
+    if not dskeys:
+        yield('Found nothing to export for job %s' % job_id)
+    for dskey in dskeys:
+        yield('Exporting %s...' % dskey)
+        for line in export_output(
+                dskey, job_id, datadir, target_dir, export_types):
+            yield line
+
+
+def get_outkey(dskey, export_types):
+    """
+    Extract the first pair (dskey, exptype) found in export
+    """
+    for exptype in export_types:
+        if (dskey, exptype) in export:
+            return (dskey, exptype)
+
+
+def export_output(dskey, calc_id, datadir, target_dir, export_types):
+    """
+    Simple UI wrapper around
+    :func:`openquake.engine.export.core.export_from_datastore` yielding
+    a summary of files exported, if any.
+    """
+    outkey = get_outkey(dskey, export_types.split(','))
+    if not outkey:
+        yield 'There is not exporter for %s, %s' % (dskey, export_types)
+        return
+    the_file = export_from_datastore(outkey, calc_id, datadir, target_dir)
+    if the_file.endswith('.zip'):
+        dname = os.path.dirname(the_file)
+        fnames = zipfile.ZipFile(the_file).namelist()
+        yield('Files exported:')
+        for fname in fnames:
+            yield(os.path.join(dname, fname))
+    else:
+        yield('File exported: %s' % the_file)
