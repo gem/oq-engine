@@ -3,6 +3,7 @@
     and the webui. Celery is not started by default, other two are.
 
   [Michele Simionato]
+  * Another export fix: made sure it is run by the current user
   * Fixed the export: if the export directory does not exists, it is created
   * Introduced the configuration variable `multi_user`, false for source
     installations and true for package installations
