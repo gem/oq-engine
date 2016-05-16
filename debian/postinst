@@ -96,7 +96,9 @@ if command -v systemctl 2>&1 > /dev/null; then
     systemctl restart supervisor.service
 else
     update-rc.d supervisor defaults || true
-    /etc/init.d/supervisor restart
+    # the 'restart' init command is broken
+    # in Ubuntu 12.04, so do not hard fail
+    /etc/init.d/supervisor restart || true
 fi
 
 #touch /tmp/mop-pause
