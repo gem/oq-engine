@@ -51,11 +51,12 @@ class LtRealization(object):
     Composite realization build on top of a source model realization and
     a GSIM realization.
     """
-    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
+    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight, sampleid):
         self.ordinal = ordinal
         self.sm_lt_path = sm_lt_path
         self.gsim_rlz = gsim_rlz
         self.weight = weight
+        self.sampleid = sampleid
 
     def __repr__(self):
         return '<%d,%s,w=%s>' % (self.ordinal, self.uid, self.weight)
@@ -365,13 +366,6 @@ class RlzsAssoc(collections.Mapping):
         """Flat list with all the realizations"""
         return sum(self.rlzs_by_smodel, [])
 
-    def get_sm_id(self, trt_model_id):
-        """Return the source model ordinal for the given trt_model_id"""
-        for smodel in self.csm_info.source_models:
-            for trt_model in smodel.trt_models:
-                if trt_model.id == trt_model_id:
-                    return smodel.ordinal
-
     def get_rlzs_by_gsim(self, trt_id):
         """
         Returns a dictionary gsim -> rlzs
@@ -395,9 +389,9 @@ class RlzsAssoc(collections.Mapping):
         rlzs = []
         for i, gsim_rlz in enumerate(realizations):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
-            rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight)
-            self.gsim_by_trt.append(dict(
-                zip(gsim_lt.all_trts, gsim_rlz.value)))
+            rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight, i)
+            self.gsim_by_trt.append(
+                dict(zip(gsim_lt.all_trts, gsim_rlz.value)))
             for trt_model in lt_model.trt_models:
                 if trt_model.trt in trts:
                     # ignore the associations to discarded TRTs
@@ -637,7 +631,6 @@ class CompositionInfo(object):
         """
         assoc = RlzsAssoc(self)
         random_seed = self.seed
-        num_samples = self.num_samples
         idx = 0
         for i, smodel in enumerate(self.source_models):
             # collect the effective tectonic region types and ruptures
@@ -654,7 +647,7 @@ class CompositionInfo(object):
                 after = smodel.gsim_lt.get_num_paths()
                 logging.warn('Reducing the logic tree of %s from %d to %d '
                              'realizations', smodel.name, before, after)
-            if num_samples:  # sampling
+            if self.num_samples:  # sampling
                 rnd = random.Random(random_seed + idx)
                 rlzs = logictree.sample(smodel.gsim_lt, smodel.samples, rnd)
             else:  # full enumeration
@@ -670,6 +663,13 @@ class CompositionInfo(object):
         if assoc.realizations:
             assoc._init()
         return assoc
+
+    def get_source_model(self, trt_model_id):
+        """Return the source model for the given trt_model_id"""
+        for smodel in self.source_models:
+            for trt_model in smodel.trt_models:
+                if trt_model.id == trt_model_id:
+                    return smodel
 
     def __repr__(self):
         info_by_model = collections.OrderedDict(
@@ -888,7 +888,7 @@ class SourceManager(object):
                     except:
                         etype, err, tb = sys.exc_info()
                         msg = 'An error occurred with source id=%s: %s'
-                        msg %= (src.source_id, unicode(err))
+                        msg %= (src.source_id, err)
                         raise_(etype, msg, tb)
                 filter_time = filter_mon.dt
                 if sites is None:
