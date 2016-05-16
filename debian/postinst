@@ -56,6 +56,11 @@ HDIR=/usr/share/openquake/engine
 mkdir -p $HDIR
 chown -R $USER.$USER $HDIR
 
+# create logs directory
+LDIR=/var/log/openquake
+mkdir -p $LDIR
+chown -R $USER.adm $LDIR
+
 # create the database. This is run as "openquake" by default
 /usr/bin/oq_create_db
 
