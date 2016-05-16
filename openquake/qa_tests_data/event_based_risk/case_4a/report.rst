@@ -1,7 +1,7 @@
 Event Based Hazard
 ==================
 
-gem-tstation:/home/michele/ssd/calc_16077.hdf5 updated Wed May 11 14:28:41 2016
+gem-tstation:/home/michele/ssd/calc_16332.hdf5 updated Mon May 16 14:19:15 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0               
 random_seed                  24                 
 master_seed                  0                  
-oqlite_version               '0.13.0-git7639915'
+oqlite_version               '0.13.0-git16c052c'
 ============================ ===================
 
 Input files
@@ -101,8 +101,8 @@ Slowest sources
 ============ ========= ========================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class              weight split_num filter_time split_time calc_time
 ============ ========= ========================= ====== ========= =========== ========== =========
-0            3         SimpleFaultSource         482    15        0.004       0.076      0.318    
-0            1         CharacteristicFaultSource 1.000  1         0.001       0.0        0.022    
+0            3         SimpleFaultSource         482    15        0.002       0.029      0.212    
+0            1         CharacteristicFaultSource 1.000  1         0.001       0.0        0.011    
 ============ ========= ========================= ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -110,17 +110,17 @@ Computation times by source typology
 ========================= =========== ========== ========= ======
 source_class              filter_time split_time calc_time counts
 ========================= =========== ========== ========= ======
-CharacteristicFaultSource 0.001       0.0        0.022     1     
-SimpleFaultSource         0.004       0.076      0.318     1     
+CharacteristicFaultSource 0.001       0.0        0.011     1     
+SimpleFaultSource         0.002       0.029      0.212     1     
 ========================= =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
 ================================= ===== ====== ===== ===== =========
 measurement                       mean  stddev min   max   num_tasks
-compute_ruptures.time_sec         0.023 0.009  0.013 0.041 15       
+compute_ruptures.time_sec         0.015 0.009  0.006 0.034 15       
 compute_ruptures.memory_mb        0.0   0.0    0.0   0.0   15       
-compute_gmfs_and_curves.time_sec  0.009 0.005  0.005 0.018 5        
+compute_gmfs_and_curves.time_sec  0.009 0.007  0.004 0.021 5        
 compute_gmfs_and_curves.memory_mb 0.0   0.0    0.0   0.0   5        
 ================================= ===== ====== ===== ===== =========
 
@@ -129,19 +129,19 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.347     0.0       15    
-managing sources               0.103     0.0       1     
-splitting sources              0.076     0.0       1     
-total compute_gmfs_and_curves  0.044     0.0       5     
-filtering ruptures             0.040     0.0       5     
-make contexts                  0.039     0.0       5     
-reading composite source model 0.015     0.0       1     
+total compute_ruptures         0.227     0.0       15    
+managing sources               0.051     0.0       1     
+total compute_gmfs_and_curves  0.043     0.0       5     
+make contexts                  0.032     0.0       5     
+splitting sources              0.029     0.0       1     
+filtering ruptures             0.019     0.0       5     
+reading composite source model 0.013     0.0       1     
 store source_info              0.009     0.0       1     
+compute poes                   0.009     0.0       5     
 saving ruptures                0.006     0.0       1     
-filtering sources              0.005     0.0       2     
-saving gmfs                    0.004     0.0       5     
+reading exposure               0.004     0.0       1     
 aggregate curves               0.003     0.0       15    
-reading exposure               0.003     0.0       1     
-compute poes                   0.002     0.0       5     
+filtering sources              0.003     0.0       2     
+saving gmfs                    0.003     0.0       5     
 reading site collection        5.960E-06 0.0       1     
 ============================== ========= ========= ======

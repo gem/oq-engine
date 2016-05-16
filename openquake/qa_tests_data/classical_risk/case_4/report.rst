@@ -1,7 +1,7 @@
 Classical Hazard-Risk QA test 4
 ===============================
 
-gem-tstation:/home/michele/ssd/calc_16039.hdf5 updated Wed May 11 14:28:24 2016
+gem-tstation:/home/michele/ssd/calc_16294.hdf5 updated Mon May 16 14:18:59 2016
 
 num_sites = 6, sitecol = 969 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git7639915'
+oqlite_version               '0.13.0-git16c052c'
 ============================ ===================
 
 Input files
@@ -76,7 +76,7 @@ Informational data
 count_eff_ruptures_max_received_per_task 3212          
 count_eff_ruptures_num_tasks             2             
 count_eff_ruptures_sent.monitor          5998          
-count_eff_ruptures_sent.rlzs_assoc       5898          
+count_eff_ruptures_sent.rlzs_assoc       5168          
 count_eff_ruptures_sent.sitecol          1114          
 count_eff_ruptures_sent.siteidx          10            
 count_eff_ruptures_sent.sources          3892          
@@ -111,8 +111,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            376       AreaSource   55     1         7.720E-04   0.0        0.0      
-0            231       AreaSource   104    1         7.210E-04   0.0        0.0      
+0            376       AreaSource   55     1         6.480E-04   0.0        0.0      
+0            231       AreaSource   104    1         6.402E-04   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -132,12 +132,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 2.571     0.0       1     
-managing sources               0.037     0.0       1     
-filtering sources              0.032     0.0       39    
-store source_info              0.008     0.0       1     
+reading composite source model 1.989     0.0       1     
+managing sources               0.030     0.0       1     
+filtering sources              0.027     0.0       39    
 reading exposure               0.006     0.0       1     
-total count_eff_ruptures       6.778E-04 0.0       2     
-aggregate curves               6.318E-05 0.0       2     
-reading site collection        7.868E-06 0.0       1     
+store source_info              0.004     0.0       1     
+total count_eff_ruptures       7.050E-04 0.0       2     
+aggregate curves               3.123E-05 0.0       2     
+reading site collection        1.311E-05 0.0       1     
 ============================== ========= ========= ======

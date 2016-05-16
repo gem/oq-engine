@@ -1,7 +1,7 @@
 Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
-gem-tstation:/home/michele/ssd/calc_16084.hdf5 updated Wed May 11 14:29:00 2016
+gem-tstation:/home/michele/ssd/calc_16339.hdf5 updated Mon May 16 14:19:32 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git7639915'
+oqlite_version               '0.13.0-git16c052c'
 ============================ ===================
 
 Input files
@@ -95,8 +95,8 @@ Informational data
 ======================================== ==============
 count_eff_ruptures_max_received_per_task 3232          
 count_eff_ruptures_num_tasks             34            
-count_eff_ruptures_sent.monitor          101132        
-count_eff_ruptures_sent.rlzs_assoc       322640        
+count_eff_ruptures_sent.monitor          101236        
+count_eff_ruptures_sent.rlzs_assoc       292672        
 count_eff_ruptures_sent.sitecol          16490         
 count_eff_ruptures_sent.siteidx          170           
 count_eff_ruptures_sent.sources          42774         
@@ -117,9 +117,9 @@ Slowest sources
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
 2            1         AreaSource   6.000  16        0.001       0.003      0.0      
-3            1         AreaSource   6.000  16        8.790E-04   0.003      0.0      
-0            1         PointSource  0.375  1         1.268E-04   0.0        0.0      
-1            2         PointSource  0.375  1         1.020E-04   0.0        0.0      
+3            1         AreaSource   6.000  16        8.380E-04   0.002      0.0      
+0            1         PointSource  0.375  1         1.211E-04   0.0        0.0      
+1            2         PointSource  0.375  1         8.798E-05   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -127,8 +127,8 @@ Computation times by source typology
 ============ =========== ========== ========= ======
 source_class filter_time split_time calc_time counts
 ============ =========== ========== ========= ======
-AreaSource   0.002       0.006      0.0       2     
-PointSource  2.289E-04   0.0        0.0       2     
+AreaSource   0.002       0.005      0.0       2     
+PointSource  2.091E-04   0.0        0.0       2     
 ============ =========== ========== ========= ======
 
 Information about the tasks
@@ -140,12 +140,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.090     0.0       1     
+managing sources               0.075     0.0       1     
 reading composite source model 0.018     0.0       1     
-total count_eff_ruptures       0.011     0.0       34    
-splitting sources              0.006     0.0       2     
+total count_eff_ruptures       0.009     0.0       34    
+splitting sources              0.005     0.0       2     
 store source_info              0.005     0.0       1     
-filtering sources              0.003     0.0       4     
-aggregate curves               7.360E-04 0.0       34    
+filtering sources              0.002     0.0       4     
+aggregate curves               5.758E-04 0.0       34    
 reading site collection        3.695E-05 0.0       1     
 ============================== ========= ========= ======

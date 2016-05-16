@@ -1,7 +1,7 @@
 Scenario QA Test 3
 ==================
 
-gem-tstation:/home/michele/ssd/calc_16121.hdf5 updated Wed May 11 14:31:08 2016
+gem-tstation:/home/michele/ssd/calc_16376.hdf5 updated Mon May 16 14:21:20 2016
 
 num_sites = 4, sitecol = 877 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  3                  
 master_seed                  0                  
 avg_losses                   False              
-oqlite_version               '0.13.0-git7639915'
+oqlite_version               '0.13.0-git16c052c'
 ============================ ===================
 
 Input files
@@ -62,8 +62,8 @@ Information about the tasks
 ---------------------------
 ======================= ===== ========= ========= ===== =========
 measurement             mean  stddev    min       max   num_tasks
-scenario_risk.time_sec  0.002 9.839E-04 5.679E-04 0.003 4        
-scenario_risk.memory_mb 0.005 0.005     0.0       0.012 4        
+scenario_risk.time_sec  0.001 3.898E-04 5.491E-04 0.001 4        
+scenario_risk.memory_mb 0.0   0.0       0.0       0.0   4        
 ======================= ===== ========= ========= ===== =========
 
 Slowest operations
@@ -71,14 +71,14 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-computing gmfs          0.069     0.0       1     
-total scenario_risk     0.008     0.012     4     
-filtering sites         0.007     0.0       1     
-computing riskmodel     0.006     0.0       4     
-reading exposure        0.004     0.0       1     
+computing gmfs          0.046     0.0       1     
+filtering sites         0.011     0.0       1     
+total scenario_risk     0.005     0.0       4     
+reading exposure        0.005     0.0       1     
+computing riskmodel     0.003     0.0       4     
 saving gmfs             0.002     0.0       1     
-building epsilons       6.192E-04 0.0       1     
-building riskinputs     5.169E-04 0.0       1     
-building hazard         1.140E-04 0.0       4     
-reading site collection 5.960E-06 0.0       1     
+building epsilons       7.799E-04 0.0       1     
+building riskinputs     3.831E-04 0.0       1     
+building hazard         1.059E-04 0.0       4     
+reading site collection 6.914E-06 0.0       1     
 ======================= ========= ========= ======
