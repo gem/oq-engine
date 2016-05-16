@@ -52,8 +52,8 @@ if [ $(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
     adduser --system --home /var/lib/$USER --group --shell /bin/bash $USER
 fi
 
-HDIR=/usr/share/openquake
-mkdir -p ${HDIR}/engine
+HDIR=/usr/share/openquake/engine
+mkdir -p $HDIR
 chown -R $USER.$USER $HDIR
 
 # create the database. This is run as "openquake" by default
