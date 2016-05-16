@@ -166,10 +166,8 @@ class EventBasedTestCase(CalculatorTestCase):
         ltr = out['hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[0])
-        # NB: we are testing that the file ltr_1.csv is equal to
-        # ltr_0.csv, as it should be for the hazard curves
         self.assertEqualFiles(
-            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[1])
+            'expected/hc-smltp_b1-gsimltp_b1-ltr_1.csv', ltr[1])
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4(self):
@@ -209,7 +207,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_7(self):
-        # 2 models x 3 GMPEs, 10 samples * 200 SES
+        # 2 models x 3 GMPEs, 10 samples * 40 SES
         expected = [
             'hazard_curve-mean.csv',
             'quantile_curve-0.1.csv',
