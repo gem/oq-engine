@@ -55,7 +55,6 @@ filter function of each kind (see :func:`source_site_distance_filter` and
 :func:`rupture_site_distance_filter`) as well as "no operation" filters
 (:func:`source_site_noop_filter` and :func:`rupture_site_noop_filter`).
 """
-from openquake.hazardlib.gsim.base import DistancesContext
 
 
 def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
