@@ -18,7 +18,8 @@
 
 """
 Module exports :class:`ZhaoEtAl2006Asc`, :class:`ZhaoEtAl2006SInter`,
-:class:`ZhaoEtAl2006SSlab`, and :class:`ZhaoEtAl2006SInterNSHMP2008`.
+:class:`ZhaoEtAl2006SSlab`, :class:`ZhaoEtAl2006SInterNSHMP2008` and
+:class:`ZhaoEtAl2006SSlabNSHMP2014`
 """
 from __future__ import division
 
@@ -460,3 +461,52 @@ class ZhaoEtAl2006SInterNSHMP2008(ZhaoEtAl2006SInter):
         4.00  -0.390 -0.1486  0.1038  0.3821
         5.00  -0.498 -0.1578  0.1090  0.3766
         """)
+
+
+class ZhaoEtAl2006SSlabNSHMP2014(ZhaoEtAl2006SSlab):
+    """
+    For the 2014 US National Seismic Hazard Maps the magnitude of Zhao et al.
+    (2006) for the subduction inslab events is capped at magnitude Mw 7.8
+    """
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # extracting dictionary of coefficients specific to required
+        # intensity measure type.
+        C = self.COEFFS_ASC[imt]
+        C_SSLAB = self.COEFFS_SSLAB[imt]
+
+        # to avoid singularity at 0.0 (in the calculation of the
+        # slab correction term), replace 0 values with 0.1
+        d = dists.rrup
+        d[d == 0.0] = 0.1
+
+        if rup.mag > 7.8:
+            rup_mag = 7.8
+        else:
+            rup_mag = rup.mag
+        # mean value as given by equation 1, p. 901, without considering the
+        # faulting style and intraslab terms (that is FR, SS, SSL = 0) and the
+        # inter and intra event terms, plus the magnitude-squared term
+        # correction factor (equation 5 p. 909)
+        mean = self._compute_magnitude_term(C, rup_mag) +\
+            self._compute_distance_term(C, rup_mag, d) +\
+            self._compute_focal_depth_term(C, rup.hypo_depth) +\
+            self._compute_site_class_term(C, sites.vs30) +\
+            self._compute_magnitude_squared_term(P=C_SSLAB['PS'], M=6.5,
+                                                 Q=C_SSLAB['QS'],
+                                                 W=C_SSLAB['WS'],
+                                                 mag=rup_mag) +\
+            C_SSLAB['SS'] + self._compute_slab_correction_term(C_SSLAB, d)
+
+        # convert from cm/s**2 to g
+        mean = np.log(np.exp(mean) * 1e-2 / g)
+
+        stddevs = self._get_stddevs(C['sigma'], C_SSLAB['tauS'], stddev_types,
+                                    num_sites=len(sites.vs30))
+
+        return mean, stddevs
+
