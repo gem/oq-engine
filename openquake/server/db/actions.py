@@ -167,60 +167,6 @@ def list_calculations(job_type, user_name):
                 job.id, status, start_time, descr)).encode('utf-8')
 
 
-def export_outputs(job_id, target_dir, export_type):
-    # make it possible commands like `oq-engine --eos -1 /tmp`
-    outputs = models.Output.objects.filter(oq_job=job_id)
-    if not outputs:
-        yield('Found nothing to export for job %s' % job_id)
-    for output in outputs:
-        yield('Exporting %s...' % output)
-        try:
-            for line in export_output(output.id, target_dir, export_type):
-                yield line
-        except Exception as exc:
-            yield(exc)
-
-
-def get_outkey(dskey, export_types):
-    """
-    Extract the first pair (dskey, exptype) found in export
-    """
-    for exptype in export_types:
-        if (dskey, exptype) in export:
-            return (dskey, exptype)
-
-
-def export_output(output_id, target_dir, export_type):
-    """
-    Simple UI wrapper around
-    :func:`openquake.engine.export.core.export_from_datastore` yielding
-    a summary of files exported, if any.
-    """
-    queryset = models.Output.objects.filter(pk=output_id)
-    if not queryset.exists():
-        yield('No output found for OUTPUT_ID %s' % output_id)
-        return
-
-    if queryset.all()[0].oq_job.status != "complete":
-        yield("Exporting output produced by a job which did not run "
-              "successfully. Results might be uncomplete")
-
-    dskey, calc_id, datadir = get_output(output_id)
-    outkey = get_outkey(dskey, export_type.split(','))
-    if not outkey:
-        yield 'There is not exporter for %s, %s' % (dskey, export_type)
-        return
-    the_file = core.export_from_datastore(outkey, calc_id, datadir, target_dir)
-    if the_file.endswith('.zip'):
-        dname = os.path.dirname(the_file)
-        fnames = zipfile.ZipFile(the_file).namelist()
-        yield('Files exported:')
-        for fname in fnames:
-            yield(os.path.join(dname, fname))
-    else:
-        yield('File exported: %s' % the_file)
-
-
 def list_outputs(job_id, full=True):
     """
     List the outputs for a given
@@ -529,3 +475,12 @@ def get_result(result_id):
     output = models.get(models.Output, pk=result_id)
     job = output.oq_job
     return job.id, job.status, os.path.dirname(job.ds_calc_dir), output.ds_key
+
+
+def get_results(job_id):
+    """
+    :returns: (datadir, datastore_keys)
+    """
+    job = models.get(models.OqJob, pk=job_id)
+    datadir = os.path.dirname(job.ds_calc_dir)
+    return datadir, [output.ds_key for output in get_outputs(job_id)]

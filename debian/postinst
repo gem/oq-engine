@@ -53,33 +53,8 @@ if [ $(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
 fi
 
 HDIR=/usr/share/openquake/engine
-IDIR=/usr/lib/python2.7/dist-packages/openquake/engine
 mkdir -p $HDIR
-
-rm -f $HDIR/celeryconfig.py.new_in_this_release
-cp $IDIR/celeryconfig.py $HDIR
 chown -R $USER.$USER $HDIR
-
-SDIR=/etc/openquake
-for cfg in openquake.cfg
-do
-    rm -f $SDIR/$cfg.new_in_this_release
-    if [ -f $SDIR/$cfg ]; then
-        if ! diff $IDIR/$cfg $SDIR/$cfg >/dev/null; then
-            cp $IDIR/$cfg $SDIR/$cfg.new_in_this_release
-        fi
-    else
-        mkdir -p $SDIR
-        cp $IDIR/$cfg $SDIR
-        chmod 644 $SDIR/$cfg
-    fi
-done
-chown -R $USER.$USER $SDIR
-
-# create logs directory
-LDIR=/var/log/openquake
-mkdir -p $LDIR
-chown -R $USER.adm $LDIR
 
 # create the database. This is run as "openquake" by default
 /usr/bin/oq_create_db
