@@ -1259,12 +1259,6 @@ fi
 
 sed -i "s/^\([ ${TB}]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__init__.py
 
-# mods pre-packaging
-mv LICENSE         openquake/engine
-mv README.md       openquake/engine/README
-mv celeryconfig.py openquake/engine
-mv openquake.cfg   openquake/engine
-
 if [ $BUILD_ON_LXC -eq 1 ]; then
     sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
