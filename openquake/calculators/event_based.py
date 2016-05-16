@@ -305,7 +305,8 @@ def sample_ruptures(src, num_ses, num_samples, seed):
 
     :param src: a hazardlib source object
     :param num_ses: the number of Stochastic Event Sets to generate
-    :param num_samples: how many samples per the given source
+    :param num_samples: how many samples for the given source
+    :param seed: master seed from the job.ini file
     :returns: a dictionary of dictionaries rupture -> {ses_id: num_occurrences}
     """
     # the dictionary `num_occ_by_rup` contains a dictionary
