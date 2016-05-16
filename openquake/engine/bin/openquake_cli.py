@@ -57,6 +57,7 @@ from openquake.engine.utils import confirm, config
 import openquake.engine
 from openquake.engine import engine, logs
 from openquake.engine.tools.make_html_report import make_report
+from openquake.engine.export import core
 from openquake.commonlib import datastore, valid
 from openquake.calculators import views
 
@@ -391,15 +392,16 @@ def main():
 
     elif args.export_output is not None:
         output_id, target_dir = args.export_output
-        for line in logs.dbcmd('@export_output', int(output_id),
-                               expanduser(target_dir), exports):
+        dskey, calc_id, datadir = logs.dbcmd('get_output', int(output_id))
+        for line in core.export_output(
+                dskey, calc_id, datadir, expanduser(target_dir), exports):
             print line
 
     elif args.export_outputs is not None:
         job_id, target_dir = args.export_outputs
         hc_id = get_job_id(job_id)
-        for line in logs.dbcmd('@export_outputs', hc_id,
-                               expanduser(target_dir), exports):
+        for line in core.export_outputs(
+                hc_id, expanduser(target_dir), exports):
             print line
 
     elif args.delete_uncompleted_calculations:
