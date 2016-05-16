@@ -58,9 +58,7 @@ exit 0
 %prep
 %setup -n %{oqrepo}-%{oqversion}-%{oqrelease} -n %{oqrepo}-%{oqversion}-%{oqrelease}
 
-# this should be -p1, but is -p3 to keep compatibility with the debian patch,
-# which is generated usign some hacks
-%patch1 -p3
+%patch1 -p1
 
 %build
 python setup.py build
