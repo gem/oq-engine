@@ -96,7 +96,7 @@ if command -v systemctl 2>&1 > /dev/null; then
     systemctl restart supervisor.service
 else
     update-rc.d supervisor defaults || true
-    service supervisor restart
+    /etc/init.d/supervisor restart
 fi
 
 #touch /tmp/mop-pause
