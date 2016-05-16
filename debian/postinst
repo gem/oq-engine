@@ -88,17 +88,24 @@ chown -R $USER.adm $LDIR
 find /usr/share/openquake -type f -name \*.pyc -exec rm -f {} \;
 
 # setup supervisord
-# - make sure supervisord is started at boot (xenial does not)
-# - make sure it's running and reload the config at the same time
+# - if supervisord is running:
+#   - reload config and start the dbserver and the webui
+# - if supervisord is NOT running:
+#   - make sure it's started during boot
+#   - start it
+
 echo "Setup supervisord"
-if command -v systemctl 2>&1 > /dev/null; then
-    systemctl enable supervisor.service
-    systemctl restart supervisor.service
+
+if pgrep supervisord 2>&1 > /dev/null; then
+    supervisorctl reload
 else
-    update-rc.d supervisor defaults || true
-    # the 'restart' init command is broken
-    # in Ubuntu 12.04, so do not hard fail
-    /etc/init.d/supervisor restart || true
+    if command -v systemctl 2>&1 > /dev/null; then
+        systemctl enable supervisor.service
+        systemctl start supervisor.service
+    else
+        update-rc.d supervisor defaults || true
+        /etc/init.d/supervisor start
+    fi
 fi
 
 #touch /tmp/mop-pause
