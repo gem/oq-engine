@@ -35,9 +35,8 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source
 from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import (
-    build_header, scientificformat, write_csv)
+    build_header, scientificformat, write_csv, FIVEDIGITS)
 
-FIVEDIGITS = '%.5E'
 FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
 INT = (int, numpy.uint32, numpy.int64)
 
@@ -127,6 +126,41 @@ def rst_table(data, header=None, fmt=None):
     return '\n'.join(lines)
 
 
+def sum_tbl(tbl, kfield, vfields):
+    """
+    Aggregate a composite array and compute the totals on a given key.
+
+    >>> dt = numpy.dtype([('name', (bytes, 10)), ('value', int)])
+    >>> tbl = numpy.array([('a', 1), ('a', 2), ('b', 3)], dt)
+    >>> print(sum_tbl(tbl, 'name', ['value']))
+    [('a', 3, 2) ('b', 3, 1)]
+    """
+    pairs = [(n, tbl.dtype[n]) for n in [kfield] + vfields]
+    dt = numpy.dtype(pairs + [('counts', int)])
+
+    def sum_all(group):
+        vals = numpy.zeros(1, dt)[0]
+        for rec in group:
+            for vfield in vfields:
+                vals[vfield] += rec[vfield]
+            vals['counts'] += 1
+        vals[kfield] = rec[kfield]
+        return vals
+    rows = groupby(tbl, operator.itemgetter(kfield), sum_all).values()
+    return numpy.array(rows, dt)
+
+
+@view.add('times_by_source_class')
+def view_times_by_source_class(token, dstore):
+    """
+    Returns the calculation times depending on the source typology
+    """
+    totals = sum_tbl(
+        dstore['source_info'], 'source_class',
+        ['filter_time', 'split_time', 'calc_time'])
+    return rst_table(totals)
+
+
 def classify_gsim_lt(gsim_lt):
     """
     :returns: "trivial", "simple" or "complex"
@@ -188,14 +222,9 @@ def view_ruptures_per_trt(token, dstore):
     n = groupby(source_info, operator.itemgetter('trt_model_id'),
                 lambda rows: sum(1 for r in rows))
     for i, sm in enumerate(csm_info.source_models):
-        # NB: the number of effective ruptures per tectonic region model
-        # is stored in the array eff_ruptures as a literal string describing
-        # an array {trt_model_id: num_ruptures}; see the method
-        # CompositionInfo.get_rlzs_assoc
-        erdict = ast.literal_eval(csm_info.eff_ruptures[i])
         for trt_model in sm.trt_models:
             trt = source.capitalize(trt_model.trt)
-            er = erdict.get(trt, 0)  # effective ruptures
+            er = trt_model.eff_ruptures
             if er:
                 num_trts += 1
                 num_sources = n.get(trt_model.id, 0)

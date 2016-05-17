@@ -32,11 +32,11 @@ class DifferentFiles(Exception):
     pass
 
 
-def check_platform():
+def check_platform(*supported):
     """
     Skip the test if the platform is not the reference one
     """
-    if platform.dist()[-1] != 'trusty':  # Ubuntu 14.04
+    if platform.dist()[-1] not in supported:
         raise unittest.SkipTest
 
 

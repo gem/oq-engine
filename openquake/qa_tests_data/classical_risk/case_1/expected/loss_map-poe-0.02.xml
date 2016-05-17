@@ -18,7 +18,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     1.0 1.0
                 </gml:pos>
             </gml:Point>
-            <loss assetRef="a1" value="0.14199"/>
+            <loss assetRef="a1" value="1.41990E-01"/>
         </node>
     </lossMap>
 </nrml>

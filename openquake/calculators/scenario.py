@@ -15,12 +15,20 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import collections
 import numpy
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib import readinput
 from openquake.calculators import base
+
+U8 = numpy.uint8
+U16 = numpy.uint16
+U32 = numpy.uint32
+F32 = numpy.float32
+
+gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 
 @base.calculators.add('scenario')
@@ -58,23 +66,26 @@ class ScenarioCalculator(base.HazardCalculator):
 
     def execute(self):
         """
-        Compute the GMFs and return a dictionary gmf_by_etag
+        Compute the GMFs and return a dictionary rlzi -> array gmv_dt
         """
-        gmfa_by_rlz = {}
+        res = collections.defaultdict(list)
+        sids = self.sitecol.sids
         with self.monitor('computing gmfs', autoflush=True):
-            eids = range(self.oqparam.number_of_ground_motion_fields)
+            n = self.oqparam.number_of_ground_motion_fields
             for i, gsim in enumerate(self.gsims):
-                gmfa_by_rlz[i] = self.computer.compute(
-                    self.oqparam.random_seed, gsim, eids)
-        return gmfa_by_rlz
+                gmfa = self.computer.compute(
+                    self.oqparam.random_seed, gsim, n)
+                for (imti, sid, eid), gmv in numpy.ndenumerate(gmfa):
+                    res[i].append((sids[sid], eid, imti, gmv))
+            return {rlzi: numpy.array(res[rlzi], gmv_dt) for rlzi in res}
 
-    def post_execute(self, gmfa_by_rlz):
+    def post_execute(self, gmfa_by_rlzi):
         """
         :param gmfa: a dictionary rlzi -> gmfa
         """
         with self.monitor('saving gmfs', autoflush=True):
             for rlzi, gsim in enumerate(self.gsims):
                 rlzstr = 'gmf_data/%04d' % rlzi
-                self.datastore[rlzstr] = gmfa_by_rlz[rlzi]
+                self.datastore[rlzstr] = gmfa_by_rlzi[rlzi]
                 self.datastore.set_attrs(rlzstr, gsim=str(gsim))
             self.datastore.set_nbytes('gmf_data')

@@ -11,17 +11,17 @@ xmlns:gml="http://www.opengis.net/gml"
             <taxonomy>
                 RC
             </taxonomy>
-            <damage ds="no_damage" mean="9.9863275E+02" stddev="4.9148431E+02"/>
-            <damage ds="LS1" mean="7.2000720E+02" stddev="2.4963548E+02"/>
-            <damage ds="LS2" mean="2.8136008E+02" stddev="2.5064592E+02"/>
+            <damage ds="no_damage" mean="9.98633E+02" stddev="4.91484E+02"/>
+            <damage ds="LS1" mean="7.20007E+02" stddev="2.49635E+02"/>
+            <damage ds="LS2" mean="2.81360E+02" stddev="2.50646E+02"/>
         </DDNode>
         <DDNode>
             <taxonomy>
                 RM
             </taxonomy>
-            <damage ds="no_damage" mean="7.2379254E+02" stddev="6.7015131E+02"/>
-            <damage ds="LS1" mean="1.7567102E+03" stddev="5.3659186E+02"/>
-            <damage ds="LS2" mean="1.5194972E+03" stddev="8.7259436E+02"/>
+            <damage ds="no_damage" mean="7.23793E+02" stddev="6.70151E+02"/>
+            <damage ds="LS1" mean="1.75671E+03" stddev="5.36592E+02"/>
+            <damage ds="LS2" mean="1.51950E+03" stddev="8.72594E+02"/>
         </DDNode>
     </dmgDistPerTaxonomy>
 </nrml>

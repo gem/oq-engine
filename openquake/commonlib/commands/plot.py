@@ -67,15 +67,15 @@ def plot(calc_id, other_id=None, sites='0'):
         print('The indices %s are invalid: no graph for them' % invalid)
     valid = sorted(set(range(n_sites)) & set(indices))
     print('Found %d site(s); plotting %d of them' % (n_sites, len(valid)))
-    curves_by_rlz, mean_curves = get_hcurves_and_means(haz)
     if other is None:
+        curves_by_rlz, mean_curves = get_hcurves_and_means(haz)
         single_curve = len(curves_by_rlz) == 1 or not getattr(
             oq, 'individual_curves', True)
         plt = make_figure(valid, oq.imtls, mean_curves,
                           {} if single_curve else curves_by_rlz, 'mean')
     else:
-        _, mean1 = get_hcurves_and_means(haz)
-        _, mean2 = get_hcurves_and_means(other)
+        mean1 = haz['hcurves/mean']
+        mean2 = other['hcurves/mean']
         plt = make_figure(valid, oq.imtls, mean1, {'mean': mean2}, 'reference')
     plt.show()
 

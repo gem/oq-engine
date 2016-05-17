@@ -59,7 +59,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        check_platform()
+        check_platform('trusty')
         self.assert_stats_ok(case_1, 'job.ini')
 
         # make sure the XML and JSON exporters run
@@ -109,6 +109,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # Turkey with SHARE logic tree
         out = self.run_calc(case_4.__file__, 'job.ini',
                             exports='csv', individual_curves='true')
+        [fname] = out['avg_losses-stats', 'csv']
+        self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
+
         fnames = out['agg_loss_table', 'csv']
         assert fnames, 'No agg_losses exported??'
         for fname in fnames:
@@ -125,7 +128,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
-        check_platform()
+        check_platform('trusty')
         self.assert_stats_ok(case_master, 'job.ini')
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname)

@@ -24,13 +24,15 @@ import collections
 
 import numpy
 
-from openquake.baselib.general import groupby, humansize
+from openquake.baselib.general import (
+    groupby, humansize, get_array, group_array)
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import disagg
 from openquake.commonlib.export import export
 from openquake.commonlib.writers import (
     scientificformat, floatformat, write_csv)
 from openquake.commonlib import writers, hazard_writers, util, readinput
+from openquake.risklib.riskinput import create
 from openquake.calculators import calc, base, event_based
 
 F32 = numpy.float32
@@ -39,18 +41,6 @@ GMF_MAX_SIZE = 10 * 1024 * 1024  # 10 MB
 GMF_WARNING = '''\
 There are a lot of ground motion fields; the export will be slow.
 Consider canceling the operation and accessing directly %s.'''
-
-
-def get_gmfa_by_eid(gmfa):
-    """
-    Returns a dictionary sid -> array of composite ground motion values,
-    ordered by sid by construction.
-    """
-    def to_array(group):
-        records = list(group)
-        return numpy.array(records, records[0].dtype)
-    return groupby(gmfa, operator.itemgetter('eid'), to_array)
-
 
 
 class SES(object):
@@ -203,20 +193,20 @@ class GmfCollection(object):
     into an object with the right form for the EventBasedGMFXMLWriter.
     Iterating over a GmfCollection yields GmfSet objects.
     """
-    def __init__(self, sitecol, ruptures, investigation_time):
+    def __init__(self, sitecol, imts, ruptures, investigation_time):
         self.sitecol = sitecol
         self.ruptures = ruptures
-        self.imts = ruptures[0].gmf.dtype.names
+        self.imts = imts
         self.investigation_time = investigation_time
 
     def __iter__(self):
         completemesh = self.sitecol.complete.mesh
         gmfset = collections.defaultdict(list)
-        for imt_str in self.imts:
+        for imti, imt_str in enumerate(self.imts):
             imt, sa_period, sa_damping = from_string(imt_str)
             for rupture in self.ruptures:
                 mesh = completemesh[rupture.indices]
-                gmf = rupture.gmf[imt_str]
+                gmf = get_array(rupture.gmfa, imti=imti)['gmv']
                 assert len(mesh) == len(gmf), (len(mesh), len(gmf))
                 nodes = (GroundMotionFieldNode(gmv, loc)
                          for gmv, loc in zip(gmf, mesh))
@@ -491,17 +481,18 @@ def export_gmf(ekey, dstore):
         logging.warn(GMF_WARNING, dstore.hdf5path)
     fnames = []
     for rlz in rlzs_assoc.realizations:
-        gmfa = gmf_data['%04d' % rlz.ordinal].value
+        gmf_arr = gmf_data['%04d' % rlz.ordinal].value
         ruptures = []
-        for eid, gmfa in get_gmfa_by_eid(gmfa).items():
-            rup = util.Rupture(etags[eid], gmfa['sid'])
-            rup.gmf = gmfa['gmv']
+        for eid, gmfa in group_array(gmf_arr, 'eid').items():
+            rup = util.Rupture(etags[eid], sorted(set(gmfa['sid'])))
+            rup.gmfa = gmfa
             ruptures.append(rup)
         ruptures.sort(key=operator.attrgetter('etag'))
         fname = build_name(dstore, rlz, 'gmf', fmt, samples)
         fnames.append(fname)
         globals()['export_gmf_%s' % fmt](
-            ('gmf', fmt), fname, sitecol, ruptures, rlz, investigation_time)
+            ('gmf', fmt), fname, sitecol, oq.imtls, ruptures, rlz,
+            investigation_time)
     return fnames
 
 
@@ -541,11 +532,13 @@ def export_gmf_spec(ekey, dstore, spec):
     return writer.getsaved()
 
 
-def export_gmf_xml(key, dest, sitecol, ruptures, rlz, investigation_time):
+def export_gmf_xml(key, dest, sitecol, imts, ruptures, rlz,
+                   investigation_time):
     """
     :param key: output_type and export_type
     :param dest: name of the exported file
     :param sitecol: the full site collection
+    :param imts: the list of intensity measure types
     :param ruptures: an ordered list of ruptures
     :param rlz: a realization object
     :param investigation_time: investigation time (None for scenario)
@@ -559,27 +552,28 @@ def export_gmf_xml(key, dest, sitecol, ruptures, rlz, investigation_time):
     writer = hazard_writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path=smltpath, gsim_lt_path=gsimpath)
     writer.serialize(
-        GmfCollection(sitecol, ruptures, investigation_time))
+        GmfCollection(sitecol, imts, ruptures, investigation_time))
     return {key: [dest]}
 
 
-def export_gmf_txt(key, dest, sitecol, ruptures, rlz, investigation_time):
+def export_gmf_txt(key, dest, sitecol, imts, ruptures, rlz,
+                   investigation_time):
     """
     :param key: output_type and export_type
     :param dest: name of the exported file
     :param sitecol: the full site collection
+    :param imts: the list of intensity measure types
     :param ruptures: an ordered list of ruptures
     :param rlz: a realization object
     :param investigation_time: investigation time (None for scenario)
     """
-    imts = ruptures[0].gmf.dtype.names
     # the csv file has the form
     # etag,indices,gmvs_imt_1,...,gmvs_imt_N
     rows = []
     for rupture in ruptures:
         indices = rupture.indices
-        row = [rupture.etag, ' '.join(map(str, indices))] + \
-              [rupture.gmf[imt] for imt in imts]
+        gmvs = [a['gmv'] for a in group_array(rupture.gmfa, 'imti').values()]
+        row = [rupture.etag, ' '.join(map(str, indices))] + gmvs
         rows.append(row)
     write_csv(dest, rows)
     return {key: [dest]}
@@ -595,6 +589,7 @@ def get_rup_idx(ebrup, etag):
 
 def _get_gmfs(dstore, serial, eid):
     oq = dstore['oqparam']
+    min_iml = event_based.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
     rlzs_assoc = dstore['rlzs_assoc']
     sitecol = dstore['sitecol'].complete
     N = len(sitecol.complete)
@@ -604,15 +599,15 @@ def _get_gmfs(dstore, serial, eid):
     rlzs = [rlz for gsim in map(str, gsims)
             for rlz in rlzs_assoc[rup.trt_id, gsim]]
     gmf_dt = numpy.dtype([('%03d' % rlz.ordinal, F32) for rlz in rlzs])
-    gmf_list = event_based.make_gmfs(
-        [rup], sitecol, oq.imtls, rlzs_assoc,
-        oq.truncation_level, correl_model).values()
-    for imt in oq.imtls:
+    gmfadict = create(event_based.GmfColl,
+                      [rup], sitecol, oq.imtls, rlzs_assoc,
+                      oq.truncation_level, correl_model, min_iml).by_rlzi()
+    for imti, imt in enumerate(oq.imtls):
         gmfa = numpy.zeros(N, gmf_dt)
-        for rlz in rlzs:
-            data = gmf_list[rlz.ordinal]
-            ok = data[data['eid'] == eid]
-            gmfa['%03d' % rlz.ordinal][rup.indices] = ok['gmv'][imt]
+        for rlzname in gmf_dt.names:
+            rlzi = int(rlzname)
+            gmvs = get_array(gmfadict[rlzi], eid=eid, imti=imti)['gmv']
+            gmfa[rlzname][rup.indices] = gmvs
         yield gmfa, imt
 
 
