@@ -400,7 +400,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         """
         oq = self.oqparam
         self.random_seed = oq.random_seed
-        self.rlzs_assoc = base.get_rlzs_assoc(self.datastore)
+        self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         self.min_iml = fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
 
     def count_eff_ruptures(self, ruptures_by_trt_id, trt_model):

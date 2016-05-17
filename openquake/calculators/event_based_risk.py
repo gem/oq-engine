@@ -591,7 +591,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param loss_curve_dt:
             numpy dtype for loss curves
         """
-        rlzs = base.get_rlzs_assoc(self.datastore).realizations
+        rlzs = self.datastore['csm_info'].get_rlzs_assoc().realizations
         Q1 = len(builder.mean_quantiles)
         agg_curve_stats = numpy.zeros(Q1, loss_curve_dt)
         for l, loss_type in enumerate(self.riskmodel.loss_types):
