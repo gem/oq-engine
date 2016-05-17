@@ -1266,7 +1266,7 @@ class GsimLogicTree(object):
                                   'branchSetID': 'bs1',
                                   'uncertaintyType': 'gmpeModel'},
                                  nodes=[ltbranch])])])
-        return cls('no-gsim-lt-file', ['*'], ltnode=lt)
+        return cls('', ['*'], ltnode=lt)
 
     def __init__(self, fname, tectonic_region_types, ltnode=None):
         self.fname = fname

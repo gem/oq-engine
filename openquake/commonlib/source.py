@@ -527,26 +527,6 @@ trt_model_dt = numpy.dtype(
      ('sm_id', U32)])
 
 
-# perhaps can be replaced with a GsimLogicTree.from_('FromFile')
-class FakeGsimLt(object):
-    """
-    Used by risk calculators processing hazard stored in a file
-    """
-    tectonic_region_types = all_trts = ['*']
-    fname = ''
-
-    def get_num_paths(self):
-        return 1
-
-    def get_gsim_by_trt(self, gsim_rlz, trt):
-        return 'FromFile'
-
-    def __iter__(self):
-        yield logictree.Realization(
-            value=('FromFile',), weight=1, lt_path=('',), ordinal=0,
-            lt_uid=('b1',))
-
-
 class CompositionInfo(object):
     """
     An object to collect information about the composition of
@@ -556,10 +536,10 @@ class CompositionInfo(object):
     :param source_models: a list of SourceModel instances
     """
     @classmethod
-    def fake(cls):
+    def fake(cls, gsimlt=None):
         fakeSM = SourceModel(
             'fake', 1,  'b1', [TrtModel('*', eff_ruptures=1)],
-            FakeGsimLt(), 0, 1)
+            gsimlt or logictree.GsimLogicTree.from_('FromFile'), 0, 1)
         return cls(0, 1, [fakeSM])
 
     def __init__(self, seed, num_samples, source_models):
