@@ -25,7 +25,6 @@ import numpy
 from openquake.baselib.general import AccumDict
 from openquake.risklib import scientific
 from openquake.commonlib.export import export
-from openquake.calculators.base import get_rlzs_assoc
 from openquake.commonlib import writers, risk_writers
 from openquake.commonlib.util import get_assets, compose_arrays
 from openquake.calculators.views import FIVEDIGITS
@@ -110,7 +109,7 @@ def export_avg_losses(ekey, dstore):
     :param dstore: datastore object
     """
     avg_losses = dstore[ekey[0]].value
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz in rlzs:
@@ -148,7 +147,7 @@ def export_agg_losses(ekey, dstore):
     :param dstore: datastore object
     """
     agg_losses = compactify(dstore[ekey[0]].value)
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     etags = dstore['etags'].value
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz in rlzs:
@@ -169,7 +168,7 @@ def export_agg_losses_ebr(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     agg_losses = dstore[ekey[0]]
     etags = dstore['etags'].value
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     writer = writers.CsvWriter(fmt=FIVEDIGITS)
     for rlz in rlzs:
         for loss_type in loss_types:
@@ -213,7 +212,7 @@ def export_avglosses_csv(ekey, dstore):
 
 @export.add(('rcurves-rlzs', 'csv'))
 def export_rcurves(ekey, dstore):
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
     curves = compactify(dstore[ekey[0]].value)
     name = ekey[0].split('-')[0]
@@ -228,7 +227,7 @@ def export_rcurves(ekey, dstore):
 # this is used by classical_risk
 @export.add(('loss_curves-rlzs', 'csv'))
 def export_loss_curves(ekey, dstore):
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     assets = get_assets(dstore)
     curves = dstore[ekey[0]]
@@ -246,7 +245,7 @@ def export_loss_curves(ekey, dstore):
 def export_damage(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     dmg_by_asset = dstore['dmg_by_asset']  # shape (N, L, R)
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
@@ -288,7 +287,7 @@ def export_damage(ekey, dstore):
 def export_damage_taxon(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     dmg_by_taxon = dstore['dmg_by_taxon']  # shape (T, L, R)
     taxonomies = dstore['assetcol/taxonomies']
     dmg_states = [DmgState(s, i) for i, s in enumerate(damage_states)]
@@ -321,7 +320,7 @@ def export_damage_taxon(ekey, dstore):
 def export_damage_total(ekey, dstore):
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     damage_states = dstore.get_attr('composite_risk_model', 'damage_states')
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     dmg_total = dstore['dmg_total']
     R, = dmg_total.shape
     L = len(loss_types)
@@ -349,7 +348,7 @@ def export_damage_total(ekey, dstore):
     ('loss_maps-rlzs', 'csv'), ('damages-rlzs', 'csv'),
     ('csq_by_asset', 'csv'))
 def export_rlzs_by_asset_csv(ekey, dstore):
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     assets = get_assets(dstore)
     R = len(rlzs)
     value = dstore[ekey[0]].value  # matrix N x R or T x R
@@ -364,7 +363,7 @@ def export_rlzs_by_asset_csv(ekey, dstore):
 @export.add(('csq_by_taxon', 'csv'))
 def export_csq_by_taxon_csv(ekey, dstore):
     taxonomies = dstore['assetcol/taxonomies'].value
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     R = len(rlzs)
     value = dstore[ekey[0]].value  # matrix T x R
     writer = writers.CsvWriter(fmt='%9.6E')
@@ -378,7 +377,7 @@ def export_csq_by_taxon_csv(ekey, dstore):
 # TODO: export loss_maps-stats csv
 @export.add(('csq_total', 'csv'))
 def export_csq_total_csv(ekey, dstore):
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     R = len(rlzs)
     value = dstore[ekey[0]].value
     writer = writers.CsvWriter(fmt='%9.6E')
@@ -425,7 +424,7 @@ def build_damage_array(data, damage_dt):
 @export.add(('dmg_by_asset', 'csv'))
 def export_dmg_by_asset_csv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
@@ -441,7 +440,7 @@ def export_dmg_by_asset_csv(ekey, dstore):
 def export_dmg_by_taxon_csv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
     taxonomies = dstore['assetcol/taxonomies'].value
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
@@ -456,7 +455,7 @@ def export_dmg_by_taxon_csv(ekey, dstore):
 @export.add(('dmg_total', 'csv'))
 def export_dmg_totalcsv(ekey, dstore):
     damage_dt = build_damage_dt(dstore)
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     data = dstore[ekey[0]]
     writer = writers.CsvWriter(fmt='%.6E')
     for rlz in rlzs:
@@ -511,7 +510,7 @@ def export_loss_maps_rlzs_xml_geojson(ekey, dstore):
     oq = dstore['oqparam']
     unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
     unit_by_lt['occupants'] = 'people'
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     loss_maps = dstore[ekey[0]]
     assetcol = dstore['assetcol/array'].value
     aref = dstore['asset_refs'].value
@@ -589,7 +588,7 @@ def export_loss_map_xml_geojson(ekey, dstore):
     oq = dstore['oqparam']
     unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
     unit_by_lt['occupants'] = 'people'
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     loss_map = dstore[ekey[0]]
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     assetcol = dstore['assetcol/array'].value
@@ -635,7 +634,7 @@ def export_loss_map_xml_geojson(ekey, dstore):
 def export_agglosses(ekey, dstore):
     unit_by_lt = {ct['name']: ct['unit'] for ct in dstore['cost_types']}
     unit_by_lt['occupants'] = 'people'
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     agglosses = dstore[ekey[0]]
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     L = len(loss_types)
@@ -696,7 +695,7 @@ def get_paths(rlz):
 def _gen_writers(dstore, writercls, root):
     # build XMLWriter instances
     oq = dstore['oqparam']
-    rlzs = get_rlzs_assoc(dstore).realizations
+    rlzs = dstore['csm_info'].get_rlzs_assoc().realizations
     cost_types = dstore['cost_types']
     L, R = len(cost_types), len(rlzs)
     poes = oq.conditional_loss_poes if 'maps' in root else [None]
@@ -855,7 +854,7 @@ def export_bcr_map_rlzs(ekey, dstore):
     bcr_data = dstore['bcr-rlzs']
     N, R = bcr_data.shape
     oq = dstore['oqparam']
-    realizations = get_rlzs_assoc(dstore).realizations
+    realizations = dstore['csm_info'].get_rlzs_assoc().realizations
     loss_types = dstore.get_attr('composite_risk_model', 'loss_types')
     writercls = risk_writers.BCRMapXMLWriter
     fnames = []

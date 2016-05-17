@@ -68,14 +68,6 @@ def set_array(longarray, shortarray):
     longarray[len(shortarray):] = numpy.nan
 
 
-def get_rlzs_assoc(dstore):
-    """
-    Build a RlzsAssoc instance from `csm_info` in the datastore, or
-    return a trivial instance if there is no such info.
-    """
-    return dstore['csm_info'].get_rlzs_assoc()
-
-
 class BaseCalculator(with_metaclass(abc.ABCMeta)):
     """
     Abstract base class for all calculators.
@@ -359,7 +351,7 @@ class HazardCalculator(BaseCalculator):
         """
         self.random_seed = None
         if 'csm_info' in self.datastore or 'csm_info' in self.datastore.parent:
-            self.rlzs_assoc = get_rlzs_assoc(self.datastore)
+            self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         else:  # build a fake; used by risk-from-file calculators
             self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
             self.rlzs_assoc = fake.get_rlzs_assoc()
@@ -652,7 +644,7 @@ def get_gmfs(dstore):
         return etags, {(0, 'FromFile'): gmfs_by_imt}
 
     # else from datastore
-    rlzs_assoc = get_rlzs_assoc(dstore)
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
     rlzs = rlzs_assoc.realizations
     sitecol = dstore['sitecol']
     # NB: if the hazard site collection has N sites, the hazard
