@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
+import io
 import sys
 import copy
 import math
@@ -533,7 +534,7 @@ class FakeGsimLt(object):
     Used by risk calculators processing hazard stored in a file
     """
     tectonic_region_types = all_trts = ['*']
-    fname = 'no-gsim-lt-file'
+    fname = None
 
     def get_num_paths(self):
         return 1
@@ -584,7 +585,8 @@ class CompositionInfo(object):
         lst = [(sm.name, sm.weight, '_'.join(sm.path),
                 sm.gsim_lt.get_num_paths(), sm.samples)
                for i, sm in enumerate(self.source_models)]
-        gsim_lt_xml = self.source_models[0].gsim_lt.fname
+        fname = self.source_models[0].gsim_lt.fname
+        gsim_lt_xml = open(fname).read() if fname else 'no-gsim-lt-file'
         return (dict(
             tm_data=numpy.array(data, trt_model_dt),
             sm_data=numpy.array(lst, source_model_dt)),
@@ -606,7 +608,8 @@ class CompositionInfo(object):
             if self.gsim_lt_xml == 'no-gsim-lt-file':
                 gsim_lt = FakeGsimLt()
             else:
-                gsim_lt = logictree.GsimLogicTree(self.gsim_lt_xml, trts)
+                gsim_lt = logictree.GsimLogicTree(
+                    io.BytesIO(self.gsim_lt_xml), trts)
             sm = SourceModel(rec['name'], rec['weight'], path, trtmodels,
                              gsim_lt, sm_id, rec['samples'])
             self.source_models.append(sm)
