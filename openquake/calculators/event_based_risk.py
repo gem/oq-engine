@@ -120,7 +120,7 @@ def _old_loss_curves(asset_values, rcurves, ratios):
                         for avalue, poes in zip(asset_values, rcurves)])
 
 
-def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
+def _aggregate_output(output, compositemodel, agg, ass, idx, result, monitor):
     # update the result dictionary and the agg array with each output
 
     asset_ids = [a.ordinal for a in output.assets]
@@ -151,8 +151,8 @@ def _aggregate_output(output, compositemodel, agg, idx, result, monitor):
                 data = [(eid, aid, loss)
                         for eid, loss in zip(out.eids, losses)
                         if loss.sum() > 0]
-                result['ASSLOSS'][l, r].append(
-                    numpy.array(data, monitor.ela_dt))
+                if data:
+                    ass[l, r].append(numpy.array(data, monitor.ela_dt))
 
             # agglosses
             agg[indices, l, r] += losses
@@ -181,13 +181,12 @@ def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     E = len(eids)
     idx = dict(zip(eids, range(E)))
     agg = numpy.zeros((E, L, R, I), F32)
+    ass = collections.defaultdict(list)
 
     def zeroN():
         return numpy.zeros((monitor.num_assets, I))
     result = dict(RC=square(L, R, AccumDict), IC=square(L, R, AccumDict),
-                  AGGLOSS=square(L, R, list))
-    if monitor.asset_loss_table:
-        result['ASSLOSS'] = square(L, R, list)
+                  AGGLOSS=AccumDict(), ASSLOSS=AccumDict())
     if monitor.avg_losses:
         result['AVGLOSS'] = square(L, R, zeroN)
 
@@ -195,12 +194,16 @@ def event_based_risk(riskinput, riskmodel, rlzs_assoc, assetcol, monitor):
     for output in riskmodel.gen_outputs(
             riskinput, rlzs_assoc, monitor, assetcol):
         with agglosses_mon:
-            _aggregate_output(output, riskmodel, agg, idx, result, monitor)
-    for (l, r), lst in numpy.ndenumerate(result['AGGLOSS']):
-        records = numpy.array(
-            [(eids[i], loss) for i, loss in enumerate(agg[:, l, r])
-             if loss.sum() > 0], monitor.elt_dt)
-        result['AGGLOSS'][l, r] = records
+            _aggregate_output(
+                output, riskmodel, agg, ass, idx, result, monitor)
+    for (l, r) in itertools.product(range(L), range(R)):
+        records = [(eids[i], loss) for i, loss in enumerate(agg[:, l, r])
+                   if loss.sum() > 0]
+        if records:
+            result['AGGLOSS'][l, r] = numpy.array(records, monitor.elt_dt)
+    for lr in ass:
+        if ass[lr]:
+            result['ASSLOSS'][lr] = numpy.concatenate(ass[lr])
 
     # store the size of the GMFs
     result['gmfbytes'] = monitor.gmfbytes
@@ -255,9 +258,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 oq.asset_correlation)
             logging.info('Generated %s epsilons', eps.shape)
 
-        # ugly: fix the minimum_intensity dictionary, should go before
-        event_based.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
-
         # preparing empty datasets
         loss_types = self.riskmodel.loss_types
         self.C = self.oqparam.loss_curve_resolution
@@ -303,9 +303,20 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
 
+        if not oq.minimum_intensity:
+            # infer it from the risk models if not directly set in job.ini
+            oq.minimum_intensity = self.riskmodel.get_min_iml()
+        min_iml = event_based.fix_minimum_intensity(
+            oq.minimum_intensity, oq.imtls)
+        if min_iml.sum() == 0:
+            logging.warn('The GMFs are not filtered: '
+                         'you may want to set a minimum_intensity')
+        else:
+            logging.info('minimum_intensity=%s', oq.minimum_intensity)
+
         riskinputs = self.riskmodel.build_inputs_from_ruptures(
             self.sitecol.complete, all_ruptures, oq.truncation_level,
-            correl_model, oq.minimum_intensity, eps, oq.concurrent_tasks or 1)
+            correl_model, min_iml, eps, oq.concurrent_tasks or 1)
         # NB: I am using generators so that the tasks are submitted one at
         # the time, without keeping all of the arguments in memory
         return starmap(
@@ -325,15 +336,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.gmfbytes += result.pop('gmfbytes')
         with self.monitor('saving event loss tables', autoflush=True):
             if self.oqparam.asset_loss_table:
-                for (l, r), arrays in numpy.ndenumerate(result.pop('ASSLOSS')):
-                    for array in arrays:
-                        self.ass_loss_table[l, r].extend(array)
-                        self.ass_bytes += array.nbytes
-            for (l, r), array in numpy.ndenumerate(result.pop('AGGLOSS')):
-                self.agg_loss_table[l, r].extend(array)
+                for lr, array in sorted(result.pop('ASSLOSS').items()):
+                    self.ass_loss_table[lr].extend(array)
+                    self.ass_bytes += array.nbytes
+            for lr, array in sorted(result.pop('AGGLOSS').items()):
+                self.agg_loss_table[lr].extend(array)
                 self.agg_bytes += array.nbytes
             self.datastore.hdf5.flush()
-
         return acc + result
 
     def post_execute(self, result):
@@ -460,7 +469,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if len(rlzs) > 1:
             self.Q1 = len(self.oqparam.quantile_loss_curves) + 1
             with self.monitor('computing stats'):
-                self.compute_store_stats(rlzs, builder)
+                if 'rcurves-rlzs' in self.datastore:
+                    self.compute_store_stats(rlzs, builder)
+                if oq.avg_losses:  # stats for avg_losses
+                    stats = scientific.SimpleStats(
+                        rlzs, oq.quantile_loss_curves)
+                    stats.compute_and_store('avg_losses', self.datastore)
+
+        self.datastore.hdf5.flush()
 
     def build_agg_curve_and_stats(self, builder):
         """
@@ -493,9 +509,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     # ################### methods to compute statistics  #################### #
 
     def _collect_all_data(self):
-        # return a list of list of outputs
-        if 'rcurves-rlzs' not in self.datastore:
-            return []
+        # called only if 'rcurves-rlzs' in dstore; return a list of outputs
         all_data = []
         assets = self.datastore['asset_refs'].value[self.assetcol.array['idx']]
         rlzs = self.rlzs_assoc.realizations
@@ -565,12 +579,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.datastore['loss_curves-stats'] = loss_curves
         if oq.conditional_loss_poes:
             self.datastore['loss_maps-stats'] = loss_maps
-
-        if oq.avg_losses:  # stats for avg_losses
-            stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
-            stats.compute('avg_losses-rlzs', self.datastore)
-
-        self.datastore.hdf5.flush()
 
     def build_agg_curve_stats(self, builder, agg_curve, loss_curve_dt):
         """

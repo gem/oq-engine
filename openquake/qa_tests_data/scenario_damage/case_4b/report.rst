@@ -1,7 +1,7 @@
 scenario hazard
 ===============
 
-gem-tstation:/home/michele/ssd/calc_12585.hdf5 updated Wed May  4 04:54:02 2016
+gem-tstation:/home/michele/ssd/calc_16303.hdf5 updated Mon May 16 14:19:01 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  42                 
 master_seed                  0                  
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-git16c052c'
 ============================ ===================
 
 Input files
@@ -40,8 +40,8 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(2)
-  0,BooreAtkinson2008: ['BooreAtkinson2008']
-  0,ChiouYoungs2008: ['ChiouYoungs2008']>
+  0,BooreAtkinson2008(): ['BooreAtkinson2008()']
+  0,ChiouYoungs2008(): ['ChiouYoungs2008()']>
 
 Exposure model
 --------------
@@ -67,8 +67,8 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.009     0.0       1     
-computing gmfs          0.006     0.0       1     
-reading exposure        0.006     0.0       1     
+filtering sites         0.008     0.0       1     
+reading exposure        0.007     0.0       1     
+computing gmfs          0.005     0.0       1     
 reading site collection 5.960E-06 0.0       1     
 ======================= ========= ========= ======

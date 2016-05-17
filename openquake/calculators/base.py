@@ -662,9 +662,11 @@ def get_gmfs(dstore):
     gmfs = {(trt_id, gsim): numpy.zeros((N, E), imt_dt)
             for trt_id, gsim in dstore['rlzs_assoc']}
     for i, rlz in enumerate(rlzs):
-        for rec in dstore['gmf_data/%04d' % i]:
-            sid = rec['sid']
+        data = general.group_array(dstore['gmf_data/%04d' % i], 'sid')
+        for sid, array in data.items():
             if sid in risk_indices:
-                for trt_id, gsim in gmfs:
-                    gmfs[trt_id, str(rlz)][sid, rec['eid']] = rec['gmv']
+                for imti, imt in enumerate(oq.imtls):
+                    a = general.get_array(array, imti=imti)
+                    for trt_id, gsim in gmfs:
+                        gmfs[trt_id, str(rlz)][imt][sid, a['eid']] = a['gmv']
     return dstore['etags'].value, gmfs

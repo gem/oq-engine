@@ -22,10 +22,10 @@ from nose.plugins.attrib import attr
 
 import numpy.testing
 
+from openquake.baselib.general import get_array
 from openquake.commonlib.datastore import read
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.commonlib.export import export
-from openquake.calculators.event_based import get_gmvs_by_sid
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_4, case_5, case_6, case_7, case_12,
@@ -82,10 +82,10 @@ class EventBasedTestCase(CalculatorTestCase):
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
-            gmvs_by_sid = get_gmvs_by_sid(dstore['gmf_data/0000'])
+            gmvs = dstore['gmf_data/0000'].value
             dstore.close()
-            gmvs_site_1 = gmvs_by_sid[0]['PGA']
-            gmvs_site_2 = gmvs_by_sid[1]['PGA']
+            gmvs_site_1 = get_array(gmvs, sid=0, imti=0)['gmv']
+            gmvs_site_2 = get_array(gmvs, sid=1, imti=0)['gmv']
             joint_prob_0_5 = joint_prob_of_occurrence(
                 gmvs_site_1, gmvs_site_2, 0.5, oq.investigation_time,
                 oq.ses_per_logic_tree_path)
@@ -166,10 +166,8 @@ class EventBasedTestCase(CalculatorTestCase):
         ltr = out['hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[0])
-        # NB: we are testing that the file ltr_1.csv is equal to
-        # ltr_0.csv, as it should be for the hazard curves
         self.assertEqualFiles(
-            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[1])
+            'expected/hc-smltp_b1-gsimltp_b1-ltr_1.csv', ltr[1])
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4(self):
@@ -209,7 +207,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_7(self):
-        # 2 models x 3 GMPEs, 10 samples * 200 SES
+        # 2 models x 3 GMPEs, 10 samples * 40 SES
         expected = [
             'hazard_curve-mean.csv',
             'quantile_curve-0.1.csv',

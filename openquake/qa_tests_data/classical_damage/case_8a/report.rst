@@ -1,7 +1,7 @@
 Classical PSHA-Based Hazard
 ===========================
 
-gem-tstation:/home/michele/ssd/calc_12606.hdf5 updated Wed May  4 04:54:07 2016
+gem-tstation:/home/michele/ssd/calc_16324.hdf5 updated Mon May 16 14:19:07 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   20.0
 random_seed                  42                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-git16c052c'
 ============================ ===================
 
 Input files
@@ -47,11 +47,11 @@ b1        1.000  `source_model.xml <source_model.xml>`_ simple(2)       2/2
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ============================== ========= ========== ==========
-trt_id gsims                          distances siteparams ruptparams
-====== ============================== ========= ========== ==========
-0      AkkarBommer2010 SadighEtAl1997 rjb rrup  vs30       rake mag  
-====== ============================== ========= ========== ==========
+====== ================================== ========= ========== ==========
+trt_id gsims                              distances siteparams ruptparams
+====== ================================== ========= ========== ==========
+0      AkkarBommer2010() SadighEtAl1997() rjb rrup  vs30       rake mag  
+====== ================================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -59,8 +59,8 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=2, rlzs=2)
-  0,AkkarBommer2010: ['<1,b1,b2,w=0.5>']
-  0,SadighEtAl1997: ['<0,b1,b1,w=0.5>']>
+  0,AkkarBommer2010(): ['<1,b1,b2,w=0.5>']
+  0,SadighEtAl1997(): ['<0,b1,b1,w=0.5>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -73,14 +73,14 @@ source_model.xml 0      Active Shallow Crust 1           1,694        1,694
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 2591          
-count_eff_ruptures_num_tasks             15            
-count_eff_ruptures_sent.monitor          35610         
-count_eff_ruptures_sent.rlzs_assoc       44820         
-count_eff_ruptures_sent.sitecol          6555          
-count_eff_ruptures_sent.siteidx          75            
-count_eff_ruptures_sent.sources          16415         
-count_eff_ruptures_tot_received          38857         
+count_eff_ruptures_max_received_per_task 2590          
+count_eff_ruptures_num_tasks             14            
+count_eff_ruptures_sent.monitor          33236         
+count_eff_ruptures_sent.rlzs_assoc       36106         
+count_eff_ruptures_sent.sitecol          6118          
+count_eff_ruptures_sent.siteidx          70            
+count_eff_ruptures_sent.sources          15499         
+count_eff_ruptures_tot_received          36260         
 hazard.input_weight                      1694.0        
 hazard.n_imts                            1             
 hazard.n_levels                          8.0           
@@ -109,8 +109,16 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 1,694  15        0.001       0.076      0.0      
+0            1         SimpleFaultSource 1,694  15        0.002       0.070      0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+================= =========== ========== ========= ======
+source_class      filter_time split_time calc_time counts
+================= =========== ========== ========= ======
+SimpleFaultSource 0.002       0.070      0.0       1     
+================= =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
@@ -121,13 +129,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.093     0.0       1     
-splitting sources              0.076     0.0       1     
-reading composite source model 0.009     0.0       1     
-total count_eff_ruptures       0.006     0.004     15    
-store source_info              0.004     0.0       1     
-reading exposure               0.002     0.0       1     
-filtering sources              0.001     0.0       1     
-aggregate curves               1.726E-04 0.0       15    
-reading site collection        5.960E-06 0.0       1     
+managing sources               0.092     0.0       1     
+splitting sources              0.070     0.0       1     
+reading exposure               0.021     0.0       1     
+reading composite source model 0.011     0.0       1     
+store source_info              0.008     0.0       1     
+total count_eff_ruptures       0.004     0.0       14    
+filtering sources              0.002     0.0       1     
+aggregate curves               2.971E-04 0.0       14    
+reading site collection        8.106E-06 0.0       1     
 ============================== ========= ========= ======

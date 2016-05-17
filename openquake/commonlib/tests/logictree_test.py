@@ -2337,13 +2337,13 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         gsim_lt = self.parse_valid(xml, ["Stable Shallow Crust"])
         [rlz] = gsim_lt
         gsim = gsim_lt.get_gsim_by_trt(rlz, 'Stable Shallow Crust')
-        self.assertEqual(str(gsim), 'AkkarBommer2010')
+        self.assertEqual(str(gsim), 'AkkarBommer2010()')
         # this test was broken in release 1.4, a wrong ordering
         # of the value gave back LinLee2008SSlab instead of AkkarBommer2010
         self.assertEqual(map(str, rlz.value), [
-            'AkkarBommer2010', 'AkkarBommer2010', 'ToroEtAl2002SHARE',
-            'ZhaoEtAl2006SInter', 'ZhaoEtAl2006SSlab', 'FaccioliEtAl2010',
-            'LinLee2008SSlab'])
+            'AkkarBommer2010()', 'AkkarBommer2010()', 'ToroEtAl2002SHARE()',
+            'ZhaoEtAl2006SInter()', 'ZhaoEtAl2006SSlab()',
+            'FaccioliEtAl2010()', 'LinLee2008SSlab()'])
 
     def test_gsim_with_kwargs(self):
         class FakeGMPETable(object):
@@ -2406,7 +2406,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
     def test_sample_gmpe(self):
         (value, weight, branch_ids, _, _) = logictree.sample_one(
             self.gmpe_lt, self.rnd)
-        self.assertEqual(value, ('ChiouYoungs2008', 'SadighEtAl1997'))
+        self.assertEqual(value, ('ChiouYoungs2008()', 'SadighEtAl1997()'))
         self.assertEqual(weight, 0.5)
         self.assertEqual(('b2', 'b3'), branch_ids)
 
