@@ -7,13 +7,13 @@
                     applyToTectonicRegionType="Active Shallow Crust">
 
                 <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
-                    <uncertaintyWeight>0.75</uncertaintyWeight>
+                  <uncertaintyModel>BooreAtkinson2008</uncertaintyModel>
+                  <uncertaintyWeight>0.75</uncertaintyWeight>
                 </logicTreeBranch>
                 
                 <logicTreeBranch branchID="b2">
- 					<uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
-                    <uncertaintyWeight>0.25</uncertaintyWeight>
+		  <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
+                  <uncertaintyWeight>0.25</uncertaintyWeight>
                 </logicTreeBranch>
 
             </logicTreeBranchSet>

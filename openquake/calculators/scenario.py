@@ -64,12 +64,8 @@ class ScenarioCalculator(base.HazardCalculator):
             rupture, self.sitecol, oq.imtls, self.gsims,
             trunc_level, correl_model)
         gsim_lt = readinput.get_gsim_lt(oq)
-        [trt] = gsim_lt.tectonic_region_types
-        fakeSM = source.SourceModel(
-            'fake', 1,  ('b1',), [source.TrtModel(trt, eff_ruptures=1)],
-            gsim_lt, 0, 1)
-        self.datastore['csm_info'] = cinfo = source.CompositionInfo(
-            oq.random_seed, 0, [fakeSM])
+        cinfo = source.CompositionInfo.fake(gsim_lt)
+        self.datastore['csm_info'] = cinfo
         self.rlzs_assoc = cinfo.get_rlzs_assoc()
 
     def init(self):

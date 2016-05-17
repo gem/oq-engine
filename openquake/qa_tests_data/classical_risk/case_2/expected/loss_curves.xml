@@ -4,7 +4,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <lossCurves
-    gsimTreePath=""
+    gsimTreePath="b1"
     investigationTime="50.0"
     lossType="structural"
     riskInvestigationTime="50.0"

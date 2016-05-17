@@ -540,7 +540,7 @@ class CompositionInfo(object):
         fakeSM = SourceModel(
             'fake', 1,  'b1', [TrtModel('*', eff_ruptures=1)],
             gsimlt or logictree.GsimLogicTree.from_('FromFile'), 0, 1)
-        return cls(0, 1, [fakeSM])
+        return cls(0, 0, [fakeSM])
 
     def __init__(self, seed, num_samples, source_models):
         self.seed = seed
@@ -585,7 +585,7 @@ class CompositionInfo(object):
             path = tuple(rec['path'].split('_'))
             trts = set(tm.trt for tm in trtmodels)
             if self.gsim_lt_xml == 'no-gsim-lt-file':
-                gsim_lt = FakeGsimLt()
+                gsim_lt = logictree.GsimLogicTree.from_('FromFile')
             else:
                 gsim_lt = logictree.GsimLogicTree(self.gsim_fname, trts)
             sm = SourceModel(rec['name'], rec['weight'], path, trtmodels,
