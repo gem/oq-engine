@@ -569,13 +569,13 @@ class CompositionInfo(object):
         lst = [(sm.name, sm.weight, '_'.join(sm.path),
                 sm.gsim_lt.get_num_paths(), sm.samples)
                for i, sm in enumerate(self.source_models)]
-        fname = self.source_models[0].gsim_lt.fname
-        gsim_lt_xml = open(fname).read() if fname else 'no-gsim-lt-file'
+        gsim_lt = self.source_models[0].gsim_lt
         return (dict(
             tm_data=numpy.array(data, trt_model_dt),
             sm_data=numpy.array(lst, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     trts=trts, gsim_lt_xml=gsim_lt_xml, gsim_fname=fname))
+                     trts=trts, gsim_lt_xml=str(gsim_lt),
+                     gsim_fname=gsim_lt.fname))
 
     def __fromh5__(self, dic, attrs):
         tm_data = group_array(dic['tm_data'], 'sm_id')
@@ -589,10 +589,10 @@ class CompositionInfo(object):
                 for trt_id, trti, effrup, sm_id in tdata if effrup > 0]
             path = tuple(rec['path'].split('_'))
             trts = set(tm.trt for tm in trtmodels)
-            if self.gsim_lt_xml == 'no-gsim-lt-file':
-                gsim_lt = logictree.GsimLogicTree.from_('FromFile')
-            else:
+            if self.gsim_fname.endswith('.xml'):
                 gsim_lt = logictree.GsimLogicTree(self.gsim_fname, trts)
+            else:  # fake file with the name of the GSIM
+                gsim_lt = logictree.GsimLogicTree.from_(self.gsim_fname)
             sm = SourceModel(rec['name'], rec['weight'], path, trtmodels,
                              gsim_lt, sm_id, rec['samples'])
             self.source_models.append(sm)

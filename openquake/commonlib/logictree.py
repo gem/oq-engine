@@ -41,7 +41,7 @@ from openquake.baselib.python3compat import raise_
 import openquake.hazardlib
 from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib import geo
-from openquake.commonlib import valid
+from openquake.commonlib import valid, writers
 from openquake.commonlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 
@@ -1266,7 +1266,7 @@ class GsimLogicTree(object):
                                   'branchSetID': 'bs1',
                                   'uncertaintyType': 'gmpeModel'},
                                  nodes=[ltbranch])])])
-        return cls('', ['*'], ltnode=lt)
+        return cls(str(gsim), ['*'], ltnode=lt)
 
     def __init__(self, fname, tectonic_region_types, ltnode=None):
         self.fname = fname
@@ -1283,6 +1283,12 @@ class GsimLogicTree(object):
                 'Could not find branches with attribute '
                 "'applyToTectonicRegionType' in %s" %
                 set(tectonic_region_types))
+
+    def __str__(self):
+        """
+        :returns: an XML string representing the logic tree
+        """
+        return writers.tostring(self._ltnode)
 
     def reduce(self, trts):
         """
@@ -1409,7 +1415,7 @@ class GsimLogicTree(object):
             yield Realization(tuple(value), weight, tuple(lt_path),
                               i, tuple(lt_uid))
 
-    def __str__(self):
+    def __repr__(self):
         lines = ['%s,%s,%s,w=%s' % (b.bset['applyToTectonicRegionType'],
                                     b.id, b.uncertainty, b.weight)
                  for b in self.branches if b.effective]

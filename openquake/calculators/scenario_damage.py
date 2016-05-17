@@ -142,7 +142,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if 'gmfs' in self.oqparam.inputs:
             self.pre_calculator = None
         base.RiskCalculator.pre_execute(self)
-        self.init()
         self.monitor.consequence_models = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
         self.etags, gmfs = base.get_gmfs(self.datastore)
