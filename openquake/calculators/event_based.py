@@ -471,7 +471,8 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
             mul = numpy.average(multiplicity, weights=numsites)
             self.datastore.set_attrs(dset.name, sites_per_rupture=spr,
                                      multiplicity=mul)
-        self.datastore.set_nbytes('rup_data')
+        if self.rup_data:
+            self.datastore.set_nbytes('rup_data')
 
 
 # ######################## GMF calculator ############################ #
