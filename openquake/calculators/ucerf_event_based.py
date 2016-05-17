@@ -31,7 +31,7 @@ import random
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
 from openquake.commonlib import readinput, parallel, datastore, valid, source
-from openquake.calculators import base, views, event_based
+from openquake.calculators import base, event_based
 
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.pmf import PMF
@@ -352,7 +352,7 @@ def generate_background_ruptures(tom, locations, occurrence, mag, npd,
     :returns:
         List of ruptures
     """
-    rupture_set = []
+    ruptures = []
     n_vals = len(locations)
     depths = hdd.sample_pairs(n_vals)
     nodal_planes = npd.sample_pairs(n_vals)
@@ -364,10 +364,10 @@ def generate_background_ruptures(tom, locations, occurrence, mag, npd,
                                       lower_seismogenic_depth)
         rupture_probability = (occurrence[i] * nodal_planes[i][0] *
                                depths[i][0])
-        rupture_set.append(ParametricProbabilisticRupture(
+        ruptures.append(ParametricProbabilisticRupture(
             mag, nodal_planes[i][1].rake, trt, hypocentre, surface,
             PointSource, rupture_probability, tom))
-    return rupture_set
+    return ruptures
 
 
 def prefilter_background_model(hdf5, sites, integration_distance, msr=WC1994(),
@@ -450,46 +450,47 @@ def sample_background_model(
         rate_cnt = sampler[rate_idx, i]
         occurrence = rates[rate_idx, i]
         locations = valid_locs[rate_idx, :]
-        rupture_set = generate_background_ruptures(
+        ruptures = generate_background_ruptures(
             tom, locations, occurrence,
             mag, npd, hdd, upper_seismogenic_depth,
             lower_seismogenic_depth, msr, aspect, trt)
-        background_ruptures.extend(rupture_set)
+        background_ruptures.extend(ruptures)
         background_n_occ.extend(rate_cnt.tolist())
     return background_ruptures, background_n_occ
 
 
+# this is a fake source object build around the HDF5 UCERF file
+# it cannot work on a cluster unless the file is on a shared file system
 class UCERFSESControl(object):
     """
-        :param str branch:
-            Valid branch of UCERF
-        :param sites:
-            Sites for consideration of events as instance of :class:
-            openquake.hazardlib.site.SiteCollection
-        :param float investigation_time:
-            Investigation time of event set (years)
-        :param float min_mag:
-            Minimim magnitude for consideration of background sources
-        :param npd:
-            Nodal plane distribution as instance of :class:
-            openquake.hazardlib.pmf.PMF
-        :param hdd:
-            Hypocentral depth distribution as instance of :class:
-            openquake.hazardlib.pmf.PMF
-        :param float aspect:
-            Aspect ratio
-        :param float upper_seismoge nic_depth:
-            Upper seismogenic depth (km)
-        :param float lower_seismogenic_depth:
-            Lower seismogenic depth (km)
-        :param msr:
-            Magnitude scaling relation
-        :param float mesh_spacing:
-            Spacing (km) of fault mesh
-        :param str trt:
-            Tectonic region type
-        :param float integration_distance:
-            Maximum distance from rupture to site for consideration
+    :param source_file:
+        Path to an existing HDF5 file containing the UCERF model
+    :param str id:
+        Valid branch of UCERF
+    :param float investigation_time:
+        Investigation time of event set (years)
+    :param float min_mag:
+        Minimim magnitude for consideration of background sources
+    :param npd:
+        Nodal plane distribution as instance of :class:
+        openquake.hazardlib.pmf.PMF
+    :param hdd:
+        Hypocentral depth distribution as instance of :class:
+        openquake.hazardlib.pmf.PMF
+    :param float aspect:
+        Aspect ratio
+    :param float upper_seismoge nic_depth:
+        Upper seismogenic depth (km)
+    :param float lower_seismogenic_depth:
+        Lower seismogenic depth (km)
+    :param msr:
+        Magnitude scaling relation
+    :param float mesh_spacing:
+        Spacing (km) of fault mesh
+    :param str trt:
+        Tectonic region type
+    :param float integration_distance:
+        Maximum distance from rupture to site for consideration
     """
     def __init__(self, source_file, id, investigation_time, min_mag,
                  npd=NPD, hdd=HDD, aspect=1.5,
@@ -524,14 +525,13 @@ class UCERFSESControl(object):
         """
         self.sites = sites
         self.integration_distance = integration_distance
-        hdf5 = h5py.File(self.source_file)
-        self.background_idx = prefilter_background_model(
-            hdf5,
-            self.sites,
-            integration_distance,
-            self.msr,
-            self.aspect)
-        hdf5.close()
+        with h5py.File(self.source_file) as hdf5:
+            self.background_idx = prefilter_background_model(
+                hdf5,
+                self.sites,
+                integration_distance,
+                self.msr,
+                self.aspect)
 
     def get_min_max_mag(self):
         """
@@ -560,19 +560,20 @@ class UCERFSESControl(object):
                            integration_distance=1000.):
         """
         Generates the event set corresponding to a particular branch
-
         """
         if sites:
             self.update_background_site_filter(sites, integration_distance)
         idxset = self.build_idx_set(branch_id)
-        # Get rates from file
+
+        # get rates from file
         hdf5 = h5py.File(self.source_file, "r+")
         rates = hdf5[idxset["rate_idx"]][:]
         occurrences = self.tom.sample_number_of_occurrences(rates)
         indices = numpy.where(occurrences)[0]
         logging.info('Considering %s %s', branch_id, indices)
-        # Get ruptures from the indices
-        rupture_set = []
+
+        # get ruptures from the indices
+        ruptures = []
         rupture_occ = []
         for idx, n_occ in zip(indices, occurrences[indices]):
             ucerf_rup, _ = get_ucerf_rupture(
@@ -580,10 +581,10 @@ class UCERFSESControl(object):
                 self.integration_distance, self.mesh_spacing,
                 self.tectonic_region_type)
             if ucerf_rup:
-                rupture_set.append(ucerf_rup)
+                ruptures.append(ucerf_rup)
                 rupture_occ.append(n_occ)
 
-        # Sample Background sources
+        # sample background sources
         background_ruptures, background_n_occ = sample_background_model(
             hdf5,
             self.tom,
@@ -593,10 +594,10 @@ class UCERFSESControl(object):
             self.usd, self.lsd,
             self.msr, self.aspect,
             self.tectonic_region_type)
-        rupture_set.extend(background_ruptures)
+        ruptures.extend(background_ruptures)
         rupture_occ.extend(background_n_occ)
         hdf5.close()
-        return rupture_set, rupture_occ
+        return ruptures, rupture_occ
 
     @staticmethod
     def build_idx_set(branch_code):
@@ -724,7 +725,7 @@ class UCERFEventBasedRuptureCalculator(
         parser = source.SourceModelParser(
             UCERFSourceConverter(self.oqparam.investigation_time,
                                  self.oqparam.rupture_mesh_spacing))
-        self.source, = parser.parse_sources(
+        [self.source] = parser.parse_sources(
             self.oqparam.inputs["source_model"])
         branches = sorted(self.smlt.branches.items())
         min_mag, max_mag = None, None
@@ -742,14 +743,15 @@ class UCERFEventBasedRuptureCalculator(
 
     def execute(self):
         """
-        Run the ucerf event based calculation
+        Run the ucerf rupture calculation
         """
         id_set = [(key, self.smlt.branches[key].value,
                   self.smlt.branches[key].weight)
                   for key in self.smlt.branches]
         ruptures_by_branch_id = parallel.apply_reduce(
             compute_ruptures,
-            (id_set, self.source, self.sitecol, self.oqparam, self.monitor))
+            (id_set, self.source, self.sitecol, self.oqparam, self.monitor),
+            concurrent_tasks=self.oqparam.concurrent_tasks)
         return ruptures_by_branch_id
 
 
