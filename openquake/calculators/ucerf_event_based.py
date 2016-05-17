@@ -31,10 +31,7 @@ import random
 from openquake.baselib.general import AccumDict
 from openquake.baselib.python3compat import zip
 from openquake.commonlib import readinput, parallel, datastore, valid, source
-
 from openquake.calculators import base, views, event_based
-from openquake.calculators.classical import ClassicalCalculator
-
 
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.pmf import PMF
@@ -621,48 +618,6 @@ class UCERFSESControl(object):
         idx_set["total_key"] = branch_code.replace("/", "|")
         return idx_set
 
-
-def num_affected_sites(rupture, num_sites):
-    """
-    :param rupture: a EBRupture object
-    :param num_sites: the total number of sites
-    :returns: the number of sites affected by the rupture
-    """
-    return (len(rupture.indices) if rupture.indices is not None
-            else num_sites)
-
-
-def get_site_ids(rupture, num_sites):
-    """
-    :param rupture: a EBRupture object
-    :param num_sites: the total number of sites
-    :returns: the indices of the sites affected by the rupture
-    """
-    if rupture.indices is None:
-        return list(range(num_sites))
-    return rupture.indices
-
-
-@datastore.view.add('col_rlz_assocs')
-def view_col_rlz_assocs(name, dstore):
-    """
-    :returns: an array with the association array col_ids -> rlz_ids
-    """
-    rlzs_assoc = dstore['rlzs_assoc']
-    num_ruptures = dstore.get_attr('etags', 'num_ruptures')
-    num_rlzs = len(rlzs_assoc.realizations)
-    col_ids_list = [[] for _ in range(num_rlzs)]
-    for rlz in rlzs_assoc.realizations:
-        for col_id in sorted(rlzs_assoc.get_col_ids(rlz)):
-            if num_ruptures[col_id]:
-                col_ids_list[rlz.ordinal].append(col_id)
-    assocs = collections.defaultdict(list)
-    for i, col_ids in enumerate(col_ids_list):
-        assocs[tuple(col_ids)].append(i)
-    tbl = [['Collections', 'Realizations']] + sorted(assocs.items())
-    return views.rst_table(tbl)
-
-
 # #################################################################### #
 
 
@@ -719,16 +674,15 @@ def compute_ruptures(branch_info, source, sitecol, oqparam, monitor):
         # set the seed before calling generate_event_set
         numpy.random.seed(oqparam.random_seed + trt_model_id)
         for ses_idx in range(1, oqparam.ses_per_logic_tree_path + 1):
-            rups, n_occs = source.generate_event_set(branch_id, sitecol,
-                                                     integration_distance)
+            rups, n_occs = source.generate_event_set(
+                branch_id, sitecol, integration_distance)
             for i, rup in enumerate(rups):
                 rup.seed = oqparam.random_seed  # to think
-                if sitecol:
-                    rrup = rup.surface.get_min_distance(sitecol.mesh)
-                    r_sites = sitecol.filter(rrup <= integration_distance)
-                    indices = r_sites.indices
-                else:
-                    indices = sitecol.indices
+                rrup = rup.surface.get_min_distance(sitecol.mesh)
+                r_sites = sitecol.filter(rrup <= integration_distance)
+                if r_sites is None:
+                    continue
+                indices = r_sites.indices
                 events = []
                 for j in range(n_occs[i]):
                     # NB: the first 0 is a placeholder for the eid that will be
@@ -794,36 +748,9 @@ class UCERFEventBasedRuptureCalculator(
                   self.smlt.branches[key].weight)
                   for key in self.smlt.branches]
         ruptures_by_branch_id = parallel.apply_reduce(
-            compute_ruptures, (id_set, self.source, self.sitecol, self.oqparam,
-                               self.monitor))
+            compute_ruptures,
+            (id_set, self.source, self.sitecol, self.oqparam, self.monitor))
         return ruptures_by_branch_id
-
-    def count_eff_ruptures(self, ruptures_by_trt_id, trt_model):
-        """
-        Returns the number of ruptures sampled in the given trt_model.
-
-        :param ruptures_by_trt_id: a dictionary with key trt_id
-        :param trt_model: a TrtModel instance
-        """
-        return sum(
-            len(ruptures) for trt_id, ruptures in ruptures_by_trt_id.items()
-            if trt_model.id == trt_id)
-
-    def agg_curves(self, acc, val):
-        """
-        For the rupture calculator, increment the AccumDict trt_id -> ruptures
-        """
-        acc += val
-
-    def zerodict(self):
-        """
-        Initial accumulator, a dictionary trt_model_id -> list of ruptures
-        """
-        smodels = self.rlzs_assoc.csm_info.source_models
-        zd = AccumDict((tm.id, []) for smodel in smodels
-                       for tm in smodel.trt_models)
-        zd.calc_times = []
-        return zd
 
 
 @base.calculators.add('ucerf_event_based')
