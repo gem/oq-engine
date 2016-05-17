@@ -122,8 +122,6 @@ class PlanarSurface(BaseQuadrilateralSurface):
             raise ValueError("corners are in the wrong order")
         if abs(length1 - length2) > tolerance:
             raise ValueError("top and bottom edges have different lengths")
-        if abs(xx[0] - xx[2]) > tolerance:
-            raise ValueError("surface's angles are not right")
 
     @classmethod
     def from_corner_points(cls, mesh_spacing, top_left, top_right,

@@ -85,7 +85,6 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
     jb_dist = rupture.surface.get_joyner_boore_distance(sites.mesh)
     return sites.filter(jb_dist <= integration_distance)
 
-
 def source_site_distance_filter(integration_distance):
     """
     Source-site filter based on distance.

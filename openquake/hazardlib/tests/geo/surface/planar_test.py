@@ -64,12 +64,6 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         msg = 'top and bottom edges have different lengths'
         self.assert_failed_creation(1, 0, 90, corners, ValueError, msg)
 
-    def test_non_right_angles(self):
-        corners = [Point(0, 0, 1), Point(1, 0, 1),
-                   Point(1.045, 0, 2), Point(0.045, 0, 2)]
-        msg = "surface's angles are not right"
-        self.assert_failed_creation(1, 0, 90, corners, ValueError, msg)
-
     def test_non_positive_mesh_spacing(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, 1, 2), Point(0, -1, 2)]
