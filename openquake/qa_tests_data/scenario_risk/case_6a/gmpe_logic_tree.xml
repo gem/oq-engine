@@ -12,7 +12,7 @@
                 </logicTreeBranch>
                 
                 <logicTreeBranch branchID="b2">
-		  <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
+                  <uncertaintyModel>ChiouYoungs2008</uncertaintyModel>
                   <uncertaintyWeight>0.25</uncertaintyWeight>
                 </logicTreeBranch>
 
