@@ -216,7 +216,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param val: a dictionary of hazard curves, keyed by (trt_id, gsim)
+        :param val: a dictionary of hazard curves keyed by trt_id
         """
         with self.monitor('aggregate curves', autoflush=True):
             if hasattr(val, 'calc_times'):

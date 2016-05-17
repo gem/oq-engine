@@ -537,6 +537,11 @@ class CompositionInfo(object):
     """
     @classmethod
     def fake(cls, gsimlt=None):
+        """
+        :returns:
+            a fake `CompositionInfo` instance with the given gsim logic tree
+            object; if None, builds automatically a fake gsim logic tree
+        """
         fakeSM = SourceModel(
             'fake', 1,  'b1', [TrtModel('*', eff_ruptures=1)],
             gsimlt or logictree.GsimLogicTree.from_('FromFile'), 0, 1)
