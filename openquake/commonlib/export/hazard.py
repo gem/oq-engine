@@ -308,7 +308,8 @@ def export_hcurves_csv(ekey, dstore):
     sitemesh = dstore['sitemesh']
     key, fmt = ekey
     fnames = []
-    for kind, hcurves in dstore['hmaps' if key == 'uhs' else key].items():
+    items = dstore['hmaps' if key == 'uhs' else key].items()
+    for kind, hcurves in sorted(items):
         fname = hazard_curve_name(
             dstore, ekey, kind, rlzs_assoc, oq.number_of_logic_tree_samples)
         if key == 'uhs':
