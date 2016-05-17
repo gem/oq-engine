@@ -573,7 +573,7 @@ class UCERFSESControl(object):
         rates = hdf5[idxset["rate_idx"]][:]
         occurrences = self.tom.sample_number_of_occurrences(rates)
         indices = numpy.where(occurrences)[0]
-        print branch_id, indices
+        logging.info('Considering %s %s', branch_id, indices)
         # Get ruptures from the indices
         rupture_set = []
         rupture_occ = []
@@ -609,11 +609,10 @@ class UCERFSESControl(object):
             Code for the branch
         """
         code_set = branch_code.split("/")
-        ridx_loc = "/".join([code_set[0], "RuptureIndex"])
         idx_set = {
-        "sec_idx": "/".join([code_set[0], code_set[1], "Sections"]),
-        "mag_idx": "/".join([code_set[0], code_set[1], code_set[2],
-                             "Magnitude"])}
+            "sec_idx": "/".join([code_set[0], code_set[1], "Sections"]),
+            "mag_idx": "/".join([code_set[0], code_set[1], code_set[2],
+                                 "Magnitude"])}
         code_set.insert(3, "Rates")
         idx_set["rate_idx"] = "/".join(code_set)
         idx_set["rake_idx"] = "/".join([code_set[0], code_set[1], "Rake"])
@@ -716,28 +715,32 @@ def compute_ruptures(branch_info, source, sitecol, oqparam, monitor):
         t0 = time.time()
         ses_ruptures = []
         source.update_background_site_filter(sitecol, integration_distance)
-        numpy.random.seed(oqparam.random_seed + trt_model_id)
 
+        # set the seed before calling generate_event_set
+        numpy.random.seed(oqparam.random_seed + trt_model_id)
         for ses_idx in range(1, oqparam.ses_per_logic_tree_path + 1):
             rups, n_occs = source.generate_event_set(branch_id, sitecol,
                                                      integration_distance)
             for i, rup in enumerate(rups):
-                rup.seed = oqparam.random_seed + trt_model_id  # to think
+                rup.seed = oqparam.random_seed  # to think
                 if sitecol:
                     rrup = rup.surface.get_min_distance(sitecol.mesh)
                     r_sites = sitecol.filter(rrup <= integration_distance)
                     indices = r_sites.indices
                 else:
-                    indices = None
-                # Build tag
-                etags = []
+                    indices = sitecol.indices
+                events = []
                 for j in range(n_occs[i]):
-                    etags.append("col=1~ses=%04d~src=%s~rup=%03d-%02d" % (
-                        ses_idx, source.source_id, i, j))
-                if len(etags):
+                    # NB: the first 0 is a placeholder for the eid that will be
+                    # set later, in EventBasedRuptureCalculator.post_execute;
+                    # the second 0 is the sampling ID
+                    events.append((0, ses_idx, j, 0))
+                if len(events):
                     ses_ruptures.append(
                         event_based.EBRupture(
-                            rup, indices, etags, trt_model_id, serial))
+                            rup, indices,
+                            numpy.array(events, event_based.event_dt),
+                            source.source_id, trt_model_id, serial))
                     serial += 1
             dt = time.time() - t0
             res.calc_times.append((ltbrid, dt))
@@ -747,7 +750,8 @@ def compute_ruptures(branch_info, source, sitecol, oqparam, monitor):
 
 
 @base.calculators.add('ucerf_event_based_rupture')
-class UCERFEventBasedRuptureCalculator(ClassicalCalculator):
+class UCERFEventBasedRuptureCalculator(
+        event_based.EventBasedRuptureCalculator):
     """
     Event based PSHA calculator generating the ruptures only
     """
@@ -761,27 +765,26 @@ class UCERFEventBasedRuptureCalculator(ClassicalCalculator):
         """
         self.sitecol = readinput.get_site_collection(self.oqparam)
         self.save_mesh()
-        self.smlt = readinput.get_source_model_lt(self.oqparam)
-        converter = UCERFSourceConverter(self.oqparam.investigation_time,
-                                         self.oqparam.rupture_mesh_spacing)
-        parser = source.SourceModelParser(converter)
-        self.source = parser.parse_sources(
-            self.oqparam.inputs["source_model"])[0]
         self.gsim_lt = readinput.get_gsim_lt(self.oqparam, [DEFAULT_TRT])
-
+        self.smlt = readinput.get_source_model_lt(self.oqparam)
+        parser = source.SourceModelParser(
+            UCERFSourceConverter(self.oqparam.investigation_time,
+                                 self.oqparam.rupture_mesh_spacing))
+        self.source, = parser.parse_sources(
+            self.oqparam.inputs["source_model"])
         branches = sorted(self.smlt.branches.items())
         min_mag, max_mag = None, None
-        gsims = []
         source_models = []
         for ordinal, (name, branch) in enumerate(branches):
-            tm = source.TrtModel(DEFAULT_TRT, [], min_mag, max_mag, gsims,
-                                 ordinal)
+            tm = source.TrtModel(DEFAULT_TRT, [], min_mag, max_mag,
+                                 ordinal, eff_ruptures=0)
             sm = source.SourceModel(
                 name, branch.weight, [name], [tm], self.gsim_lt, ordinal, 1)
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
             self.smlt, source_models, set_weight=False)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
+        self.rup_data = {}
 
     def execute(self):
         """
@@ -821,48 +824,6 @@ class UCERFEventBasedRuptureCalculator(ClassicalCalculator):
                        for tm in smodel.trt_models)
         zd.calc_times = []
         return zd
-
-    def send_sources(self):
-        """
-        Filter, split and set the seed array for each source, then send it the
-        workers
-        """
-        oq = self.oqparam
-        self.manager = self.SourceManager(
-            self.csm, self.core_task.__func__,
-            oq.maximum_distance, self.datastore,
-            self.monitor.new(oqparam=oq), oq.random_seed, oq.filter_sources)
-        self.manager.submit_sources(self.sitecol)
-
-    def post_execute(self, result):
-        """
-        Save the SES collection
-        """
-        logging.info('Generated %d EBRuptures',
-                     sum(len(v) for v in result.values()))
-        with self.monitor('saving ruptures', autoflush=True):
-            sescollection = [[] for _ in sorted(self.smlt.branches)]
-            etags = []
-            for trt_id in result:
-                for ebr in result[trt_id]:
-                    sescollection[trt_id].append(ebr)
-                    etags.extend(ebr.etags)
-            etags.sort()
-            etag2eid = dict(zip(etags, range(len(etags))))
-            self.etags = numpy.array(etags, (bytes, 100))
-            self.datastore.set_attrs(
-                'etags',
-                num_ruptures=numpy.array([len(sc) for sc in sescollection]))
-            for i, sescol in enumerate(sescollection):
-                for ebr in sescol:
-                    ebr.eids = [etag2eid[etag] for etag in ebr.etags]
-                nr = len(sescol)
-                logging.info('Saving SES collection #%d with %d ruptures',
-                             i, nr)
-                key = 'sescollection/trt=%02d' % i
-                self.datastore[key] = sorted(
-                    sescol, key=operator.attrgetter('serial'))
-                self.datastore.set_attrs(key, num_ruptures=nr, trt_model_id=i)
 
 
 @base.calculators.add('ucerf_event_based')
