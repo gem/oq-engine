@@ -542,10 +542,12 @@ class CompositionInfo(object):
             a fake `CompositionInfo` instance with the given gsim logic tree
             object; if None, builds automatically a fake gsim logic tree
         """
+        weight = 1
         fakeSM = SourceModel(
-            'fake', 1,  'b1', [TrtModel('*', eff_ruptures=1)],
-            gsimlt or logictree.GsimLogicTree.from_('FromFile'), 0, 1)
-        return cls(0, 0, [fakeSM])
+            'fake', weight,  'b1', [TrtModel('*', eff_ruptures=1)],
+            gsimlt or logictree.GsimLogicTree.from_('FromFile'),
+            ordinal=0, samples=1)
+        return cls(seed=0, num_samples=0, source_models=[fakeSM])
 
     def __init__(self, seed, num_samples, source_models):
         self.seed = seed
