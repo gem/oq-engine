@@ -35,7 +35,7 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 
 from openquake.baselib.general import groupby, writetmp
-from openquake.commonlib import nrml, readinput
+from openquake.commonlib import nrml, readinput, oqvalidation
 from openquake.commonlib.parallel import safely_call
 from openquake.commonlib.export import export
 from openquake.engine import __version__ as oqversion
@@ -66,6 +66,9 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
                   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
                   'Access-Control-Max-Age': 1000,
                   'Access-Control-Allow-Headers': '*'}
+
+# disable check on the export_dir, since the WebUI exports in a tmpdir
+oqvalidation.OqParam.is_valid_export_dir = lambda self: True
 
 
 # Credit for this decorator to https://gist.github.com/aschem/1308865.
