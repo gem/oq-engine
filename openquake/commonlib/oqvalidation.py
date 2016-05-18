@@ -300,7 +300,8 @@ class OqParam(valid.ParamSet):
         one, or nothing.
         """
         if ('risk' in self.calculation_mode or
-                'damage' in self.calculation_mode):
+                'damage' in self.calculation_mode or
+                'bcr' in self.calculation_mode):
             return True  # no check on the sites for risk
         flags = dict(
             sites=bool(self.sites),
