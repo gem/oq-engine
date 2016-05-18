@@ -299,7 +299,8 @@ class OqParam(valid.ParamSet):
         region and exposure_file is set. You did set more than
         one, or nothing.
         """
-        if 'risk' in self.calculation_mode:
+        if ('risk' in self.calculation_mode or
+                'damage' in self.calculation_mode):
             return True  # no check on the sites for risk
         flags = dict(
             sites=bool(self.sites),
