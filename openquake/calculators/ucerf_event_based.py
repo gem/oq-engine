@@ -618,8 +618,10 @@ class UCERFSourceConverter(SourceConverter):
         """
         Converts the Ucerf Source node into an SES Control object
         """
+        dirname = os.path.dirname(self.fname)  # where the source_model_file is
+        source_file = os.path.join(dirname, node["filename"])
         return UCERFSESControl(
-            node["filename"],
+            source_file,
             node["id"],
             self.tom.time_span,
             float(node["minMag"]),
