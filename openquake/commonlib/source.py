@@ -17,9 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import io
 import sys
-import ast
 import copy
 import math
 import logging
@@ -40,6 +38,7 @@ from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 MAX_INT = 2 ** 31 - 1
 U16 = numpy.uint16
 U32 = numpy.uint32
+I32 = numpy.int32
 F32 = numpy.float32
 
 
@@ -164,7 +163,7 @@ class TrtModel(collections.Sequence):
         return sorted(source_stats_dict.values())
 
     def __init__(self, trt, sources=None,
-                 min_mag=None, max_mag=None, id=0, eff_ruptures=0):
+                 min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
         self.trt = trt
         self.sources = sources or []
         self.min_mag = min_mag
@@ -200,9 +199,9 @@ class TrtModel(collections.Sequence):
             self.max_mag = max_mag
 
     def __repr__(self):
-        return '<%s #%d %s, %d source(s), %d rupture(s)>' % (
+        return '<%s #%d %s, %d source(s), %d effective rupture(s)>' % (
             self.__class__.__name__, self.id, self.trt,
-            len(self.sources), self.tot_ruptures())
+            len(self.sources), self.eff_ruptures)
 
     def __lt__(self, other):
         """
@@ -435,7 +434,7 @@ class RlzsAssoc(collections.Mapping):
 
     def combine(self, results, agg=agg_prob):
         """
-        :param results: a dictionary (trt_model_id, gsim_no) -> floats
+        :param results: a dictionary (trt_model_id, gsim) -> floats
         :param agg: an aggregation function
         :returns: a dictionary rlz -> aggregated floats
 
@@ -480,8 +479,13 @@ class RlzsAssoc(collections.Mapping):
         probability, which however is close to the sum for small probabilities.
         """
         ad = AccumDict()
-        for (trt_id, gsim_idx), value in results.items():
-            gsim = self.gsims_by_trt_id[trt_id][int(gsim_idx)]
+        for (trt_id, gsim), value in results.items():
+            try:
+                gsim_idx = int(gsim)  # for classical calculations
+            except (ValueError, TypeError):  # already a GSIM
+                pass  # for scenario calculations
+            else:
+                gsim = self.gsims_by_trt_id[trt_id][gsim_idx]
             for rlz in self.rlzs_assoc[trt_id, gsim]:
                 ad[rlz] = agg(ad.get(rlz, 0), value)
         return ad
@@ -519,7 +523,7 @@ source_model_dt = numpy.dtype([
 trt_model_dt = numpy.dtype(
     [('trt_id', U32),
      ('trti', U16),
-     ('effrup', U32),
+     ('effrup', I32),
      ('sm_id', U32)])
 
 
@@ -531,6 +535,20 @@ class CompositionInfo(object):
     :param source_model_lt: a SourceModelLogicTree object
     :param source_models: a list of SourceModel instances
     """
+    @classmethod
+    def fake(cls, gsimlt=None):
+        """
+        :returns:
+            a fake `CompositionInfo` instance with the given gsim logic tree
+            object; if None, builds automatically a fake gsim logic tree
+        """
+        weight = 1
+        fakeSM = SourceModel(
+            'fake', weight,  'b1', [TrtModel('*', eff_ruptures=1)],
+            gsimlt or logictree.GsimLogicTree.from_('FromFile'),
+            ordinal=0, samples=1)
+        return cls(seed=0, num_samples=0, source_models=[fakeSM])
+
     def __init__(self, seed, num_samples, source_models):
         self.seed = seed
         self.num_samples = num_samples
@@ -558,7 +576,8 @@ class CompositionInfo(object):
             tm_data=numpy.array(data, trt_model_dt),
             sm_data=numpy.array(lst, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     trts=trts, gsim_lt_xml=open(gsim_lt.fname).read()))
+                     trts=trts, gsim_lt_xml=str(gsim_lt),
+                     gsim_fname=gsim_lt.fname))
 
     def __fromh5__(self, dic, attrs):
         tm_data = group_array(dic['tm_data'], 'sm_id')
@@ -567,14 +586,15 @@ class CompositionInfo(object):
         self.source_models = []
         for sm_id, rec in enumerate(sm_data):
             tdata = tm_data[sm_id]
-            trtis = tdata[tdata['effrup'] > 0]['trti']
-            path = tuple(rec['path'].split('_'))
-            trts = [self.trts[trti] for trti in trtis]
-            gsim_lt = logictree.GsimLogicTree(
-                io.BytesIO(self.gsim_lt_xml), trts)
             trtmodels = [
-                TrtModel(trts[trti], id=trt_id, eff_ruptures=effrup)
-                for trt_id, trti, effrup, sm_id in tdata]
+                TrtModel(self.trts[trti], id=trt_id, eff_ruptures=effrup)
+                for trt_id, trti, effrup, sm_id in tdata if effrup > 0]
+            path = tuple(rec['path'].split('_'))
+            trts = set(tm.trt for tm in trtmodels)
+            if self.gsim_fname.endswith('.xml'):
+                gsim_lt = logictree.GsimLogicTree(self.gsim_fname, trts)
+            else:  # fake file with the name of the GSIM
+                gsim_lt = logictree.GsimLogicTree.from_(self.gsim_fname)
             sm = SourceModel(rec['name'], rec['weight'], path, trtmodels,
                              gsim_lt, sm_id, rec['samples'])
             self.source_models.append(sm)
@@ -590,14 +610,7 @@ class CompositionInfo(object):
             return source_model.samples
         return source_model.gsim_lt.get_num_paths()
 
-    def get_source_model(self, trt_model_id):
-        """Return the source model for the given trt_model_id"""
-        for smodel in self.source_models:
-            for trt_model in smodel.trt_models:
-                if trt_model.id == trt_model_id:
-                    return smodel
-
-    def get_rlzs_assoc(self, count_ruptures=lambda tm: -1):
+    def get_rlzs_assoc(self, count_ruptures=None):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
         rlz_idx and trt_gsims.
@@ -611,10 +624,10 @@ class CompositionInfo(object):
             # collect the effective tectonic region types and ruptures
             trts = set()
             for tm in smodel.trt_models:
-                tm.eff_ruptures = count_ruptures(tm)
+                if count_ruptures:
+                    tm.eff_ruptures = count_ruptures(tm)
                 if tm.eff_ruptures:
                     trts.add(tm.trt)
-
             # recompute the GSIM logic tree if needed
             if trts != set(smodel.gsim_lt.tectonic_region_types):
                 before = smodel.gsim_lt.get_num_paths()
@@ -638,6 +651,13 @@ class CompositionInfo(object):
         if assoc.realizations:
             assoc._init()
         return assoc
+
+    def get_source_model(self, trt_model_id):
+        """Return the source model for the given trt_model_id"""
+        for smodel in self.source_models:
+            for trt_model in smodel.trt_models:
+                if trt_model.id == trt_model_id:
+                    return smodel
 
     def __repr__(self):
         info_by_model = collections.OrderedDict(

@@ -36,7 +36,7 @@ def get_hcurves_and_means(dstore):
     """
     oq = dstore['oqparam']
     hcurves = dstore['hcurves']
-    realizations = dstore['rlzs_assoc'].realizations
+    realizations = dstore['csm_info'].get_rlzs_assoc().realizations
     weights = [rlz.weight for rlz in realizations]
     curves_by_rlz = {rlz: hcurves['rlz-%03d' % rlz.ordinal]
                      for rlz in realizations}

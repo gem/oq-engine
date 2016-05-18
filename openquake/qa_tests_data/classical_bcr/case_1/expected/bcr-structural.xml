@@ -5,10 +5,10 @@ xmlns:gml="http://www.opengis.net/gml"
 >
     <bcrMap
     assetLifeExpectancy="40.0"
-    gsimTreePath=""
+    gsimTreePath="b1"
     interestRate="0.05"
     lossType="structural"
-    sourceModelTreePath=""
+    sourceModelTreePath="b_1"
     >
         <node>
             <gml:Point>

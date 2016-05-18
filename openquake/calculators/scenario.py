@@ -20,7 +20,7 @@ import numpy
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, source
 from openquake.calculators import base
 
 U8 = numpy.uint8
@@ -43,13 +43,13 @@ class ScenarioCalculator(base.HazardCalculator):
         Read the site collection and initialize GmfComputer, etags and seeds
         """
         super(ScenarioCalculator, self).pre_execute()
-        trunc_level = self.oqparam.truncation_level
-        correl_model = readinput.get_correl_model(self.oqparam)
-        n_gmfs = self.oqparam.number_of_ground_motion_fields
-        rupture = readinput.get_rupture(self.oqparam)
-        self.gsims = readinput.get_gsims(self.oqparam)
-        self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
-        maxdist = self.oqparam.maximum_distance['default']
+        oq = self.oqparam
+        trunc_level = oq.truncation_level
+        correl_model = readinput.get_correl_model(oq)
+        n_gmfs = oq.number_of_ground_motion_fields
+        rupture = readinput.get_rupture(oq)
+        self.gsims = readinput.get_gsims(oq)
+        maxdist = oq.maximum_distance['default']
         with self.monitor('filtering sites', autoflush=True):
             self.sitecol = filters.filter_sites_by_distance_to_rupture(
                 rupture, maxdist, self.sitecol)
@@ -61,8 +61,15 @@ class ScenarioCalculator(base.HazardCalculator):
             sorted(['scenario-%010d~ses=1' % i for i in range(n_gmfs)]),
             (bytes, 100))
         self.computer = GmfComputer(
-            rupture, self.sitecol, self.oqparam.imtls, self.gsims,
+            rupture, self.sitecol, oq.imtls, self.gsims,
             trunc_level, correl_model)
+        gsim_lt = readinput.get_gsim_lt(oq)
+        cinfo = source.CompositionInfo.fake(gsim_lt)
+        self.datastore['csm_info'] = cinfo
+        self.rlzs_assoc = cinfo.get_rlzs_assoc()
+
+    def init(self):
+        pass
 
     def execute(self):
         """
