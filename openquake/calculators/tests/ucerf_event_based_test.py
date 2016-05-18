@@ -16,13 +16,16 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import h5py
+import unittest
 from openquake.qa_tests_data import ucerf
-from openquake.calculators.tests import CalculatorTestCase, check_platform
+from openquake.calculators.tests import CalculatorTestCase
 
 
 class UcerfTestCase(CalculatorTestCase):
     def test(self):
-        check_platform('xenial')  # because there is h5py 2.6
+        if h5py.__version__ < '2.3.0':
+            raise unittest.SkipTest  # UCERF requires vlen arrays
         out = self.run_calc(ucerf.__file__, 'job.ini', exports='txt')
         num_exported = len(out['gmf_data', 'txt'])
         # just check that two realizations are exported
