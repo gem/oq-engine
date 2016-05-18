@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+from __future__ import division
 import sys
 import abc
 import pdb
@@ -564,15 +565,15 @@ class RiskCalculator(HazardCalculator):
             haz = ', '.join(imtls)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
+        num_tasks = math.ceil((self.oqparam.concurrent_tasks or 1) /
+                              len(imtls))
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             idx_weight_pairs = [
                 (i, len(assets))
                 for i, assets in enumerate(self.assets_by_site)]
             blocks = general.split_in_blocks(
-                idx_weight_pairs,
-                self.oqparam.concurrent_tasks or 1,
-                weight=operator.itemgetter(1))
+                idx_weight_pairs, num_tasks, weight=operator.itemgetter(1))
             for block in blocks:
                 indices = numpy.array([idx for idx, _weight in block])
                 reduced_assets = self.assets_by_site[indices]
