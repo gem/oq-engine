@@ -4,7 +4,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <lossMap
-    gsimTreePath="@"
+    gsimTreePath="b_1,b1"
     investigationTime="None"
     lossType="occupants"
     poE="None"
