@@ -400,6 +400,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         """
         oq = self.oqparam
         self.random_seed = oq.random_seed
+        self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         self.min_iml = fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
 
     def count_eff_ruptures(self, ruptures_by_trt_id, trt_model):
@@ -612,16 +613,14 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         monitor = self.monitor(self.core_task.__name__)
         monitor.oqparam = oq
-        zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
-        zerodict = AccumDict({rlz.ordinal: zc
-                              for rlz in self.rlzs_assoc.realizations})
+        self.zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
         min_iml = fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
         acc = parallel.apply_reduce(
             self.core_task.__func__,
             (self.sesruptures, self.sitecol, oq.imtls, self.rlzs_assoc,
              min_iml, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
-            acc=zerodict, agg=self.combine_curves_and_save_gmfs,
+            agg=self.combine_curves_and_save_gmfs,
             key=operator.attrgetter('trt_id'),
             weight=operator.attrgetter('weight'))
         if oq.ground_motion_fields:

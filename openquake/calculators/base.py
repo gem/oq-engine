@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+from __future__ import division
 import sys
 import abc
 import pdb
@@ -52,7 +53,7 @@ F32 = numpy.float32
 class AssetSiteAssociationError(Exception):
     """Raised when there are no hazard sites close enough to any asset"""
 
-rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('weight', float)])
+rlz_dt = numpy.dtype([('uid', (bytes, 200)), ('weight', F32)])
 
 
 def set_array(longarray, shortarray):
@@ -79,8 +80,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
     sitemesh = datastore.persistent_attribute('sitemesh')
     sitecol = datastore.persistent_attribute('sitecol')
     etags = datastore.persistent_attribute('etags')
-    rlzs_assoc = datastore.persistent_attribute('rlzs_assoc')
-    realizations = datastore.persistent_attribute('realizations')
     assetcol = datastore.persistent_attribute('assetcol')
     cost_types = datastore.persistent_attribute('cost_types')
     job_info = datastore.persistent_attribute('job_info')
@@ -221,10 +220,6 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
             self.datastore.set_nbytes('hcurves')
         if 'hmaps' in self.datastore:
             self.datastore.set_nbytes('hmaps')
-        if 'rlzs_assoc' in self.datastore:
-            rlzs = self.rlzs_assoc.realizations
-            self.realizations = numpy.array(
-                [(r.uid, r.weight) for r in rlzs], rlz_dt)
         self.datastore.flush()
         if self.close:  # in the engine we close later
             try:
@@ -308,7 +303,6 @@ class HazardCalculator(BaseCalculator):
                 for name in ('riskmodel', 'assets_by_site'):
                     if name in pre_attrs:
                         setattr(self, name, getattr(precalc, name))
-
             else:  # read previously computed data
                 parent = datastore.read(precalc_id)
                 self.datastore.set_parent(parent)
@@ -318,7 +312,7 @@ class HazardCalculator(BaseCalculator):
                           if name not in vars(self.oqparam)}
                 self.save_params(**params)
                 self.read_risk_data()
-
+            self.init()
         else:  # we are in a basic calculator
             self.read_risk_data()
             if 'source' in self.oqparam.inputs:
@@ -326,8 +320,7 @@ class HazardCalculator(BaseCalculator):
                         'reading composite source model', autoflush=True):
                     self.csm = readinput.get_composite_source_model(
                         self.oqparam)
-                    self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
-                    self.datastore['csm_info'] = self.rlzs_assoc.csm_info
+                    self.datastore['csm_info'] = self.csm.info
                     self.rup_data = {}
 
                     # we could manage limits here
@@ -337,7 +330,8 @@ class HazardCalculator(BaseCalculator):
                                  job_info.hazard['output_weight'])
                     logging.info('Total weight of the sources=%s',
                                  job_info.hazard['input_weight'])
-                self.init()
+            self.init()
+            if 'source' in self.oqparam.inputs:
                 with self.monitor('managing sources', autoflush=True):
                     self.send_sources()
                 self.manager.store_source_info(self.datastore)
@@ -357,6 +351,13 @@ class HazardCalculator(BaseCalculator):
         To be overridden to initialize the datasets needed by the calculation
         """
         self.random_seed = None
+        if 'csm_info' in self.datastore or 'csm_info' in self.datastore.parent:
+            self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
+        else:  # build a fake; used by risk-from-file calculators
+            self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
+            self.rlzs_assoc = fake.get_rlzs_assoc()
+        self.datastore['realizations'] = numpy.array(
+            [(r.uid, r.weight) for r in self.rlzs_assoc.realizations], rlz_dt)
 
     def read_exposure(self):
         """
@@ -564,15 +565,15 @@ class RiskCalculator(HazardCalculator):
             haz = ', '.join(imtls)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
+        num_tasks = math.ceil((self.oqparam.concurrent_tasks or 1) /
+                              len(imtls))
         with self.monitor('building riskinputs', autoflush=True):
             riskinputs = []
             idx_weight_pairs = [
                 (i, len(assets))
                 for i, assets in enumerate(self.assets_by_site)]
             blocks = general.split_in_blocks(
-                idx_weight_pairs,
-                self.oqparam.concurrent_tasks or 1,
-                weight=operator.itemgetter(1))
+                idx_weight_pairs, num_tasks, weight=operator.itemgetter(1))
             for block in blocks:
                 indices = numpy.array([idx for idx, _weight in block])
                 reduced_assets = self.assets_by_site[indices]
@@ -644,7 +645,8 @@ def get_gmfs(dstore):
         return etags, {(0, 'FromFile'): gmfs_by_imt}
 
     # else from datastore
-    rlzs = dstore['rlzs_assoc'].realizations
+    rlzs_assoc = dstore['csm_info'].get_rlzs_assoc()
+    rlzs = rlzs_assoc.realizations
     sitecol = dstore['sitecol']
     # NB: if the hazard site collection has N sites, the hazard
     # filtered site collection for the nonzero GMFs has N' <= N sites
@@ -660,13 +662,13 @@ def get_gmfs(dstore):
     E = oq.number_of_ground_motion_fields
     # build a matrix N x E for each GSIM realization
     gmfs = {(trt_id, gsim): numpy.zeros((N, E), imt_dt)
-            for trt_id, gsim in dstore['rlzs_assoc']}
+            for trt_id, gsim in rlzs_assoc}
     for i, rlz in enumerate(rlzs):
         data = general.group_array(dstore['gmf_data/%04d' % i], 'sid')
         for sid, array in data.items():
             if sid in risk_indices:
                 for imti, imt in enumerate(oq.imtls):
                     a = general.get_array(array, imti=imti)
-                    for trt_id, gsim in gmfs:
-                        gmfs[trt_id, str(rlz)][imt][sid, a['eid']] = a['gmv']
+                    gs = str(rlz.gsim_rlz)
+                    gmfs[0, gs][imt][sid, a['eid']] = a['gmv']
     return dstore['etags'].value, gmfs
