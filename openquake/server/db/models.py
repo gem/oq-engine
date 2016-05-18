@@ -146,7 +146,8 @@ class OqJob(djm.Model):
         """
         # the calculation mode can be unknown if the job parameters
         # have not been written on the database yet
-        return 'risk' if 'risk' in self.calculation_mode else 'hazard'
+        return 'risk' if ('risk' in self.calculation_mode
+                          or 'damage' in self.calculation_mode) else 'hazard'
 
     def get_oqparam(self):
         """
