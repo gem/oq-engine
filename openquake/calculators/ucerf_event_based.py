@@ -22,6 +22,7 @@ import os.path
 import logging
 import math
 import random
+import functools
 import h5py
 import numpy
 
@@ -726,7 +727,6 @@ class UCERFEventBasedRuptureCalculator(
             source_models.append(sm)
         self.csm = source.CompositeSourceModel(
             self.smlt, source_models, set_weight=False)
-        self.rlzs_assoc = self.csm.info.get_rlzs_assoc()
         self.rup_data = {}
 
     def execute(self):
@@ -736,11 +736,14 @@ class UCERFEventBasedRuptureCalculator(
         id_set = [(key, self.smlt.branches[key].value,
                   self.smlt.branches[key].weight)
                   for key in self.smlt.branches]
-        ruptures_by_branch_id = parallel.apply_reduce(
+        ruptures_by_trt_id = parallel.apply_reduce(
             compute_ruptures,
             (id_set, self.source, self.sitecol, self.oqparam, self.monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks)
-        return ruptures_by_branch_id
+        self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
+            functools.partial(self.count_eff_ruptures, ruptures_by_trt_id))
+        self.datastore['csm_info'] = self.rlzs_assoc.csm_info
+        return ruptures_by_trt_id
 
 
 @base.calculators.add('ucerf_event_based')
