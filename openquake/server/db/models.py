@@ -28,7 +28,6 @@ import os
 from datetime import datetime
 import openquake.engine.utils  # side effect setting OQ_DISTRIBUTE
 from openquake.commonlib import datastore
-from openquake.commonlib.oqvalidation import RISK_CALCULATORS
 from django.db import models as djm
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -147,8 +146,7 @@ class OqJob(djm.Model):
         """
         # the calculation mode can be unknown if the job parameters
         # have not been written on the database yet
-        return ('risk' if self.calculation_mode in RISK_CALCULATORS
-                else 'hazard')
+        return 'risk' if 'risk' in self.calculation_mode else 'hazard'
 
     def get_oqparam(self):
         """
