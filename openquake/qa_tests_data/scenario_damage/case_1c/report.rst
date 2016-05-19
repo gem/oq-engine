@@ -1,7 +1,7 @@
 Scenario Damage
 ===============
 
-gem-tstation:/home/michele/ssd/calc_16297.hdf5 updated Mon May 16 14:19:01 2016
+gem-tstation:/home/michele/ssd/calc_16341.hdf5 updated Wed May 18 18:18:23 2016
 
 num_sites = 7, sitecol = 690 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  42                 
 master_seed                  0                  
-oqlite_version               '0.13.0-git16c052c'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -40,8 +40,8 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
-  0,BooreAtkinson2008(): ['BooreAtkinson2008()']>
+  <RlzsAssoc(size=1, rlzs=1)
+  0,BooreAtkinson2008(): ['<0,b_1,b1,w=1.0>']>
 
 Exposure model
 --------------
@@ -59,8 +59,8 @@ Information about the tasks
 ---------------------------
 ========================= ===== ====== ===== ===== =========
 measurement               mean  stddev min   max   num_tasks
-scenario_damage.time_sec  0.028 NaN    0.028 0.028 1        
-scenario_damage.memory_mb 0.066 NaN    0.066 0.066 1        
+scenario_damage.time_sec  0.024 NaN    0.024 0.024 1        
+scenario_damage.memory_mb 0.0   NaN    0.0   0.0   1        
 ========================= ===== ====== ===== ===== =========
 
 Slowest operations
@@ -68,14 +68,14 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-computing gmfs          0.045     0.0       1     
-total scenario_damage   0.028     0.066     1     
-computing riskmodel     0.027     0.0       1     
-filtering sites         0.010     0.0       1     
-reading exposure        0.005     0.0       1     
-saving gmfs             0.002     0.0       1     
-assoc_assets_sites      9.370E-04 0.0       1     
-reading site collection 5.610E-04 0.0       1     
-building riskinputs     1.500E-04 0.0       1     
-building hazard         3.886E-05 0.0       1     
+total scenario_damage   0.024     0.0       1     
+computing riskmodel     0.024     0.0       1     
+filtering sites         0.007     0.0       1     
+reading exposure        0.003     0.0       1     
+computing gmfs          0.002     0.0       1     
+saving gmfs             0.001     0.0       1     
+assoc_assets_sites      6.340E-04 0.0       1     
+building hazard         1.230E-04 0.0       1     
+building riskinputs     1.049E-04 0.0       1     
+reading site collection 9.704E-05 0.0       1     
 ======================= ========= ========= ======

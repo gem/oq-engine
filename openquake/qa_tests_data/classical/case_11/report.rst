@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 11
 =================================
 
-gem-tstation:/home/michele/ssd/calc_16350.hdf5 updated Mon May 16 14:20:00 2016
+gem-tstation:/home/michele/ssd/calc_16394.hdf5 updated Wed May 18 18:19:21 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  1066               
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git16c052c'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -61,18 +61,18 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=3, rlzs=3)
-  0,SadighEtAl1997(): ['<0,b1_b2,b1,w=0.2>']
-  1,SadighEtAl1997(): ['<1,b1_b3,b1,w=0.6>']
-  2,SadighEtAl1997(): ['<2,b1_b4,b1,w=0.2>']>
+  0,SadighEtAl1997(): ['<0,b1_b2,b1,w=0.19999999702>']
+  1,SadighEtAl1997(): ['<1,b1_b3,b1,w=0.60000000596>']
+  2,SadighEtAl1997(): ['<2,b1_b4,b1,w=0.19999999702>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           3,500        87    
-source_model.xml 1      Active Shallow Crust 1           3,000        75    
-source_model.xml 2      Active Shallow Crust 1           2,500        62    
+source_model.xml 0      Active Shallow Crust 1           3500         87    
+source_model.xml 1      Active Shallow Crust 1           3000         75    
+source_model.xml 2      Active Shallow Crust 1           2500         62    
 ================ ====== ==================== =========== ============ ======
 
 =============== =====
@@ -108,9 +108,9 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  87     1         0.008       2.885E-05  0.0      
-1            1         PointSource  75     1         0.006       2.408E-05  0.0      
-2            1         PointSource  62     1         0.005       2.098E-05  0.0      
+0            1         PointSource  87     1         0.005       1.907E-05  0.0      
+1            1         PointSource  75     1         0.004       1.502E-05  0.0      
+2            1         PointSource  62     1         0.003       1.407E-05  0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -118,7 +118,7 @@ Computation times by source typology
 ============ =========== ========== ========= ======
 source_class filter_time split_time calc_time counts
 ============ =========== ========== ========= ======
-PointSource  0.019       7.391E-05  0.0       3     
+PointSource  0.012       4.816E-05  0.0       3     
 ============ =========== ========== ========= ======
 
 Information about the tasks
@@ -130,12 +130,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.036     0.0       1     
-managing sources               0.026     0.0       1     
-filtering sources              0.019     0.0       3     
-store source_info              0.006     0.0       1     
-total count_eff_ruptures       9.961E-04 0.0       3     
-aggregate curves               7.892E-05 0.0       3     
-splitting sources              7.391E-05 0.0       3     
-reading site collection        6.914E-05 0.0       1     
+reading composite source model 0.021     0.0       1     
+managing sources               0.018     0.0       1     
+filtering sources              0.012     0.0       3     
+store source_info              0.004     0.0       1     
+total count_eff_ruptures       9.141E-04 0.0       3     
+aggregate curves               5.484E-05 0.0       3     
+splitting sources              4.816E-05 0.0       3     
+reading site collection        3.982E-05 0.0       1     
 ============================== ========= ========= ======

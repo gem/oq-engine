@@ -1,7 +1,7 @@
 Classical PSHA QA test
 ======================
 
-gem-tstation:/home/michele/ssd/calc_16342.hdf5 updated Mon May 16 14:19:47 2016
+gem-tstation:/home/michele/ssd/calc_16386.hdf5 updated Wed May 18 18:19:08 2016
 
 num_sites = 21, sitecol = 1.62 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git16c052c'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -71,8 +71,8 @@ Number of ruptures per tectonic region type
 ============================= ====== ==================== =========== ============ ======
 source_model                  trt_id trt                  num_sources eff_ruptures weight
 ============================= ====== ==================== =========== ============ ======
-aFault_aPriori_D2.1.xml       0      Active Shallow Crust 168         1,848        1,848 
-bFault_stitched_D2.1_Char.xml 1      Active Shallow Crust 186         2,046        2,046 
+aFault_aPriori_D2.1.xml       0      Active Shallow Crust 168         1848         1,848 
+bFault_stitched_D2.1_Char.xml 1      Active Shallow Crust 186         2046         2,046 
 ============================= ====== ==================== =========== ============ ======
 
 =============== =====
@@ -87,7 +87,7 @@ Informational data
 ======================================== ==============
 count_eff_ruptures_max_received_per_task 3098          
 count_eff_ruptures_num_tasks             36            
-count_eff_ruptures_sent.monitor          102288        
+count_eff_ruptures_sent.monitor          102248        
 count_eff_ruptures_sent.rlzs_assoc       148572        
 count_eff_ruptures_sent.sitecol          33012         
 count_eff_ruptures_sent.siteidx          180           
@@ -109,25 +109,25 @@ Slowest sources
 trt_model_id source_id source_class              weight split_num filter_time split_time calc_time
 ============ ========= ========================= ====== ========= =========== ========== =========
 0            0_0       CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-1            56_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-0            28_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-1            98_1      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-1            91_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-1            56_1      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-1            13_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+0            13_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
 0            20_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-1            91_1      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-0            31_1      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-1            118_0     CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-1            111_1     CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-0            35_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-1            122_0     CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-0            5_0       CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-0            64_1      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-0            32_1      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-0            54_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+0            38_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+0            22_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+0            38_1      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+0            41_1      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+0            19_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
 0            43_1      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
-0            19_1      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+1            52_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+0            45_1      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+1            74_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+1            88_1      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+1            54_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+1            50_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+0            15_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+1            48_1      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+1            99_1      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+1            49_0      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
+0            12_1      CharacteristicFaultSource 11     1         0.001       0.0        0.0      
 ============ ========= ========================= ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -135,7 +135,7 @@ Computation times by source typology
 ========================= =========== ========== ========= ======
 source_class              filter_time split_time calc_time counts
 ========================= =========== ========== ========= ======
-CharacteristicFaultSource 0.360       0.0        0.0       354   
+CharacteristicFaultSource 0.355       0.0        0.0       354   
 ========================= =========== ========== ========= ======
 
 Information about the tasks
@@ -147,11 +147,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 2.097     0.0       1     
-managing sources               0.518     0.0       1     
-filtering sources              0.433     0.0       426   
+reading composite source model 2.070     0.0       1     
+managing sources               0.515     0.0       1     
+filtering sources              0.426     0.0       426   
 total count_eff_ruptures       0.010     0.0       36    
-store source_info              0.004     0.0       1     
-reading site collection        0.001     0.0       1     
-aggregate curves               4.995E-04 0.0       36    
+store source_info              0.005     0.0       1     
+aggregate curves               6.654E-04 0.0       36    
+reading site collection        2.081E-04 0.0       1     
 ============================== ========= ========= ======

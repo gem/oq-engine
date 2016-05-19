@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 20
 =================================
 
-gem-tstation:/home/michele/ssd/calc_16348.hdf5 updated Mon May 16 14:20:00 2016
+gem-tstation:/home/michele/ssd/calc_16392.hdf5 updated Wed May 18 18:19:21 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  106                
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git16c052c'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -79,18 +79,18 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=12, rlzs=12)
-  0,SadighEtAl1997(): ['<0,sm1_sg1_cog1_char_complex,Sad1997,w=0.07>']
-  1,SadighEtAl1997(): ['<1,sm1_sg1_cog1_char_plane,Sad1997,w=0.105>']
-  2,SadighEtAl1997(): ['<2,sm1_sg1_cog1_char_simple,Sad1997,w=0.175>']
-  3,SadighEtAl1997(): ['<3,sm1_sg1_cog2_char_complex,Sad1997,w=0.07>']
-  4,SadighEtAl1997(): ['<4,sm1_sg1_cog2_char_plane,Sad1997,w=0.105>']
-  5,SadighEtAl1997(): ['<5,sm1_sg1_cog2_char_simple,Sad1997,w=0.175>']
-  6,SadighEtAl1997(): ['<6,sm1_sg2_cog1_char_complex,Sad1997,w=0.03>']
-  7,SadighEtAl1997(): ['<7,sm1_sg2_cog1_char_plane,Sad1997,w=0.045>']
-  8,SadighEtAl1997(): ['<8,sm1_sg2_cog1_char_simple,Sad1997,w=0.075>']
-  9,SadighEtAl1997(): ['<9,sm1_sg2_cog2_char_complex,Sad1997,w=0.03>']
-  10,SadighEtAl1997(): ['<10,sm1_sg2_cog2_char_plane,Sad1997,w=0.045>']
-  11,SadighEtAl1997(): ['<11,sm1_sg2_cog2_char_simple,Sad1997,w=0.075>']>
+  0,SadighEtAl1997(): ['<0,sm1_sg1_cog1_char_complex,Sad1997,w=0.0700000005588>']
+  1,SadighEtAl1997(): ['<1,sm1_sg1_cog1_char_plane,Sad1997,w=0.104999997113>']
+  2,SadighEtAl1997(): ['<2,sm1_sg1_cog1_char_simple,Sad1997,w=0.174999997672>']
+  3,SadighEtAl1997(): ['<3,sm1_sg1_cog2_char_complex,Sad1997,w=0.0700000005588>']
+  4,SadighEtAl1997(): ['<4,sm1_sg1_cog2_char_plane,Sad1997,w=0.104999997113>']
+  5,SadighEtAl1997(): ['<5,sm1_sg1_cog2_char_simple,Sad1997,w=0.174999997672>']
+  6,SadighEtAl1997(): ['<6,sm1_sg2_cog1_char_complex,Sad1997,w=0.0299999994412>']
+  7,SadighEtAl1997(): ['<7,sm1_sg2_cog1_char_plane,Sad1997,w=0.0450000019558>']
+  8,SadighEtAl1997(): ['<8,sm1_sg2_cog1_char_simple,Sad1997,w=0.0750000032596>']
+  9,SadighEtAl1997(): ['<9,sm1_sg2_cog2_char_complex,Sad1997,w=0.0299999994412>']
+  10,SadighEtAl1997(): ['<10,sm1_sg2_cog2_char_plane,Sad1997,w=0.0450000019558>']
+  11,SadighEtAl1997(): ['<11,sm1_sg2_cog2_char_simple,Sad1997,w=0.0750000032596>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -144,26 +144,26 @@ Slowest sources
 ============ ========= ========================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class              weight split_num filter_time split_time calc_time
 ============ ========= ========================= ====== ========= =========== ========== =========
-8            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
-6            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
-2            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-1            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-5            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-3            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-4            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-0            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
-4            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
-9            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
 0            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
 11           SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
+6            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
 7            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
+5            COMFLT1   ComplexFaultSource        62     1         0.001       0.0        0.0      
+0            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
+1            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
 10           SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
-0            COMFLT1   ComplexFaultSource        29     1         0.001       0.0        0.0      
-5            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
-6            COMFLT1   ComplexFaultSource        29     1         0.001       0.0        0.0      
-1            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
-10           CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
 7            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
+3            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
+4            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
+0            COMFLT1   ComplexFaultSource        29     1         0.001       0.0        0.0      
+2            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
+2            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
+5            SFLT1     SimpleFaultSource         56     1         0.001       0.0        0.0      
+8            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
+9            SFLT1     SimpleFaultSource         58     1         0.001       0.0        0.0      
+1            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
+2            COMFLT1   ComplexFaultSource        29     1         0.001       0.0        0.0      
+5            CHAR1     CharacteristicFaultSource 1.000  1         0.001       0.0        0.0      
 ============ ========= ========================= ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -173,7 +173,7 @@ source_class              filter_time split_time calc_time counts
 ========================= =========== ========== ========= ======
 CharacteristicFaultSource 0.013       0.0        0.0       12    
 ComplexFaultSource        0.013       0.0        0.0       12    
-SimpleFaultSource         0.014       0.0        0.0       12    
+SimpleFaultSource         0.015       0.0        0.0       12    
 ========================= =========== ========== ========= ======
 
 Information about the tasks
@@ -185,11 +185,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.599     0.0       1     
-managing sources               0.142     0.0       1     
-filtering sources              0.040     0.0       36    
-total count_eff_ruptures       0.008     0.0       30    
+reading composite source model 0.603     0.0       1     
+managing sources               0.131     0.0       1     
+filtering sources              0.041     0.0       36    
+total count_eff_ruptures       0.007     0.0       30    
 store source_info              0.005     0.0       1     
-aggregate curves               6.485E-04 0.0       30    
-reading site collection        3.314E-05 0.0       1     
+aggregate curves               6.154E-04 0.0       30    
+reading site collection        3.195E-05 0.0       1     
 ============================== ========= ========= ======

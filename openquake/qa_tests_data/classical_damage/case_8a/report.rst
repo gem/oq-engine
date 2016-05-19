@@ -1,7 +1,7 @@
 Classical PSHA-Based Hazard
 ===========================
 
-gem-tstation:/home/michele/ssd/calc_16324.hdf5 updated Mon May 16 14:19:07 2016
+gem-tstation:/home/michele/ssd/calc_16368.hdf5 updated Wed May 18 18:18:28 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   20.0
 random_seed                  42                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git16c052c'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -67,7 +67,7 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           1,694        1,694 
+source_model.xml 0      Active Shallow Crust 1           1694         1,694 
 ================ ====== ==================== =========== ============ ======
 
 Informational data
@@ -129,13 +129,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.092     0.0       1     
+managing sources               0.096     0.0       1     
 splitting sources              0.070     0.0       1     
-reading exposure               0.021     0.0       1     
-reading composite source model 0.011     0.0       1     
+reading composite source model 0.010     0.0       1     
 store source_info              0.008     0.0       1     
 total count_eff_ruptures       0.004     0.0       14    
+reading exposure               0.003     0.0       1     
 filtering sources              0.002     0.0       1     
-aggregate curves               2.971E-04 0.0       14    
-reading site collection        8.106E-06 0.0       1     
+aggregate curves               3.033E-04 0.0       14    
+reading site collection        6.914E-06 0.0       1     
 ============================== ========= ========= ======
