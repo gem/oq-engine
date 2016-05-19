@@ -428,16 +428,6 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
                     'rup_data/' + val.trt, val.rup_data.dtype)
             dset.extend(val.rup_data)
 
-    def zerodict(self):
-        """
-        Initial accumulator, a dictionary trt_model_id -> list of ruptures
-        """
-        smodels = self.rlzs_assoc.csm_info.source_models
-        zd = AccumDict((tm.id, []) for smodel in smodels
-                       for tm in smodel.trt_models)
-        zd.calc_times = []
-        return zd
-
     def post_execute(self, result):
         """
         Save the SES collection
@@ -528,10 +518,10 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
         with monitor('bulding hazard curves', measuremem=False):
             duration = oq.investigation_time * oq.ses_per_logic_tree_path
             for rlzi in gmfadict:
-                gmvs_by_sid = group_array(gmfadict[rlzi], 'sid')
+                gmfa = group_array(gmfadict[rlzi], 'sid')
                 result[rlzi][HAZCURVES] = {sid: gmvs_to_haz_curve(
-                    gmvs, oq.imtls, oq.investigation_time, duration)
-                        for sid, gmvs in gmvs_by_sid.items()}
+                    gmfa[sid], oq.imtls, oq.investigation_time, duration)
+                                           for sid in gmfa}
     return result
 
 
@@ -602,8 +592,6 @@ class EventBasedCalculator(ClassicalCalculator):
             return
         monitor = self.monitor(self.core_task.__name__)
         monitor.oqparam = oq
-        zerodict = AccumDict({
-            rlz.ordinal: {} for rlz in self.rlzs_assoc.realizations})
         min_iml = fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
         acc = parallel.apply_reduce(
             self.core_task.__func__,
@@ -611,7 +599,7 @@ class EventBasedCalculator(ClassicalCalculator):
              min_iml, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             agg=self.combine_curves_and_save_gmfs,
-            acc=zerodict, key=operator.attrgetter('trt_id'),
+            key=operator.attrgetter('trt_id'),
             weight=operator.attrgetter('weight'))
         if oq.ground_motion_fields:
             self.datastore.set_nbytes('gmf_data')

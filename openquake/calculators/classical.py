@@ -29,7 +29,7 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
-    hazard_curves_per_trt, zero_curves, zero_maps, agg_curves, array_of_curves)
+    hazard_curves_per_trt, zero_curves, zero_maps, array_of_curves)
 from openquake.risklib import scientific
 from openquake.commonlib import parallel, datastore, source
 from openquake.baselib.general import AccumDict
@@ -210,7 +210,8 @@ class ClassicalCalculator(base.HazardCalculator):
     # overridden in event_based_rupture
     def agg_curves(self, acc, val):
         for trt_id in val:
-            acc[trt_id] = ProbabilityCurve.compose(acc.get(trt_id, {}), val[trt_id])
+            acc[trt_id] = ProbabilityCurve.compose(
+                acc.get(trt_id, {}), val[trt_id])
 
     def count_eff_ruptures(self, result_dict, trt_model):
         """
