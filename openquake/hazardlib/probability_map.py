@@ -21,8 +21,8 @@ import numpy
 F64 = numpy.float64
 
 
-# returns a dict imt -> slice
-def slicedict(imt_dt):
+# return a dict imt -> slice and the total number of levels
+def _slicedict_n(imt_dt):
     n = 0
     slicedic = {}
     for imt in imt_dt.names:
@@ -47,7 +47,7 @@ class Imtls(collections.Mapping):
         self.imt_dt = dt = numpy.dtype(
             [(imt, F64, len(imls) if hasattr(imls, '__len__') else 1)
              for imt, imls in sorted(imtls.items())])
-        self.slicedic, num_levels = slicedict(dt)
+        self.slicedic, num_levels = _slicedict_n(dt)
         self.array = numpy.zeros(num_levels, F64)
         for imt, imls in imtls.items():
             self[imt] = imls
@@ -73,10 +73,8 @@ class Imtls(collections.Mapping):
 class ProbabilityCurve(object):
     """
     This class is a small wrapper over an array of PoEs associated to
-    a set of intensity measure types and levels. It provides a few
-    class methods to manage a dictionary of curves keyed by an integer
-    (the site index) and defines a few operators, including the complement
-    operator `~`
+    a set of intensity measure types and levels. It provides a few operators,
+    including the complement operator `~`
 
     ~p = 1 - p
 
@@ -89,7 +87,6 @@ class ProbabilityCurve(object):
 
     Here is an example of use:
 
-    >>> imtls = Imtls({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
     >>> poe = ProbabilityCurve(numpy.array([0.1, 0.2, 0.3, 0, 0]))
     >>> ~(poe | poe) * .5
     <ProbabilityCurve
@@ -127,12 +124,21 @@ class ProbabilityCurve(object):
 
 class ProbabilityMap(dict):
     """
-    >>> imtls = Imtls(dict(PGA=[1, 2, 3], PGV=[4, 5]))
-    >>> map1 = ProbabilityMap.build(5, 1, [0, 1], initvalue=.1)
-    >>> map2 = ProbabilityMap.build(5, 1, [1, 2], initvalue=.1)
-    >>> map3 = map1 + map2
-    """
+    A dictionary site_id -> ProbabilityCurve. It defines the complement
+    operator `~`, performing the complement on each curve, the addition
+    operator `+`. performing the
 
+    ~p = 1 - p
+
+    and the inclusive or on the underlying curves:
+
+    m = m1 + m2 = {sid: m1[sid] | m2[sid] for sid in all_sids}
+
+    Such operators are implemented efficiently at the numpy level, by
+    dispatching on the underlying array. Moreover there is a classmethod
+    .build(num_levels, num_gsims, sids, initvalue) to build initialized
+    instances of ProbabilityMap.
+    """
     @classmethod
     def build(cls, num_levels, num_gsims, sids, initvalue=0.):
         """
