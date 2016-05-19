@@ -164,7 +164,7 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     dic = AccumDict()
     dic.siteslice = slice(siteidx, siteidx + len(sitecol))
     if monitor.oqparam.poes_disagg:
-        sm_id = rlzs_assoc.csm_info.get_source_model(trt_model_id).ordinal
+        sm_id = rlzs_assoc.sm_ids[trt_model_id]
         dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
     else:
         dic.bbs = []
@@ -280,7 +280,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.store_source_info(curves_by_trt_gsim)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
             partial(self.count_eff_ruptures, curves_by_trt_gsim))
-        self.datastore['csm_info'] = self.rlzs_assoc.csm_info
+        self.datastore['csm_info'] = self.csm.info
         return curves_by_trt_gsim
 
     def store_source_info(self, curves_by_trt_gsim):
@@ -315,7 +315,7 @@ class ClassicalCalculator(base.HazardCalculator):
             a dictionary (trt_id, gsim) -> hazard curves
         """
         with self.monitor('save curves_by_trt_gsim', autoflush=True):
-            for sm in self.rlzs_assoc.csm_info.source_models:
+            for sm in self.csm.info.source_models:
                 group = self.datastore.hdf5.create_group(
                     'curves_by_sm/' + '_'.join(sm.path))
                 group.attrs['source_model'] = sm.name

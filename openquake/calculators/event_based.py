@@ -266,7 +266,7 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     rup_data = []
     calc_times = []
     rup_mon = monitor('filtering ruptures', measuremem=False)
-    sm = rlzs_assoc.csm_info.get_source_model(trt_model_id)
+    num_samples = rlzs_assoc.samples[trt_model_id]
 
     # Compute and save stochastic event sets
     for src in sources:
@@ -278,8 +278,8 @@ def compute_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
             filter_sites_by_distance_to_rupture,
             integration_distance=max_dist, sites=s_sites)
         num_occ_by_rup = sample_ruptures(
-            src, oq.ses_per_logic_tree_path, sm.samples,
-            rlzs_assoc.csm_info.seed)
+            src, oq.ses_per_logic_tree_path, num_samples,
+            rlzs_assoc.seed)
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_ruptures *before* the filtering
@@ -432,7 +432,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         """
         Initial accumulator, a dictionary trt_model_id -> list of ruptures
         """
-        smodels = self.rlzs_assoc.csm_info.source_models
+        smodels = self.csm.info.source_models
         zd = AccumDict((tm.id, []) for smodel in smodels
                        for tm in smodel.trt_models)
         zd.calc_times = []
