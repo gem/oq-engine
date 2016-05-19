@@ -22,8 +22,9 @@ import operator
 from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import sap, nrml, readinput, reportwriter, datastore
+from openquake.commonlib.parallel import get_pickled_sizes
 from openquake.commonlib.export import export
-from openquake.calculators import base
+from openquake.calculators import base, views
 from openquake.hazardlib import gsim
 
 
@@ -37,7 +38,10 @@ def print_csm_info(fname):
     print(csm.info)
     print('See https://github.com/gem/oq-risklib/blob/master/doc/'
           'effective-realizations.rst for an explanation')
-    print(csm.info.get_rlzs_assoc())
+    rlzs_assoc = csm.info.get_rlzs_assoc()
+    print(rlzs_assoc)
+    tot, pairs = get_pickled_sizes(rlzs_assoc)
+    print(views.rst_table(pairs, ['attribute', 'nbytes']))
 
 
 # the documentation about how to use this feature can be found
