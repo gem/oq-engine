@@ -61,7 +61,16 @@ class InfoTestCase(unittest.TestCase):
 b1, x15.xml, trt=[0], weight=1.00: 1 realization(s)>
 See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst for an explanation
 <RlzsAssoc(size=1, rlzs=1)
-0,AkkarBommer2010(): ['<0,b1,@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>'''
+0,AkkarBommer2010(): ['<0,b1,@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>
+=============== ======
+attribute       nbytes
+=============== ======
+csm_info        4,090 
+rlzs_assoc      991   
+rlzs_by_smodel  936   
+gsim_by_trt     590   
+gsims_by_trt_id 131   
+=============== ======'''
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
