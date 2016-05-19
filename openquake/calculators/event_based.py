@@ -414,20 +414,6 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
             len(ruptures) for trt_id, ruptures in ruptures_by_trt_id.items()
             if trt_model.id == trt_id)
 
-    def agg_curves(self, acc, val):
-        """
-        For the rupture calculator, increment the AccumDict trt_id -> ruptures
-        and save the rup_data
-        """
-        acc += val
-        if len(val.rup_data):
-            try:
-                dset = self.rup_data[val.trt]
-            except KeyError:
-                dset = self.rup_data[val.trt] = self.datastore.create_dset(
-                    'rup_data/' + val.trt, val.rup_data.dtype)
-            dset.extend(val.rup_data)
-
     def post_execute(self, result):
         """
         Save the SES collection
