@@ -1,4 +1,6 @@
   [Daniele Viganò]
+  * Remove the dependency from the python 'pwd' package which is not
+    available on Windows
   * Supervisord init scripts are now provided for the dbserver, celery
     and the webui. Celery is not started by default, other two are.
 
