@@ -171,12 +171,12 @@ def calc_hazard_curves(
     imtls = Imtls(imtls)
     sources_by_trt = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
-    acc = ProbabilityMap()
+    pmap = ProbabilityMap()
     for trt in sources_by_trt:
-        acc += hazard_curves_per_trt(
+        pmap += hazard_curves_per_trt(
             sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
             truncation_level, source_site_filter)
-    return array_of_curves(acc, len(sites), imtls)
+    return array_of_curves(pmap, len(sites), imtls)
 
 
 # NB: it is important for this to be fast since it is inside an inner loop
