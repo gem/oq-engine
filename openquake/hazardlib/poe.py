@@ -36,7 +36,12 @@ def slicedict(imt_dt):
 class Imtls(collections.Mapping):
     """
     A small wrapper over an ordered dictionary of intensity measure types
-    and levels
+    and levels.
+
+    >>> Imtls({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
+    <Imtls
+    PGA: [ 0.01  0.02  0.04]
+    PGV: [ 0.1  0.2]>
     """
     def __init__(self, imtls):
         self.imt_dt = dt = numpy.dtype(
@@ -61,7 +66,7 @@ class Imtls(collections.Mapping):
         return len(self.imt_dt.names)
 
     def __repr__(self):
-        data = ['%s: %s' % (imt, self.array[imt]) for imt in self]
+        data = ['%s: %s' % (imt, self[imt]) for imt in self]
         return '<Imtls\n%s>' % '\n'.join(data)
 
 
@@ -85,93 +90,62 @@ class ProbabilityCurve(object):
     Here is an example of use:
 
     >>> imtls = Imtls({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
-    >>> poe = ProbabilityCurve(imtls.slicedic, numpy.zeros(5, F64))
-    >>> poe['PGA'] = [0.1, 0.2, 0.3]
+    >>> poe = ProbabilityCurve(numpy.array([0.1, 0.2, 0.3, 0, 0]))
     >>> ~(poe | poe) * .5
     <ProbabilityCurve
-    PGA: [ 0.405  0.32   0.245]
-    PGV: [ 0.5  0.5]>
+    [ 0.405  0.32   0.245  0.5    0.5  ]>
     """
-    def __init__(self, slicedic, array):
-        self.slicedic = slicedic
+    def __init__(self, array):
         self.array = array
-
-    def __setitem__(self, imt, array):
-        self.array[self.slicedic[imt]] = array
-
-    def __getitem__(self, imt):
-        return self.array[self.slicedic[imt]]
 
     def __or__(self, other):
         if other == 0:
             return self
         else:
             return self.__class__(
-                self.slicedic, 1. - (1. - self.array) * (1. - other.array))
+                1. - (1. - self.array) * (1. - other.array))
     __ror__ = __or__
 
     def __mul__(self, other):
         if isinstance(other, self.__class__):
-            return self.__class__(self.slicedic, self.array * other.array)
+            return self.__class__(self.array * other.array)
         elif other == 1:
             return self
         else:
-            return self.__class__(self.slicedic, self.array * other)
+            return self.__class__(self.array * other)
     __rmul__ = __mul__
 
     def __invert__(self):
-        return self.__class__(self.slicedic, 1. - self.array)
+        return self.__class__(1. - self.array)
 
     def __nonzero__(self):
         return bool(self.array.sum())
 
     def __repr__(self):
-        data = ['%s: %s' % (imt, self[imt]) for imt in sorted(self.slicedic)]
-        return '<ProbabilityCurve\n%s>' % '\n'.join(data)
+        return '<ProbabilityCurve\n%s>' % self.array
 
 
 class ProbabilityMap(dict):
     """
     >>> imtls = Imtls(dict(PGA=[1, 2, 3], PGV=[4, 5]))
-    >>> curves1 = ProbabilityMap.build(imtls, 1, [0, 1], initvalue=.1)
-    >>> curves2 = ProbabilityMap.build(imtls, 1, [1, 2], initvalue=.1)
-    >>> dic = curves1 + curves2
-    >>> dic[0]
-    <ProbabilityCurve
-    PGA: [[ 0.1]
-     [ 0.1]
-     [ 0.1]]
-    PGV: [[ 0.1]
-     [ 0.1]]>
-    >>> dic[1]
-    <ProbabilityCurve
-    PGA: [[ 0.19]
-     [ 0.19]
-     [ 0.19]]
-    PGV: [[ 0.19]
-     [ 0.19]]>
-    >>> dic[2]
-    <ProbabilityCurve
-    PGA: [[ 0.1]
-     [ 0.1]
-     [ 0.1]]
-    PGV: [[ 0.1]
-     [ 0.1]]>
+    >>> map1 = ProbabilityMap.build(5, 1, [0, 1], initvalue=.1)
+    >>> map2 = ProbabilityMap.build(5, 1, [1, 2], initvalue=.1)
+    >>> map3 = map1 + map2
     """
 
     @classmethod
-    def build(cls, imtls, num_gsims, sids, initvalue=0.):
+    def build(cls, num_levels, num_gsims, sids, initvalue=0.):
         """
-        :param imtls: an :class:`openquake.hazardlib.imt.Imtls` instance
+        :param num_levels: the total number of intensity measure levels
         :param num_gsims: the number of GSIMs
         :param sids: a set of site indices
         :param initvalue: the initial value of the probability (default 0)
         """
         dic = cls()
         for sid in sids:
-            array = numpy.empty((len(imtls.array), num_gsims), F64)
+            array = numpy.empty((num_levels, num_gsims), F64)
             array.fill(initvalue)
-            dic[sid] = ProbabilityCurve(imtls.slicedic, array)
+            dic[sid] = ProbabilityCurve(array)
         return dic
 
     def extract(self, gsim_idx):
@@ -183,7 +157,7 @@ class ProbabilityMap(dict):
         for sid in self:
             curve = self[sid]
             array = curve.array[:, gsim_idx].reshape(-1, 1)
-            out[sid] = ProbabilityCurve(curve.slicedic, array)
+            out[sid] = ProbabilityCurve(array)
         return out
 
     def __add__(self, other):

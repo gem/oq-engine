@@ -87,15 +87,12 @@ def array_of_curves(acc, nsites, imtls, gsim_idx=0):
     :param imtls: intensity measure types and levels
     :param gsims_idx: extract the data corresponding to a specific GSIM
     """
-    num_levels = sum(len(imtls[imt]) for imt in imtls)
-    try:
-        imt_dt = imtls.imt_dt
-    except AttributeError:
-        imt_dt = Imtls(imtls).imt_dt
-    curves = numpy.zeros((nsites, num_levels))
+    curves = numpy.zeros(nsites, imtls.imt_dt)
     for sid in acc:
-        curves[sid, :] = acc[sid].array[:, gsim_idx]
-    return curves.view(imt_dt).reshape(nsites)
+        array = acc[sid].array[:, gsim_idx]
+        for imt in imtls:
+            curves[imt][sid] = array[imtls.slicedic[imt]]
+    return curves
 
 
 @deprecated('Use calc_hazard_curves instead')
@@ -213,7 +210,7 @@ def probability_map(src, s_sites, imtls, cmaker, trunclevel, bbs,
     bounding boxes.
     """
     pmap = ProbabilityMap.build(
-        imtls, len(cmaker.gsims), s_sites.sids, initvalue=1.)
+        len(imtls.array), len(cmaker.gsims), s_sites.sids, initvalue=1.)
     try:
         for rup in src.iter_ruptures():
             with ctx_mon:  # compute distances
