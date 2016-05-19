@@ -26,7 +26,8 @@ import numpy
 from openquake.baselib.general import get_array
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import gmf, filters
-from openquake.hazardlib.poe import ProbabilityCurve, ProbabilityMap
+from openquake.hazardlib.probability_map import (
+    ProbabilityCurve, ProbabilityMap)
 from openquake.hazardlib.site import SiteCollection
 from openquake.commonlib.readinput import \
     get_gsims, get_rupture, get_correl_model, get_imts

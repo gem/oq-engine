@@ -21,7 +21,7 @@ import logging
 import numpy
 
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.poe import Imtls
+from openquake.hazardlib.probability_map import Imtls
 from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import get_risk_files
 

@@ -23,7 +23,7 @@ from functools import partial
 
 import numpy
 
-from openquake.hazardlib.poe import ProbabilityMap
+from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
