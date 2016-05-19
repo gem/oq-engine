@@ -23,7 +23,6 @@ Various utility functions concerned with configuration.
 
 import ConfigParser
 import os
-import pwd
 import sys
 from contextlib import contextmanager
 
@@ -143,10 +142,8 @@ def abort_if_no_config_available():
         msg = (
             "\nYou are not authorized to read any of the OpenQuake "
             "configuration files.\n"
-            "Please contact a system administrator or run the following "
-            "command:\n\n"
-            "   sudo gpasswd --add %s openquake"
-            % pwd.getpwuid(os.geteuid()).pw_name)
+            "Please check permissions on the configuration files in %s."
+            % cfg._get_paths())
         print msg
         sys.exit(2)
 
