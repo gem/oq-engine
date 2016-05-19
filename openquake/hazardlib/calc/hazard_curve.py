@@ -22,12 +22,13 @@
 """
 import sys
 import time
-import collections
+import operator
 
 import numpy
 
 from openquake.baselib.python3compat import raise_, zip
 from openquake.baselib.performance import Monitor
+from openquake.baselib.general import groupby
 from openquake.hazardlib.probability_map import ProbabilityMap, Imtls
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -168,9 +169,8 @@ def calc_hazard_curves(
         size of each field is given by the number of levels in ``imtls``.
     """
     imtls = Imtls(imtls)
-    sources_by_trt = collections.defaultdict(list)
-    for src in sources:
-        sources_by_trt[src.tectonic_region_type].append(src)
+    sources_by_trt = groupby(
+        sources, operator.attrgetter('tectonic_region_type'))
     acc = ProbabilityMap()
     for trt in sources_by_trt:
         acc += hazard_curves_per_trt(
