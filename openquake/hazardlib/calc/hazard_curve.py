@@ -91,7 +91,8 @@ def array_of_curves(pmap, nsites, imtls, gsim_idx=0):
     for sid in pmap:
         array = pmap[sid].array[:, gsim_idx]
         for imt in imtls:
-            curves[sid][imt] = array[imtls.slicedic[imt]]
+            curves[imt][sid] = array[imtls.slicedic[imt]]
+            # NB: curves[sid][imt] does not work on h5py 2.2
     return curves
 
 
