@@ -142,7 +142,7 @@ def abort_if_no_config_available():
         msg = (
             "\nYou are not authorized to read any of the OpenQuake "
             "configuration files.\n"
-            "Please check permissions on the configration files in %s."
+            "Please check permissions on the configuration files in %s."
             % cfg._get_paths())
         print msg
         sys.exit(2)
