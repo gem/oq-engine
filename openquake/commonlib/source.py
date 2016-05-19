@@ -17,9 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import division
-import io
 import sys
-import ast
 import copy
 import math
 import logging
@@ -28,16 +26,20 @@ import collections
 import random
 from xml.etree import ElementTree as etree
 
-import h5py
 import numpy
 
 from openquake.baselib.python3compat import raise_
-from openquake.baselib.general import AccumDict, groupby, block_splitter
+from openquake.baselib.general import (
+    AccumDict, groupby, block_splitter, group_array)
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import logictree, sourceconverter, parallel, valid
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
 
 MAX_INT = 2 ** 31 - 1
+U16 = numpy.uint16
+U32 = numpy.uint32
+I32 = numpy.int32
+F32 = numpy.float32
 
 
 class DuplicatedID(Exception):
@@ -49,11 +51,12 @@ class LtRealization(object):
     Composite realization build on top of a source model realization and
     a GSIM realization.
     """
-    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
+    def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight, sampleid):
         self.ordinal = ordinal
         self.sm_lt_path = sm_lt_path
         self.gsim_rlz = gsim_rlz
         self.weight = weight
+        self.sampleid = sampleid
 
     def __repr__(self):
         return '<%d,%s,w=%s>' % (self.ordinal, self.uid, self.weight)
@@ -160,7 +163,7 @@ class TrtModel(collections.Sequence):
         return sorted(source_stats_dict.values())
 
     def __init__(self, trt, sources=None,
-                 min_mag=None, max_mag=None, id=0):
+                 min_mag=None, max_mag=None, id=0, eff_ruptures=-1):
         self.trt = trt
         self.sources = sources or []
         self.min_mag = min_mag
@@ -170,6 +173,7 @@ class TrtModel(collections.Sequence):
             self.update(src)
         self.source_model = None  # to be set later, in CompositionInfo
         self.weight = 1
+        self.eff_ruptures = eff_ruptures  # set later nby get_rlzs_assoc
 
     def tot_ruptures(self):
         return sum(src.num_ruptures for src in self.sources)
@@ -195,9 +199,9 @@ class TrtModel(collections.Sequence):
             self.max_mag = max_mag
 
     def __repr__(self):
-        return '<%s #%d %s, %d source(s), %d rupture(s)>' % (
+        return '<%s #%d %s, %d source(s), %d effective rupture(s)>' % (
             self.__class__.__name__, self.id, self.trt,
-            len(self.sources), self.tot_ruptures())
+            len(self.sources), self.eff_ruptures)
 
     def __lt__(self, other):
         """
@@ -362,13 +366,6 @@ class RlzsAssoc(collections.Mapping):
         """Flat list with all the realizations"""
         return sum(self.rlzs_by_smodel, [])
 
-    def get_sm_id(self, trt_model_id):
-        """Return the source model ordinal for the given trt_model_id"""
-        for smodel in self.csm_info.source_models:
-            for trt_model in smodel.trt_models:
-                if trt_model.id == trt_model_id:
-                    return smodel.ordinal
-
     def get_rlzs_by_gsim(self, trt_id):
         """
         Returns a dictionary gsim -> rlzs
@@ -392,9 +389,9 @@ class RlzsAssoc(collections.Mapping):
         rlzs = []
         for i, gsim_rlz in enumerate(realizations):
             weight = float(lt_model.weight) * float(gsim_rlz.weight)
-            rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight)
-            self.gsim_by_trt.append(dict(
-                zip(gsim_lt.all_trts, gsim_rlz.value)))
+            rlz = LtRealization(idx[i], lt_model.path, gsim_rlz, weight, i)
+            self.gsim_by_trt.append(
+                dict(zip(gsim_lt.all_trts, gsim_rlz.value)))
             for trt_model in lt_model.trt_models:
                 if trt_model.trt in trts:
                     # ignore the associations to discarded TRTs
@@ -438,7 +435,7 @@ class RlzsAssoc(collections.Mapping):
 
     def combine(self, results, agg=agg_prob):
         """
-        :param results: a dictionary (trt_model_id, gsim_no) -> floats
+        :param results: a dictionary (trt_model_id, gsim) -> floats
         :param agg: an aggregation function
         :returns: a dictionary rlz -> aggregated floats
 
@@ -483,8 +480,13 @@ class RlzsAssoc(collections.Mapping):
         probability, which however is close to the sum for small probabilities.
         """
         ad = AccumDict()
-        for (trt_id, gsim_idx), value in results.items():
-            gsim = self.gsims_by_trt_id[trt_id][int(gsim_idx)]
+        for (trt_id, gsim), value in results.items():
+            try:
+                gsim_idx = int(gsim)  # for classical calculations
+            except (ValueError, TypeError):  # already a GSIM
+                pass  # for scenario calculations
+            else:
+                gsim = self.gsims_by_trt_id[trt_id][gsim_idx]
             for rlz in self.rlzs_assoc[trt_id, gsim]:
                 ad[rlz] = agg(ad.get(rlz, 0), value)
         return ad
@@ -509,37 +511,21 @@ class RlzsAssoc(collections.Mapping):
             self.__class__.__name__, len(self), len(self.realizations),
             '\n'.join('%s: %s' % pair for pair in pairs))
 
-# collection <-> trt model associations
-col_dt = numpy.dtype([('trt_id', numpy.uint32), ('sample', numpy.uint32)])
-
 LENGTH = 256
 
 source_model_dt = numpy.dtype([
     ('name', (bytes, LENGTH)),
-    ('weight', numpy.float32),
+    ('weight', F32),
     ('path', (bytes, LENGTH)),
-    ('num_rlzs', numpy.uint32),
-    ('eff_ruptures', (bytes, LENGTH)),
-    ('samples', numpy.uint32),
+    ('num_rlzs', U32),
+    ('samples', U32),
 ])
 
-
-# this is used when populating the array csm_info.eff_ruptures in
-# get_rlzs_assoc, which is then read by view_ruptures_per_trt; an
-# overflow would break the report but not the computation
-def cjoin(strings, maxlength=LENGTH):
-    """
-    Join strings by checking that the result is below maxlength characters
-
-    :param strings: an iterable over strings
-    :returns: a comma separated string of lenght <= maxlength
-    """
-    s = ','.join(strings)
-    if len(s) > maxlength:
-        logging.warn(
-            'The string %r is over %d characters: `csm_info.eff_ruptures` '
-            'will be corrupted' % (s, maxlength))
-    return s
+trt_model_dt = numpy.dtype(
+    [('trt_id', U32),
+     ('trti', U16),
+     ('effrup', I32),
+     ('sm_id', U32)])
 
 
 class CompositionInfo(object):
@@ -550,55 +536,69 @@ class CompositionInfo(object):
     :param source_model_lt: a SourceModelLogicTree object
     :param source_models: a list of SourceModel instances
     """
+    @classmethod
+    def fake(cls, gsimlt=None):
+        """
+        :returns:
+            a fake `CompositionInfo` instance with the given gsim logic tree
+            object; if None, builds automatically a fake gsim logic tree
+        """
+        weight = 1
+        fakeSM = SourceModel(
+            'fake', weight,  'b1', [TrtModel('*', eff_ruptures=1)],
+            gsimlt or logictree.GsimLogicTree.from_('FromFile'),
+            ordinal=0, samples=1)
+        return cls(seed=0, num_samples=0, source_models=[fakeSM])
+
     def __init__(self, seed, num_samples, source_models):
         self.seed = seed
         self.num_samples = num_samples
         self.source_models = source_models
-        self.init()
-
-    def init(self):
-        """Fully initialize the CompositionInfo object"""
-        self.eff_ruptures = numpy.zeros(len(self.source_models),
-                                        (bytes, LENGTH))
-        self.tmdict = {}  # trt_id -> trt_model
-        for sm in self.source_models:
-            for trt_model in sm.trt_models:
-                trt_model.source_model = sm
-                trt_id = trt_model.id
-                self.tmdict[trt_id] = trt_model
 
     def __getnewargs__(self):
         # with this CompositionInfo instances will be unpickled correctly
         return self.seed, self.num_samples, self.source_models
 
     def __toh5__(self):
+        trts = sorted(set(trt_model.trt for sm in self.source_models
+                          for trt_model in sm.trt_models))
+        trti = {trt: i for i, trt in enumerate(trts)}
+        data = []
+        for sm in self.source_models:
+            for trt_model in sm.trt_models:
+                # the number of effective realizations is set by get_rlzs_assoc
+                data.append((trt_model.id, trti[trt_model.trt],
+                             trt_model.eff_ruptures, sm.ordinal))
         lst = [(sm.name, sm.weight, '_'.join(sm.path),
-                sm.gsim_lt.get_num_paths(),
-                self.eff_ruptures[i], sm.samples)
+                sm.gsim_lt.get_num_paths(), sm.samples)
                for i, sm in enumerate(self.source_models)]
-        return (numpy.array(lst, source_model_dt),
+        gsim_lt = self.source_models[0].gsim_lt
+        return (dict(
+            tm_data=numpy.array(data, trt_model_dt),
+            sm_data=numpy.array(lst, source_model_dt)),
                 dict(seed=self.seed, num_samples=self.num_samples,
-                     gsim_lt_xml=open(sm.gsim_lt.fname).read()))
+                     trts=trts, gsim_lt_xml=str(gsim_lt),
+                     gsim_fname=gsim_lt.fname))
 
-    def __fromh5__(self, array, attrs):
+    def __fromh5__(self, dic, attrs):
+        tm_data = group_array(dic['tm_data'], 'sm_id')
+        sm_data = dic['sm_data']
         vars(self).update(attrs)
         self.source_models = []
-        trt_id = 0
-        for i, rec in enumerate(array):
+        for sm_id, rec in enumerate(sm_data):
+            tdata = tm_data[sm_id]
+            trtmodels = [
+                TrtModel(self.trts[trti], id=trt_id, eff_ruptures=effrup)
+                for trt_id, trti, effrup, sm_id in tdata if effrup > 0]
             path = tuple(rec['path'].split('_'))
-            trts = ast.literal_eval(rec['eff_ruptures'])
-            gsim_lt = logictree.GsimLogicTree(
-                io.BytesIO(self.gsim_lt_xml), trts)
-            trtmodels = []
-            for trt in trts:
-                tm = TrtModel(trt, id=trt_id)
-                trtmodels.append(tm)
-                trt_id += 1
+            trts = set(tm.trt for tm in trtmodels)
+            if self.gsim_fname.endswith('.xml'):
+                gsim_lt = logictree.GsimLogicTree(self.gsim_fname, trts)
+            else:  # fake file with the name of the GSIM
+                gsim_lt = logictree.GsimLogicTree.from_(self.gsim_fname)
             sm = SourceModel(rec['name'], rec['weight'], path, trtmodels,
-                             gsim_lt, i, rec['samples'])
+                             gsim_lt, sm_id, rec['samples'])
             self.source_models.append(sm)
-        self.init()
-        self.eff_ruptures = array['eff_ruptures']
 
     def get_num_rlzs(self, source_model=None):
         """
@@ -611,7 +611,7 @@ class CompositionInfo(object):
             return source_model.samples
         return source_model.gsim_lt.get_num_paths()
 
-    def get_rlzs_assoc(self, count_ruptures=lambda tm: -1):
+    def get_rlzs_assoc(self, count_ruptures=None):
         """
         Return a RlzsAssoc with fields realizations, gsim_by_trt,
         rlz_idx and trt_gsims.
@@ -620,19 +620,15 @@ class CompositionInfo(object):
         """
         assoc = RlzsAssoc(self)
         random_seed = self.seed
-        num_samples = self.num_samples
         idx = 0
         for i, smodel in enumerate(self.source_models):
             # collect the effective tectonic region types and ruptures
             trts = set()
-            rups = []
             for tm in smodel.trt_models:
-                nr = count_ruptures(tm)
-                if nr:
-                    rups.append('%r: %d' % (capitalize(tm.trt), nr))
+                if count_ruptures:
+                    tm.eff_ruptures = count_ruptures(tm)
+                if tm.eff_ruptures:
                     trts.add(tm.trt)
-            self.eff_ruptures[i] = '{%s}' % cjoin(rups, LENGTH - len('{}'))
-
             # recompute the GSIM logic tree if needed
             if trts != set(smodel.gsim_lt.tectonic_region_types):
                 before = smodel.gsim_lt.get_num_paths()
@@ -640,7 +636,7 @@ class CompositionInfo(object):
                 after = smodel.gsim_lt.get_num_paths()
                 logging.warn('Reducing the logic tree of %s from %d to %d '
                              'realizations', smodel.name, before, after)
-            if num_samples:  # sampling
+            if self.num_samples:  # sampling
                 rnd = random.Random(random_seed + idx)
                 rlzs = logictree.sample(smodel.gsim_lt, smodel.samples, rnd)
             else:  # full enumeration
@@ -656,6 +652,13 @@ class CompositionInfo(object):
         if assoc.realizations:
             assoc._init()
         return assoc
+
+    def get_source_model(self, trt_model_id):
+        """Return the source model for the given trt_model_id"""
+        for smodel in self.source_models:
+            for trt_model in smodel.trt_models:
+                if trt_model.id == trt_model_id:
+                    return smodel
 
     def __repr__(self):
         info_by_model = collections.OrderedDict(
@@ -874,7 +877,7 @@ class SourceManager(object):
                     except:
                         etype, err, tb = sys.exc_info()
                         msg = 'An error occurred with source id=%s: %s'
-                        msg %= (src.source_id, unicode(err))
+                        msg %= (src.source_id, err)
                         raise_(etype, msg, tb)
                 filter_time = filter_mon.dt
                 if sites is None:

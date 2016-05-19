@@ -1,7 +1,7 @@
 oq-test03, depth=15km
 =====================
 
-gem-tstation:/home/michele/ssd/calc_15396.hdf5 updated Tue May 10 12:35:38 2016
+gem-tstation:/home/michele/ssd/calc_16342.hdf5 updated Wed May 18 18:18:23 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  3                  
 master_seed                  0                  
-oqlite_version               '0.13.0-gitcdd89a9'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -39,8 +39,8 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
-  0,SadighEtAl1997(): ['SadighEtAl1997()']>
+  <RlzsAssoc(size=1, rlzs=1)
+  0,SadighEtAl1997(): ['<0,b_1,b1,w=1.0>']>
 
 Exposure model
 --------------
@@ -68,8 +68,8 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.005     0.0       1     
+reading exposure        0.004     0.0       1     
 filtering sites         0.001     0.0       1     
-computing gmfs          5.400E-04 0.0       1     
-reading site collection 7.868E-06 0.0       1     
+computing gmfs          0.001     0.0       1     
+reading site collection 7.153E-06 0.0       1     
 ======================= ========= ========= ======

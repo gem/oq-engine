@@ -706,17 +706,20 @@ class TrtModelTestCase(unittest.TestCase):
     def test_repr(self):
         self.assertEqual(
             repr(self.source_collector['Volcanic']),
-            '<TrtModel #0 Volcanic, 3 source(s), 0 rupture(s)>')
+            '<TrtModel #0 Volcanic, 3 source(s), -1 effective rupture(s)>')
         self.assertEqual(
             repr(self.source_collector['Stable Continental Crust']),
-            '<TrtModel #0 Stable Continental Crust, 1 source(s), 0 rupture(s)>'
+            '<TrtModel #0 Stable Continental Crust, 1 source(s), '
+            '-1 effective rupture(s)>'
         )
         self.assertEqual(
             repr(self.source_collector['Subduction Interface']),
-            '<TrtModel #0 Subduction Interface, 1 source(s), 0 rupture(s)>')
+            '<TrtModel #0 Subduction Interface, 1 source(s), '
+            '-1 effective rupture(s)>')
         self.assertEqual(
             repr(self.source_collector['Active Shallow Crust']),
-            '<TrtModel #0 Active Shallow Crust, 2 source(s), 0 rupture(s)>')
+            '<TrtModel #0 Active Shallow Crust, 2 source(s), -1'
+            ' effective rupture(s)>')
 
 
 class RuptureConverterTestCase(unittest.TestCase):
@@ -766,7 +769,7 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         # the example has number_of_logic_tree_samples = 1
         sitecol = readinput.get_site_collection(oqparam)
         csm = readinput.get_composite_source_model(oqparam, sitecol)
-        self.assertEqual(str(csm[0].gsim_lt), '''\
+        self.assertEqual(repr(csm[0].gsim_lt), '''\
 <GsimLogicTree
 Active Shallow Crust,b1,SadighEtAl1997(),w=0.5
 Active Shallow Crust,b2,ChiouYoungs2008(),w=0.5
@@ -843,7 +846,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         sitecol = readinput.get_site_collection(oq)
         csm = readinput.get_composite_source_model(oq, sitecol)
-        assoc = csm.info.get_rlzs_assoc()
+        assoc = csm.info.get_rlzs_assoc(lambda tm: 1)
         self.assertEqual(
             str(assoc),
             "<RlzsAssoc(size=2, rlzs=5)\n"
@@ -851,7 +854,7 @@ Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
             "1,SadighEtAl1997(): ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']>")
 
         # check CompositionInfo serialization
-        array, attrs = assoc.csm_info.__toh5__()
+        dic, attrs = assoc.csm_info.__toh5__()
         new = object.__new__(CompositionInfo)
-        new.__fromh5__(array, attrs)
+        new.__fromh5__(dic, attrs)
         self.assertEqual(repr(new), repr(assoc.csm_info))

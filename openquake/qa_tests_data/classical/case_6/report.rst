@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 6
 ================================
 
-gem-tstation:/home/michele/ssd/calc_15439.hdf5 updated Tue May 10 12:36:28 2016
+gem-tstation:/home/michele/ssd/calc_16385.hdf5 updated Wed May 18 18:19:05 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  1066               
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcdd89a9'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -64,7 +64,7 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 2           1,386        1,386 
+source_model.xml 0      Active Shallow Crust 2           1386         1,386 
 ================ ====== ==================== =========== ============ ======
 
 Informational data
@@ -73,7 +73,7 @@ Informational data
 count_eff_ruptures_max_received_per_task 2577          
 count_eff_ruptures_num_tasks             2             
 count_eff_ruptures_sent.monitor          4636          
-count_eff_ruptures_sent.rlzs_assoc       5178          
+count_eff_ruptures_sent.rlzs_assoc       4440          
 count_eff_ruptures_sent.sitecol          874           
 count_eff_ruptures_sent.siteidx          10            
 count_eff_ruptures_sent.sources          2256          
@@ -93,8 +93,8 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            2         ComplexFaultSource 485    1         0.002       8.098      0.0      
-0            1         SimpleFaultSource  901    1         0.001       0.509      0.0      
+0            2         ComplexFaultSource 485    1         0.001       5.351      0.0      
+0            1         SimpleFaultSource  901    1         0.001       0.472      0.0      
 ============ ========= ================== ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -102,8 +102,8 @@ Computation times by source typology
 ================== =========== ========== ========= ======
 source_class       filter_time split_time calc_time counts
 ================== =========== ========== ========= ======
-ComplexFaultSource 0.002       8.098      0.0       1     
-SimpleFaultSource  0.001       0.509      0.0       1     
+ComplexFaultSource 0.001       5.351      0.0       1     
+SimpleFaultSource  0.001       0.472      0.0       1     
 ================== =========== ========== ========= ======
 
 Information about the tasks
@@ -115,12 +115,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               8.614     0.0       1     
-splitting sources              8.608     0.0       2     
-reading composite source model 8.554     0.0       1     
-store source_info              0.004     0.0       1     
+reading composite source model 6.105     0.0       1     
+managing sources               5.829     0.0       1     
+splitting sources              5.823     0.0       2     
+store source_info              0.009     0.0       1     
 filtering sources              0.003     0.0       2     
-total count_eff_ruptures       7.310E-04 0.0       2     
-reading site collection        3.505E-05 0.0       1     
-aggregate curves               3.409E-05 0.0       2     
+total count_eff_ruptures       7.050E-04 0.0       2     
+aggregate curves               7.010E-05 0.0       2     
+reading site collection        4.005E-05 0.0       1     
 ============================== ========= ========= ======

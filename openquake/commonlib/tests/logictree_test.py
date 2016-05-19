@@ -2372,7 +2372,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTree>
             """)
             gsim_lt = self.parse_valid(xml, ['Shield'])
-            self.assertEqual(str(gsim_lt), '''<GsimLogicTree
+            self.assertEqual(repr(gsim_lt), '''<GsimLogicTree
 Shield,b1,FakeGMPETable(gmpe_table="Wcrust_rjb_med.hdf5"),w=1.0>''')
         finally:
             del valid.GSIM['FakeGMPETable']

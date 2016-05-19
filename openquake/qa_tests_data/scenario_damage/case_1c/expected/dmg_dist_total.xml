@@ -7,10 +7,10 @@ xmlns:gml="http://www.opengis.net/gml"
         <damageStates>
             no_damage slight moderate extreme complete
         </damageStates>
-        <damage ds="no_damage" mean="4.9066526E-01" stddev="4.0176341E-01"/>
-        <damage ds="slight" mean="3.2498819E-01" stddev="2.5434855E-01"/>
-        <damage ds="moderate" mean="7.0849165E-02" stddev="9.0181805E-02"/>
-        <damage ds="extreme" mean="2.1133421E-02" stddev="3.1731185E-02"/>
-        <damage ds="complete" mean="9.2363961E-02" stddev="1.3021585E-01"/>
+        <damage ds="no_damage" mean="4.90665E-01" stddev="4.01763E-01"/>
+        <damage ds="slight" mean="3.24988E-01" stddev="2.54349E-01"/>
+        <damage ds="moderate" mean="7.08492E-02" stddev="9.01818E-02"/>
+        <damage ds="extreme" mean="2.11334E-02" stddev="3.17312E-02"/>
+        <damage ds="complete" mean="9.23640E-02" stddev="1.30216E-01"/>
     </totalDmgDist>
 </nrml>

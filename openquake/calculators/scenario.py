@@ -15,13 +15,20 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import collections
 import numpy
 
-from openquake.baselib.general import group_array
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import GmfComputer
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, source
 from openquake.calculators import base
+
+U8 = numpy.uint8
+U16 = numpy.uint16
+U32 = numpy.uint32
+F32 = numpy.float32
+
+gmv_dt = numpy.dtype([('sid', U16), ('eid', U32), ('imti', U8), ('gmv', F32)])
 
 
 @base.calculators.add('scenario')
@@ -36,13 +43,13 @@ class ScenarioCalculator(base.HazardCalculator):
         Read the site collection and initialize GmfComputer, etags and seeds
         """
         super(ScenarioCalculator, self).pre_execute()
-        trunc_level = self.oqparam.truncation_level
-        correl_model = readinput.get_correl_model(self.oqparam)
-        n_gmfs = self.oqparam.number_of_ground_motion_fields
-        rupture = readinput.get_rupture(self.oqparam)
-        self.gsims = readinput.get_gsims(self.oqparam)
-        self.rlzs_assoc = readinput.get_rlzs_assoc(self.oqparam)
-        maxdist = self.oqparam.maximum_distance['default']
+        oq = self.oqparam
+        trunc_level = oq.truncation_level
+        correl_model = readinput.get_correl_model(oq)
+        n_gmfs = oq.number_of_ground_motion_fields
+        rupture = readinput.get_rupture(oq)
+        self.gsims = readinput.get_gsims(oq)
+        maxdist = oq.maximum_distance['default']
         with self.monitor('filtering sites', autoflush=True):
             self.sitecol = filters.filter_sites_by_distance_to_rupture(
                 rupture, maxdist, self.sitecol)
@@ -54,19 +61,30 @@ class ScenarioCalculator(base.HazardCalculator):
             sorted(['scenario-%010d~ses=1' % i for i in range(n_gmfs)]),
             (bytes, 100))
         self.computer = GmfComputer(
-            rupture, self.sitecol, self.oqparam.imtls, self.gsims,
+            rupture, self.sitecol, oq.imtls, self.gsims,
             trunc_level, correl_model)
+        gsim_lt = readinput.get_gsim_lt(oq)
+        cinfo = source.CompositionInfo.fake(gsim_lt)
+        self.datastore['csm_info'] = cinfo
+        self.rlzs_assoc = cinfo.get_rlzs_assoc()
+
+    def init(self):
+        pass
 
     def execute(self):
         """
-        Compute the GMFs and return a dictionary gmf_by_etag
+        Compute the GMFs and return a dictionary rlzi -> array gmv_dt
         """
-        rlzs_by_gsim = {gsim: self.rlzs_assoc[0, gsim] for gsim in self.gsims}
+        res = collections.defaultdict(list)
+        sids = self.sitecol.sids
         with self.monitor('computing gmfs', autoflush=True):
-            eids = range(self.oqparam.number_of_ground_motion_fields)
-            gmfa = self.computer.compute(
-                self.oqparam.random_seed, eids, rlzs_by_gsim)
-            return group_array(gmfa, 'rlzi')
+            n = self.oqparam.number_of_ground_motion_fields
+            for i, gsim in enumerate(self.gsims):
+                gmfa = self.computer.compute(
+                    self.oqparam.random_seed, gsim, n)
+                for (imti, sid, eid), gmv in numpy.ndenumerate(gmfa):
+                    res[i].append((sids[sid], eid, imti, gmv))
+            return {rlzi: numpy.array(res[rlzi], gmv_dt) for rlzi in res}
 
     def post_execute(self, gmfa_by_rlzi):
         """

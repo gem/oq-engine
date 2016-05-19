@@ -68,7 +68,7 @@ class ReportWriter(object):
         dpath = dstore.hdf5path
         mtime = os.path.getmtime(dpath)
         self.text += '\n\n%s:%s updated %s' % (
-            info.hostname, dpath, time.ctime(mtime))
+            info.hostname, dpath.encode('utf-8'), time.ctime(mtime))
         # NB: in the future, the sitecol could be transferred as
         # an array by leveraging the HDF5 serialization protocol in
         # litetask decorator; for the moment however the size of the
@@ -95,7 +95,7 @@ class ReportWriter(object):
         if 'composite_source_model' in ds:
             self.add('csm_info')
             self.add('required_params_per_trt')
-        self.add('rlzs_assoc', ds['rlzs_assoc'])
+        self.add('rlzs_assoc', ds['csm_info'].get_rlzs_assoc())
         if 'composite_source_model' in ds:
             self.add('ruptures_per_trt')
         if 'scenario' not in oq.calculation_mode:

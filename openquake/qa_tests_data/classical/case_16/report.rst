@@ -1,7 +1,7 @@
 Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per source + 3 Mmax per source
 ==========================================================================================================
 
-gem-tstation:/home/michele/ssd/calc_15452.hdf5 updated Tue May 10 12:37:20 2016
+gem-tstation:/home/michele/ssd/calc_16398.hdf5 updated Wed May 18 18:19:46 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcdd89a9'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -91,16 +91,16 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 5           1,925        48    
-source_model.xml 1      Active Shallow Crust 5           2,025        50    
-source_model.xml 2      Active Shallow Crust 5           2,135        53    
-source_model.xml 3      Active Shallow Crust 5           2,035        50    
-source_model.xml 4      Active Shallow Crust 5           1,865        46    
-source_model.xml 5      Active Shallow Crust 5           2,085        52    
-source_model.xml 6      Active Shallow Crust 5           2,075        51    
-source_model.xml 7      Active Shallow Crust 5           2,185        54    
-source_model.xml 8      Active Shallow Crust 5           1,905        47    
-source_model.xml 9      Active Shallow Crust 5           2,025        50    
+source_model.xml 0      Active Shallow Crust 5           1925         48    
+source_model.xml 1      Active Shallow Crust 5           2025         50    
+source_model.xml 2      Active Shallow Crust 5           2135         53    
+source_model.xml 3      Active Shallow Crust 5           2035         50    
+source_model.xml 4      Active Shallow Crust 5           1865         46    
+source_model.xml 5      Active Shallow Crust 5           2085         52    
+source_model.xml 6      Active Shallow Crust 5           2075         51    
+source_model.xml 7      Active Shallow Crust 5           2185         54    
+source_model.xml 8      Active Shallow Crust 5           1905         47    
+source_model.xml 9      Active Shallow Crust 5           2025         50    
 ================ ====== ==================== =========== ============ ======
 
 =============== ======
@@ -115,8 +115,8 @@ Informational data
 ======================================== ==============
 count_eff_ruptures_max_received_per_task 2769          
 count_eff_ruptures_num_tasks             50            
-count_eff_ruptures_sent.monitor          125538        
-count_eff_ruptures_sent.rlzs_assoc       846750        
+count_eff_ruptures_sent.monitor          125500        
+count_eff_ruptures_sent.rlzs_assoc       713500        
 count_eff_ruptures_sent.sitecol          21850         
 count_eff_ruptures_sent.siteidx          250           
 count_eff_ruptures_sent.sources          95900         
@@ -136,26 +136,26 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   8.125  1         7.970E-04   0.0        0.0      
-3            3         AreaSource   12     1         7.761E-04   0.0        0.0      
-1            2         AreaSource   11     1         7.639E-04   0.0        0.0      
-6            5         AreaSource   9.375  1         7.200E-04   0.0        0.0      
-8            1         AreaSource   9.375  1         7.200E-04   0.0        0.0      
-9            1         AreaSource   10     1         7.200E-04   0.0        0.0      
-3            1         AreaSource   8.125  1         7.160E-04   0.0        0.0      
-0            5         AreaSource   9.375  1         7.160E-04   0.0        0.0      
-7            5         AreaSource   10     1         7.141E-04   0.0        0.0      
-5            2         AreaSource   12     1         7.141E-04   0.0        0.0      
-5            5         AreaSource   9.375  1         7.138E-04   0.0        0.0      
-6            2         AreaSource   11     1         7.122E-04   0.0        0.0      
-7            3         AreaSource   12     1         7.110E-04   0.0        0.0      
-3            2         AreaSource   11     1         7.110E-04   0.0        0.0      
-6            1         AreaSource   10     1         7.110E-04   0.0        0.0      
-5            4         AreaSource   9.375  1         7.100E-04   0.0        0.0      
-6            3         AreaSource   11     1         7.091E-04   0.0        0.0      
-5            3         AreaSource   11     1         7.091E-04   0.0        0.0      
-8            4         AreaSource   10     1         7.091E-04   0.0        0.0      
-4            1         AreaSource   9.375  1         7.088E-04   0.0        0.0      
+9            2         AreaSource   11     1         7.298E-04   0.0        0.0      
+0            1         AreaSource   8.125  1         7.279E-04   0.0        0.0      
+9            3         AreaSource   11     1         7.071E-04   0.0        0.0      
+6            1         AreaSource   10     1         6.471E-04   0.0        0.0      
+1            1         AreaSource   9.375  1         6.461E-04   0.0        0.0      
+7            2         AreaSource   11     1         6.461E-04   0.0        0.0      
+4            5         AreaSource   8.125  1         6.459E-04   0.0        0.0      
+3            3         AreaSource   12     1         6.459E-04   0.0        0.0      
+1            2         AreaSource   11     1         6.449E-04   0.0        0.0      
+2            2         AreaSource   11     1         6.440E-04   0.0        0.0      
+0            2         AreaSource   11     1         6.440E-04   0.0        0.0      
+7            3         AreaSource   12     1         6.430E-04   0.0        0.0      
+0            5         AreaSource   9.375  1         6.430E-04   0.0        0.0      
+5            3         AreaSource   11     1         6.421E-04   0.0        0.0      
+9            4         AreaSource   8.125  1         6.418E-04   0.0        0.0      
+8            3         AreaSource   9.750  1         6.402E-04   0.0        0.0      
+2            3         AreaSource   12     1         6.399E-04   0.0        0.0      
+4            3         AreaSource   11     1         6.390E-04   0.0        0.0      
+5            2         AreaSource   12     1         6.371E-04   0.0        0.0      
+0            3         AreaSource   11     1         6.371E-04   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -163,7 +163,7 @@ Computation times by source typology
 ============ =========== ========== ========= ======
 source_class filter_time split_time calc_time counts
 ============ =========== ========== ========= ======
-AreaSource   0.036       0.0        0.0       50    
+AreaSource   0.032       0.0        0.0       50    
 ============ =========== ========== ========= ======
 
 Information about the tasks
@@ -175,11 +175,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.239     0.0       1     
-managing sources               0.135     0.0       1     
-filtering sources              0.036     0.0       50    
-total count_eff_ruptures       0.016     0.0       50    
-store source_info              0.004     0.0       1     
-aggregate curves               7.293E-04 0.0       50    
+reading composite source model 0.200     0.0       1     
+managing sources               0.182     0.0       1     
+filtering sources              0.032     0.0       50    
+total count_eff_ruptures       0.012     0.0       50    
+store source_info              0.005     0.0       1     
+aggregate curves               8.719E-04 0.0       50    
 reading site collection        3.099E-05 0.0       1     
 ============================== ========= ========= ======

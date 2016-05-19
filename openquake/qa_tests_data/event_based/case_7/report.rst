@@ -1,7 +1,7 @@
 Event-based PSHA with logic tree sampling
 =========================================
 
-gem-tstation:/home/michele/ssd/calc_15465.hdf5 updated Tue May 10 12:37:45 2016
+gem-tstation:/home/michele/ssd/calc_16411.hdf5 updated Wed May 18 18:20:13 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -12,7 +12,7 @@ calculation_mode             'event_based'
 number_of_logic_tree_samples 10                 
 maximum_distance             {'default': 200.0} 
 investigation_time           50.0               
-ses_per_logic_tree_path      200                
+ses_per_logic_tree_path      40                 
 truncation_level             3.0                
 rupture_mesh_spacing         2.0                
 complex_fault_mesh_spacing   2.0                
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   20.0               
 random_seed                  23                 
 master_seed                  0                  
-oqlite_version               '0.13.0-gitcdd89a9'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -70,14 +70,14 @@ Number of ruptures per tectonic region type
 ================= ====== ==================== =========== ============ ======
 source_model      trt_id trt                  num_sources eff_ruptures weight
 ================= ====== ==================== =========== ============ ======
-source_model1.xml 0      Active Shallow Crust 1           1,964        61    
-source_model2.xml 1      Active Shallow Crust 1           694          61    
+source_model1.xml 0      Active Shallow Crust 1           2120         61    
+source_model2.xml 1      Active Shallow Crust 1           478          61    
 ================= ====== ==================== =========== ============ ======
 
 =============== =====
 #TRT models     2    
 #sources        2    
-#eff_ruptures   2,658
+#eff_ruptures   2,598
 filtered_weight 122  
 =============== =====
 
@@ -90,9 +90,9 @@ hostname 'gem-tstation'
 Specific information for event based
 ------------------------------------
 ======================== ======
-Total number of ruptures 2,658 
-Total number of events   10,802
-Rupture multiplicity     4.064 
+Total number of ruptures 2,598 
+Total number of events   14,308
+Rupture multiplicity     5.507 
 ======================== ======
 
 Slowest sources
@@ -100,8 +100,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   61     307       0.001       0.068      2.361    
-1            1         AreaSource   61     307       0.001       0.067      1.513    
+0            1         AreaSource   61     307       0.001       0.048      2.512    
+1            1         AreaSource   61     307       0.001       0.050      1.207    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -109,17 +109,17 @@ Computation times by source typology
 ============ =========== ========== ========= ======
 source_class filter_time split_time calc_time counts
 ============ =========== ========== ========= ======
-AreaSource   0.003       0.135      3.874     2     
+AreaSource   0.002       0.097      3.719     2     
 ============ =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
 ================================= ===== ====== ===== ===== =========
 measurement                       mean  stddev min   max   num_tasks
-compute_ruptures.time_sec         0.102 0.036  0.005 0.151 38       
+compute_ruptures.time_sec         0.098 0.047  0.003 0.197 38       
 compute_ruptures.memory_mb        0.0   0.0    0.0   0.0   38       
-compute_gmfs_and_curves.time_sec  0.691 0.310  0.393 1.727 21       
-compute_gmfs_and_curves.memory_mb 0.019 0.087  0.0   0.398 21       
+compute_gmfs_and_curves.time_sec  1.054 0.364  0.603 1.921 21       
+compute_gmfs_and_curves.memory_mb 0.017 0.055  0.0   0.215 21       
 ================================= ===== ====== ===== ===== =========
 
 Slowest operations
@@ -127,19 +127,19 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_gmfs_and_curves  14        0.398     21    
-compute poes                   12        0.0       2,658 
-total compute_ruptures         3.892     0.0       38    
-saving ruptures                1.899     0.0       1     
-make contexts                  1.428     0.0       2,658 
-filtering ruptures             0.766     0.0       2,658 
-bulding hazard curves          0.316     0.0       21    
-managing sources               0.202     0.0       1     
-reading composite source model 0.148     0.0       1     
-splitting sources              0.135     0.0       2     
-aggregating hcurves            0.115     0.0       143   
-aggregate curves               0.058     0.0       181   
-store source_info              0.010     0.0       1     
-filtering sources              0.003     0.0       2     
-reading site collection        4.697E-05 0.0       1     
+total compute_gmfs_and_curves  22        0.215     21    
+compute poes                   20        0.0       2,598 
+total compute_ruptures         3.733     0.0       38    
+saving ruptures                1.692     0.0       1     
+make contexts                  1.451     0.0       2,598 
+filtering ruptures             0.719     0.0       2,598 
+managing sources               0.239     0.0       1     
+aggregating hcurves            0.142     0.0       143   
+bulding hazard curves          0.106     0.0       21    
+reading composite source model 0.099     0.0       1     
+splitting sources              0.097     0.0       2     
+aggregate curves               0.020     0.0       181   
+store source_info              0.007     0.0       1     
+filtering sources              0.002     0.0       2     
+reading site collection        3.505E-05 0.0       1     
 ============================== ========= ========= ======

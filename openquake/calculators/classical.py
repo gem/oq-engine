@@ -165,7 +165,7 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     dic = AccumDict()
     dic.siteslice = slice(siteidx, siteidx + len(sitecol))
     if monitor.oqparam.poes_disagg:
-        sm_id = rlzs_assoc.get_sm_id(trt_model_id)
+        sm_id = rlzs_assoc.csm_info.get_source_model(trt_model_id).ordinal
         dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
     else:
         dic.bbs = []
@@ -343,7 +343,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.mean_curves = numpy.array(zc)
             for imt in oq.imtls:
                 self.mean_curves[imt] = scientific.mean_curve(
-                    [curves_by_rlz[rlz][imt] for rlz in rlzs], weights)
+                    [curves_by_rlz.get(rlz, zc)[imt] for rlz in rlzs], weights)
 
             self.quantile = {}
             for q in oq.quantile_hazard_curves:

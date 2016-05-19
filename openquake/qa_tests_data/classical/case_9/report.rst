@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 9
 ================================
 
-gem-tstation:/home/michele/ssd/calc_15441.hdf5 updated Tue May 10 12:36:31 2016
+gem-tstation:/home/michele/ssd/calc_16387.hdf5 updated Wed May 18 18:19:08 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  1066               
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-gitcdd89a9'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -67,8 +67,8 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           3,000        75    
-source_model.xml 1      Active Shallow Crust 1           3,500        87    
+source_model.xml 0      Active Shallow Crust 1           3000         75    
+source_model.xml 1      Active Shallow Crust 1           3500         87    
 ================ ====== ==================== =========== ============ ======
 
 =============== =====
@@ -84,7 +84,7 @@ Informational data
 count_eff_ruptures_max_received_per_task 2586          
 count_eff_ruptures_num_tasks             2             
 count_eff_ruptures_sent.monitor          4654          
-count_eff_ruptures_sent.rlzs_assoc       7820          
+count_eff_ruptures_sent.rlzs_assoc       6580          
 count_eff_ruptures_sent.sitecol          874           
 count_eff_ruptures_sent.siteidx          10            
 count_eff_ruptures_sent.sources          2346          
@@ -104,8 +104,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-1            1         PointSource  87     1         0.005       1.502E-05  0.0      
-0            1         PointSource  75     1         0.004       2.098E-05  0.0      
+1            1         PointSource  87     1         0.005       1.597E-05  0.0      
+0            1         PointSource  75     1         0.005       2.003E-05  0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -113,7 +113,7 @@ Computation times by source typology
 ============ =========== ========== ========= ======
 source_class filter_time split_time calc_time counts
 ============ =========== ========== ========= ======
-PointSource  0.008       3.600E-05  0.0       2     
+PointSource  0.010       3.600E-05  0.0       2     
 ============ =========== ========== ========= ======
 
 Information about the tasks
@@ -125,12 +125,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.015     0.0       1     
-managing sources               0.012     0.0       1     
-filtering sources              0.008     0.0       2     
+reading composite source model 0.041     0.0       1     
+managing sources               0.014     0.0       1     
+filtering sources              0.010     0.0       2     
 store source_info              0.005     0.0       1     
-total count_eff_ruptures       7.169E-04 0.0       2     
-aggregate curves               4.292E-05 0.0       2     
-reading site collection        3.695E-05 0.0       1     
+total count_eff_ruptures       6.959E-04 0.0       2     
+aggregate curves               5.603E-05 0.0       2     
+reading site collection        3.791E-05 0.0       1     
 splitting sources              3.600E-05 0.0       2     
 ============================== ========= ========= ======

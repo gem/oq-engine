@@ -23,6 +23,7 @@ import operator
 
 import numpy
 
+from openquake.baselib.general import get_array
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.poe import ProbabilityCurve
@@ -220,16 +221,18 @@ def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
     return poes
 
 
-def gmvs_to_haz_curve(gmvs, imtls, invest_time, duration):
+def gmvs_to_haz_curve(gmfa, imtls, invest_time, duration):
     """
     Convert a composite array of gmvs into a ProbabilityCurve instance
     """
     data = []
-    for imt in imtls:
+    for imti, imt in enumerate(imtls):
+        gmvs = get_array(gmfa, imti=imti)['gmv']
         data.append(
-            _gmvs_to_haz_curve(gmvs[imt], imtls[imt], invest_time, duration))
+            _gmvs_to_haz_curve(gmvs, imtls[imt], invest_time, duration))
     # the array underlying the ProbabilityCurve has size (1, num_levels)
-    return ProbabilityCurve(imtls.imt_dt, numpy.concatenate(data).reshape(1, -1))
+    array = numpy.concatenate(data).reshape(1, -1)
+    return ProbabilityCurve(imtls.imt_dt, array)
 
 
 # ################## utilities for classical calculators ################ #
