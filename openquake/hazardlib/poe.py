@@ -92,74 +92,6 @@ class ProbabilityCurve(object):
     PGA: [ 0.405  0.32   0.245]
     PGV: [ 0.5  0.5]>
     """
-    @classmethod
-    def build(cls, imtls, num_gsims, sids, initvalue=0.):
-        """
-        :param imtls: an :class:`openquake.hazardlib.imt.Imtls` instance
-        :param num_gsims: the number of GSIMs
-        :returns: a dictionary of ProbabilityCurves
-        """
-        dic = {}
-        for sid in sids:
-            array = numpy.empty((len(imtls.array), num_gsims), F64)
-            array.fill(initvalue)
-            dic[sid] = cls(imtls.slicedic, array)
-        return dic
-
-    @classmethod
-    def compose(cls, dic1, dic2):
-        """
-        >>> imtls = Imtls(dict(PGA=[1, 2, 3], PGV=[4, 5]))
-        >>> curves1 = ProbabilityCurve.build(imtls, 1, [0, 1], initvalue=.1)
-        >>> curves2 = ProbabilityCurve.build(imtls, 1, [1, 2], initvalue=.1)
-        >>> dic = ProbabilityCurve.compose(curves1, curves2)
-        >>> dic[0]
-        <ProbabilityCurve
-        PGA: [[ 0.1]
-         [ 0.1]
-         [ 0.1]]
-        PGV: [[ 0.1]
-         [ 0.1]]>
-        >>> dic[1]
-        <ProbabilityCurve
-        PGA: [[ 0.19]
-         [ 0.19]
-         [ 0.19]]
-        PGV: [[ 0.19]
-         [ 0.19]]>
-        >>> dic[2]
-        <ProbabilityCurve
-        PGA: [[ 0.1]
-         [ 0.1]
-         [ 0.1]]
-        PGV: [[ 0.1]
-         [ 0.1]]>
-        """
-        sids = set(dic1) | set(dic2)
-        dic = {}
-        for sid in sids:
-            curve = dic1.get(sid, 0) | dic2.get(sid, 0)
-            if curve:
-                dic[sid] = curve
-        return dic
-
-    @classmethod
-    def multiply(cls, dic1, dic2):
-        """
-        Multiply two dictionaries of curves
-        """
-        sids = set(dic1) | set(dic2)
-        return {sid: dic1.get(sid, 1) * dic2.get(sid, 1) for sid in sids}
-
-    @classmethod
-    def extract(cls, dic, gsim_idx):
-        out = {}
-        for sid in dic:
-            curve = dic[sid]
-            array = curve.array[:, gsim_idx].reshape(-1, 1)
-            out[sid] = cls(curve.slicedic, array)
-        return out
-
     def __init__(self, slicedic, array):
         self.slicedic = slicedic
         self.array = array
@@ -196,3 +128,77 @@ class ProbabilityCurve(object):
     def __repr__(self):
         data = ['%s: %s' % (imt, self[imt]) for imt in sorted(self.slicedic)]
         return '<ProbabilityCurve\n%s>' % '\n'.join(data)
+
+
+class ProbabilityMap(dict):
+    """
+    >>> imtls = Imtls(dict(PGA=[1, 2, 3], PGV=[4, 5]))
+    >>> curves1 = ProbabilityMap.build(imtls, 1, [0, 1], initvalue=.1)
+    >>> curves2 = ProbabilityMap.build(imtls, 1, [1, 2], initvalue=.1)
+    >>> dic = curves1 + curves2
+    >>> dic[0]
+    <ProbabilityCurve
+    PGA: [[ 0.1]
+     [ 0.1]
+     [ 0.1]]
+    PGV: [[ 0.1]
+     [ 0.1]]>
+    >>> dic[1]
+    <ProbabilityCurve
+    PGA: [[ 0.19]
+     [ 0.19]
+     [ 0.19]]
+    PGV: [[ 0.19]
+     [ 0.19]]>
+    >>> dic[2]
+    <ProbabilityCurve
+    PGA: [[ 0.1]
+     [ 0.1]
+     [ 0.1]]
+    PGV: [[ 0.1]
+     [ 0.1]]>
+    """
+
+    @classmethod
+    def build(cls, imtls, num_gsims, sids, initvalue=0.):
+        """
+        :param imtls: an :class:`openquake.hazardlib.imt.Imtls` instance
+        :param num_gsims: the number of GSIMs
+        :param sids: a set of site indices
+        :param initvalue: the initial value of the probability (default 0)
+        """
+        dic = cls()
+        for sid in sids:
+            array = numpy.empty((len(imtls.array), num_gsims), F64)
+            array.fill(initvalue)
+            dic[sid] = ProbabilityCurve(imtls.slicedic, array)
+        return dic
+
+    def extract(self, gsim_idx):
+        """
+        Extracts a component of the underlying ProbabilityCurves,
+        specified by the index `gsim_idx`.
+        """
+        out = self.__class__()
+        for sid in self:
+            curve = self[sid]
+            array = curve.array[:, gsim_idx].reshape(-1, 1)
+            out[sid] = ProbabilityCurve(curve.slicedic, array)
+        return out
+
+    def __add__(self, other):
+        sids = set(self) | set(other)
+        dic = self.__class__()
+        for sid in sids:
+            curve = self.get(sid, 0) | other.get(sid, 0)
+            if curve:
+                dic[sid] = curve
+        return dic
+
+    def __mul__(self, other):
+        sids = set(self) | set(other)
+        return self.__class__((sid, self.get(sid, 1) * other.get(sid, 1))
+                              for sid in sids)
+
+    def __invert__(self):
+        return self.__class__((sid, ~self[sid]) for sid in self)

@@ -28,7 +28,7 @@ import numpy
 
 from openquake.baselib.python3compat import raise_, zip
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib.poe import ProbabilityCurve, Imtls
+from openquake.hazardlib.poe import ProbabilityMap, Imtls
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
@@ -173,11 +173,11 @@ def calc_hazard_curves(
     sources_by_trt = collections.defaultdict(list)
     for src in sources:
         sources_by_trt[src.tectonic_region_type].append(src)
-    acc = {}
+    acc = ProbabilityMap()
     for trt in sources_by_trt:
-        acc = ProbabilityCurve.compose(acc, hazard_curves_per_trt(
+        acc += hazard_curves_per_trt(
             sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
-            truncation_level, source_site_filter))
+            truncation_level, source_site_filter)
     return array_of_curves(acc, len(sites), imtls)
 
 
@@ -213,7 +213,7 @@ def curves_from_src(
     given source. Also, store some information in the monitors
     and optionally in the bounding boxes.
     """
-    curves = ProbabilityCurve.build(
+    curves = ProbabilityMap.build(
         imtls, len(cmaker.gsims), s_sites.sids, initvalue=1.)
     try:
         for rup in src.iter_ruptures():
@@ -273,7 +273,7 @@ def hazard_curves_per_trt(
     pne_mon = monitor('computing poes', measuremem=False)
     disagg_mon = monitor('get closest points', measuremem=False)
     monitor.calc_times = []  # pairs (src_id, delta_t)
-    acc = {}
+    acc = ProbabilityMap()
     for src, s_sites in source_site_filter(sources_sites):
         t0 = time.time()
         curves = curves_from_src(
@@ -284,6 +284,6 @@ def hazard_curves_per_trt(
         monitor.calc_times.append((src.id, time.time() - t0))
         # NB: source.id is an integer; it should not be confused
         # with source.source_id, which is a string
-        acc = ProbabilityCurve.compose(acc, {sid: ~curves[sid] for sid in curves})
+        acc += {sid: ~curves[sid] for sid in curves}
     monitor.eff_ruptures = pne_mon.counts  # contributing ruptures
     return acc
