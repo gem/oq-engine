@@ -93,7 +93,6 @@ class OqParam(valid.ParamSet):
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.floatdict)  # km
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
-    maximum_tile_weight = valid.Param(valid.positivefloat)
     mean_hazard_curves = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
