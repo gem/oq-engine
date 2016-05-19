@@ -194,7 +194,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param val: a nested dictionary trt_id -> sid -> ProbabilityCurve
+        :param val: a nested dictionary trt_id -> ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
             if hasattr(val, 'calc_times'):
@@ -204,20 +204,15 @@ class ClassicalCalculator(base.HazardCalculator):
             for bb in getattr(val, 'bbs', []):
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
             acc += val
-
-            # this is used in event_based_rupture
-            for v in val.values():
-                if hasattr(v, 'rup_data') and len(v.rup_data):
-                    trt = v.trt
-                    try:
-                        dset = self.rup_data[trt]
-                    except KeyError:
-                        dset = self.rup_data[trt] = self.datastore.create_dset(
-                            'rup_data/' + v.trt, v.rup_data.dtype)
-                    dset.extend(v.rup_data)
+            self.agg_hook(val)
 
         self.datastore.flush()
         return acc
+
+    def agg_hook(self, val):
+        """
+        This is overridden in the event based rupture calculator
+        """
 
     def count_eff_ruptures(self, result_dict, trt_model):
         """

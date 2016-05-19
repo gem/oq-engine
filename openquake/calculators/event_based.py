@@ -26,7 +26,7 @@ import collections
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict, group_array, get_array
+from openquake.baselib.general import AccumDict, group_array
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
 from openquake.hazardlib.calc.hazard_curve import array_of_curves
@@ -36,7 +36,7 @@ from openquake.commonlib import readinput, parallel, datastore
 from openquake.commonlib.util import max_rel_diff_index, Rupture
 from openquake.risklib.riskinput import create
 from openquake.calculators import base
-from openquake.calculators.calc import gmvs_to_haz_curve
+from openquake.calculators.calc import gmvs_to_poe_map
 from openquake.calculators.classical import ClassicalCalculator
 
 # ######################## rupture calculator ############################ #
@@ -45,7 +45,7 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-HAZCURVES = 1
+POEMAP = 1
 
 event_dt = numpy.dtype([('eid', U32), ('ses', U32), ('occ', U32),
                         ('sample', U32)])
@@ -402,6 +402,7 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         self.random_seed = oq.random_seed
         self.rlzs_assoc = self.datastore['csm_info'].get_rlzs_assoc()
         self.min_iml = fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
+        self.rup_data = {}
 
     def count_eff_ruptures(self, ruptures_by_trt_id, trt_model):
         """
@@ -413,6 +414,19 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         return sum(
             len(ruptures) for trt_id, ruptures in ruptures_by_trt_id.items()
             if trt_model.id == trt_id)
+
+    def agg_hook(self, ruptures_by_trt_id):
+        """
+        Populate rup_data
+        """
+        if len(ruptures_by_trt_id.rup_data):
+            trt = ruptures_by_trt_id.trt
+            try:
+                dset = self.rup_data[trt]
+            except KeyError:
+                dset = self.rup_data[trt] = self.datastore.create_dset(
+                    'rup_data/' + trt, ruptures_by_trt_id.rup_data.dtype)
+            dset.extend(ruptures_by_trt_id.rup_data)
 
     def post_execute(self, result):
         """
@@ -448,7 +462,8 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
             mul = numpy.average(multiplicity, weights=numsites)
             self.datastore.set_attrs(dset.name, sites_per_rupture=spr,
                                      multiplicity=mul)
-        self.datastore.set_nbytes('rup_data')
+        if self.rup_data:
+            self.datastore.set_nbytes('rup_data')
 
 
 # ######################## GMF calculator ############################ #
@@ -504,10 +519,9 @@ def compute_gmfs_and_curves(eb_ruptures, sitecol, imts, rlzs_assoc,
         with monitor('bulding hazard curves', measuremem=False):
             duration = oq.investigation_time * oq.ses_per_logic_tree_path
             for rlzi in gmfadict:
-                gmfa = group_array(gmfadict[rlzi], 'sid')
-                result[rlzi][HAZCURVES] = {sid: gmvs_to_haz_curve(
-                    gmfa[sid], oq.imtls, oq.investigation_time, duration)
-                                           for sid in gmfa}
+                gmvs_by_sid = group_array(gmfadict[rlzi], 'sid')
+                result[rlzi][POEMAP] = gmvs_to_poe_map(
+                    gmvs_by_sid, oq.imtls, oq.investigation_time, duration)
     return result
 
 

@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib.general import get_array
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import gmf, filters
-from openquake.hazardlib.poe import ProbabilityCurve
+from openquake.hazardlib.poe import ProbabilityCurve, ProbabilityMap
 from openquake.hazardlib.site import SiteCollection
 from openquake.commonlib.readinput import \
     get_gsims, get_rupture, get_correl_model, get_imts
@@ -221,18 +221,21 @@ def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
     return poes
 
 
-def gmvs_to_haz_curve(gmfa, imtls, invest_time, duration):
+def gmvs_to_poe_map(gmvs_by_sid, imtls, invest_time, duration):
     """
-    Convert a composite array of gmvs into a ProbabilityCurve instance
+    Convert a dictionary sid -> gmva into a ProbabilityMap
     """
-    data = []
-    for imti, imt in enumerate(imtls):
-        gmvs = get_array(gmfa, imti=imti)['gmv']
-        data.append(
-            _gmvs_to_haz_curve(gmvs, imtls[imt], invest_time, duration))
-    # the array underlying the ProbabilityCurve has size (1, num_levels)
-    array = numpy.concatenate(data).reshape(1, -1)
-    return ProbabilityCurve(imtls.imt_dt, array)
+    pmap = ProbabilityMap()
+    for sid in gmvs_by_sid:
+        data = []
+        for imti, imt in enumerate(imtls):
+            gmvs = get_array(gmvs_by_sid[sid], imti=imti)['gmv']
+            data.append(
+                _gmvs_to_haz_curve(gmvs, imtls[imt], invest_time, duration))
+        # the array underlying the ProbabilityCurve has size (num_levels, 1)
+        array = numpy.concatenate(data).reshape(-1, 1)
+        pmap[sid] = ProbabilityCurve(array)
+    return pmap
 
 
 # ################## utilities for classical calculators ################ #
