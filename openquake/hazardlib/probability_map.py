@@ -170,7 +170,9 @@ class ProbabilityMap(dict):
         sids = set(self) | set(other)
         dic = self.__class__()
         for sid in sids:
-            dic[sid] = self.get(sid, 0) | other.get(sid, 0)
+            curve = self.get(sid, 0) | other.get(sid, 0)
+            if curve:  # this check is very important for performance
+                dic[sid] = curve
         return dic
 
     # faster than ___add__
