@@ -260,8 +260,7 @@ def hazard_curves_per_trt(
     The arguments are the same as in :func:`calc_hazard_curves`, except
     for ``gsims``, which is a list of GSIM instances.
 
-    :returns:
-        A :class:`openquake.hazardlib.probability_map.ProbabilityMap`
+    :returns: a ProbabilityMap instance
     """
     imtls = Imtls(imtls)
     cmaker = ContextMaker(gsims, maximum_distance)
