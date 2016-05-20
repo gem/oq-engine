@@ -424,7 +424,7 @@ class RlzsAssoc(collections.Mapping):
     # used in classical and event_based calculators
     def combine_curves(self, results):
         """
-        :param results: dictionary trt_model_id -> curves
+        :param results: dictionary (trt_model_id, gsim) -> curves
         :returns: a dictionary rlz -> aggregate curves
         """
         acc = {rlz: ProbabilityMap() for rlz in self.realizations}
@@ -481,14 +481,8 @@ class RlzsAssoc(collections.Mapping):
         probability, which however is close to the sum for small probabilities.
         """
         ad = {rlz: 0 for rlz in self.realizations}
-        for (trt_id, gsim), value in results.items():
-            try:
-                gsim_idx = int(gsim)  # for classical calculations
-            except (ValueError, TypeError):  # already a GSIM
-                pass  # for scenario calculations
-            else:
-                gsim = self.gsims_by_trt_id[trt_id][gsim_idx]
-            for rlz in self.rlzs_assoc[trt_id, gsim]:
+        for key, value in results.items():
+            for rlz in self.rlzs_assoc[key]:
                 ad[rlz] = agg(ad[rlz], value)
         return ad
 
