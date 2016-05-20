@@ -1,0 +1,126 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" 
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+<exposureModel id="exp1" category="buildings">
+  <description>multiple assets em w/ insurance</description>
+  <conversions>
+    <area type="per_asset" unit="SQM" />
+    <costTypes>
+      <costType name="structural" type="per_asset" unit="USD" />
+      <costType name="nonstructural" type="per_asset" unit="USD" />
+      <costType name="contents" type="per_asset" unit="USD" />
+      <costType name="business_interruption" type="per_asset" unit="USD/month" />
+    </costTypes>
+  </conversions>
+  
+  <assets>
+    <asset id="a1" number="1" area="100" taxonomy="tax1" >
+      <location lon="-122.000" lat="38.113" />
+      <costs>
+        <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="nonstructural" value="15000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="contents" value="5000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="business_interruption" value="2000" deductible="0.1" insuranceLimit="0.8" />
+      </costs>
+      <occupancies>
+        <occupancy occupants="2" period="day" />
+        <occupancy occupants="4" period="transit" />
+        <occupancy occupants="6" period="night" />
+      </occupancies>
+    </asset>
+    
+    <asset id="a2" number="1" area="100" taxonomy="tax2" >
+      <location lon="-122.114" lat="38.113" />
+      <costs>
+        <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="nonstructural" value="15000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="contents" value="5000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="business_interruption" value="2000" deductible="0.1" insuranceLimit="0.8" />
+      </costs>
+      <occupancies>
+        <occupancy occupants="2" period="day" />
+        <occupancy occupants="4" period="transit" />
+        <occupancy occupants="6" period="night" />
+      </occupancies>
+    </asset>
+    
+    <asset id="a3" number="1" area="100" taxonomy="tax1" >
+      <location lon="-122.570" lat="38.113" />
+      <costs>
+        <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="nonstructural" value="15000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="contents" value="5000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="business_interruption" value="2000" deductible="0.1" insuranceLimit="0.8" />
+      </costs>
+      <occupancies>
+        <occupancy occupants="2" period="day" />
+        <occupancy occupants="4" period="transit" />
+        <occupancy occupants="6" period="night" />
+      </occupancies>
+    </asset>
+    
+    <asset id="a4" number="1" area="100" taxonomy="tax3" >
+      <location lon="-122.000" lat="38.000" />
+      <costs>
+        <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="nonstructural" value="15000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="contents" value="5000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="business_interruption" value="2000" deductible="0.1" insuranceLimit="0.8" />
+      </costs>
+      <occupancies>
+        <occupancy occupants="2" period="day" />
+        <occupancy occupants="4" period="transit" />
+        <occupancy occupants="6" period="night" />
+      </occupancies>
+    </asset>
+    
+    <asset id="a5" number="1" area="100" taxonomy="tax1" >
+      <location lon="-122.000" lat="37.910" />
+      <costs>
+        <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="nonstructural" value="15000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="contents" value="5000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="business_interruption" value="2000" deductible="0.1" insuranceLimit="0.8" />
+      </costs>
+      <occupancies>
+        <occupancy occupants="2" period="day" />
+        <occupancy occupants="4" period="transit" />
+        <occupancy occupants="6" period="night" />
+      </occupancies>
+    </asset>
+    
+    <asset id="a6" number="1" area="100" taxonomy="tax2" >
+      <location lon="-122.000" lat="38.225" />
+      <costs>
+        <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="nonstructural" value="15000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="contents" value="5000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="business_interruption" value="2000" deductible="0.1" insuranceLimit="0.8" />
+      </costs>
+      <occupancies>
+        <occupancy occupants="2" period="day" />
+        <occupancy occupants="4" period="transit" />
+        <occupancy occupants="6" period="night" />
+      </occupancies>
+    </asset>
+    
+    <asset id="a7" number="1" area="100" taxonomy="tax1" >
+      <location lon="-121.886" lat="38.113" />
+      <costs>
+        <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="nonstructural" value="15000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="contents" value="5000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="business_interruption" value="2000" deductible="0.1" insuranceLimit="0.8" />
+      </costs>
+      <occupancies>
+        <occupancy occupants="2" period="day" />
+        <occupancy occupants="4" period="transit" />
+        <occupancy occupants="6" period="night" />
+      </occupancies>
+    </asset>
+    
+  </assets>
+</exposureModel>
+
+</nrml>

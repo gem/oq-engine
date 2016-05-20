@@ -1,0 +1,6 @@
+include README.md LICENSE
+
+recursive-include openquake/risklib/qa_tests *.csv
+recursive-include openquake/*/tests *.xml *.csv *.ini *.txt *.zip README
+recursive-include openquake/qa_tests_data *.xml *.csv *.ini *.txt README
+recursive-include openquake/commonlib/nrml_examples *.xml *.csv *.geojson

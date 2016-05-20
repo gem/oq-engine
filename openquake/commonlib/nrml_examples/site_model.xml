@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <siteModel>
+        <site lon="-122.5" lat="37.5" vs30="800.0" vs30Type="measured" z1pt0="100.0" z2pt5="5.0" />
+        <site lon="-122.6" lat="37.6" vs30="801.0" vs30Type="measured" z1pt0="101.0" z2pt5="5.1" />
+        <site lon="-122.7" lat="37.7" vs30="802.0" vs30Type="measured" z1pt0="102.0" z2pt5="5.2" />
+        <site lon="-122.8" lat="37.8" vs30="803.0" vs30Type="measured" z1pt0="103.0" z2pt5="5.3" />
+        <site lon="-122.9" lat="37.9" vs30="804.0" vs30Type="measured" z1pt0="104.0" z2pt5="5.4" />
+    </siteModel>
+</nrml>

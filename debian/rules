@@ -1,0 +1,29 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+export DISTUTILS_DEBUG=1
+export DH_VERBOSE=1
+export DH_OPTIONS=-v
+
+DEFAULT_DEP = python-h5py (>= 2.2.1)
+PRECISE_DEP = python-h5py (= 2.2.1-1build3~precise03)
+
+ifeq ($(shell lsb_release --codename --short),precise)
+        DEPENDS = -Vdist:Depends="$(PRECISE_DEP)"
+else
+        DEPENDS = -Vdist:Depends="$(DEFAULT_DEP)"
+endif
+
+%:
+	dh --with python2 --with quilt --buildsystem=python_distutils $@ 
+
+override_dh_gencontrol:
+	dh_gencontrol -- $(DEPENDS)
+
