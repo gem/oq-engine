@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+	<exposureModel
+	  id="exp_mod_1"
+	  category="buildings"
+	  taxonomySource="GEM Taxonomy">
+	  <description>
+	    Exposure Model for buildings located in Lisbon
+	  </description>
+	  <conversions>
+	    <area type="per_asset" unit="square meters"/>
+	    <costTypes>
+	      <costType name="structural" type="per_area" unit="EUR"  />
+	    </costTypes>
+	  </conversions>
+	  <assets>
+		<asset id="a2371" area="187.72"  number="379.0"  taxonomy="M1_2_PC" >
+		 <location lon="-9.46228" lat="38.79563" />
+		 <costs>
+		   <cost type="structural" value="793.21"  />
+		 </costs>
+		   <occupancies>
+		    <occupancy occupants="297.636286764" period="Day" />
+		    <occupancy occupants="26.3423877476" period="Night" />
+		    <occupancy occupants="60.4004153902" period="Transit" />
+		   </occupancies>
+		 </asset>
+	  </assets>
+	</exposureModel>
+</nrml>

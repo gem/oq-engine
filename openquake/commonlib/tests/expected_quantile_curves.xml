@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <hazardCurves
+    IMT="SA"
+    investigationTime="50.0"
+    quantileValue="0.15"
+    saDamping="5.0"
+    saPeriod="0.025"
+    statistics="quantile"
+    >
+        <IMLs>
+            5.000000000E-03 7.000000000E-03 9.800000000E-03
+        </IMLs>
+        <hazardCurve>
+            <gml:Point>
+                <gml:pos>
+                    38.0 -20.1
+                </gml:pos>
+            </gml:Point>
+            <poEs>
+                1.000000000E-01 2.000000000E-01 3.000000000E-01
+            </poEs>
+        </hazardCurve>
+        <hazardCurve>
+            <gml:Point>
+                <gml:pos>
+                    38.1 -20.2
+                </gml:pos>
+            </gml:Point>
+            <poEs>
+                4.000000000E-01 5.000000000E-01 6.000000000E-01
+            </poEs>
+        </hazardCurve>
+        <hazardCurve>
+            <gml:Point>
+                <gml:pos>
+                    38.2 -20.3
+                </gml:pos>
+            </gml:Point>
+            <poEs>
+                7.000000000E-01 8.000000000E-01 8.000000000E-01
+            </poEs>
+        </hazardCurve>
+    </hazardCurves>
+</nrml>

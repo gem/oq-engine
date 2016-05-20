@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <fragilityModel
+    assetCategory="building"
+    id="fm_12_converted_from_NRML_04"
+    lossCategory="structural"
+    >
+        <description>
+            Fragility model for QA test
+        </description>
+        <limitStates>
+            LS1 LS2
+        </limitStates>
+        <fragilityFunction
+        format="discrete"
+        id="RC"
+        shape="logncdf"
+        >
+            <imls
+            imt="PGA"
+            noDamageLimit="0"
+            >
+                0.1 0.2 0.3 0.5
+            </imls>
+            <poes
+            ls="LS1"
+            >
+                0.0073 0.35 0.74 0.99
+            </poes>
+            <poes
+            ls="LS2"
+            >
+                0.001 0.02 0.25 0.72
+            </poes>
+        </fragilityFunction>
+        <fragilityFunction
+        format="discrete"
+        id="RM"
+        shape="logncdf"
+        >
+            <imls
+            imt="PGA"
+            noDamageLimit="0"
+            >
+                0.1 0.2 0.3 0.5
+            </imls>
+            <poes
+            ls="LS1"
+            >
+                0.01 0.64 0.95 1.0
+            </poes>
+            <poes
+            ls="LS2"
+            >
+                0.0003 0.05 0.4 0.86
+            </poes>
+        </fragilityFunction>
+    </fragilityModel>
+</nrml>

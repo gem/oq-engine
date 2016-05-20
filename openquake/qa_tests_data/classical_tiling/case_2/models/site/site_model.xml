@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <siteModel>
+        <site lat="37.01189" lon="35.76820" vs30="312.69" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.54648" lon="34.98430" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="36.91276" lon="35.17898" vs30="203.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="36.97022" lon="35.42197" vs30="289.12" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.56571" lon="38.49118" vs30="457.76" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="38.68505" lon="30.82767" vs30="220.14" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.91932" lon="29.78324" vs30="415.22" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.57773" lon="44.03619" vs30="372.12" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.81192" lon="43.17244" vs30="535.24" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.46455" lon="32.44178" vs30="483.47" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="36.73600" lon="29.88832" vs30="539.01" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="36.43342" lon="30.03091" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="36.37907" lon="29.59863" vs30="572.91" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.09599" lon="31.01540" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.94266" lon="28.10675" vs30="508.58" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.95516" lon="28.64135" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.79142" lon="28.19592" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.27577" lon="27.99025" vs30="293.83" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.45921" lon="27.02603" vs30="664.69" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="38.39436" lon="41.42820" vs30="581.87" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.28690" lon="30.32822" vs30="463.84" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="38.95654" lon="40.57670" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="38.17297" lon="42.57946" vs30="594.46" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.04174" lon="29.54414" vs30="361.99" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.74223" lon="28.84076" vs30="398.65" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.58679" lon="26.37142" vs30="368.83" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.79821" lon="26.29105" vs30="427.90" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.79475" lon="34.44577" vs30="536.82" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.48975" lon="34.87547" vs30="372.94" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="38.09587" lon="28.87615" vs30="364.01" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="38.15920" lon="39.75666" vs30="309.30" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="38.25373" lon="40.53854" vs30="385.77" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.91700" lon="30.97827" vs30="691.32" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.75163" lon="31.04469" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.52389" lon="38.56662" vs30="464.13" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.30387" lon="41.87680" vs30="337.66" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.16415" lon="36.86179" vs30="393.71" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.12769" lon="38.76857" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.49509" lon="39.21107" vs30="500.11" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="36.34933" lon="36.54899" vs30="214.23" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.71958" lon="31.22851" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.94554" lon="30.44782" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.80004" lon="31.36420" vs30="622.53" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="41.05510" lon="28.89512" vs30="411.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="41.16278" lon="28.26096" vs30="491.94" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="38.08008" lon="28.23019" vs30="505.10" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.06086" lon="27.36973" vs30="499.19" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="38.39502" lon="36.86916" vs30="364.35" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.45751" lon="37.30150" vs30="580.83" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.96750" lon="32.52082" vs30="686.44" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="41.12443" lon="32.23257" vs30="731.63" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.40382" lon="43.45578" vs30="619.89" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.18341" lon="43.11256" vs30="520.39" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="41.85387" lon="34.14423" vs30="556.77" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.02102" lon="36.18818" vs30="570.65" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="38.90399" lon="35.38693" vs30="434.07" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.58561" lon="34.38961" vs30="573.89" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.66098" lon="29.78786" vs30="625.54" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.68899" lon="31.68568" vs30="150.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.01508" lon="31.90401" vs30="402.91" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.26223" lon="32.73956" vs30="672.57" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.56320" lon="29.44798" vs30="528.53" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="38.21793" lon="38.17508" vs30="603.45" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="38.69795" lon="27.98172" vs30="516.32" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.18088" lon="27.79327" vs30="473.99" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="36.35867" lon="33.35836" vs30="301.53" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="36.95912" lon="34.42626" vs30="564.80" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.21088" lon="42.50529" vs30="380.55" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.85586" lon="34.56664" vs30="287.72" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.97381" lon="35.10739" vs30="558.18" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.81665" lon="36.98346" vs30="685.51" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="41.04904" lon="37.06682" vs30="452.30" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="41.02635" lon="37.27055" vs30="512.11" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="41.06526" lon="35.73689" vs30="407.83" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="37.29047" lon="42.59482" vs30="489.24" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.90547" lon="37.37244" vs30="590.36" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.22352" lon="36.28389" vs30="726.91" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.43395" lon="37.37463" vs30="571.68" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.74171" lon="39.95122" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.86580" lon="39.39949" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.97671" lon="39.30445" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="39.43805" lon="40.08199" vs30="760.00" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+        <site lat="40.13911" lon="35.28899" vs30="508.16" vs30Type="inferred" z1pt0="100" z2pt5="5"/>
+    </siteModel>
+</nrml>

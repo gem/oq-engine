@@ -1,0 +1,2885 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <sourceModel name="a Fault a-Priori D2.1 model for California">
+    <characteristicFaultSource id="0_0" name="Elsinore;W combined w/merge2.f" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.789">
+        <occurRates>8.57121030795e-06 1.76089791121e-05 3.08275554898e-05 4.59893086476e-05 5.84638695421e-05 6.33331538012e-05 5.84638695421e-05 4.59893086476e-05 3.08275554898e-05 1.76089791121e-05 8.57121030795e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.59 33.8289 -117.636 33.8511 -117.717 33.8733 -117.792 33.9074 -117.852 33.9297 -117.992 33.9712 -118.048 33.995</gml:posList>
+          </gml:LineString>
+          <dip>75.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.4888873943</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="0_1" name="Elsinore;W combined w/merge2.f" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.602">
+        <occurRates>8.57121030795e-06 1.76089791121e-05 3.08275554898e-05 4.59893086476e-05 5.84638695421e-05 6.33331538012e-05 5.84638695421e-05 4.59893086476e-05 3.08275554898e-05 1.76089791121e-05 8.57121030795e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.59 33.8289 -117.636 33.8511 -117.717 33.8733 -117.792 33.9074 -117.852 33.9297 -117.992 33.9712 -118.048 33.995</gml:posList>
+          </gml:LineString>
+          <dip>75.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.4888873943</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="1_0" name="Elsinore;GI" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.649">
+        <occurRates>3.06018758985e-05 6.28695101539e-05 0.000110063922533 0.000164196077955 0.000208734124586 0.000226118977747 0.000208734124586 0.000164196077955 0.000110063922533 6.28695101539e-05 3.06018758985e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.59 33.8289 -117.548 33.8129 -117.46332 33.74509 -117.44568 33.73183 -117.42415 33.71851 -117.40265 33.70453 -117.3727 33.68522 -117.27443 33.62646</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="1_1" name="Elsinore;GI" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.429">
+        <occurRates>3.06018758985e-05 6.28695101539e-05 0.000110063922533 0.000164196077955 0.000208734124586 0.000226118977747 0.000208734124586 0.000164196077955 0.000110063922533 6.28695101539e-05 3.06018758985e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.59 33.8289 -117.548 33.8129 -117.46332 33.74509 -117.44568 33.73183 -117.42415 33.71851 -117.40265 33.70453 -117.3727 33.68522 -117.27443 33.62646</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="2_0" name="Elsinore;T" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.826">
+        <occurRates>7.32188242782e-06 1.50423184242e-05 2.63341732059e-05 3.92859699805e-05 4.99422559572e-05 5.4101800009e-05 4.99422559572e-05 3.92859699805e-05 2.63341732059e-05 1.50423184242e-05 7.32188242782e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.389 33.6677 -117.31566 33.63098 -117.28099 33.6116 -117.20448 33.55897 -117.17214 33.52894 -117.14172 33.49754 -117.05333 33.42297 -117.03091 33.3914 -117.01517 33.3703 -117.00819 33.34092</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="2_1" name="Elsinore;T" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.652">
+        <occurRates>7.32188242782e-06 1.50423184242e-05 2.63341732059e-05 3.92859699805e-05 4.99422559572e-05 5.4101800009e-05 4.99422559572e-05 3.92859699805e-05 2.63341732059e-05 1.50423184242e-05 7.32188242782e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.389 33.6677 -117.31566 33.63098 -117.28099 33.6116 -117.20448 33.55897 -117.17214 33.52894 -117.14172 33.49754 -117.05333 33.42297 -117.03091 33.3914 -117.01517 33.3703 -117.00819 33.34092</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="3_0" name="Elsinore;CM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.674">
+        <occurRates>6.85699043691e-06 1.40872288786e-05 2.46621242032e-05 3.67915659827e-05 4.67712469945e-05 5.06666870081e-05 4.67712469945e-05 3.67915659827e-05 2.46621242032e-05 1.40872288786e-05 6.85699043691e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.006 32.779 -116.099 32.8144 -116.178 32.8377 -116.23022 32.88921 -116.26443 32.93081 -116.33667 32.97477</gml:posList>
+          </gml:LineString>
+          <dip>82.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.8734848936</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="3_1" name="Elsinore;CM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.454">
+        <occurRates>6.85699043691e-06 1.40872288786e-05 2.46621242032e-05 3.67915659827e-05 4.67712469945e-05 5.06666870081e-05 4.67712469945e-05 3.67915659827e-05 2.46621242032e-05 1.40872288786e-05 6.85699043691e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.006 32.779 -116.099 32.8144 -116.178 32.8377 -116.23022 32.88921 -116.26443 32.93081 -116.33667 32.97477</gml:posList>
+          </gml:LineString>
+          <dip>82.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.8734848936</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="4_0" name="Elsinore;GI+T" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.048">
+        <occurRates>1.06776481236e-05 2.19365149167e-05 3.8403653417e-05 5.72915186471e-05 7.28317944007e-05 7.88977409899e-05 7.28317944007e-05 5.72915186471e-05 3.8403653417e-05 2.19365149167e-05 1.06776481236e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.59 33.8289 -117.548 33.8129 -117.46332 33.74509 -117.44568 33.73183 -117.42415 33.71851 -117.40265 33.70453 -117.3727 33.68522 -117.28099 33.6116 -117.20448 33.55897 -117.17214 33.52894 -117.14172 33.49754 -117.05333 33.42297 -117.03091 33.3914 -117.01517 33.3703 -117.00819 33.34092</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="4_1" name="Elsinore;GI+T" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.947">
+        <occurRates>1.06776481236e-05 2.19365149167e-05 3.8403653417e-05 5.72915186471e-05 7.28317944007e-05 7.88977409899e-05 7.28317944007e-05 5.72915186471e-05 3.8403653417e-05 2.19365149167e-05 1.06776481236e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.59 33.8289 -117.548 33.8129 -117.46332 33.74509 -117.44568 33.73183 -117.42415 33.71851 -117.40265 33.70453 -117.3727 33.68522 -117.28099 33.6116 -117.20448 33.55897 -117.17214 33.52894 -117.14172 33.49754 -117.05333 33.42297 -117.03091 33.3914 -117.01517 33.3703 -117.00819 33.34092</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="5_0" name="Elsinore;T+J+CM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.388">
+        <occurRates>2.99994025069e-06 6.16317688097e-06 1.078970428e-05 1.60963473251e-05 2.04624678603e-05 2.21667268058e-05 2.04624678603e-05 1.60963473251e-05 1.078970428e-05 6.16317688097e-06 2.99994025069e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.006 32.779 -116.099 32.8144 -116.178 32.8377 -116.23022 32.88921 -116.26443 32.93081 -116.33667 32.97477 -116.35568 32.94965 -116.40701 32.98262 -116.46024 33.01088 -116.51917 33.04934 -116.628 33.1225 -116.69025 33.17807 -116.72922 33.20868 -116.791 33.2465 -116.844 33.279 -116.952 33.332 -117.00819 33.34092 -117.01517 33.3703 -117.03091 33.3914 -117.05333 33.42297 -117.14172 33.49754 -117.17214 33.52894 -117.20448 33.55897 -117.28099 33.6116 -117.31566 33.63098 -117.389 33.6677</gml:posList>
+          </gml:LineString>
+          <dip>85.3</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>15.9461981891</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="5_1" name="Elsinore;T+J+CM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.4">
+        <occurRates>2.99994025069e-06 6.16317688097e-06 1.078970428e-05 1.60963473251e-05 2.04624678603e-05 2.21667268058e-05 2.04624678603e-05 1.60963473251e-05 1.078970428e-05 6.16317688097e-06 2.99994025069e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.006 32.779 -116.099 32.8144 -116.178 32.8377 -116.23022 32.88921 -116.26443 32.93081 -116.33667 32.97477 -116.35568 32.94965 -116.40701 32.98262 -116.46024 33.01088 -116.51917 33.04934 -116.628 33.1225 -116.69025 33.17807 -116.72922 33.20868 -116.791 33.2465 -116.844 33.279 -116.952 33.332 -117.00819 33.34092 -117.01517 33.3703 -117.03091 33.3914 -117.05333 33.42297 -117.14172 33.49754 -117.17214 33.52894 -117.20448 33.55897 -117.28099 33.6116 -117.31566 33.63098 -117.389 33.6677</gml:posList>
+          </gml:LineString>
+          <dip>85.3</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>15.9461981891</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="6_0" name="Elsinore;GI+T+J+CM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.461">
+        <occurRates>2.99994025069e-06 6.16317688097e-06 1.078970428e-05 1.60963473251e-05 2.04624678603e-05 2.21667268058e-05 2.04624678603e-05 1.60963473251e-05 1.078970428e-05 6.16317688097e-06 2.99994025069e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.006 32.779 -116.099 32.8144 -116.178 32.8377 -116.23022 32.88921 -116.26443 32.93081 -116.33667 32.97477 -116.35568 32.94965 -116.40701 32.98262 -116.46024 33.01088 -116.51917 33.04934 -116.628 33.1225 -116.69025 33.17807 -116.72922 33.20868 -116.791 33.2465 -116.844 33.279 -116.952 33.332 -117.00819 33.34092 -117.01517 33.3703 -117.03091 33.3914 -117.05333 33.42297 -117.14172 33.49754 -117.17214 33.52894 -117.20448 33.55897 -117.28099 33.6116 -117.3727 33.68522 -117.40265 33.70453 -117.42415 33.71851 -117.44568 33.73183 -117.46332 33.74509 -117.548 33.8129 -117.59 33.8289</gml:posList>
+          </gml:LineString>
+          <dip>85.5</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>15.9506773397</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="6_1" name="Elsinore;GI+T+J+CM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.497">
+        <occurRates>2.99994025069e-06 6.16317688097e-06 1.078970428e-05 1.60963473251e-05 2.04624678603e-05 2.21667268058e-05 2.04624678603e-05 1.60963473251e-05 1.078970428e-05 6.16317688097e-06 2.99994025069e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.006 32.779 -116.099 32.8144 -116.178 32.8377 -116.23022 32.88921 -116.26443 32.93081 -116.33667 32.97477 -116.35568 32.94965 -116.40701 32.98262 -116.46024 33.01088 -116.51917 33.04934 -116.628 33.1225 -116.69025 33.17807 -116.72922 33.20868 -116.791 33.2465 -116.844 33.279 -116.952 33.332 -117.00819 33.34092 -117.01517 33.3703 -117.03091 33.3914 -117.05333 33.42297 -117.14172 33.49754 -117.17214 33.52894 -117.20448 33.55897 -117.28099 33.6116 -117.3727 33.68522 -117.40265 33.70453 -117.42415 33.71851 -117.44568 33.73183 -117.46332 33.74509 -117.548 33.8129 -117.59 33.8289</gml:posList>
+          </gml:LineString>
+          <dip>85.5</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>15.9506773397</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="7_0" name="Garlock;GE" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.675">
+        <occurRates>8.15469371275e-06 1.67532735861e-05 2.93294953571e-05 4.37544655431e-05 5.56228271444e-05 6.02554893131e-05 5.56228271444e-05 4.37544655431e-05 2.93294953571e-05 1.67532735861e-05 8.15469371275e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.87894 35.59833 -116.81796 35.59671 -116.59081 35.59358 -116.46697 35.5864 -116.37972 35.5904</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="7_1" name="Garlock;GE" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.455">
+        <occurRates>8.15469371275e-06 1.67532735861e-05 2.93294953571e-05 4.37544655431e-05 5.56228271444e-05 6.02554893131e-05 5.56228271444e-05 4.37544655431e-05 2.93294953571e-05 1.67532735861e-05 8.15469371275e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.87894 35.59833 -116.81796 35.59671 -116.59081 35.59358 -116.46697 35.5864 -116.37972 35.5904</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="8_0" name="Garlock;GC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.066">
+        <occurRates>9.40413254561e-07 1.9320162219e-06 3.38232766981e-06 5.04583995333e-06 6.41451975333e-06 6.94876629413e-06 6.41451975333e-06 5.04583995333e-06 3.38232766981e-06 1.9320162219e-06 9.40413254561e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.02395 35.28346 -117.74931 35.42322 -117.48687 35.4972 -117.15792 35.5676 -117.01067 35.60182 -116.87894 35.59833</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="8_1" name="Garlock;GC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.971">
+        <occurRates>9.40413254561e-07 1.9320162219e-06 3.38232766981e-06 5.04583995333e-06 6.41451975333e-06 6.94876629413e-06 6.41451975333e-06 5.04583995333e-06 3.38232766981e-06 1.9320162219e-06 9.40413254561e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.02395 35.28346 -117.74931 35.42322 -117.48687 35.4972 -117.15792 35.5676 -117.01067 35.60182 -116.87894 35.59833</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="9_0" name="Garlock;GW" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.071">
+        <occurRates>2.83018255473e-06 5.81442103261e-06 1.01791470069e-05 1.51855029059e-05 1.93045576663e-05 2.09123776671e-05 1.93045576663e-05 1.51855029059e-05 1.01791470069e-05 5.81442103261e-06 2.83018255473e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.91833 34.82362 -118.87123 34.82844 -118.82281 34.84924 -118.77081 34.88225 -118.66699 34.93137 -118.47466 34.99577 -118.3754 35.0477 -118.3326 35.07881 -118.11913 35.18647 -118.06134 35.22325 -118.01031 35.27129</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.7</upperSeismoDepth>
+          <lowerSeismoDepth>13.7</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="9_1" name="Garlock;GW" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.978">
+        <occurRates>2.83018255473e-06 5.81442103261e-06 1.01791470069e-05 1.51855029059e-05 1.93045576663e-05 2.09123776671e-05 1.93045576663e-05 1.51855029059e-05 1.01791470069e-05 5.81442103261e-06 2.83018255473e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.91833 34.82362 -118.87123 34.82844 -118.82281 34.84924 -118.77081 34.88225 -118.66699 34.93137 -118.47466 34.99577 -118.3754 35.0477 -118.3326 35.07881 -118.11913 35.18647 -118.06134 35.22325 -118.01031 35.27129</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.7</upperSeismoDepth>
+          <lowerSeismoDepth>13.7</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="10_0" name="Garlock;GE+GC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.214">
+        <occurRates>9.40413254561e-07 1.9320162219e-06 3.38232766981e-06 5.04583995333e-06 6.41451975333e-06 6.94876629413e-06 6.41451975333e-06 5.04583995333e-06 3.38232766981e-06 1.9320162219e-06 9.40413254561e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.37972 35.5904 -116.46697 35.5864 -116.59081 35.59358 -116.81796 35.59671 -116.87894 35.59833 -117.01067 35.60182 -117.15792 35.5676 -117.48687 35.4972 -117.74931 35.42322 -118.02395 35.28346</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="10_1" name="Garlock;GE+GC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.169">
+        <occurRates>9.40413254561e-07 1.9320162219e-06 3.38232766981e-06 5.04583995333e-06 6.41451975333e-06 6.94876629413e-06 6.41451975333e-06 5.04583995333e-06 3.38232766981e-06 1.9320162219e-06 9.40413254561e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.37972 35.5904 -116.46697 35.5864 -116.59081 35.59358 -116.81796 35.59671 -116.87894 35.59833 -117.01067 35.60182 -117.15792 35.5676 -117.48687 35.4972 -117.74931 35.42322 -118.02395 35.28346</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="11_0" name="Garlock;GC+GW" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.369">
+        <occurRates>3.7616308277e-06 7.7280192986e-06 1.35292308678e-05 2.01832407487e-05 2.56579276525e-05 2.77949012093e-05 2.56579276525e-05 2.01832407487e-05 1.35292308678e-05 7.7280192986e-06 3.7616308277e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.91833 34.82362 -118.87123 34.82844 -118.82281 34.84924 -118.77081 34.88225 -118.66699 34.93137 -118.47466 34.99577 -118.3754 35.0477 -118.3326 35.07881 -118.11913 35.18647 -118.06134 35.22325 -118.01031 35.27129 -118.02395 35.28346 -117.74931 35.42322 -117.48687 35.4972 -117.15792 35.5676 -117.01067 35.60182 -116.87894 35.59833</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.4</upperSeismoDepth>
+          <lowerSeismoDepth>12.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="11_1" name="Garlock;GC+GW" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.376">
+        <occurRates>3.7616308277e-06 7.7280192986e-06 1.35292308678e-05 2.01832407487e-05 2.56579276525e-05 2.77949012093e-05 2.56579276525e-05 2.01832407487e-05 1.35292308678e-05 7.7280192986e-06 3.7616308277e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.91833 34.82362 -118.87123 34.82844 -118.82281 34.84924 -118.77081 34.88225 -118.66699 34.93137 -118.47466 34.99577 -118.3754 35.0477 -118.3326 35.07881 -118.11913 35.18647 -118.06134 35.22325 -118.01031 35.27129 -118.02395 35.28346 -117.74931 35.42322 -117.48687 35.4972 -117.15792 35.5676 -117.01067 35.60182 -116.87894 35.59833</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.4</upperSeismoDepth>
+          <lowerSeismoDepth>12.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="12_0" name="Garlock;GE+GC+GW" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.449">
+        <occurRates>3.7616308277e-06 7.7280192986e-06 1.35292308678e-05 2.01832407487e-05 2.56579276525e-05 2.77949012093e-05 2.56579276525e-05 2.01832407487e-05 1.35292308678e-05 7.7280192986e-06 3.7616308277e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.37972 35.5904 -116.46697 35.5864 -116.59081 35.59358 -116.81796 35.59671 -116.87894 35.59833 -117.01067 35.60182 -117.15792 35.5676 -117.48687 35.4972 -117.74931 35.42322 -118.02395 35.28346 -118.01031 35.27129 -118.06134 35.22325 -118.11913 35.18647 -118.3326 35.07881 -118.3754 35.0477 -118.47466 34.99577 -118.66699 34.93137 -118.77081 34.88225 -118.82281 34.84924 -118.87123 34.82844 -118.91833 34.82362</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.3</upperSeismoDepth>
+          <lowerSeismoDepth>12.3</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="12_1" name="Garlock;GE+GC+GW" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.483">
+        <occurRates>3.7616308277e-06 7.7280192986e-06 1.35292308678e-05 2.01832407487e-05 2.56579276525e-05 2.77949012093e-05 2.56579276525e-05 2.01832407487e-05 1.35292308678e-05 7.7280192986e-06 3.7616308277e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.37972 35.5904 -116.46697 35.5864 -116.59081 35.59358 -116.81796 35.59671 -116.87894 35.59833 -117.01067 35.60182 -117.15792 35.5676 -117.48687 35.4972 -117.74931 35.42322 -118.02395 35.28346 -118.01031 35.27129 -118.06134 35.22325 -118.11913 35.18647 -118.3326 35.07881 -118.3754 35.0477 -118.47466 34.99577 -118.66699 34.93137 -118.77081 34.88225 -118.82281 34.84924 -118.87123 34.82844 -118.91833 34.82362</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.3</upperSeismoDepth>
+          <lowerSeismoDepth>12.3</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="13_0" name="San Jacinto;SBV" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.821">
+        <occurRates>2.77537189995e-05 5.70181620314e-05 9.98201282859e-05 0.000148914132699 0.000189306964664 0.000205073786641 0.000189306964664 0.000148914132699 9.98201282859e-05 5.70181620314e-05 2.77537189995e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.565 34.2936 -117.403 34.182 -117.389 34.1917 -117.364 34.1588 -117.325 34.1013 -117.237 34.017</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>16.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="13_1" name="San Jacinto;SBV" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.644">
+        <occurRates>2.77537189995e-05 5.70181620314e-05 9.98201282859e-05 0.000148914132699 0.000189306964664 0.000205073786641 0.000189306964664 0.000148914132699 9.98201282859e-05 5.70181620314e-05 2.77537189995e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.565 34.2936 -117.403 34.182 -117.389 34.1917 -117.364 34.1588 -117.325 34.1013 -117.237 34.017</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>16.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="14_0" name="San Jacinto;SJV" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.797">
+        <occurRates>2.91472854448e-05 5.9881151218e-05 0.000104832284723 0.00015639139146 0.000198812423512 0.000215370927283 0.000198812423512 0.00015639139146 0.000104832284723 5.9881151218e-05 2.91472854448e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.237 34.017 -117.222 34.0067 -117.08958 33.90453 -117.01205 33.84928 -116.93905 33.80536 -116.90302 33.75567</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>16.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="14_1" name="San Jacinto;SJV" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.612">
+        <occurRates>2.91472854448e-05 5.9881151218e-05 0.000104832284723 0.00015639139146 0.000198812423512 0.000215370927283 0.000198812423512 0.00015639139146 0.000104832284723 5.9881151218e-05 2.91472854448e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.237 34.017 -117.222 34.0067 -117.08958 33.90453 -117.01205 33.84928 -116.93905 33.80536 -116.90302 33.75567</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>16.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="15_0" name="San Jacinto;CC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.793">
+        <occurRates>1.06664418966e-05 2.19134924718e-05 3.83633486558e-05 5.7231391009e-05 7.27553571918e-05 7.881493755e-05 7.27553571918e-05 5.7231391009e-05 3.83633486558e-05 2.19134924718e-05 1.06664418966e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.543 33.4688 -116.47 33.4204 -116.283 33.2636 -116.205 33.2066</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>16.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="15_1" name="San Jacinto;CC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.608">
+        <occurRates>1.06664418966e-05 2.19134924718e-05 3.83633486558e-05 5.7231391009e-05 7.27553571918e-05 7.881493755e-05 7.27553571918e-05 5.7231391009e-05 3.83633486558e-05 2.19134924718e-05 1.06664418966e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.543 33.4688 -116.47 33.4204 -116.283 33.2636 -116.205 33.2066</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>16.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="16_0" name="San Jacinto;B" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.566">
+        <occurRates>5.78441027553e-05 0.00011883684574 0.000208044397859 0.000310365770933 0.000394552222587 0.000427413320251 0.000394552222587 0.000310365770933 0.000208044397859 0.00011883684574 5.78441027553e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.205 33.2066 -116.164 33.1822 -116.129 33.1434 -116.058 33.0976 -116.011 33.0297 -115.943 33.001</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.7</upperSeismoDepth>
+          <lowerSeismoDepth>12.7</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="16_1" name="San Jacinto;B" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.346">
+        <occurRates>5.78441027553e-05 0.00011883684574 0.000208044397859 0.000310365770933 0.000394552222587 0.000427413320251 0.000394552222587 0.000310365770933 0.000208044397859 0.00011883684574 5.78441027553e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.205 33.2066 -116.164 33.1822 -116.129 33.1434 -116.058 33.0976 -116.011 33.0297 -115.943 33.001</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.7</upperSeismoDepth>
+          <lowerSeismoDepth>12.7</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="17_0" name="San Jacinto;SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.473">
+        <occurRates>1.31279284881e-05 2.6970452273e-05 4.72164291148e-05 7.04386350879e-05 8.95450550053e-05 9.70030000615e-05 8.95450550053e-05 7.04386350879e-05 4.72164291148e-05 2.6970452273e-05 1.31279284881e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.943 33.001 -115.80666 32.93785 -115.698 32.8842</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="17_1" name="San Jacinto;SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.253">
+        <occurRates>1.31279284881e-05 2.6970452273e-05 4.72164291148e-05 7.04386350879e-05 8.95450550053e-05 9.70030000615e-05 8.95450550053e-05 7.04386350879e-05 4.72164291148e-05 2.6970452273e-05 1.31279284881e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.943 33.001 -115.80666 32.93785 -115.698 32.8842</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="18_0" name="San Jacinto;SBV+SJV" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.11">
+        <occurRates>1.58728993366e-05 3.26098115464e-05 5.70891003141e-05 8.51669298148e-05 0.000108268387162 0.000117285743651 0.000108268387162 8.51669298148e-05 5.70891003141e-05 3.26098115464e-05 1.58728993366e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.565 34.2936 -117.403 34.182 -117.389 34.1917 -117.364 34.1588 -117.325 34.1013 -117.237 34.017 -117.222 34.0067 -117.08958 33.90453 -117.01205 33.84928 -116.93905 33.80536 -116.90302 33.75567</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>16.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="18_1" name="San Jacinto;SBV+SJV" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.03">
+        <occurRates>1.58728993366e-05 3.26098115464e-05 5.70891003141e-05 8.51669298148e-05 0.000108268387162 0.000117285743651 0.000108268387162 8.51669298148e-05 5.70891003141e-05 3.26098115464e-05 1.58728993366e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.565 34.2936 -117.403 34.182 -117.389 34.1917 -117.364 34.1588 -117.325 34.1013 -117.237 34.017 -117.222 34.0067 -117.08958 33.90453 -117.01205 33.84928 -116.93905 33.80536 -116.90302 33.75567</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>16.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="19_0" name="San Jacinto;A+C" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.257">
+        <occurRates>3.77350277114e-05 7.75240941349e-05 0.000135719299712 0.000202469403257 0.000257389056857 0.000278826236654 0.000257389056857 0.000202469403257 0.000135719299712 7.75240941349e-05 3.77350277114e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.10829 33.89068 -116.979 33.7778 -116.96198 33.76173 -116.9143 33.73643 -116.84472 33.69667 -116.549 33.5112 -116.5133 33.48955 -116.393 33.4166 -116.339 33.396 -116.297 33.3839 -116.21 33.315 -116.147 33.2854 -116.099 33.2558</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>17.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="19_1" name="San Jacinto;A+C" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.226">
+        <occurRates>3.77350277114e-05 7.75240941349e-05 0.000135719299712 0.000202469403257 0.000257389056857 0.000278826236654 0.000257389056857 0.000202469403257 0.000135719299712 7.75240941349e-05 3.77350277114e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.10829 33.89068 -116.979 33.7778 -116.96198 33.76173 -116.9143 33.73643 -116.84472 33.69667 -116.549 33.5112 -116.5133 33.48955 -116.393 33.4166 -116.339 33.396 -116.297 33.3839 -116.21 33.315 -116.147 33.2854 -116.099 33.2558</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>17.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="20_0" name="San Jacinto;CC+B" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.995">
+        <occurRates>1.06664418966e-05 2.19134924718e-05 3.83633486558e-05 5.7231391009e-05 7.27553571918e-05 7.881493755e-05 7.27553571918e-05 5.7231391009e-05 3.83633486558e-05 2.19134924718e-05 1.06664418966e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.543 33.4688 -116.47 33.4204 -116.283 33.2636 -116.205 33.2066 -116.164 33.1822 -116.129 33.1434 -116.058 33.0976 -116.011 33.0297 -115.943 33.001</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.2</upperSeismoDepth>
+          <lowerSeismoDepth>14.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="20_1" name="San Jacinto;CC+B" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.877">
+        <occurRates>1.06664418966e-05 2.19134924718e-05 3.83633486558e-05 5.7231391009e-05 7.27553571918e-05 7.881493755e-05 7.27553571918e-05 5.7231391009e-05 3.83633486558e-05 2.19134924718e-05 1.06664418966e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.543 33.4688 -116.47 33.4204 -116.283 33.2636 -116.205 33.2066 -116.164 33.1822 -116.129 33.1434 -116.058 33.0976 -116.011 33.0297 -115.943 33.001</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.2</upperSeismoDepth>
+          <lowerSeismoDepth>14.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="21_0" name="San Jacinto;B+SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.823">
+        <occurRates>1.31279284881e-05 2.6970452273e-05 4.72164291148e-05 7.04386350879e-05 8.95450550053e-05 9.70030000615e-05 8.95450550053e-05 7.04386350879e-05 4.72164291148e-05 2.6970452273e-05 1.31279284881e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.205 33.2066 -116.164 33.1822 -116.129 33.1434 -116.058 33.0976 -116.011 33.0297 -115.943 33.001 -115.80666 32.93785 -115.698 32.8842</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.4</upperSeismoDepth>
+          <lowerSeismoDepth>12.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="21_1" name="San Jacinto;B+SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.647">
+        <occurRates>1.31279284881e-05 2.6970452273e-05 4.72164291148e-05 7.04386350879e-05 8.95450550053e-05 9.70030000615e-05 8.95450550053e-05 7.04386350879e-05 4.72164291148e-05 2.6970452273e-05 1.31279284881e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.205 33.2066 -116.164 33.1822 -116.129 33.1434 -116.058 33.0976 -116.011 33.0297 -115.943 33.001 -115.80666 32.93785 -115.698 32.8842</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.4</upperSeismoDepth>
+          <lowerSeismoDepth>12.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="22_0" name="San Jacinto;CC+B+SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.11">
+        <occurRates>1.06664418966e-05 2.19134924718e-05 3.83633486558e-05 5.7231391009e-05 7.27553571918e-05 7.881493755e-05 7.27553571918e-05 5.7231391009e-05 3.83633486558e-05 2.19134924718e-05 1.06664418966e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.543 33.4688 -116.47 33.4204 -116.283 33.2636 -116.205 33.2066 -116.164 33.1822 -116.129 33.1434 -116.058 33.0976 -116.011 33.0297 -115.943 33.001 -115.80666 32.93785 -115.698 32.8842</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.2</upperSeismoDepth>
+          <lowerSeismoDepth>14.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="22_1" name="San Jacinto;CC+B+SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.029">
+        <occurRates>1.06664418966e-05 2.19134924718e-05 3.83633486558e-05 5.7231391009e-05 7.27553571918e-05 7.881493755e-05 7.27553571918e-05 5.7231391009e-05 3.83633486558e-05 2.19134924718e-05 1.06664418966e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.543 33.4688 -116.47 33.4204 -116.283 33.2636 -116.205 33.2066 -116.164 33.1822 -116.129 33.1434 -116.058 33.0976 -116.011 33.0297 -115.943 33.001 -115.80666 32.93785 -115.698 32.8842</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.2</upperSeismoDepth>
+          <lowerSeismoDepth>14.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="23_0" name="San Jacinto;SBV+SJV+A+C" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.491">
+        <occurRates>1.25787124129e-05 2.58421245283e-05 4.52410967609e-05 6.74917854963e-05 8.57988749658e-05 9.29448116715e-05 8.57988749658e-05 6.74917854963e-05 4.52410967609e-05 2.58421245283e-05 1.25787124129e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.565 34.2936 -117.403 34.182 -117.389 34.1917 -117.364 34.1588 -117.325 34.1013 -117.237 34.017 -117.222 34.0067 -117.08958 33.90453 -116.9143 33.73643 -116.84472 33.69667 -116.549 33.5112 -116.5133 33.48955 -116.393 33.4166 -116.339 33.396 -116.297 33.3839 -116.21 33.315 -116.147 33.2854 -116.099 33.2558</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>17.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="23_1" name="San Jacinto;SBV+SJV+A+C" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.537">
+        <occurRates>1.25787124129e-05 2.58421245283e-05 4.52410967609e-05 6.74917854963e-05 8.57988749658e-05 9.29448116715e-05 8.57988749658e-05 6.74917854963e-05 4.52410967609e-05 2.58421245283e-05 1.25787124129e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.565 34.2936 -117.403 34.182 -117.389 34.1917 -117.364 34.1588 -117.325 34.1013 -117.237 34.017 -117.222 34.0067 -117.08958 33.90453 -116.9143 33.73643 -116.84472 33.69667 -116.549 33.5112 -116.5133 33.48955 -116.393 33.4166 -116.339 33.396 -116.297 33.3839 -116.21 33.315 -116.147 33.2854 -116.099 33.2558</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>17.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="24_0" name="N. San Andreas;SAO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.127">
+        <occurRates>5.91322640952e-06 1.21483287178e-05 2.12677450108e-05 3.17277472702e-05 4.03338717589e-05 4.36931616656e-05 4.03338717589e-05 3.17277472702e-05 2.12677450108e-05 1.21483287178e-05 5.91322640952e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-123.8407 39.1706 -123.8726 39.2589 -123.9224 39.3965 -123.9953 39.673 -124.0067 39.9135 -124.049 40.0259 -124.0635 40.0506 -124.1381 40.0965 -124.4032 40.244</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>11.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="24_1" name="N. San Andreas;SAO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.053">
+        <occurRates>5.91322640952e-06 1.21483287178e-05 2.12677450108e-05 3.17277472702e-05 4.03338717589e-05 4.36931616656e-05 4.03338717589e-05 3.17277472702e-05 2.12677450108e-05 1.21483287178e-05 5.91322640952e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-123.8407 39.1706 -123.8726 39.2589 -123.9224 39.3965 -123.9953 39.673 -124.0067 39.9135 -124.049 40.0259 -124.0635 40.0506 -124.1381 40.0965 -124.4032 40.244</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>11.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="25_0" name="N. San Andreas;SAN" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.271">
+        <occurRates>2.50387053914e-07 5.14403479077e-07 9.00552024877e-07 1.34346575222e-06 1.707879696e-06 1.85012398782e-06 1.707879696e-06 1.34346575222e-06 9.00552024877e-07 5.14403479077e-07 2.50387053914e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.5741 37.7856 -122.72245 37.9617 -122.917 38.181 -123.0419 38.329 -123.1144 38.408 -123.7894 39.1014 -123.8407 39.1706</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>11.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="25_1" name="N. San Andreas;SAN" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.244">
+        <occurRates>2.50387053914e-07 5.14403479077e-07 9.00552024877e-07 1.34346575222e-06 1.707879696e-06 1.85012398782e-06 1.707879696e-06 1.34346575222e-06 9.00552024877e-07 5.14403479077e-07 2.50387053914e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.5741 37.7856 -122.72245 37.9617 -122.917 38.181 -123.0419 38.329 -123.1144 38.408 -123.7894 39.1014 -123.8407 39.1706</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>11.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="26_0" name="N. San Andreas;SAP" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.993">
+        <occurRates>6.37612125108e-06 1.30993152533e-05 2.29326109867e-05 3.42114354513e-05 4.34912582488e-05 4.71135176178e-05 4.34912582488e-05 3.42114354513e-05 2.29326109867e-05 1.30993152533e-05 6.37612125108e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.0036 37.1762 -122.14 37.297 -122.21 37.367 -122.283 37.438 -122.5741 37.7856</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="26_1" name="N. San Andreas;SAP" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.874">
+        <occurRates>6.37612125108e-06 1.30993152533e-05 2.29326109867e-05 3.42114354513e-05 4.34912582488e-05 4.71135176178e-05 4.34912582488e-05 3.42114354513e-05 2.29326109867e-05 1.30993152533e-05 6.37612125108e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.0036 37.1762 -122.14 37.297 -122.21 37.367 -122.283 37.438 -122.5741 37.7856</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="27_0" name="N. San Andreas;SAS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.883">
+        <occurRates>9.17168655015e-06 1.88426174463e-05 3.29872521968e-05 4.92111975344e-05 6.2559693052e-05 6.77701064409e-05 6.2559693052e-05 4.92111975344e-05 3.29872521968e-05 1.88426174463e-05 9.17168655015e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.4816 36.8059 -121.5645 36.8701 -121.652 36.926 -121.733 36.989 -121.812 37.053 -121.907 37.104 -122.0036 37.1762</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.8</upperSeismoDepth>
+          <lowerSeismoDepth>14.8</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="27_1" name="N. San Andreas;SAS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.728">
+        <occurRates>9.17168655015e-06 1.88426174463e-05 3.29872521968e-05 4.92111975344e-05 6.2559693052e-05 6.77701064409e-05 6.2559693052e-05 4.92111975344e-05 3.29872521968e-05 1.88426174463e-05 9.17168655015e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.4816 36.8059 -121.5645 36.8701 -121.652 36.926 -121.733 36.989 -121.812 37.053 -121.907 37.104 -122.0036 37.1762</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.8</upperSeismoDepth>
+          <lowerSeismoDepth>14.8</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="28_0" name="N. San Andreas;SAO+SAN" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.506">
+        <occurRates>1.28106036447e-05 2.6318529576e-05 4.6075125977e-05 6.87360108794e-05 8.7380595427e-05 9.46582689918e-05 8.7380595427e-05 6.87360108794e-05 4.6075125977e-05 2.6318529576e-05 1.28106036447e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-124.4032 40.244 -124.1381 40.0965 -124.0635 40.0506 -124.049 40.0259 -124.0067 39.9135 -123.9953 39.673 -123.9224 39.3965 -123.8726 39.2589 -123.8407 39.1706 -123.7894 39.1014 -123.1144 38.408 -123.0419 38.329 -122.917 38.181 -122.72245 37.9617 -122.5741 37.7856</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>11.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="28_1" name="N. San Andreas;SAO+SAN" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.558">
+        <occurRates>1.28106036447e-05 2.6318529576e-05 4.6075125977e-05 6.87360108794e-05 8.7380595427e-05 9.46582689918e-05 8.7380595427e-05 6.87360108794e-05 4.6075125977e-05 2.6318529576e-05 1.28106036447e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-124.4032 40.244 -124.1381 40.0965 -124.0635 40.0506 -124.049 40.0259 -124.0067 39.9135 -123.9953 39.673 -123.9224 39.3965 -123.8726 39.2589 -123.8407 39.1706 -123.7894 39.1014 -123.1144 38.408 -123.0419 38.329 -122.917 38.181 -122.72245 37.9617 -122.5741 37.7856</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>11.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="29_0" name="N. San Andreas;SAP+SAS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.243">
+        <occurRates>1.24034070799e-05 2.548197143e-05 4.46105866358e-05 6.65511749196e-05 8.46031245694e-05 9.16494707309e-05 8.46031245694e-05 6.65511749196e-05 4.46105866358e-05 2.548197143e-05 1.24034070799e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.5741 37.7856 -122.283 37.438 -122.21 37.367 -122.14 37.297 -122.0036 37.1762 -121.907 37.104 -121.812 37.053 -121.733 36.989 -121.652 36.926 -121.5645 36.8701 -121.4816 36.8059</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.4</upperSeismoDepth>
+          <lowerSeismoDepth>13.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="29_1" name="N. San Andreas;SAP+SAS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.207">
+        <occurRates>1.24034070799e-05 2.548197143e-05 4.46105866358e-05 6.65511749196e-05 8.46031245694e-05 9.16494707309e-05 8.46031245694e-05 6.65511749196e-05 4.46105866358e-05 2.548197143e-05 1.24034070799e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.5741 37.7856 -122.283 37.438 -122.21 37.367 -122.14 37.297 -122.0036 37.1762 -121.907 37.104 -121.812 37.053 -121.733 36.989 -121.652 36.926 -121.5645 36.8701 -121.4816 36.8059</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.4</upperSeismoDepth>
+          <lowerSeismoDepth>13.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="30_0" name="N. San Andreas;SAO+SAN+SAP" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.622">
+        <occurRates>9.85548830195e-07 2.02474424746e-06 3.54466407417e-06 5.28801741068e-06 6.72238764022e-06 7.28227559455e-06 6.72238764022e-06 5.28801741068e-06 3.54466407417e-06 2.02474424746e-06 9.85548830195e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-124.4032 40.244 -124.1381 40.0965 -124.0635 40.0506 -124.049 40.0259 -124.0067 39.9135 -123.9953 39.673 -123.9224 39.3965 -123.8726 39.2589 -123.8407 39.1706 -123.7894 39.1014 -123.1144 38.408 -123.0419 38.329 -122.917 38.181 -122.72245 37.9617 -122.5741 37.7856 -122.283 37.438 -122.21 37.367 -122.14 37.297 -122.0036 37.1762</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>11.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="30_1" name="N. San Andreas;SAO+SAN+SAP" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.713">
+        <occurRates>9.85548830195e-07 2.02474424746e-06 3.54466407417e-06 5.28801741068e-06 6.72238764022e-06 7.28227559455e-06 6.72238764022e-06 5.28801741068e-06 3.54466407417e-06 2.02474424746e-06 9.85548830195e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-124.4032 40.244 -124.1381 40.0965 -124.0635 40.0506 -124.049 40.0259 -124.0067 39.9135 -123.9953 39.673 -123.9224 39.3965 -123.8726 39.2589 -123.8407 39.1706 -123.7894 39.1014 -123.1144 38.408 -123.0419 38.329 -122.917 38.181 -122.72245 37.9617 -122.5741 37.7856 -122.283 37.438 -122.21 37.367 -122.14 37.297 -122.0036 37.1762</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>11.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="31_0" name="N. San Andreas;SAN+SAP+SAS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.558">
+        <occurRates>3.02679081437e-07 6.21833957071e-07 1.08862760839e-06 1.62404155274e-06 2.064561444e-06 2.23651271271e-06 2.064561444e-06 1.62404155274e-06 1.08862760839e-06 6.21833957071e-07 3.02679081437e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-123.8407 39.1706 -123.7894 39.1014 -123.1144 38.408 -123.0419 38.329 -122.917 38.181 -122.72245 37.9617 -122.5741 37.7856 -122.283 37.438 -122.21 37.367 -122.14 37.297 -122.0036 37.1762 -121.907 37.104 -121.812 37.053 -121.733 36.989 -121.652 36.926 -121.5645 36.8701 -121.4816 36.8059</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.2</upperSeismoDepth>
+          <lowerSeismoDepth>12.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="31_1" name="N. San Andreas;SAN+SAP+SAS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.627">
+        <occurRates>3.02679081437e-07 6.21833957071e-07 1.08862760839e-06 1.62404155274e-06 2.064561444e-06 2.23651271271e-06 2.064561444e-06 1.62404155274e-06 1.08862760839e-06 6.21833957071e-07 3.02679081437e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-123.8407 39.1706 -123.7894 39.1014 -123.1144 38.408 -123.0419 38.329 -122.917 38.181 -122.72245 37.9617 -122.5741 37.7856 -122.283 37.438 -122.21 37.367 -122.14 37.297 -122.0036 37.1762 -121.907 37.104 -121.812 37.053 -121.733 36.989 -121.652 36.926 -121.5645 36.8701 -121.4816 36.8059</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.2</upperSeismoDepth>
+          <lowerSeismoDepth>12.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="32_0" name="N. San Andreas;SAO+SAN+SAP+SAS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.695">
+        <occurRates>3.40358632777e-05 6.99244078707e-05 0.000122414737959 0.000182621329442 0.000232157209884 0.000251492903135 0.000232157209884 0.000182621329442 0.000122414737959 6.99244078707e-05 3.40358632777e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-124.4032 40.244 -124.1381 40.0965 -124.0635 40.0506 -124.049 40.0259 -124.0067 39.9135 -123.9953 39.673 -123.9224 39.3965 -123.8726 39.2589 -123.8407 39.1706 -123.7894 39.1014 -123.1144 38.408 -123.0419 38.329 -122.917 38.181 -122.72245 37.9617 -122.5741 37.7856 -122.283 37.438 -122.21 37.367 -122.14 37.297 -122.0036 37.1762 -121.907 37.104 -121.812 37.053 -121.733 36.989 -121.652 36.926 -121.5645 36.8701 -121.4816 36.8059</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.2</upperSeismoDepth>
+          <lowerSeismoDepth>12.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="32_1" name="N. San Andreas;SAO+SAN+SAP+SAS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.81">
+        <occurRates>3.40358632777e-05 6.99244078707e-05 0.000122414737959 0.000182621329442 0.000232157209884 0.000251492903135 0.000232157209884 0.000182621329442 0.000122414737959 6.99244078707e-05 3.40358632777e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-124.4032 40.244 -124.1381 40.0965 -124.0635 40.0506 -124.049 40.0259 -124.0067 39.9135 -123.9953 39.673 -123.9224 39.3965 -123.8726 39.2589 -123.8407 39.1706 -123.7894 39.1014 -123.1144 38.408 -123.0419 38.329 -122.917 38.181 -122.72245 37.9617 -122.5741 37.7856 -122.283 37.438 -122.21 37.367 -122.14 37.297 -122.0036 37.1762 -121.907 37.104 -121.812 37.053 -121.733 36.989 -121.652 36.926 -121.5645 36.8701 -121.4816 36.8059</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.2</upperSeismoDepth>
+          <lowerSeismoDepth>12.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="33_0" name="S. San Andreas;PK" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="5.852">
+        <occurRates>0.000415185162294 0.000852970185983 0.00149327144817 0.00222769922667 0.00283196074907 0.00306782645563 0.00283196074907 0.00222769922667 0.00149327144817 0.000852970185983 0.000415185162294</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.30005 35.75198 -120.56089 36.00265</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>4.0</upperSeismoDepth>
+          <lowerSeismoDepth>6.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="33_1" name="S. San Andreas;PK" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="5.632">
+        <occurRates>0.000415185162294 0.000852970185983 0.00149327144817 0.00222769922667 0.00283196074907 0.00306782645563 0.00283196074907 0.00222769922667 0.00149327144817 0.000852970185983 0.000415185162294</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.30005 35.75198 -120.56089 36.00265</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>4.0</upperSeismoDepth>
+          <lowerSeismoDepth>6.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="34_0" name="S. San Andreas;CH" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.835">
+        <occurRates>5.99988050139e-07 1.23263537619e-06 2.157940856e-06 3.21926946502e-06 4.09249357207e-06 4.43334536116e-06 4.09249357207e-06 3.21926946502e-06 2.157940856e-06 1.23263537619e-06 5.99988050139e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-119.86595 35.31417 -119.9703 35.41391 -120.08675 35.53331 -120.30005 35.75198</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="34_1" name="S. San Andreas;CH" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.664">
+        <occurRates>5.99988050139e-07 1.23263537619e-06 2.157940856e-06 3.21926946502e-06 4.09249357207e-06 4.43334536116e-06 4.09249357207e-06 3.21926946502e-06 2.157940856e-06 1.23263537619e-06 5.99988050139e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-119.86595 35.31417 -119.9703 35.41391 -120.08675 35.53331 -120.30005 35.75198</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="35_0" name="S. San Andreas;CC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.91">
+        <occurRates>3.59986172919e-06 7.39567549017e-06 1.29474057017e-05 1.93152595963e-05 2.455450735e-05 2.65995802654e-05 2.455450735e-05 1.93152595963e-05 1.29474057017e-05 7.39567549017e-06 3.59986172919e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-119.8659 35.3142 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>15.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="35_1" name="S. San Andreas;CC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.763">
+        <occurRates>3.59986172919e-06 7.39567549017e-06 1.29474057017e-05 1.93152595963e-05 2.455450735e-05 2.65995802654e-05 2.455450735e-05 1.93152595963e-05 1.29474057017e-05 7.39567549017e-06 3.59986172919e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-119.8659 35.3142 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>15.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="36_0" name="S. San Andreas;BB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.836">
+        <occurRates>3.59986172919e-06 7.39567549017e-06 1.29474057017e-05 1.93152595963e-05 2.455450735e-05 2.65995802654e-05 2.455450735e-05 1.93152595963e-05 1.29474057017e-05 7.39567549017e-06 3.59986172919e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-119.40286 34.94406 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>15.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="36_1" name="S. San Andreas;BB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.664">
+        <occurRates>3.59986172919e-06 7.39567549017e-06 1.29474057017e-05 1.93152595963e-05 2.455450735e-05 2.65995802654e-05 2.455450735e-05 1.93152595963e-05 1.29474057017e-05 7.39567549017e-06 3.59986172919e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-119.40286 34.94406 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>15.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="37_0" name="S. San Andreas;NM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.705">
+        <occurRates>2.39990781946e-06 4.93045032678e-06 8.63160380117e-06 1.28768397308e-05 1.63696715666e-05 1.77330535102e-05 1.63696715666e-05 1.28768397308e-05 8.63160380117e-06 4.93045032678e-06 2.39990781946e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>15.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="37_1" name="S. San Andreas;NM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.491">
+        <occurRates>2.39990781946e-06 4.93045032678e-06 8.63160380117e-06 1.28768397308e-05 1.63696715666e-05 1.77330535102e-05 1.63696715666e-05 1.28768397308e-05 8.63160380117e-06 4.93045032678e-06 2.39990781946e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>15.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="38_0" name="S. San Andreas;SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.067">
+        <occurRates>5.99988050139e-06 1.23263537619e-05 2.157940856e-05 3.21926946502e-05 4.09249357207e-05 4.43334536116e-05 4.09249357207e-05 3.21926946502e-05 2.157940856e-05 1.23263537619e-05 5.99988050139e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="38_1" name="S. San Andreas;SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.972">
+        <occurRates>5.99988050139e-06 1.23263537619e-05 2.157940856e-05 3.21926946502e-05 4.09249357207e-05 4.43334536116e-05 4.09249357207e-05 3.21926946502e-05 2.157940856e-05 1.23263537619e-05 5.99988050139e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="39_0" name="S. San Andreas;NSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.615">
+        <occurRates>8.39978832084e-06 1.72568040887e-05 3.02110123611e-05 4.50695343811e-05 5.72946072873e-05 6.20665071219e-05 5.72946072873e-05 4.50695343811e-05 3.02110123611e-05 1.72568040887e-05 8.39978832084e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="39_1" name="S. San Andreas;NSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.395">
+        <occurRates>8.39978832084e-06 1.72568040887e-05 3.02110123611e-05 4.50695343811e-05 5.72946072873e-05 6.20665071219e-05 5.72946072873e-05 4.50695343811e-05 3.02110123611e-05 1.72568040887e-05 8.39978832084e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="40_0" name="S. San Andreas;SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.705">
+        <occurRates>5.99988050139e-07 1.23263537619e-06 2.157940856e-06 3.21926946502e-06 4.09249357207e-06 4.43334536116e-06 4.09249357207e-06 3.21926946502e-06 2.157940856e-06 1.23263537619e-06 5.99988050139e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.22202 34.15003 -117.06767 34.0928 -117.0139 34.07377 -116.90235 34.03384 -116.87354 34.01135 -116.81979 33.95911</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="40_1" name="S. San Andreas;SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.49">
+        <occurRates>5.99988050139e-07 1.23263537619e-06 2.157940856e-06 3.21926946502e-06 4.09249357207e-06 4.43334536116e-06 4.09249357207e-06 3.21926946502e-06 2.157940856e-06 1.23263537619e-06 5.99988050139e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.22202 34.15003 -117.06767 34.0928 -117.0139 34.07377 -116.90235 34.03384 -116.87354 34.01135 -116.81979 33.95911</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="41_0" name="S. San Andreas;BG" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.886">
+        <occurRates>5.99988050139e-06 1.23263537619e-05 2.157940856e-05 3.21926946502e-05 4.09249357207e-05 4.43334536116e-05 4.09249357207e-05 3.21926946502e-05 2.157940856e-05 1.23263537619e-05 5.99988050139e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.24629 33.78825 -116.383 33.84852 -116.42653 33.84812 -116.51689 33.88466 -116.58485 33.90702 -116.62387 33.91757 -116.68581 33.94416 -116.77859 33.93741 -116.80139 33.95316</gml:posList>
+          </gml:LineString>
+          <dip>58.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.7207214423</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="41_1" name="S. San Andreas;BG" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.731">
+        <occurRates>5.99988050139e-06 1.23263537619e-05 2.157940856e-05 3.21926946502e-05 4.09249357207e-05 4.43334536116e-05 4.09249357207e-05 3.21926946502e-05 2.157940856e-05 1.23263537619e-05 5.99988050139e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.24629 33.78825 -116.383 33.84852 -116.42653 33.84812 -116.51689 33.88466 -116.58485 33.90702 -116.62387 33.91757 -116.68581 33.94416 -116.77859 33.93741 -116.80139 33.95316</gml:posList>
+          </gml:LineString>
+          <dip>58.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.7207214423</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="42_0" name="S. San Andreas;CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.801">
+        <occurRates>2.99994025069e-05 6.16317688097e-05 0.0001078970428 0.000160963473251 0.000204624678603 0.000221667268058 0.000204624678603 0.000160963473251 0.0001078970428 6.16317688097e-05 2.99994025069e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.24629 33.78825 -115.71192 33.35009</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.6</upperSeismoDepth>
+          <lowerSeismoDepth>10.6</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="42_1" name="S. San Andreas;CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.618">
+        <occurRates>2.99994025069e-05 6.16317688097e-05 0.0001078970428 0.000160963473251 0.000204624678603 0.000221667268058 0.000204624678603 0.000160963473251 0.0001078970428 6.16317688097e-05 2.99994025069e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.24629 33.78825 -115.71192 33.35009</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.6</upperSeismoDepth>
+          <lowerSeismoDepth>10.6</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="43_0" name="S. San Andreas;PK+CH" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.878">
+        <occurRates>1.91992625557e-05 3.94436026142e-05 6.90528304093e-05 0.000103014717847 0.000130957372533 0.000141864428082 0.000130957372533 0.000103014717847 6.90528304093e-05 3.94436026142e-05 1.91992625557e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.56089 36.00265 -120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.4</upperSeismoDepth>
+          <lowerSeismoDepth>8.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="43_1" name="S. San Andreas;PK+CH" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.721">
+        <occurRates>1.91992625557e-05 3.94436026142e-05 6.90528304093e-05 0.000103014717847 0.000130957372533 0.000141864428082 0.000130957372533 0.000103014717847 6.90528304093e-05 3.94436026142e-05 1.91992625557e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.56089 36.00265 -120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.4</upperSeismoDepth>
+          <lowerSeismoDepth>8.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="44_0" name="S. San Andreas;CH+CC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.175">
+        <occurRates>3.59986172919e-06 7.39567549017e-06 1.29474057017e-05 1.93152595963e-05 2.455450735e-05 2.65995802654e-05 2.455450735e-05 1.93152595963e-05 1.29474057017e-05 7.39567549017e-06 3.59986172919e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="44_1" name="S. San Andreas;CH+CC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.117">
+        <occurRates>3.59986172919e-06 7.39567549017e-06 1.29474057017e-05 1.93152595963e-05 2.455450735e-05 2.65995802654e-05 2.455450735e-05 1.93152595963e-05 1.29474057017e-05 7.39567549017e-06 3.59986172919e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="45_0" name="S. San Andreas;NM+SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.224">
+        <occurRates>8.39978832084e-06 1.72568040887e-05 3.02110123611e-05 4.50695343811e-05 5.72946072873e-05 6.20665071219e-05 5.72946072873e-05 4.50695343811e-05 3.02110123611e-05 1.72568040887e-05 8.39978832084e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849 -118.76731 34.77325 -118.88764 34.80722 -118.89012 34.8076</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="45_1" name="S. San Andreas;NM+SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.182">
+        <occurRates>8.39978832084e-06 1.72568040887e-05 3.02110123611e-05 4.50695343811e-05 5.72946072873e-05 6.20665071219e-05 5.72946072873e-05 4.50695343811e-05 3.02110123611e-05 1.72568040887e-05 8.39978832084e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849 -118.76731 34.77325 -118.88764 34.80722 -118.89012 34.8076</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="46_0" name="S. San Andreas;SM+NSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.198">
+        <occurRates>7.19983441112e-06 1.47915789253e-05 2.58952104605e-05 3.86311145157e-05 4.9109771504e-05 5.31999803667e-05 4.9109771504e-05 3.86311145157e-05 2.58952104605e-05 1.47915789253e-05 7.19983441112e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="46_1" name="S. San Andreas;SM+NSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.148">
+        <occurRates>7.19983441112e-06 1.47915789253e-05 2.58952104605e-05 3.86311145157e-05 4.9109771504e-05 5.31999803667e-05 4.9109771504e-05 3.86311145157e-05 2.58952104605e-05 1.47915789253e-05 7.19983441112e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="47_0" name="S. San Andreas;NSB+SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.963">
+        <occurRates>9.59974223057e-06 1.97220292521e-05 3.45268142617e-05 5.15079542465e-05 6.54794430706e-05 7.0933033877e-05 6.54794430706e-05 5.15079542465e-05 3.45268142617e-05 1.97220292521e-05 9.59974223057e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003 -117.06767 34.0928 -117.0139 34.07377 -116.90235 34.03384 -116.87354 34.01135 -116.81979 33.95911</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="47_1" name="S. San Andreas;NSB+SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.834">
+        <occurRates>9.59974223057e-06 1.97220292521e-05 3.45268142617e-05 5.15079542465e-05 6.54794430706e-05 7.0933033877e-05 6.54794430706e-05 5.15079542465e-05 3.45268142617e-05 1.97220292521e-05 9.59974223057e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003 -117.06767 34.0928 -117.0139 34.07377 -116.90235 34.03384 -116.87354 34.01135 -116.81979 33.95911</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="48_0" name="S. San Andreas;SSB+BG" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.106">
+        <occurRates>1.07996961403e-05 2.21872544155e-05 3.88426161623e-05 5.79463741119e-05 7.3664278854e-05 7.97995606321e-05 7.3664278854e-05 5.79463741119e-05 3.88426161623e-05 2.21872544155e-05 1.07996961403e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.24629 33.78825 -116.383 33.84852 -116.42653 33.84812 -116.51689 33.88466 -116.58485 33.90702 -116.62387 33.91757 -116.68581 33.94416 -116.77859 33.93741 -116.80139 33.95316 -116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003</gml:posList>
+          </gml:LineString>
+          <dip>70.7</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.2132133222</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="48_1" name="S. San Andreas;SSB+BG" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.024">
+        <occurRates>1.07996961403e-05 2.21872544155e-05 3.88426161623e-05 5.79463741119e-05 7.3664278854e-05 7.97995606321e-05 7.3664278854e-05 5.79463741119e-05 3.88426161623e-05 2.21872544155e-05 1.07996961403e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.24629 33.78825 -116.383 33.84852 -116.42653 33.84812 -116.51689 33.88466 -116.58485 33.90702 -116.62387 33.91757 -116.68581 33.94416 -116.77859 33.93741 -116.80139 33.95316 -116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003</gml:posList>
+          </gml:LineString>
+          <dip>70.7</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.2132133222</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="49_0" name="S. San Andreas;BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.146">
+        <occurRates>8.39978832084e-06 1.72568040887e-05 3.02110123611e-05 4.50695343811e-05 5.72946072873e-05 6.20665071219e-05 5.72946072873e-05 4.50695343811e-05 3.02110123611e-05 1.72568040887e-05 8.39978832084e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.712491797 33.3493798376 -116.246864707 33.7875398376 -116.383575112 33.8478098376 -116.427105109 33.8474098376 -116.517465355 33.8839498376 -116.585425506 33.9063098376 -116.624445577 33.9168598376 -116.686385757 33.9434498376 -116.779165711 33.9366998376 -116.801965818 33.9524498376</gml:posList>
+          </gml:LineString>
+          <dip>72.4</dip>
+          <upperSeismoDepth>0.3</upperSeismoDepth>
+          <lowerSeismoDepth>11.7382880135</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="49_1" name="S. San Andreas;BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.079">
+        <occurRates>8.39978832084e-06 1.72568040887e-05 3.02110123611e-05 4.50695343811e-05 5.72946072873e-05 6.20665071219e-05 5.72946072873e-05 4.50695343811e-05 3.02110123611e-05 1.72568040887e-05 8.39978832084e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.712491797 33.3493798376 -116.246864707 33.7875398376 -116.383575112 33.8478098376 -116.427105109 33.8474098376 -116.517465355 33.8839498376 -116.585425506 33.9063098376 -116.624445577 33.9168598376 -116.686385757 33.9434498376 -116.779165711 33.9366998376 -116.801965818 33.9524498376</gml:posList>
+          </gml:LineString>
+          <dip>72.4</dip>
+          <upperSeismoDepth>0.3</upperSeismoDepth>
+          <lowerSeismoDepth>11.7382880135</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="50_0" name="S. San Andreas;PK+CH+CC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.195">
+        <occurRates>8.39978832084e-06 1.72568040887e-05 3.02110123611e-05 4.50695343811e-05 5.72946072873e-05 6.20665071219e-05 5.72946072873e-05 4.50695343811e-05 3.02110123611e-05 1.72568040887e-05 8.39978832084e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.56089 36.00265 -120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.2</upperSeismoDepth>
+          <lowerSeismoDepth>11.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="50_1" name="S. San Andreas;PK+CH+CC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.144">
+        <occurRates>8.39978832084e-06 1.72568040887e-05 3.02110123611e-05 4.50695343811e-05 5.72946072873e-05 6.20665071219e-05 5.72946072873e-05 4.50695343811e-05 3.02110123611e-05 1.72568040887e-05 8.39978832084e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.56089 36.00265 -120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.2</upperSeismoDepth>
+          <lowerSeismoDepth>11.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="51_0" name="S. San Andreas;BB+NM+SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.373">
+        <occurRates>2.99994025069e-06 6.16317688097e-06 1.078970428e-05 1.60963473251e-05 2.04624678603e-05 2.21667268058e-05 2.04624678603e-05 1.60963473251e-05 1.078970428e-05 6.16317688097e-06 2.99994025069e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-119.40286 34.94406 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="51_1" name="S. San Andreas;BB+NM+SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.38">
+        <occurRates>2.99994025069e-06 6.16317688097e-06 1.078970428e-05 1.60963473251e-05 2.04624678603e-05 2.21667268058e-05 2.04624678603e-05 1.60963473251e-05 1.078970428e-05 6.16317688097e-06 2.99994025069e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-119.40286 34.94406 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="52_0" name="S. San Andreas;NM+SM+NSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.319">
+        <occurRates>1.19995390973e-06 2.46522516339e-06 4.31580190058e-06 6.43841986542e-06 8.18483578332e-06 8.86652675512e-06 8.18483578332e-06 6.43841986542e-06 4.31580190058e-06 2.46522516339e-06 1.19995390973e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849 -118.76731 34.77325 -118.88764 34.80722 -118.89012 34.8076</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="52_1" name="S. San Andreas;NM+SM+NSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.309">
+        <occurRates>1.19995390973e-06 2.46522516339e-06 4.31580190058e-06 6.43841986542e-06 8.18483578332e-06 8.86652675512e-06 8.18483578332e-06 6.43841986542e-06 4.31580190058e-06 2.46522516339e-06 1.19995390973e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849 -118.76731 34.77325 -118.88764 34.80722 -118.89012 34.8076</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="53_0" name="S. San Andreas;SM+NSB+SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.319">
+        <occurRates>4.79992659166e-06 9.86112859855e-06 1.72636066594e-05 2.57542747848e-05 3.27400999373e-05 3.54669268565e-05 3.27400999373e-05 2.57542747848e-05 1.72636066594e-05 9.86112859855e-06 4.79992659166e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003 -117.06767 34.0928 -117.0139 34.07377 -116.90235 34.03384 -116.87354 34.01135 -116.81979 33.95911</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="53_1" name="S. San Andreas;SM+NSB+SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.309">
+        <occurRates>4.79992659166e-06 9.86112859855e-06 1.72636066594e-05 2.57542747848e-05 3.27400999373e-05 3.54669268565e-05 3.27400999373e-05 2.57542747848e-05 1.72636066594e-05 9.86112859855e-06 4.79992659166e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003 -117.06767 34.0928 -117.0139 34.07377 -116.90235 34.03384 -116.87354 34.01135 -116.81979 33.95911</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="54_0" name="S. San Andreas;NSB+SSB+BG" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.227">
+        <occurRates>4.79992659166e-06 9.86112859855e-06 1.72636066594e-05 2.57542747848e-05 3.27400999373e-05 3.54669268565e-05 3.27400999373e-05 2.57542747848e-05 1.72636066594e-05 9.86112859855e-06 4.79992659166e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.24629 33.78825 -116.383 33.84852 -116.42653 33.84812 -116.51689 33.88466 -116.58485 33.90702 -116.62387 33.91757 -116.68581 33.94416 -116.77859 33.93741 -116.80139 33.95316 -116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163</gml:posList>
+          </gml:LineString>
+          <dip>75.4</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.5479283867</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="54_1" name="S. San Andreas;NSB+SSB+BG" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.186">
+        <occurRates>4.79992659166e-06 9.86112859855e-06 1.72636066594e-05 2.57542747848e-05 3.27400999373e-05 3.54669268565e-05 3.27400999373e-05 2.57542747848e-05 1.72636066594e-05 9.86112859855e-06 4.79992659166e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.24629 33.78825 -116.383 33.84852 -116.42653 33.84812 -116.51689 33.88466 -116.58485 33.90702 -116.62387 33.91757 -116.68581 33.94416 -116.77859 33.93741 -116.80139 33.95316 -116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163</gml:posList>
+          </gml:LineString>
+          <dip>75.4</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.5479283867</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="55_0" name="S. San Andreas;SSB+BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.281">
+        <occurRates>4.79992659166e-06 9.86112859855e-06 1.72636066594e-05 2.57542747848e-05 3.27400999373e-05 3.54669268565e-05 3.27400999373e-05 2.57542747848e-05 1.72636066594e-05 9.86112859855e-06 4.79992659166e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.712188004 33.3497441969 -116.246559367 33.7879041969 -116.383269557 33.8481741969 -116.426799556 33.8477741969 -116.517159671 33.8843141969 -116.585119742 33.9066741969 -116.624139775 33.9172241969 -116.68607986 33.9438141969 -116.778859838 33.9370641969 -116.801659888 33.9528141969 -116.820059907 33.9587641969 -116.873810073 34.0110041969 -116.902620145 34.0334941969 -117.014170272 34.0734241969 -117.067940333 34.0924541969 -117.222290516 34.1496841969</gml:posList>
+          </gml:LineString>
+          <dip>77.1</dip>
+          <upperSeismoDepth>0.2</upperSeismoDepth>
+          <lowerSeismoDepth>11.8971343303</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="55_1" name="S. San Andreas;SSB+BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.257">
+        <occurRates>4.79992659166e-06 9.86112859855e-06 1.72636066594e-05 2.57542747848e-05 3.27400999373e-05 3.54669268565e-05 3.27400999373e-05 2.57542747848e-05 1.72636066594e-05 9.86112859855e-06 4.79992659166e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.712188004 33.3497441969 -116.246559367 33.7879041969 -116.383269557 33.8481741969 -116.426799556 33.8477741969 -116.517159671 33.8843141969 -116.585119742 33.9066741969 -116.624139775 33.9172241969 -116.68607986 33.9438141969 -116.778859838 33.9370641969 -116.801659888 33.9528141969 -116.820059907 33.9587641969 -116.873810073 34.0110041969 -116.902620145 34.0334941969 -117.014170272 34.0734241969 -117.067940333 34.0924541969 -117.222290516 34.1496841969</gml:posList>
+          </gml:LineString>
+          <dip>77.1</dip>
+          <upperSeismoDepth>0.2</upperSeismoDepth>
+          <lowerSeismoDepth>11.8971343303</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="56_0" name="S. San Andreas;PK+CH+CC+BB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.353">
+        <occurRates>4.79992659166e-06 9.86112859855e-06 1.72636066594e-05 2.57542747848e-05 3.27400999373e-05 3.54669268565e-05 3.27400999373e-05 2.57542747848e-05 1.72636066594e-05 9.86112859855e-06 4.79992659166e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.56089 36.00265 -120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>12.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="56_1" name="S. San Andreas;PK+CH+CC+BB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.354">
+        <occurRates>4.79992659166e-06 9.86112859855e-06 1.72636066594e-05 2.57542747848e-05 3.27400999373e-05 3.54669268565e-05 3.27400999373e-05 2.57542747848e-05 1.72636066594e-05 9.86112859855e-06 4.79992659166e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.56089 36.00265 -120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>12.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="57_0" name="S. San Andreas;CC+BB+NM+SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.501">
+        <occurRates>4.79992659166e-06 9.86112859855e-06 1.72636066594e-05 2.57542747848e-05 3.27400999373e-05 3.54669268565e-05 3.27400999373e-05 2.57542747848e-05 1.72636066594e-05 9.86112859855e-06 4.79992659166e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-119.8659 35.3142 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="57_1" name="S. San Andreas;CC+BB+NM+SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.552">
+        <occurRates>4.79992659166e-06 9.86112859855e-06 1.72636066594e-05 2.57542747848e-05 3.27400999373e-05 3.54669268565e-05 3.27400999373e-05 2.57542747848e-05 1.72636066594e-05 9.86112859855e-06 4.79992659166e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-119.8659 35.3142 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="58_0" name="S. San Andreas;NM+SM+NSB+SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.414">
+        <occurRates>2.39990781946e-06 4.93045032678e-06 8.63160380117e-06 1.28768397308e-05 1.63696715666e-05 1.77330535102e-05 1.63696715666e-05 1.28768397308e-05 8.63160380117e-06 4.93045032678e-06 2.39990781946e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003 -117.06767 34.0928 -117.0139 34.07377 -116.90235 34.03384 -116.87354 34.01135 -116.81979 33.95911</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="58_1" name="S. San Andreas;NM+SM+NSB+SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.435">
+        <occurRates>2.39990781946e-06 4.93045032678e-06 8.63160380117e-06 1.28768397308e-05 1.63696715666e-05 1.77330535102e-05 1.63696715666e-05 1.28768397308e-05 8.63160380117e-06 4.93045032678e-06 2.39990781946e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003 -117.06767 34.0928 -117.0139 34.07377 -116.90235 34.03384 -116.87354 34.01135 -116.81979 33.95911</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="59_0" name="S. San Andreas;SM+NSB+SSB+BG" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.455">
+        <occurRates>3.59986172919e-06 7.39567549017e-06 1.29474057017e-05 1.93152595963e-05 2.455450735e-05 2.65995802654e-05 2.455450735e-05 1.93152595963e-05 1.29474057017e-05 7.39567549017e-06 3.59986172919e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.24629 33.78825 -116.383 33.84852 -116.42653 33.84812 -116.51689 33.88466 -116.58485 33.90702 -116.62387 33.91757 -116.68581 33.94416 -116.77859 33.93741 -116.80139 33.95316 -116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849</gml:posList>
+          </gml:LineString>
+          <dip>81.4</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.8538329536</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="59_1" name="S. San Andreas;SM+NSB+SSB+BG" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.491">
+        <occurRates>3.59986172919e-06 7.39567549017e-06 1.29474057017e-05 1.93152595963e-05 2.455450735e-05 2.65995802654e-05 2.455450735e-05 1.93152595963e-05 1.29474057017e-05 7.39567549017e-06 3.59986172919e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.24629 33.78825 -116.383 33.84852 -116.42653 33.84812 -116.51689 33.88466 -116.58485 33.90702 -116.62387 33.91757 -116.68581 33.94416 -116.77859 33.93741 -116.80139 33.95316 -116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849</gml:posList>
+          </gml:LineString>
+          <dip>81.4</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>12.8538329536</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="60_0" name="S. San Andreas;NSB+SSB+BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.365">
+        <occurRates>4.79992659166e-06 9.86112859855e-06 1.72636066594e-05 2.57542747848e-05 3.27400999373e-05 3.54669268565e-05 3.27400999373e-05 2.57542747848e-05 1.72636066594e-05 9.86112859855e-06 4.79992659166e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.712138582 33.3498072173 -116.246509694 33.7879672173 -116.383219849 33.8482372173 -116.426749848 33.8478372173 -116.517109942 33.8843772173 -116.585069999 33.9067372173 -116.624090027 33.9172872173 -116.686030095 33.9438772173 -116.778810078 33.9371272173 -116.801610119 33.9528772173 -116.820010134 33.9588272173 -116.873760269 34.0110672173 -116.902570328 34.0335572173 -117.014120432 34.0734872173 -117.067890481 34.0925172173 -117.22224063 34.1497472173 -117.274380691 34.1728572173 -117.388910847 34.2325572173 -117.451220947 34.2706172173 -117.549221066 34.3160172173</gml:posList>
+          </gml:LineString>
+          <dip>79.4</dip>
+          <upperSeismoDepth>0.2</upperSeismoDepth>
+          <lowerSeismoDepth>11.9952241898</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="60_1" name="S. San Andreas;NSB+SSB+BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.371">
+        <occurRates>4.79992659166e-06 9.86112859855e-06 1.72636066594e-05 2.57542747848e-05 3.27400999373e-05 3.54669268565e-05 3.27400999373e-05 2.57542747848e-05 1.72636066594e-05 9.86112859855e-06 4.79992659166e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.712138582 33.3498072173 -116.246509694 33.7879672173 -116.383219849 33.8482372173 -116.426749848 33.8478372173 -116.517109942 33.8843772173 -116.585069999 33.9067372173 -116.624090027 33.9172872173 -116.686030095 33.9438772173 -116.778810078 33.9371272173 -116.801610119 33.9528772173 -116.820010134 33.9588272173 -116.873760269 34.0110672173 -116.902570328 34.0335572173 -117.014120432 34.0734872173 -117.067890481 34.0925172173 -117.22224063 34.1497472173 -117.274380691 34.1728572173 -117.388910847 34.2325572173 -117.451220947 34.2706172173 -117.549221066 34.3160172173</gml:posList>
+          </gml:LineString>
+          <dip>79.4</dip>
+          <upperSeismoDepth>0.2</upperSeismoDepth>
+          <lowerSeismoDepth>11.9952241898</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="61_0" name="S. San Andreas;PK+CH+CC+BB+NM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.441">
+        <occurRates>8.39978832084e-06 1.72568040887e-05 3.02110123611e-05 4.50695343811e-05 5.72946072873e-05 6.20665071219e-05 5.72946072873e-05 4.50695343811e-05 3.02110123611e-05 1.72568040887e-05 8.39978832084e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.56089 36.00265 -120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>12.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="61_1" name="S. San Andreas;PK+CH+CC+BB+NM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.471">
+        <occurRates>8.39978832084e-06 1.72568040887e-05 3.02110123611e-05 4.50695343811e-05 5.72946072873e-05 6.20665071219e-05 5.72946072873e-05 4.50695343811e-05 3.02110123611e-05 1.72568040887e-05 8.39978832084e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.56089 36.00265 -120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>12.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="62_0" name="S. San Andreas;CH+CC+BB+NM+SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.586">
+        <occurRates>5.99988050139e-06 1.23263537619e-05 2.157940856e-05 3.21926946502e-05 4.09249357207e-05 4.43334536116e-05 4.09249357207e-05 3.21926946502e-05 2.157940856e-05 1.23263537619e-05 5.99988050139e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="62_1" name="S. San Andreas;CH+CC+BB+NM+SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.665">
+        <occurRates>5.99988050139e-06 1.23263537619e-05 2.157940856e-05 3.21926946502e-05 4.09249357207e-05 4.43334536116e-05 4.09249357207e-05 3.21926946502e-05 2.157940856e-05 1.23263537619e-05 5.99988050139e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="63_0" name="S. San Andreas;CC+BB+NM+SM+NSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.554">
+        <occurRates>1.19995390973e-06 2.46522516339e-06 4.31580190058e-06 6.43841986542e-06 8.18483578332e-06 8.86652675512e-06 8.18483578332e-06 6.43841986542e-06 4.31580190058e-06 2.46522516339e-06 1.19995390973e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-119.8659 35.3142 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="63_1" name="S. San Andreas;CC+BB+NM+SM+NSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.622">
+        <occurRates>1.19995390973e-06 2.46522516339e-06 4.31580190058e-06 6.43841986542e-06 8.18483578332e-06 8.86652675512e-06 8.18483578332e-06 6.43841986542e-06 4.31580190058e-06 2.46522516339e-06 1.19995390973e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-119.8659 35.3142 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="64_0" name="S. San Andreas;BB+NM+SM+NSB+SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.516">
+        <occurRates>5.99988050139e-07 1.23263537619e-06 2.157940856e-06 3.21926946502e-06 4.09249357207e-06 4.43334536116e-06 4.09249357207e-06 3.21926946502e-06 2.157940856e-06 1.23263537619e-06 5.99988050139e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-119.40286 34.94406 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003 -117.06767 34.0928 -117.0139 34.07377 -116.90235 34.03384 -116.87354 34.01135 -116.81979 33.95911</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="64_1" name="S. San Andreas;BB+NM+SM+NSB+SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.571">
+        <occurRates>5.99988050139e-07 1.23263537619e-06 2.157940856e-06 3.21926946502e-06 4.09249357207e-06 4.43334536116e-06 4.09249357207e-06 3.21926946502e-06 2.157940856e-06 1.23263537619e-06 5.99988050139e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-119.40286 34.94406 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003 -117.06767 34.0928 -117.0139 34.07377 -116.90235 34.03384 -116.87354 34.01135 -116.81979 33.95911</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="65_0" name="S. San Andreas;NM+SM+NSB+SSB+BG" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.527">
+        <occurRates>1.19995390973e-06 2.46522516339e-06 4.31580190058e-06 6.43841986542e-06 8.18483578332e-06 8.86652675512e-06 8.18483578332e-06 6.43841986542e-06 4.31580190058e-06 2.46522516339e-06 1.19995390973e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.24629 33.78825 -116.383 33.84852 -116.42653 33.84812 -116.51689 33.88466 -116.58485 33.90702 -116.62387 33.91757 -116.68581 33.94416 -116.77859 33.93741 -116.80139 33.95316 -116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849 -118.76731 34.77325 -118.88764 34.80722 -118.89012 34.8076</gml:posList>
+          </gml:LineString>
+          <dip>82.7</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.8865221963</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="65_1" name="S. San Andreas;NM+SM+NSB+SSB+BG" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.585">
+        <occurRates>1.19995390973e-06 2.46522516339e-06 4.31580190058e-06 6.43841986542e-06 8.18483578332e-06 8.86652675512e-06 8.18483578332e-06 6.43841986542e-06 4.31580190058e-06 2.46522516339e-06 1.19995390973e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.24629 33.78825 -116.383 33.84852 -116.42653 33.84812 -116.51689 33.88466 -116.58485 33.90702 -116.62387 33.91757 -116.68581 33.94416 -116.77859 33.93741 -116.80139 33.95316 -116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849 -118.76731 34.77325 -118.88764 34.80722 -118.89012 34.8076</gml:posList>
+          </gml:LineString>
+          <dip>82.7</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.8865221963</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="66_0" name="S. San Andreas;SM+NSB+SSB+BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.542">
+        <occurRates>4.79992659166e-06 9.86112859855e-06 1.72636066594e-05 2.57542747848e-05 3.27400999373e-05 3.54669268565e-05 3.27400999373e-05 2.57542747848e-05 1.72636066594e-05 9.86112859855e-06 4.79992659166e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.71198899 33.3499939451 -116.246359341 33.7881539451 -116.38306939 33.8484239451 -116.42659939 33.8480239451 -116.516959419 33.8845639451 -116.584919438 33.9069239451 -116.623939446 33.9174739451 -116.685879468 33.9440639451 -116.778659462 33.9373139451 -116.801459475 33.9530639451 -116.81985948 33.9590139451 -116.873609523 34.0112539451 -116.902419541 34.0337439451 -117.013969574 34.0736739451 -117.06773959 34.0927039451 -117.222089637 34.1499339451 -117.274229656 34.1730439451 -117.388759705 34.2327439451 -117.451069737 34.2708039451 -117.549069774 34.3162039451 -117.753649846 34.4028339451 -118.104009968 34.5477539451 -118.509020095 34.6983939451</gml:posList>
+          </gml:LineString>
+          <dip>82.9</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.0003151925</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="66_1" name="S. San Andreas;SM+NSB+SSB+BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.607">
+        <occurRates>4.79992659166e-06 9.86112859855e-06 1.72636066594e-05 2.57542747848e-05 3.27400999373e-05 3.54669268565e-05 3.27400999373e-05 2.57542747848e-05 1.72636066594e-05 9.86112859855e-06 4.79992659166e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.71198899 33.3499939451 -116.246359341 33.7881539451 -116.38306939 33.8484239451 -116.42659939 33.8480239451 -116.516959419 33.8845639451 -116.584919438 33.9069239451 -116.623939446 33.9174739451 -116.685879468 33.9440639451 -116.778659462 33.9373139451 -116.801459475 33.9530639451 -116.81985948 33.9590139451 -116.873609523 34.0112539451 -116.902419541 34.0337439451 -117.013969574 34.0736739451 -117.06773959 34.0927039451 -117.222089637 34.1499339451 -117.274229656 34.1730439451 -117.388759705 34.2327439451 -117.451069737 34.2708039451 -117.549069774 34.3162039451 -117.753649846 34.4028339451 -118.104009968 34.5477539451 -118.509020095 34.6983939451</gml:posList>
+          </gml:LineString>
+          <dip>82.9</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.0003151925</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="67_0" name="S. San Andreas;PK+CH+CC+BB+NM+SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.594">
+        <occurRates>2.39990781946e-05 4.93045032678e-05 8.63160380117e-05 0.000128768397308 0.000163696715666 0.000177330535102 0.000163696715666 0.000128768397308 8.63160380117e-05 4.93045032678e-05 2.39990781946e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.56089 36.00265 -120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="67_1" name="S. San Andreas;PK+CH+CC+BB+NM+SM" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.675">
+        <occurRates>2.39990781946e-05 4.93045032678e-05 8.63160380117e-05 0.000128768397308 0.000163696715666 0.000177330535102 0.000163696715666 0.000128768397308 8.63160380117e-05 4.93045032678e-05 2.39990781946e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.56089 36.00265 -120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="68_0" name="S. San Andreas;CC+BB+NM+SM+NSB+SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.612">
+        <occurRates>1.19995390973e-06 2.46522516339e-06 4.31580190058e-06 6.43841986542e-06 8.18483578332e-06 8.86652675512e-06 8.18483578332e-06 6.43841986542e-06 4.31580190058e-06 2.46522516339e-06 1.19995390973e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849 -118.76731 34.77325 -118.88764 34.80722 -118.89012 34.8076 -119.03009 34.82896 -119.21 34.8639 -119.36286 34.91571 -119.4029 34.9441 -119.4711 34.9878 -119.5583 35.0475 -119.7068 35.1607 -119.8659 35.3142</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="68_1" name="S. San Andreas;CC+BB+NM+SM+NSB+SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.699">
+        <occurRates>1.19995390973e-06 2.46522516339e-06 4.31580190058e-06 6.43841986542e-06 8.18483578332e-06 8.86652675512e-06 8.18483578332e-06 6.43841986542e-06 4.31580190058e-06 2.46522516339e-06 1.19995390973e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849 -118.76731 34.77325 -118.88764 34.80722 -118.89012 34.8076 -119.03009 34.82896 -119.21 34.8639 -119.36286 34.91571 -119.4029 34.9441 -119.4711 34.9878 -119.5583 35.0475 -119.7068 35.1607 -119.8659 35.3142</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="69_0" name="S. San Andreas;NM+SM+NSB+SSB+BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.601">
+        <occurRates>1.19995390973e-06 2.46522516339e-06 4.31580190058e-06 6.43841986542e-06 8.18483578332e-06 8.86652675512e-06 8.18483578332e-06 6.43841986542e-06 4.31580190058e-06 2.46522516339e-06 1.19995390973e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.711978224 33.3500052691 -116.246348521 33.7881652691 -116.383058562 33.8484352691 -116.426588561 33.8480352691 -116.516948587 33.8845752691 -116.584908602 33.9069352691 -116.623928609 33.9174852691 -116.685868627 33.9440752691 -116.778648623 33.9373252691 -116.801448634 33.9530752691 -116.819848638 33.9590252691 -116.873598674 34.0112652691 -116.902408689 34.0337552691 -117.013958717 34.0736852691 -117.06772873 34.0927152691 -117.22207877 34.1499452691 -117.274218786 34.1730552691 -117.388748828 34.2327552691 -117.451058854 34.2708152691 -117.549058886 34.3162152691 -117.753638947 34.4028452691 -118.10399905 34.5477652691 -118.509009157 34.6984052691 -118.76736921 34.7731652691 -118.887699235 34.8071352691 -118.890179235 34.8075152691</gml:posList>
+          </gml:LineString>
+          <dip>83.8</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.0239625316</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="69_1" name="S. San Andreas;NM+SM+NSB+SSB+BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.685">
+        <occurRates>1.19995390973e-06 2.46522516339e-06 4.31580190058e-06 6.43841986542e-06 8.18483578332e-06 8.86652675512e-06 8.18483578332e-06 6.43841986542e-06 4.31580190058e-06 2.46522516339e-06 1.19995390973e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.711978224 33.3500052691 -116.246348521 33.7881652691 -116.383058562 33.8484352691 -116.426588561 33.8480352691 -116.516948587 33.8845752691 -116.584908602 33.9069352691 -116.623928609 33.9174852691 -116.685868627 33.9440752691 -116.778648623 33.9373252691 -116.801448634 33.9530752691 -116.819848638 33.9590252691 -116.873598674 34.0112652691 -116.902408689 34.0337552691 -117.013958717 34.0736852691 -117.06772873 34.0927152691 -117.22207877 34.1499452691 -117.274218786 34.1730552691 -117.388748828 34.2327552691 -117.451058854 34.2708152691 -117.549058886 34.3162152691 -117.753638947 34.4028452691 -118.10399905 34.5477652691 -118.509009157 34.6984052691 -118.76736921 34.7731652691 -118.887699235 34.8071352691 -118.890179235 34.8075152691</gml:posList>
+          </gml:LineString>
+          <dip>83.8</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.0239625316</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="70_0" name="S. San Andreas;PK+CH+CC+BB+NM+SM+NSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.637">
+        <occurRates>5.99988050139e-06 1.23263537619e-05 2.157940856e-05 3.21926946502e-05 4.09249357207e-05 4.43334536116e-05 4.09249357207e-05 3.21926946502e-05 2.157940856e-05 1.23263537619e-05 5.99988050139e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.56089 36.00265 -120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="70_1" name="S. San Andreas;PK+CH+CC+BB+NM+SM+NSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.733">
+        <occurRates>5.99988050139e-06 1.23263537619e-05 2.157940856e-05 3.21926946502e-05 4.09249357207e-05 4.43334536116e-05 4.09249357207e-05 3.21926946502e-05 2.157940856e-05 1.23263537619e-05 5.99988050139e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-120.56089 36.00265 -120.30005 35.75198 -120.08675 35.53331 -119.9703 35.41391 -119.86595 35.31417 -119.7068 35.1607 -119.5583 35.0475 -119.4711 34.9878 -119.4029 34.9441 -119.36286 34.91571 -119.21 34.8639 -119.03009 34.82896 -118.89012 34.8076 -118.88764 34.80722 -118.76731 34.77325 -118.50895 34.69849 -118.10394 34.54785 -117.75358 34.40293 -117.549 34.3163 -117.451 34.2709 -117.38869 34.23284 -117.27416 34.17314 -117.22202 34.15003</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="71_0" name="S. San Andreas;CH+CC+BB+NM+SM+NSB+SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.679">
+        <occurRates>5.99988050139e-07 1.23263537619e-06 2.157940856e-06 3.21926946502e-06 4.09249357207e-06 4.43334536116e-06 4.09249357207e-06 3.21926946502e-06 2.157940856e-06 1.23263537619e-06 5.99988050139e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849 -118.76731 34.77325 -118.88764 34.80722 -118.89012 34.8076 -119.03009 34.82896 -119.21 34.8639 -119.36286 34.91571 -119.4029 34.9441 -119.4711 34.9878 -119.5583 35.0475 -119.7068 35.1607 -119.86595 35.31417 -119.9703 35.41391 -120.08675 35.53331 -120.30005 35.75198</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="71_1" name="S. San Andreas;CH+CC+BB+NM+SM+NSB+SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.789">
+        <occurRates>5.99988050139e-07 1.23263537619e-06 2.157940856e-06 3.21926946502e-06 4.09249357207e-06 4.43334536116e-06 4.09249357207e-06 3.21926946502e-06 2.157940856e-06 1.23263537619e-06 5.99988050139e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849 -118.76731 34.77325 -118.88764 34.80722 -118.89012 34.8076 -119.03009 34.82896 -119.21 34.8639 -119.36286 34.91571 -119.4029 34.9441 -119.4711 34.9878 -119.5583 35.0475 -119.7068 35.1607 -119.86595 35.31417 -119.9703 35.41391 -120.08675 35.53331 -120.30005 35.75198</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="72_0" name="S. San Andreas;CC+BB+NM+SM+NSB+SSB+BG" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.687">
+        <occurRates>5.99988050139e-07 1.23263537619e-06 2.157940856e-06 3.21926946502e-06 4.09249357207e-06 4.43334536116e-06 4.09249357207e-06 3.21926946502e-06 2.157940856e-06 1.23263537619e-06 5.99988050139e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.24629 33.78825 -116.383 33.84852 -116.42653 33.84812 -116.51689 33.88466 -116.58485 33.90702 -116.62387 33.91757 -116.68581 33.94416 -116.77859 33.93741 -116.80139 33.95316 -116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849 -118.76731 34.77325 -118.88764 34.80722 -118.89012 34.8076 -119.03009 34.82896 -119.21 34.8639 -119.36286 34.91571 -119.4029 34.9441 -119.4711 34.9878 -119.5583 35.0475 -119.7068 35.1607 -119.8659 35.3142</gml:posList>
+          </gml:LineString>
+          <dip>84.9</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.9445749158</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="72_1" name="S. San Andreas;CC+BB+NM+SM+NSB+SSB+BG" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.799">
+        <occurRates>5.99988050139e-07 1.23263537619e-06 2.157940856e-06 3.21926946502e-06 4.09249357207e-06 4.43334536116e-06 4.09249357207e-06 3.21926946502e-06 2.157940856e-06 1.23263537619e-06 5.99988050139e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.24629 33.78825 -116.383 33.84852 -116.42653 33.84812 -116.51689 33.88466 -116.58485 33.90702 -116.62387 33.91757 -116.68581 33.94416 -116.77859 33.93741 -116.80139 33.95316 -116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849 -118.76731 34.77325 -118.88764 34.80722 -118.89012 34.8076 -119.03009 34.82896 -119.21 34.8639 -119.36286 34.91571 -119.4029 34.9441 -119.4711 34.9878 -119.5583 35.0475 -119.7068 35.1607 -119.8659 35.3142</gml:posList>
+          </gml:LineString>
+          <dip>84.9</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.9445749158</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="73_0" name="S. San Andreas;BB+NM+SM+NSB+SSB+BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.67">
+        <occurRates>5.99988050139e-07 1.23263537619e-06 2.157940856e-06 3.21926946502e-06 4.09249357207e-06 4.43334536116e-06 4.09249357207e-06 3.21926946502e-06 2.157940856e-06 1.23263537619e-06 5.99988050139e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.711967784 33.3500167408 -116.246338027 33.7881767408 -116.383048061 33.8484467408 -116.426578061 33.8480467408 -116.516938082 33.8845867408 -116.584898094 33.9069467408 -116.6239181 33.9174967408 -116.685858115 33.9440867408 -116.778638111 33.9373367408 -116.80143812 33.9530867408 -116.819838124 33.9590367408 -116.873588153 34.0112767408 -116.902398166 34.0337667408 -117.013948189 34.0736967408 -117.0677182 34.0927267408 -117.222068232 34.1499567408 -117.274208245 34.1730667408 -117.38873828 34.2327667408 -117.451048301 34.2708267408 -117.549048327 34.3162267408 -117.753628377 34.4028567408 -118.103988462 34.5477767408 -118.50899855 34.6984167408 -118.767358594 34.7731767408 -118.887688614 34.8071467408 -118.890168614 34.8075267408 -119.030138626 34.8288867408 -119.210048647 34.8638267408 -119.362908678 34.9156367408 -119.402908695 34.9439867408</gml:posList>
+          </gml:LineString>
+          <dip>84.7</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.0444210764</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="73_1" name="S. San Andreas;BB+NM+SM+NSB+SSB+BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.777">
+        <occurRates>5.99988050139e-07 1.23263537619e-06 2.157940856e-06 3.21926946502e-06 4.09249357207e-06 4.43334536116e-06 4.09249357207e-06 3.21926946502e-06 2.157940856e-06 1.23263537619e-06 5.99988050139e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.711967784 33.3500167408 -116.246338027 33.7881767408 -116.383048061 33.8484467408 -116.426578061 33.8480467408 -116.516938082 33.8845867408 -116.584898094 33.9069467408 -116.6239181 33.9174967408 -116.685858115 33.9440867408 -116.778638111 33.9373367408 -116.80143812 33.9530867408 -116.819838124 33.9590367408 -116.873588153 34.0112767408 -116.902398166 34.0337667408 -117.013948189 34.0736967408 -117.0677182 34.0927267408 -117.222068232 34.1499567408 -117.274208245 34.1730667408 -117.38873828 34.2327667408 -117.451048301 34.2708267408 -117.549048327 34.3162267408 -117.753628377 34.4028567408 -118.103988462 34.5477767408 -118.50899855 34.6984167408 -118.767358594 34.7731767408 -118.887688614 34.8071467408 -118.890168614 34.8075267408 -119.030138626 34.8288867408 -119.210048647 34.8638267408 -119.362908678 34.9156367408 -119.402908695 34.9439867408</gml:posList>
+          </gml:LineString>
+          <dip>84.7</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.0444210764</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="74_0" name="S. San Andreas;PK+CH+CC+BB+NM+SM+NSB+SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.685">
+        <occurRates>1.19995390973e-06 2.46522516339e-06 4.31580190058e-06 6.43841986542e-06 8.18483578332e-06 8.86652675512e-06 8.18483578332e-06 6.43841986542e-06 4.31580190058e-06 2.46522516339e-06 1.19995390973e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849 -118.76731 34.77325 -118.88764 34.80722 -118.89012 34.8076 -119.03009 34.82896 -119.21 34.8639 -119.36286 34.91571 -119.4029 34.9441 -119.4711 34.9878 -119.5583 35.0475 -119.7068 35.1607 -119.86595 35.31417 -119.9703 35.41391 -120.08675 35.53331 -120.30005 35.75198 -120.56089 36.00265</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="74_1" name="S. San Andreas;PK+CH+CC+BB+NM+SM+NSB+SSB" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.797">
+        <occurRates>1.19995390973e-06 2.46522516339e-06 4.31580190058e-06 6.43841986542e-06 8.18483578332e-06 8.86652675512e-06 8.18483578332e-06 6.43841986542e-06 4.31580190058e-06 2.46522516339e-06 1.19995390973e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.81979 33.95911 -116.87354 34.01135 -116.90235 34.03384 -117.0139 34.07377 -117.06767 34.0928 -117.22202 34.15003 -117.27416 34.17314 -117.38869 34.23284 -117.451 34.2709 -117.549 34.3163 -117.75358 34.40293 -118.10394 34.54785 -118.50895 34.69849 -118.76731 34.77325 -118.88764 34.80722 -118.89012 34.8076 -119.03009 34.82896 -119.21 34.8639 -119.36286 34.91571 -119.4029 34.9441 -119.4711 34.9878 -119.5583 35.0475 -119.7068 35.1607 -119.86595 35.31417 -119.9703 35.41391 -120.08675 35.53331 -120.30005 35.75198 -120.56089 36.00265</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="75_0" name="S. San Andreas;CC+BB+NM+SM+NSB+SSB+BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.74">
+        <occurRates>1.19995390973e-07 2.46522516339e-07 4.31580190058e-07 6.43841986542e-07 8.18483578332e-07 8.86652675512e-07 8.18483578332e-07 6.43841986542e-07 4.31580190058e-07 2.46522516339e-07 1.19995390973e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.711963582 33.3500293023 -116.246333804 33.7881893023 -116.383043835 33.8484593023 -116.426573834 33.8480593023 -116.516933853 33.8845993023 -116.584893865 33.9069593023 -116.62391387 33.9175093023 -116.685853884 33.9440993023 -116.77863388 33.9373493023 -116.801433888 33.9530993023 -116.819833891 33.9590493023 -116.873583918 34.0112893023 -116.90239393 34.0337793023 -117.013943951 34.0737093023 -117.067713961 34.0927393023 -117.22206399 34.1499693023 -117.274204002 34.1730793023 -117.388734034 34.2327793023 -117.451044054 34.2708393023 -117.549044077 34.3162393023 -117.753624123 34.4028693023 -118.1039842 34.5477893023 -118.50899428 34.6984293023 -118.76735432 34.7731893023 -118.887684338 34.8071593023 -118.890164339 34.8075393023 -119.03013435 34.8288993023 -119.210044369 34.8638393023 -119.362904397 34.9156493023 -119.402944412 34.9440393023 -119.471144436 34.9877393023 -119.558344468 35.0474393023 -119.70684453 35.1606393023 -119.865944615 35.3141393023</gml:posList>
+          </gml:LineString>
+          <dip>85.5</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.0599253385</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="75_1" name="S. San Andreas;CC+BB+NM+SM+NSB+SSB+BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.87">
+        <occurRates>1.19995390973e-07 2.46522516339e-07 4.31580190058e-07 6.43841986542e-07 8.18483578332e-07 8.86652675512e-07 8.18483578332e-07 6.43841986542e-07 4.31580190058e-07 2.46522516339e-07 1.19995390973e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.711963582 33.3500293023 -116.246333804 33.7881893023 -116.383043835 33.8484593023 -116.426573834 33.8480593023 -116.516933853 33.8845993023 -116.584893865 33.9069593023 -116.62391387 33.9175093023 -116.685853884 33.9440993023 -116.77863388 33.9373493023 -116.801433888 33.9530993023 -116.819833891 33.9590493023 -116.873583918 34.0112893023 -116.90239393 34.0337793023 -117.013943951 34.0737093023 -117.067713961 34.0927393023 -117.22206399 34.1499693023 -117.274204002 34.1730793023 -117.388734034 34.2327793023 -117.451044054 34.2708393023 -117.549044077 34.3162393023 -117.753624123 34.4028693023 -118.1039842 34.5477893023 -118.50899428 34.6984293023 -118.76735432 34.7731893023 -118.887684338 34.8071593023 -118.890164339 34.8075393023 -119.03013435 34.8288993023 -119.210044369 34.8638393023 -119.362904397 34.9156493023 -119.402944412 34.9440393023 -119.471144436 34.9877393023 -119.558344468 35.0474393023 -119.70684453 35.1606393023 -119.865944615 35.3141393023</gml:posList>
+          </gml:LineString>
+          <dip>85.5</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.0599253385</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="76_0" name="S. San Andreas;PK+CH+CC+BB+NM+SM+NSB+SSB+BG" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.749">
+        <occurRates>5.99988050139e-07 1.23263537619e-06 2.157940856e-06 3.21926946502e-06 4.09249357207e-06 4.43334536116e-06 4.09249357207e-06 3.21926946502e-06 2.157940856e-06 1.23263537619e-06 5.99988050139e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.246335661 33.7881921345 -116.383045693 33.8484621345 -116.426575693 33.8480621345 -116.516935712 33.8846021345 -116.584895724 33.9069621345 -116.62391573 33.9175121345 -116.685855744 33.9441021345 -116.77863574 33.9373521345 -116.801435749 33.9531021345 -116.819835752 33.9590521345 -116.87358578 34.0112921345 -116.902395792 34.0337821345 -117.013945814 34.0737121345 -117.067715824 34.0927421345 -117.222065855 34.1499721345 -117.274205868 34.1730821345 -117.3887359 34.2327821345 -117.451045921 34.2708421345 -117.549045946 34.3162421345 -117.753625993 34.4028721345 -118.103986073 34.5477921345 -118.508996157 34.6984321345 -118.767356199 34.7731921345 -118.887686218 34.8071621345 -118.890166218 34.8075421345 -119.03013623 34.8289021345 -119.21004625 34.8638421345 -119.362906279 34.9156521345 -119.402946295 34.9440421345 -119.47114632 34.9877421345 -119.558346353 35.0474421345 -119.706846418 35.1606421345 -119.865996506 35.3141121345 -119.970346563 35.4138521345 -120.086796632 35.5332521345 -120.30009676 35.7519221345 -120.560936908 36.0025921345</gml:posList>
+          </gml:LineString>
+          <dip>85.6</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.0616857789</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="76_1" name="S. San Andreas;PK+CH+CC+BB+NM+SM+NSB+SSB+BG" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.882">
+        <occurRates>5.99988050139e-07 1.23263537619e-06 2.157940856e-06 3.21926946502e-06 4.09249357207e-06 4.43334536116e-06 4.09249357207e-06 3.21926946502e-06 2.157940856e-06 1.23263537619e-06 5.99988050139e-07</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-116.246335661 33.7881921345 -116.383045693 33.8484621345 -116.426575693 33.8480621345 -116.516935712 33.8846021345 -116.584895724 33.9069621345 -116.62391573 33.9175121345 -116.685855744 33.9441021345 -116.77863574 33.9373521345 -116.801435749 33.9531021345 -116.819835752 33.9590521345 -116.87358578 34.0112921345 -116.902395792 34.0337821345 -117.013945814 34.0737121345 -117.067715824 34.0927421345 -117.222065855 34.1499721345 -117.274205868 34.1730821345 -117.3887359 34.2327821345 -117.451045921 34.2708421345 -117.549045946 34.3162421345 -117.753625993 34.4028721345 -118.103986073 34.5477921345 -118.508996157 34.6984321345 -118.767356199 34.7731921345 -118.887686218 34.8071621345 -118.890166218 34.8075421345 -119.03013623 34.8289021345 -119.21004625 34.8638421345 -119.362906279 34.9156521345 -119.402946295 34.9440421345 -119.47114632 34.9877421345 -119.558346353 35.0474421345 -119.706846418 35.1606421345 -119.865996506 35.3141121345 -119.970346563 35.4138521345 -120.086796632 35.5332521345 -120.30009676 35.7519221345 -120.560936908 36.0025921345</gml:posList>
+          </gml:LineString>
+          <dip>85.6</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.0616857789</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="77_0" name="S. San Andreas;PK+CH+CC+BB+NM+SM+NSB+SSB+BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.796">
+        <occurRates>1.19995390973e-06 2.46522516339e-06 4.31580190058e-06 6.43841986542e-06 8.18483578332e-06 8.86652675512e-06 8.18483578332e-06 6.43841986542e-06 4.31580190058e-06 2.46522516339e-06 1.19995390973e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.711962091 33.3500397741 -116.246332305 33.7881997741 -116.383042335 33.8484697741 -116.426572335 33.8480697741 -116.516932353 33.8846097741 -116.584892364 33.9069697741 -116.62391237 33.9175197741 -116.685852383 33.9441097741 -116.778632379 33.9373597741 -116.801432387 33.9531097741 -116.81983239 33.9590597741 -116.873582416 34.0112997741 -116.902392428 34.0337897741 -117.013942448 34.0737197741 -117.067712457 34.0927497741 -117.222062486 34.1499797741 -117.274202497 34.1730897741 -117.388732528 34.2327897741 -117.451042547 34.2708497741 -117.54904257 34.3162497741 -117.753622614 34.4028797741 -118.103982688 34.5477997741 -118.508992765 34.6984397741 -118.767352804 34.7731997741 -118.887682822 34.8071697741 -118.890162822 34.8075497741 -119.030132833 34.8289097741 -119.210042851 34.8638497741 -119.362902878 34.9156597741 -119.402942893 34.9440497741 -119.471142916 34.9877497741 -119.558342947 35.0474497741 -119.706843007 35.1606497741 -119.865993089 35.3141197741 -119.970343142 35.4138597741 -120.086793206 35.5332597741 -120.300093324 35.7519297741 -120.560933462 36.0025997741</gml:posList>
+          </gml:LineString>
+          <dip>86.1</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.0698956249</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="77_1" name="S. San Andreas;PK+CH+CC+BB+NM+SM+NSB+SSB+BG+CO" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.944">
+        <occurRates>1.19995390973e-06 2.46522516339e-06 4.31580190058e-06 6.43841986542e-06 8.18483578332e-06 8.86652675512e-06 8.18483578332e-06 6.43841986542e-06 4.31580190058e-06 2.46522516339e-06 1.19995390973e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-115.711962091 33.3500397741 -116.246332305 33.7881997741 -116.383042335 33.8484697741 -116.426572335 33.8480697741 -116.516932353 33.8846097741 -116.584892364 33.9069697741 -116.62391237 33.9175197741 -116.685852383 33.9441097741 -116.778632379 33.9373597741 -116.801432387 33.9531097741 -116.81983239 33.9590597741 -116.873582416 34.0112997741 -116.902392428 34.0337897741 -117.013942448 34.0737197741 -117.067712457 34.0927497741 -117.222062486 34.1499797741 -117.274202497 34.1730897741 -117.388732528 34.2327897741 -117.451042547 34.2708497741 -117.54904257 34.3162497741 -117.753622614 34.4028797741 -118.103982688 34.5477997741 -118.508992765 34.6984397741 -118.767352804 34.7731997741 -118.887682822 34.8071697741 -118.890162822 34.8075497741 -119.030132833 34.8289097741 -119.210042851 34.8638497741 -119.362902878 34.9156597741 -119.402942893 34.9440497741 -119.471142916 34.9877497741 -119.558342947 35.0474497741 -119.706843007 35.1606497741 -119.865993089 35.3141197741 -119.970343142 35.4138597741 -120.086793206 35.5332597741 -120.300093324 35.7519297741 -120.560933462 36.0025997741</gml:posList>
+          </gml:LineString>
+          <dip>86.1</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>13.0698956249</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="78_0" name="Hayward-Rodgers Creek;RC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.826">
+        <occurRates>5.23297514549e-05 0.000107507979294 0.000188211262912 0.000280778210386 0.000356939061382 0.000386667469143 0.000356939061382 0.000280778210386 0.000188211262912 0.000107507979294 5.23297514549e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.4342 38.0875 -122.6136 38.3315 -122.7883 38.5752</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>12.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="78_1" name="Hayward-Rodgers Creek;RC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.651">
+        <occurRates>5.23297514549e-05 0.000107507979294 0.000188211262912 0.000280778210386 0.000356939061382 0.000386667469143 0.000356939061382 0.000280778210386 0.000188211262912 0.000107507979294 5.23297514549e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.4342 38.0875 -122.6136 38.3315 -122.7883 38.5752</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.1</upperSeismoDepth>
+          <lowerSeismoDepth>12.1</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="79_0" name="Hayward-Rodgers Creek;HN" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.359">
+        <occurRates>4.18092124146e-05 8.58942344954e-05 0.000150372674265 0.000224329669319 0.000285178901514 0.000308930615984 0.000285178901514 0.000224329669319 0.000150372674265 8.58942344954e-05 4.18092124146e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.2128 37.8273 -122.4342 38.0875</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>2.4</upperSeismoDepth>
+          <lowerSeismoDepth>9.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="79_1" name="Hayward-Rodgers Creek;HN" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.139">
+        <occurRates>4.18092124146e-05 8.58942344954e-05 0.000150372674265 0.000224329669319 0.000285178901514 0.000308930615984 0.000285178901514 0.000224329669319 0.000150372674265 8.58942344954e-05 4.18092124146e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.2128 37.8273 -122.4342 38.0875</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>2.4</upperSeismoDepth>
+          <lowerSeismoDepth>9.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="80_0" name="Hayward-Rodgers Creek;HS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.537">
+        <occurRates>4.46651360056e-05 9.17615387678e-05 0.000160644402506 0.000239653287196 0.000304659037719 0.000330033195612 0.000304659037719 0.000239653287196 0.000160644402506 9.17615387678e-05 4.46651360056e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.849 37.454 -122.0824 37.676 -122.1284 37.7299 -122.2128 37.8273</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>2.4</upperSeismoDepth>
+          <lowerSeismoDepth>9.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="80_1" name="Hayward-Rodgers Creek;HS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.317">
+        <occurRates>4.46651360056e-05 9.17615387678e-05 0.000160644402506 0.000239653287196 0.000304659037719 0.000330033195612 0.000304659037719 0.000239653287196 0.000160644402506 9.17615387678e-05 4.46651360056e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.849 37.454 -122.0824 37.676 -122.1284 37.7299 -122.2128 37.8273</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>2.4</upperSeismoDepth>
+          <lowerSeismoDepth>9.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="81_0" name="Hayward-Rodgers Creek;RC+HN" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.954">
+        <occurRates>6.26028658795e-06 1.28613406744e-05 2.25159954357e-05 3.35899180829e-05 4.27011548222e-05 4.62576087937e-05 4.27011548222e-05 3.35899180829e-05 2.25159954357e-05 1.28613406744e-05 6.26028658795e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.7883 38.5752 -122.6136 38.3315 -122.4342 38.0875 -122.2128 37.8273</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.7</upperSeismoDepth>
+          <lowerSeismoDepth>10.7</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="81_1" name="Hayward-Rodgers Creek;RC+HN" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.821">
+        <occurRates>6.26028658795e-06 1.28613406744e-05 2.25159954357e-05 3.35899180829e-05 4.27011548222e-05 4.62576087937e-05 4.27011548222e-05 3.35899180829e-05 2.25159954357e-05 1.28613406744e-05 6.26028658795e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.7883 38.5752 -122.6136 38.3315 -122.4342 38.0875 -122.2128 37.8273</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.7</upperSeismoDepth>
+          <lowerSeismoDepth>10.7</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="82_0" name="Hayward-Rodgers Creek;HN+HS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.758">
+        <occurRates>3.16448316776e-05 6.50121931438e-05 0.000113815058721 0.000169792115563 0.000215848082641 0.000233825436507 0.000215848082641 0.000169792115563 0.000113815058721 6.50121931438e-05 3.16448316776e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.4342 38.0875 -122.2128 37.8273 -122.1284 37.7299 -122.0824 37.676 -121.849 37.454</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>2.4</upperSeismoDepth>
+          <lowerSeismoDepth>9.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="82_1" name="Hayward-Rodgers Creek;HN+HS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.561">
+        <occurRates>3.16448316776e-05 6.50121931438e-05 0.000113815058721 0.000169792115563 0.000215848082641 0.000233825436507 0.000215848082641 0.000169792115563 0.000113815058721 6.50121931438e-05 3.16448316776e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.4342 38.0875 -122.2128 37.8273 -122.1284 37.7299 -122.0824 37.676 -121.849 37.454</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>2.4</upperSeismoDepth>
+          <lowerSeismoDepth>9.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="83_0" name="Hayward-Rodgers Creek;RC+HN+HS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.094">
+        <occurRates>3.70559969275e-06 7.61290707414e-06 1.3327707062e-05 1.9882602558e-05 2.52757416081e-05 2.73808840099e-05 2.52757416081e-05 1.9882602558e-05 1.3327707062e-05 7.61290707414e-06 3.70559969275e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.7883 38.5752 -122.6136 38.3315 -122.4342 38.0875 -122.2128 37.8273 -122.1284 37.7299 -122.0824 37.676 -121.849 37.454</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>1.2</upperSeismoDepth>
+          <lowerSeismoDepth>10.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="83_1" name="Hayward-Rodgers Creek;RC+HN+HS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.009">
+        <occurRates>3.70559969275e-06 7.61290707414e-06 1.3327707062e-05 1.9882602558e-05 2.52757416081e-05 2.73808840099e-05 2.52757416081e-05 1.9882602558e-05 1.3327707062e-05 7.61290707414e-06 3.70559969275e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.7883 38.5752 -122.6136 38.3315 -122.4342 38.0875 -122.2128 37.8273 -122.1284 37.7299 -122.0824 37.676 -121.849 37.454</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>1.2</upperSeismoDepth>
+          <lowerSeismoDepth>10.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="84_0" name="Calaveras;CN" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.632">
+        <occurRates>1.23690117297e-05 2.54113084803e-05 4.4486878953e-05 6.63666247431e-05 8.43685153144e-05 9.1395321559e-05 8.43685153144e-05 6.63666247431e-05 4.4486878953e-05 2.54113084803e-05 1.23690117297e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.0094 37.8173 -121.9379 37.7149 -121.9327 37.6939 -121.862 37.5675 -121.8511 37.5385 -121.8349 37.5101 -121.8235 37.4888 -121.8071 37.445</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>1.3</upperSeismoDepth>
+          <lowerSeismoDepth>11.3</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="84_1" name="Calaveras;CN" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.412">
+        <occurRates>1.23690117297e-05 2.54113084803e-05 4.4486878953e-05 6.63666247431e-05 8.43685153144e-05 9.1395321559e-05 8.43685153144e-05 6.63666247431e-05 4.4486878953e-05 2.54113084803e-05 1.23690117297e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.0094 37.8173 -121.9379 37.7149 -121.9327 37.6939 -121.862 37.5675 -121.8511 37.5385 -121.8349 37.5101 -121.8235 37.4888 -121.8071 37.445</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>1.3</upperSeismoDepth>
+          <lowerSeismoDepth>11.3</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="85_0" name="Calaveras;CC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.152">
+        <occurRates>9.18710898136e-05 0.000188743018011 0.000330427211255 0.000492939474523 0.000626648888147 0.000678840636502 0.000626648888147 0.000492939474523 0.000330427211255 0.000188743018011 9.18710898136e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.8071 37.445 -121.7618 37.3996 -121.7149 37.343 -121.6483 37.2481 -121.5801 37.1523 -121.5424 37.0958 -121.4678 36.9898</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>4.2</upperSeismoDepth>
+          <lowerSeismoDepth>7.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="85_1" name="Calaveras;CC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="5.932">
+        <occurRates>9.18710898136e-05 0.000188743018011 0.000330427211255 0.000492939474523 0.000626648888147 0.000678840636502 0.000626648888147 0.000492939474523 0.000330427211255 0.000188743018011 9.18710898136e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.8071 37.445 -121.7618 37.3996 -121.7149 37.343 -121.6483 37.2481 -121.5801 37.1523 -121.5424 37.0958 -121.4678 36.9898</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>4.2</upperSeismoDepth>
+          <lowerSeismoDepth>7.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="86_0" name="Calaveras;CS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="5.589">
+        <occurRates>0.000126097791808 0.00025905949128 0.000453528327324 0.000676584759782 0.000860107800994 0.000931743657623 0.000860107800994 0.000676584759782 0.000453528327324 0.00025905949128 0.000126097791808</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.3956 36.8257 -121.4678 36.9898</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>4.4</upperSeismoDepth>
+          <lowerSeismoDepth>6.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="86_1" name="Calaveras;CS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="5.369">
+        <occurRates>0.000126097791808 0.00025905949128 0.000453528327324 0.000676584759782 0.000860107800994 0.000931743657623 0.000860107800994 0.000676584759782 0.000453528327324 0.00025905949128 0.000126097791808</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.3956 36.8257 -121.4678 36.9898</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>4.4</upperSeismoDepth>
+          <lowerSeismoDepth>6.4</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="87_0" name="Calaveras;CN+CC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.756">
+        <occurRates>1.54357455313e-06 3.17117082506e-06 5.55168155718e-06 8.28213566044e-06 1.05286579212e-05 1.1405558966e-05 1.05286579212e-05 8.28213566044e-06 5.55168155718e-06 3.17117082506e-06 1.54357455313e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.0094 37.8173 -121.9379 37.7149 -121.9327 37.6939 -121.862 37.5675 -121.8511 37.5385 -121.8349 37.5101 -121.8235 37.4888 -121.8071 37.445 -121.7618 37.3996 -121.7149 37.343 -121.6483 37.2481 -121.5801 37.1523 -121.5424 37.0958 -121.4678 36.9898</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>2.0</upperSeismoDepth>
+          <lowerSeismoDepth>8.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="87_1" name="Calaveras;CN+CC" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.558">
+        <occurRates>1.54357455313e-06 3.17117082506e-06 5.55168155718e-06 8.28213566044e-06 1.05286579212e-05 1.1405558966e-05 1.05286579212e-05 8.28213566044e-06 5.55168155718e-06 3.17117082506e-06 1.54357455313e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.0094 37.8173 -121.9379 37.7149 -121.9327 37.6939 -121.862 37.5675 -121.8511 37.5385 -121.8349 37.5101 -121.8235 37.4888 -121.8071 37.445 -121.7618 37.3996 -121.7149 37.343 -121.6483 37.2481 -121.5801 37.1523 -121.5424 37.0958 -121.4678 36.9898</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>2.0</upperSeismoDepth>
+          <lowerSeismoDepth>8.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="88_0" name="Calaveras;CC+CS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.257">
+        <occurRates>3.12553875516e-05 6.42121061976e-05 0.000112414368506 0.000167702531307 0.000213191700431 0.000230947812013 0.000213191700431 0.000167702531307 0.000112414368506 6.42121061976e-05 3.12553875516e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.8071 37.445 -121.7618 37.3996 -121.7149 37.343 -121.6483 37.2481 -121.5801 37.1523 -121.5424 37.0958 -121.4678 36.9898 -121.3956 36.8257</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>4.2</upperSeismoDepth>
+          <lowerSeismoDepth>7.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="88_1" name="Calaveras;CC+CS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.037">
+        <occurRates>3.12553875516e-05 6.42121061976e-05 0.000112414368506 0.000167702531307 0.000213191700431 0.000230947812013 0.000213191700431 0.000167702531307 0.000112414368506 6.42121061976e-05 3.12553875516e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.8071 37.445 -121.7618 37.3996 -121.7149 37.343 -121.6483 37.2481 -121.5801 37.1523 -121.5424 37.0958 -121.4678 36.9898 -121.3956 36.8257</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>4.2</upperSeismoDepth>
+          <lowerSeismoDepth>7.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="89_0" name="Calaveras;CN+CC+CS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.785">
+        <occurRates>1.08796930676e-05 2.23516027597e-05 3.9130336289e-05 5.83756021029e-05 7.42099345728e-05 8.03906624158e-05 7.42099345728e-05 5.83756021029e-05 3.9130336289e-05 2.23516027597e-05 1.08796930676e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.0094 37.8173 -121.9379 37.7149 -121.9327 37.6939 -121.862 37.5675 -121.8511 37.5385 -121.8349 37.5101 -121.8235 37.4888 -121.8071 37.445 -121.7618 37.3996 -121.7149 37.343 -121.6483 37.2481 -121.5801 37.1523 -121.5424 37.0958 -121.4678 36.9898 -121.3956 36.8257</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>2.2</upperSeismoDepth>
+          <lowerSeismoDepth>7.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="89_1" name="Calaveras;CN+CC+CS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.597">
+        <occurRates>1.08796930676e-05 2.23516027597e-05 3.9130336289e-05 5.83756021029e-05 7.42099345728e-05 8.03906624158e-05 7.42099345728e-05 5.83756021029e-05 3.9130336289e-05 2.23516027597e-05 1.08796930676e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.0094 37.8173 -121.9379 37.7149 -121.9327 37.6939 -121.862 37.5675 -121.8511 37.5385 -121.8349 37.5101 -121.8235 37.4888 -121.8071 37.445 -121.7618 37.3996 -121.7149 37.343 -121.6483 37.2481 -121.5801 37.1523 -121.5424 37.0958 -121.4678 36.9898 -121.3956 36.8257</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>2.2</upperSeismoDepth>
+          <lowerSeismoDepth>7.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+  </sourceModel>
+</nrml>

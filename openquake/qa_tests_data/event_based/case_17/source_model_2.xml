@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+  <sourceModel name="Classical Hazard QA Test, Case 1 source model 2">
+    <pointSource id="2" name="point source" tectonicRegion="active shallow crust">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>0.0 0.0</gml:pos>
+        </gml:Point>
+        
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>40.0</lowerSeismoDepth>
+      </pointGeometry>
+      
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.8" binWidth="0.25">
+        <occurRates>0.001 0.002 0.003 0.004 0.2 0.3 0.4</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="0.0" dip="90.0" rake="0.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="21.2"/>
+      </hypoDepthDist>
+    </pointSource>
+  </sourceModel>
+</nrml>
