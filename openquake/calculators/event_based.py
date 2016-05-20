@@ -442,8 +442,6 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
         """
         Save the SES collection
         """
-        logging.info('Generated %d EBRuptures',
-                     sum(len(v) for v in result.values()))
         with self.monitor('saving ruptures', autoflush=True):
             # ordering ruptures
             sescollection = []
@@ -454,7 +452,8 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
             etags = numpy.concatenate([ebr.etags for ebr in sescollection])
             self.etags = numpy.array(etags, (bytes, 100))
             nr = len(sescollection)
-            logging.info('Saving SES collection with %d ruptures', nr)
+            logging.info('Saving SES collection with %d ruptures, %d events',
+                         nr, len(etags))
             eid = 0
             for ebr in sescollection:
                 eids = []
