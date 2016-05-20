@@ -1,18 +1,51 @@
-OpenQuake Risk Library (oq-risklib)
------------------------------------
+OpenQuake Engine
+================
 
-OpenQuake Risklib is an open source library for seismic risk assessment,
-which includes several modules capable of calculating losses and damage
-distributions for a scenario earthquake, or for calculating probabilistic
-risk from all the possible events that might occur in a region within a
-certain time span (that can be estimated through an event-based approach,
-or a classical PSHA-based approach). The main outputs of this library are
-loss statistics, loss maps, loss curves, damage distributions and collapse
-maps.
+OpenQuake is an open source application that allows users to
+compute seismic hazard and seismic risk of earthquakes on a global scale.
 
-The GEM Foundation (http://www.globalquakemodel.org/) supports the development
-of this library by adding the most common methodologies used by seismic risk
-modellers. Comments, suggestions and criticisms from the community are always
-very welcome.
+Please note: the `/usr/bin/oq-engine` script requires a `celeryconfig.py`
+file in the `PYTHONPATH`.  Please make sure this is the case and that your
+celeryconfig.py file works with your python-celery setup.
 
-Copyright (C) 2013-2016 GEM Foundation
+Feel free to copy `/usr/openquake/engine/celeryconfig.py` and revise it as needed.
+
+### Running Tests ###
+
+#### Short-running test suite ####
+
+These tests should complete in about 5 minutes:
+
+    $ nosetests --with-doctest tests/
+
+#### Shorter-running test suite ####
+
+These tests should complete in about 1 minute:
+
+    $ nosetests --with-doctest -a '!slow' tests/
+
+#### Full test suite ####
+
+These tests including many long-running QA tests and can take ~1 hour to run:
+
+    $ nosetests --with-doctest
+
+
+OpenQuake Engine Server
+=======================
+
+### Running Tests ###
+
+Here are some examples for how to run tests. Both methods must be run from the
+`openquake/server/` directory.
+
+Using Django's manage.py:
+
+    $ python manage.py test --settings=test_db_settings
+
+    Note: You need to install Django South for this to work.
+
+Using nosetests:
+
+    $ (export DJANGO_SETTINGS_MODULE="openquake.server.settings"; nosetests -v --with-coverage --cover-package=openquake.server)
+
