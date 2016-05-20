@@ -290,32 +290,18 @@ class ClassicalCalculator(base.HazardCalculator):
         nsites = len(self.sitecol)
         imtls = self.oqparam.imtls
         curves_by_trt_gsim = {}
-        with self.monitor('save curves_by_trt_id', autoflush=True):
-            for sm in self.rlzs_assoc.csm_info.source_models:
-                group = self.datastore.hdf5.create_group(
-                    'curves_by_sm/' + '_'.join(sm.path))
-                group.attrs['source_model'] = sm.name
-                for tm in sm.trt_models:
-                    if tm.id not in curves_by_trt_id:
-                        continue   # no data for this tectonic model
-                    gsims = self.rlzs_assoc.gsims_by_trt_id[tm.id]
-                    for i, gsim in enumerate(gsims):
-                        curves = array_of_curves(
-                            curves_by_trt_id[tm.id], nsites, imtls, i)
-                        ts = '%03d-%d' % (tm.id, i)
-                        if nonzero(curves):
-                            group[ts] = curves
-                            group[ts].attrs['trt'] = tm.trt
-                            group[ts].attrs['nbytes'] = curves.nbytes
-                            group[ts].attrs['gsim'] = str(gsim)
-                            curves_by_trt_gsim[tm.id, gsim] = \
-                                curves_by_trt_id[tm.id].extract(i)
-                self.datastore.set_nbytes(group.name)
-            self.datastore.set_nbytes('curves_by_sm')
+
+        with self.monitor('saving probability maps', autoflush=True):
+            for trt_id in curves_by_trt_id:
+                self.datastore['pmap/%04d' % trt_id] = curves_by_trt_id[trt_id]
+                gsims = self.rlzs_assoc.gsims_by_trt_id[trt_id]
+                for i, gsim in enumerate(gsims):
+                    curves_by_trt_gsim[trt_id, gsim] = (
+                        curves_by_trt_id[trt_id].extract(i))
+            self.datastore.set_nbytes('pmap')
 
         with self.monitor('combine curves_by_rlz', autoflush=True):
-            curves_by_rlz = self.rlzs_assoc.combine_curves(
-                curves_by_trt_gsim)
+            curves_by_rlz = self.rlzs_assoc.combine_curves(curves_by_trt_gsim)
 
         self.save_curves({rlz: array_of_curves(curves, nsites, imtls)
                           for rlz, curves in curves_by_rlz.items()})
