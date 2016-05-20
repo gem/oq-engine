@@ -649,11 +649,22 @@ class CompositionInfo(object):
         return assoc
 
     def get_source_model(self, trt_model_id):
-        """Return the source model for the given trt_model_id"""
+        """
+        Return the source model for the given trt_model_id
+        """
         for smodel in self.source_models:
             for trt_model in smodel.trt_models:
                 if trt_model.id == trt_model_id:
                     return smodel
+
+    def get_trt(self, trt_model_id):
+        """
+        Return the TRT string for the given trt_model_id
+        """
+        for smodel in self.source_models:
+            for trt_model in smodel.trt_models:
+                if trt_model.id == trt_model_id:
+                    return trt_model.trt
 
     def __repr__(self):
         info_by_model = collections.OrderedDict(
