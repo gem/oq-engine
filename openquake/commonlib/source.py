@@ -31,6 +31,7 @@ import numpy
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import (
     AccumDict, groupby, block_splitter, group_array)
+from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import logictree, sourceconverter, parallel, valid
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
@@ -420,19 +421,19 @@ class RlzsAssoc(collections.Mapping):
         assoc._init()
         return assoc
 
-    def combine_curves(self, results, agg, acc):
+    # used in classical and event_based calculators
+    def combine_curves(self, results):
         """
-        :param results: dictionary (trt_model_id, gsim_name) -> curves
-        :param agg: aggregation function (composition of probabilities)
-        :returns: a dictionary rlz -> aggregated curves
+        :param results: dictionary trt_model_id -> curves
+        :returns: a dictionary rlz -> aggregate curves
         """
-        ad = AccumDict({rlz: acc for rlz in self.realizations})
+        acc = {rlz: ProbabilityMap() for rlz in self.realizations}
         for key in results:
-            # NB: don't use results.items(), you may run out of memory
             for rlz in self.rlzs_assoc[key]:
-                ad[rlz] = agg(ad[rlz], results[key])
-        return ad
+                acc[rlz] += results[key]
+        return acc
 
+    # used in riskinput
     def combine(self, results, agg=agg_prob):
         """
         :param results: a dictionary (trt_model_id, gsim) -> floats
@@ -479,7 +480,7 @@ class RlzsAssoc(collections.Mapping):
         the aggregation function is the `agg_curves` function, a composition of
         probability, which however is close to the sum for small probabilities.
         """
-        ad = AccumDict()
+        ad = {rlz: 0 for rlz in self.realizations}
         for (trt_id, gsim), value in results.items():
             try:
                 gsim_idx = int(gsim)  # for classical calculations
@@ -488,7 +489,7 @@ class RlzsAssoc(collections.Mapping):
             else:
                 gsim = self.gsims_by_trt_id[trt_id][gsim_idx]
             for rlz in self.rlzs_assoc[trt_id, gsim]:
-                ad[rlz] = agg(ad.get(rlz, 0), value)
+                ad[rlz] = agg(ad[rlz], value)
         return ad
 
     def __iter__(self):

@@ -315,7 +315,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         with self.monitor('combine curves_by_rlz', autoflush=True):
             curves_by_rlz = self.rlzs_assoc.combine_curves(
-                curves_by_trt_gsim, operator.add, ProbabilityMap())
+                curves_by_trt_gsim)
 
         self.save_curves({rlz: array_of_curves(curves, nsites, imtls)
                           for rlz, curves in curves_by_rlz.items()})
