@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+	<exposureModel
+	  id="exp_mod_1"
+	  category="buildings"
+	  taxonomySource="GEM Taxonomy">
+	  <description>
+	    Exposure Model for buildings located in Antioquia-Colombia
+	  </description>
+	  <conversions>
+	    <costTypes>
+	      <costType name="structural" type="per_asset" unit="USD"  />
+	    </costTypes>
+	  </conversions>
+	  <assets>
+	   <asset id="ant_13_S1" number="2129"  taxonomy="MUR/LWAL/HEX:1" >
+	    <location lon="-75.07678846" lat="6.909131594" />
+	    <costs>
+	      <cost type="structural" value="27995.43547"  />
+	    </costs>
+	    </asset>
+	   <asset id="ant_13_S2" number="460"  taxonomy="MUR/LWAL/HEX:2" >
+	    <location lon="-75.07678846" lat="6.909131594" />
+	    <costs>
+	      <cost type="structural" value="42041.42095"  />
+	    </costs>
+	    </asset>
+	   <asset id="ant_13_S3" number="77"  taxonomy="MUR/LWAL/HEX:3" >
+	    <location lon="-75.07678846" lat="6.909131594" />
+	    <costs>
+	      <cost type="structural" value="83895.15429"  />
+	    </costs>
+	    </asset>
+	   <asset id="ant_13_S4" number="15"  taxonomy="MUR/LWAL/HEX:4" >
+	    <location lon="-75.07678846" lat="6.909131594" />
+	    <costs>
+	      <cost type="structural" value="114025.9444"  />
+	    </costs>
+	    </asset>
+	   <asset id="ant_13_S5" number="1"  taxonomy="MUR/LWAL/HEX:5" >
+	    <location lon="-75.07678846" lat="6.909131594" />
+	    <costs>
+	      <cost type="structural" value="161444.2764"  />
+	    </costs>
+	    </asset>
+	  </assets>
+	</exposureModel>
+</nrml>

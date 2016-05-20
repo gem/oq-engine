@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <gmfCollection
+    gsimTreePath="b1|b7"
+    sourceModelTreePath="b1|b2|b4"
+    >
+        <gmfSet
+        investigationTime="50.0"
+        stochasticEventSetId="1"
+        >
+            <gmf
+            IMT="SA"
+            ruptureId="rlz=00|ses=0001|src=1|i=0"
+            saDamping="5"
+            saPeriod="0.025"
+            >
+                <node gmv="0.2" lat="0.0" lon="0.0"/>
+                <node gmv="1.4" lat="0.0" lon="1.0"/>
+                <node gmv="0.6" lat="1.0" lon="0.0"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="rlz=00|ses=0001|src=1|i=1"
+            >
+                <node gmv="0.2" lat="0.0" lon="0.0"/>
+                <node gmv="1.4" lat="0.0" lon="1.0"/>
+                <node gmv="0.6" lat="1.0" lon="0.0"/>
+            </gmf>
+            <gmf
+            IMT="PGV"
+            ruptureId="rlz=00|ses=0001|src=1|i=1"
+            >
+                <node gmv="0.2" lat="0.0" lon="0.0"/>
+                <node gmv="1.4" lat="0.0" lon="1.0"/>
+                <node gmv="0.6" lat="1.0" lon="0.0"/>
+            </gmf>
+        </gmfSet>
+        <gmfSet
+        investigationTime="40.0"
+        stochasticEventSetId="2"
+        >
+            <gmf
+            IMT="SA"
+            ruptureId="rlz=00|ses=0002|src=1|i=0"
+            saDamping="5"
+            saPeriod="0.025"
+            >
+                <node gmv="0.2" lat="0.0" lon="0.0"/>
+                <node gmv="1.4" lat="0.0" lon="1.0"/>
+                <node gmv="0.6" lat="1.0" lon="0.0"/>
+            </gmf>
+            <gmf
+            IMT="PGA"
+            ruptureId="rlz=00|ses=0002|src=1|i=0"
+            >
+                <node gmv="0.2" lat="0.0" lon="0.0"/>
+                <node gmv="1.4" lat="0.0" lon="1.0"/>
+                <node gmv="0.6" lat="1.0" lon="0.0"/>
+            </gmf>
+            <gmf
+            IMT="PGV"
+            ruptureId="rlz=00|ses=0002|src=1|i=0"
+            >
+                <node gmv="0.2" lat="0.0" lon="0.0"/>
+                <node gmv="1.4" lat="0.0" lon="1.0"/>
+                <node gmv="0.6" lat="1.0" lon="0.0"/>
+            </gmf>
+        </gmfSet>
+    </gmfCollection>
+</nrml>

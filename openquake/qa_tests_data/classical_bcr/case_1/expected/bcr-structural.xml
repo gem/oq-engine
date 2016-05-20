@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <bcrMap
+    assetLifeExpectancy="40.0"
+    gsimTreePath="b1"
+    interestRate="0.05"
+    lossType="structural"
+    sourceModelTreePath="b_1"
+    >
+        <node>
+            <gml:Point>
+                <gml:pos>
+                    1.0 1.0
+                </gml:pos>
+            </gml:Point>
+            <bcr aalOrig="0.0093929" aalRetr="0.0065823" assetRef="a1" ratio="0.486046"/>
+        </node>
+    </bcrMap>
+</nrml>
