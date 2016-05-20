@@ -15,6 +15,7 @@
 
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+from openquake.baselib.python3compat import zip
 import collections
 import numpy
 
@@ -182,3 +183,21 @@ class ProbabilityMap(dict):
 
     def __invert__(self):
         return self.__class__((sid, ~self[sid]) for sid in self)
+
+    def __toh5__(self):
+        # converts to an array of shape (num_sids, num_levels, num_gsims)
+        size = len(self)
+        sids = numpy.array(sorted(self), numpy.uint32)
+        if size:
+            shape = (size,) + self[sids[0]].array.shape
+            array = numpy.zeros(shape)
+            for i, sid in numpy.ndenumerate(sids):
+                array[i] = self[sid].array
+        else:
+            array = numpy.zeros(0)
+        return array, dict(sids=sids)
+
+    def __fromh5__(self, array, attrs):
+        # rebuild the map from sids and probs arrays
+        for sid, prob in zip(attrs['sids'], array):
+            self[sid] = ProbabilityCurve(prob)
