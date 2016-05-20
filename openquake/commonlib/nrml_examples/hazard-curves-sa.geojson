@@ -1,0 +1,54 @@
+{
+    "features": [
+        {
+            "geometry": {
+                "coordinates": [
+                    -122.5,
+                    37.5
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "poEs": [
+                    0.98728,
+                    0.98266,
+                    0.94957
+                ]
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    -123.5,
+                    37.5
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "poEs": [
+                    0.098728,
+                    0.098266,
+                    0.094957
+                ]
+            },
+            "type": "Feature"
+        }
+    ],
+    "oqmetadata": {
+        "IMLs": [
+            0.005,
+            0.007,
+            0.0137
+        ],
+        "IMT": "SA",
+        "gsimTreePath": "b1_b2",
+        "investigationTime": "50.0",
+        "saDamping": "5.0",
+        "saPeriod": "0.025",
+        "sourceModelTreePath": "b1_b2_b4"
+    },
+    "oqnrmlversion": "0.4",
+    "oqtype": "HazardCurve",
+    "type": "FeatureCollection"
+}

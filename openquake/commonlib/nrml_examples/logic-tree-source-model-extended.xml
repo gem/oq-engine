@@ -1,0 +1,447 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>source_model_1.xml</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>source_model_2.xml</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="maxMagGRRelative" branchSetID="bs2">
+                <logicTreeBranch branchID="b3">
+                    <uncertaintyModel>0.2</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b4">
+                    <uncertaintyModel>0.0</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b5">
+                    <uncertaintyModel>-0.2</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="bl3">
+            <logicTreeBranchSet uncertaintyType="bGRRelative" branchSetID="bs3">
+                <logicTreeBranch branchID="b6">
+                    <uncertaintyModel>0.1</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b7">
+                    <uncertaintyModel>0.0</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b8">
+                    <uncertaintyModel>-0.1</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        
+        <logicTreeBranchingLevel branchingLevelID="bl4">
+            <logicTreeBranchSet uncertaintyType="incrementalMFDAbsolute"
+                                branchSetID="bs4"
+                                applyToSources="1">
+                <logicTreeBranch branchID="b9">
+                    <uncertaintyModel>
+                        <incrementalMFD
+                            binWidth="0.1"
+                            minMag="8.0"
+                        >
+                            <occurRates>
+                                0.005 0.0025
+                            </occurRates>
+                        </incrementalMFD>
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b10">
+                    <uncertaintyModel>
+                        <incrementalMFD
+                            binWidth="0.1"
+                            minMag="8.2"
+                        >
+                            <occurRates>
+                                0.01 0.005
+                            </occurRates>
+                        </incrementalMFD>
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.34</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b11">
+                    <uncertaintyModel>
+                        <incrementalMFD
+                            binWidth="0.1"
+                            minMag="7.8"
+                        >
+                            <occurRates>
+                                0.05 0.025
+                            </occurRates>
+                        </incrementalMFD>
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.33</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl5">
+            <logicTreeBranchSet uncertaintyType="simpleFaultGeometryAbsolute"
+                                branchSetID="bs5"
+                                applyToSources="1">
+                <logicTreeBranch branchID="b12">
+                    <uncertaintyModel>
+                        <simpleFaultGeometry spacing="1.0">
+                            <gml:LineString>
+                                <gml:posList>
+                                    -121.80 37.70 -122.05 37.88
+                                </gml:posList>
+                            </gml:LineString>
+                            <dip>
+                                45.0
+                            </dip>
+                            <upperSeismoDepth>
+                                10.0
+                            </upperSeismoDepth>
+                            <lowerSeismoDepth>
+                                20.0
+                            </lowerSeismoDepth>
+                        </simpleFaultGeometry>
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b13">
+                    <uncertaintyModel>
+                        <simpleFaultGeometry spacing="1.0">
+                            <gml:LineString>
+                                <gml:posList>
+                                    -121.81 37.70 -122.10 37.90
+                                </gml:posList>
+                            </gml:LineString>
+                            <dip>
+                                55.0
+                            </dip>
+                            <upperSeismoDepth>
+                                10.0
+                            </upperSeismoDepth>
+                            <lowerSeismoDepth>
+                                20.0
+                            </lowerSeismoDepth>
+                        </simpleFaultGeometry>
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl7">
+            <logicTreeBranchSet uncertaintyType="simpleFaultDipRelative" branchSetID="bs7">
+                <logicTreeBranch branchID="b14">
+                    <uncertaintyModel>-15.0</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b15">
+                    <uncertaintyModel>0.0</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b16">
+                    <uncertaintyModel>15.0</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl8">
+            <logicTreeBranchSet uncertaintyType="simpleFaultDipAbsolute" branchSetID="bs8">
+                <logicTreeBranch branchID="b17">
+                    <uncertaintyModel>30.0</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b18">
+                    <uncertaintyModel>45.0</uncertaintyModel>
+                    <uncertaintyWeight>0.6</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b19">
+                    <uncertaintyModel>60.0</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl6">
+            <logicTreeBranchSet uncertaintyType="complexFaultGeometryAbsolute"
+                                branchSetID="bs6"
+                                applyToSources="1">
+                <logicTreeBranch branchID="CASCBOT">
+                    <uncertaintyModel>
+                        <complexFaultGeometry spacing="5.0">
+                            <faultTopEdge>
+                                <gml:LineString>
+                                    <gml:posList>
+                                        49.25290 -127.64473 5
+                                        48.68892 -127.08010 5
+                                        48.27786 -126.67810 5
+                                        47.99196 -126.43900 5
+                                        47.66285 -126.23375 5
+                                        47.27867 -126.04937 5
+                                        46.94307 -125.92025 5
+                                        46.62940 -125.81562 5
+                                        46.32987 -125.73574 5
+                                        46.30000 -125.72885 5
+                                        45.45161 -125.57416 5
+                                        45.00000 -125.52694 5
+                                        44.71223 -125.49976 5
+                                        43.84118 -125.42693 5
+                                        43.70000 -125.41145 5
+                                        42.95745 -125.28921 5
+                                        42.09936 -125.04685 5
+                                        41.21360 -125.08518 5
+                                        40.35467 -125.09899 6.74507
+                                    </gml:posList>
+                                </gml:LineString>
+                            </faultTopEdge>
+                            <faultBottomEdge>
+                                <gml:LineString>
+                                    <gml:posList>
+                                        49.79822 -126.68793 26.48063
+                                        49.38693 -125.85895 30.03475
+                                        49.03918 -125.11155 32.41970
+                                        48.65848 -124.45814 32.73473
+                                        48.25478 -123.91736 32.44285
+                                        47.78030 -123.50923 33.81351
+                                        47.31280 -123.35685 34.71377
+                                        46.83492 -123.35173 34.74473
+                                        46.37659 -123.39889 34.88430
+                                        46.30000 -123.41320 34.82818
+                                        45.50147 -123.59924 33.12882
+                                        45.00000 -123.70227 30.99767
+                                        44.75677 -123.73402 30.30617
+                                        43.88167 -123.76421 29.48059
+                                        43.70000 -123.78006 28.55160
+                                        42.99611 -123.80901 26.80524
+                                        42.11925 -123.66163 27.89170
+                                        41.21481 -123.32929 29.25479
+                                        40.37608 -122.94522 37.83032
+                                    </gml:posList>
+                                </gml:LineString>
+                            </faultBottomEdge>
+                        </complexFaultGeometry> 
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.333</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="CASCMID">
+                    <uncertaintyModel>
+                        <complexFaultGeometry spacing="5.0">
+                            <faultTopEdge>
+                                <gml:LineString>
+                                    <gml:posList>
+                                        49.25290 -127.64473 5
+                                        48.68892 -127.08010 5
+                                        48.27786 -126.67810 5
+                                        47.99196 -126.43900 5
+                                        47.66285 -126.23375 5
+                                        47.27867 -126.04937 5
+                                        46.94307 -125.92025 5
+                                        46.62940 -125.81562 5
+                                        46.32987 -125.73574 5
+                                        46.30000 -125.72885 5
+                                        45.45161 -125.57416 5
+                                        45.00000 -125.52694 5
+                                        44.71223 -125.49976 5
+                                        43.84118 -125.42693 5
+                                        43.70000 -125.41145 5
+                                        42.95745 -125.28921 5
+                                        42.09936 -125.04685 5
+                                        41.21360 -125.08518 5
+                                        40.35467 -125.09899 6.74507 
+                                    </gml:posList>
+                                </gml:LineString>
+                            </faultTopEdge>
+                            <faultBottomEdge>
+                                <gml:LineString>
+                                    <gml:posList>
+                                        49.73665 -126.82846 23.69129
+                                        49.21444 -126.17539 22.97471
+                                        48.86098 -125.43884 25.03354
+                                        48.55325 -124.80386 27.84144
+                                        48.15165 -124.36144 27.86888
+                                        47.70893 -123.91646 29.32002
+                                        47.23766 -123.89909 27.91269
+                                        46.77860 -124.11635 23.94863
+                                        46.36419 -124.13849 22.90940
+                                        46.30000 -124.13677 22.92826
+                                        45.48932 -124.32961 20.20983
+                                        45.00000 -124.48830 17.45862
+                                        44.74235 -124.35632 19.36195
+                                        43.86274 -124.49237 15.98822
+                                        43.70000 -124.50873 15.27711
+                                        42.97969 -124.51445 13.66332
+                                        42.11170 -124.38969 12.12714
+                                        41.21782 -124.17259 14.83582
+                                        40.34700 -123.82900 24.01755 
+                                    </gml:posList>
+                                </gml:LineString>
+                            </faultBottomEdge>
+                        </complexFaultGeometry> 
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.334</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="CASCTOP">
+                    <uncertaintyModel>
+                        <complexFaultGeometry spacing="5.0">
+                            <faultTopEdge>
+                                <gml:LineString>
+                                    <gml:posList>
+                                        49.25290 -127.64473 5
+                                        48.68892 -127.08010 5
+                                        48.27786 -126.67810 5
+                                        47.99196 -126.43900 5
+                                        47.66285 -126.23375 5
+                                        47.27867 -126.04937 5
+                                        46.94307 -125.92025 5
+                                        46.62940 -125.81562 5
+                                        46.32987 -125.73574 5
+                                        46.30000 -125.72885 5
+                                        45.45161 -125.57416 5
+                                        45.00000 -125.52694 5
+                                        44.71223 -125.49976 5
+                                        43.84118 -125.42693 5
+                                        43.70000 -125.41145 5
+                                        42.95745 -125.28921 5
+                                        42.09936 -125.04685 5
+                                        41.21360 -125.08518 5
+                                        40.35467 -125.09899 6.74507
+                                    </gml:posList>
+                                </gml:LineString>
+                            </faultTopEdge>
+                            <faultBottomEdge>
+                                <gml:LineString>
+                                    <gml:posList>
+                                        49.61933 -127.04273 19.11960
+                                        49.09622 -126.38320 18.47519
+                                        48.71699 -125.74942 19.01135
+                                        48.41262 -125.21443 21.23967
+                                        48.05182 -124.74072 22.80767
+                                        47.62747 -124.33373 24.46938
+                                        47.18333 -124.28905 23.12651
+                                        46.75830 -124.40518 19.99963
+                                        46.35860 -124.43224 18.59490
+                                        46.30000 -124.43943 18.44058
+                                        45.48466 -124.54931 16.70756
+                                        45.00000 -124.56091 16.30861
+                                        44.73817 -124.56716 15.66685
+                                        43.85837 -124.62968 13.99074
+                                        43.70000 -124.63121 13.57291
+                                        42.97534 -124.63823 11.95881
+                                        42.10785 -124.54285 9.92821
+                                        41.21391 -124.34779 12.70226
+                                        40.34700 -124.04150 22.81817
+                                    </gml:posList>
+                                </gml:LineString>
+                            </faultBottomEdge>
+                        </complexFaultGeometry> 
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.333</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        <logicTreeBranchingLevel branchingLevelID="bl9">
+            <logicTreeBranchSet uncertaintyType="characteristicFaultGeometryAbsolute"
+                                branchSetID="bs9"
+                                applyToSources="1">
+                <logicTreeBranch branchID="CHAR_SIMPLE">
+                    <uncertaintyModel>
+                        <surface>
+                            <simpleFaultGeometry spacing="1.0">
+                                <gml:LineString>
+                                    <gml:posList>
+                                        30.0 30.0 31.0 30.0 31.5 30.2
+                                    </gml:posList>
+                                </gml:LineString>
+                                <dip>
+                                    90
+                                </dip>
+                                <upperSeismoDepth>
+                                    0.
+                                </upperSeismoDepth>
+                                <lowerSeismoDepth>
+                                    15.0
+                                </lowerSeismoDepth>
+                            </simpleFaultGeometry>
+                        </surface>
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="CHAR_COMPLEX">
+                    <uncertaintyModel>
+                        <surface>
+                            <complexFaultGeometry spacing="2.0">
+                                <faultTopEdge>
+                                    <gml:LineString>
+                                        <gml:posList>
+                                            30.0 30.05 0.0 31.0 30.1 0.0 31.5 30.5 0.5
+                                        </gml:posList>
+                                    </gml:LineString>
+                                </faultTopEdge>
+                                <faultBottomEdge>
+                                    <gml:LineString>
+                                        <gml:posList>
+                                            30.0 30.0 13.0 31.0 30.0 15.0 31.5 30.3 14.0
+                                        </gml:posList>
+                                    </gml:LineString>
+                                </faultBottomEdge>
+                            </complexFaultGeometry>
+                        </surface>
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="CHAR_MULTI_PLANE">
+                    <uncertaintyModel>
+                        <surface>
+                            <planarSurface
+                            dip="90.0"
+                            strike="89.75"
+                            spacing="1.0"
+                            >
+                                <topLeft depth="0.5" lat="30.0" lon="30.0"/>
+                                <topRight depth="0.5" lat="30.0" lon="31.0"/>
+                                <bottomLeft depth="15.2" lat="30.0" lon="30.0"/>
+                                <bottomRight depth="15.2" lat="30.0" lon="31.0"/>
+                            </planarSurface>
+                            <planarSurface
+                            dip="90.0"
+                            strike="65.06146"
+                            spacing="1.0"
+                            >
+                                <topLeft depth="0.6" lat="30.0" lon="31.0"/>
+                                <topRight depth="0.6" lat="30.2" lon="31.5"/>
+                                <bottomLeft depth="14.9" lat="30.0" lon="31.0"/>
+                                <bottomRight depth="14.9" lat="30.2" lon="31.5"/>
+                            </planarSurface>
+                        </surface>
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>
