@@ -178,13 +178,12 @@ class ProbabilityMap(dict):
     # faster than ___add__
     def __iadd__(self, other):
         self_sids = set(self)
-        other_sids = set(other)
+        # this check is very important for performance
+        other_sids = set(sid for sid in other if other[sid])
         for sid in self_sids & other_sids:
-            if other[sid]:  # this check is very important for performance
-                self[sid] = self[sid] | other[sid]
+            self[sid] = self[sid] | other[sid]
         for sid in other_sids - self_sids:
-            if other[sid]:  # this check is very important for performance
-                self[sid] = other[sid]
+            self[sid] = other[sid]
         return self
 
     def __mul__(self, other):
