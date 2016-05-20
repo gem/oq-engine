@@ -26,7 +26,7 @@ def get_version():
     version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
     version = None
 
-    package_init = 'openquake/risklib/__init__.py'
+    package_init = 'openquake/engine/__init__.py'
     for line in open(package_init, 'r'):
         version_match = re.search(version_re, line, re.M)
         if version_match:
@@ -36,49 +36,72 @@ def get_version():
         sys.exit('__version__ variable not found in %s' % package_init)
 
     return version
+
 version = get_version()
 
-url = "http://github.com/gem/oq-risklib"
+url = "https://github.com/gem/oq-engine"
 
-cd = os.path.dirname(os.path.join(__file__))
+README = """
+OpenQuake is an open source application that allows users to
+compute seismic hazard and seismic risk of earthquakes on a global scale.
+
+Please note: the /usr/bin/oq-engine script requires a celeryconfig.py file in
+the PYTHONPATH; when using binary packages, if a celeryconfig.py is not
+available the OpenQuake Engine default celeryconfig.py, located in
+/usr/share/openquake/engine, is used.
+
+Copyright (C) 2010-2016, GEM Foundation.
+"""
+
+PY_MODULES = ['openquake.engine.bin.openquake_cli']
 
 setup(
-    name='openquake.risklib',
+    entry_points={
+        "console_scripts": [
+            "oq-engine = openquake.engine.bin.openquake_cli:main"
+        ]
+    },
+    name="openquake.engine",
     version=version,
-    description="oq-risklib is a library for performing seismic risk analysis",
-    long_description=open(os.path.join(cd, 'README.md')).read(),
+    author="GEM Foundation",
+    author_email="devops@openquake.org",
+    maintainer='GEM Foundation',
+    maintainer_email='devops@openquake.org',
+    description=("Computes hazard, risk and socio-economic impact of "
+                 "earthquakes."),
+    license="AGPL3",
+    keywords="earthquake seismic hazard risk",
     url=url,
-    packages=find_packages(),
+    long_description=README,
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Education',
+        'Intended Audience :: Science/Research',
+        'Programming Language :: Python :: 2',
+        'License :: OSI Approved :: GNU Affero General Public License v3',
+        'Operating System :: OS Independent',
+        'Topic :: Scientific/Engineering',
+    ],
+    packages=find_packages(exclude=["qa_tests", "qa_tests.*",
+                                    "tools",
+                                    "openquake.engine.bin",
+                                    "openquake.engine.bin.*"]),
+    py_modules=PY_MODULES,
+    include_package_data=True,
+    package_data={"openquake.engine": [
+        "openquake.cfg", "README.md",
+        "LICENSE", "CONTRIBUTORS.txt"]},
+    namespace_packages=['openquake'],
     install_requires=[
+        'openquake.hazardlib',
         'numpy',
         'scipy',
         'decorator',
         'psutil >= 0.4.1',
     ],
-    author='GEM Foundation',
-    author_email='devops@openquake.org',
-    maintainer='GEM Foundation',
-    maintainer_email='devops@openquake.org',
-    classifiers=(
-        'Development Status :: 4 - Beta',
-        'Intended Audience :: Education',
-        'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: GNU Affero General Public License v3',
-        'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2',
-        'Topic :: Scientific/Engineering',
-    ),
-    keywords="seismic risk",
-    license="AGPL3",
-    platforms=["any"],
-    package_data={"openquake.risklib": [
-        "README.md", "LICENSE"]},
-    entry_points={
-        'console_scripts': [
-            'oq-lite = openquake.commonlib.commands.__main__:oq_lite']},
-    namespace_packages=['openquake'],
-    include_package_data=True,
+    scripts=["openquake/engine/bin/oq_create_db",
+             "openquake/engine/bin/oq_reset_db"],
     test_loader='openquake.baselib.runtests:TestLoader',
     test_suite='openquake.risklib,openquake.commonlib,openquake.calculators',
     zip_safe=False,
-)
+    )
