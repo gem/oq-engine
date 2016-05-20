@@ -124,8 +124,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             super(ClassicalRiskCalculator, self).pre_execute()
             logging.info('Preparing the risk input')
             curves_by_trt_gsim = {}
-            for key in self.datastore['pmap']:
-                pmap = self.datastore['pmap/' + key]
+            for key in self.datastore['poes']:
+                pmap = self.datastore['poes/' + key]
                 trt_id = int(key)
                 gsims = self.rlzs_assoc.gsims_by_trt_id[trt_id]
                 for i, gsim in enumerate(gsims):

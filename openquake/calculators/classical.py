@@ -293,12 +293,12 @@ class ClassicalCalculator(base.HazardCalculator):
 
         with self.monitor('saving probability maps', autoflush=True):
             for trt_id in curves_by_trt_id:
-                self.datastore['pmap/%04d' % trt_id] = curves_by_trt_id[trt_id]
+                self.datastore['poes/%04d' % trt_id] = curves_by_trt_id[trt_id]
                 gsims = self.rlzs_assoc.gsims_by_trt_id[trt_id]
                 for i, gsim in enumerate(gsims):
                     curves_by_trt_gsim[trt_id, gsim] = (
                         curves_by_trt_id[trt_id].extract(i))
-            self.datastore.set_nbytes('pmap')
+            self.datastore.set_nbytes('poes')
 
         with self.monitor('combine curves_by_rlz', autoflush=True):
             curves_by_rlz = self.rlzs_assoc.combine_curves(curves_by_trt_gsim)
