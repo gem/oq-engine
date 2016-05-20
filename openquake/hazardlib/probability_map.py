@@ -177,9 +177,11 @@ class ProbabilityMap(dict):
 
     # faster than ___add__
     def __iadd__(self, other):
-        for sid in self:
-            self[sid] = self[sid] | other.get(sid, 0)
-        for sid in set(other) - set(self):
+        self_sids = set(self)
+        other_sids = set(other)
+        for sid in self_sids & other_sids:
+            self[sid] = self[sid] | other[sid]
+        for sid in other_sids - self_sids:
             self[sid] = other[sid]
         return self
 
