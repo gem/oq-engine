@@ -1,28 +1,15 @@
-Source: python-oq-risklib
+Source: python-oq-engine
 Section: python
 Priority: extra
 Maintainer: Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>
-Build-Depends: debhelper (>= 7.0.50~), python (>=2.7), lsb-release, python-setuptools, python-coverage, quilt, python-mock
+Build-Depends: debhelper (>= 7.0.50~), lsb-release, quilt, python (>=2.7), python-setuptools, python-coverage, python-sphinx
 Standards-Version: 3.9.3
-Homepage: http://github.com/gem/oq-risklib
-#Vcs-Git: git://git.debian.org/collab-maint/python-dateutil.git
-#Vcs-Browser: http://git.debian.org/?p=collab-maint/python-dateutil.git;a=summary
-
-Package: python-oq-risklib
+Homepage: http://www.globalquakemodel.org/openquake/
+Package: python-oq-engine
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${dist:Depends}, python-scipy, python-numpy, python-psutil, python-concurrent.futures, python-oq-hazardlib (>= 0.20.0-0~), python-mock, python-setuptools, python-nose, python-decorator, python-prctl
-Provides: python-oq-commonlib
-Conflicts: python-oq-commonlib
-Replaces: python-oq-commonlib
-Description:  OpenQuake Risklib is an open source library for seismic risk
- assessment, which includes several modules capable of calculating losses and
- damage distributions for a scenario earthquake, or for calculating
- probabilistic risk from all the possible events that might occur in a region
- within a certain time span (that can be estimated through an event-based
- approach, or a classical PSHA-based approach). The main outputs of this
- library are loss statistics, loss maps, loss curves, damage distributions
- and collapse maps.
- The GEM Foundation (http://www.globalquakemodel.org/) supports the development
- of this library by adding the most common methodologies used by seismic risk
- modellers. Comments, suggestions and criticisms from the community are always
- very welcome.
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${dist:Depends}, python-scipy, python-numpy, python-psutil, python-decorator, python-prctl, python-celery (>=2.4.6-1ubuntu0.2~gem03), python-geohash, python-paramiko, python-shapely, python-setuptools, python-nose, python-mock, python-requests (>=0.8.2), python-docutils, python-oq-hazardlib (>=0.20.0-0~), python-concurrent.futures (>=2.1.2), rabbitmq-server (>=2.8.0-2~gem02), supervisor
+Conflicts: python-oq-risklib, python-noq, python-oq
+Replaces: python-oq-risklib
+Recommends: ${dist:Recommends}
+Description: computes seismic hazard and physical risk
+ based on the hazard and risk libraries developed by the GEM foundation.
