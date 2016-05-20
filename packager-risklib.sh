@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# packager.sh  Copyright (C) 2014-2016, GEM Foundation.
+# packager.sh  Copyright (C) 2014-2016 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,15 +33,14 @@
 # but any modifications are stored in another overlayed
 # file system (in-memory or disk)
 #
-
 if [ -n "$GEM_SET_DEBUG" -a "$GEM_SET_DEBUG" != "false" ]; then
     export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
     set -x
 fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
-GEM_GIT_PACKAGE="oq-engine"
-GEM_GIT_DEPS="oq-hazardlib oq-risklib"
+GEM_GIT_PACKAGE="oq-risklib"
+GEM_GIT_DEPS="oq-hazardlib"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -53,8 +52,6 @@ fi
 
 GEM_BUILD_ROOT="build-deb"
 GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
-
-GEM_MAXLOOP=20
 
 GEM_ALWAYS_YES=false
 
@@ -98,9 +95,6 @@ sig_hand () {
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
-        if [ "$GEM_USE_CELERY" ]; then
-            scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
-        fi
         scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/ssh.history"
         echo "Destroying [$lxc_name] lxc"
         upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
@@ -200,14 +194,8 @@ usage () {
     echo "       if -R is present update the local repository to the new current package"
     echo "       if -D is present a package with self-computed version is produced."
     echo "       if -U is present no sign are perfomed using gpg key related to the mantainer."
-    echo
-    echo "    $0 pkgtest <branch-name>"
-    echo "                                                 install oq-engine package and related dependencies into"
-    echo "                                                 an ubuntu lxc environment and run package tests and demos"
-
-    echo "    $0 devtest <branch-name>"
-    echo "                                                 put oq-engine and oq-* dependencies sources in a lxc,"
-    echo "                                                 setup environment and run development tests."
+    echo "    $0 pkgtest <branch-name>                    run packaging tests into an ubuntu lxc environment"
+    echo "    $0 devtest <branch-name>                    run development tests into an ubuntu lxc environment"
     echo
     exit $ret
 }
@@ -240,7 +228,7 @@ _pkgbuild_innervm_run () {
     scp -r * $lxc_ip:build-deb
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
     ssh $lxc_ip sudo apt-get update
-    ssh $lxc_ip sudo apt-get -y upgrade
+    ssh $lxc_ip sudo apt-get upgrade -y
     ssh $lxc_ip sudo apt-get -y install build-essential dpatch fakeroot devscripts equivs lintian quilt
     ssh $lxc_ip "sudo mk-build-deps --install --tool 'apt-get -y' build-deb/debian/control"
 
@@ -253,17 +241,19 @@ _pkgbuild_innervm_run () {
 #
 #  _devtest_innervm_run <lxc_ip> <branch> - part of source test performed on lxc
 #                     the following activities are performed:
-#                     - extracts dependencies from oq-{engine,hazardlib, ..} debian/control
+#                     - extracts dependencies from oq-hazardlib debian/control
 #                       files and install them
 #                     - builds oq-hazardlib speedups
 #                     - installs oq-engine sources on lxc
-#                     - set up db
+#                     - set up postgres
+#                     - upgrade db
+#                     - runs celeryd
 #                     - runs tests
 #                     - runs coverage
 #                     - collects all tests output files from lxc
 #
-#      <lxc_ip>   the IP address of lxc instance
-#      <branch>   name of the tested branch
+#      <lxc_ip>       the IP address of lxc instance
+#      <branch>       name of the tested branch
 #
 _devtest_innervm_run () {
     local i old_ifs pkgs_list dep lxc_ip="$1" branch="$2"
@@ -305,12 +295,7 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
     # build oq-hazardlib speedups and put in the right place
-    ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
-                 set -e
-                 if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
-                     export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
-                     set -x
-                 fi
+    ssh $lxc_ip "set -e
                  cd oq-hazardlib
                  python ./setup.py build
                  for i in \$(find build/ -name *.so); do
@@ -318,45 +303,33 @@ _devtest_innervm_run () {
                      cp \$i \$o
                  done"
 
-    # install sources of this package
+    # TODO: version check
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
-    # configure the machine to run tests
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         if [ -n "$GEM_DEVTEST_SKIP_SLOW_TESTS" ]; then
             # skip slow tests
             skip_tests="!slow,"
         fi
 
-        # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
         ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
                  set -e
                  if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
                      export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
                      set -x
                  fi
-                 export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ;
-                 cd oq-engine
-                 nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
-                 nosetests -v -a '${skip_tests}' --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
-
-                 # OQ Engine QA tests (splitted into multiple execution to track the performance)
-                 nosetests  -a '${skip_tests}qa,hazard' -v --with-xunit --xunit-file=xunit-qa-hazard.xml
-                 nosetests  -a '${skip_tests}qa,risk' -v --with-xunit --xunit-file=xunit-qa-risk.xml
-
-                 python-coverage xml --include=\"openquake/*\"
-        "
-        scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
-        scp "${lxc_ip}:oq-engine/coverage.xml" "out_${BUILD_UBUVER}/" || true
+                 export PYTHONPATH=\"\$PWD/oq-risklib:\$PWD/oq-hazardlib\"
+                 cd $GEM_GIT_PACKAGE
+                 nosetests -a '${skip_tests}' -v --with-doctest --with-coverage --cover-package=openquake.baselib --cover-package=openquake.risklib --cover-package=openquake.commonlib --with-xunit
+                 bin/slowtests nosetests.xml
+                 ./openquake/risklib/tests/bin/bash_tests.sh all bashtests.xml"
+        scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" "out_${BUILD_UBUVER}/"
+        scp "$lxc_ip:$GEM_GIT_PACKAGE/bashtests.xml" "out_${BUILD_UBUVER}/"
     else
         if [ -d $HOME/fake-data/$GEM_GIT_PACKAGE ]; then
             cp $HOME/fake-data/$GEM_GIT_PACKAGE/* "out_${BUILD_UBUVER}/"
         fi
     fi
-
-    # TODO: version check
-#    echo "NOW PRESS ENTER TO CONTINUE"
-#    read aaa
     trap ERR
 
     return
@@ -390,16 +363,24 @@ _builddoc_innervm_run () {
     IFS="$old_ifs"
 
     # extract dependencies for this package
-    pkgs_list="$(deps_list "build" debian)"
+    pkgs_list="$(deps_list "all" debian)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
-    # install sources of this package
-    git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
-
-    ssh $lxc_ip "set -e ; export PYTHONPATH=\"\$PWD/oq-hazardlib:\$PWD/oq-risklib:\$PWD/oq-engine\" ; cd oq-engine/doc ; make html"
-    scp -r "${lxc_ip}:oq-engine/doc/build/html" "out_${BUILD_UBUVER}/" || true
+    # build oq-hazardlib speedups and put in the right place
+    ssh $lxc_ip "set -e
+                 cd oq-hazardlib
+                 python ./setup.py build
+                 for i in \$(find build/ -name *.so); do
+                     o=\"\$(echo \"\$i\" | sed 's@^[^/]\+/[^/]\+/@@g')\"
+                     cp \$i \$o
+                 done"
 
     # TODO: version check
+    git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
+
+    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-risklib:\$PWD/oq-hazardlib\" ;
+                 cd ${GEM_GIT_PACKAGE}/doc ; make html"
+    scp -r "$lxc_ip:$GEM_GIT_PACKAGE/doc/_build/html" "out_${BUILD_UBUVER}/"
     trap ERR
 
     return
@@ -412,12 +393,13 @@ _builddoc_innervm_run () {
 #                     - copies 'oq-*' package repositories on lxc
 #                     - adds repositories to apt sources on lxc
 #                     - performs package tests (install, remove, reinstall ..)
-#                     - set up db
-#                     - runs celeryd if GEM_USE_CELERY is set
+#                     - set up postgres
+#                     - upgrade db
+#                     - runs celeryd
 #                     - executes demos
 #
 #      <lxc_ip>    the IP address of lxc instance
-#      <branch>    name of the tested branch
+#      <branch>    the name of the branch under test
 #
 _pkgtest_innervm_run () {
     local lxc_ip="$1" branch="$2" old_ifs from_dir
@@ -483,7 +465,7 @@ _pkgtest_innervm_run () {
                 # NOTE: in the other case dep branch is 'master' and package branch isn't
                 #       so we try to get the correct commit package and if it isn't yet built
                 #       it fallback to the latest builded
-                from_dir="$(ls -drt ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}* | tail -n 1)"
+                from_dir="$(ls -drt ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/python-${dep}*  | tail -n 1)"
                 scp -r "$from_dir" $lxc_ip:repo/python-${dep}
                 break
             fi
@@ -505,118 +487,52 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
 
-    # configure the machine to run tests
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
-        # Is the GEM_USE_CELERY flag is set, use celery to run the demos
-        if [ "$GEM_USE_CELERY" ]; then
-            ssh $lxc_ip "sudo sed -i 's/use_celery = false/use_celery = true/g' /etc/openquake/openquake.cfg" 
-            # run celeryd daemon
-            ssh $lxc_ip "cd /usr/share/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
+        # run selected demos
+        ssh $lxc_ip "set -e; cd /usr/share/openquake/risklib/demos/risk
+        echo 'running the report tool'
+        oq-lite info --report ClassicalRisk/job_hazard.ini
 
-            # wait for celeryd startup time
-            ssh $lxc_ip "
-celeryd_wait() {
-    local cw_nloop=\"\$1\" cw_ret cw_i
+        echo 'running ClassicalRisk...'
+        oq-lite run ClassicalRisk/job_hazard.ini,ClassicalRisk/job_risk.ini
 
-    if command -v celeryctl &> /dev/null; then
-        # celery 2.4
-        celery=celeryctl
-    elif command -v celery &> /dev/null; then
-        # celery 3
-        celery=celery
-    else
-        echo \"ERROR: no Celery available\"
-        return 1
+        echo 'running ScenarioDamage...'
+        oq-lite run ScenarioDamage/job_hazard.ini,ScenarioDamage/job_risk.ini
+        oq-lite export -e xml dmg_by_asset /tmp
+
+        echo 'running ScenarioRisk...'
+        oq-lite run ScenarioRisk/job.ini
+
+        echo 'running EventBasedRisk...'
+        oq-lite run EventBasedRisk/job.ini
+        oq-lite export -e xml loss_maps-rlzs /tmp
+        oq-lite show performance
+
+        echo 'running ClassicalRisk...'
+        oq-lite run ClassicalRisk/job_hazard.ini,ClassicalRisk/job_risk.ini
+
+        echo 'running ClassicalBCR...'
+        oq-lite run ClassicalBCR/job_hazard.ini,ClassicalBCR/job_risk.ini
+
+        cd ../hazard
+        echo 'running Disaggregation'
+        oq-lite run Disaggregation/job.ini
+
+        echo 'running LogicTreeCase1ClassicalPSHA'
+        oq-lite run LogicTreeCase1ClassicalPSHA/job.ini
+
+        echo 'running LogicTreeCase3ClassicalPSHA'
+        oq-lite run LogicTreeCase3ClassicalPSHA/job.ini --exports xml
+        oq-lite show rlzs
+
+        echo 'Show all the oq-lite calculations'
+        oq-lite show all
+        oq-lite show all > /tmp/all.txt  # stress encoding issues
+        "
     fi
-
-    cd /usr/share/openquake/engine
-
-    for cw_i in \$(seq 1 \$cw_nloop); do
-        cw_ret=\"\$(\$celery status)\"
-        if echo \"\$cw_ret\" | grep -iq '^error:'; then
-            if echo \"\$cw_ret\" | grep -ivq '^error: no nodes replied'; then
-                return 1
-            fi
-        else
-            return 0
-        fi
-        sleep 1
-    done
-
-    return 1
-}
-
-celeryd_wait $GEM_MAXLOOP"
-        fi
-
-        # run all of the hazard and risk demos
-        ssh $lxc_ip "export GEM_SET_DEBUG=$GEM_SET_DEBUG
-        set -e
-
-        if [ \$(cat /etc/passwd | grep ^openquake: | wc -l) -eq 0 ]; then
-            echo \"There's no 'openquake' user on this system. Installation may have failed.\"
-            exit 1
-        fi
-        sudo -u openquake python -m openquake.server.db.upgrade_manager ~openquake/db.sqlite3
-        
-        # dbserver should be already started by supervisord. Let's have a check
-        # FIXME instead of using a 'sleep' we should use a better way to check that
-        # the dbserver is alive
-        sleep 10; sudo /usr/bin/supervisorctl status
-
-        if [ -n \"\$GEM_SET_DEBUG\" -a \"\$GEM_SET_DEBUG\" != \"false\" ]; then
-            export PS4='+\${BASH_SOURCE}:\${LINENO}:\${FUNCNAME[0]}: '
-            set -x
-        fi
-
-        cd /usr/share/openquake/risklib/demos
-
-        for ini in \$(find . -name job.ini | sort); do
-            echo \"Running \$ini\"
-            for loop in \$(seq 1 $GEM_MAXLOOP); do
-                set +e
-                oq-engine --run \$ini --exports xml
-                oq_ret=\$?
-                set -e
-                if [ \$oq_ret -eq 0 ]; then
-                    break
-                elif [ \$oq_ret -ne 2 ]; then
-                    exit \$oq_ret
-                fi
-                sleep 1
-            done
-            if [ \$loop -eq $GEM_MAXLOOP ]; then
-                exit \$oq_ret
-            fi
-        done
-
-        # print the log of the last calculation
-        oq-engine --show-log -1
-
-        # Try to export a set of results AFTER the calculation
-        # automatically creates a directory called out
-        echo \"Exporting output #1\"
-        oq-engine --eo 1 /tmp/output
-        echo \"Exporting calculation #2\"
-        oq-engine --eos 2 /tmp/out/eos_2
-
-        for demo_dir in \$(find . -type d | sort); do
-            if [ -f \$demo_dir/job_hazard.ini ]; then
-            cd \$demo_dir
-            echo \"Running \$demo_dir/job_hazard.ini\"
-            oq-engine --run-hazard job_hazard.ini
-            echo \"Running \$demo_dir/job_risk.ini\"
-            oq-engine --run-risk job_risk.ini --exports csv,xml --hazard-calculation-id -1
-            cd -
-            fi
-        done
-        python -m openquake.server.stop"
-    fi
-
-    ssh $lxc_ip "sudo -u openquake python -m openquake.server.dbserver & sleep 1 ; oq-engine --make-html-report today ; python -m openquake.server.stop"
-    scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
     scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/changelog*" "out_${BUILD_UBUVER}/"
+    scp -r "${lxc_ip}:/usr/share/doc/${GEM_DEB_PACKAGE}/README*" "out_${BUILD_UBUVER}/"
 
     trap ERR
 
@@ -624,10 +540,10 @@ celeryd_wait $GEM_MAXLOOP"
 }
 
 #
-#  deps_list <listtype> <filename> - retrieve dependencies list from debian/control
+#  deps_list <listtype> <filename> - retrieve dependencies list from debian/control and debian/rules
 #                                    to be able to install them without the package
 #      listtype    inform deps_list which control lines use to get dependencies
-#      dir         the folder containing control and rules files
+#      filename    control file used for input
 #
 deps_list() {
     local old_ifs out_list skip i d listtype="$1" control_file="$2"/control rules_file="$2"/rules
@@ -824,6 +740,7 @@ devtest_run () {
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
+
     set +e
     _devtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
@@ -831,14 +748,8 @@ devtest_run () {
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/devtest.history"
 
     sudo $LXC_TERM -n $lxc_name
-
-    # NOTE: pylint returns errors too frequently to consider them a critical event
-    if pylint --rcfile pylintrc -f parseable openquake > pylint.txt ; then
-        echo "pylint exits without errors"
-    else
-        echo "WARNING: pylint exits with $? value"
-    fi
     set -e
+
     if [ -f /tmp/packager.eph.$$.log ]; then
         rm /tmp/packager.eph.$$.log
     fi
@@ -923,6 +834,7 @@ builddoc_run () {
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
     _wait_ssh $lxc_ip
+
     set +e
     _builddoc_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
@@ -930,14 +842,15 @@ builddoc_run () {
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/builddoc.history"
 
     sudo $LXC_TERM -n $lxc_name
-
     set -e
+
     if [ -f /tmp/packager.eph.$$.log ]; then
         rm /tmp/packager.eph.$$.log
     fi
 
     return $inner_ret
 }
+
 
 #
 #  pkgtest_run <branch> - main function of package test
@@ -1001,9 +914,6 @@ EOF
     _pkgtest_innervm_run "$lxc_ip" "$branch"
     inner_ret=$?
 
-    if [ "$GEM_USE_CELERY" ]; then
-        scp "${lxc_ip}:/tmp/celeryd.log" "out_${BUILD_UBUVER}/celeryd.log"
-    fi
     scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
 
     sudo $LXC_TERM -n $lxc_name
@@ -1056,6 +966,9 @@ EOF
         echo "The package is saved here: ${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.${commit}"
     fi
 
+    # TODO
+    # app related tests (run demos)
+
     return 0
 }
 
@@ -1087,7 +1000,7 @@ while [ $# -gt 0 ]; do
             ;;
         -s|--serie)
             BUILD_UBUVER="$2"
-            if [ "$BUILD_UBUVER" != "precise" -a "$BUILD_UBUVER" != "trusty"  -a "$BUILD_UBUVER" != "xenial" ]; then
+            if [ "$BUILD_UBUVER" != "precise" -a "$BUILD_UBUVER" != "trusty" -a "$BUILD_UBUVER" != "xenial" ]; then
                 echo
                 echo "ERROR: ubuntu version '$BUILD_UBUVER' not supported"
                 echo
@@ -1150,12 +1063,6 @@ if [ $BUILD_UNSIGN -eq 1 ]; then
     DPBP_FLAG="$DPBP_FLAG -us -uc"
 fi
 
-if [ ! -d "out_${BUILD_UBUVER}" ]; then
-    mkdir "out_${BUILD_UBUVER}"
-fi
-GEM_BUILD_ROOT="build-deb"
-GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
-
 mksafedir "$GEM_BUILD_ROOT"
 mksafedir "$GEM_BUILD_SRC"
 
@@ -1178,12 +1085,12 @@ fi
 
 cd "$GEM_BUILD_SRC"
 
-# version info from openquake/engine/__init__.py
-ini_vers="$(cat openquake/engine/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
+# version info from openquake/risklib/__init__.py
+ini_vers="$(cat openquake/risklib/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
 ini_maj="$(echo "$ini_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
 ini_min="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
 ini_bfx="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
-ini_suf="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(.*\)/\1/gp')"
+ini_suf="" # currently not included into the version array structure
 # echo "ini [] [$ini_maj] [$ini_min] [$ini_bfx] [$ini_suf]"
 
 # version info from debian/changelog
@@ -1242,8 +1149,6 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     )  > debian/changelog
     cat debian/changelog.orig | sed -n "/^$GEM_DEB_PACKAGE/,\$ p" >> debian/changelog
     rm debian/changelog.orig
-
-    sed -i "s/^__version__[  ]*=.*/__version__ = '${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}~dev${dt}-${hash}'/g" openquake/engine/__init__.py
 else
     cp debian/changelog debian/changelog.orig
     cat debian/changelog.orig | sed "1 s/${BUILD_UBUVER_REFERENCE}/${BUILD_UBUVER}/g" > debian/changelog
@@ -1262,7 +1167,18 @@ if [  "$ini_maj" != "$pkg_maj" -o \
     read a
 fi
 
-sed -i "s/^\([ ${TB}]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__init__.py
+# the following unexecuted block of code is a flag to identify where and how modifications can
+# be performed from sources to package
+if [ 0 -eq 1 ]; then
+    sed -i "s/^\([ 	]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__init__.py
+
+    # mods pre-packaging
+    mv LICENSE         openquake
+    mv README.md       openquake/README
+    mv bin             openquake/bin
+
+    rm -rf $(find demos -mindepth 1 -maxdepth 1 | egrep -v 'demos/simple_fault_demo_hazard|demos/event_based_hazard|demos/_site_model')
+fi
 
 if [ $BUILD_ON_LXC -eq 1 ]; then
     sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
