@@ -489,7 +489,8 @@ def get_result(request, result_id):
         export_type, DEFAULT_CONTENT_TYPE)
     try:
         fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
-        data = open(exported).read()
+        # 'b' is needed when running the WebUI on Windows
+        data = open(exported, 'rb').read()
         response = HttpResponse(data, content_type=content_type)
         response['Content-Length'] = len(data)
         response['Content-Disposition'] = 'attachment; filename=%s' % fname
