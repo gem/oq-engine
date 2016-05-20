@@ -646,7 +646,7 @@ class CompositionInfo(object):
                 indices = numpy.arange(idx, idx + len(rlzs))
                 idx += len(indices)
                 assoc._add_realizations(indices, smodel, rlzs)
-            else:
+            elif trts:
                 logging.warn('No realizations for %s, %s',
                              '_'.join(smodel.path), smodel.name)
         # NB: realizations could be filtered away by logic tree reduction
