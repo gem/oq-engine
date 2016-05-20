@@ -180,9 +180,11 @@ class ProbabilityMap(dict):
         self_sids = set(self)
         other_sids = set(other)
         for sid in self_sids & other_sids:
-            self[sid] = self[sid] | other[sid]
+            if other[sid]:  # this check is very important for performance
+                self[sid] = self[sid] | other[sid]
         for sid in other_sids - self_sids:
-            self[sid] = other[sid]
+            if other[sid]:  # this check is very important for performance
+                self[sid] = other[sid]
         return self
 
     def __mul__(self, other):
