@@ -100,8 +100,7 @@ class ProbabilityCurve(object):
         if other == 0:
             return self
         else:
-            return self.__class__(
-                1. - (1. - self.array) * (1. - other.array))
+            return self.__class__(1. - (1. - self.array) * (1. - other.array))
     __ror__ = __or__
 
     def __mul__(self, other):
@@ -117,7 +116,7 @@ class ProbabilityCurve(object):
         return self.__class__(1. - self.array)
 
     def __nonzero__(self):
-        return bool(self.array.sum())
+        return bool(self.array.any())
 
     def __repr__(self):
         return '<ProbabilityCurve\n%s>' % self.array
@@ -171,10 +170,16 @@ class ProbabilityMap(dict):
         sids = set(self) | set(other)
         dic = self.__class__()
         for sid in sids:
-            curve = self.get(sid, 0) | other.get(sid, 0)
-            if curve:
-                dic[sid] = curve
+            dic[sid] = self.get(sid, 0) | other.get(sid, 0)
         return dic
+
+    # faster than ___add__
+    def __iadd__(self, other):
+        for sid in self:
+            self[sid] = self[sid] | other.get(sid, 0)
+        for sid in set(other) - set(self):
+            self[sid] = other[sid]
+        return self
 
     def __mul__(self, other):
         sids = set(self) | set(other)
