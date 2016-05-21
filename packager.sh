@@ -569,7 +569,7 @@ celeryd_wait $GEM_MAXLOOP"
             set -x
         fi
 
-        cd /usr/share/openquake/risklib/demos
+        cd /usr/share/openquake/engine/demos
 
         for ini in \$(find . -name job.ini | sort); do
             echo \"Running \$ini\"
