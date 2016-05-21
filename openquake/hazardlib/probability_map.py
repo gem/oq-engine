@@ -166,25 +166,21 @@ class ProbabilityMap(dict):
             out[sid] = ProbabilityCurve(array)
         return out
 
-    def __add__(self, other):
-        sids = set(self) | set(other)
-        dic = self.__class__()
-        for sid in sids:
-            curve = self.get(sid, 0) | other.get(sid, 0)
-            if curve:  # this check is very important for performance
-                dic[sid] = curve
-        return dic
-
-    # faster than ___add__
     def __iadd__(self, other):
         self_sids = set(self)
-        # this check is very important for performance
-        other_sids = set(sid for sid in other if other[sid])
+        other_sids = set(other)
         for sid in self_sids & other_sids:
             self[sid] = self[sid] | other[sid]
         for sid in other_sids - self_sids:
             self[sid] = other[sid]
         return self
+
+    def __add__(self, other):
+        new = self.__class__(self)
+        new += other
+        return new
+
+    __radd__ = __add__
 
     def __mul__(self, other):
         sids = set(self) | set(other)
@@ -192,7 +188,11 @@ class ProbabilityMap(dict):
                               for sid in sids)
 
     def __invert__(self):
-        return self.__class__((sid, ~self[sid]) for sid in self)
+        new = self.__class__()
+        for sid in self:
+            if (self[sid].array != 1.).any():
+                new[sid] = ~self[sid]  # store only nonzero probabilities
+        return new
 
     def __toh5__(self):
         # converts to an array of shape (num_sids, num_levels, num_gsims)
