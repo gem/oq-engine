@@ -836,6 +836,7 @@ class SourceManager(object):
         self.monitor = monitor
         self.filter_sources = filter_sources
         self.num_tiles = num_tiles
+        self.rlzs_assoc = csm.info.get_rlzs_assoc()
         self.split_map = {}  # trt_model_id, source_id -> split sources
         self.source_chunks = []
         self.infos = {}  # trt_model_id, source_id -> SourceInfo tuple
@@ -855,10 +856,10 @@ class SourceManager(object):
         logging.info('Instantiated SourceManager with maxweight=%.1f',
                      self.maxweight)
 
-    def get_sources(self, kind, etile):
+    def get_sources(self, kind, tile):
         """
         :param kind: a string 'light', 'heavy' or 'all'
-        :param etile: an :class:`openquake.hazardlib.site.FatTile` instance
+        :param tile: an :class:`openquake.hazardlib.site.FatTile` instance
         :returns: the sources of the given kind affecting the given tile
         """
         filter_mon = self.monitor('filtering sources')
@@ -868,7 +869,7 @@ class SourceManager(object):
             if self.filter_sources:
                 with filter_mon:
                     try:
-                        if src not in etile:
+                        if src not in tile:
                             continue
                     except:
                         etype, err, tb = sys.exc_info()
@@ -923,19 +924,15 @@ class SourceManager(object):
     def submit_sources(self, sitecol, siteidx=0):
         """
         Submit the light sources and then the (split) heavy sources.
-        Only the sources affecting the sitecol as considered. Also,
-        set the .seed attribute of each source.
+        Only the sources affecting the sitecol as considered.
         """
-        etile = FatTile(sitecol, self.maximum_distance)
-        rlzs_assoc = self.csm.info.get_rlzs_assoc()
+        tile = FatTile(sitecol, self.maximum_distance)
         for kind in ('light', 'heavy'):
             if self.filter_sources:
                 logging.info('Filtering %s sources', kind)
-            sources = list(self.get_sources(kind, etile))
+            sources = list(self.get_sources(kind, tile))
             if not sources:
                 continue
-            # set a seed for each split source; the seed is used
-            # only by the event based calculator, but it is set anyway
             for src in sources:
                 self.csm.filtered_weight += src.weight
             nblocks = 0
@@ -944,7 +941,7 @@ class SourceManager(object):
                     operator.attrgetter('weight'),
                     operator.attrgetter('trt_model_id')):
                 sent = self.tm.submit(block, sitecol, siteidx,
-                                      rlzs_assoc, self.monitor.new())
+                                      self.rlzs_assoc, self.monitor.new())
                 self.source_chunks.append(
                     (len(block), block.weight, sum(sent.values())))
                 nblocks += 1
