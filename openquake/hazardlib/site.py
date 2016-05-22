@@ -25,6 +25,7 @@ from openquake.baselib.python3compat import range
 from openquake.baselib.slots import with_slots
 from openquake.baselib.general import split_in_blocks
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.utils import cross_idl
 
 
 @with_slots
@@ -486,3 +487,60 @@ for name in 'vs30 vs30measured z1pt0 z2pt5 backarc lons lats sids'.split():
         lambda fsc, name=name: _extract_site_param(fsc, name),
         doc='Extract %s array from FilteredSiteCollection' % name)
     setattr(FilteredSiteCollection, name, prop)
+
+
+class FatTile(object):
+    """
+    Consider a site collection, find its bounding box, enlarge the box by
+    the angular maximum distance for the different tectonic region types and
+    check if a source is contained inside it.
+    """
+    KM_ONE_DEGREE = 111.32  # km per 1 degree
+
+    def __init__(self, sitecol, maximum_distance):
+        self.sitecol = sitecol
+        self.maximum_distance = maximum_distance
+        trts = set(maximum_distance)
+
+        # angular distance per TRT
+        self.delta = {trt: maximum_distance[trt] / self.KM_ONE_DEGREE
+                      for trt in trts}
+
+        # determine the bounding box by taking into account the IDL
+        min_lon, max_lon = self.sitecol.lons.min(), self.sitecol.lons.max()
+        min_lat, max_lat = self.sitecol.lats.min(), self.sitecol.lats.max()
+        self.cross_idl = cross_idl(min_lon, max_lon)
+        if self.cross_idl:  # cross the International Date Line
+            min_lon, max_lon = max_lon, min_lon + 360
+
+        self.min_lon = {trt: min_lon - self.delta[trt] for trt in trts}
+        self.max_lon = {trt: max_lon + self.delta[trt] for trt in trts}
+        self.min_lat = {trt: min_lat - self.delta[trt] for trt in trts}
+        self.max_lat = {trt: max_lat + self.delta[trt] for trt in trts}
+
+    def contains(self, lon, lat, trt):
+        """
+        Check if `lon` and `lat` are within the FatTile for the given `trt`.
+        """
+        if self.cross_idl and lon < 0:  # special case
+            within_lon = self.min_lon[trt] <= lon + 360 <= self.max_lon[trt]
+        else:  # regular case
+            within_lon = self.min_lon[trt] <= lon <= self.max_lon[trt]
+        within_lat = self.min_lat[trt] <= lat <= self.max_lat[trt]
+        return within_lon and within_lat
+
+    def __contains__(self, src):
+        trt = src.tectonic_region_type
+        if src.__class__.__name__ == 'PointSource':
+            return self.contains(src.location.x, src.location.y, trt)
+        else:
+            return src.filter_sites_by_distance_to_source(
+                self.maximum_distance[trt], self.sitecol) is not None
+
+    def __repr__(self):
+        boundaries = [
+            '%s: %d <= lon <= %d, %d <= lat <= %d' % (
+                trt, self.min_lon[trt], self.max_lon[trt],
+                self.min_lat[trt], self.max_lat[trt])
+            for trt in self.maximum_distance]
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(boundaries))

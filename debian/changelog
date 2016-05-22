@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a FatTile class to filter efficiently point sources
   * Fixed the string representation of GSIM instances: this solves a serious
     bug in the GMPETable
   * Removed the rupture_site_filter where it was not used

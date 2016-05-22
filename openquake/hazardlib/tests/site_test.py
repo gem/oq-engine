@@ -22,10 +22,18 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.hazardlib.site import \
-    Site, SiteCollection, FilteredSiteCollection
-from openquake.hazardlib.geo.point import Point
+    Site, SiteCollection, FilteredSiteCollection, FatTile
+from openquake.hazardlib.source.point import PointSource
+from openquake.hazardlib.geo import Point
 
 assert_eq = numpy.testing.assert_equal
+
+
+def point_source(lon, lat):
+    src = object.__new__(PointSource)
+    src.tectonic_region_type = 'Active Shallow Crust'
+    src.location = Point(lon, lat, 0)
+    return src
 
 
 class SiteModelParam(object):
@@ -297,5 +305,34 @@ class SitePickleTestCase(unittest.TestCase):
         point = Point(1, 2, 3)
         site1 = Site(point, 760.0, True, 100.0, 5.0)
         site2 = pickle.loads(pickle.dumps(site1))
-
         self.assertEqual(site1, site2)
+
+
+class FatTileTestCase(unittest.TestCase):
+    def test_normal(self):
+        lons = [10, -1.2]
+        lats = [20, -3.4]
+        maximum_distance = {'Active Shallow Crust': 200}
+        sitecol = SiteCollection.from_points(
+            lons, lats, range(2), SiteModelParam())
+        tile = FatTile(sitecol, maximum_distance)
+        self.assertEqual(
+            repr(tile), '<FatTile\nActive Shallow Crust: '
+            '-2 <= lon <= 11, -5 <= lat <= 21>')
+        src = point_source(1, 10)
+        self.assertTrue(src in tile)
+
+    def test_cross_idl(self):
+        lons = [-179.2, 178.0]
+        lats = [3.0, 4.0]
+        maximum_distance = {'Active Shallow Crust': 200}
+        sitecol = SiteCollection.from_points(
+            lons, lats, range(2), SiteModelParam())
+        tile = FatTile(sitecol, maximum_distance)
+        self.assertEqual(
+            repr(tile), '<FatTile\nActive Shallow Crust: '
+            '176 <= lon <= 182, 1 <= lat <= 5>')
+        src = point_source(-179.3, 3.5)
+        self.assertTrue(src in tile)
+        src = point_source(178.2, 3.5)
+        self.assertTrue(src in tile)
