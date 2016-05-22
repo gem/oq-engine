@@ -27,11 +27,11 @@ import random
 from xml.etree import ElementTree as etree
 
 import numpy
-import shapely
 
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import (
     AccumDict, groupby, block_splitter, group_array)
+from openquake.hazardlib.site import FatTile
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import logictree, sourceconverter, parallel, valid
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
@@ -820,24 +820,6 @@ source_chunk_dt = numpy.dtype([
     ('sent', numpy.int32)])
 
 
-class ExpandedTile(object):
-    """
-    The convex hull of a tile expanded by maximum_distance
-    kilometers, depending on the TRT.
-    """
-    def __init__(self, sitecol, maximum_distance):
-        self.sitecol = sitecol
-        hull = sitecol.mesh.get_convex_hull()
-        self.hull = {}
-        for trt in maximum_distance:
-            self.hull[trt] = hull.dilate(maximum_distance[trt])._polygon2d
-
-    def contains(self, src):
-        loc = src.location
-        hull = self.hull[src.tectonic_region_type]
-        return hull.contains(shapely.geometry.Point(loc.x, loc.y))
-
-
 class SourceManager(object):
     """
     Manager associated to a CompositeSourceModel instance.
@@ -876,25 +858,18 @@ class SourceManager(object):
     def get_sources(self, kind, etile):
         """
         :param kind: a string 'light', 'heavy' or 'all'
-        :param etile: an ExpandedTile instance
-        :returns: the sources of the given kind affecting the given sitecol
+        :param etile: an :class:`openquake.hazardlib.site.FatTile` instance
+        :returns: the sources of the given kind affecting the given tile
         """
         filter_mon = self.monitor('filtering sources')
         split_mon = self.monitor('splitting sources')
         for src in self.csm.get_sources(kind):
             filter_time = split_time = 0
             if self.filter_sources:
-                max_dist = self.maximum_distance[src.tectonic_region_type]
                 with filter_mon:
                     try:
-                        # notice that AreaSource is a subclass of PointSource
-                        if (src.__class__.__name__ == 'PointSource' and not
-                                etile.contains(src)):  # skip point sources
+                        if src not in etile:
                             continue
-                        else:
-                            if src.filter_sites_by_distance_to_source(
-                                    max_dist, etile.sitecol) is None:
-                                continue
                     except:
                         etype, err, tb = sys.exc_info()
                         msg = 'An error occurred with source id=%s: %s'
@@ -951,7 +926,7 @@ class SourceManager(object):
         Only the sources affecting the sitecol as considered. Also,
         set the .seed attribute of each source.
         """
-        etile = ExpandedTile(sitecol, self.maximum_distance)
+        etile = FatTile(sitecol, self.maximum_distance)
         rlzs_assoc = self.csm.info.get_rlzs_assoc()
         for kind in ('light', 'heavy'):
             if self.filter_sources:
