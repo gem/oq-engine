@@ -258,9 +258,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 oq.asset_correlation)
             logging.info('Generated %s epsilons', eps.shape)
 
-        # ugly: fix the minimum_intensity dictionary, should go before
-        event_based.fix_minimum_intensity(oq.minimum_intensity, oq.imtls)
-
         # preparing empty datasets
         loss_types = self.riskmodel.loss_types
         self.C = self.oqparam.loss_curve_resolution
@@ -306,17 +303,29 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if rlz_ids:
             self.rlzs_assoc = self.rlzs_assoc.extract(rlz_ids)
 
-        riskinputs = self.riskmodel.build_inputs_from_ruptures(
-            self.sitecol.complete, all_ruptures, oq.truncation_level,
-            correl_model, oq.minimum_intensity, eps, oq.concurrent_tasks or 1)
-        # NB: I am using generators so that the tasks are submitted one at
-        # the time, without keeping all of the arguments in memory
-        return starmap(
-            self.core_task.__func__,
-            ((riskinput, self.riskmodel, self.rlzs_assoc,
-              self.assetcol, self.monitor.new('task'))
-             for riskinput in riskinputs)).reduce(
-                     agg=self.agg, posthook=self.save_data_transfer)
+        if not oq.minimum_intensity:
+            # infer it from the risk models if not directly set in job.ini
+            oq.minimum_intensity = self.riskmodel.get_min_iml()
+        min_iml = event_based.fix_minimum_intensity(
+            oq.minimum_intensity, oq.imtls)
+        if min_iml.sum() == 0:
+            logging.warn('The GMFs are not filtered: '
+                         'you may want to set a minimum_intensity')
+        else:
+            logging.info('minimum_intensity=%s', oq.minimum_intensity)
+
+        with self.monitor('building riskinputs', autoflush=True):
+            riskinputs = self.riskmodel.build_inputs_from_ruptures(
+                self.sitecol.complete, all_ruptures, oq.truncation_level,
+                correl_model, min_iml, eps, oq.concurrent_tasks or 1)
+            # NB: I am using generators so that the tasks are submitted one at
+            # the time, without keeping all of the arguments in memory
+            tm = starmap(
+                self.core_task.__func__,
+                ((riskinput, self.riskmodel, self.rlzs_assoc,
+                  self.assetcol, self.monitor.new('task'))
+                 for riskinput in riskinputs))
+        return tm.reduce(agg=self.agg, posthook=self.save_data_transfer)
 
     def agg(self, acc, result):
         """
@@ -461,7 +470,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if len(rlzs) > 1:
             self.Q1 = len(self.oqparam.quantile_loss_curves) + 1
             with self.monitor('computing stats'):
-                self.compute_store_stats(rlzs, builder)
+                if 'rcurves-rlzs' in self.datastore:
+                    self.compute_store_stats(rlzs, builder)
+                if oq.avg_losses:  # stats for avg_losses
+                    stats = scientific.SimpleStats(
+                        rlzs, oq.quantile_loss_curves)
+                    stats.compute_and_store('avg_losses', self.datastore)
+
+        self.datastore.hdf5.flush()
 
     def build_agg_curve_and_stats(self, builder):
         """
@@ -494,9 +510,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     # ################### methods to compute statistics  #################### #
 
     def _collect_all_data(self):
-        # return a list of list of outputs
-        if 'rcurves-rlzs' not in self.datastore:
-            return []
+        # called only if 'rcurves-rlzs' in dstore; return a list of outputs
         all_data = []
         assets = self.datastore['asset_refs'].value[self.assetcol.array['idx']]
         rlzs = self.rlzs_assoc.realizations
@@ -567,12 +581,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if oq.conditional_loss_poes:
             self.datastore['loss_maps-stats'] = loss_maps
 
-        if oq.avg_losses:  # stats for avg_losses
-            stats = scientific.SimpleStats(rlzs, oq.quantile_loss_curves)
-            stats.compute('avg_losses-rlzs', self.datastore)
-
-        self.datastore.hdf5.flush()
-
     def build_agg_curve_stats(self, builder, agg_curve, loss_curve_dt):
         """
         Build and save `agg_curve-stats` in the HDF5 file.
@@ -584,7 +592,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         :param loss_curve_dt:
             numpy dtype for loss curves
         """
-        rlzs = self.datastore['rlzs_assoc'].realizations
+        rlzs = self.datastore['csm_info'].get_rlzs_assoc().realizations
         Q1 = len(builder.mean_quantiles)
         agg_curve_stats = numpy.zeros(Q1, loss_curve_dt)
         for l, loss_type in enumerate(self.riskmodel.loss_types):

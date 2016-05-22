@@ -200,7 +200,7 @@ class OqParam(valid.ParamSet):
                                  'must be no `gsim` key')
             path = os.path.join(
                 self.base_path, self.inputs['gsim_logic_tree'])
-            self._gsims_by_trt = logictree.GsimLogicTree(path, []).values
+            self._gsims_by_trt = logictree.GsimLogicTree(path, ['*']).values
             for gsims in self._gsims_by_trt.values():
                 self.check_gsims(gsims)
         elif self.gsim is not None:

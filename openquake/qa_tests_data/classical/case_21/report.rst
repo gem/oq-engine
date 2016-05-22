@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 21
 =================================
 
-gem-tstation:/home/michele/ssd/calc_12626.hdf5 updated Wed May  4 04:54:57 2016
+gem-tstation:/home/michele/ssd/calc_16388.hdf5 updated Wed May 18 18:19:09 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  106                
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -71,37 +71,37 @@ b1_mfd3_mid_dip_dip60  0.040  `source_model.xml <source_model.xml>`_ trivial(1) 
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ============== ========= ========== ==========
-trt_id gsims          distances siteparams ruptparams
-====== ============== ========= ========== ==========
-0      SadighEtAl1997 rrup      vs30       rake mag  
-1      SadighEtAl1997 rrup      vs30       rake mag  
-2      SadighEtAl1997 rrup      vs30       rake mag  
-3      SadighEtAl1997 rrup      vs30       rake mag  
-4      SadighEtAl1997 rrup      vs30       rake mag  
-5      SadighEtAl1997 rrup      vs30       rake mag  
-6      SadighEtAl1997 rrup      vs30       rake mag  
-7      SadighEtAl1997 rrup      vs30       rake mag  
-8      SadighEtAl1997 rrup      vs30       rake mag  
-9      SadighEtAl1997 rrup      vs30       rake mag  
-10     SadighEtAl1997 rrup      vs30       rake mag  
-11     SadighEtAl1997 rrup      vs30       rake mag  
-12     SadighEtAl1997 rrup      vs30       rake mag  
-13     SadighEtAl1997 rrup      vs30       rake mag  
-14     SadighEtAl1997 rrup      vs30       rake mag  
-15     SadighEtAl1997 rrup      vs30       rake mag  
-16     SadighEtAl1997 rrup      vs30       rake mag  
-17     SadighEtAl1997 rrup      vs30       rake mag  
-18     SadighEtAl1997 rrup      vs30       rake mag  
-19     SadighEtAl1997 rrup      vs30       rake mag  
-20     SadighEtAl1997 rrup      vs30       rake mag  
-21     SadighEtAl1997 rrup      vs30       rake mag  
-22     SadighEtAl1997 rrup      vs30       rake mag  
-23     SadighEtAl1997 rrup      vs30       rake mag  
-24     SadighEtAl1997 rrup      vs30       rake mag  
-25     SadighEtAl1997 rrup      vs30       rake mag  
-26     SadighEtAl1997 rrup      vs30       rake mag  
-====== ============== ========= ========== ==========
+====== ================ ========= ========== ==========
+trt_id gsims            distances siteparams ruptparams
+====== ================ ========= ========== ==========
+0      SadighEtAl1997() rrup      vs30       rake mag  
+1      SadighEtAl1997() rrup      vs30       rake mag  
+2      SadighEtAl1997() rrup      vs30       rake mag  
+3      SadighEtAl1997() rrup      vs30       rake mag  
+4      SadighEtAl1997() rrup      vs30       rake mag  
+5      SadighEtAl1997() rrup      vs30       rake mag  
+6      SadighEtAl1997() rrup      vs30       rake mag  
+7      SadighEtAl1997() rrup      vs30       rake mag  
+8      SadighEtAl1997() rrup      vs30       rake mag  
+9      SadighEtAl1997() rrup      vs30       rake mag  
+10     SadighEtAl1997() rrup      vs30       rake mag  
+11     SadighEtAl1997() rrup      vs30       rake mag  
+12     SadighEtAl1997() rrup      vs30       rake mag  
+13     SadighEtAl1997() rrup      vs30       rake mag  
+14     SadighEtAl1997() rrup      vs30       rake mag  
+15     SadighEtAl1997() rrup      vs30       rake mag  
+16     SadighEtAl1997() rrup      vs30       rake mag  
+17     SadighEtAl1997() rrup      vs30       rake mag  
+18     SadighEtAl1997() rrup      vs30       rake mag  
+19     SadighEtAl1997() rrup      vs30       rake mag  
+20     SadighEtAl1997() rrup      vs30       rake mag  
+21     SadighEtAl1997() rrup      vs30       rake mag  
+22     SadighEtAl1997() rrup      vs30       rake mag  
+23     SadighEtAl1997() rrup      vs30       rake mag  
+24     SadighEtAl1997() rrup      vs30       rake mag  
+25     SadighEtAl1997() rrup      vs30       rake mag  
+26     SadighEtAl1997() rrup      vs30       rake mag  
+====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -109,33 +109,33 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=27, rlzs=27)
-  0,SadighEtAl1997: ['<0,b1_mfd1_high_dip_dip30,Sad1997,w=0.0132>']
-  1,SadighEtAl1997: ['<1,b1_mfd1_high_dip_dip45,Sad1997,w=0.0396>']
-  2,SadighEtAl1997: ['<2,b1_mfd1_high_dip_dip60,Sad1997,w=0.0132>']
-  3,SadighEtAl1997: ['<3,b1_mfd1_low_dip_dip30,Sad1997,w=0.0132>']
-  4,SadighEtAl1997: ['<4,b1_mfd1_low_dip_dip45,Sad1997,w=0.0396>']
-  5,SadighEtAl1997: ['<5,b1_mfd1_low_dip_dip60,Sad1997,w=0.0132>']
-  6,SadighEtAl1997: ['<6,b1_mfd1_mid_dip_dip30,Sad1997,w=0.0396>']
-  7,SadighEtAl1997: ['<7,b1_mfd1_mid_dip_dip45,Sad1997,w=0.1188>']
-  8,SadighEtAl1997: ['<8,b1_mfd1_mid_dip_dip60,Sad1997,w=0.0396>']
-  9,SadighEtAl1997: ['<9,b1_mfd2_high_dip_dip30,Sad1997,w=0.0136>']
-  10,SadighEtAl1997: ['<10,b1_mfd2_high_dip_dip45,Sad1997,w=0.0408>']
-  11,SadighEtAl1997: ['<11,b1_mfd2_high_dip_dip60,Sad1997,w=0.0136>']
-  12,SadighEtAl1997: ['<12,b1_mfd2_low_dip_dip30,Sad1997,w=0.0136>']
-  13,SadighEtAl1997: ['<13,b1_mfd2_low_dip_dip45,Sad1997,w=0.0408>']
-  14,SadighEtAl1997: ['<14,b1_mfd2_low_dip_dip60,Sad1997,w=0.0136>']
-  15,SadighEtAl1997: ['<15,b1_mfd2_mid_dip_dip30,Sad1997,w=0.0408>']
-  16,SadighEtAl1997: ['<16,b1_mfd2_mid_dip_dip45,Sad1997,w=0.1224>']
-  17,SadighEtAl1997: ['<17,b1_mfd2_mid_dip_dip60,Sad1997,w=0.0408>']
-  18,SadighEtAl1997: ['<18,b1_mfd3_high_dip_dip30,Sad1997,w=0.0132>']
-  19,SadighEtAl1997: ['<19,b1_mfd3_high_dip_dip45,Sad1997,w=0.0396>']
-  20,SadighEtAl1997: ['<20,b1_mfd3_high_dip_dip60,Sad1997,w=0.0132>']
-  21,SadighEtAl1997: ['<21,b1_mfd3_low_dip_dip30,Sad1997,w=0.0132>']
-  22,SadighEtAl1997: ['<22,b1_mfd3_low_dip_dip45,Sad1997,w=0.0396>']
-  23,SadighEtAl1997: ['<23,b1_mfd3_low_dip_dip60,Sad1997,w=0.0132>']
-  24,SadighEtAl1997: ['<24,b1_mfd3_mid_dip_dip30,Sad1997,w=0.0396>']
-  25,SadighEtAl1997: ['<25,b1_mfd3_mid_dip_dip45,Sad1997,w=0.1188>']
-  26,SadighEtAl1997: ['<26,b1_mfd3_mid_dip_dip60,Sad1997,w=0.0396>']>
+  0,SadighEtAl1997(): ['<0,b1_mfd1_high_dip_dip30,Sad1997,w=0.0131999998793>']
+  1,SadighEtAl1997(): ['<1,b1_mfd1_high_dip_dip45,Sad1997,w=0.0395999996379>']
+  2,SadighEtAl1997(): ['<2,b1_mfd1_high_dip_dip60,Sad1997,w=0.0131999998793>']
+  3,SadighEtAl1997(): ['<3,b1_mfd1_low_dip_dip30,Sad1997,w=0.0131999998793>']
+  4,SadighEtAl1997(): ['<4,b1_mfd1_low_dip_dip45,Sad1997,w=0.0395999996379>']
+  5,SadighEtAl1997(): ['<5,b1_mfd1_low_dip_dip60,Sad1997,w=0.0131999998793>']
+  6,SadighEtAl1997(): ['<6,b1_mfd1_mid_dip_dip30,Sad1997,w=0.0395999996379>']
+  7,SadighEtAl1997(): ['<7,b1_mfd1_mid_dip_dip45,Sad1997,w=0.118799998914>']
+  8,SadighEtAl1997(): ['<8,b1_mfd1_mid_dip_dip60,Sad1997,w=0.0395999996379>']
+  9,SadighEtAl1997(): ['<9,b1_mfd2_high_dip_dip30,Sad1997,w=0.0136000001296>']
+  10,SadighEtAl1997(): ['<10,b1_mfd2_high_dip_dip45,Sad1997,w=0.0408000013202>']
+  11,SadighEtAl1997(): ['<11,b1_mfd2_high_dip_dip60,Sad1997,w=0.0136000001296>']
+  12,SadighEtAl1997(): ['<12,b1_mfd2_low_dip_dip30,Sad1997,w=0.0136000001296>']
+  13,SadighEtAl1997(): ['<13,b1_mfd2_low_dip_dip45,Sad1997,w=0.0408000013202>']
+  14,SadighEtAl1997(): ['<14,b1_mfd2_low_dip_dip60,Sad1997,w=0.0136000001296>']
+  15,SadighEtAl1997(): ['<15,b1_mfd2_mid_dip_dip30,Sad1997,w=0.0408000013202>']
+  16,SadighEtAl1997(): ['<16,b1_mfd2_mid_dip_dip45,Sad1997,w=0.122400000235>']
+  17,SadighEtAl1997(): ['<17,b1_mfd2_mid_dip_dip60,Sad1997,w=0.0408000013202>']
+  18,SadighEtAl1997(): ['<18,b1_mfd3_high_dip_dip30,Sad1997,w=0.0131999998793>']
+  19,SadighEtAl1997(): ['<19,b1_mfd3_high_dip_dip45,Sad1997,w=0.0395999996379>']
+  20,SadighEtAl1997(): ['<20,b1_mfd3_high_dip_dip60,Sad1997,w=0.0131999998793>']
+  21,SadighEtAl1997(): ['<21,b1_mfd3_low_dip_dip30,Sad1997,w=0.0131999998793>']
+  22,SadighEtAl1997(): ['<22,b1_mfd3_low_dip_dip45,Sad1997,w=0.0395999996379>']
+  23,SadighEtAl1997(): ['<23,b1_mfd3_low_dip_dip60,Sad1997,w=0.0131999998793>']
+  24,SadighEtAl1997(): ['<24,b1_mfd3_mid_dip_dip30,Sad1997,w=0.0395999996379>']
+  25,SadighEtAl1997(): ['<25,b1_mfd3_mid_dip_dip45,Sad1997,w=0.118799998914>']
+  26,SadighEtAl1997(): ['<26,b1_mfd3_mid_dip_dip60,Sad1997,w=0.0395999996379>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -181,14 +181,14 @@ filtered_weight 8,175
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 2525          
-count_eff_ruptures_num_tasks             81            
-count_eff_ruptures_sent.monitor          183627        
-count_eff_ruptures_sent.rlzs_assoc       3895614       
-count_eff_ruptures_sent.sitecol          35397         
-count_eff_ruptures_sent.siteidx          405           
-count_eff_ruptures_sent.sources          10409382      
-count_eff_ruptures_tot_received          204525        
+count_eff_ruptures_max_received_per_task 2526          
+count_eff_ruptures_num_tasks             46            
+count_eff_ruptures_sent.monitor          104282        
+count_eff_ruptures_sent.rlzs_assoc       1866772       
+count_eff_ruptures_sent.sitecol          20102         
+count_eff_ruptures_sent.siteidx          230           
+count_eff_ruptures_sent.sources          53461         
+count_eff_ruptures_tot_received          116159        
 hazard.input_weight                      8175.0        
 hazard.n_imts                            1             
 hazard.n_levels                          4.0           
@@ -204,27 +204,35 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-12           SFLT2     SimpleFaultSource 384    384       0.002       0.091      0.0      
-0            SFLT2     SimpleFaultSource 384    384       0.002       0.066      0.0      
-21           SFLT2     SimpleFaultSource 384    384       0.002       0.065      0.0      
-15           SFLT2     SimpleFaultSource 384    384       0.002       0.065      0.0      
-6            SFLT2     SimpleFaultSource 384    384       0.002       0.065      0.0      
-3            SFLT2     SimpleFaultSource 384    384       0.002       0.065      0.0      
-18           SFLT2     SimpleFaultSource 384    384       0.002       0.065      0.0      
-9            SFLT2     SimpleFaultSource 384    384       0.002       0.064      0.0      
-24           SFLT2     SimpleFaultSource 384    384       0.002       0.064      0.0      
-0            SFLT1     SimpleFaultSource 60     1         0.002       0.0        0.0      
-26           SFLT1     SimpleFaultSource 132    1         0.002       0.0        0.0      
-26           SFLT2     SimpleFaultSource 89     1         0.002       0.0        0.0      
-1            SFLT1     SimpleFaultSource 60     1         0.002       0.0        0.0      
-4            SFLT2     SimpleFaultSource 148    1         0.002       0.0        0.0      
-10           SFLT2     SimpleFaultSource 148    1         0.002       0.0        0.0      
-9            SFLT1     SimpleFaultSource 25     1         0.002       0.0        0.0      
-15           SFLT1     SimpleFaultSource 27     1         0.002       0.0        0.0      
-20           SFLT1     SimpleFaultSource 99     1         0.002       0.0        0.0      
+0            SFLT1     SimpleFaultSource 60     1         0.001       0.0        0.0      
 2            SFLT2     SimpleFaultSource 89     1         0.001       0.0        0.0      
-5            SFLT2     SimpleFaultSource 89     1         0.001       0.0        0.0      
+3            SFLT1     SimpleFaultSource 150    1         0.001       0.0        0.0      
+4            SFLT1     SimpleFaultSource 150    1         0.001       0.0        0.0      
+6            SFLT1     SimpleFaultSource 90     1         0.001       0.0        0.0      
+7            SFLT2     SimpleFaultSource 148    1         0.001       0.0        0.0      
+11           SFLT1     SimpleFaultSource 25     1         0.001       0.0        0.0      
+9            SFLT2     SimpleFaultSource 384    1         0.001       0.0        0.0      
+0            SFLT2     SimpleFaultSource 384    1         0.001       0.0        0.0      
+17           SFLT1     SimpleFaultSource 27     1         0.001       0.0        0.0      
+13           SFLT1     SimpleFaultSource 81     1         0.001       0.0        0.0      
+2            SFLT1     SimpleFaultSource 60     1         0.001       0.0        0.0      
+15           SFLT1     SimpleFaultSource 27     1         0.001       0.0        0.0      
+16           SFLT2     SimpleFaultSource 148    1         0.001       0.0        0.0      
+6            SFLT2     SimpleFaultSource 384    1         0.001       0.0        0.0      
+11           SFLT2     SimpleFaultSource 89     1         0.001       0.0        0.0      
+20           SFLT1     SimpleFaultSource 99     1         0.001       0.0        0.0      
+1            SFLT2     SimpleFaultSource 148    1         0.001       0.0        0.0      
+18           SFLT2     SimpleFaultSource 384    1         0.001       0.0        0.0      
+1            SFLT1     SimpleFaultSource 60     1         0.001       0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+================= =========== ========== ========= ======
+source_class      filter_time split_time calc_time counts
+================= =========== ========== ========= ======
+SimpleFaultSource 0.060       0.0        0.0       54    
+================= =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
@@ -235,12 +243,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               1.321     0.0       1     
-splitting sources              0.610     0.0       9     
-reading composite source model 0.579     0.0       1     
-filtering sources              0.083     0.0       54    
-total count_eff_ruptures       0.033     0.0       81    
+reading composite source model 0.412     0.0       1     
+managing sources               0.290     0.0       1     
+filtering sources              0.060     0.0       54    
+total count_eff_ruptures       0.011     0.0       46    
 store source_info              0.005     0.0       1     
-aggregate curves               0.001     0.0       81    
-reading site collection        4.101E-05 0.0       1     
+aggregate curves               8.202E-04 0.0       46    
+reading site collection        3.409E-05 0.0       1     
 ============================== ========= ========= ======

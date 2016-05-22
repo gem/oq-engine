@@ -1,7 +1,7 @@
 Demo Classical PSHA for Vancouver Schools
 =========================================
 
-gem-tstation:/home/michele/ssd/calc_12633.hdf5 updated Wed May  4 04:55:14 2016
+gem-tstation:/home/michele/ssd/calc_16395.hdf5 updated Wed May 18 18:19:21 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   50.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -46,26 +46,28 @@ b1        1.000  `vancouver_area_source.xml <vancouver_area_source.xml>`_ simple
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ========= ========= ========== ==========
-trt_id gsims     distances siteparams ruptparams
-====== ========= ========= ========== ==========
-0      GMPETable rhypo                mag       
-====== ========= ========= ========== ==========
+====== ========================================================================================================================================== ========= ========== ==========
+trt_id gsims                                                                                                                                      distances siteparams ruptparams
+====== ========================================================================================================================================== ========= ========== ==========
+0      GMPETable(gmpe_table='Wcrust_high_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_low_rhypo.hdf5') GMPETable(gmpe_table='Wcrust_med_rhypo.hdf5') rhypo                mag       
+====== ========================================================================================================================================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
 
 ::
 
-  <RlzsAssoc(size=1, rlzs=3)
-  0,GMPETable: ['<0,b1,b11,w=0.16>', '<1,b1,b12,w=0.68>', '<2,b1,b13,w=0.16>']>
+  <RlzsAssoc(size=3, rlzs=3)
+  0,GMPETable(gmpe_table='Wcrust_high_rhypo.hdf5'): ['<2,b1,b13,w=0.16>']
+  0,GMPETable(gmpe_table='Wcrust_low_rhypo.hdf5'): ['<0,b1,b11,w=0.16>']
+  0,GMPETable(gmpe_table='Wcrust_med_rhypo.hdf5'): ['<1,b1,b12,w=0.68>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
 ========================= ====== ==================== =========== ============ ======
 source_model              trt_id trt                  num_sources eff_ruptures weight
 ========================= ====== ==================== =========== ============ ======
-vancouver_area_source.xml 0      Active Shallow Crust 1           2,430        60    
+vancouver_area_source.xml 0      Active Shallow Crust 1           2430         60    
 ========================= ====== ==================== =========== ============ ======
 
 Informational data
@@ -73,8 +75,8 @@ Informational data
 ======================================== ==============
 count_eff_ruptures_max_received_per_task 162902        
 count_eff_ruptures_num_tasks             30            
-count_eff_ruptures_sent.monitor          4879404       
-count_eff_ruptures_sent.rlzs_assoc       4892322       
+count_eff_ruptures_sent.monitor          4879320       
+count_eff_ruptures_sent.rlzs_assoc       4881420       
 count_eff_ruptures_sent.sitecol          14550         
 count_eff_ruptures_sent.siteidx          150           
 count_eff_ruptures_sent.sources          40480         
@@ -94,8 +96,16 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            VICM      AreaSource   60     30        0.001       0.010      0.0      
+0            VICM      AreaSource   60     30        8.211E-04   0.007      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+============ =========== ========== ========= ======
+source_class filter_time split_time calc_time counts
+============ =========== ========== ========= ======
+AreaSource   8.211E-04   0.007      0.0       1     
+============ =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
@@ -106,12 +116,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.075     0.0       1     
-reading composite source model 0.025     0.0       1     
-total count_eff_ruptures       0.011     0.0       30    
-splitting sources              0.010     0.0       1     
+managing sources               0.070     0.0       1     
+reading composite source model 0.019     0.0       1     
+total count_eff_ruptures       0.009     0.0       30    
+splitting sources              0.007     0.0       1     
 store source_info              0.005     0.0       1     
-filtering sources              0.001     0.0       1     
-aggregate curves               5.405E-04 0.0       30    
-reading site collection        2.689E-04 0.0       1     
+filtering sources              8.211E-04 0.0       1     
+aggregate curves               6.187E-04 0.0       30    
+reading site collection        8.106E-05 0.0       1     
 ============================== ========= ========= ======

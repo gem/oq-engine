@@ -1,7 +1,7 @@
 Calculation of the ground motion fields for a scenario
 ======================================================
 
-gem-tstation:/home/michele/ssd/calc_12584.hdf5 updated Wed May  4 04:54:02 2016
+gem-tstation:/home/michele/ssd/calc_16346.hdf5 updated Wed May 18 18:18:23 2016
 
 num_sites = 11, sitecol = 834 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  3                  
 master_seed                  0                  
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -38,8 +38,8 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
-  0,ChiouYoungs2008: ['ChiouYoungs2008']>
+  <RlzsAssoc(size=1, rlzs=1)
+  0,ChiouYoungs2008(): ['<0,b_1,b1,w=1.0>']>
 
 Exposure model
 --------------
@@ -66,8 +66,8 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-reading exposure        0.006     0.0       1     
-filtering sites         0.004     0.0       1     
-computing gmfs          6.690E-04 0.0       1     
-reading site collection 5.960E-06 0.0       1     
+reading exposure        0.005     0.0       1     
+filtering sites         0.003     0.0       1     
+computing gmfs          8.528E-04 0.0       1     
+reading site collection 5.007E-06 0.0       1     
 ======================= ========= ========= ======

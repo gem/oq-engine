@@ -1,7 +1,7 @@
 classical risk
 ==============
 
-gem-tstation:/home/michele/ssd/calc_12577.hdf5 updated Wed May  4 04:54:01 2016
+gem-tstation:/home/michele/ssd/calc_16339.hdf5 updated Wed May 18 18:18:22 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -22,7 +22,7 @@ random_seed                  24
 master_seed                  0                  
 avg_losses                   False              
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -52,14 +52,14 @@ b2        0.750  `source_model_2.xml <source_model_2.xml>`_ complex(2,2)    4/4
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================================= =========== ======================= =================
-trt_id gsims                             distances   siteparams              ruptparams       
-====== ================================= =========== ======================= =================
-0      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
-1      AkkarBommer2010 ChiouYoungs2008   rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
-2      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
-3      AkkarBommer2010 ChiouYoungs2008   rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
-====== ================================= =========== ======================= =================
+====== ===================================== =========== ======================= =================
+trt_id gsims                                 distances   siteparams              ruptparams       
+====== ===================================== =========== ======================= =================
+0      BooreAtkinson2008() ChiouYoungs2008() rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+1      AkkarBommer2010() ChiouYoungs2008()   rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+2      BooreAtkinson2008() ChiouYoungs2008() rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+3      AkkarBommer2010() ChiouYoungs2008()   rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+====== ===================================== =========== ======================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -67,14 +67,14 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=8, rlzs=8)
-  0,BooreAtkinson2008: ['<0,b1,b11_b21,w=0.1125>', '<1,b1,b11_b22,w=0.075>']
-  0,ChiouYoungs2008: ['<2,b1,b12_b21,w=0.0375>', '<3,b1,b12_b22,w=0.025>']
-  1,AkkarBommer2010: ['<0,b1,b11_b21,w=0.1125>', '<2,b1,b12_b21,w=0.0375>']
-  1,ChiouYoungs2008: ['<1,b1,b11_b22,w=0.075>', '<3,b1,b12_b22,w=0.025>']
-  2,BooreAtkinson2008: ['<4,b2,b11_b21,w=0.3375>', '<5,b2,b11_b22,w=0.225>']
-  2,ChiouYoungs2008: ['<6,b2,b12_b21,w=0.1125>', '<7,b2,b12_b22,w=0.075>']
-  3,AkkarBommer2010: ['<4,b2,b11_b21,w=0.3375>', '<6,b2,b12_b21,w=0.1125>']
-  3,ChiouYoungs2008: ['<5,b2,b11_b22,w=0.225>', '<7,b2,b12_b22,w=0.075>']>
+  0,BooreAtkinson2008(): ['<0,b1,b11_b21,w=0.1125>', '<1,b1,b11_b22,w=0.075>']
+  0,ChiouYoungs2008(): ['<2,b1,b12_b21,w=0.0375>', '<3,b1,b12_b22,w=0.025>']
+  1,AkkarBommer2010(): ['<0,b1,b11_b21,w=0.1125>', '<2,b1,b12_b21,w=0.0375>']
+  1,ChiouYoungs2008(): ['<1,b1,b11_b22,w=0.075>', '<3,b1,b12_b22,w=0.025>']
+  2,BooreAtkinson2008(): ['<4,b2,b11_b21,w=0.3375>', '<5,b2,b11_b22,w=0.225>']
+  2,ChiouYoungs2008(): ['<6,b2,b12_b21,w=0.1125>', '<7,b2,b12_b22,w=0.075>']
+  3,AkkarBommer2010(): ['<4,b2,b11_b21,w=0.3375>', '<6,b2,b12_b21,w=0.1125>']
+  3,ChiouYoungs2008(): ['<5,b2,b11_b22,w=0.225>', '<7,b2,b12_b22,w=0.075>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -118,25 +118,34 @@ tax3     1.000 NaN    1   1   1         1
 
 Slowest sources
 ---------------
-============ ========= ==================== ====== ========= =========== ========== =========
-trt_model_id source_id source_class         weight split_num filter_time split_time calc_time
-============ ========= ==================== ====== ========= =========== ========== =========
-0            1         SimpleFaultSource    482    15        0.002       0.042      5.292    
-2            1         SimpleFaultSource    482    15        0.002       0.044      4.834    
-3            2         CharacteristicFaultS 1.000  1         0.001       0.0        0.039    
-1            2         SimpleFaultSource    4.000  1         0.002       0.0        0.030    
-============ ========= ==================== ====== ========= =========== ========== =========
+============ ========= ========================= ====== ========= =========== ========== =========
+trt_model_id source_id source_class              weight split_num filter_time split_time calc_time
+============ ========= ========================= ====== ========= =========== ========== =========
+0            1         SimpleFaultSource         482    15        0.002       0.030      2.527    
+2            1         SimpleFaultSource         482    15        0.001       0.029      2.072    
+3            2         CharacteristicFaultSource 1.000  1         0.001       0.0        0.030    
+1            2         SimpleFaultSource         4.000  1         0.001       0.0        0.025    
+============ ========= ========================= ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+========================= =========== ========== ========= ======
+source_class              filter_time split_time calc_time counts
+========================= =========== ========== ========= ======
+CharacteristicFaultSource 0.001       0.0        0.030     1     
+SimpleFaultSource         0.005       0.059      4.624     3     
+========================= =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
 ======================== ===== ====== ===== ===== =========
 measurement              mean  stddev min   max   num_tasks
-classical_risk.time_sec  0.067 0.036  0.012 0.115 11       
-classical_risk.memory_mb 0.129 0.116  0.016 0.340 11       
-classical.time_sec       0.345 0.151  0.037 0.541 30       
-classical.memory_mb      1.151 1.053  0.0   3.402 30       
-classical.time_sec       0.345 0.151  0.037 0.541 30       
-classical.memory_mb      1.151 1.053  0.0   3.402 30       
+classical_risk.time_sec  0.075 0.060  0.016 0.155 8        
+classical_risk.memory_mb 0.141 0.061  0.0   0.191 8        
+classical.time_sec       0.170 0.064  0.030 0.263 28       
+classical.memory_mb      0.479 0.766  0.0   1.863 28       
+classical.time_sec       0.170 0.064  0.030 0.263 28       
+classical.memory_mb      0.479 0.766  0.0   1.863 28       
 ======================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -144,23 +153,23 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total classical                10        3.402     30    
-making contexts                6.098     0.0       969   
-computing poes                 3.542     0.0       1,938 
-total classical_risk           0.732     0.340     11    
-computing riskmodel            0.722     0.0       11    
-managing sources               0.184     0.0       1     
-splitting sources              0.086     0.0       2     
-reading composite source model 0.023     0.0       1     
-save curves_by_rlz             0.018     0.0       1     
-compute and save statistics    0.016     0.0       1     
-store source_info              0.011     0.0       1     
-save curves_by_trt_gsim        0.009     0.0       1     
+total classical                4.748     1.863     28    
+making contexts                2.913     0.0       969   
+computing poes                 1.516     0.0       1,938 
+total classical_risk           0.601     0.191     8     
+computing riskmodel            0.590     0.0       11    
+managing sources               0.121     0.0       1     
+splitting sources              0.059     0.0       2     
+save curves_by_rlz             0.034     0.0       1     
+store source_info              0.021     0.0       1     
+compute and save statistics    0.021     0.0       1     
+save curves_by_trt_gsim        0.020     0.0       1     
+reading composite source model 0.017     0.0       1     
+building hazard                0.007     0.0       8     
 filtering sources              0.006     0.0       4     
-aggregate curves               0.006     0.0       30    
-reading exposure               0.005     0.0       1     
-building hazard                0.005     0.0       11    
-building riskinputs            0.002     0.0       1     
-combine curves_by_rlz          8.960E-04 0.0       1     
-reading site collection        6.199E-06 0.0       1     
+reading exposure               0.006     0.0       1     
+aggregate curves               0.003     0.0       28    
+building riskinputs            0.001     0.0       1     
+combine curves_by_rlz          0.001     0.0       1     
+reading site collection        7.153E-06 0.0       1     
 ============================== ========= ========= ======

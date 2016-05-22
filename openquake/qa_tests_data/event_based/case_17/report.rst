@@ -1,7 +1,7 @@
 Event Based Hazard QA Test, Case 17
 ===================================
 
-gem-tstation:/home/michele/ssd/calc_12641.hdf5 updated Wed May  4 04:55:57 2016
+gem-tstation:/home/michele/ssd/calc_16403.hdf5 updated Wed May 18 18:19:54 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             1.0
 area_source_discretization   10.0               
 random_seed                  106                
 master_seed                  0                  
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -46,11 +46,11 @@ b2        0.200  `source_model_2.xml <source_model_2.xml>`_ trivial(1)      4/4
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ============== ========= ========== ==========
-trt_id gsims          distances siteparams ruptparams
-====== ============== ========= ========== ==========
-1      SadighEtAl1997 rrup      vs30       rake mag  
-====== ============== ========= ========== ==========
+====== ================ ========= ========== ==========
+trt_id gsims            distances siteparams ruptparams
+====== ================ ========= ========== ==========
+1      SadighEtAl1997() rrup      vs30       rake mag  
+====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -58,7 +58,7 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=1, rlzs=5)
-  1,SadighEtAl1997: ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']>
+  1,SadighEtAl1997(): ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -78,8 +78,8 @@ Specific information for event based
 ------------------------------------
 ======================== =====
 Total number of ruptures 3    
-Total number of events   8    
-Rupture multiplicity     2.667
+Total number of events   23   
+Rupture multiplicity     7.667
 ======================== =====
 
 Slowest sources
@@ -87,38 +87,46 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  0.975  1         1.402E-04   0.0        0.025    
-1            2         PointSource  0.175  1         8.988E-05   0.0        0.008    
+0            1         PointSource  0.975  1         1.130E-04   0.0        0.017    
+1            2         PointSource  0.175  1         6.700E-05   0.0        0.007    
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+============ =========== ========== ========= ======
+source_class filter_time split_time calc_time counts
+============ =========== ========== ========= ======
+PointSource  1.800E-04   0.0        0.024     2     
+============ =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
-================================= ===== ========= ===== ===== =========
-measurement                       mean  stddev    min   max   num_tasks
-compute_ruptures.time_sec         0.017 0.012     0.008 0.025 2        
-compute_ruptures.memory_mb        0.0   0.0       0.0   0.0   2        
-compute_gmfs_and_curves.time_sec  0.004 8.106E-05 0.004 0.005 3        
-compute_gmfs_and_curves.memory_mb 0.0   0.0       0.0   0.0   3        
-================================= ===== ========= ===== ===== =========
+================================= ===== ====== ===== ===== =========
+measurement                       mean  stddev min   max   num_tasks
+compute_ruptures.time_sec         0.012 0.007  0.008 0.017 2        
+compute_ruptures.memory_mb        0.0   0.0    0.0   0.0   2        
+compute_gmfs_and_curves.time_sec  0.009 0.001  0.008 0.010 3        
+compute_gmfs_and_curves.memory_mb 0.0   0.0    0.0   0.0   3        
+================================= ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.033     0.0       2     
-total compute_gmfs_and_curves  0.013     0.0       3     
+total compute_gmfs_and_curves  0.027     0.0       3     
+total compute_ruptures         0.024     0.0       2     
+compute poes                   0.021     0.0       3     
 reading composite source model 0.008     0.0       1     
-aggregating hcurves            0.008     0.0       12    
+aggregating hcurves            0.008     0.0       10    
 store source_info              0.006     0.0       1     
-compute poes                   0.005     0.0       3     
-saving gmfs                    0.005     0.0       12    
+saving gmfs                    0.005     0.0       10    
 managing sources               0.004     0.0       1     
-make contexts                  0.003     0.0       3     
-bulding hazard curves          0.003     0.0       3     
 saving ruptures                0.003     0.0       1     
-filtering ruptures             0.002     0.0       3     
-aggregate curves               0.001     0.0       14    
-filtering sources              2.301E-04 0.0       2     
-reading site collection        4.411E-05 0.0       1     
+bulding hazard curves          0.003     0.0       3     
+make contexts                  0.002     0.0       3     
+filtering ruptures             0.001     0.0       3     
+aggregate curves               0.001     0.0       12    
+filtering sources              1.800E-04 0.0       2     
+reading site collection        4.196E-05 0.0       1     
 ============================== ========= ========= ======

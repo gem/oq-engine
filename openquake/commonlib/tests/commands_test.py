@@ -61,13 +61,41 @@ class InfoTestCase(unittest.TestCase):
 b1, x15.xml, trt=[0], weight=1.00: 1 realization(s)>
 See https://github.com/gem/oq-risklib/blob/master/doc/effective-realizations.rst for an explanation
 <RlzsAssoc(size=1, rlzs=1)
-0,AkkarBommer2010(): ['<0,b1,@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>'''
+0,AkkarBommer2010(): ['<0,b1,@_AkkarBommer2010_@_@_@_@_@,w=1.0>']>
+=============== ======
+attribute       nbytes
+=============== ======'''
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info(None, None, None, None, path)
-        self.assertEqual(self.EXPECTED, str(p))
+            info(None, None, None, None, None, path)
+        self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
+
+    # poor man tests: checking that the flags produce a few characters
+    # (more than 10) and do not break; I am not checking the precise output
+
+    def test_calculators(self):
+        with Print.patch() as p:
+            info(True, None, None, None, None, '')
+        self.assertGreater(len(str(p)), 10)
+
+    def test_gsims(self):
+        with Print.patch() as p:
+            info(None, True, None, None, None, '')
+        self.assertGreater(len(str(p)), 10)
+
+    def test_views(self):
+        with Print.patch() as p:
+            info(None, None, True, None, None, '')
+        self.assertGreater(len(str(p)), 10)
+
+    def test_exports(self):
+        with Print.patch() as p:
+            info(None, None, None, True, None, '')
+        self.assertGreater(len(str(p)), 10)
+
+    # NB: info --report is tested manually once in a while
 
 
 class TidyTestCase(unittest.TestCase):

@@ -16,21 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import operator
 import logging
-import tempfile
 import collections
-
 import numpy
-import h5py
 
-from openquake.baselib import hdf5
 from openquake.baselib.python3compat import zip
 from openquake.baselib.performance import Monitor
 from openquake.baselib.general import groupby, split_in_blocks
-from openquake.hazardlib.calc.gmf import GmfComputer
-from openquake.hazardlib import site
+from openquake.hazardlib import site, calc
 from openquake.risklib import scientific, riskmodels
 
 U32 = numpy.uint32
@@ -381,7 +375,7 @@ class CompositeRiskModel(collections.Mapping):
         :param all_ruptures: the complete list of EBRupture instances
         :param trunc_level: the truncation level (or None)
         :param correl_model: the correlation model (or None)
-        :param min_iml: dictionary of minimum IMLs
+        :param min_iml: an array of minimum IMLs per IMT
         :param eps: a matrix of epsilons of shape (N, E) or None
         :param hint: hint for how many blocks to generate
 
@@ -419,7 +413,6 @@ class CompositeRiskModel(collections.Mapping):
                               else assetcol.assets_by_site())
             hazard_by_site = riskinput.get_hazard(
                 rlzs_assoc, mon_hazard(measuremem=False))
-
         for sid, assets in enumerate(assets_by_site):
             hazard = hazard_by_site[sid]
             the_assets = groupby(assets, by_taxonomy)
@@ -525,58 +518,6 @@ def make_eps(assets_by_site, num_samples, seed, correlation):
     return eps
 
 
-# this not used; it could be used in the future, if we find computations
-# that run out of memory. For now it is not used for two reasons:
-# 1) it is slower than keeping everything in memory
-# 2) it requires having disk space on the workers, which apparently is
-# not the case for some sponsors
-class _GmfCollector(object):
-    """
-    An object storing the GMFs into a temporary HDF5 file to save memory.
-    """
-    def __init__(self, calc_id, task_no, imts, rlzs):
-        self.calc_id = calc_id
-        self.task_no = task_no
-        self.imts = imts
-        self.rlzs = rlzs
-        self.fname = os.path.join(
-            tempfile.gettempdir(), '%d-%d.hdf5' % (calc_id, task_no))
-        self.hdf5 = h5py.File(self.fname, 'w')
-
-    def close(self):
-        self.hdf5.close()
-        nbytes = os.path.getsize(self.fname)
-        os.remove(self.fname)
-        return nbytes
-
-    def save(self, sid, imt, rlz, gmvs, eids):
-        key = '%s/%s/%s' % (sid, imt, rlz.ordinal)
-        try:
-            dset = self.hdf5[key]
-        except KeyError:
-            dset = self.hdf5.create_dataset(
-                key, (0,), gmv_eid_dt, chunks=True, maxshape=(None,))
-        hdf5.extend(dset, numpy.array(list(zip(gmvs, eids)), gmv_eid_dt))
-
-    def __getitem__(self, sid):
-        hazard = {}
-        try:
-            dset = self.hdf5[str(sid)]
-        except KeyError:
-            return hazard
-        for imt in self.imts:
-            try:
-                items = dset[imt].items()
-            except KeyError:
-                hazard[imt] = {}
-            else:
-                hazard[imt] = {self.rlzs[int(rlzi)]: ds.value
-                               for rlzi, ds in items}
-        return hazard
-
-gmv_eid_dt = numpy.dtype([('gmv', F32), ('eid', U32)])
-
-
 class GmfCollector(object):
     """
     An object storing the GMFs in memory.
@@ -584,18 +525,20 @@ class GmfCollector(object):
     def __init__(self, imts, rlzs):
         self.imts = imts
         self.rlzs = rlzs
-        self.dic = collections.defaultdict(list)
+        self.dic = collections.defaultdict(lambda: ([], []))
         self.nbytes = 0
 
     def close(self):
         self.dic.clear()
         return self.nbytes
 
-    def save(self, sid, imt, rlz, gmvs, eids):
-        key = '%s/%s/%s' % (sid, imt, rlz.ordinal)
-        array = numpy.array(list(zip(gmvs, eids)), gmv_eid_dt)
-        self.dic[key].append(array)
-        self.nbytes += array.nbytes
+    def save(self, eid, imti, rlz, gmf, sids):
+        for gmv, sid in zip(gmf, sids):
+            key = '%s/%s/%s' % (sid, self.imts[imti], rlz.ordinal)
+            glist, elist = self.dic[key]
+            glist.append(gmv)
+            elist.append(eid)
+        self.nbytes += gmf.nbytes * 2
 
     def __getitem__(self, sid):
         hazard = {}
@@ -603,57 +546,12 @@ class GmfCollector(object):
             hazard[imt] = {}
             for rlz in self.rlzs:
                 key = '%s/%s/%s' % (sid, imt, rlz.ordinal)
-                try:
-                    data = self.dic[key]
-                except KeyError:
-                    pass
-                else:
-                    if data:
-                        hazard[imt][rlz] = numpy.concatenate(data)
+                data = self.dic[key]
+                if data[0]:
+                    # a pairs of F32 arrays (gmvs, eids)
+                    hazard[imt][rlz] = (numpy.array(data[0], F32),
+                                        numpy.array(data[1], U32))
         return hazard
-
-
-def calc_gmfs(eb_ruptures, sitecol, imts, rlzs_assoc,
-              trunc_level, correl_model, min_iml, monitor=Monitor()):
-    """
-    :param eb_ruptures: a list of EBRuptures with the same trt_model_id
-    :param sitecol: a SiteCollection instance
-    :param imts: list of IMT strings
-    :param rlzs_assoc: a RlzsAssoc instance
-    :param trunc_level: truncation level
-    :param correl_model: correlation model instance
-    :param min_iml: a dictionary of minimum intensity measure levels
-    :param monitor: a monitor instance
-    :returns: a dictionary rlzi -> gmv_dt array
-    """
-    trt_id = eb_ruptures[0].trt_id
-    gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
-    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(trt_id)
-    rlzs = rlzs_assoc.realizations
-    ctx_mon = monitor('make contexts')
-    gmf_mon = monitor('compute poes')
-    sites = sitecol.complete
-    gmfcoll = GmfCollector(imts, rlzs)
-    for ebr in eb_ruptures:
-        with ctx_mon:
-            r_sites = site.FilteredSiteCollection(ebr.indices, sites)
-            computer = GmfComputer(
-                ebr.rupture, r_sites, imts, gsims,
-                trunc_level, correl_model)
-        with gmf_mon:
-            ddic = computer.calcgmfs(
-                ebr.multiplicity, ebr.rupture.seed, rlzs_by_gsim)
-            for rlz, gmf_by_imt in ddic.items():
-                for imt, gmf in gmf_by_imt.items():
-                    for sid, gmvs in zip(r_sites.sids, gmf):
-                        if min_iml:
-                            ok = gmvs >= min_iml[imt]
-                            gmvs, eids = gmvs[ok], ebr.eids[ok]
-                        else:
-                            eids = ebr.eids
-                        if len(eids):
-                            gmfcoll.save(sid, imt, rlz, gmvs, eids)
-    return gmfcoll
 
 
 class RiskInputFromRuptures(object):
@@ -707,11 +605,49 @@ class RiskInputFromRuptures(object):
         :returns:
             lists of N hazard dictionaries imt -> rlz -> Gmvs
         """
-        hazards = calc_gmfs(
-            self.ses_ruptures, self.sitecol, self.imts, rlzs_assoc,
-            self.trunc_level, self.correl_model, self.min_iml, monitor)
-        return hazards
+        gmfcoll = create(
+            GmfCollector, self.ses_ruptures, self.sitecol, self.imts,
+            rlzs_assoc, self.trunc_level, self.correl_model, self.min_iml,
+            monitor)
+        return gmfcoll
 
     def __repr__(self):
         return '<%s IMT_taxonomies=%s, weight=%d>' % (
             self.__class__.__name__, self.imt_taxonomies, self.weight)
+
+
+def create(GmfColl, eb_ruptures, sitecol, imts, rlzs_assoc,
+           trunc_level, correl_model, min_iml, monitor=Monitor()):
+    """
+    :param GmfColl: a GmfCollector class to be instantiated
+    :param eb_ruptures: a list of EBRuptures with the same trt_model_id
+    :param sitecol: a SiteCollection instance
+    :param imts: list of IMT strings
+    :param rlzs_assoc: a RlzsAssoc instance
+    :param trunc_level: truncation level
+    :param correl_model: correlation model instance
+    :param min_iml: a dictionary of minimum intensity measure levels
+    :param monitor: a monitor instance
+    :returns: a GmfCollector instance
+    """
+    trt_id = eb_ruptures[0].trt_id
+    gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
+    rlzs_by_gsim = rlzs_assoc.get_rlzs_by_gsim(trt_id)
+    rlzs = rlzs_assoc.realizations
+    ctx_mon = monitor('make contexts')
+    gmf_mon = monitor('compute poes')
+    sites = sitecol.complete
+    samples = rlzs_assoc.csm_info.get_source_model(trt_id).samples
+    gmfcoll = GmfColl(imts, rlzs)
+    for ebr in eb_ruptures:
+        rup = ebr.rupture
+        with ctx_mon:
+            r_sites = site.FilteredSiteCollection(ebr.indices, sites)
+            computer = calc.gmf.GmfComputer(
+                rup, r_sites, imts, gsims, trunc_level, correl_model, samples)
+        with gmf_mon:
+            data = computer.calcgmfs(
+                rup.seed, ebr.events, rlzs_by_gsim, min_iml)
+            for eid, imti, rlz, gmf_sids in data:
+                gmfcoll.save(eid, imti, rlz, *gmf_sids)
+    return gmfcoll

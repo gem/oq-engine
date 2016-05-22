@@ -161,7 +161,7 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     dic = AccumDict()
     dic.siteslice = slice(siteidx, siteidx + len(sitecol))
     if monitor.oqparam.poes_disagg:
-        sm_id = rlzs_assoc.get_sm_id(trt_model_id)
+        sm_id = rlzs_assoc.csm_info.get_source_model(trt_model_id).ordinal
         dic.bbs = [BoundingBox(sm_id, sid) for sid in sitecol.sids]
     else:
         dic.bbs = []
@@ -213,7 +213,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param val: a dictionary of hazard curves, keyed by (trt_id, gsim)
+        :param val: a dictionary of hazard curves keyed by trt_id
         """
         with self.monitor('aggregate curves', autoflush=True):
             if hasattr(val, 'calc_times'):
@@ -234,8 +234,8 @@ class ClassicalCalculator(base.HazardCalculator):
         n = len(self.sitecol)
         tiling = self.is_tiling()
         for k, v in val.items():
-            acc[k] = agg_curves(acc[k], expand(v, n, val.siteslice)
-                                if tiling else v)
+            acc[k] = agg_curves(acc.get(k, self.zc),
+                                expand(v, n, val.siteslice) if tiling else v)
 
     def count_eff_ruptures(self, result_dict, trt_model):
         """
@@ -252,8 +252,8 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Initial accumulator, a dictionary (trt_id, gsim) -> curves
         """
-        zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
-        zd = AccumDict((key, zc) for key in self.rlzs_assoc)
+        self.zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
+        zd = AccumDict()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # trt_id -> eff_ruptures
         zd.bb_dict = {
@@ -362,7 +362,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.mean_curves = numpy.array(zc)
             for imt in oq.imtls:
                 self.mean_curves[imt] = scientific.mean_curve(
-                    [curves_by_rlz[rlz][imt] for rlz in rlzs], weights)
+                    [curves_by_rlz.get(rlz, zc)[imt] for rlz in rlzs], weights)
 
             self.quantile = {}
             for q in oq.quantile_hazard_curves:

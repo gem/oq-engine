@@ -1,7 +1,7 @@
 Classical Hazard QA Test, Case 12
 =================================
 
-gem-tstation:/home/michele/ssd/calc_12637.hdf5 updated Wed May  4 04:55:49 2016
+gem-tstation:/home/michele/ssd/calc_16399.hdf5 updated Wed May 18 18:19:46 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  1066               
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git02c4b55'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -45,12 +45,12 @@ b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1,1)    1/1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================= ========= ========== ==========
-trt_id gsims             distances siteparams ruptparams
-====== ================= ========= ========== ==========
-0      SadighEtAl1997    rrup      vs30       rake mag  
-1      BooreAtkinson2008 rjb       vs30       rake mag  
-====== ================= ========= ========== ==========
+====== =================== ========= ========== ==========
+trt_id gsims               distances siteparams ruptparams
+====== =================== ========= ========== ==========
+0      SadighEtAl1997()    rrup      vs30       rake mag  
+1      BooreAtkinson2008() rjb       vs30       rake mag  
+====== =================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -58,8 +58,8 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=2, rlzs=1)
-  0,SadighEtAl1997: ['<0,b1,b1_b2,w=1.0>']
-  1,BooreAtkinson2008: ['<0,b1,b1_b2,w=1.0>']>
+  0,SadighEtAl1997(): ['<0,b1,b1_b2,w=1.0>']
+  1,BooreAtkinson2008(): ['<0,b1,b1_b2,w=1.0>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -83,7 +83,7 @@ Informational data
 count_eff_ruptures_max_received_per_task 2687          
 count_eff_ruptures_num_tasks             2             
 count_eff_ruptures_sent.monitor          4862          
-count_eff_ruptures_sent.rlzs_assoc       6318          
+count_eff_ruptures_sent.rlzs_assoc       5486          
 count_eff_ruptures_sent.sitecol          874           
 count_eff_ruptures_sent.siteidx          10            
 count_eff_ruptures_sent.sources          2318          
@@ -104,8 +104,16 @@ Slowest sources
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
 0            1         PointSource  0.025  1         8.798E-05   0.0        0.0      
-1            2         PointSource  0.025  1         6.080E-05   0.0        0.0      
+1            2         PointSource  0.025  1         6.008E-05   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+============ =========== ========== ========= ======
+source_class filter_time split_time calc_time counts
+============ =========== ========== ========= ======
+PointSource  1.481E-04   0.0        0.0       2     
+============ =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
@@ -116,11 +124,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.004     0.0       1     
-store source_info              0.004     0.0       1     
-managing sources               0.002     0.0       1     
-total count_eff_ruptures       7.200E-04 0.0       2     
-filtering sources              1.488E-04 0.0       2     
-aggregate curves               3.481E-05 0.0       2     
-reading site collection        2.980E-05 0.0       1     
+reading composite source model 0.005     0.0       1     
+store source_info              0.005     0.0       1     
+managing sources               0.003     0.0       1     
+total count_eff_ruptures       4.611E-04 0.0       2     
+filtering sources              1.481E-04 0.0       2     
+aggregate curves               3.719E-05 0.0       2     
+reading site collection        3.600E-05 0.0       1     
 ============================== ========= ========= ======
