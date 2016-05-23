@@ -25,4 +25,3 @@ from openquake.hazardlib.calc.stochastic import stochastic_event_set
 # from disagg we want to import main calc function
 # as well as all the pmf extractors
 from openquake.hazardlib.calc.disagg import *
-from openquake.hazardlib.calc import filters

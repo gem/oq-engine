@@ -18,7 +18,7 @@
 
 """
 :mod:`openquake.hazardlib.calc.hazard_curve` implements
-:func:`hazard_curves`.
+:func:`calc_hazard_curves`.
 """
 import sys
 import time
