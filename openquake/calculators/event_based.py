@@ -29,7 +29,8 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, group_array
 from openquake.hazardlib.calc.filters import \
     filter_sites_by_distance_to_rupture
-from openquake.hazardlib.calc.hazard_curve import array_of_curves
+from openquake.hazardlib.calc.hazard_curve import (
+    array_of_curves, ProbabilityMap)
 from openquake.hazardlib import geo
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import readinput, parallel, datastore
@@ -415,18 +416,38 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
             len(ruptures) for trt_id, ruptures in ruptures_by_trt_id.items()
             if trt_model.id == trt_id)
 
-    def agg_hook(self, ruptures_by_trt_id):
+    def zerodict(self):
         """
-        Populate rup_data
+        Initial accumulator, a dictionary (trt_id, gsim) -> curves
         """
-        if len(ruptures_by_trt_id.rup_data):
-            trt = ruptures_by_trt_id.trt
-            try:
-                dset = self.rup_data[trt]
-            except KeyError:
-                dset = self.rup_data[trt] = self.datastore.create_dset(
-                    'rup_data/' + trt, ruptures_by_trt_id.rup_data.dtype)
-            dset.extend(ruptures_by_trt_id.rup_data)
+        zd = AccumDict()
+        zd.calc_times = []
+        zd.eff_ruptures = AccumDict()
+        return zd
+
+    def agg_dicts(self, acc, ruptures_by_trt_id):
+        """
+        Aggregate dictionaries of hazard curves by updating the accumulator.
+
+        :param acc: accumulator dictionary
+        :param ruptures_by_trt_id: a nested dictionary trt_id -> ProbabilityMap
+        """
+        with self.monitor('aggregate curves', autoflush=True):
+            if hasattr(ruptures_by_trt_id, 'calc_times'):
+                acc.calc_times.extend(ruptures_by_trt_id.calc_times)
+            if hasattr(ruptures_by_trt_id, 'eff_ruptures'):
+                acc.eff_ruptures += ruptures_by_trt_id.eff_ruptures
+            acc += ruptures_by_trt_id
+            if len(ruptures_by_trt_id):
+                trt = ruptures_by_trt_id.trt
+                try:
+                    dset = self.rup_data[trt]
+                except KeyError:
+                    dset = self.rup_data[trt] = self.datastore.create_dset(
+                        'rup_data/' + trt, ruptures_by_trt_id.rup_data.dtype)
+                dset.extend(ruptures_by_trt_id.rup_data)
+        self.datastore.flush()
+        return acc
 
     def post_execute(self, result):
         """
@@ -455,12 +476,13 @@ class EventBasedRuptureCalculator(ClassicalCalculator):
             self.datastore.set_nbytes('sescollection')
 
         for dset in self.rup_data.values():
-            numsites = dset.dset['numsites']
-            multiplicity = dset.dset['multiplicity']
-            spr = numpy.average(numsites, weights=multiplicity)
-            mul = numpy.average(multiplicity, weights=numsites)
-            self.datastore.set_attrs(dset.name, sites_per_rupture=spr,
-                                     multiplicity=mul)
+            if len(dset.dset):
+                numsites = dset.dset['numsites']
+                multiplicity = dset.dset['multiplicity']
+                spr = numpy.average(numsites, weights=multiplicity)
+                mul = numpy.average(multiplicity, weights=numsites)
+                self.datastore.set_attrs(dset.name, sites_per_rupture=spr,
+                                         multiplicity=mul)
         if self.rup_data:
             self.datastore.set_nbytes('rup_data')
 
@@ -598,6 +620,7 @@ class EventBasedCalculator(ClassicalCalculator):
              min_iml, monitor),
             concurrent_tasks=self.oqparam.concurrent_tasks,
             agg=self.combine_curves_and_save_gmfs,
+            acc=ProbabilityMap(),
             key=operator.attrgetter('trt_id'),
             weight=operator.attrgetter('weight'))
         if oq.ground_motion_fields:

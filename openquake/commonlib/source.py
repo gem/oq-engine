@@ -430,7 +430,7 @@ class RlzsAssoc(collections.Mapping):
         acc = {rlz: ProbabilityMap() for rlz in self.realizations}
         for key in results:
             for rlz in self.rlzs_assoc[key]:
-                acc[rlz] += results[key]
+                acc[rlz] |= results[key]
         return acc
 
     # used in riskinput

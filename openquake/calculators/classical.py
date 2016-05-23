@@ -27,7 +27,8 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
-    hazard_curves_per_trt, zero_curves, zero_maps, array_of_curves)
+    hazard_curves_per_trt, zero_curves, zero_maps,
+    array_of_curves, ProbabilityMap)
 from openquake.risklib import scientific
 from openquake.commonlib import parallel, datastore, source
 from openquake.baselib.general import AccumDict
@@ -201,16 +202,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc.eff_ruptures += val.eff_ruptures
             for bb in getattr(val, 'bbs', []):
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
-            acc += val
-            self.agg_hook(val)
-
+            acc |= val
         self.datastore.flush()
         return acc
-
-    def agg_hook(self, val):
-        """
-        This is overridden in the event based rupture calculator
-        """
 
     def count_eff_ruptures(self, result_dict, trt_model):
         """
@@ -225,9 +219,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def zerodict(self):
         """
-        Initial accumulator, a dictionary (trt_id, gsim) -> curves
+        Initial accumulator, an empty ProbabilityMap
         """
-        zd = AccumDict()
+        zd = ProbabilityMap()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # trt_id -> eff_ruptures
         zd.bb_dict = {
