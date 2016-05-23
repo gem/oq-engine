@@ -16,22 +16,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.montalva_2015 import (
-    MontalvaEtAl2015SInter,
-    MontalvaEtAl2015SSlab)
+from openquake.hazardlib.gsim.montalva_2016 import (
+    MontalvaEtAl2016SInter,
+    MontalvaEtAl2016SSlab)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
-class MontalvaEtAl2015SInterTestCase(BaseGSIMTestCase):
+class MontalvaEtAl2016SInterTestCase(BaseGSIMTestCase):
     """
-    Tests the Montalva et al. (2015) GMPE for subduction
+    Tests the Montalva et al. (2016) GMPE for subduction
     interface earthquakes
     """
-    GSIM_CLASS = MontalvaEtAl2015SInter
-    MEAN_FILE = "mont15/MONTALVA_SINTER_MEAN.csv"
-    TOTAL_FILE = "mont15/MONTALVA_SINTER_TOTAL.csv"
-    INTER_FILE = "mont15/MONTALVA_SINTER_INTER_EVENT.csv"
-    INTRA_FILE = "mont15/MONTALVA_SINTER_INTRA_EVENT.csv"
+    GSIM_CLASS = MontalvaEtAl2016SInter
+    MEAN_FILE = "mont16/MONTALVA_SINTER_MEAN.csv"
+    TOTAL_FILE = "mont16/MONTALVA_SINTER_TOTAL.csv"
+    INTER_FILE = "mont16/MONTALVA_SINTER_INTER_EVENT.csv"
+    INTRA_FILE = "mont16/MONTALVA_SINTER_INTRA_EVENT.csv"
 
     def test_mean(self):
         self.check(self.MEAN_FILE,
@@ -50,12 +50,12 @@ class MontalvaEtAl2015SInterTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.1)
 
 
-class MontalvaEtAl2015SSlabTestCase(MontalvaEtAl2015SInterTestCase):
+class MontalvaEtAl2016SSlabTestCase(MontalvaEtAl2016SInterTestCase):
     """
-    Tests the Montalva et al. (2015) GMPE for subduction inslab earthquakes
+    Tests the Montalva et al. (2016) GMPE for subduction inslab earthquakes
     """
-    GSIM_CLASS = MontalvaEtAl2015SSlab
-    MEAN_FILE = "mont15/MONTALVA_SSLAB_MEAN.csv"
-    TOTAL_FILE = "mont15/MONTALVA_SSLAB_TOTAL.csv"
-    INTER_FILE = "mont15/MONTALVA_SSLAB_INTER_EVENT.csv"
-    INTRA_FILE = "mont15/MONTALVA_SSLAB_INTRA_EVENT.csv"
+    GSIM_CLASS = MontalvaEtAl2016SSlab
+    MEAN_FILE = "mont16/MONTALVA_SSLAB_MEAN.csv"
+    TOTAL_FILE = "mont16/MONTALVA_SSLAB_TOTAL.csv"
+    INTER_FILE = "mont16/MONTALVA_SSLAB_INTER_EVENT.csv"
+    INTRA_FILE = "mont16/MONTALVA_SSLAB_INTRA_EVENT.csv"

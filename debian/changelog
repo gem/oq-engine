@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Updates coefficients to Montalva et al. GMPE and updates year to 2016
+
   [Michele Simionato]
   * Removed the function `hazard_curve.hazard_curves` that has been
     deprecated from November 2014
