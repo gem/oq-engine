@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the function `hazard_curve.hazard_curves` that has been
+    deprecated from November 2014
   * Fixed the string representation of GSIM instances: this solves a serious
     bug in the GMPETable
   * Removed the rupture_site_filter where it was not used

@@ -33,7 +33,6 @@ from openquake.hazardlib.probability_map import ProbabilityMap, Imtls
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
-from openquake.baselib.general import deprecated
 
 
 def zero_curves(num_sites, imtls):
@@ -95,23 +94,6 @@ def array_of_curves(pmap, nsites, imtls, gsim_idx=0):
             curves[imt][sid] = array[imtls.slicedic[imt]]
             # NB: curves[sid][imt] does not work on h5py 2.2
     return curves
-
-
-@deprecated('Use calc_hazard_curves instead')
-def hazard_curves(
-        sources, sites, imtls, gsim_by_trt, truncation_level=None,
-        source_site_filter=filters.source_site_noop_filter):
-    """
-    Deprecated. It does the same job of
-    :func:`openquake.hazardlib.calc.hazard_curve.calc_hazard_curves`,
-    with the only difference that the intensity measure types in input
-    and output are hazardlib objects instead of simple strings.
-    """
-    imtls = {str(imt): imls for imt, imls in imtls.items()}
-    curves_by_imt = calc_hazard_curves(
-        sources, sites, imtls, gsim_by_trt, truncation_level,
-        source_site_filter=filters.source_site_noop_filter)
-    return {from_string(imt): curves_by_imt[imt] for imt in imtls}
 
 
 def calc_hazard_curves(
