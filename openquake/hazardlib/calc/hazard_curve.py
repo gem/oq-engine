@@ -18,7 +18,7 @@
 
 """
 :mod:`openquake.hazardlib.calc.hazard_curve` implements
-:func:`hazard_curves`.
+:func:`calc_hazard_curves`.
 """
 import sys
 import time
@@ -31,7 +31,6 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
-from openquake.baselib.general import deprecated
 
 
 def zero_curves(num_sites, imtls):
@@ -74,23 +73,6 @@ def agg_curves(acc, curves):
     for imt in curves.dtype.fields:
         new[imt] = 1. - (1. - curves[imt]) * (1. - acc[imt])
     return new
-
-
-@deprecated('Use calc_hazard_curves instead')
-def hazard_curves(
-        sources, sites, imtls, gsim_by_trt, truncation_level=None,
-        source_site_filter=filters.source_site_noop_filter):
-    """
-    Deprecated. It does the same job of
-    :func:`openquake.hazardlib.calc.hazard_curve.calc_hazard_curves`,
-    with the only difference that the intensity measure types in input
-    and output are hazardlib objects instead of simple strings.
-    """
-    imtls = {str(imt): imls for imt, imls in imtls.items()}
-    curves_by_imt = calc_hazard_curves(
-        sources, sites, imtls, gsim_by_trt, truncation_level,
-        source_site_filter=filters.source_site_noop_filter)
-    return {from_string(imt): curves_by_imt[imt] for imt in imtls}
 
 
 def calc_hazard_curves(
