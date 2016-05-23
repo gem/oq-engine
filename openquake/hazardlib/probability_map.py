@@ -166,7 +166,7 @@ class ProbabilityMap(dict):
             out[sid] = ProbabilityCurve(array)
         return out
 
-    def __iadd__(self, other):
+    def __ior__(self, other):
         self_sids = set(self)
         other_sids = set(other)
         for sid in self_sids & other_sids:
@@ -175,12 +175,12 @@ class ProbabilityMap(dict):
             self[sid] = other[sid]
         return self
 
-    def __add__(self, other):
+    def __or__(self, other):
         new = self.__class__(self)
-        new += other
+        new |= other
         return new
 
-    __radd__ = __add__
+    __ror__ = __or__
 
     def __mul__(self, other):
         sids = set(self) | set(other)

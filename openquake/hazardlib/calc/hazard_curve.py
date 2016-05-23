@@ -155,7 +155,7 @@ def calc_hazard_curves(
         sources, operator.attrgetter('tectonic_region_type'))
     pmap = ProbabilityMap()
     for trt in sources_by_trt:
-        pmap += hazard_curves_per_trt(
+        pmap |= hazard_curves_per_trt(
             sources_by_trt[trt], sites, imtls, [gsim_by_trt[trt]],
             truncation_level, source_site_filter)
     return array_of_curves(pmap, len(sites), imtls)
@@ -254,7 +254,7 @@ def hazard_curves_per_trt(
     pmap = ProbabilityMap()
     for src, s_sites in source_site_filter(sources_sites):
         t0 = time.time()
-        pmap += poe_map(src, s_sites, imtls, cmaker, truncation_level, bbs,
+        pmap |= poe_map(src, s_sites, imtls, cmaker, truncation_level, bbs,
                         ctx_mon, pne_mon, disagg_mon)
         # we are attaching the calculation times to the monitor
         # so that oq-lite (and the engine) can store them
