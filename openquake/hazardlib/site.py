@@ -494,6 +494,9 @@ class FatTile(object):
     Consider a site collection, find its bounding box, enlarge the box by
     the angular maximum distance for the different tectonic region types and
     check if a source is contained inside it.
+
+    :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
+    :param maximum_distance: a dictionary TRT -> integration distance in km
     """
     KM_ONE_DEGREE = 111.32  # km per 1 degree
 
