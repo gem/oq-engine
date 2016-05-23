@@ -613,18 +613,6 @@ celeryd_wait $GEM_MAXLOOP"
         python -m openquake.server.stop"
     fi
 
-    ssh $lxc_ip "set -e; cd /usr/share/openquake/engine/demos/risk
-        echo 'running the report tool'
-        oq-lite info --report ClassicalRisk/job_hazard.ini
-
-        oq-lite show performance
-        oq-lite show rlzs
-
-        echo 'Show all the oq-lite calculations'
-        oq-lite show all
-        oq-lite show all > /tmp/all.txt  # stress encoding issues
-    "
-
     ssh $lxc_ip "sudo -u openquake python -m openquake.server.dbserver & sleep 1 ; oq-engine --make-html-report today ; python -m openquake.server.stop"
     scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
