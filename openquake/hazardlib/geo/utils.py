@@ -422,10 +422,7 @@ def cross_idl(lon1, lon2):
     """
     # a line crosses the international date line if the end positions
     # have different sign and they are more than 180 degrees longitude apart
-    if lon1 * lon2 < 0 and ((lon2 - lon1) > 180 or (lon1 - lon2) > 180):
-        return True
-    else:
-        return False
+    return lon1 * lon2 < 0 and abs(lon1 - lon2) > 180
 
 
 def plane_fit(points):

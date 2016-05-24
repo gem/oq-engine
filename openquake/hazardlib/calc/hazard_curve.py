@@ -201,7 +201,6 @@ def poe_map(src, s_sites, imtls, cmaker, trunclevel, bbs,
                     sctx, rctx, dctx = cmaker.make_contexts(s_sites, rup)
                 except FarAwayRupture:
                     continue
-
             with pne_mon:  # compute probabilities and updates the pmap
                 pnes = get_probability_no_exceedance(
                     rup, sctx, rctx, dctx, imtls, cmaker.gsims, trunclevel)

@@ -2,6 +2,7 @@
   * Updates coefficients to Montalva et al. GMPE and updates year to 2016
 
   [Michele Simionato]
+  * Added a Tile class to filter efficiently point sources
   * Removed the function `hazard_curve.hazard_curves` that has been
     deprecated from November 2014
   * Fixed the string representation of GSIM instances: this solves a serious
