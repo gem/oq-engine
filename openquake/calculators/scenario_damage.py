@@ -19,7 +19,7 @@
 import itertools
 import numpy
 
-from openquake.commonlib import parallel, riskmodels, logictree
+from openquake.commonlib import parallel, riskmodels
 from openquake.risklib import scientific
 from openquake.calculators import base
 
@@ -74,12 +74,12 @@ def dist_total(data, multi_stat_dt):
 
 
 @parallel.litetask
-def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
+def scenario_damage(riskinput, riskmodel, rlzs_assoc, monitor):
     """
     Core function for a damage computation.
 
-    :param riskinputs:
-        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
+    :param riskinput:
+        a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param rlzs_assoc:
@@ -107,7 +107,7 @@ def scenario_damage(riskinputs, riskmodel, rlzs_assoc, monitor):
     result = dict(d_asset=[], d_taxon=numpy.zeros((T, L, R, E, D), F64),
                   c_asset=[], c_taxon=numpy.zeros((T, L, R, E), F64))
     for out_by_lr in riskmodel.gen_outputs(
-            riskinputs, rlzs_assoc, monitor):
+            riskinput, rlzs_assoc, monitor):
         for (l, r), out in sorted(out_by_lr.items()):
             c_model = c_models.get(out.loss_type)
             for asset, fraction in zip(out.assets, out.damages):
@@ -144,8 +144,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         base.RiskCalculator.pre_execute(self)
         self.monitor.consequence_models = riskmodels.get_risk_models(
             self.oqparam, 'consequence')
-        if 'gmfs' in self.oqparam.inputs:
-            self.rlzs_assoc = logictree.trivial_rlzs_assoc()
         self.etags, gmfs = base.get_gmfs(self.datastore)
         self.riskinputs = self.build_riskinputs(gmfs)
         self.monitor.taxonomies = sorted(self.taxonomies)

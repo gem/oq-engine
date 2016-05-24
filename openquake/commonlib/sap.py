@@ -90,8 +90,8 @@ class Parser(object):
         nodefaults = len(args) - len(defaults)
         alldefaults = (NODEFAULT,) * nodefaults + defaults
         self.argdict = OrderedDict(zip(args, alldefaults))
-        self.parentparser = get_parentparser(
-            parentparser, description=func.__doc__, help=help)
+        self.description = descr = func.__doc__ if func.__doc__ else None
+        self.parentparser = get_parentparser(parentparser, descr, help)
         self.names = set()
         self.all_arguments = []
         self._group = self.parentparser
@@ -125,7 +125,7 @@ class Parser(object):
         if default is not NODEFAULT:
             kw['nargs'] = nargs or '?'
             kw['default'] = default
-            kw['help'] = kw['help'] + ' [default: %s]' % str(default)
+            kw['help'] = kw['help'] + ' [default: %s]' % repr(default)
         self._add(name, name, **kw)
 
     def opt(self, name, help, abbrev=None,
@@ -176,7 +176,8 @@ class Parser(object):
         return self.parentparser.format_help()
 
 
-def compose(parsers, name='main', description=None, help=True, prog=None):
+def compose(parsers, name='main', description=None, prog=None,
+            version=None):
     """
     Collects together different arguments parsers and builds a single
     Parser dispatching on the subparsers depending on
@@ -185,16 +186,30 @@ def compose(parsers, name='main', description=None, help=True, prog=None):
     :param parsers: a list of Parser instances
     :param name: the name of the composed parser
     :param description: description of the composed parser
-    :param help: help flag
     :param prog: name of the script printed in the usage message
+    :param version: version of the script printed with --version
     """
     assert len(parsers) >= 1, parsers
     parentparser = argparse.ArgumentParser(
-        description=description, add_help=help)
+        description=description, version=version, add_help=False)
     subparsers = parentparser.add_subparsers(
-        help='available subcommands (see sub help)', prog=prog)
-    for p in parsers:
-        subp = subparsers.add_parser(p.name)
+        help='available subcommands; use %s help <cmd>' % prog,
+        prog=prog)
+
+    def gethelp(cmd=None):
+        if cmd is None:
+            print(parentparser.format_help())
+            return
+        subp = subparsers._name_parser_map.get(cmd)
+        if subp is None:
+            print('No help for unknown command %r' % cmd)
+        else:
+            print(subp.format_help())
+    help_parser = Parser(gethelp, 'help', help=False)
+    progname = '%s ' % prog if prog else ''
+    help_parser.arg('cmd', progname + 'subcommand')
+    for p in parsers + [help_parser]:
+        subp = subparsers.add_parser(p.name, description=p.description)
         for args, kw in p.all_arguments:
             subp.add_argument(*args, **kw)
         subp.set_defaults(_func=p.func)

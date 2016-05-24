@@ -132,23 +132,6 @@ def run(job_ini, slowest, hc, param, concurrent_tasks=CT, exports='',
         loglevel='info', pdb=None):
     """
     Run a calculation.
-
-    :param job_ini:
-        the configuration file (or filew, comma-separated)
-    :param slowest:
-        enable Python cProfile functionality
-    :param hc:
-        ID of the previous calculation (or None)
-    :param param:
-        override a configuration parameter
-    :param concurrent_tasks:
-        the number of concurrent tasks (0 to disable the parallelization)
-    :param loglevel:
-        the logging level (default 'info')
-    :param exports:
-        export type, can be '', 'csv', 'xml', 'geojson' or combinations
-    :param pdb:
-        flag to enable pdb debugging on failing calculations
     """
     concurrent_futures_process_monkeypatch()
     params = oqvalidation.OqParam.check(

@@ -47,6 +47,10 @@ def gsim(value, **kwargs):
     >>> gsim('BooreAtkinson2011')
     'BooreAtkinson2011()'
     """
+    if value == 'FromFile':
+        return 'FromFile'
+    elif value.endswith('()'):
+        value = value[:-2]  # strip parenthesis
     try:
         gsim_class = GSIM[value]
     except KeyError:
@@ -1018,8 +1022,3 @@ class ParamSet(with_metaclass(MetaParamSet, hdf5.LiteralAttrs)):
     def __iter__(self):
         for item in sorted(vars(self).items()):
             yield item
-
-    def __repr__(self):
-        names = sorted(n for n in vars(self) if not n.startswith('_'))
-        nameval = ', '.join('%s=%r' % (n, getattr(self, n)) for n in names)
-        return '<%s %s>' % (self.__class__.__name__, nameval)

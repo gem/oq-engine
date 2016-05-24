@@ -28,6 +28,8 @@ import numpy  # this is needed by the doctests, don't remove it
 from openquake.baselib.python3compat import unicode
 from openquake.commonlib import InvalidFile
 
+FIVEDIGITS = '%.5E'
+
 
 @contextmanager
 def floatformat(fmt_string):

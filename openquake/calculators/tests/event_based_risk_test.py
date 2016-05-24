@@ -20,11 +20,14 @@ import os
 import re
 from nose.plugins.attrib import attr
 
+from openquake.baselib.general import writetmp
 from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.export import export
+from openquake.calculators.tests import check_platform
 from openquake.qa_tests_data.event_based_risk import (
-    case_1, case_2, case_3, case_4, case_4a, case_master, occupants)
+    case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
+    occupants)
 
 
 def strip_calc_id(fname):
@@ -56,7 +59,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
-        self.assert_stats_ok(case_1, 'job_haz.ini,job_risk.ini')
+        check_platform('trusty')
+        self.assert_stats_ok(case_1, 'job.ini')
 
         # make sure the XML and JSON exporters run
         ekeys = [
@@ -77,18 +81,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2(self):
-        self.assert_stats_ok(case_2, 'job_haz.ini,job_risk.ini',
-                             individual_curves='true')
-        text = view('mean_avg_losses', self.calc.datastore)
-        self.assertEqual(text, '''\
-========= ======== ============ ============ ============ ==============
-asset_ref taxonomy lon          lat          structural   structural_ins
-========= ======== ============ ============ ============ ==============
-a0        RM       8.129850E+01 2.910980E+01 3.368651E+02 9.858012E+01  
-a1        RC       8.308230E+01 2.790060E+01 7.165132E+01 0.000000E+00  
-a2        W        8.574770E+01 2.790150E+01 1.719736E+02 1.036929E+02  
-a3        RM       8.574770E+01 2.790150E+01 2.281648E+02 0.000000E+00  
-========= ======== ============ ============ ============ ==============''')
+        self.assert_stats_ok(case_2, 'job.ini', individual_curves='true')
+        fname = writetmp(view('mean_avg_losses', self.calc.datastore))
+        self.assertEqualFiles('expected/mean_avg_losses.txt', fname)
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_2bis(self):
@@ -103,7 +98,7 @@ a3        RM       8.574770E+01 2.790150E+01 2.281648E+02 0.000000E+00
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_3(self):
         # this is a test with statistics and without conditional_loss_poes
-        out = self.run_calc(case_3.__file__, 'job_haz.ini,job_risk.ini',
+        out = self.run_calc(case_3.__file__, 'job.ini',
                             exports='xml', individual_curves='false',
                             concurrent_tasks='4')
         [fname] = out['agg_curve-stats', 'xml']
@@ -112,8 +107,11 @@ a3        RM       8.574770E+01 2.790150E+01 2.281648E+02 0.000000E+00
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_4(self):
         # Turkey with SHARE logic tree
-        out = self.run_calc(case_4.__file__, 'job_h.ini,job_r.ini',
+        out = self.run_calc(case_4.__file__, 'job.ini',
                             exports='csv', individual_curves='true')
+        [fname] = out['avg_losses-stats', 'csv']
+        self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
+
         fnames = out['agg_loss_table', 'csv']
         assert fnames, 'No agg_losses exported??'
         for fname in fnames:
@@ -121,7 +119,7 @@ a3        RM       8.574770E+01 2.790150E+01 2.281648E+02 0.000000E+00
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_occupants(self):
-        out = self.run_calc(occupants.__file__, 'job_h.ini,job_r.ini',
+        out = self.run_calc(occupants.__file__, 'job.ini',
                             exports='xml', individual_curves='true')
         fnames = out['loss_maps-rlzs', 'xml'] + out['agg_curve-rlzs', 'xml']
         self.assertEqual(len(fnames), 3)  # 2 loss_maps + 1 agg_curve
@@ -130,14 +128,26 @@ a3        RM       8.574770E+01 2.790150E+01 2.281648E+02 0.000000E+00
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
+        check_platform('trusty')
         self.assert_stats_ok(case_master, 'job.ini')
+        fname = writetmp(view('portfolio_loss', self.calc.datastore))
+        self.assertEqualFiles('expected/portfolio_loss.txt', fname)
+
+    @attr('qa', 'risk', 'event_based_risk')
+    def test_case_miriam(self):
+        # this is a case with a grid and asset-hazard association
+        out = self.run_calc(case_miriam.__file__, 'job.ini', exports='csv')
+        [fname] = out['agg_loss_table', 'csv']
+        self.assertEqualFiles('expected/agg_losses-rlz000-structural.csv',
+                              fname)
 
     # now a couple of hazard tests
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4_hazard(self):
         # Turkey with SHARE logic tree; TODO: add site model
-        out = self.run_calc(case_4.__file__, 'job_h.ini',
+        out = self.run_calc(case_4.__file__, 'job.ini',
+                            calculation_mode='event_based',
                             ground_motion_fields='false', exports='csv')
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles('expected/hazard_curve-mean.csv', fname)
@@ -150,10 +160,10 @@ a3        RM       8.574770E+01 2.790150E+01 2.281648E+02 0.000000E+00
         # export a single rupture
         [f1, f2] = export(('gmfs:0', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
-            'expected/gmf-col=05'
+            'expected/gmf-trt=05'
             '~ses=0001~src=AS_TRAS334~rup=612021-01-PGA.csv', f1)
         self.assertEqualFiles(
-            'expected/gmf-col=05'
+            'expected/gmf-trt=05'
             '~ses=0001~src=AS_TRAS334~rup=612021-01-SA(0.5).csv', f2)
 
     @attr('qa', 'hazard', 'event_based')

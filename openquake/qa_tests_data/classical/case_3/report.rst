@@ -1,26 +1,28 @@
 Classical Hazard QA Test, Case 3
 ================================
 
+gem-tstation:/home/michele/ssd/calc_16389.hdf5 updated Wed May 18 18:19:18 2016
+
 num_sites = 1, sitecol = 739 B
 
 Parameters
 ----------
-============================ ==================
-calculation_mode             'classical'       
-number_of_logic_tree_samples 0                 
-maximum_distance             {'default': 200.0}
-investigation_time           1.0               
-ses_per_logic_tree_path      1                 
-truncation_level             0.0               
-rupture_mesh_spacing         1.0               
-complex_fault_mesh_spacing   1.0               
-width_of_mfd_bin             1.0               
-area_source_discretization   0.05              
-random_seed                  1066              
-master_seed                  0                 
-concurrent_tasks             40                
-sites_per_tile               1000              
-============================ ==================
+============================ ===================
+calculation_mode             'classical'        
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 200.0} 
+investigation_time           1.0                
+ses_per_logic_tree_path      1                  
+truncation_level             0.0                
+rupture_mesh_spacing         1.0                
+complex_fault_mesh_spacing   1.0                
+width_of_mfd_bin             1.0                
+area_source_discretization   0.05               
+random_seed                  1066               
+master_seed                  0                  
+sites_per_tile               1000               
+oqlite_version               '0.13.0-git034c0a0'
+============================ ===================
 
 Input files
 -----------
@@ -43,11 +45,11 @@ b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ============== ========= ========== ==========
-trt_id gsims          distances siteparams ruptparams
-====== ============== ========= ========== ==========
-0      SadighEtAl1997 rrup      vs30       rake mag  
-====== ============== ========= ========== ==========
+====== ================ ========= ========== ==========
+trt_id gsims            distances siteparams ruptparams
+====== ================ ========= ========== ==========
+0      SadighEtAl1997() rrup      vs30       rake mag  
+====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -55,42 +57,68 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,SadighEtAl1997: ['<0,b1,b1,w=1.0>']>
+  0,SadighEtAl1997(): ['<0,b1,b1,w=1.0>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           31,353       783   
+source_model.xml 0      Active Shallow Crust 1           31353        783   
 ================ ====== ==================== =========== ============ ======
 
-Expected data transfer for the sources
---------------------------------------
-=========================== =======
-Number of tasks to generate 79     
-Sent data                   6.72 MB
-=========================== =======
+Informational data
+------------------
+======================================== ==============
+count_eff_ruptures_max_received_per_task 2577          
+count_eff_ruptures_num_tasks             40            
+count_eff_ruptures_sent.monitor          92720         
+count_eff_ruptures_sent.rlzs_assoc       88800         
+count_eff_ruptures_sent.sitecol          17480         
+count_eff_ruptures_sent.siteidx          200           
+count_eff_ruptures_sent.sources          6581750       
+count_eff_ruptures_tot_received          103079        
+hazard.input_weight                      783.825       
+hazard.n_imts                            1             
+hazard.n_levels                          3.0           
+hazard.n_realizations                    1             
+hazard.n_sites                           1             
+hazard.n_sources                         0             
+hazard.output_weight                     3.0           
+hostname                                 'gem-tstation'
+======================================== ==============
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   783    31,353    0.001       4.798      0.0      
+0            1         AreaSource   783    31,353    0.001       4.221      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+============ =========== ========== ========= ======
+source_class filter_time split_time calc_time counts
+============ =========== ========== ========= ======
+AreaSource   0.001       4.221      0.0       1     
+============ =========== ========== ========= ======
+
+Information about the tasks
+---------------------------
+Not available
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               5.384     0.0       1     
-splitting sources              4.798     0.0       1     
-reading composite source model 4.635     0.0       1     
-total count_eff_ruptures       0.053     0.0       79    
+managing sources               4.966     0.0       1     
+splitting sources              4.221     0.0       1     
+reading composite source model 3.944     0.0       1     
+total count_eff_ruptures       0.036     0.0       40    
+store source_info              0.005     0.0       1     
 filtering sources              0.001     0.0       1     
-aggregate curves               0.001     0.0       79    
-store source_info              2.439E-04 0.0       1     
-reading site collection        3.791E-05 0.0       1     
+aggregate curves               7.484E-04 0.0       40    
+reading site collection        3.886E-05 0.0       1     
 ============================== ========= ========= ======

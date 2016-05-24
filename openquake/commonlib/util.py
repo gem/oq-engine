@@ -132,21 +132,20 @@ def get_assets(dstore):
 
 def get_ses_idx(etag):
     """
-    >>> get_ses_idx("col=00~ses=0007~src=1-3~rup=018-01")
+    >>> get_ses_idx("trt=00~ses=0007~src=1-3~rup=018-01")
     7
     """
     return int(etag.split('~')[1][4:])
 
 
-def get_col_serial(etag):
+def get_serial(etag):
     """
-    >>> get_col_serial("col=00~ses=0007~src=1-3~rup=018-01")
-    (0, 18)
+    >>> get_serial("trt=00~ses=0007~src=1-3~rup=018-01")
+    '018'
     """
-    col, ses, src, rup = etag.split('~')
-    col_id = int(col.split('=')[1])
-    serial = int(rup.split('=')[1].split('-')[0])
-    return col_id, serial
+    trt, ses, src, rup = etag.split('~')
+    serial = rup.split('=')[1].split('-')[0]
+    return serial
 
 
 class Rupture(object):
