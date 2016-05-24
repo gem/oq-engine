@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Provided a better error message in the case of absence of openquake.cfg
   * Removed the check on the export_dir when using the WebUI
 
   [Daniele Viganò]
