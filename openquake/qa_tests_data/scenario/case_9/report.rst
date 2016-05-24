@@ -1,7 +1,7 @@
 Scenario QA Test, Case 9, Multiple GSIMs
 ========================================
 
-gem-tstation:/home/michele/ssd/calc_16306.hdf5 updated Mon May 16 14:19:02 2016
+gem-tstation:/home/michele/ssd/calc_16350.hdf5 updated Wed May 18 18:18:24 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  3                  
 master_seed                  0                  
-oqlite_version               '0.13.0-git16c052c'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -38,9 +38,9 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(2)
-  0,LinLee2008SSlab(): ['LinLee2008SSlab()']
-  0,YoungsEtAl1997SSlab(): ['YoungsEtAl1997SSlab()']>
+  <RlzsAssoc(size=2, rlzs=2)
+  0,LinLee2008SSlab(): ['<0,b_1,b1,w=0.6>']
+  0,YoungsEtAl1997SSlab(): ['<1,b_1,b2,w=0.4>']>
 
 Information about the tasks
 ---------------------------
@@ -51,7 +51,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.276     0.0       1     
-computing gmfs          0.004     0.0       1     
-reading site collection 7.606E-05 0.0       1     
+filtering sites         0.011     0.0       1     
+computing gmfs          0.002     0.0       1     
+reading site collection 3.195E-05 0.0       1     
 ======================= ========= ========= ======

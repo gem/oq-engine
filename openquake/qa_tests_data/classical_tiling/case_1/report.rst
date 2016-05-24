@@ -1,7 +1,7 @@
 Classical PSHA using Area Source
 ================================
 
-gem-tstation:/home/michele/ssd/calc_16382.hdf5 updated Mon May 16 14:21:27 2016
+gem-tstation:/home/michele/ssd/calc_16426.hdf5 updated Wed May 18 18:20:47 2016
 
 num_sites = 6, sitecol = 969 B
 
@@ -21,7 +21,7 @@ area_source_discretization   5.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1                  
-oqlite_version               '0.13.0-git16c052c'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -65,7 +65,7 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           1,640        41    
+source_model.xml 0      Active Shallow Crust 1           1640         41    
 ================ ====== ==================== =========== ============ ======
 
 Informational data
@@ -94,7 +94,7 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   41     205       0.009       0.038      0.0      
+0            1         AreaSource   41     205       0.006       0.038      0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -102,7 +102,7 @@ Computation times by source typology
 ============ =========== ========== ========= ======
 source_class filter_time split_time calc_time counts
 ============ =========== ========== ========= ======
-AreaSource   0.009       0.038      0.0       1     
+AreaSource   0.006       0.038      0.0       1     
 ============ =========== ========== ========= ======
 
 Information about the tasks
@@ -114,12 +114,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.128     0.0       1     
-reading composite source model 0.042     0.0       1     
+managing sources               0.092     0.0       1     
+reading composite source model 0.039     0.0       1     
 splitting sources              0.038     0.0       1     
-filtering sources              0.009     0.0       6     
-total count_eff_ruptures       0.008     0.0       24    
-store source_info              0.005     0.0       1     
+total count_eff_ruptures       0.009     0.0       24    
+filtering sources              0.006     0.0       6     
+store source_info              0.004     0.0       1     
 reading site collection        0.002     0.0       1     
-aggregate curves               4.132E-04 0.0       24    
+aggregate curves               2.854E-04 0.0       24    
 ============================== ========= ========= ======

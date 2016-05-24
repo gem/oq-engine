@@ -75,10 +75,11 @@ def _collect_bins_data(trt_num, source_ruptures, site, curves, trt_model_id,
                 pne_dict = {}
                 # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
                 for gsim in gsims:
+                    gs = str(gsim)
                     for imt_str, imls in imtls.iteritems():
                         imt = from_string(imt_str)
                         imls = numpy.array(imls[::-1])
-                        for rlz in rlzs_assoc[trt_model_id, gsim]:
+                        for rlz in rlzs_assoc[trt_model_id, gs]:
                             rlzi = rlz.ordinal
                             curve_poes = curves[rlzi, imt_str][::-1]
                             for poe in poes:
@@ -164,7 +165,6 @@ def compute_disagg(sitecol, sources, trt_model_id, rlzs_assoc,
             gen_ruptures_for_site(site, sources, max_dist, monitor))
         if not source_ruptures:
             continue
-
         with collecting_mon:
             bdata = _collect_bins_data(
                 trt_num, source_ruptures, site, curves_dict[site.id],
