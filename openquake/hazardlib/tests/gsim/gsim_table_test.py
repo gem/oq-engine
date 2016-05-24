@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import tempfile
 import unittest
 
 import h5py
@@ -35,6 +36,7 @@ from openquake.hazardlib import imt as imt_module
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__),
                               "data",
                               "gsimtables")
+TEMP_DIR = tempfile.gettempdir() + os.sep
 
 
 def midpoint(low, high, point=0.5):
@@ -50,7 +52,7 @@ class HDFArraysToDictTestCase(unittest.TestCase):
     a dictionary
     """
     def setUp(self):
-        self.fle = h5py.File("foo.hdf5")
+        self.fle = h5py.File(TEMP_DIR + "foo.hdf5")
         self.group = self.fle.create_group("TestGroup")
         dset1 = self.group.create_dataset("DSET1", (3, 3), dtype="f")
         dset1[:] = np.zeros([3, 3])
@@ -78,7 +80,7 @@ class HDFArraysToDictTestCase(unittest.TestCase):
         Close and delete the hdf5 file
         """
         self.fle.close()
-        os.remove("foo.hdf5")
+        os.remove(TEMP_DIR + "foo.hdf5")
 
 
 class AmplificationTableSiteTestCase(unittest.TestCase):
