@@ -866,7 +866,7 @@ class SourceManager(object):
     def get_sources(self, kind, tile):
         """
         :param kind: a string 'light', 'heavy' or 'all'
-        :param tile: an :class:`openquake.hazardlib.site.Tile` instance
+        :param tile: a :class:`openquake.hazardlib.site.Tile` instance
         :returns: the sources of the given kind affecting the given tile
         """
         filter_mon = self.monitor('filtering sources')
