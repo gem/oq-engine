@@ -489,18 +489,6 @@ for name in 'vs30 vs30measured z1pt0 z2pt5 backarc lons lats sids'.split():
     setattr(FilteredSiteCollection, name, prop)
 
 
-def fix_lons(lons):
-    """
-    Make sure the longitudes are in the range [0, 360] degrees.
-    :returns: (fixed longitudes, cross_idl flag)
-    """
-    if cross_idl(lons.min(), lons.max()):
-        new = numpy.array(lons)
-        new[new < 0] += 360
-        return new, True
-    return lons, False
-
-
 class Tile(object):
     """
     Consider a site collection, find its bounding box and check if a source
@@ -518,7 +506,8 @@ class Tile(object):
         trts = set(maximum_distance)
 
         # determine the bounding box by taking into account the IDL
-        lons, self.cross_idl = fix_lons(self.sitecol.lons)
+        self.cross_idl = cross_idl(sitecol.lons.min(), sitecol.lons.max())
+        lons = self.fix_lons(sitecol.lons)
         min_lon, max_lon = lons.min(), lons.max()
         min_lat, max_lat = self.sitecol.lats.min(), self.sitecol.lats.max()
 
@@ -526,6 +515,17 @@ class Tile(object):
         self.max_lon = {trt: max_lon for trt in trts}
         self.min_lat = {trt: min_lat for trt in trts}
         self.max_lat = {trt: max_lat for trt in trts}
+
+    def fix_lons(self, lons):
+        """
+        Make sure the longitudes are in the range [0, 360] degrees.
+        :returns: fixed longitudes
+        """
+        if self.cross_idl:
+            new = numpy.array(lons)
+            new[new < 0] += 360
+            return new
+        return lons
 
     def get_rectangle(self):
         """
