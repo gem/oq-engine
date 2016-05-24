@@ -564,7 +564,7 @@ def view_task_info(token, dstore):
     pdata = dstore['performance_data'].value
     tasks = [calc.core_task.__name__ for calc in base.calculators.values()]
     data = ['measurement mean stddev min max num_tasks'.split()]
-    for task in tasks:
+    for task in set(tasks):  # strip duplicates
         records = pdata[pdata['operation'] == 'total ' + task]
         if len(records):
             for stat in ('time_sec', 'memory_mb'):

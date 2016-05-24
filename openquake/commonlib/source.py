@@ -31,6 +31,7 @@ import numpy
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import (
     AccumDict, groupby, block_splitter, group_array)
+from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import logictree, sourceconverter, parallel, valid
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
@@ -421,18 +422,19 @@ class RlzsAssoc(collections.Mapping):
         assoc._init()
         return assoc
 
-    def combine_curves(self, results, agg, acc):
+    # used in classical and event_based calculators
+    def combine_curves(self, results):
         """
-        :param results: dictionary (trt_model_id, gsim_name) -> curves
-        :param agg: aggregation function (composition of probabilities)
-        :returns: a dictionary rlz -> aggregated curves
+        :param results: dictionary (trt_model_id, gsim) -> curves
+        :returns: a dictionary rlz -> aggregate curves
         """
-        ad = AccumDict({rlz: acc for rlz in self.realizations})
-        for key, value in results.items():
+        acc = {rlz: ProbabilityMap() for rlz in self.realizations}
+        for key in results:
             for rlz in self.rlzs_assoc[key]:
-                ad[rlz] = agg(ad[rlz], value)
-        return ad
+                acc[rlz] |= results[key]
+        return acc
 
+    # used in riskinput
     def combine(self, results, agg=agg_prob):
         """
         :param results: a dictionary (trt_model_id, gsim) -> floats
@@ -479,16 +481,10 @@ class RlzsAssoc(collections.Mapping):
         the aggregation function is the `agg_curves` function, a composition of
         probability, which however is close to the sum for small probabilities.
         """
-        ad = AccumDict()
-        for (trt_id, gsim), value in results.items():
-            try:
-                gsim_idx = int(gsim)  # for classical calculations
-            except (ValueError, TypeError):  # already a GSIM
-                pass  # for scenario calculations
-            else:
-                gsim = self.gsims_by_trt_id[trt_id][gsim_idx]
-            for rlz in self.rlzs_assoc[trt_id, gsim]:
-                ad[rlz] = agg(ad.get(rlz, 0), value)
+        ad = {rlz: 0 for rlz in self.realizations}
+        for key, value in results.items():
+            for rlz in self.rlzs_assoc[key]:
+                ad[rlz] = agg(ad[rlz], value)
         return ad
 
     def __iter__(self):
@@ -645,7 +641,7 @@ class CompositionInfo(object):
                 indices = numpy.arange(idx, idx + len(rlzs))
                 idx += len(indices)
                 assoc._add_realizations(indices, smodel, rlzs)
-            else:
+            elif trts:
                 logging.warn('No realizations for %s, %s',
                              '_'.join(smodel.path), smodel.name)
         # NB: realizations could be filtered away by logic tree reduction
@@ -654,11 +650,22 @@ class CompositionInfo(object):
         return assoc
 
     def get_source_model(self, trt_model_id):
-        """Return the source model for the given trt_model_id"""
+        """
+        Return the source model for the given trt_model_id
+        """
         for smodel in self.source_models:
             for trt_model in smodel.trt_models:
                 if trt_model.id == trt_model_id:
                     return smodel
+
+    def get_trt(self, trt_model_id):
+        """
+        Return the TRT string for the given trt_model_id
+        """
+        for smodel in self.source_models:
+            for trt_model in smodel.trt_models:
+                if trt_model.id == trt_model_id:
+                    return trt_model.trt
 
     def __repr__(self):
         info_by_model = collections.OrderedDict(
