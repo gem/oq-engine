@@ -991,15 +991,3 @@ def count_eff_ruptures(sources, sitecol, siteidx, rlzs_assoc, monitor):
     acc.eff_ruptures = {sources[0].trt_model_id:
                         sum(src.num_ruptures for src in sources)}
     return acc
-
-
-class DummySourceManager(SourceManager):
-    """
-    A SourceManager submitting tasks of kind `count_eff_ruptures`: this is
-    used by the reports produced by `oq-lite info --report`.
-    """
-    def __init__(self, csm, taskfunc, maximum_distance, dstore, monitor,
-                 random_seed=None, filter_sources=True, num_tiles=1):
-        SourceManager.__init__(self, csm, count_eff_ruptures, maximum_distance,
-                               dstore, monitor, random_seed, filter_sources,
-                               num_tiles)
