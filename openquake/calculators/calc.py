@@ -23,8 +23,11 @@ import operator
 
 import numpy
 
+from openquake.baselib.general import get_array
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import gmf, filters
+from openquake.hazardlib.probability_map import (
+    ProbabilityCurve, ProbabilityMap)
 from openquake.hazardlib.site import SiteCollection
 from openquake.commonlib.readinput import \
     get_gsims, get_rupture, get_correl_model, get_imts
@@ -182,7 +185,7 @@ def compute_hazard_maps(curves, imls, poes):
 # #########################  GMF->curves #################################### #
 
 # NB (MS): the approach used here will not work for non-poissonian models
-def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
+def _gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
     """
     Given a set of ground motion values (``gmvs``) and intensity measure levels
     (``imls``), compute hazard curve probabilities of exceedance.
@@ -217,6 +220,23 @@ def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
     num_exceeding = numpy.sum(numpy.array(gmvs) >= imls, axis=1)
     poes = 1 - numpy.exp(- (invest_time / duration) * num_exceeding)
     return poes
+
+
+def gmvs_to_poe_map(gmvs_by_sid, imtls, invest_time, duration):
+    """
+    Convert a dictionary sid -> gmva into a ProbabilityMap
+    """
+    pmap = ProbabilityMap()
+    for sid in gmvs_by_sid:
+        data = []
+        for imti, imt in enumerate(imtls):
+            gmvs = get_array(gmvs_by_sid[sid], imti=imti)['gmv']
+            data.append(
+                _gmvs_to_haz_curve(gmvs, imtls[imt], invest_time, duration))
+        # the array underlying the ProbabilityCurve has size (num_levels, 1)
+        array = numpy.concatenate(data).reshape(-1, 1)
+        pmap[sid] = ProbabilityCurve(array)
+    return pmap
 
 
 # ################## utilities for classical calculators ################ #

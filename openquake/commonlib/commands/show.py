@@ -36,7 +36,7 @@ def get_hcurves_and_means(dstore):
     """
     oq = dstore['oqparam']
     hcurves = dstore['hcurves']
-    realizations = dstore['rlzs_assoc'].realizations
+    realizations = dstore['csm_info'].get_rlzs_assoc().realizations
     weights = [rlz.weight for rlz in realizations]
     curves_by_rlz = {rlz: hcurves['rlz-%03d' % rlz.ordinal]
                      for rlz in realizations}
@@ -70,7 +70,6 @@ def show(what, calc_id=-1):
                 continue
             else:
                 rows.append((calc_id, cmode, descr.encode('utf-8')))
-                ds.close()
         for row in sorted(rows, key=lambda row: row[0]):  # by calc_id
             print('#%d %s: %s' % row)
         return
@@ -98,6 +97,7 @@ def show(what, calc_id=-1):
         else:
             print(obj)
 
+    ds.close()
 
 parser = sap.Parser(show)
 parser.arg('what', 'key or view of the datastore')

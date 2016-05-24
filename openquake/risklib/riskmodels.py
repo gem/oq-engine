@@ -259,15 +259,14 @@ class RiskModel(object):
         out_by_lr = AccumDict()
         out_by_lr.assets = assets
         loss_types = self.get_loss_types(imt)
-        # extract the realizations from the first asset
         for rlz in sorted(hazard):
-            r = rlz.ordinal
             haz = hazard[rlz]
             if len(haz) == 0:
                 continue
+            r = rlz.ordinal
             for loss_type in loss_types:
                 out = self(loss_type, assets, haz, epsgetter)
-                if out:
+                if out:  # can be None in scenario_risk with no valid values
                     l = self.compositemodel.lti[loss_type]
                     out.hid = r
                     out.weight = rlz.weight
@@ -483,41 +482,26 @@ class ProbabilisticEventBased(RiskModel):
     kind = 'vulnerability'
 
     def __init__(
-            self, taxonomy,
-            vulnerability_functions,
-            investigation_time,
-            risk_investigation_time,
-            number_of_logic_tree_samples,
-            ses_per_logic_tree_path,
-            loss_curve_resolution,
-            conditional_loss_poes,
-            insured_losses=False,
-            loss_ratios=()):
+            self, taxonomy, vulnerability_functions, loss_curve_resolution,
+            conditional_loss_poes, insured_losses=False):
         """
         See :func:`openquake.risklib.scientific.event_based` for a description
         of the input parameters.
         """
-        time_span = risk_investigation_time or investigation_time
-        self.ses_ratio = time_span / (
-            investigation_time * ses_per_logic_tree_path)
         self.taxonomy = taxonomy
         self.risk_functions = vulnerability_functions
         self.loss_curve_resolution = loss_curve_resolution
-        self.curves = functools.partial(
-            scientific.event_based, curve_resolution=loss_curve_resolution,
-            ses_ratio=self.ses_ratio)
         self.conditional_loss_poes = conditional_loss_poes
         self.insured_losses = insured_losses
-        self.loss_ratios = loss_ratios
 
-    def __call__(self, loss_type, assets, gmvs, epsgetter):
+    def __call__(self, loss_type, assets, gmvs_eids, epsgetter):
         """
         :param str loss_type:
             the loss type considered
         :param assets:
            a list of assets on the same site and with the same taxonomy
-        :param gmvs:
-           an instance of :class:`openquake.risklib.riskinput.Gmvs`
+        :param gmvs_eids:
+           a pair of arrays of E elements
         :param epsgetter:
            a callable returning the correct epsilons for the given gmvs
         :returns:
@@ -525,33 +509,26 @@ class ProbabilisticEventBased(RiskModel):
             `openquake.risklib.scientific.ProbabilisticEventBased.Output`
             instance.
         """
-        eids = gmvs['eid']
+        gmvs, eids = gmvs_eids
         E = len(gmvs)
         I = self.insured_losses + 1
         N = len(assets)
         loss_ratios = numpy.zeros((N, E, I), F32)
-        losses = numpy.zeros((N, E, I), F32)
-        cb = self.compositemodel.curve_builders[
-            self.compositemodel.lti[loss_type]]
+        vf = self.risk_functions[loss_type]
+        means, covs, idxs = vf.interpolate(gmvs)
         for i, asset in enumerate(assets):
-            val = asset.value(loss_type)
             epsilons = epsgetter(asset.ordinal, eids)
-            loss_ratios[i, :, 0] = ratios = self.risk_functions[loss_type](
-                gmvs['gmv'], epsilons)  # shape E
+            if epsilons is not None:
+                ratios = vf.sample(means, covs, idxs, epsilons)
+            else:
+                ratios = means
+            loss_ratios[i, idxs, 0] = ratios
             if self.insured_losses and loss_type != 'occupants':
-                loss_ratios[i, :, 1] = scientific.insured_losses(
+                loss_ratios[i, idxs, 1] = scientific.insured_losses(
                     ratios,  asset.deductible(loss_type),
                     asset.insurance_limit(loss_type))
-            losses[i] = val * loss_ratios[i]
         return scientific.Output(
-            assets,
-            loss_type,
-            losses=losses,
-            average_loss=loss_ratios.sum(axis=1) * self.ses_ratio,
-            counts_matrix=cb.build_counts(loss_ratios[:, :, 0]),
-            insured_counts_matrix=(cb.build_counts(loss_ratios[:, :, 1])
-                                   if self.insured_losses else None),
-            eids=eids)
+            assets, loss_type, loss_ratios=loss_ratios, eids=eids)
 
 
 @registry.add('classical_bcr')
@@ -641,10 +618,11 @@ class Scenario(RiskModel):
             epsilons = epsilons[ok]
 
         # a matrix of N x E elements
+        vf = self.risk_functions[loss_type]
+        means, covs, idxs = vf.interpolate(ground_motion_values)
         loss_ratio_matrix = numpy.zeros((len(assets), len(epsilons[0])))
         for i, eps in enumerate(epsilons):
-            loss_ratio_matrix[i] = self.risk_functions[loss_type](
-                ground_motion_values, eps)
+            loss_ratio_matrix[i, idxs] = vf.sample(means, covs, idxs, eps)
         # another matrix of N x E elements
         loss_matrix = (loss_ratio_matrix.T * values).T
         # an array of E elements

@@ -1,7 +1,7 @@
 Scenario QA Test with AtkinsonBoore2003SInter
 =============================================
 
-gem-tstation:/home/michele/ssd/calc_968.hdf5 updated Thu Apr 28 15:38:31 2016
+gem-tstation:/home/michele/ssd/calc_19127.hdf5 updated Tue May 24 14:31:59 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  3                  
 master_seed                  0                  
-oqlite_version               '0.13.0-git93d6f64'
+oqlite_version               '0.13.0-git1f78261'
 ============================ ===================
 
 Input files
@@ -37,8 +37,8 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
-  0,AtkinsonBoore2003SInter: ['AtkinsonBoore2003SInter']>
+  <RlzsAssoc(size=1, rlzs=1)
+  0,AtkinsonBoore2003SInter(): ['<0,b_1,b1,w=1.0>']>
 
 Information about the tasks
 ---------------------------
@@ -49,7 +49,7 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.033     0.0       1     
-computing gmfs          0.025     0.0       1     
-reading site collection 4.601E-05 0.0       1     
+filtering sites         0.008     0.0       1     
+computing gmfs          0.003     0.0       1     
+reading site collection 3.004E-05 0.0       1     
 ======================= ========= ========= ======

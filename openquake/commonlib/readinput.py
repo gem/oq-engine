@@ -288,6 +288,25 @@ def get_site_collection(oqparam, mesh=None, site_ids=None,
         mesh.lons, mesh.lats, site_ids, oqparam)
 
 
+def get_gsim_lt(oqparam, trts=['*']):
+    """
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param trts:
+        a sequence of tectonic region types as strings; trts=['*']
+        means that there is no filtering
+    :returns:
+        a GsimLogicTree instance obtained by filtering on the provided
+        tectonic region types.
+    """
+    if 'gsim_logic_tree' not in oqparam.inputs:
+        return logictree.GsimLogicTree.from_(oqparam.gsim)
+    gsim_file = os.path.join(
+        oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
+    gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
+    return gsim_lt
+
+
 def get_gsims(oqparam):
     """
     Return an ordered list of GSIM instances from the gsim name in the
@@ -296,36 +315,7 @@ def get_gsims(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    gsims = list(map(str, get_rlzs_assoc(oqparam).realizations))
-    return list(map(valid.gsim, gsims))
-
-
-def get_rlzs_assoc(oqparam):
-    """
-    Extract the GSIM realizations from the gsim_logic_tree file, if present,
-    or build a single realization from the gsim attribute. It is only defined
-    for the scenario calculators.
-
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    """
-    if 'gsim_logic_tree' in oqparam.inputs:
-        gsim_lt = get_gsim_lt(oqparam, [])
-        if len(gsim_lt.values) != 1:
-            gsim_file = os.path.join(
-                oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
-            raise InvalidFile(
-                'The gsim logic tree file %s must contain a single tectonic '
-                'region type, found %s instead ' % (
-                    gsim_file, list(gsim_lt.values)))
-        trts = gsim_lt.values.keys()
-        rlzs = sorted(get_gsim_lt(oqparam, trts))
-    else:
-        rlzs = [
-            logictree.Realization(
-                value=(str(oqparam.gsim),), weight=1, lt_path=('',),
-                ordinal=0, lt_uid=('@',))]
-    return logictree.RlzsAssoc(rlzs)
+    return [valid.gsim(str(rlz)) for rlz in get_gsim_lt(oqparam)]
 
 
 def get_correl_model(oqparam):
@@ -353,21 +343,6 @@ def get_rupture(oqparam):
     conv = sourceconverter.RuptureConverter(
         oqparam.rupture_mesh_spacing, oqparam.complex_fault_mesh_spacing)
     return conv.convert_node(rup_node)
-
-
-def get_gsim_lt(oqparam, trts):
-    """
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param trts:
-        a sequence of tectonic region types as strings
-    :returns:
-        a GsimLogicTree instance obtained by filtering on the provided
-        tectonic region types.
-    """
-    gsim_file = os.path.join(
-        oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
-    return logictree.GsimLogicTree(gsim_file, trts)
 
 
 def get_source_model_lt(oqparam):
@@ -543,14 +518,11 @@ def get_job_info(oqparam, source_models, sitecol):
     imtls = oqparam.imtls
     n_sites = len(sitecol) if sitecol else 0
 
-    # the imtls dictionary has values None when the levels are unknown
+    # the imtls object has values [NaN] when the levels are unknown
     # (this is a valid case for the event based hazard calculator)
-    if None in imtls.values():  # there are no levels
-        n_imts = len(imtls)
-        n_levels = 0
-    else:  # there are levels
-        n_imts = len(imtls)
-        n_levels = sum(len(ls) for ls in imtls.values()) / float(n_imts)
+    n_imts = len(imtls)
+    n_levels = sum(len(ls) if hasattr(ls, '__len__') else 0
+                   for ls in imtls.values()) / float(n_imts)
 
     n_realizations = oqparam.number_of_logic_tree_samples or sum(
         sm.gsim_lt.get_num_paths() for sm in source_models)
@@ -1049,7 +1021,8 @@ def get_gmfs_from_txt(oqparam, fname):
         raise InvalidFile('%s contains %d rows, expected %d' % (
             fname, lineno, num_gmfs + 1))
     if etags != sorted(etags):
-        raise InvalidFile('The etags in %s are not ordered: %s' % (fname, etags))
+        raise InvalidFile('The etags in %s are not ordered: %s'
+                          % (fname, etags))
     return sitecol, numpy.array(etags, '|S100'), gmf_by_imt.T
 
 

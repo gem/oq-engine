@@ -47,6 +47,10 @@ def gsim(value, **kwargs):
     >>> gsim('BooreAtkinson2011')
     'BooreAtkinson2011()'
     """
+    if value == 'FromFile':
+        return 'FromFile'
+    elif value.endswith('()'):
+        value = value[:-2]  # strip parenthesis
     try:
         gsim_class = GSIM[value]
     except KeyError:

@@ -18,9 +18,13 @@
 
 from __future__ import print_function
 import logging
+import operator
+from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
 from openquake.commonlib import sap, nrml, readinput, reportwriter, datastore
-from openquake.calculators import base
+from openquake.commonlib.parallel import get_pickled_sizes
+from openquake.commonlib.export import export
+from openquake.calculators import base, views
 from openquake.hazardlib import gsim
 
 
@@ -34,12 +38,15 @@ def print_csm_info(fname):
     print(csm.info)
     print('See https://github.com/gem/oq-risklib/blob/master/doc/'
           'effective-realizations.rst for an explanation')
-    print(csm.info.get_rlzs_assoc())
+    rlzs_assoc = csm.info.get_rlzs_assoc()
+    print(rlzs_assoc)
+    tot, pairs = get_pickled_sizes(rlzs_assoc)
+    print(views.rst_table(pairs, ['attribute', 'nbytes']))
 
 
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
-def info(calculators, gsims, views, report, input_file=''):
+def info(calculators, gsims, views, exports, report, input_file=''):
     """
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
@@ -54,6 +61,14 @@ def info(calculators, gsims, views, report, input_file=''):
     if views:
         for name in sorted(datastore.view):
             print(name)
+    if exports:
+        dic = groupby(export, operator.itemgetter(0),
+                      lambda group: [r[1] for r in group])
+        n = 0
+        for exporter, formats in dic.items():
+            print(exporter, formats)
+            n += len(formats)
+        print('There are %d exporters defined.' % n)
     if input_file.endswith('.xml'):
         print(nrml.read(input_file).to_str())
     elif input_file.endswith(('.ini', '.zip')):
@@ -71,5 +86,6 @@ parser = sap.Parser(info)
 parser.flg('calculators', 'list available calculators')
 parser.flg('gsims', 'list available GSIMs')
 parser.flg('views', 'list available views')
+parser.flg('exports', 'list available exports')
 parser.flg('report', 'build a report in rst format')
 parser.arg('input_file', 'job.ini file or zip archive')

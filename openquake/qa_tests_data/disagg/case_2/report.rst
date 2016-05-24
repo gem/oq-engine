@@ -1,7 +1,7 @@
 QA test for disaggregation case_2
 =================================
 
-gem-tstation:/home/michele/ssd/calc_1038.hdf5 updated Thu Apr 28 15:44:15 2016
+gem-tstation:/home/michele/ssd/calc_19199.hdf5 updated Tue May 24 14:34:16 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0               
 random_seed                  23                 
 master_seed                  0                  
-oqlite_version               '0.13.0-git93d6f64'
+oqlite_version               '0.13.0-git1f78261'
 ============================ ===================
 
 Input files
@@ -46,13 +46,13 @@ source_model_2 0.500  `source_model_2.xml <source_model_2.xml>`_ simple(2,0)    
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================================= =========== ======================= =================
-trt_id gsims                             distances   siteparams              ruptparams       
-====== ================================= =========== ======================= =================
-0      YoungsEtAl1997SSlab               rrup        vs30                    hypo_depth mag   
-1      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
-2      BooreAtkinson2008 ChiouYoungs2008 rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
-====== ================================= =========== ======================= =================
+====== ===================================== =========== ======================= =================
+trt_id gsims                                 distances   siteparams              ruptparams       
+====== ===================================== =========== ======================= =================
+0      YoungsEtAl1997SSlab()                 rrup        vs30                    hypo_depth mag   
+1      BooreAtkinson2008() ChiouYoungs2008() rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+2      BooreAtkinson2008() ChiouYoungs2008() rx rjb rrup vs30measured z1pt0 vs30 ztor mag rake dip
+====== ===================================== =========== ======================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -60,20 +60,20 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=5, rlzs=4)
-  0,YoungsEtAl1997SSlab: ['<0,source_model_1,BooreAtkinson2008_YoungsEtAl1997SSlab,w=0.25>', '<1,source_model_1,ChiouYoungs2008_YoungsEtAl1997SSlab,w=0.25>']
-  1,BooreAtkinson2008: ['<0,source_model_1,BooreAtkinson2008_YoungsEtAl1997SSlab,w=0.25>']
-  1,ChiouYoungs2008: ['<1,source_model_1,ChiouYoungs2008_YoungsEtAl1997SSlab,w=0.25>']
-  2,BooreAtkinson2008: ['<2,source_model_2,BooreAtkinson2008_@,w=0.25>']
-  2,ChiouYoungs2008: ['<3,source_model_2,ChiouYoungs2008_@,w=0.25>']>
+  0,YoungsEtAl1997SSlab(): ['<0,source_model_1,BooreAtkinson2008_YoungsEtAl1997SSlab,w=0.25>', '<1,source_model_1,ChiouYoungs2008_YoungsEtAl1997SSlab,w=0.25>']
+  1,BooreAtkinson2008(): ['<0,source_model_1,BooreAtkinson2008_YoungsEtAl1997SSlab,w=0.25>']
+  1,ChiouYoungs2008(): ['<1,source_model_1,ChiouYoungs2008_YoungsEtAl1997SSlab,w=0.25>']
+  2,BooreAtkinson2008(): ['<2,source_model_2,BooreAtkinson2008_@,w=0.25>']
+  2,ChiouYoungs2008(): ['<3,source_model_2,ChiouYoungs2008_@,w=0.25>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================== ====== ==================== =========== ============ ======
 source_model       trt_id trt                  num_sources eff_ruptures weight
 ================== ====== ==================== =========== ============ ======
-source_model_1.xml 0      Subduction Intraslab 1           1,815        45    
-source_model_1.xml 1      Active Shallow Crust 2           3,630        90    
-source_model_2.xml 2      Active Shallow Crust 1           1,420        1,420 
+source_model_1.xml 0      Subduction Intraslab 1           1815         45    
+source_model_1.xml 1      Active Shallow Crust 2           3630         90    
+source_model_2.xml 2      Active Shallow Crust 1           1420         1,420 
 ================== ====== ==================== =========== ============ ======
 
 =============== =====
@@ -86,14 +86,14 @@ filtered_weight 1,556
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 3102          
+count_eff_ruptures_max_received_per_task 3136          
 count_eff_ruptures_num_tasks             18            
-count_eff_ruptures_sent.monitor          51372         
-count_eff_ruptures_sent.rlzs_assoc       107000        
+count_eff_ruptures_sent.monitor          51786         
+count_eff_ruptures_sent.rlzs_assoc       94194         
 count_eff_ruptures_sent.sitecol          8298          
 count_eff_ruptures_sent.siteidx          90            
 count_eff_ruptures_sent.sources          21981         
-count_eff_ruptures_tot_received          55821         
+count_eff_ruptures_tot_received          56433         
 hazard.input_weight                      1556.125      
 hazard.n_imts                            1             
 hazard.n_levels                          19.0          
@@ -109,11 +109,20 @@ Slowest sources
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-2            1         SimpleFaultSource 1,420  15        0.020       0.344      0.0      
-0            2         AreaSource        45     1         0.002       0.0        0.0      
-1            3         AreaSource        45     1         0.001       0.0        0.0      
-1            1         AreaSource        45     1         0.001       0.0        0.0      
+2            1         SimpleFaultSource 1,420  15        0.002       0.074      0.0      
+0            2         AreaSource        45     1         6.919E-04   0.0        0.0      
+1            1         AreaSource        45     1         6.390E-04   0.0        0.0      
+1            3         AreaSource        45     1         6.351E-04   0.0        0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+================= =========== ========== ========= ======
+source_class      filter_time split_time calc_time counts
+================= =========== ========== ========= ======
+AreaSource        0.002       0.0        0.0       3     
+SimpleFaultSource 0.002       0.074      0.0       1     
+================= =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
@@ -124,12 +133,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.552     0.0       1     
-splitting sources              0.344     0.0       1     
-reading composite source model 0.124     0.0       1     
-filtering sources              0.024     0.0       4     
-store source_info              0.007     0.0       1     
+managing sources               0.106     0.0       1     
+splitting sources              0.074     0.0       1     
+reading composite source model 0.043     0.0       1     
+store source_info              0.006     0.0       1     
 total count_eff_ruptures       0.005     0.0       18    
-aggregate curves               3.538E-04 0.0       18    
-reading site collection        5.078E-05 0.0       1     
+filtering sources              0.004     0.0       4     
+aggregate curves               3.810E-04 0.0       18    
+reading site collection        2.885E-05 0.0       1     
 ============================== ========= ========= ======

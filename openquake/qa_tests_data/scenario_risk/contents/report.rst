@@ -1,7 +1,7 @@
 QA Scenario Risk for contents
 =============================
 
-gem-tstation:/home/michele/ssd/calc_1032.hdf5 updated Thu Apr 28 15:44:06 2016
+gem-tstation:/home/michele/ssd/calc_19193.hdf5 updated Tue May 24 14:34:11 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   None
 random_seed                  3                  
 master_seed                  0                  
 avg_losses                   False              
-oqlite_version               '0.13.0-git93d6f64'
+oqlite_version               '0.13.0-git1f78261'
 ============================ ===================
 
 Input files
@@ -41,8 +41,8 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
-  0,ChiouYoungs2008: ['ChiouYoungs2008']>
+  <RlzsAssoc(size=1, rlzs=1)
+  0,ChiouYoungs2008(): ['<0,b_1,b1,w=1.0>']>
 
 Exposure model
 --------------
@@ -51,35 +51,35 @@ Exposure model
 #taxonomies 3
 =========== =
 
-======== =======
-Taxonomy #Assets
-======== =======
-RC       1      
-RM       1      
-W        1      
-======== =======
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+RC       1.000 NaN    1   1   1         1         
+RM       1.000 NaN    1   1   1         1         
+W        1.000 NaN    1   1   1         1         
+*ALL*    1.000 0.0    1   1   3         3         
+======== ===== ====== === === ========= ==========
 
 Information about the tasks
 ---------------------------
-======================= ===== ===== ===== =========
-measurement             min   max   mean  stddev   
-scenario_risk.time_sec  0.002 0.002 0.002 6.204E-05
-scenario_risk.memory_mb 0.004 0.004 0.004 0.0      
-======================= ===== ===== ===== =========
+======================= ===== ========= ===== ===== =========
+measurement             mean  stddev    min   max   num_tasks
+scenario_risk.time_sec  0.002 1.772E-04 0.002 0.002 3        
+scenario_risk.memory_mb 0.0   0.0       0.0   0.0   3        
+======================= ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.011     0.0       1     
-reading exposure        0.008     0.0       1     
-total scenario_risk     0.007     0.004     3     
-computing risk          0.005     0.0       3     
+filtering sites         0.006     0.0       1     
+total scenario_risk     0.005     0.0       3     
+reading exposure        0.004     0.0       1     
+computing riskmodel     0.003     0.0       3     
 computing gmfs          0.002     0.0       1     
-saving gmfs             0.002     0.0       1     
-building riskinputs     5.109E-04 0.0       1     
-building epsilons       1.659E-04 0.0       1     
-building hazard         7.796E-05 0.0       3     
-reading site collection 1.001E-05 0.0       1     
+saving gmfs             0.001     0.0       1     
+building hazard         3.819E-04 0.0       3     
+building riskinputs     3.791E-04 0.0       1     
+building epsilons       1.240E-04 0.0       1     
+reading site collection 6.199E-06 0.0       1     
 ======================= ========= ========= ======

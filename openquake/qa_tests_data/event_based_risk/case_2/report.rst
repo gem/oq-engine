@@ -1,7 +1,7 @@
 Event Based Risk QA Test 2
 ==========================
 
-gem-tstation:/home/michele/ssd/calc_989.hdf5 updated Thu Apr 28 15:38:43 2016
+gem-tstation:/home/michele/ssd/calc_19148.hdf5 updated Tue May 24 14:32:04 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                 
 master_seed                  42                 
 avg_losses                   True               
-oqlite_version               '0.13.0-git93d6f64'
+oqlite_version               '0.13.0-git1f78261'
 ============================ ===================
 
 Input files
@@ -47,11 +47,11 @@ b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =============== =========== ======================= =================
-trt_id gsims           distances   siteparams              ruptparams       
-====== =============== =========== ======================= =================
-0      ChiouYoungs2008 rx rjb rrup vs30measured vs30 z1pt0 rake dip ztor mag
-====== =============== =========== ======================= =================
+====== ================= =========== ======================= =================
+trt_id gsims             distances   siteparams              ruptparams       
+====== ================= =========== ======================= =================
+0      ChiouYoungs2008() rx rjb rrup vs30measured vs30 z1pt0 rake dip ztor mag
+====== ================= =========== ======================= =================
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -59,7 +59,7 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,ChiouYoungs2008: ['<0,b1,b1,w=1.0>']>
+  0,ChiouYoungs2008(): ['<0,b1,b1,w=1.0>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -72,14 +72,14 @@ source_model.xml 0      Active Shallow Crust 3           8            0.450
 Informational data
 ------------------
 ====================================== ==============
-event_based_risk_max_received_per_task 4829          
+event_based_risk_max_received_per_task 4754          
 event_based_risk_num_tasks             8             
 event_based_risk_sent.assetcol         17680         
-event_based_risk_sent.monitor          21488         
-event_based_risk_sent.riskinput        24467         
-event_based_risk_sent.riskmodel        17800         
-event_based_risk_sent.rlzs_assoc       20984         
-event_based_risk_tot_received          37477         
+event_based_risk_sent.monitor          21680         
+event_based_risk_sent.riskinput        25234         
+event_based_risk_sent.riskmodel        15080         
+event_based_risk_sent.rlzs_assoc       30160         
+event_based_risk_tot_received          37162         
 hostname                               'gem-tstation'
 require_epsilons                       True          
 ====================================== ==============
@@ -99,7 +99,7 @@ and has a size of 312 B / num_tasks
 
 Estimated data transfer for the avglosses
 -----------------------------------------
-4 asset(s) x 1 realization(s) x 1 loss type(s) x 2 losses x 8 bytes x 40 tasks = 2.5 KB
+4 asset(s) x 1 realization(s) x 1 loss type(s) x 2 losses x 8 bytes x 20 tasks = 1.25 KB
 
 Exposure model
 --------------
@@ -108,57 +108,67 @@ Exposure model
 #taxonomies 3
 =========== =
 
-======== =======
-Taxonomy #Assets
-======== =======
-RC       1      
-RM       2      
-W        1      
-======== =======
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+RC       1.000 NaN    1   1   1         1         
+RM       1.000 0.0    1   1   2         2         
+W        1.000 NaN    1   1   1         1         
+*ALL*    1.333 0.577  1   2   3         4         
+======== ===== ====== === === ========= ==========
 
 Slowest sources
 ---------------
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            3         PointSource  0.150  1         1.419E-04   0.0        0.009    
-0            2         PointSource  0.150  1         1.450E-04   0.0        0.005    
-0            1         PointSource  0.150  1         1.760E-04   0.0        0.005    
+0            2         PointSource  0.150  1         8.297E-05   0.0        0.006    
+0            1         PointSource  0.150  1         1.290E-04   0.0        0.006    
+0            3         PointSource  0.150  1         7.010E-05   0.0        0.006    
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+============ =========== ========== ========= ======
+source_class filter_time split_time calc_time counts
+============ =========== ========== ========= ======
+PointSource  2.820E-04   0.0        0.018     3     
+============ =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
-================================= ===== ===== ===== =========
-measurement                       min   max   mean  stddev   
-compute_gmfs_and_curves.time_sec  0.003 0.004 0.003 1.603E-04
-compute_gmfs_and_curves.memory_mb 0.004 0.227 0.159 0.096    
-event_based_risk.time_sec         0.005 0.008 0.006 0.001    
-event_based_risk.memory_mb        0.0   0.574 0.259 0.165    
-================================= ===== ===== ===== =========
+================================= ===== ========= ===== ===== =========
+measurement                       mean  stddev    min   max   num_tasks
+compute_ruptures.time_sec         0.019 NaN       0.019 0.019 1        
+compute_ruptures.memory_mb        0.0   NaN       0.0   0.0   1        
+event_based_risk.time_sec         0.006 0.002     0.004 0.008 8        
+event_based_risk.memory_mb        0.078 0.128     0.0   0.363 8        
+compute_gmfs_and_curves.time_sec  0.006 9.922E-04 0.003 0.006 8        
+compute_gmfs_and_curves.memory_mb 0.320 0.056     0.246 0.398 8        
+================================= ===== ========= ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total event_based_risk         0.051     0.574     8     
-compute poes                   0.032     0.0       16    
-total compute_gmfs_and_curves  0.027     0.227     8     
-building hazard                0.025     0.0       8     
-total compute_ruptures         0.020     0.207     1     
-computing risk                 0.018     0.0       24    
-make contexts                  0.016     0.0       16    
-saving event loss tables       0.014     0.0       8     
-saving ruptures                0.009     0.0       1     
-store source_info              0.009     0.0       1     
-reading composite source model 0.008     0.0       1     
-reading exposure               0.008     0.0       1     
-filtering ruptures             0.007     0.0       8     
-saving gmfs                    0.005     0.0       8     
-managing sources               0.003     0.0       1     
-aggregate losses               0.001     0.0       32    
-aggregate curves               0.001     0.0       1     
-getting hazard                 0.001     0.0       24    
-filtering sources              4.628E-04 0.0       3     
-reading site collection        5.293E-05 0.0       1     
+compute poes                   0.052     0.0       16    
+total event_based_risk         0.049     0.363     8     
+total compute_gmfs_and_curves  0.045     0.398     8     
+building hazard                0.032     0.0       8     
+total compute_ruptures         0.019     0.0       1     
+make contexts                  0.017     0.0       16    
+building riskinputs            0.016     0.0       1     
+computing riskmodel            0.010     0.0       32    
+saving ruptures                0.007     0.0       1     
+saving gmfs                    0.007     0.0       8     
+reading composite source model 0.007     0.0       1     
+saving event loss tables       0.007     0.0       8     
+store source_info              0.006     0.0       1     
+reading exposure               0.005     0.0       1     
+filtering ruptures             0.004     0.0       8     
+aggregate losses               0.003     0.0       32    
+managing sources               0.002     0.0       1     
+aggregate curves               9.122E-04 0.0       1     
+filtering sources              2.820E-04 0.0       3     
+reading site collection        3.600E-05 0.0       1     
 ============================== ========= ========= ======

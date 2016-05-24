@@ -41,13 +41,13 @@ from openquake.baselib.python3compat import raise_
 import openquake.hazardlib
 from openquake.hazardlib.gsim.gsim_table import GMPETable
 from openquake.hazardlib import geo
-from openquake.commonlib import valid, util
+from openquake.commonlib import valid, writers
 from openquake.commonlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 
 from openquake.commonlib.node import (
     node_from_xml, parse, iterparse,
-    node_from_elem, LiteralNode, context)
+    node_from_elem, LiteralNode as N, context)
 from openquake.baselib.python3compat import with_metaclass
 
 #: Minimum value for a seed number
@@ -61,55 +61,6 @@ Realization.uid = property(lambda self: '_'.join(self.lt_uid))  # unique ID
 Realization.__str__ = lambda self: (
     repr(self) if isinstance(self.value, str)  # source model realization
     else str(self.value[0]))  # gsim realization
-
-
-class RlzsAssoc(collections.Mapping):
-    """
-    Used for scenario calculators, when there is a realization for each GSIM.
-    """
-    def __init__(self, realizations):
-        self.realizations = realizations
-        self.rlzs_assoc = {}
-        self.gsims_by_trt_id = {0: []}
-        for rlz in realizations:
-            rlz_str = str(rlz)
-            self.rlzs_assoc[0, rlz_str] = [rlz]
-            if rlz_str != 'FromFile':
-                self.gsims_by_trt_id[0].append(valid.gsim(rlz_str))
-
-    def combine(self, result):  # this is used in the workers
-        """
-        Convert a dictionary key -> value into a dictionary rlz -> value,
-        since there is a single realization per key.
-        """
-        return {self.rlzs_assoc[key][0]: result[key] for key in result}
-
-    def __iter__(self):
-        return iter(self.rlzs_assoc.keys())
-
-    def __getitem__(self, key):
-        return self.rlzs_assoc[key]
-
-    def __len__(self):
-        return len(self.rlzs_assoc)
-
-    def __repr__(self):
-        pairs = []
-        for key in sorted(self.rlzs_assoc):
-            rlzs = list(map(str, self.rlzs_assoc[key]))
-            pairs.append(('%s,%s' % key, rlzs))
-        return '<%s(%d)\n%s>' % (self.__class__.__name__, len(self),
-                                 '\n'.join('%s: %s' % pair for pair in pairs))
-
-
-def trivial_rlzs_assoc():
-    """
-    Return a fake RlzsAssoc instance. Used by the risk calculators when
-    reading the hazard from a file.
-    """
-    fake_rlz = Realization(
-        value=('FromFile',), weight=1, lt_path=('',), ordinal=0, lt_uid=('@',))
-    return RlzsAssoc([fake_rlz])
 
 
 def get_effective_rlzs(rlzs):
@@ -625,8 +576,7 @@ class BaseLogicTree(with_metaclass(abc.ABCMeta)):
             weight_sum += weight
             value_node = node_from_elem(
                 branchnode.find('%suncertaintyModel' % self.NRML),
-                nodefactory=LiteralNode
-                )
+                nodefactory=N)
             if validate:
                 self.validate_uncertainty_value(value_node, branchset)
             value = self.parse_uncertainty_value(value_node, branchset)
@@ -1301,10 +1251,26 @@ class GsimLogicTree(object):
         :class:`openquake.commonlib.nrml.Node` object describing the
         GSIM logic tree XML file, to avoid reparsing it
     """
+    @classmethod
+    def from_(cls, gsim):
+        """
+        Generate a trivial GsimLogicTree from a single GSIM instance.
+        """
+        ltbranch = N('logicTreeBranch', {'branchID': 'b1'},
+                     nodes=[N('uncertaintyModel', text=str(gsim)),
+                            N('uncertaintyWeight', text='1.0')])
+        lt = N('logicTree', {'logicTreeID': 'lt1'},
+               nodes=[N('logicTreeBranchingLevel', {'branchingLevelID': 'bl1'},
+                        nodes=[N('logicTreeBranchSet',
+                                 {'applyToTectonicRegionType': '*',
+                                  'branchSetID': 'bs1',
+                                  'uncertaintyType': 'gmpeModel'},
+                                 nodes=[ltbranch])])])
+        return cls(str(gsim), ['*'], ltnode=lt)
+
     def __init__(self, fname, tectonic_region_types, ltnode=None):
         self.fname = fname
-        self.tectonic_region_types = sorted(tectonic_region_types)
-        trts = self.tectonic_region_types
+        self.tectonic_region_types = trts = sorted(tectonic_region_types)
         if len(trts) > len(set(trts)):
             raise ValueError(
                 'The given tectonic region types are not distinct: %s' %
@@ -1317,6 +1283,12 @@ class GsimLogicTree(object):
                 'Could not find branches with attribute '
                 "'applyToTectonicRegionType' in %s" %
                 set(tectonic_region_types))
+
+    def __str__(self):
+        """
+        :returns: an XML string representing the logic tree
+        """
+        return writers.tostring(self._ltnode)
 
     def reduce(self, trts):
         """
@@ -1379,7 +1351,9 @@ class GsimLogicTree(object):
                 trt = branchset.attrib.get('applyToTectonicRegionType')
                 if trt:
                     trts.append(trt)
-                effective = trt in self.tectonic_region_types
+                # NB: '*' is used in scenario calculations to disable filtering
+                effective = (self.tectonic_region_types == ['*'] or
+                             trt in self.tectonic_region_types)
                 weights = []
                 for branch in branchset:
                     weight = Decimal(branch.uncertaintyWeight.text)
@@ -1413,6 +1387,8 @@ class GsimLogicTree(object):
         :param: a tectonic region type string
         :returns: the GSIM string associated to the given realization
         """
+        if trt == '*':  # assume a single TRT
+            return rlz.value[0]
         idx = self.all_trts.index(trt)
         return rlz.value[idx]
 
@@ -1439,7 +1415,7 @@ class GsimLogicTree(object):
             yield Realization(tuple(value), weight, tuple(lt_path),
                               i, tuple(lt_uid))
 
-    def __str__(self):
+    def __repr__(self):
         lines = ['%s,%s,%s,w=%s' % (b.bset['applyToTectonicRegionType'],
                                     b.id, b.uncertainty, b.weight)
                  for b in self.branches if b.effective]

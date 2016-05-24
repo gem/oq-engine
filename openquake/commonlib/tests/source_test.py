@@ -17,12 +17,11 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import mock
 import unittest
 from io import BytesIO
 
 import numpy
-from numpy.testing import assert_allclose, assert_equal
+from numpy.testing import assert_allclose
 
 from openquake.hazardlib import site
 from openquake.hazardlib import geo
@@ -707,17 +706,20 @@ class TrtModelTestCase(unittest.TestCase):
     def test_repr(self):
         self.assertEqual(
             repr(self.source_collector['Volcanic']),
-            '<TrtModel #0 Volcanic, 3 source(s), 0 rupture(s)>')
+            '<TrtModel #0 Volcanic, 3 source(s), -1 effective rupture(s)>')
         self.assertEqual(
             repr(self.source_collector['Stable Continental Crust']),
-            '<TrtModel #0 Stable Continental Crust, 1 source(s), 0 rupture(s)>'
+            '<TrtModel #0 Stable Continental Crust, 1 source(s), '
+            '-1 effective rupture(s)>'
         )
         self.assertEqual(
             repr(self.source_collector['Subduction Interface']),
-            '<TrtModel #0 Subduction Interface, 1 source(s), 0 rupture(s)>')
+            '<TrtModel #0 Subduction Interface, 1 source(s), '
+            '-1 effective rupture(s)>')
         self.assertEqual(
             repr(self.source_collector['Active Shallow Crust']),
-            '<TrtModel #0 Active Shallow Crust, 2 source(s), 0 rupture(s)>')
+            '<TrtModel #0 Active Shallow Crust, 2 source(s), -1'
+            ' effective rupture(s)>')
 
 
 class RuptureConverterTestCase(unittest.TestCase):
@@ -767,16 +769,16 @@ class CompositeSourceModelTestCase(unittest.TestCase):
         # the example has number_of_logic_tree_samples = 1
         sitecol = readinput.get_site_collection(oqparam)
         csm = readinput.get_composite_source_model(oqparam, sitecol)
-        self.assertEqual(str(csm[0].gsim_lt), '''\
+        self.assertEqual(repr(csm[0].gsim_lt), '''\
 <GsimLogicTree
-Active Shallow Crust,b1,SadighEtAl1997,w=0.5
-Active Shallow Crust,b2,ChiouYoungs2008,w=0.5
-Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
+Active Shallow Crust,b1,SadighEtAl1997(),w=0.5
+Active Shallow Crust,b2,ChiouYoungs2008(),w=0.5
+Subduction Interface,b3,SadighEtAl1997(),w=1.0>''')
         assoc = csm.info.get_rlzs_assoc()
         [rlz] = assoc.realizations
         self.assertEqual(assoc.gsim_by_trt[rlz.ordinal],
-                         {'Subduction Interface': 'SadighEtAl1997',
-                          'Active Shallow Crust': 'ChiouYoungs2008'})
+                         {'Subduction Interface': 'SadighEtAl1997()',
+                          'Active Shallow Crust': 'ChiouYoungs2008()'})
         # ignoring the end of the tuple, with the uid field
         self.assertEqual(rlz.ordinal, 0)
         self.assertEqual(rlz.sm_lt_path, ('b1', 'b5', 'b8'))
@@ -784,8 +786,9 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         self.assertEqual(rlz.weight, 1.)
         self.assertEqual(
             str(assoc),
-            "<RlzsAssoc(size=2, rlzs=1)\n0,SadighEtAl1997: ['<0,b1_b5_b8,b2_b3,w=1.0>']\n"
-            "1,ChiouYoungs2008: ['<0,b1_b5_b8,b2_b3,w=1.0>']>")
+            "<RlzsAssoc(size=2, rlzs=1)\n0,SadighEtAl1997(): "
+            "['<0,b1_b5_b8,b2_b3,w=1.0>']\n"
+            "1,ChiouYoungs2008(): ['<0,b1_b5_b8,b2_b3,w=1.0>']>")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
@@ -808,10 +811,10 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         assoc = rlzs_assoc.extract([1, 5])
         self.assertEqual(str(assoc), """\
 <RlzsAssoc(size=4, rlzs=2)
-0,SadighEtAl1997: ['<1,b1_b3_b6,b2_b3,w=0.5>']
-1,ChiouYoungs2008: ['<1,b1_b3_b6,b2_b3,w=0.5>']
-4,SadighEtAl1997: ['<5,b1_b3_b8,b2_b3,w=0.5>']
-5,ChiouYoungs2008: ['<5,b1_b3_b8,b2_b3,w=0.5>']>""")
+0,SadighEtAl1997(): ['<1,b1_b3_b6,b2_b3,w=0.5>']
+1,ChiouYoungs2008(): ['<1,b1_b3_b6,b2_b3,w=0.5>']
+4,SadighEtAl1997(): ['<5,b1_b3_b8,b2_b3,w=0.5>']
+5,ChiouYoungs2008(): ['<5,b1_b3_b8,b2_b3,w=0.5>']>""")
 
         # removing 9 trt_models out of 18
         def count_ruptures(trt_model):
@@ -822,15 +825,15 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
         assoc = csm.info.get_rlzs_assoc(count_ruptures)
         expected_assoc = """\
 <RlzsAssoc(size=9, rlzs=9)
-0,SadighEtAl1997: ['<0,b1_b3_b6,@_b3,w=0.04>']
-2,SadighEtAl1997: ['<1,b1_b3_b7,@_b3,w=0.12>']
-4,SadighEtAl1997: ['<2,b1_b3_b8,@_b3,w=0.04>']
-6,SadighEtAl1997: ['<3,b1_b4_b6,@_b3,w=0.12>']
-8,SadighEtAl1997: ['<4,b1_b4_b7,@_b3,w=0.36>']
-10,SadighEtAl1997: ['<5,b1_b4_b8,@_b3,w=0.12>']
-12,SadighEtAl1997: ['<6,b1_b5_b6,@_b3,w=0.04>']
-14,SadighEtAl1997: ['<7,b1_b5_b7,@_b3,w=0.12>']
-16,SadighEtAl1997: ['<8,b1_b5_b8,@_b3,w=0.04>']>"""
+0,SadighEtAl1997(): ['<0,b1_b3_b6,@_b3,w=0.04>']
+2,SadighEtAl1997(): ['<1,b1_b3_b7,@_b3,w=0.12>']
+4,SadighEtAl1997(): ['<2,b1_b3_b8,@_b3,w=0.04>']
+6,SadighEtAl1997(): ['<3,b1_b4_b6,@_b3,w=0.12>']
+8,SadighEtAl1997(): ['<4,b1_b4_b7,@_b3,w=0.36>']
+10,SadighEtAl1997(): ['<5,b1_b4_b8,@_b3,w=0.12>']
+12,SadighEtAl1997(): ['<6,b1_b5_b6,@_b3,w=0.04>']
+14,SadighEtAl1997(): ['<7,b1_b5_b7,@_b3,w=0.12>']
+16,SadighEtAl1997(): ['<8,b1_b5_b8,@_b3,w=0.04>']>"""
         self.assertEqual(str(assoc), expected_assoc)
         self.assertEqual(len(assoc.realizations), 9)
 
@@ -843,15 +846,15 @@ Subduction Interface,b3,SadighEtAl1997,w=1.0>''')
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         sitecol = readinput.get_site_collection(oq)
         csm = readinput.get_composite_source_model(oq, sitecol)
-        assoc = csm.info.get_rlzs_assoc()
+        assoc = csm.info.get_rlzs_assoc(lambda tm: 1)
         self.assertEqual(
             str(assoc),
             "<RlzsAssoc(size=2, rlzs=5)\n"
-            "0,SadighEtAl1997: ['<0,b1,b1,w=0.2>']\n"
-            "1,SadighEtAl1997: ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']>")
+            "0,SadighEtAl1997(): ['<0,b1,b1,w=0.2>']\n"
+            "1,SadighEtAl1997(): ['<1,b2,b1,w=0.2>', '<2,b2,b1,w=0.2>', '<3,b2,b1,w=0.2>', '<4,b2,b1,w=0.2>']>")
 
         # check CompositionInfo serialization
-        array, attrs = assoc.csm_info.__toh5__()
+        dic, attrs = assoc.csm_info.__toh5__()
         new = object.__new__(CompositionInfo)
-        new.__fromh5__(array, attrs)
+        new.__fromh5__(dic, attrs)
         self.assertEqual(repr(new), repr(assoc.csm_info))

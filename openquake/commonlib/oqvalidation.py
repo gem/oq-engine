@@ -18,24 +18,14 @@
 
 import os
 import logging
-import collections
 import numpy
 
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.probability_map import Imtls
 from openquake.commonlib import valid, parallel, logictree
 from openquake.commonlib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
-
-HAZARD_CALCULATORS = [
-    'classical', 'disaggregation', 'event_based', 'scenario',
-    'event_based_rupture']
-
-RISK_CALCULATORS = [
-    'classical_risk', 'event_based_risk', 'scenario_risk',
-    'classical_bcr', 'scenario_damage', 'classical_damage']
-
-CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
 
 
 class OqParam(valid.ParamSet):
@@ -53,7 +43,7 @@ class OqParam(valid.ParamSet):
     asset_loss_table = valid.Param(valid.boolean, False)
     avg_losses = valid.Param(valid.boolean, False)
     base_path = valid.Param(valid.utf8, '.')
-    calculation_mode = valid.Param(valid.Choice(*CALCULATORS), '')
+    calculation_mode = valid.Param(valid.Choice(), '')  # -> get_oqparam
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
@@ -93,7 +83,6 @@ class OqParam(valid.ParamSet):
     master_seed = valid.Param(valid.positiveint, 0)
     maximum_distance = valid.Param(valid.floatdict)  # km
     asset_hazard_distance = valid.Param(valid.positivefloat, 5)  # km
-    maximum_tile_weight = valid.Param(valid.positivefloat)
     mean_hazard_curves = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
@@ -124,7 +113,7 @@ class OqParam(valid.ParamSet):
     ses_per_logic_tree_path = valid.Param(valid.positiveint, 1)
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
-    sites_per_tile = valid.Param(valid.positiveint, 1000)
+    sites_per_tile = valid.Param(valid.positiveint, 10000)
     specific_assets = valid.Param(valid.namelist, [])
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
@@ -171,7 +160,7 @@ class OqParam(valid.ParamSet):
                                  'must be no `gsim` key')
             path = os.path.join(
                 self.base_path, self.inputs['gsim_logic_tree'])
-            self._gsims_by_trt = logictree.GsimLogicTree(path, []).values
+            self._gsims_by_trt = logictree.GsimLogicTree(path, ['*']).values
             for gsims in self._gsims_by_trt.values():
                 self.check_gsims(gsims)
         elif self.gsim is not None:
@@ -233,7 +222,7 @@ class OqParam(valid.ParamSet):
         levels, if given, or the hazard ones.
         """
         imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
-        return collections.OrderedDict(sorted(imtls.items()))
+        return Imtls(imtls)
 
     @property
     def all_cost_types(self):
@@ -285,7 +274,7 @@ class OqParam(valid.ParamSet):
         """
         Return True if there are no intensity measure levels
         """
-        return all(ls is None for ls in self.imtls.values())
+        return all(numpy.isnan(ls).any() for ls in self.imtls.values())
 
     def is_valid_truncation_level_disaggregation(self):
         """
@@ -309,7 +298,9 @@ class OqParam(valid.ParamSet):
         region and exposure_file is set. You did set more than
         one, or nothing.
         """
-        if self.calculation_mode not in HAZARD_CALCULATORS:
+        if ('risk' in self.calculation_mode or
+                'damage' in self.calculation_mode or
+                'bcr' in self.calculation_mode):
             return True  # no check on the sites for risk
         flags = dict(
             sites=bool(self.sites),
