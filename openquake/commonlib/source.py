@@ -31,7 +31,7 @@ import numpy
 from openquake.baselib.python3compat import raise_
 from openquake.baselib.general import (
     AccumDict, groupby, block_splitter, group_array)
-from openquake.hazardlib.site import FatTile
+from openquake.hazardlib.site import Tile
 from openquake.commonlib.node import read_nodes
 from openquake.commonlib import logictree, sourceconverter, parallel, valid
 from openquake.commonlib.nrml import nodefactory, PARSE_NS_MAP
@@ -859,7 +859,7 @@ class SourceManager(object):
     def get_sources(self, kind, tile):
         """
         :param kind: a string 'light', 'heavy' or 'all'
-        :param tile: an :class:`openquake.hazardlib.site.FatTile` instance
+        :param tile: an :class:`openquake.hazardlib.site.Tile` instance
         :returns: the sources of the given kind affecting the given tile
         """
         filter_mon = self.monitor('filtering sources')
@@ -926,7 +926,7 @@ class SourceManager(object):
         Submit the light sources and then the (split) heavy sources.
         Only the sources affecting the sitecol as considered.
         """
-        tile = FatTile(sitecol, self.maximum_distance)
+        tile = Tile(sitecol, self.maximum_distance)
         for kind in ('light', 'heavy'):
             if self.filter_sources:
                 logging.info('Filtering %s sources', kind)
