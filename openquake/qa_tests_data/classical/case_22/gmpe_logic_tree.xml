@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID='lt1'>
+
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                    applyToTectonicRegionType="Active Shallow Crust">
+<!--
+    GMPEs and weights for Alaska active shallow crust grid model as
+    defined in NSHMP input files available from
+    http://earthquake.usgs.gov/hazards/products/ak/2007/software/
+    and described at page 22 in Open File Report 2007-1043.pdf
+    (http://earthquake.usgs.gov/hazards/products/ak/2007/documentation/ofr2007-1043.pdf)
+-->
+                <logicTreeBranch branchID="Boore_et_al_1997">
+                    <uncertaintyModel>BooreEtAl1997GeometricMean</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="Sadigh_et_al_1997">
+                    <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="Abrahamson_Silva_1997">
+                    <uncertaintyModel>AbrahamsonSilva1997</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="Campbell_Bozorgnia_2003">
+                    <uncertaintyModel>CampbellBozorgnia2003NSHMP2007</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+    </logicTree>
+</nrml>
