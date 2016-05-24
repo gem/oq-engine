@@ -84,9 +84,12 @@ class _Config(object):
     def _load_from_file(self):
         """Load the config files, set up the section dictionaries."""
         config = ConfigParser.SafeConfigParser()
-        config.read(self._get_paths())
+        paths = self._get_paths()
+        config.read(paths)
         for section in config.sections():
             self.cfg[section] = dict(config.items(section))
+        if not self.cfg:
+            raise IOError('Found no configuration file, tried %s' % paths)
 
     def is_readable(self):
         """Return `True` if at least one config file is readable."""
