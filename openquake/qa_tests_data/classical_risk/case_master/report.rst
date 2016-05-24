@@ -1,7 +1,7 @@
 classical risk
 ==============
 
-gem-tstation:/home/michele/ssd/calc_16295.hdf5 updated Mon May 16 14:19:00 2016
+gem-tstation:/home/michele/ssd/calc_16339.hdf5 updated Wed May 18 18:18:22 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -22,7 +22,7 @@ random_seed                  24
 master_seed                  0                  
 avg_losses                   False              
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git16c052c'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -82,9 +82,9 @@ Number of ruptures per tectonic region type
 source_model       trt_id trt                  num_sources eff_ruptures weight
 ================== ====== ==================== =========== ============ ======
 source_model_1.xml 0      Active Shallow Crust 1           482          482   
-source_model_1.xml 1      Stable Shallow Crust 1           4.000        4.000 
+source_model_1.xml 1      Stable Shallow Crust 1           4            4.000 
 source_model_2.xml 2      Active Shallow Crust 1           482          482   
-source_model_2.xml 3      Stable Shallow Crust 1           1.000        1.000 
+source_model_2.xml 3      Stable Shallow Crust 1           1            1.000 
 ================== ====== ==================== =========== ============ ======
 
 =============== ===
@@ -121,10 +121,10 @@ Slowest sources
 ============ ========= ========================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class              weight split_num filter_time split_time calc_time
 ============ ========= ========================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource         482    15        0.002       0.030      2.453    
-2            1         SimpleFaultSource         482    15        0.001       0.030      2.100    
+0            1         SimpleFaultSource         482    15        0.002       0.030      2.527    
+2            1         SimpleFaultSource         482    15        0.001       0.029      2.072    
 3            2         CharacteristicFaultSource 1.000  1         0.001       0.0        0.030    
-1            2         SimpleFaultSource         4.000  1         0.001       0.0        0.024    
+1            2         SimpleFaultSource         4.000  1         0.001       0.0        0.025    
 ============ ========= ========================= ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -133,19 +133,19 @@ Computation times by source typology
 source_class              filter_time split_time calc_time counts
 ========================= =========== ========== ========= ======
 CharacteristicFaultSource 0.001       0.0        0.030     1     
-SimpleFaultSource         0.005       0.059      4.577     3     
+SimpleFaultSource         0.005       0.059      4.624     3     
 ========================= =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
 ======================== ===== ====== ===== ===== =========
 measurement              mean  stddev min   max   num_tasks
-classical_risk.time_sec  0.063 0.034  0.009 0.102 11       
-classical_risk.memory_mb 0.102 0.102  0.0   0.238 11       
-classical.time_sec       0.168 0.063  0.030 0.263 28       
-classical.memory_mb      0.437 0.686  0.0   1.684 28       
-classical.time_sec       0.168 0.063  0.030 0.263 28       
-classical.memory_mb      0.437 0.686  0.0   1.684 28       
+classical_risk.time_sec  0.075 0.060  0.016 0.155 8        
+classical_risk.memory_mb 0.141 0.061  0.0   0.191 8        
+classical.time_sec       0.170 0.064  0.030 0.263 28       
+classical.memory_mb      0.479 0.766  0.0   1.863 28       
+classical.time_sec       0.170 0.064  0.030 0.263 28       
+classical.memory_mb      0.479 0.766  0.0   1.863 28       
 ======================== ===== ====== ===== ===== =========
 
 Slowest operations
@@ -153,23 +153,23 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total classical                4.701     1.684     28    
-making contexts                2.844     0.0       969   
-computing poes                 1.556     0.0       1,938 
-total classical_risk           0.691     0.238     11    
-computing riskmodel            0.682     0.0       11    
-managing sources               0.125     0.0       1     
+total classical                4.748     1.863     28    
+making contexts                2.913     0.0       969   
+computing poes                 1.516     0.0       1,938 
+total classical_risk           0.601     0.191     8     
+computing riskmodel            0.590     0.0       11    
+managing sources               0.121     0.0       1     
 splitting sources              0.059     0.0       2     
-save curves_by_rlz             0.035     0.0       1     
-store source_info              0.023     0.0       1     
+save curves_by_rlz             0.034     0.0       1     
+store source_info              0.021     0.0       1     
 compute and save statistics    0.021     0.0       1     
 save curves_by_trt_gsim        0.020     0.0       1     
-reading composite source model 0.018     0.0       1     
-reading exposure               0.007     0.0       1     
+reading composite source model 0.017     0.0       1     
+building hazard                0.007     0.0       8     
 filtering sources              0.006     0.0       4     
-building hazard                0.004     0.0       11    
-aggregate curves               0.004     0.0       28    
-building riskinputs            0.002     0.0       1     
+reading exposure               0.006     0.0       1     
+aggregate curves               0.003     0.0       28    
+building riskinputs            0.001     0.0       1     
 combine curves_by_rlz          0.001     0.0       1     
-reading site collection        6.914E-06 0.0       1     
+reading site collection        7.153E-06 0.0       1     
 ============================== ========= ========= ======

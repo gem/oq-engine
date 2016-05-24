@@ -1,7 +1,7 @@
 Event Based Risk for Turkey reduced
 ===================================
 
-gem-tstation:/home/michele/ssd/calc_16333.hdf5 updated Mon May 16 14:19:27 2016
+gem-tstation:/home/michele/ssd/calc_16377.hdf5 updated Wed May 18 18:18:47 2016
 
 num_sites = 14, sitecol = 1.31 KB
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  323                
 master_seed                  42                 
 avg_losses                   True               
-oqlite_version               '0.13.0-git16c052c'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -80,14 +80,14 @@ models/src/as_model.xml 5      Active Shallow Crust 7           30           977
 Informational data
 ------------------
 ====================================== ==============
-event_based_risk_max_received_per_task 4851          
+event_based_risk_max_received_per_task 4852          
 event_based_risk_num_tasks             30            
 event_based_risk_sent.assetcol         84360         
 event_based_risk_sent.monitor          79110         
 event_based_risk_sent.riskinput        107885        
 event_based_risk_sent.riskmodel        541740        
-event_based_risk_sent.rlzs_assoc       810810        
-event_based_risk_tot_received          143947        
+event_based_risk_sent.rlzs_assoc       1258620       
+event_based_risk_tot_received          143950        
 hostname                               'gem-tstation'
 require_epsilons                       False         
 ====================================== ==============
@@ -135,26 +135,26 @@ Slowest sources
 ============ ============ ================= ====== ========= =========== ========== =========
 trt_model_id source_id    source_class      weight split_num filter_time split_time calc_time
 ============ ============ ================= ====== ========= =========== ========== =========
-5            AS_TRAS334   AreaSource        244    1         9.320E-04   0.0        2.016    
-5            AS_TRAS346   AreaSource        154    1         8.121E-04   0.0        1.543    
-5            AS_TRAS360   AreaSource        182    1         6.781E-04   0.0        1.456    
-5            AS_TRAS395   AreaSource        122    1         7.100E-04   0.0        1.117    
-5            AS_TRAS458   AreaSource        121    1         6.731E-04   0.0        0.998    
-5            AS_GEAS479   AreaSource        72     1         0.001       0.0        0.739    
-5            AS_TRAS410   AreaSource        81     1         6.881E-04   0.0        0.659    
-9            FSBG_TRBG989 AreaSource        33     1         7.079E-04   0.0        0.380    
-9            FSBG_TRCS439 SimpleFaultSource 233    1         0.002       0.0        0.066    
-9            FSBG_TRCS114 SimpleFaultSource 449    1         0.002       0.0        0.058    
-9            FSBG_TRCS003 SimpleFaultSource 1,020  934       0.004       0.297      0.057    
-9            FSBG_TRCS082 SimpleFaultSource 197    1         0.002       0.0        0.044    
-9            FSBG_TRCS322 SimpleFaultSource 194    1         0.002       0.0        0.040    
-9            FSBG_TRCS113 SimpleFaultSource 149    1         0.002       0.0        0.038    
-9            FSBG_TRCS068 SimpleFaultSource 149    1         0.002       0.0        0.038    
-9            FSBG_TRCS141 SimpleFaultSource 116    1         0.002       0.0        0.031    
-9            FSBG_TRCS437 SimpleFaultSource 193    1         0.002       0.0        0.022    
-9            FSBG_TRCS373 SimpleFaultSource 85     1         0.002       0.0        0.020    
-9            FSBG_TRCS239 SimpleFaultSource 113    1         0.002       0.0        0.018    
-9            FSBG_BGCS044 SimpleFaultSource 57     1         0.002       0.0        0.017    
+5            AS_TRAS334   AreaSource        244    1         9.279E-04   0.0        1.980    
+5            AS_TRAS360   AreaSource        182    1         6.659E-04   0.0        1.442    
+5            AS_TRAS346   AreaSource        154    1         8.271E-04   0.0        1.404    
+5            AS_TRAS458   AreaSource        121    1         7.260E-04   0.0        1.169    
+5            AS_TRAS395   AreaSource        122    1         7.401E-04   0.0        1.158    
+5            AS_GEAS479   AreaSource        72     1         0.001       0.0        0.745    
+5            AS_TRAS410   AreaSource        81     1         7.069E-04   0.0        0.660    
+9            FSBG_TRBG989 AreaSource        33     1         6.950E-04   0.0        0.351    
+9            FSBG_TRCS114 SimpleFaultSource 449    1         0.002       0.0        0.079    
+9            FSBG_TRCS003 SimpleFaultSource 1,020  934       0.004       0.331      0.058    
+9            FSBG_TRCS113 SimpleFaultSource 149    1         0.002       0.0        0.037    
+9            FSBG_TRCS082 SimpleFaultSource 197    1         0.002       0.0        0.035    
+9            FSBG_TRCS068 SimpleFaultSource 149    1         0.002       0.0        0.034    
+9            FSBG_TRCS439 SimpleFaultSource 233    1         0.002       0.0        0.028    
+9            FSBG_TRCS141 SimpleFaultSource 116    1         0.002       0.0        0.024    
+9            FSBG_TRCS437 SimpleFaultSource 193    1         0.002       0.0        0.020    
+9            FSBG_TRCS322 SimpleFaultSource 194    1         0.002       0.0        0.019    
+9            FSBG_TRCS239 SimpleFaultSource 113    1         0.002       0.0        0.016    
+9            FSBG_BGCS044 SimpleFaultSource 57     1         0.002       0.0        0.015    
+9            FSBG_TRCS373 SimpleFaultSource 85     1         0.002       0.0        0.013    
 ============ ============ ================= ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -162,20 +162,20 @@ Computation times by source typology
 ================= =========== ========== ========= ======
 source_class      filter_time split_time calc_time counts
 ================= =========== ========== ========= ======
-AreaSource        0.006       0.0        8.908     8     
-SimpleFaultSource 0.040       0.297      0.550     24    
+AreaSource        0.007       0.0        8.910     8     
+SimpleFaultSource 0.039       0.331      0.467     24    
 ================= =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
 ================================= ===== ====== ===== ===== =========
 measurement                       mean  stddev min   max   num_tasks
-compute_ruptures.time_sec         0.592 1.122  0.009 2.999 16       
-compute_ruptures.memory_mb        0.031 0.071  0.0   0.238 16       
-compute_gmfs_and_curves.time_sec  0.012 0.002  0.007 0.015 30       
-compute_gmfs_and_curves.memory_mb 0.012 0.046  0.0   0.184 30       
-event_based_risk.time_sec         0.014 0.004  0.008 0.021 30       
-event_based_risk.memory_mb        0.002 0.011  0.0   0.062 30       
+compute_ruptures.time_sec         0.587 1.129  0.009 2.987 16       
+compute_ruptures.memory_mb        0.022 0.061  0.0   0.180 16       
+compute_gmfs_and_curves.time_sec  0.011 0.002  0.007 0.014 30       
+compute_gmfs_and_curves.memory_mb 0.015 0.050  0.0   0.203 30       
+event_based_risk.time_sec         0.013 0.003  0.008 0.020 30       
+event_based_risk.memory_mb        0.004 0.016  0.0   0.062 30       
 ================================= ===== ====== ===== ===== =========
 
 Slowest operations
@@ -183,27 +183,28 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         9.466     0.238     16    
-reading composite source model 6.681     0.0       1     
-managing sources               1.178     0.0       1     
-compute poes                   0.461     0.0       60    
-total event_based_risk         0.432     0.062     30    
-total compute_gmfs_and_curves  0.351     0.184     30    
-splitting sources              0.297     0.0       1     
-building hazard                0.276     0.0       30    
-filtering sources              0.189     0.0       148   
-computing riskmodel            0.099     0.0       420   
-aggregating hcurves            0.099     0.0       120   
-make contexts                  0.068     0.0       60    
-bulding hazard curves          0.062     0.0       30    
-saving gmfs                    0.059     0.0       120   
-reading exposure               0.049     0.0       1     
+total compute_ruptures         9.384     0.180     16    
+reading composite source model 6.039     0.0       1     
+managing sources               1.211     0.0       1     
+compute poes                   0.418     0.0       60    
+total event_based_risk         0.376     0.062     30    
+splitting sources              0.331     0.0       1     
+total compute_gmfs_and_curves  0.326     0.203     30    
+building hazard                0.244     0.0       30    
+building riskinputs            0.201     0.0       1     
+filtering sources              0.184     0.0       148   
+aggregating hcurves            0.094     0.0       120   
+computing riskmodel            0.083     0.0       420   
+make contexts                  0.061     0.0       60    
+saving gmfs                    0.056     0.0       120   
+bulding hazard curves          0.055     0.0       30    
 store source_info              0.029     0.0       1     
-saving ruptures                0.023     0.0       1     
-compute and save statistics    0.023     0.0       1     
-saving event loss tables       0.018     0.0       30    
-aggregate losses               0.015     0.0       420   
-aggregate curves               0.013     0.0       136   
-filtering ruptures             0.008     0.0       33    
-reading site collection        9.060E-06 0.0       1     
+saving ruptures                0.026     0.0       1     
+saving event loss tables       0.019     0.0       30    
+aggregate losses               0.013     0.0       420   
+aggregate curves               0.012     0.0       136   
+reading exposure               0.011     0.0       1     
+filtering ruptures             0.007     0.0       33    
+compute and save statistics    0.003     0.0       1     
+reading site collection        8.106E-06 0.0       1     
 ============================== ========= ========= ======

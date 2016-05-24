@@ -1,7 +1,7 @@
 Classical Hazard-Risk QA test 4
 ===============================
 
-gem-tstation:/home/michele/ssd/calc_16294.hdf5 updated Mon May 16 14:18:59 2016
+gem-tstation:/home/michele/ssd/calc_16338.hdf5 updated Wed May 18 18:18:21 2016
 
 num_sites = 6, sitecol = 969 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  23                 
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git16c052c'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -67,7 +67,7 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 2           6,405        160   
+source_model.xml 0      Active Shallow Crust 2           6405         160   
 ================ ====== ==================== =========== ============ ======
 
 Informational data
@@ -111,8 +111,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            376       AreaSource   55     1         6.480E-04   0.0        0.0      
-0            231       AreaSource   104    1         6.402E-04   0.0        0.0      
+0            376       AreaSource   55     1         6.561E-04   0.0        0.0      
+0            231       AreaSource   104    1         6.461E-04   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -132,12 +132,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 1.989     0.0       1     
+reading composite source model 2.122     0.0       1     
 managing sources               0.030     0.0       1     
-filtering sources              0.027     0.0       39    
-reading exposure               0.006     0.0       1     
+filtering sources              0.026     0.0       39    
+reading exposure               0.005     0.0       1     
 store source_info              0.004     0.0       1     
-total count_eff_ruptures       7.050E-04 0.0       2     
-aggregate curves               3.123E-05 0.0       2     
-reading site collection        1.311E-05 0.0       1     
+total count_eff_ruptures       6.900E-04 0.0       2     
+aggregate curves               3.004E-05 0.0       2     
+reading site collection        8.821E-06 0.0       1     
 ============================== ========= ========= ======

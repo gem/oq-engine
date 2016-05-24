@@ -1,7 +1,7 @@
 Event-based PSHA with logic tree sampling
 =========================================
 
-gem-tstation:/home/michele/ssd/calc_16367.hdf5 updated Mon May 16 14:20:52 2016
+gem-tstation:/home/michele/ssd/calc_16411.hdf5 updated Wed May 18 18:20:13 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   20.0               
 random_seed                  23                 
 master_seed                  0                  
-oqlite_version               '0.13.0-git16c052c'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -70,7 +70,7 @@ Number of ruptures per tectonic region type
 ================= ====== ==================== =========== ============ ======
 source_model      trt_id trt                  num_sources eff_ruptures weight
 ================= ====== ==================== =========== ============ ======
-source_model1.xml 0      Active Shallow Crust 1           2,120        61    
+source_model1.xml 0      Active Shallow Crust 1           2120         61    
 source_model2.xml 1      Active Shallow Crust 1           478          61    
 ================= ====== ==================== =========== ============ ======
 
@@ -100,8 +100,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         AreaSource   61     307       0.001       0.058      2.539    
-1            1         AreaSource   61     307       0.001       0.062      1.239    
+0            1         AreaSource   61     307       0.001       0.048      2.512    
+1            1         AreaSource   61     307       0.001       0.050      1.207    
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -109,17 +109,17 @@ Computation times by source typology
 ============ =========== ========== ========= ======
 source_class filter_time split_time calc_time counts
 ============ =========== ========== ========= ======
-AreaSource   0.003       0.120      3.778     2     
+AreaSource   0.002       0.097      3.719     2     
 ============ =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
 ================================= ===== ====== ===== ===== =========
 measurement                       mean  stddev min   max   num_tasks
-compute_ruptures.time_sec         0.100 0.045  0.004 0.198 38       
+compute_ruptures.time_sec         0.098 0.047  0.003 0.197 38       
 compute_ruptures.memory_mb        0.0   0.0    0.0   0.0   38       
-compute_gmfs_and_curves.time_sec  1.053 0.367  0.553 1.883 21       
-compute_gmfs_and_curves.memory_mb 0.016 0.072  0.0   0.328 21       
+compute_gmfs_and_curves.time_sec  1.054 0.364  0.603 1.921 21       
+compute_gmfs_and_curves.memory_mb 0.017 0.055  0.0   0.215 21       
 ================================= ===== ====== ===== ===== =========
 
 Slowest operations
@@ -127,19 +127,19 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_gmfs_and_curves  22        0.328     21    
+total compute_gmfs_and_curves  22        0.215     21    
 compute poes                   20        0.0       2,598 
-total compute_ruptures         3.794     0.0       38    
-saving ruptures                1.812     0.0       1     
-make contexts                  1.476     0.0       2,598 
-filtering ruptures             0.758     0.0       2,598 
-managing sources               0.217     0.0       1     
-aggregating hcurves            0.141     0.0       143   
-reading composite source model 0.124     0.0       1     
-splitting sources              0.120     0.0       2     
-bulding hazard curves          0.107     0.0       21    
-aggregate curves               0.021     0.0       181   
-store source_info              0.009     0.0       1     
-filtering sources              0.003     0.0       2     
-reading site collection        4.506E-05 0.0       1     
+total compute_ruptures         3.733     0.0       38    
+saving ruptures                1.692     0.0       1     
+make contexts                  1.451     0.0       2,598 
+filtering ruptures             0.719     0.0       2,598 
+managing sources               0.239     0.0       1     
+aggregating hcurves            0.142     0.0       143   
+bulding hazard curves          0.106     0.0       21    
+reading composite source model 0.099     0.0       1     
+splitting sources              0.097     0.0       2     
+aggregate curves               0.020     0.0       181   
+store source_info              0.007     0.0       1     
+filtering sources              0.002     0.0       2     
+reading site collection        3.505E-05 0.0       1     
 ============================== ========= ========= ======

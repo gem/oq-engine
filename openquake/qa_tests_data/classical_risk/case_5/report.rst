@@ -1,7 +1,7 @@
 Hazard Calculation for end-to-end hazard+risk
 =============================================
 
-gem-tstation:/home/michele/ssd/calc_16296.hdf5 updated Mon May 16 14:19:00 2016
+gem-tstation:/home/michele/ssd/calc_16340.hdf5 updated Wed May 18 18:18:23 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -21,7 +21,7 @@ area_source_discretization   10.0
 random_seed                  1024               
 master_seed                  0                  
 sites_per_tile               1000               
-oqlite_version               '0.13.0-git16c052c'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -106,8 +106,8 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            A         PointSource  0.575  1         2.079E-04   0.0        0.0      
-1            B         PointSource  0.575  1         1.590E-04   0.0        0.0      
+0            A         PointSource  0.575  1         1.278E-04   0.0        0.0      
+1            B         PointSource  0.575  1         9.608E-05   0.0        0.0      
 ============ ========= ============ ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -115,7 +115,7 @@ Computation times by source typology
 ============ =========== ========== ========= ======
 source_class filter_time split_time calc_time counts
 ============ =========== ========== ========= ======
-PointSource  3.669E-04   0.0        0.0       2     
+PointSource  2.239E-04   0.0        0.0       2     
 ============ =========== ========== ========= ======
 
 Information about the tasks
@@ -127,11 +127,11 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-reading composite source model 0.018     0.0       1     
-store source_info              0.015     0.0       1     
-managing sources               0.005     0.0       1     
-total count_eff_ruptures       3.872E-04 0.0       2     
-filtering sources              3.669E-04 0.0       2     
-reading site collection        6.294E-05 0.0       1     
-aggregate curves               5.889E-05 0.0       2     
+store source_info              0.010     0.0       1     
+reading composite source model 0.007     0.0       1     
+managing sources               0.004     0.0       1     
+total count_eff_ruptures       6.981E-04 0.0       2     
+filtering sources              2.239E-04 0.0       2     
+reading site collection        3.815E-05 0.0       1     
+aggregate curves               3.695E-05 0.0       2     
 ============================== ========= ========= ======

@@ -1,7 +1,7 @@
 QA test for disaggregation case_1, taken from the disagg demo
 =============================================================
 
-gem-tstation:/home/michele/ssd/calc_16380.hdf5 updated Mon May 16 14:21:22 2016
+gem-tstation:/home/michele/ssd/calc_16424.hdf5 updated Wed May 18 18:20:41 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.2
 area_source_discretization   10.0               
 random_seed                  9000               
 master_seed                  0                  
-oqlite_version               '0.13.0-git16c052c'
+oqlite_version               '0.13.0-git034c0a0'
 ============================ ===================
 
 Input files
@@ -63,7 +63,7 @@ Number of ruptures per tectonic region type
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 4           2,236        817   
+source_model.xml 0      Active Shallow Crust 4           2236         817   
 ================ ====== ==================== =========== ============ ======
 
 Informational data
@@ -92,10 +92,10 @@ Slowest sources
 ============ ========= ================== ====== ========= =========== ========== =========
 trt_model_id source_id source_class       weight split_num filter_time split_time calc_time
 ============ ========= ================== ====== ========= =========== ========== =========
-0            3         SimpleFaultSource  617    83        0.002       0.043      0.0      
+0            3         SimpleFaultSource  617    83        0.002       0.041      0.0      
 0            4         ComplexFaultSource 164    1         0.001       0.0        0.0      
-0            2         AreaSource         36     1         9.270E-04   0.0        0.0      
-0            1         PointSource        0.375  1         1.290E-04   0.0        0.0      
+0            2         AreaSource         36     1         8.519E-04   0.0        0.0      
+0            1         PointSource        0.375  1         1.130E-04   0.0        0.0      
 ============ ========= ================== ====== ========= =========== ========== =========
 
 Computation times by source typology
@@ -103,10 +103,10 @@ Computation times by source typology
 ================== =========== ========== ========= ======
 source_class       filter_time split_time calc_time counts
 ================== =========== ========== ========= ======
-AreaSource         9.270E-04   0.0        0.0       1     
+AreaSource         8.519E-04   0.0        0.0       1     
 ComplexFaultSource 0.001       0.0        0.0       1     
-PointSource        1.290E-04   0.0        0.0       1     
-SimpleFaultSource  0.002       0.043      0.0       1     
+PointSource        1.130E-04   0.0        0.0       1     
+SimpleFaultSource  0.002       0.041      0.0       1     
 ================== =========== ========== ========= ======
 
 Information about the tasks
@@ -118,12 +118,12 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.068     0.0       1     
-splitting sources              0.043     0.0       1     
-reading composite source model 0.040     0.0       1     
-store source_info              0.008     0.0       1     
-filtering sources              0.005     0.0       4     
+managing sources               0.061     0.0       1     
+splitting sources              0.041     0.0       1     
+reading composite source model 0.038     0.0       1     
+store source_info              0.004     0.0       1     
+filtering sources              0.004     0.0       4     
 total count_eff_ruptures       0.003     0.0       10    
-aggregate curves               2.310E-04 0.0       10    
-reading site collection        4.601E-05 0.0       1     
+aggregate curves               1.309E-04 0.0       10    
+reading site collection        3.791E-05 0.0       1     
 ============================== ========= ========= ======
