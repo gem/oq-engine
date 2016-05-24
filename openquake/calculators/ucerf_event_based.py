@@ -494,7 +494,8 @@ class UCERFSESControl(object):
     def __init__(self, source_file, id, investigation_time, min_mag,
                  npd=NPD, hdd=HDD, aspect=1.5,
                  upper_seismogenic_depth=0.0, lower_seismogenic_depth=15.,
-                 msr=WC1994(), mesh_spacing=1.0, trt="Active Shallow Crust"):
+                 msr=WC1994(), mesh_spacing=1.0, trt="Active Shallow Crust",
+                 integration_distance=1000):
         """
         :param str branch:
             Valid branch of UCERF
@@ -545,7 +546,7 @@ class UCERFSESControl(object):
         self.tectonic_region_type = trt
         self.seed = random.randint(0, MAX_INT)
         self.rnd = None
-        self.integration_distance = 1000
+        self.integration_distance = integration_distance
         self.sites = None
         self.background_idx = None
         self.num_ruptures = 0
@@ -655,13 +656,6 @@ class UCERFSESControl(object):
         idx_set["geol_idx"] = code_set[0]
         idx_set["total_key"] = branch_code.replace("/", "|")
         return idx_set
-
-    def hazard_curves_per_trt(
-
-class UCERFClassicalControl(UCERFSESControl):
-    """
-
-    """
 
 
 def num_affected_sites(rupture, num_sites):
