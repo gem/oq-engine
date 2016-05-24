@@ -194,7 +194,11 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
         for fmt in fmts:
             if not fmt:
                 continue
-            for key in self.datastore:  # top level keys
+            keys = set(self.datastore)
+            if (self.oqparam.uniform_hazard_spectra and not
+                    self.oqparam.hazard_maps):
+                keys.remove('hmaps')
+            for key in sorted(keys):  # top level keys
                 if 'rlzs' in key and not individual_curves:
                     continue  # skip individual curves
                 ekey = (key, fmt)
@@ -204,8 +208,7 @@ class BaseCalculator(with_metaclass(abc.ABCMeta)):
                     exported[ekey] = exp(ekey, self.datastore)
                 logging.info('exported %s: %s', key, exported[ekey])
             # special case for uhs which is a view
-            if (self.oqparam.uniform_hazard_spectra and
-                    'hmaps' in self.datastore):
+            if self.oqparam.uniform_hazard_spectra:
                 ekey = ('uhs', fmt)
                 exported[ekey] = exp(ekey, self.datastore)
                 logging.info('exported %s: %s', key, exported[ekey])
