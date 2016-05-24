@@ -177,7 +177,6 @@ def hazard_curves_per_trt(
                             s_sites, rupture)
                     except FarAwayRupture:
                         continue
-
                     monitor.eff_ruptures += 1
 
                     # add optional disaggregation information (bounding boxes)

@@ -212,7 +212,7 @@ class Point(object):
         >>> Point(-180 + 1e-7, 0) == Point(180 - 1e-7, 0)
         True
         """
-        if other == None:
+        if other is None:
             return False
         return abs(self.distance(other)) <= self.EQUALITY_DISTANCE
 

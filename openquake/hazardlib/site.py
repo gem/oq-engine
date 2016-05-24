@@ -541,21 +541,28 @@ class FatTile(object):
         max_lat = max(self.max_lat.values())
         return (min_lon, min_lat), max_lon - min_lon, max_lat - min_lat
 
-    def contains(self, lon, lat, trt):
+    def contains(self, lon, lat, trt, delta):
         """
         Check if `lon` and `lat` are within the FatTile for the given `trt`.
+        `delta` is the angular distance of the maximum rupture radius
         """
+        min_lon = self.min_lon[trt] - delta
+        max_lon = self.max_lon[trt] + delta
+        min_lat = self.min_lat[trt] - delta
+        max_lat = self.max_lat[trt] + delta
         if self.cross_idl and lon < 0:  # special case
-            within_lon = self.min_lon[trt] <= lon + 360 <= self.max_lon[trt]
+            within_lon = min_lon <= lon + 360 <= max_lon
         else:  # regular case
-            within_lon = self.min_lon[trt] <= lon <= self.max_lon[trt]
-        within_lat = self.min_lat[trt] <= lat <= self.max_lat[trt]
+            within_lon = min_lon <= lon <= max_lon
+        within_lat = min_lat <= lat <= max_lat
         return within_lon and within_lat
 
     def __contains__(self, src):
         trt = src.tectonic_region_type
         if src.__class__.__name__ == 'PointSource':
-            return self.contains(src.location.x, src.location.y, trt)
+            delta = (src._get_max_rupture_projection_radius() /
+                     self.KM_ONE_DEGREE)  # upper limit for the rupture radius
+            return self.contains(src.location.x, src.location.y, trt, delta)
         else:
             return src.filter_sites_by_distance_to_source(
                 self.maximum_distance[trt], self.sitecol) is not None
