@@ -19,6 +19,7 @@
 import os
 import logging
 import unittest
+import platform
 
 import numpy
 
@@ -29,6 +30,14 @@ from openquake.commonlib import readinput, oqvalidation, datastore
 
 class DifferentFiles(Exception):
     pass
+
+
+def check_platform(*supported):
+    """
+    Skip the test if the platform is not the reference one
+    """
+    if platform.dist()[-1] not in supported:
+        raise unittest.SkipTest
 
 
 def columns(line):
@@ -55,6 +64,9 @@ class CalculatorTestCase(unittest.TestCase):
         inis = [os.path.join(self.testdir, ini) for ini in job_ini.split(',')]
         params = readinput.get_params(inis)
         params.update(kw)
+
+        oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
+            base.calculators)
         oq = oqvalidation.OqParam(**params)
         oq.validate()
         # change this when debugging the test

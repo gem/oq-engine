@@ -1,7 +1,7 @@
 Probabilistic Event-Based QA Test with Spatial Correlation, case 2
 ==================================================================
 
-gem-tstation:/home/michele/ssd/calc_1021.hdf5 updated Thu Apr 28 15:42:52 2016
+gem-tstation:/home/michele/ssd/calc_19182.hdf5 updated Tue May 24 14:33:36 2016
 
 num_sites = 2, sitecol = 785 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             0.1
 area_source_discretization   10.0               
 random_seed                  123456789          
 master_seed                  0                  
-oqlite_version               '0.13.0-git93d6f64'
+oqlite_version               '0.13.0-git1f78261'
 ============================ ===================
 
 Input files
@@ -44,11 +44,11 @@ b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================= ========= ========== ==========
-trt_id gsims             distances siteparams ruptparams
-====== ================= ========= ========== ==========
-0      BooreAtkinson2008 rjb       vs30       rake mag  
-====== ================= ========= ========== ==========
+====== =================== ========= ========== ==========
+trt_id gsims               distances siteparams ruptparams
+====== =================== ========= ========== ==========
+0      BooreAtkinson2008() rjb       vs30       rake mag  
+====== =================== ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -56,7 +56,7 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,BooreAtkinson2008: ['<0,b1,b1,w=1.0>']>
+  0,BooreAtkinson2008(): ['<0,b1,b1,w=1.0>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
@@ -85,26 +85,38 @@ Slowest sources
 ============ ========= ============ ====== ========= =========== ========== =========
 trt_model_id source_id source_class weight split_num filter_time split_time calc_time
 ============ ========= ============ ====== ========= =========== ========== =========
-0            1         PointSource  0.025  1         1.490E-04   0.0        0.438    
+0            1         PointSource  0.025  1         7.915E-05   0.0        0.226    
 ============ ========= ============ ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+============ =========== ========== ========= ======
+source_class filter_time split_time calc_time counts
+============ =========== ========== ========= ======
+PointSource  7.915E-05   0.0        0.226     1     
+============ =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
-Not available
+========================== ===== ====== ===== ===== =========
+measurement                mean  stddev min   max   num_tasks
+compute_ruptures.time_sec  0.226 NaN    0.226 0.226 1        
+compute_ruptures.memory_mb 0.609 NaN    0.609 0.609 1        
+========================== ===== ====== ===== ===== =========
 
 Slowest operations
 ------------------
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-total compute_ruptures         0.438     0.867     1     
-saving ruptures                0.350     0.0       1     
-store source_info              0.020     0.0       1     
-reading composite source model 0.006     0.0       1     
-managing sources               0.003     0.0       1     
-saving gmfs                    0.002     0.0       1     
-aggregate curves               0.001     0.0       1     
-filtering ruptures             3.929E-04 0.0       1     
-filtering sources              1.490E-04 0.0       1     
-reading site collection        5.007E-05 0.0       1     
+total compute_ruptures         0.226     0.609     1     
+saving ruptures                0.221     0.0       1     
+store source_info              0.011     0.0       1     
+reading composite source model 0.005     0.0       1     
+managing sources               0.002     0.0       1     
+saving gmfs                    0.001     0.0       1     
+aggregate curves               8.419E-04 0.0       1     
+filtering ruptures             5.310E-04 0.0       1     
+filtering sources              7.915E-05 0.0       1     
+reading site collection        3.409E-05 0.0       1     
 ============================== ========= ========= ======

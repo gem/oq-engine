@@ -18,22 +18,16 @@
 
 import os
 import re
-import unittest
 from nose.plugins.attrib import attr
 
 from openquake.baselib.general import writetmp
 from openquake.calculators.views import view
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.commonlib.export import export
+from openquake.calculators.tests import check_platform
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_master, case_miriam,
     occupants)
-try:
-    from shapely.geos import geos_version
-except:
-    old_geos = True
-else:
-    old_geos = geos_version < (3, 4, 2)
 
 
 def strip_calc_id(fname):
@@ -65,6 +59,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_1(self):
+        check_platform('trusty')
         self.assert_stats_ok(case_1, 'job.ini')
 
         # make sure the XML and JSON exporters run
@@ -114,6 +109,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # Turkey with SHARE logic tree
         out = self.run_calc(case_4.__file__, 'job.ini',
                             exports='csv', individual_curves='true')
+        [fname] = out['avg_losses-stats', 'csv']
+        self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
+
         fnames = out['agg_loss_table', 'csv']
         assert fnames, 'No agg_losses exported??'
         for fname in fnames:
@@ -130,8 +128,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     @attr('qa', 'risk', 'event_based_risk')
     def test_case_master(self):
-        if old_geos:  # the numbers are different at the 5th decimal
-            raise unittest.SkipTest
+        check_platform('trusty')
         self.assert_stats_ok(case_master, 'job.ini')
         fname = writetmp(view('portfolio_loss', self.calc.datastore))
         self.assertEqualFiles('expected/portfolio_loss.txt', fname)

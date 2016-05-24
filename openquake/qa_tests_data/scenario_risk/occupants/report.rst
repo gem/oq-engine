@@ -1,7 +1,7 @@
 Scenario QA Test for occupants
 ==============================
 
-gem-tstation:/home/michele/ssd/calc_1033.hdf5 updated Thu Apr 28 15:44:07 2016
+gem-tstation:/home/michele/ssd/calc_19194.hdf5 updated Tue May 24 14:34:11 2016
 
 num_sites = 3, sitecol = 831 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  3                  
 master_seed                  0                  
-oqlite_version               '0.13.0-git93d6f64'
+oqlite_version               '0.13.0-git1f78261'
 ============================ ===================
 
 Input files
@@ -39,8 +39,8 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
-  0,ChiouYoungs2008: ['ChiouYoungs2008']>
+  <RlzsAssoc(size=1, rlzs=1)
+  0,ChiouYoungs2008(): ['<0,b_1,b1,w=1.0>']>
 
 Exposure model
 --------------
@@ -49,13 +49,13 @@ Exposure model
 #taxonomies 3
 =========== =
 
-======== =======
-Taxonomy #Assets
-======== =======
-RC       1      
-RM       1      
-W        1      
-======== =======
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+RC       1.000 NaN    1   1   1         1         
+RM       1.000 NaN    1   1   1         1         
+W        1.000 NaN    1   1   1         1         
+*ALL*    1.000 0.0    1   1   3         3         
+======== ===== ====== === === ========= ==========
 
 Information about the tasks
 ---------------------------
@@ -66,8 +66,8 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.010     0.0       1     
-reading exposure        0.005     0.0       1     
+filtering sites         0.006     0.0       1     
+reading exposure        0.004     0.0       1     
 computing gmfs          0.002     0.0       1     
-reading site collection 1.001E-05 0.0       1     
+reading site collection 8.106E-06 0.0       1     
 ======================= ========= ========= ======

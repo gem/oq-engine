@@ -1,7 +1,7 @@
 scenario hazard
 ===============
 
-gem-tstation:/home/michele/ssd/calc_963.hdf5 updated Thu Apr 28 15:38:30 2016
+gem-tstation:/home/michele/ssd/calc_19122.hdf5 updated Tue May 24 14:31:58 2016
 
 num_sites = 7, sitecol = 1015 B
 
@@ -20,7 +20,7 @@ width_of_mfd_bin             None
 area_source_discretization   None               
 random_seed                  42                 
 master_seed                  0                  
-oqlite_version               '0.13.0-git93d6f64'
+oqlite_version               '0.13.0-git1f78261'
 ============================ ===================
 
 Input files
@@ -39,9 +39,9 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(2)
-  0,BooreAtkinson2008: ['BooreAtkinson2008']
-  0,ChiouYoungs2008: ['ChiouYoungs2008']>
+  <RlzsAssoc(size=2, rlzs=2)
+  0,BooreAtkinson2008(): ['<0,b_1,b1,w=0.75>']
+  0,ChiouYoungs2008(): ['<1,b_1,b2,w=0.25>']>
 
 Exposure model
 --------------
@@ -50,13 +50,13 @@ Exposure model
 #taxonomies 3
 =========== =
 
-======== =======
-Taxonomy #Assets
-======== =======
-tax1     4      
-tax2     2      
-tax3     1      
-======== =======
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+tax1     1.000 0.0    1   1   4         4         
+tax2     1.000 0.0    1   1   2         2         
+tax3     1.000 NaN    1   1   1         1         
+*ALL*    1.000 0.0    1   1   7         7         
+======== ===== ====== === === ========= ==========
 
 Information about the tasks
 ---------------------------
@@ -67,8 +67,8 @@ Slowest operations
 ======================= ========= ========= ======
 operation               time_sec  memory_mb counts
 ======================= ========= ========= ======
-filtering sites         0.015     0.0       1     
-reading exposure        0.012     0.0       1     
-computing gmfs          0.010     0.0       1     
-reading site collection 1.001E-05 0.0       1     
+filtering sites         0.008     0.0       1     
+reading exposure        0.006     0.0       1     
+computing gmfs          0.005     0.0       1     
+reading site collection 6.914E-06 0.0       1     
 ======================= ========= ========= ======

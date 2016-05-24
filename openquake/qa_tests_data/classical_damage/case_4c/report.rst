@@ -1,7 +1,7 @@
 Classical PSHA-Based Hazard
 ===========================
 
-gem-tstation:/home/michele/ssd/calc_981.hdf5 updated Thu Apr 28 15:38:39 2016
+gem-tstation:/home/michele/ssd/calc_19140.hdf5 updated Tue May 24 14:32:02 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,8 +20,8 @@ width_of_mfd_bin             0.1
 area_source_discretization   20.0               
 random_seed                  42                 
 master_seed                  0                  
-sites_per_tile               1000               
-oqlite_version               '0.13.0-git93d6f64'
+sites_per_tile               10000              
+oqlite_version               '0.13.0-git1f78261'
 ============================ ===================
 
 Input files
@@ -47,11 +47,11 @@ b1        1.000  `source_model.xml <source_model.xml>`_ trivial(1)      1/1
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ============== ========= ========== ==========
-trt_id gsims          distances siteparams ruptparams
-====== ============== ========= ========== ==========
-0      SadighEtAl1997 rrup      vs30       rake mag  
-====== ============== ========= ========== ==========
+====== ================ ========= ========== ==========
+trt_id gsims            distances siteparams ruptparams
+====== ================ ========= ========== ==========
+0      SadighEtAl1997() rrup      vs30       rake mag  
+====== ================ ========= ========== ==========
 
 Realizations per (TRT, GSIM)
 ----------------------------
@@ -59,27 +59,27 @@ Realizations per (TRT, GSIM)
 ::
 
   <RlzsAssoc(size=1, rlzs=1)
-  0,SadighEtAl1997: ['<0,b1,b1,w=1.0>']>
+  0,SadighEtAl1997(): ['<0,b1,b1,w=1.0>']>
 
 Number of ruptures per tectonic region type
 -------------------------------------------
 ================ ====== ==================== =========== ============ ======
 source_model     trt_id trt                  num_sources eff_ruptures weight
 ================ ====== ==================== =========== ============ ======
-source_model.xml 0      Active Shallow Crust 1           1,694        1,694 
+source_model.xml 0      Active Shallow Crust 1           1694         1,694 
 ================ ====== ==================== =========== ============ ======
 
 Informational data
 ------------------
 ======================================== ==============
-count_eff_ruptures_max_received_per_task 2837          
-count_eff_ruptures_num_tasks             15            
-count_eff_ruptures_sent.monitor          39300         
-count_eff_ruptures_sent.rlzs_assoc       39450         
-count_eff_ruptures_sent.sitecol          6555          
-count_eff_ruptures_sent.siteidx          75            
-count_eff_ruptures_sent.sources          16415         
-count_eff_ruptures_tot_received          42541         
+count_eff_ruptures_max_received_per_task 2838          
+count_eff_ruptures_num_tasks             14            
+count_eff_ruptures_sent.monitor          36708         
+count_eff_ruptures_sent.rlzs_assoc       31164         
+count_eff_ruptures_sent.sitecol          6118          
+count_eff_ruptures_sent.siteidx          70            
+count_eff_ruptures_sent.sources          15499         
+count_eff_ruptures_tot_received          39732         
 hazard.input_weight                      1694.0        
 hazard.n_imts                            1             
 hazard.n_levels                          20.0          
@@ -98,19 +98,26 @@ Exposure model
 #taxonomies 1
 =========== =
 
-======== =======
-Taxonomy #Assets
-======== =======
-Wood     1      
-======== =======
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+Wood     1.000 NaN    1   1   1         1         
+======== ===== ====== === === ========= ==========
 
 Slowest sources
 ---------------
 ============ ========= ================= ====== ========= =========== ========== =========
 trt_model_id source_id source_class      weight split_num filter_time split_time calc_time
 ============ ========= ================= ====== ========= =========== ========== =========
-0            1         SimpleFaultSource 1,694  15        0.003       0.169      0.0      
+0            1         SimpleFaultSource 1,694  15        0.002       0.070      0.0      
 ============ ========= ================= ====== ========= =========== ========== =========
+
+Computation times by source typology
+------------------------------------
+================= =========== ========== ========= ======
+source_class      filter_time split_time calc_time counts
+================= =========== ========== ========= ======
+SimpleFaultSource 0.002       0.070      0.0       1     
+================= =========== ========== ========= ======
 
 Information about the tasks
 ---------------------------
@@ -121,13 +128,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.295     0.0       1     
-splitting sources              0.169     0.0       1     
-store source_info              0.027     0.0       1     
-reading composite source model 0.018     0.0       1     
-reading exposure               0.018     0.0       1     
-total count_eff_ruptures       0.004     0.004     15    
-filtering sources              0.003     0.0       1     
-aggregate curves               2.830E-04 0.0       15    
-reading site collection        1.001E-05 0.0       1     
+managing sources               0.086     0.0       1     
+splitting sources              0.070     0.0       1     
+reading composite source model 0.011     0.0       1     
+store source_info              0.005     0.0       1     
+total count_eff_ruptures       0.004     0.0       14    
+reading exposure               0.004     0.0       1     
+filtering sources              0.002     0.0       1     
+aggregate curves               1.843E-04 0.0       14    
+reading site collection        8.106E-06 0.0       1     
 ============================== ========= ========= ======
