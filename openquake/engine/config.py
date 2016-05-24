@@ -84,9 +84,7 @@ class _Config(object):
     def _load_from_file(self):
         """Load the config files, set up the section dictionaries."""
         config = ConfigParser.SafeConfigParser()
-        paths = self._get_paths()
-
-        config.read(paths)
+        config.read(self._get_paths())
         for section in config.sections():
             self.cfg[section] = dict(config.items(section))
 
