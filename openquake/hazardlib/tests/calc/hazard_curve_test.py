@@ -90,8 +90,8 @@ class HazardCurvesTestCase(unittest.TestCase):
         self.source2 = self.FakeSource(
             2, [rup21], self.time_span, const.TRT.VOLCANIC)
         self.sources = [self.source1, self.source2]
-        site1 = Site(Point(10, 20), 1, True, 2, 3)
-        site2 = Site(Point(20, 30), 2, False, 4, 5)
+        site1 = Site(Point(10, 20), 1, True, 2, 3, id=0)
+        site2 = Site(Point(20, 30), 2, False, 4, 5, id=1)
         self.sites = SiteCollection([site1, site2])
 
         gsim1 = self.FakeGSIM(self.truncation_level, self.imts, poes={
