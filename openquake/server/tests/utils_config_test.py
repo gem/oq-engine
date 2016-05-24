@@ -169,7 +169,7 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
         # get() will return `None` for a section name that is not known
         config.cfg.cfg.clear()
         config.cfg._load_from_file()
-        self.assertTrue(config.cfg.get("Anything") is None)
+        self.assertIsNone(config.cfg.get("Anything"))
 
     def test_get_with_known_section(self):
         # get() will correctly return configuration data for known sections
