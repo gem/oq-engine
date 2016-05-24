@@ -1,8 +1,6 @@
 from __future__ import division
 import math
 import numpy
-import matplotlib.pyplot as p
-from matplotlib.patches import Rectangle
 from openquake.commonlib import sap, datastore
 from openquake.hazardlib.site import Tile
 
@@ -21,6 +19,8 @@ def plot_sites(calc_id):
     (a box for each tile). If point sources are present, prints them too as
     circles of radius `integration_distance + max rupture radius`.
     """
+    import matplotlib.pyplot as p
+    from matplotlib.patches import Rectangle
     dstore = datastore.read(calc_id)
     sitecol = dstore['sitecol']
     csm = dstore['composite_source_model']
@@ -51,4 +51,3 @@ def plot_sites(calc_id):
 
 parser = sap.Parser(plot_sites)
 parser.arg('calc_id', 'a computation id', type=int)
-
