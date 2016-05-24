@@ -27,16 +27,6 @@ from openquake.commonlib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009']
 
-HAZARD_CALCULATORS = [
-    'classical', 'disaggregation', 'event_based', 'scenario',
-    'event_based_rupture']
-
-RISK_CALCULATORS = [
-    'classical_risk', 'event_based_risk', 'scenario_risk',
-    'classical_bcr', 'scenario_damage', 'classical_damage']
-
-CALCULATORS = HAZARD_CALCULATORS + RISK_CALCULATORS
-
 
 def getdefault(dic_with_default, key):
     """
@@ -82,7 +72,7 @@ class OqParam(valid.ParamSet):
     asset_loss_table = valid.Param(valid.boolean, False)
     avg_losses = valid.Param(valid.boolean, False)
     base_path = valid.Param(valid.utf8, '.')
-    calculation_mode = valid.Param(valid.Choice(*CALCULATORS), '')
+    calculation_mode = valid.Param(valid.Choice(), '')  # -> get_oqparam
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
@@ -337,7 +327,9 @@ class OqParam(valid.ParamSet):
         region and exposure_file is set. You did set more than
         one, or nothing.
         """
-        if self.calculation_mode not in HAZARD_CALCULATORS:
+        if ('risk' in self.calculation_mode or
+                'damage' in self.calculation_mode or
+                'bcr' in self.calculation_mode):
             return True  # no check on the sites for risk
         flags = dict(
             sites=bool(self.sites),
