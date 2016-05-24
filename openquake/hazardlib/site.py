@@ -501,11 +501,11 @@ def fix_lons(lons):
     return lons, False
 
 
-class FatTile(object):
+class Tile(object):
     """
-    Consider a site collection, find its bounding box, enlarge the box by
-    the angular maximum distance for the different tectonic region types and
-    check if a source is contained inside it.
+    Consider a site collection, find its bounding box and check if a source
+    is contained inside it, by taking into consideration the integration
+    distance and the maximum rupture projection radius.
 
     :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param maximum_distance: a dictionary TRT -> integration distance in km
@@ -517,19 +517,15 @@ class FatTile(object):
         self.maximum_distance = maximum_distance
         trts = set(maximum_distance)
 
-        # angular distance per TRT
-        delta = {trt: maximum_distance[trt] / self.KM_ONE_DEGREE
-                 for trt in trts}
-
         # determine the bounding box by taking into account the IDL
         lons, self.cross_idl = fix_lons(self.sitecol.lons)
         min_lon, max_lon = lons.min(), lons.max()
         min_lat, max_lat = self.sitecol.lats.min(), self.sitecol.lats.max()
 
-        self.min_lon = {trt: min_lon - delta[trt] for trt in trts}
-        self.max_lon = {trt: max_lon + delta[trt] for trt in trts}
-        self.min_lat = {trt: min_lat - delta[trt] for trt in trts}
-        self.max_lat = {trt: max_lat + delta[trt] for trt in trts}
+        self.min_lon = {trt: min_lon for trt in trts}
+        self.max_lon = {trt: max_lon for trt in trts}
+        self.min_lat = {trt: min_lat for trt in trts}
+        self.max_lat = {trt: max_lat for trt in trts}
 
     def get_rectangle(self):
         """
@@ -541,11 +537,13 @@ class FatTile(object):
         max_lat = max(self.max_lat.values())
         return (min_lon, min_lat), max_lon - min_lon, max_lat - min_lat
 
-    def contains(self, lon, lat, trt, delta):
+    def contains(self, lon, lat, trt, max_radius):
         """
-        Check if `lon` and `lat` are within the FatTile for the given `trt`.
-        `delta` is the angular distance of the maximum rupture radius
+        Check if `lon` and `lat` are within the Tile for the given `trt`
+        by taking into account the maximum distance and maximum radius.
         """
+        # angular distance per TRT
+        delta = (self.maximum_distance[trt] + max_radius) / self.KM_ONE_DEGREE
         min_lon = self.min_lon[trt] - delta
         max_lon = self.max_lon[trt] + delta
         min_lat = self.min_lat[trt] - delta
@@ -560,9 +558,8 @@ class FatTile(object):
     def __contains__(self, src):
         trt = src.tectonic_region_type
         if src.__class__.__name__ == 'PointSource':
-            delta = (src._get_max_rupture_projection_radius() /
-                     self.KM_ONE_DEGREE)  # upper limit for the rupture radius
-            return self.contains(src.location.x, src.location.y, trt, delta)
+            maxrpr = src._get_max_rupture_projection_radius()
+            return self.contains(src.location.x, src.location.y, trt, maxrpr)
         else:
             return src.filter_sites_by_distance_to_source(
                 self.maximum_distance[trt], self.sitecol) is not None

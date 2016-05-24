@@ -37,13 +37,13 @@ from openquake.hazardlib.tests.geo.surface import \
 from openquake.hazardlib.tests import assert_pickleable
 
 
-def make_point_source(**kwargs):
+def make_point_source(lon=1.2, lat=3.4, **kwargs):
     default_arguments = {
         'source_id': 'source_id', 'name': 'source name',
         'tectonic_region_type': TRT.SUBDUCTION_INTRASLAB,
         'mfd': TruncatedGRMFD(a_val=1, b_val=2, min_mag=3,
                               max_mag=5, bin_width=1),
-        'location': Point(1.2, 3.4, 5.6),
+        'location': Point(lon, lat, 5.6),
         'nodal_plane_distribution': PMF([(1, NodalPlane(1, 2, 3))]),
         'hypocenter_distribution': PMF([(1, 4)]),
         'upper_seismogenic_depth': 1.3,
