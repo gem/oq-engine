@@ -1,26 +1,28 @@
 Scenario QA Test 3
 ==================
 
+gem-tstation:/home/michele/ssd/calc_16420.hdf5 updated Wed May 18 18:20:39 2016
+
 num_sites = 4, sitecol = 877 B
 
 Parameters
 ----------
-============================ ================
-calculation_mode             'scenario_risk' 
-number_of_logic_tree_samples 0               
-maximum_distance             {'default': 300}
-investigation_time           None            
-ses_per_logic_tree_path      1               
-truncation_level             3.0             
-rupture_mesh_spacing         10.0            
-complex_fault_mesh_spacing   10.0            
-width_of_mfd_bin             None            
-area_source_discretization   None            
-random_seed                  3               
-master_seed                  0               
-concurrent_tasks             40              
-avg_losses                   False           
-============================ ================
+============================ ===================
+calculation_mode             'scenario_risk'    
+number_of_logic_tree_samples 0                  
+maximum_distance             {'default': 300}   
+investigation_time           None               
+ses_per_logic_tree_path      1                  
+truncation_level             3.0                
+rupture_mesh_spacing         10.0               
+complex_fault_mesh_spacing   10.0               
+width_of_mfd_bin             None               
+area_source_discretization   None               
+random_seed                  3                  
+master_seed                  0                  
+avg_losses                   False              
+oqlite_version               '0.13.0-git034c0a0'
+============================ ===================
 
 Input files
 -----------
@@ -38,8 +40,8 @@ Realizations per (TRT, GSIM)
 
 ::
 
-  <RlzsAssoc(1)
-  0,ChiouYoungs2008: ['ChiouYoungs2008']>
+  <RlzsAssoc(size=1, rlzs=1)
+  0,ChiouYoungs2008(): ['<0,b_1,b1,w=1.0>']>
 
 Exposure model
 --------------
@@ -48,27 +50,35 @@ Exposure model
 #taxonomies 3
 =========== =
 
-======== =======
-Taxonomy #Assets
-======== =======
-RC       1      
-RM       1      
-W        2      
-======== =======
+======== ===== ====== === === ========= ==========
+taxonomy mean  stddev min max num_sites num_assets
+RC       1.000 NaN    1   1   1         1         
+RM       1.000 NaN    1   1   1         1         
+W        1.000 0.0    1   1   2         2         
+*ALL*    1.000 0.0    1   1   4         4         
+======== ===== ====== === === ========= ==========
+
+Information about the tasks
+---------------------------
+======================= ===== ========= ========= ===== =========
+measurement             mean  stddev    min       max   num_tasks
+scenario_risk.time_sec  0.001 4.747E-04 6.711E-04 0.002 4        
+scenario_risk.memory_mb 0.0   0.0       0.0       0.0   4        
+======================= ===== ========= ========= ===== =========
 
 Slowest operations
 ------------------
-========================= ========= ========= ======
-operation                 time_sec  memory_mb counts
-========================= ========= ========= ======
-total scenario_risk       0.033     0.004     4     
-computing individual risk 0.032     0.0       4     
-filtering sites           0.010     0.0       1     
-computing gmfs            0.006     0.0       1     
-reading exposure          0.005     0.0       1     
-building riskinputs       0.001     0.0       1     
-saving gmfs               0.001     0.0       1     
-building epsilons         8.411E-04 0.0       1     
-getting hazard            1.340E-04 0.0       4     
-reading site collection   1.192E-05 0.0       1     
-========================= ========= ========= ======
+======================= ========= ========= ======
+operation               time_sec  memory_mb counts
+======================= ========= ========= ======
+computing gmfs          0.029     0.0       1     
+filtering sites         0.005     0.0       1     
+total scenario_risk     0.005     0.0       4     
+reading exposure        0.004     0.0       1     
+computing riskmodel     0.003     0.0       4     
+saving gmfs             0.002     0.0       1     
+building epsilons       5.841E-04 0.0       1     
+building hazard         5.229E-04 0.0       4     
+building riskinputs     4.880E-04 0.0       1     
+reading site collection 6.914E-06 0.0       1     
+======================= ========= ========= ======

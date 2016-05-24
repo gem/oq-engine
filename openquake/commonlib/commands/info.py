@@ -17,11 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import print_function
-import textwrap
 import logging
+import operator
+from openquake.baselib.general import groupby
 from openquake.baselib.performance import Monitor
-from openquake.commonlib import sap, nrml, readinput, reportwriter
-from openquake.calculators import base
+from openquake.commonlib import sap, nrml, readinput, reportwriter, datastore
+from openquake.commonlib.parallel import get_pickled_sizes
+from openquake.commonlib.export import export
+from openquake.calculators import base, views
 from openquake.hazardlib import gsim
 
 
@@ -35,35 +38,54 @@ def print_csm_info(fname):
     print(csm.info)
     print('See https://github.com/gem/oq-risklib/blob/master/doc/'
           'effective-realizations.rst for an explanation')
-    print(csm.info.get_rlzs_assoc())
+    rlzs_assoc = csm.info.get_rlzs_assoc()
+    print(rlzs_assoc)
+    tot, pairs = get_pickled_sizes(rlzs_assoc)
+    print(views.rst_table(pairs, ['attribute', 'nbytes']))
 
 
 # the documentation about how to use this feature can be found
 # in the file effective-realizations.rst
-def info(name, report=False):
+def info(calculators, gsims, views, exports, report, input_file=''):
     """
     Give information. You can pass the name of an available calculator,
     a job.ini file, or a zip archive with the input files.
     """
     logging.basicConfig(level=logging.INFO)
-    if name in base.calculators:
-        print(textwrap.dedent(base.calculators[name].__doc__.strip()))
-    elif name == 'gsims':
+    if calculators:
+        for calc in sorted(base.calculators):
+            print(calc)
+    if gsims:
         for gs in gsim.get_available_gsims():
             print(gs)
-    elif name.endswith('.xml'):
-        print(nrml.read(name).to_str())
-    elif name.endswith(('.ini', '.zip')):
+    if views:
+        for name in sorted(datastore.view):
+            print(name)
+    if exports:
+        dic = groupby(export, operator.itemgetter(0),
+                      lambda group: [r[1] for r in group])
+        n = 0
+        for exporter, formats in dic.items():
+            print(exporter, formats)
+            n += len(formats)
+        print('There are %d exporters defined.' % n)
+    if input_file.endswith('.xml'):
+        print(nrml.read(input_file).to_str())
+    elif input_file.endswith(('.ini', '.zip')):
         with Monitor('info', measuremem=True) as mon:
             if report:
-                print('Generated', reportwriter.build_report(name))
+                print('Generated', reportwriter.build_report(input_file))
             else:
-                print_csm_info(name)
+                print_csm_info(input_file)
         if mon.duration > 1:
             print(mon)
-    else:
-        print("No info for '%s'" % name)
+    elif input_file:
+        print("No info for '%s'" % input_file)
 
 parser = sap.Parser(info)
-parser.arg('name', 'calculator name, job.ini file or zip archive')
+parser.flg('calculators', 'list available calculators')
+parser.flg('gsims', 'list available GSIMs')
+parser.flg('views', 'list available views')
+parser.flg('exports', 'list available exports')
 parser.flg('report', 'build a report in rst format')
+parser.arg('input_file', 'job.ini file or zip archive')

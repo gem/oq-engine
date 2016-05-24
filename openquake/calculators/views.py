@@ -24,21 +24,24 @@ import operator
 import decimal
 import functools
 import itertools
+import collections
 import numpy
+import h5py
 
-from openquake.baselib.general import humansize, groupby
+from openquake.calculators import base
+from openquake.baselib.general import humansize, groupby, AccumDict
 from openquake.baselib.performance import perf_dt
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util, source
 from openquake.commonlib.datastore import view
 from openquake.commonlib.writers import (
-    build_header, scientificformat, write_csv)
-
-# ########################## utility functions ############################## #
+    build_header, scientificformat, write_csv, FIVEDIGITS)
 
 FLOAT = (float, numpy.float32, numpy.float64, decimal.Decimal)
 INT = (int, numpy.uint32, numpy.int64)
 
+
+# ########################## utility functions ############################## #
 
 def form(value):
     """
@@ -68,6 +71,8 @@ def form(value):
             return '%.3f' % value
         elif value > 1000:
             return '{:,d}'.format(int(round(value)))
+        elif numpy.isnan(value):
+            return 'NaN'
         else:  # in the range 10-1000
             return str(int(value))
     elif hasattr(value, '__iter__'):
@@ -121,6 +126,41 @@ def rst_table(data, header=None, fmt=None):
     return '\n'.join(lines)
 
 
+def sum_tbl(tbl, kfield, vfields):
+    """
+    Aggregate a composite array and compute the totals on a given key.
+
+    >>> dt = numpy.dtype([('name', (bytes, 10)), ('value', int)])
+    >>> tbl = numpy.array([('a', 1), ('a', 2), ('b', 3)], dt)
+    >>> print(sum_tbl(tbl, 'name', ['value']))
+    [('a', 3, 2) ('b', 3, 1)]
+    """
+    pairs = [(n, tbl.dtype[n]) for n in [kfield] + vfields]
+    dt = numpy.dtype(pairs + [('counts', int)])
+
+    def sum_all(group):
+        vals = numpy.zeros(1, dt)[0]
+        for rec in group:
+            for vfield in vfields:
+                vals[vfield] += rec[vfield]
+            vals['counts'] += 1
+        vals[kfield] = rec[kfield]
+        return vals
+    rows = groupby(tbl, operator.itemgetter(kfield), sum_all).values()
+    return numpy.array(rows, dt)
+
+
+@view.add('times_by_source_class')
+def view_times_by_source_class(token, dstore):
+    """
+    Returns the calculation times depending on the source typology
+    """
+    totals = sum_tbl(
+        dstore['source_info'], 'source_class',
+        ['filter_time', 'split_time', 'calc_time'])
+    return rst_table(totals)
+
+
 def classify_gsim_lt(gsim_lt):
     """
     :returns: "trivial", "simple" or "complex"
@@ -151,8 +191,8 @@ def view_contents(token, dstore):
 
 @view.add('csm_info')
 def view_csm_info(token, dstore):
-    rlzs_assoc = dstore['rlzs_assoc']
-    csm_info = rlzs_assoc.csm_info
+    csm_info = dstore['csm_info']
+    rlzs_assoc = csm_info.get_rlzs_assoc()
     header = ['smlt_path', 'weight', 'source_model_file',
               'gsim_logic_tree', 'num_realizations']
     rows = []
@@ -166,23 +206,6 @@ def view_csm_info(token, dstore):
     return rst_table(rows, header)
 
 
-@view.add('rupture_collections')
-def view_rupture_collections(token, dstore):
-    rlzs_assoc = dstore['rlzs_assoc']
-    num_ruptures = dstore['num_ruptures']
-    csm_info = rlzs_assoc.csm_info
-    rows = []
-    col_id = 0
-    for sm in csm_info.source_models:
-        for tm in sm.trt_models:
-            for idx in range(sm.samples):
-                nr = num_ruptures[col_id]
-                if nr:
-                    rows.append((col_id, '_'.join(sm.path), tm.trt, nr))
-                col_id += 1
-    return rst_table(rows, ['col', 'smlt_path', 'TRT', 'num_ruptures'])
-
-
 @view.add('ruptures_per_trt')
 def view_ruptures_per_trt(token, dstore):
     tbl = []
@@ -193,20 +216,15 @@ def view_ruptures_per_trt(token, dstore):
     eff_ruptures = 0
     tot_weight = 0
     source_info = dstore['source_info'].value
-    csm_info = dstore['rlzs_assoc'].csm_info
+    csm_info = dstore['csm_info']
     w = groupby(source_info, operator.itemgetter('trt_model_id'),
                 lambda rows: sum(r['weight'] for r in rows))
     n = groupby(source_info, operator.itemgetter('trt_model_id'),
                 lambda rows: sum(1 for r in rows))
     for i, sm in enumerate(csm_info.source_models):
-        # NB: the number of effective ruptures per tectonic region model
-        # is stored in the array eff_ruptures as a literal string describing
-        # an array {trt_model_id: num_ruptures}; see the method
-        # CompositionInfo.get_rlzs_assoc
-        erdict = ast.literal_eval(csm_info.eff_ruptures[i])
         for trt_model in sm.trt_models:
             trt = source.capitalize(trt_model.trt)
-            er = erdict.get(trt, 0)  # effective ruptures
+            er = trt_model.eff_ruptures
             if er:
                 num_trts += 1
                 num_sources = n.get(trt_model.id, 0)
@@ -240,11 +258,12 @@ def view_params(token, dstore):
               'ses_per_logic_tree_path', 'truncation_level',
               'rupture_mesh_spacing', 'complex_fault_mesh_spacing',
               'width_of_mfd_bin', 'area_source_discretization',
-              'random_seed', 'master_seed', 'concurrent_tasks']
+              'random_seed', 'master_seed']
     if 'risk' in oq.calculation_mode:
         params.append('avg_losses')
     if 'classical' in oq.calculation_mode:
         params.append('sites_per_tile')
+    params.append('oqlite_version')
     return rst_table([(param, repr(getattr(oq, param, None)))
                       for param in params])
 
@@ -271,24 +290,14 @@ def view_inputs(token, dstore):
         header=['Name', 'File'])
 
 
-@view.add('source_data_transfer')
-def source_data_transfer(token, dstore):
+@view.add('job_info')
+def view_job_info(token, dstore):
     """
     Determine the amount of data transferred from the controller node
     to the workers and back in a classical calculation.
     """
-    sc = dstore['source_chunks']
-    tbl = [
-        ('Number of tasks to generate', len(sc)),
-        ('Sent data', humansize(sc.attrs['sent']))]
-    # NB: when called from `oq-lite info --report` the task name is
-    # count_eff_ruptures; then tot_received and max_received are bogus
-    if sc.attrs['task_name'] != 'count_eff_ruptures':
-        tbl.extend([
-            ('Total received data', humansize(sc.attrs['tot_received'])),
-            ('Maximum received per task', humansize(sc.attrs['max_received'])),
-        ])
-    return rst_table(tbl)
+    job_info = list(h5py.File.__getitem__(dstore.hdf5, 'job_info'))
+    return rst_table(job_info)
 
 
 @view.add('avglosses_data_transfer')
@@ -299,7 +308,7 @@ def avglosses_data_transfer(token, dstore):
     """
     oq = dstore['oqparam']
     N = len(dstore['assetcol'])
-    R = len(dstore['rlzs_assoc'].realizations)
+    R = len(dstore['realizations'])
     L = len(dstore.get_attr('composite_risk_model', 'loss_types'))
     I = oq.insured_losses + 1
     ct = oq.concurrent_tasks
@@ -345,6 +354,32 @@ def view_totlosses(token, dstore):
     return rst_table(zero, fmt='%.6E')
 
 
+# for event based risk
+@view.add('portfolio_loss')
+def view_portfolio_loss(token, dstore):
+    """
+    The loss for the full portfolio, for each realization and loss type,
+    extracted from the event loss table.
+    """
+    oq = dstore['oqparam']
+    agg_loss_table = dstore['agg_loss_table']
+    data = numpy.zeros(len(agg_loss_table), oq.loss_dt())
+    rlzids = []
+    for rlz, dset in dstore['agg_loss_table'].items():
+        rlzi = int(rlz.split('-')[1])  # rlz-000 -> 0 etc
+        rlzids.append(rlzi)
+        for loss_type, losses in dset.items():
+            loss = losses['loss'].sum(axis=0)
+            if loss.shape == (2,):
+                data[rlzi][loss_type] = loss[0]
+                data[rlzi][loss_type + '_ins'] = loss[1]
+            else:
+                data[rlzi][loss_type] = loss
+    array = util.compose_arrays(numpy.array(rlzids), data, 'rlz')
+    # this is very sensitive to rounding errors, so I a using a low precision
+    return rst_table(array, fmt='%.4E')
+
+
 def sum_table(records):
     """
     Used to compute summaries. The records are assumed to have numeric
@@ -377,7 +412,7 @@ def view_mean_avg_losses(token, dstore):
     assets = util.get_assets(dstore)
     losses = util.compose_arrays(assets, data)
     losses.sort()
-    return rst_table(losses, fmt='%8.6E')
+    return rst_table(losses, fmt=FIVEDIGITS)
 
 
 # this is used by the classical calculator
@@ -407,15 +442,9 @@ def view_exposure_info(token, dstore):
     """
     assetcol = dstore['assetcol/array'][:]
     taxonomies = dstore['assetcol/taxonomies'][:]
-    counts = numpy.zeros(len(taxonomies), numpy.uint32)
-    for ass in assetcol:
-        tax_idx = ass['taxonomy']
-        counts[tax_idx] += 1
-    tbl = zip(taxonomies, counts)
     data = [('#assets', len(assetcol)),
             ('#taxonomies', len(taxonomies))]
-    return rst_table(data) + '\n\n' + rst_table(
-        tbl, header=['Taxonomy', '#Assets'])
+    return rst_table(data) + '\n\n' + view_assets_by_site(token, dstore)
 
 
 @view.add('assetcol')
@@ -437,22 +466,24 @@ def view_assetcol(token, dstore):
 
 def get_max_gmf_size(dstore):
     """
-    Extract info about the largest GMF
+    Upper limit for the size of the GMFs
     """
     oq = dstore['oqparam']
-    n_sites = len(dstore['sitecol'].complete)
-    rlzs_assoc = dstore['rlzs_assoc']
-    num_ruptures = dstore.get_attr('etags', 'num_ruptures')
-    col = num_ruptures.argmax()
-    n_ruptures = num_ruptures[col]
-    trt_id = rlzs_assoc.csm_info.get_trt_id(col)
-    gsims = rlzs_assoc.gsims_by_trt_id[trt_id]
     n_imts = len(oq.imtls)
-    n_rlzs = max(len(rlzs_assoc[trt_id, gsim]) for gsim in gsims)
-    size = n_sites * n_rlzs * n_ruptures * n_imts * 4  # 4 bytes per float
-    return dict(n_rlzs=n_rlzs, n_imts=n_imts, n_sites=n_sites, size=size,
-                n_ruptures=n_ruptures, humansize=humansize(size), col=col,
-                trt=rlzs_assoc.csm_info.tmdict[trt_id].trt)
+    rlzs_by_trt_id = dstore['csm_info'].get_rlzs_assoc().get_rlzs_by_trt_id()
+    n_ruptures = collections.Counter()
+    size = collections.Counter()  # by trt_id
+    for serial in dstore['sescollection']:
+        ebr = dstore['sescollection/' + serial]
+        trt_id = ebr.trt_id
+        n_ruptures[trt_id] += 1
+        # there are 4 bytes per float
+        size[trt_id] += (len(ebr.indices) * ebr.multiplicity *
+                         len(rlzs_by_trt_id[trt_id]) * n_imts) * 4
+    [(trt_id, maxsize)] = size.most_common(1)
+    return dict(n_imts=n_imts, size=maxsize, n_ruptures=n_ruptures[trt_id],
+                n_rlzs=len(rlzs_by_trt_id[trt_id]),
+                trt_id=trt_id, humansize=humansize(maxsize))
 
 
 @view.add('biggest_ebr_gmf')
@@ -460,10 +491,21 @@ def view_biggest_ebr_gmf(token, dstore):
     """
     Returns the size of the biggest GMF in an event based risk calculation
     """
-    msg = ('The largest GMF block is for collection #%(col)d of type %(trt)r,'
-           '\ncontains %(n_imts)d IMT(s), %(n_sites)d site(s), %(n_rlzs)d '
-           'realization(s), and has a size of %(humansize)s / num_tasks')
+    msg = ('The largest GMF block is for trt_model_id=%(trt_id)d, '
+           'contains %(n_imts)d IMT(s), %(n_rlzs)d '
+           'realization(s)\nand has a size of %(humansize)s / num_tasks')
     return msg % get_max_gmf_size(dstore)
+
+
+@view.add('ruptures_events')
+def view_ruptures_events(token, dstore):
+    num_ruptures = len(dstore['sescollection'])
+    num_events = len(dstore['etags'])
+    mult = round(num_events / num_ruptures, 3)
+    lst = [('Total number of ruptures', num_ruptures),
+           ('Total number of events', num_events),
+           ('Rupture multiplicity', mult)]
+    return rst_table(lst)
 
 
 @view.add('fullreport')
@@ -503,12 +545,63 @@ def view_performance(token, dstore):
     return rst_table(performance_view(dstore))
 
 
+def stats(name, array, *extras):
+    """
+    Returns statistics from an array of numbers.
+
+    :param name: a descriptive string
+    :returns: (name, mean, std, min, max, len)
+    """
+    return (name, numpy.mean(array), numpy.std(array, ddof=1),
+            numpy.min(array), numpy.max(array), len(array)) + extras
+
+
+@view.add('task_info')
+def view_task_info(token, dstore):
+    """
+    Display statistical information about the tasks performance
+    """
+    pdata = dstore['performance_data'].value
+    tasks = [calc.core_task.__name__ for calc in base.calculators.values()]
+    data = ['measurement mean stddev min max num_tasks'.split()]
+    for task in set(tasks):  # strip duplicates
+        records = pdata[pdata['operation'] == 'total ' + task]
+        if len(records):
+            for stat in ('time_sec', 'memory_mb'):
+                val = records[stat]
+                data.append(stats(task + '.' + stat, val))
+    if len(data) == 1:
+        return 'Not available'
+    return rst_table(data)
+
+
+@view.add('assets_by_site')
+def view_assets_by_site(token, dstore):
+    """
+    Display statistical information about the distribution of the assets
+    """
+    assets_by_site = dstore['assetcol'].assets_by_site()
+    data = ['taxonomy mean stddev min max num_sites num_assets'.split()]
+    num_assets = AccumDict()
+    for assets in assets_by_site:
+        num_assets += {k: [len(v)] for k, v in groupby(
+            assets, operator.attrgetter('taxonomy')).items()}
+    for taxo in sorted(num_assets):
+        val = numpy.array(num_assets[taxo])
+        data.append(stats(taxo, val, val.sum()))
+    if len(num_assets) > 1:  # more than one taxonomy, add a summary
+        n_assets = numpy.array([len(assets) for assets in assets_by_site])
+        data.append(stats('*ALL*', n_assets, n_assets.sum()))
+    return rst_table(data)
+
+
 @view.add('required_params_per_trt')
 def view_required_params_per_trt(token, dstore):
     """
     Display the parameters needed by each tectonic region type
     """
-    gsims_per_trt_id = sorted(dstore['rlzs_assoc'].gsims_by_trt_id.items())
+    gsims_per_trt_id = sorted(
+        dstore['csm_info'].get_rlzs_assoc().gsims_by_trt_id.items())
     tbl = []
     for trt_id, gsims in gsims_per_trt_id:
         maker = ContextMaker(gsims)

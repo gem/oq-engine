@@ -22,7 +22,8 @@ from nose.plugins.attrib import attr
 
 import numpy.testing
 
-from openquake.commonlib.datastore import DataStore
+from openquake.baselib.general import get_array
+from openquake.commonlib.datastore import read
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.commonlib.export import export
 from openquake.calculators.tests import CalculatorTestCase
@@ -80,11 +81,11 @@ class EventBasedTestCase(CalculatorTestCase):
             self.run_calc(case.__file__, 'job.ini')
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
-            dstore = DataStore(self.calc.datastore.calc_id)
-            gmfa = dstore['gmf_data/1']['BooreAtkinson2008']['PGA']
+            dstore = read(self.calc.datastore.calc_id)
+            gmvs = dstore['gmf_data/0000'].value
             dstore.close()
-            gmvs_site_1 = gmfa[:, 0]
-            gmvs_site_2 = gmfa[:, 1]
+            gmvs_site_1 = get_array(gmvs, sid=0, imti=0)['gmv']
+            gmvs_site_2 = get_array(gmvs, sid=1, imti=0)['gmv']
             joint_prob_0_5 = joint_prob_of_occurrence(
                 gmvs_site_1, gmvs_site_2, 0.5, oq.investigation_time,
                 oq.ses_per_logic_tree_path)
@@ -129,6 +130,15 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
 
     @attr('qa', 'hazard', 'event_based')
+    def test_minimum_intensity(self):
+        out = self.run_calc(case_2.__file__, 'job.ini', exports='txt',
+                            minimum_intensity='0.4')
+
+        [fname] = out['gmf_data', 'txt']
+        self.assertEqualFiles(
+            'expected/minimum-intensity-SadighEtAl1997.txt', fname, sorted)
+
+    @attr('qa', 'hazard', 'event_based')
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='txt,csv')
         [fname] = out['gmf_data', 'txt']
@@ -156,10 +166,8 @@ class EventBasedTestCase(CalculatorTestCase):
         ltr = out['hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[0])
-        # NB: we are testing that the file ltr_1.csv is equal to
-        # ltr_0.csv, as it should be for the hazard curves
         self.assertEqualFiles(
-            'expected/hc-smltp_b1-gsimltp_b1-ltr_0.csv', ltr[1])
+            'expected/hc-smltp_b1-gsimltp_b1-ltr_1.csv', ltr[1])
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_4(self):
@@ -199,7 +207,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_7(self):
-        # 2 models x 3 GMPEs, 100 samples * 10 SES
+        # 2 models x 3 GMPEs, 10 samples * 40 SES
         expected = [
             'hazard_curve-mean.csv',
             'quantile_curve-0.1.csv',
@@ -214,7 +222,7 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
         for imt in mean_cl.dtype.fields:
             reldiff, _index = max_rel_diff_index(
                 mean_cl[imt], mean_eb[imt], min_value=0.1)
-            self.assertLess(reldiff, 0.41)
+            self.assertLess(reldiff, 0.20)
 
     @attr('qa', 'hazard', 'event_based')
     def test_case_12(self):
@@ -237,7 +245,6 @@ gmf-smltp_b3-gsimltp_@_@_@_b4_1.txt'''.split()
     @attr('qa', 'hazard', 'event_based')
     def test_case_17(self):  # oversampling
         expected = [
-            'hazard_curve-smltp_b1-gsimltp_@-ltr_0.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_1.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_2.csv',
             'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',

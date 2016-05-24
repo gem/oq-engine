@@ -26,6 +26,7 @@ from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9)
 
 from openquake.commonlib import writers
+from openquake.baselib.general import get_array
 from openquake.calculators.tests import CalculatorTestCase
 
 
@@ -43,25 +44,27 @@ def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
                for v1, v2 in zip(gmvs_site_one, gmvs_site_two))
 
 
-class ScenarioHazardTestCase(CalculatorTestCase):
+class ScenarioTestCase(CalculatorTestCase):
 
     def frequencies(self, case, fst_value, snd_value):
-        gmfa = self.execute(case.__file__, 'job.ini')
+        [gmfa] = self.execute(case.__file__, 'job.ini').values()
         [imt] = self.calc.oqparam.imtls
-        [gsim] = list(map(str, self.calc.gsims))
-        gmf = gmfa[gsim][imt]
+        gmvs0 = get_array(gmfa, sid=0, imti=0)['gmv']
+        gmvs1 = get_array(gmfa, sid=1, imti=0)['gmv']
         realizations = float(self.calc.oqparam.number_of_ground_motion_fields)
-        gmvs_within_range_fst = count_close(fst_value, gmf[:, 0], gmf[:, 1])
-        gmvs_within_range_snd = count_close(snd_value, gmf[:, 0], gmf[:, 1])
+        gmvs_within_range_fst = count_close(fst_value, gmvs0, gmvs1)
+        gmvs_within_range_snd = count_close(snd_value, gmvs0, gmvs1)
         return (gmvs_within_range_fst / realizations,
                 gmvs_within_range_snd / realizations)
 
     def medians(self, case):
-        gmfa = self.execute(case.__file__, 'job.ini')
-        [gsim] = list(map(str, self.calc.gsims))
-        median = self.calc.oqparam.imtls.copy()
-        for imt in median:
-            median[imt] = numpy.median(gmfa[gsim][imt], axis=0)  # shape N
+        [gmfa] = self.execute(case.__file__, 'job.ini').values()
+        median = {imt: [] for imt in self.calc.oqparam.imtls}
+        for imti, imt in enumerate(self.calc.oqparam.imtls):
+            gmfa_by_imt = get_array(gmfa, imti=imti)
+            for sid in self.calc.sitecol.sids:
+                gmvs = get_array(gmfa_by_imt, sid=sid)['gmv']
+                median[imt].append(numpy.median(gmvs))
         return median
 
     @attr('qa', 'hazard', 'scenario')

@@ -84,14 +84,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['agglosses-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_loss.csv', fname)
 
-        # check wrong time_event
-        self.calc.save_params(time_event="'Day'")
-        with self.assertRaises(ValueError) as ctx:
-            self.calc.pre_execute()
-        msg = str(ctx.exception)
-        self.assertIn("time_event is 'Day' in", msg)
-        self.assertIn("but the exposure contains day, night, transit", msg)
-
     @attr('qa', 'risk', 'scenario_risk')
     def test_case_6a(self):
         # case with two gsims

@@ -22,8 +22,9 @@ import operator
 import numpy
 
 from openquake.baselib.general import groupby
+from openquake.hazardlib.calc.hazard_curve import array_of_curves
 from openquake.risklib import scientific, riskinput
-from openquake.commonlib import readinput, parallel, datastore, logictree
+from openquake.commonlib import readinput, parallel, datastore, source
 from openquake.calculators import base
 
 
@@ -31,12 +32,12 @@ F32 = numpy.float32
 
 
 @parallel.litetask
-def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
+def classical_risk(riskinput, riskmodel, rlzs_assoc, monitor):
     """
     Compute and return the average losses for each asset.
 
-    :param riskinputs:
-        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
+    :param riskinput:
+        a :class:`openquake.risklib.riskinput.RiskInput` object
     :param riskmodel:
         a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param rlzs_assoc:
@@ -49,7 +50,7 @@ def classical_risk(riskinputs, riskmodel, rlzs_assoc, monitor):
     R = len(rlzs_assoc.realizations)
     result = dict(
         loss_curves=[], loss_maps=[], stat_curves=[], stat_maps=[])
-    for out_by_lr in riskmodel.gen_outputs(riskinputs, rlzs_assoc, monitor):
+    for out_by_lr in riskmodel.gen_outputs(riskinput, rlzs_assoc, monitor):
         for (l, r), out in sorted(out_by_lr.items()):
             for i, asset in enumerate(out.assets):
                 aid = asset.ordinal
@@ -116,16 +117,20 @@ class ClassicalRiskCalculator(base.RiskCalculator):
             self.sitecol, self.assets_by_site = self.assoc_assets_sites(
                 haz_sitecol)
             curves_by_trt_gsim = {(0, 'FromFile'): haz_curves}
-            self.rlzs_assoc = logictree.trivial_rlzs_assoc()
+            self.datastore['csm_info'] = fake = source.CompositionInfo.fake()
+            self.rlzs_assoc = fake.get_rlzs_assoc()
             self.save_mesh()
         else:  # compute hazard or read it from the datastore
             super(ClassicalRiskCalculator, self).pre_execute()
             logging.info('Preparing the risk input')
             curves_by_trt_gsim = {}
-            for dset in self.datastore['curves_by_sm'].values():
-                for key, curves in dset.items():
-                    trt_id, gsim = key.split('-')
-                    curves_by_trt_gsim[int(trt_id), gsim] = curves.value
+            for key in self.datastore['poes']:
+                pmap = self.datastore['poes/' + key]
+                trt_id = int(key)
+                gsims = self.rlzs_assoc.gsims_by_trt_id[trt_id]
+                for i, gsim in enumerate(gsims):
+                    curves_by_trt_gsim[trt_id, gsim] = array_of_curves(
+                        pmap, len(self.sitecol), self.oqparam.imtls, i)
         self.riskinputs = self.build_riskinputs(curves_by_trt_gsim)
         self.monitor.oqparam = self.oqparam
 

@@ -19,6 +19,7 @@
 import os
 import logging
 import unittest
+import platform
 
 import numpy
 
@@ -31,6 +32,14 @@ class DifferentFiles(Exception):
     pass
 
 
+def check_platform(*supported):
+    """
+    Skip the test if the platform is not the reference one
+    """
+    if platform.dist()[-1] not in supported:
+        raise unittest.SkipTest
+
+
 def columns(line):
     data = []
     for column in line.split(','):
@@ -41,14 +50,6 @@ def columns(line):
         else:
             data.append(numpy.array(floats))
     return data
-
-
-def get_datastore(calc):
-    ds = datastore.DataStore(calc.datastore.calc_id)
-    hc_id = ds['oqparam'].hazard_calculation_id
-    if hc_id:
-        ds.parent = datastore.DataStore(int(hc_id))
-    return ds
 
 
 class CalculatorTestCase(unittest.TestCase):
@@ -84,6 +85,10 @@ class CalculatorTestCase(unittest.TestCase):
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
             with self.calc.monitor:
                 result.update(self.calc.run())
+        # reopen datastore, since some tests need to export from it
+        dstore = datastore.read(self.calc.datastore.calc_id)
+        dstore.export_dir = dstore['oqparam'].export_dir
+        self.calc.datastore = dstore
         return result
 
     def execute(self, testfile, job_ini):

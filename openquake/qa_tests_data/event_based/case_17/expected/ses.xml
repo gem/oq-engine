@@ -10,7 +10,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <rupture
             dip="90.0"
-            id="col=01~ses=0001~src=2~rup=44-01"
+            id="trt=01~ses=0001~src=2~rup=44-01"
             magnitude="5.8"
             rake="0.0"
             strike="0.0"
@@ -25,7 +25,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="col=01~ses=0001~src=2~rup=44-02"
+            id="trt=01~ses=0001~src=2~rup=44-02"
             magnitude="5.8"
             rake="0.0"
             strike="0.0"
@@ -40,7 +40,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="col=01~ses=0001~src=2~rup=45-01"
+            id="trt=01~ses=0001~src=2~rup=45-01"
             magnitude="6.05"
             rake="0.0"
             strike="0.0"
@@ -55,7 +55,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="col=01~ses=0001~src=2~rup=46-01"
+            id="trt=01~ses=0001~src=2~rup=46-01"
             magnitude="6.3"
             rake="0.0"
             strike="0.0"
@@ -70,7 +70,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="col=02~ses=0001~src=2~rup=46-01"
+            id="trt=01~ses=0001~src=2~rup=46-01~sample=1"
             magnitude="6.3"
             rake="0.0"
             strike="0.0"
@@ -85,7 +85,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="col=02~ses=0001~src=2~rup=46-02"
+            id="trt=01~ses=0001~src=2~rup=46-02~sample=1"
             magnitude="6.3"
             rake="0.0"
             strike="0.0"
@@ -105,7 +105,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <rupture
             dip="90.0"
-            id="col=01~ses=0002~src=2~rup=44-01"
+            id="trt=01~ses=0002~src=2~rup=44-01"
             magnitude="5.8"
             rake="0.0"
             strike="0.0"
@@ -120,7 +120,52 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="col=01~ses=0002~src=2~rup=45-01"
+            id="trt=01~ses=0002~src=2~rup=44-01~sample=2"
+            magnitude="5.8"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
+                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
+                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
+                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="trt=01~ses=0002~src=2~rup=44-01~sample=3"
+            magnitude="5.8"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
+                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
+                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
+                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="trt=01~ses=0002~src=2~rup=44-02~sample=3"
+            magnitude="5.8"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
+                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
+                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
+                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="trt=01~ses=0002~src=2~rup=45-01"
             magnitude="6.05"
             rake="0.0"
             strike="0.0"
@@ -135,7 +180,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="col=02~ses=0002~src=2~rup=45-01"
+            id="trt=01~ses=0002~src=2~rup=45-01~sample=1"
             magnitude="6.05"
             rake="0.0"
             strike="0.0"
@@ -150,7 +195,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="col=02~ses=0002~src=2~rup=45-02"
+            id="trt=01~ses=0002~src=2~rup=45-02~sample=1"
             magnitude="6.05"
             rake="0.0"
             strike="0.0"
@@ -165,52 +210,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="col=03~ses=0002~src=2~rup=44-01"
-            magnitude="5.8"
-            rake="0.0"
-            strike="0.0"
-            tectonicRegion="active shallow crust"
-            >
-                <planarSurface>
-                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
-                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
-                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
-                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
-                </planarSurface>
-            </rupture>
-            <rupture
-            dip="90.0"
-            id="col=04~ses=0002~src=2~rup=44-01"
-            magnitude="5.8"
-            rake="0.0"
-            strike="0.0"
-            tectonicRegion="active shallow crust"
-            >
-                <planarSurface>
-                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
-                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
-                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
-                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
-                </planarSurface>
-            </rupture>
-            <rupture
-            dip="90.0"
-            id="col=04~ses=0002~src=2~rup=44-02"
-            magnitude="5.8"
-            rake="0.0"
-            strike="0.0"
-            tectonicRegion="active shallow crust"
-            >
-                <planarSurface>
-                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
-                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
-                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
-                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
-                </planarSurface>
-            </rupture>
-            <rupture
-            dip="90.0"
-            id="col=04~ses=0002~src=2~rup=46-01"
+            id="trt=01~ses=0002~src=2~rup=46-01~sample=3"
             magnitude="6.3"
             rake="0.0"
             strike="0.0"
@@ -230,7 +230,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <rupture
             dip="90.0"
-            id="col=01~ses=0003~src=2~rup=44-01"
+            id="trt=01~ses=0003~src=2~rup=44-01"
             magnitude="5.8"
             rake="0.0"
             strike="0.0"
@@ -245,22 +245,37 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="col=01~ses=0003~src=2~rup=46-01"
-            magnitude="6.3"
+            id="trt=01~ses=0003~src=2~rup=44-01~sample=2"
+            magnitude="5.8"
             rake="0.0"
             strike="0.0"
             tectonicRegion="active shallow crust"
             >
                 <planarSurface>
-                    <topLeft depth="14.5323928392" lat="-0.059963231795" lon="0.0"/>
-                    <topRight depth="14.5323928392" lat="0.059963231795" lon="0.0"/>
-                    <bottomLeft depth="27.8676071608" lat="-0.059963231795" lon="0.0"/>
-                    <bottomRight depth="27.8676071608" lat="0.059963231795" lon="0.0"/>
+                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
+                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
+                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
+                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
                 </planarSurface>
             </rupture>
             <rupture
             dip="90.0"
-            id="col=02~ses=0003~src=2~rup=45-01"
+            id="trt=01~ses=0003~src=2~rup=44-01~sample=3"
+            magnitude="5.8"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
+                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
+                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
+                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="trt=01~ses=0003~src=2~rup=45-01~sample=1"
             magnitude="6.05"
             rake="0.0"
             strike="0.0"
@@ -275,52 +290,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="col=03~ses=0003~src=2~rup=44-01"
-            magnitude="5.8"
-            rake="0.0"
-            strike="0.0"
-            tectonicRegion="active shallow crust"
-            >
-                <planarSurface>
-                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
-                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
-                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
-                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
-                </planarSurface>
-            </rupture>
-            <rupture
-            dip="90.0"
-            id="col=03~ses=0003~src=2~rup=46-01"
-            magnitude="6.3"
-            rake="0.0"
-            strike="0.0"
-            tectonicRegion="active shallow crust"
-            >
-                <planarSurface>
-                    <topLeft depth="14.5323928392" lat="-0.059963231795" lon="0.0"/>
-                    <topRight depth="14.5323928392" lat="0.059963231795" lon="0.0"/>
-                    <bottomLeft depth="27.8676071608" lat="-0.059963231795" lon="0.0"/>
-                    <bottomRight depth="27.8676071608" lat="0.059963231795" lon="0.0"/>
-                </planarSurface>
-            </rupture>
-            <rupture
-            dip="90.0"
-            id="col=04~ses=0003~src=2~rup=44-01"
-            magnitude="5.8"
-            rake="0.0"
-            strike="0.0"
-            tectonicRegion="active shallow crust"
-            >
-                <planarSurface>
-                    <topLeft depth="17.2283588264" lat="-0.0357178271839" lon="0.0"/>
-                    <topRight depth="17.2283588264" lat="0.0357178271839" lon="0.0"/>
-                    <bottomLeft depth="25.1716411736" lat="-0.0357178271839" lon="0.0"/>
-                    <bottomRight depth="25.1716411736" lat="0.0357178271839" lon="0.0"/>
-                </planarSurface>
-            </rupture>
-            <rupture
-            dip="90.0"
-            id="col=04~ses=0003~src=2~rup=45-01"
+            id="trt=01~ses=0003~src=2~rup=45-01~sample=3"
             magnitude="6.05"
             rake="0.0"
             strike="0.0"
@@ -335,7 +305,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="col=04~ses=0003~src=2~rup=46-01"
+            id="trt=01~ses=0003~src=2~rup=46-01"
             magnitude="6.3"
             rake="0.0"
             strike="0.0"
@@ -350,7 +320,37 @@ xmlns:gml="http://www.opengis.net/gml"
             </rupture>
             <rupture
             dip="90.0"
-            id="col=04~ses=0003~src=2~rup=46-02"
+            id="trt=01~ses=0003~src=2~rup=46-01~sample=2"
+            magnitude="6.3"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="14.5323928392" lat="-0.059963231795" lon="0.0"/>
+                    <topRight depth="14.5323928392" lat="0.059963231795" lon="0.0"/>
+                    <bottomLeft depth="27.8676071608" lat="-0.059963231795" lon="0.0"/>
+                    <bottomRight depth="27.8676071608" lat="0.059963231795" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="trt=01~ses=0003~src=2~rup=46-01~sample=3"
+            magnitude="6.3"
+            rake="0.0"
+            strike="0.0"
+            tectonicRegion="active shallow crust"
+            >
+                <planarSurface>
+                    <topLeft depth="14.5323928392" lat="-0.059963231795" lon="0.0"/>
+                    <topRight depth="14.5323928392" lat="0.059963231795" lon="0.0"/>
+                    <bottomLeft depth="27.8676071608" lat="-0.059963231795" lon="0.0"/>
+                    <bottomRight depth="27.8676071608" lat="0.059963231795" lon="0.0"/>
+                </planarSurface>
+            </rupture>
+            <rupture
+            dip="90.0"
+            id="trt=01~ses=0003~src=2~rup=46-02~sample=3"
             magnitude="6.3"
             rake="0.0"
             strike="0.0"
