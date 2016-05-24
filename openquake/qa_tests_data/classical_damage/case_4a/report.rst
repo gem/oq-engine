@@ -1,7 +1,7 @@
 Classical PSHA-Based Hazard
 ===========================
 
-gem-tstation:/home/michele/ssd/calc_16363.hdf5 updated Wed May 18 18:18:26 2016
+gem-tstation:/home/michele/ssd/calc_19138.hdf5 updated Tue May 24 14:32:01 2016
 
 num_sites = 1, sitecol = 739 B
 
@@ -20,8 +20,8 @@ width_of_mfd_bin             0.1
 area_source_discretization   20.0               
 random_seed                  42                 
 master_seed                  0                  
-sites_per_tile               1000               
-oqlite_version               '0.13.0-git034c0a0'
+sites_per_tile               10000              
+oqlite_version               '0.13.0-git1f78261'
 ============================ ===================
 
 Input files
@@ -128,13 +128,13 @@ Slowest operations
 ============================== ========= ========= ======
 operation                      time_sec  memory_mb counts
 ============================== ========= ========= ======
-managing sources               0.095     0.0       1     
+managing sources               0.090     0.0       1     
 splitting sources              0.071     0.0       1     
 reading composite source model 0.011     0.0       1     
-store source_info              0.005     0.0       1     
+store source_info              0.007     0.0       1     
 total count_eff_ruptures       0.004     0.0       14    
-reading exposure               0.004     0.0       1     
+reading exposure               0.003     0.0       1     
 filtering sources              0.002     0.0       1     
-aggregate curves               1.853E-04 0.0       14    
+aggregate curves               2.861E-04 0.0       14    
 reading site collection        7.868E-06 0.0       1     
 ============================== ========= ========= ======

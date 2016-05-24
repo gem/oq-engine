@@ -20,7 +20,6 @@ from __future__ import division
 import operator
 import collections
 from functools import partial
-
 import numpy
 
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
@@ -28,7 +27,8 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.calc.filters import source_site_distance_filter
 from openquake.hazardlib.calc.hazard_curve import (
-    hazard_curves_per_trt, zero_curves, zero_maps, agg_curves)
+    hazard_curves_per_trt, zero_curves, zero_maps,
+    array_of_curves, ProbabilityMap)
 from openquake.risklib import scientific
 from openquake.commonlib import parallel, datastore, source
 from openquake.baselib.general import AccumDict
@@ -171,36 +171,13 @@ def classical(sources, sitecol, siteidx, rlzs_assoc, monitor):
     # NB: the source_site_filter below is ESSENTIAL for performance inside
     # hazard_curves_per_trt, since it reduces the full site collection
     # to a filtered one *before* doing the rupture filtering
-    curves_by_gsim = hazard_curves_per_trt(
+    dic[trt_model_id] = hazard_curves_per_trt(
         sources, sitecol, imtls, gsims, truncation_level,
         source_site_filter=source_site_distance_filter(max_dist),
         maximum_distance=max_dist, bbs=dic.bbs, monitor=monitor)
     dic.calc_times = monitor.calc_times  # added by hazard_curves_per_trt
     dic.eff_ruptures = {trt_model_id: monitor.eff_ruptures}  # idem
-    for gsim, curves in zip(gsims, curves_by_gsim):
-        dic[trt_model_id, str(gsim)] = curves
     return dic
-
-
-def expand(array, n, aslice):
-    """
-    Expand a short array to size n by adding zeros outside of the slice.
-    For instance:
-
-    >>> arr = numpy.array([1, 2, 3])
-    >>> expand(arr, 5, slice(1, 4))
-    array([0, 1, 2, 3, 0])
-    """
-    if len(array) > n:
-        raise ValueError('The array is too large: %d > %d' % (len(array), n))
-    elif len(array) == n:  # nothing to expand
-        return array
-    if aslice.stop - aslice.start != len(array):
-        raise ValueError('The slice has %d places, but the array has length '
-                         '%d', slice.stop - aslice.start, len(array))
-    zeros = numpy.zeros((n,) + array.shape[1:], array.dtype)
-    zeros[aslice] = array
-    return zeros
 
 
 @base.calculators.add('classical')
@@ -216,7 +193,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Aggregate dictionaries of hazard curves by updating the accumulator.
 
         :param acc: accumulator dictionary
-        :param val: a dictionary of hazard curves keyed by trt_id
+        :param val: a nested dictionary trt_id -> ProbabilityMap
         """
         with self.monitor('aggregate curves', autoflush=True):
             if hasattr(val, 'calc_times'):
@@ -225,20 +202,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 acc.eff_ruptures += val.eff_ruptures
             for bb in getattr(val, 'bbs', []):
                 acc.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
-            self.agg_curves(acc, val)
+            acc |= val
         self.datastore.flush()
         return acc
-
-    def agg_curves(self, acc, val):
-        """
-        Aggregate the hazard curves. If tiling is enabled, expand them
-        first to the full site collection.
-        """
-        n = len(self.sitecol)
-        tiling = self.is_tiling()
-        for k, v in val.items():
-            acc[k] = agg_curves(acc.get(k, self.zc),
-                                expand(v, n, val.siteslice) if tiling else v)
 
     def count_eff_ruptures(self, result_dict, trt_model):
         """
@@ -253,10 +219,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def zerodict(self):
         """
-        Initial accumulator, a dictionary (trt_id, gsim) -> curves
+        Initial accumulator, an empty ProbabilityMap
         """
-        self.zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
-        zd = AccumDict()
+        zd = ProbabilityMap()
         zd.calc_times = []
         zd.eff_ruptures = AccumDict()  # trt_id -> eff_ruptures
         zd.bb_dict = {
@@ -274,16 +239,16 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         monitor = self.monitor.new(self.core_task.__name__)
         monitor.oqparam = self.oqparam
-        curves_by_trt_gsim = self.manager.tm.reduce(
+        curves_by_trt_id = self.manager.tm.reduce(
             self.agg_dicts, self.zerodict(), posthook=self.save_data_transfer)
         with self.monitor('store source_info', autoflush=True):
-            self.store_source_info(curves_by_trt_gsim)
+            self.store_source_info(curves_by_trt_id)
         self.rlzs_assoc = self.csm.info.get_rlzs_assoc(
-            partial(self.count_eff_ruptures, curves_by_trt_gsim))
+            partial(self.count_eff_ruptures, curves_by_trt_id))
         self.datastore['csm_info'] = self.csm.info
-        return curves_by_trt_gsim
+        return curves_by_trt_id
 
-    def store_source_info(self, curves_by_trt_gsim):
+    def store_source_info(self, curves_by_trt_id):
         # store the information about received data
         received = self.manager.tm.received
         if received:
@@ -293,7 +258,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 tname + '_tot_received': sum(received),
                 tname + '_num_tasks': len(received)})
         # then save the calculation times per each source
-        calc_times = getattr(curves_by_trt_gsim, 'calc_times', [])
+        calc_times = getattr(curves_by_trt_id, 'calc_times', [])
         if calc_times:
             sources = self.csm.get_sources()
             info_dict = {(rec['trt_model_id'], rec['source_id']): rec
@@ -307,38 +272,34 @@ class ClassicalCalculator(base.HazardCalculator):
                        reverse=True), source.source_info_dt)
         self.datastore.hdf5.flush()
 
-    def post_execute(self, curves_by_trt_gsim):
+    def post_execute(self, curves_by_trt_id):
         """
         Collect the hazard curves by realization and export them.
 
-        :param curves_by_trt_gsim:
-            a dictionary (trt_id, gsim) -> hazard curves
+        :param curves_by_trt_id:
+            a dictionary trt_id -> hazard curves
         """
-        with self.monitor('save curves_by_trt_gsim', autoflush=True):
-            for sm in self.csm.info.source_models:
-                group = self.datastore.hdf5.create_group(
-                    'curves_by_sm/' + '_'.join(sm.path))
-                group.attrs['source_model'] = sm.name
-                for tm in sm.trt_models:
-                    if tm.id not in self.rlzs_assoc.gsims_by_trt_id:
-                        continue  # no data for the trt_model
-                    gsims = self.rlzs_assoc.gsims_by_trt_id[tm.id]
-                    for i, gsim in enumerate(gsims):
-                        curves = curves_by_trt_gsim[tm.id, gsim]
-                        ts = '%03d-%d' % (tm.id, i)
-                        if nonzero(curves):
-                            group[ts] = curves
-                            group[ts].attrs['trt'] = tm.trt
-                            group[ts].attrs['nbytes'] = curves.nbytes
-                            group[ts].attrs['gsim'] = str(gsim)
-                self.datastore.set_nbytes(group.name)
-            self.datastore.set_nbytes('curves_by_sm')
+        nsites = len(self.sitecol)
+        imtls = self.oqparam.imtls
+        curves_by_trt_gsim = {}
+
+        with self.monitor('saving probability maps', autoflush=True):
+            for trt_id in curves_by_trt_id:
+                key = 'poes/%04d' % trt_id
+                self.datastore[key] = curves_by_trt_id[trt_id]
+                self.datastore.set_attrs(
+                    key, trt=self.csm.info.get_trt(trt_id))
+                gsims = self.rlzs_assoc.gsims_by_trt_id[trt_id]
+                for i, gsim in enumerate(gsims):
+                    curves_by_trt_gsim[trt_id, gsim] = (
+                        curves_by_trt_id[trt_id].extract(i))
+            self.datastore.set_nbytes('poes')
 
         with self.monitor('combine curves_by_rlz', autoflush=True):
-            zc = zero_curves(len(self.sitecol.complete), self.oqparam.imtls)
-            curves_by_rlz = self.rlzs_assoc.combine_curves(
-                curves_by_trt_gsim, agg_curves, zc)
-        self.save_curves(curves_by_rlz)
+            curves_by_rlz = self.rlzs_assoc.combine_curves(curves_by_trt_gsim)
+
+        self.save_curves({rlz: array_of_curves(curves, nsites, imtls)
+                          for rlz, curves in curves_by_rlz.items()})
 
     def save_curves(self, curves_by_rlz):
         """
